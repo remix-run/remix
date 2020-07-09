@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "target": "es2018",
+    "moduleResolution": "node",
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "declaration": true,
+    "outDir": ".tsc-output",
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "jsx": "react"
+  },
+  "files": [
+    "packages/@remix-run-core/index.tsx",
+    "packages/@remix-run-express/index.tsx",
+    "packages/remix/index.tsx"
+  ],
+  "include": ["types/global.d.ts"]
+}

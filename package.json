@@ -1,0 +1,51 @@
+{
+  "private": true,
+  "name": "remix-packages",
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -fdX .",
+    "test": "jest",
+    "build": "node ./scripts/build.js",
+    "watch": "node ./scripts/watch.js"
+  },
+  "workspaces": [
+    "packages/remix",
+    "packages/@remix-run-core",
+    "packages/@remix-run-express"
+  ],
+  "dependencies": {
+    "@babel/core": "^7.10.4",
+    "@babel/preset-env": "^7.10.4",
+    "@babel/preset-react": "^7.10.4",
+    "@babel/preset-typescript": "^7.10.4",
+    "@types/jest": "^25.2.3",
+    "@types/react": "^16.9.41",
+    "@types/react-test-renderer": "^16.9.2",
+    "@typescript-eslint/eslint-plugin": "2.x",
+    "@typescript-eslint/parser": "2.x",
+    "babel-eslint": "10.x",
+    "eslint": "6.x",
+    "eslint-config-react-app": "^5.2.1",
+    "eslint-plugin-flowtype": "4.x",
+    "eslint-plugin-import": "2.x",
+    "eslint-plugin-jsx-a11y": "6.x",
+    "eslint-plugin-react": "7.x",
+    "eslint-plugin-react-hooks": "2.x",
+    "history": "^5.0.0",
+    "jest": "^26.0.1",
+    "prettier": "^2.0.5",
+    "react": "0.0.0-experimental-33c3af284",
+    "react-dom": "0.0.0-experimental-33c3af284",
+    "react-router-dom": "0.0.0-experimental-ffd8c7d0",
+    "react-test-renderer": "0.0.0-experimental-33c3af284",
+    "rollup": "^2.21.0",
+    "typescript": "^3.9.6"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "trailingComma": "none"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  }
+}
