@@ -1,26 +1,33 @@
-import { exec } from "./utils.js";
+import { exec } from "child_process";
+import { promisify } from "util";
 
-async function build() {
-  await exec("tsc -b");
+const x = promisify(exec);
 
-  await exec("mkdir -p build/@remix-run");
+async function run() {
+  await x("tsc -b");
 
-  await Promise.all([
-    exec("cp -r .tsc-output/core build/@remix-run/core"),
-    exec("cp packages/core/package.json build/@remix-run/core/package.json"),
+  await x("mkdir -p build/@remix-run");
 
-    exec("cp -r .tsc-output/express build/@remix-run/express"),
-    exec(
-      "cp packages/express/package.json build/@remix-run/express/package.json"
-    ),
+  await x("cp -r .tsc-output/core build/@remix-run/core");
+  await x("cp packages/core/package.json build/@remix-run/core/package.json");
 
-    exec("cp -r .tsc-output/react build/@remix-run/react"),
-    exec("cp packages/react/package.json build/@remix-run/react/package.json")
-  ]);
+  await x("cp -r .tsc-output/express build/@remix-run/express");
+  await x(
+    "cp packages/express/package.json build/@remix-run/express/package.json"
+  );
+
+  await x("cp -r .tsc-output/react build/@remix-run/react");
+  await x("cp packages/react/package.json build/@remix-run/react/package.json");
 
   return 0;
 }
 
-build().then(code => {
-  process.exit(code);
-});
+run().then(
+  code => {
+    process.exit(code);
+  },
+  error => {
+    console.error(error);
+    process.exit(1);
+  }
+);

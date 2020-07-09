@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "clean": "git clean -fdX .",
-    "test": "jest",
     "build": "node ./scripts/build.js",
-    "watch": "node ./scripts/watch.js"
+    "publish": "node ./scripts/publish.js",
+    "test": "node ./scripts/test.js",
+    "version": "node ./scripts/version.js"
   },
   "workspaces": [
     "packages/core",
@@ -24,6 +25,7 @@
     "@typescript-eslint/eslint-plugin": "2.x",
     "@typescript-eslint/parser": "2.x",
     "babel-eslint": "10.x",
+    "chalk": "^4.1.0",
     "eslint": "6.x",
     "eslint-config-react-app": "^5.2.1",
     "eslint-plugin-flowtype": "4.x",
@@ -33,19 +35,22 @@
     "eslint-plugin-react-hooks": "2.x",
     "history": "^5.0.0",
     "jest": "^26.0.1",
+    "jsonfile": "^6.0.1",
     "prettier": "^2.0.5",
+    "prompt-confirm": "^2.0.4",
     "react": "0.0.0-experimental-33c3af284",
     "react-dom": "0.0.0-experimental-33c3af284",
     "react-router-dom": "0.0.0-experimental-ffd8c7d0",
     "react-test-renderer": "0.0.0-experimental-33c3af284",
     "rollup": "^2.21.0",
+    "semver": "^7.3.2",
     "typescript": "^3.9.6"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
   },
   "prettier": {
     "arrowParens": "avoid",
     "trailingComma": "none"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
   }
 }
