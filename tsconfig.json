@@ -17,9 +17,9 @@
     "jsx": "react"
   },
   "files": [
-    "packages/@remix-run-core/index.tsx",
-    "packages/@remix-run-express/index.tsx",
-    "packages/remix/index.tsx"
+    "packages/core/index.tsx",
+    "packages/express/index.tsx",
+    "packages/react/index.tsx"
   ],
   "include": ["types/global.d.ts"]
 }

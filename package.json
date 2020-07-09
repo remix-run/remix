@@ -9,9 +9,9 @@
     "watch": "node ./scripts/watch.js"
   },
   "workspaces": [
-    "packages/remix",
-    "packages/@remix-run-core",
-    "packages/@remix-run-express"
+    "packages/core",
+    "packages/express",
+    "packages/react"
   ],
   "dependencies": {
     "@babel/core": "^7.10.4",

@@ -1,0 +1,39 @@
+name: build-and-test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Read .nvmrc
+        run: echo "::set-output name=nvmrc::$(cat .nvmrc)"
+        id: nvm
+
+      - name: Setup node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "${{ steps.nvm.outputs.nvmrc }}"
+
+      - run: yarncache=$(yarn cache dir)
+      - run: echo $yarncache
+      - name: Restore dependency cache
+        uses: actions/cache@v2
+        with:
+          path: $yarncache
+          key: ${{ runner.os }}-build-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Test
+        run: yarn test
+      

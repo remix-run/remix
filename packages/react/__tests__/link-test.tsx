@@ -1,6 +1,6 @@
 import React from "react";
 import { create as createTestRenderer } from "react-test-renderer";
-import { RemixLink } from "remix";
+import { RemixLink } from "@remix-run/react";
 
 describe("A <RemixLink>", () => {
   it("works", () => {

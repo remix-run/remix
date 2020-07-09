@@ -11,17 +11,11 @@ async function test(args) {
   let target = args[0];
 
   if (target) {
-    if (target === "remix") {
-      target = "packages/remix";
-    } else if (target.startsWith("@remix-run/")) {
-      target = target.replace(/^@remix-run\//, "packages/@remix-run-");
+    let packageNames = await fsp.readdir(packagesDir);
+    if (packageNames.includes(target)) {
+      target = `packages/${target}`;
     } else {
-      let dirs = await fsp.readdir(packagesDir);
-      if (dirs.includes(`@remix-run-${target}`)) {
-        target = `packages/@remix-run-${target}`;
-      } else {
-        throw new Error(`Cannot run tests for ${target}`);
-      }
+      throw new Error(`Cannot run tests for ${target}`);
     }
   } else {
     target = "packages/*";

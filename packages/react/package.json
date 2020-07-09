@@ -1,5 +1,5 @@
 {
-  "name": "remix",
+  "name": "@remix-run/react",
   "version": "0.0.0",
   "peerDependencies": {
     "history": ">=5",
