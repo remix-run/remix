@@ -1,6 +1,6 @@
-Welcome to Remix!
+# Welcome to Remix development!
 
-GitHub Actions suck!
+Remix is a framework for shipping better websites.
 
 ## Development
 
@@ -20,20 +20,7 @@ yarn test react --watch
 
 # cut a release
 yarn run version major|minor|patch|prerelease [prereleaseId]
-yarn publish
-# or
+yarn run publish
+# or, to automatically publish from GitHub Actions
 git push origin --follow-tags
-```
-
-## For Users
-
-```
-# in ~/.npmrc
-//npm.pkg.github.com/:_authToken=GITHUB_PERSONAL_ACCESS_TOKEN
-
-# in project .npmrc
-@remix-run:registry=https://npm.pkg.github.com
-
-# to install
-yarn add @remix-run/react @remix-run/express
 ```
