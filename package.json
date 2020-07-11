@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix-packages",
+  "name": "remix",
   "type": "module",
   "scripts": {
     "clean": "git clean -fdX .",

@@ -16,10 +16,5 @@
     "skipLibCheck": true,
     "jsx": "react"
   },
-  "files": [
-    "packages/core/index.tsx",
-    "packages/express/index.tsx",
-    "packages/react/index.tsx"
-  ],
-  "include": ["types/global.d.ts"]
+  "include": ["types/global.d.ts", "packages/**/*.ts", "packages/**/*.tsx"]
 }
