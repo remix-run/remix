@@ -11,7 +11,7 @@ export interface ConfigRoute {
   children?: ConfigRoute[];
 }
 
-interface DefineRoute {
+export interface DefineRoute {
   (
     path: string,
     // component path is relative to src/ directory
