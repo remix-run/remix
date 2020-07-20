@@ -1,45 +1,61 @@
 import path from "path";
 
-import defineRoutes, { ConfigRoute } from "./defineRoutes";
+import _defineRoutes, { ConfigRoute } from "./defineRoutes";
 import getConventionalRoutes from "./getConventionalRoutes";
 
-export interface ConfigPaths {
-  /**
-   * Relative path where the loaders are found.
-   */
-  loadersDirectory: string;
+/**
+ * The user-provided config in remix.config.js.
+ */
+export interface AppRemixConfig {
+  paths: {
+    /**
+     * Relative path where the loaders are found.
+     */
+    loadersDirectory: string;
+
+    /**
+     * Relative path where the developer wants the server build to be saved.
+     */
+    serverBuildDirectory: string;
+
+    /**
+     * Relative path where the developer wants the client build to be saved
+     */
+    clientBuildDirectory: string;
+
+    /**
+     * URL prefix of the client build.
+     */
+    clientPublicPath: string;
+  };
 
   /**
-   * Relative path where the developer wants the server build to be saved.
+   * Configuration for the dev server.
    */
-  serverBuildDirectory: string;
+  devServer: {
+    port: number;
+  };
 
-  /**
-   * Relative path where the developer wants the client build to be saved
-   */
-  clientBuildDirectory: string;
-
-  /**
-   * URL prefix of the client build.
-   */
-  clientPublicPath: string;
+  routes: {
+    (defineRoutes: typeof _defineRoutes): Promise<ConfigRoute[]>;
+  };
 }
 
 /**
  * Combined config from the app's `remix.config.js` and the route config we use
  * throughout the server.
  */
-export interface AppRemixConfig {
-  paths: ConfigPaths;
+export interface RemixConfig extends AppRemixConfig {
+  appRoot: string;
   routesConfig: ConfigRoute[];
 }
 
 export default async function readRemixConfig(
   root?: string
-): Promise<AppRemixConfig> {
+): Promise<RemixConfig> {
   let appRoot = root || process.env.REMIX_ROOT || process.cwd();
-  let appRemixConfigPath = path.resolve("remix.config.js", appRoot);
-  let appRemixConfig = await import(appRemixConfigPath);
+  let appRemixConfigPath = path.resolve(appRoot, "remix.config.js");
+  let appRemixConfig: AppRemixConfig = await import(appRemixConfigPath);
 
   // get routes
   let getRoutes = appRemixConfig.routes || (() => []);
@@ -48,7 +64,7 @@ export default async function readRemixConfig(
     appRoot,
     appRemixConfig.paths.loadersDirectory
   );
-  let manualRoutes = await getRoutes({ defineRoutes });
+  let manualRoutes = await getRoutes(_defineRoutes);
   let conventionalRoutes = await getConventionalRoutes(
     appRoutesDirPath,
     appLoadersDirPath
@@ -56,11 +72,9 @@ export default async function readRemixConfig(
   // validateRoutes(conventionalRoutes, manualRoutes);
   let routesConfig = [...conventionalRoutes, ...manualRoutes];
 
-  appRemixConfig.paths.appRoot = appRoot;
-
-  // TODO: remove appRoot from root of config, it's already on paths.appRoot
   return {
     ...appRemixConfig,
+    appRoot,
     routesConfig
   };
 }

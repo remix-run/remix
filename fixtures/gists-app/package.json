@@ -1,0 +1,27 @@
+{
+  "name": "gists-app",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "remix run",
+    "build": "remix build",
+    "test": "jest --testRegex \".test.js$\"",
+    "test:jk": "echo \"No tests here\" && exit 0"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "history": "^5.0.0",
+    "node-fetch": "^2.6.0",
+    "react": "0.0.0-experimental-33c3af284",
+    "react-dom": "0.0.0-experimental-33c3af284",
+    "react-router-dom": "0.0.0-experimental-ffd8c7d0",
+    "remix": "2.0.0",
+    "use-throttle": "^0.0.3"
+  },
+  "devDependencies": {
+    "jest": "^26.0.1",
+    "puppeteer": "^3.0.4"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}
