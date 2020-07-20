@@ -1,5 +1,11 @@
 {
   "name": "@remix-run/core",
   "version": "0.0.0",
-  "repository": "https://github.com/remix-run/packages"
+  "repository": "https://github.com/remix-run/packages",
+  "dependencies": {
+    "history": "^5.0.0",
+    "react": "0.0.0-experimental-33c3af284",
+    "react-dom": "0.0.0-experimental-33c3af284",
+    "react-router-dom": "0.0.0-experimental-ffd8c7d0"
+  }
 }
