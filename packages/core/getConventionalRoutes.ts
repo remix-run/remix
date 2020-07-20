@@ -8,7 +8,7 @@ export default async function getConventionalRoutes(
   routesDir: string,
   loadersDir: string
 ) {
-  await validateDirectories(routesDir, loadersDir);
+  // await validateDirectories(routesDir, loadersDir);
   let [routesTree, loadersTree] = await Promise.all([
     readdirRecursively(routesDir),
     readdirRecursively(loadersDir)
@@ -31,9 +31,9 @@ export default async function getConventionalRoutes(
 let sourceRegex = /\.(jsx?|tsx?|mdx?)$/;
 let fileExtensionRegex = /(.*)\.([^.]+)$/;
 
-async function validateDirectories(routesDir: string, loadersDir: string) {
-  // TODO: validate the conventional directories exist
-}
+// async function validateDirectories(routesDir: string, loadersDir: string) {
+//   // TODO: validate the conventional directories exist
+// }
 
 function defineFileTree(
   routesTree: DirTree,
