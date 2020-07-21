@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from "path";
 import { parsePath } from "history";
 
