@@ -16,5 +16,11 @@
     "skipLibCheck": true,
     "jsx": "react"
   },
-  "include": ["types/global.d.ts", "packages/**/*.ts", "packages/**/*.tsx"]
+  "include": ["types/global.d.ts", "packages/**/*"],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/**",
+    "**/__fixtures__/**",
+    "**/__snapshots__/**"
+  ]
 }
