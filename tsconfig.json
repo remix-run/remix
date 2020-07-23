@@ -1,22 +1,22 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "module": "esnext",
-    "target": "es2018",
+    "lib": ["esnext", "dom", "dom.iterable"],
     "moduleResolution": "node",
-    "downlevelIteration": true,
     "esModuleInterop": true,
+    "jsx": "react",
+
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
+
+    "target": "es2018",
+    "module": "commonjs",
+    "outDir": "build/@remix-run",
     "declaration": true,
-    "outDir": ".tsc-output",
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "jsx": "react"
+    "sourceMap": true
   },
-  "include": ["types/global.d.ts", "packages/**/*"],
+  "include": ["types/**/*", "packages/**/*"],
   "exclude": [
     "node_modules",
     "**/__tests__/**",
