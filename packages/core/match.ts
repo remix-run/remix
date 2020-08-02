@@ -1,8 +1,27 @@
 // @ts-nocheck
 import path from "path";
 import { matchRoutes } from "react-router-dom";
+import { RemixConfig } from "./readRemixConfig";
 
-export default async function match({
+enum DataLoadStatus {
+  NoMatch,
+  Success,
+  NotFound,
+  Error
+}
+
+export async function matchAndLoadData(
+  remixConfig: RemixConfig,
+  url: string,
+  appLoadContext: any
+) {
+  return {
+    context: [{}, {}],
+    status: DataLoadStatus.Success
+  };
+}
+
+export async function matchOld({
   entry,
   url,
   loadContext,
