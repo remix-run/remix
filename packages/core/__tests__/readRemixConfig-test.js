@@ -11,7 +11,7 @@ describe("readRemixConfig", () => {
     let config = await readRemixConfig(root);
     expect(config).toMatchInlineSnapshot(`
       Object {
-        "appRoot": "/Users/michael/Projects/remix/fixtures/gists-app",
+        "appRoot": "/Users/ryan/Work/remix/fixtures/gists-app",
         "devServer": Object {
           "port": 8002,
         },

@@ -2,20 +2,37 @@ import { matchAndLoadData } from "../match";
 import readRemixConfig from "../readRemixConfig";
 import path from "path";
 
-describe("match", () => {
+describe("matchAndLoadData", () => {
+  let root;
+  let config;
+
+  beforeAll(async () => {
+    root = path.resolve(__dirname, "../../../fixtures/gists-app");
+    config = await readRemixConfig(root);
+  });
+
   it("works", async () => {
-    let root = path.resolve(__dirname, "../../../fixtures/gists-app");
-    let config = await readRemixConfig(root);
     let url = "/gists";
     let appLoadContext = null;
     let result = await matchAndLoadData(config, url, appLoadContext);
     expect(result).toMatchInlineSnapshot(`
       Object {
-        "context": Array [
+        "data": Array [
           Object {},
           Object {},
         ],
-        "status": 1,
+        "status": "SUCCESS",
+      }
+    `);
+  });
+
+  it("returns NoMatch status", async () => {
+    let url = "/carnitas/street/tacos/are/the/best";
+    let appLoadContext = null;
+    let result = await matchAndLoadData(config, url, appLoadContext);
+    expect(result).toMatchInlineSnapshot(`
+      Object {
+        "status": "NO_MATCH",
       }
     `);
   });

@@ -4,21 +4,48 @@ import { matchRoutes } from "react-router-dom";
 import { RemixConfig } from "./readRemixConfig";
 
 enum DataLoadStatus {
-  NoMatch,
-  Success,
-  NotFound,
-  Error
+  NoMatch = "NO_MATCH",
+  Success = "SUCCESS",
+  NotFound = "NOT_FOUND",
+  Error = "ERROR"
 }
+
+export interface SuccessLoadResult {
+  data: any[];
+  status: DataLoadStatus.Success;
+}
+
+export interface ErrorLoadResult {
+  error: Error;
+  status: DataLoadStatus.Error;
+}
+
+export interface NoMatchLoadResult {
+  status: DataLoadStatus.NoMatch;
+}
+
+export type LoadResult = SuccessLoadResult | ErrorLoadResult;
 
 export async function matchAndLoadData(
   remixConfig: RemixConfig,
   url: string,
   appLoadContext: any
-) {
-  return {
-    context: [{}, {}],
+): Promise<LoadResult> {
+  let matches = matchRoutes(remixConfig.routesConfig, url);
+
+  let notFound = is404Match(matches);
+  if (notFound) {
+    return { status: DataLoadStatus.NoMatch };
+  }
+
+  return Promise.resolve({
+    data: [{}, {}],
     status: DataLoadStatus.Success
-  };
+  });
+}
+
+function is404Match(matches) {
+  return matches.length === 1 && matches[0].route.path === "*";
 }
 
 export async function matchOld({
