@@ -85,6 +85,8 @@ async function loadData(
   });
 }
 
+type fixme = any;
+
 // TODO: we probably want this to stream data as it becomes available to fully
 // take advantage of suspense
 export async function matchAndLoadData(
@@ -92,7 +94,7 @@ export async function matchAndLoadData(
   url: string,
   appLoadContext: any
 ): Promise<LoadResult> {
-  let matches = matchRoutes(remixConfig.routesConfig, url);
+  let matches = matchRoutes(remixConfig.routesConfig as fixme, url);
   if (matches === null) throw new Error("Missing routes/404.js");
 
   let notFound = matches.length === 1 && matches[0].route.path === "*";
@@ -101,7 +103,12 @@ export async function matchAndLoadData(
   }
 
   let location = createLocation(url);
-  let data = await loadData(remixConfig, matches, appLoadContext, location);
+  let data = await loadData(
+    remixConfig,
+    matches as fixme,
+    appLoadContext,
+    location
+  );
 
   return {
     data,
