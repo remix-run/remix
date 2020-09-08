@@ -1,15 +1,21 @@
 import path from "path";
+import { builtinModules } from "module";
 import copy from "rollup-plugin-copy";
 import babel from "@rollup/plugin-babel";
+import nodeResolve from "@rollup/plugin-node-resolve";
 
 /** @type {import('rollup').RollupOptions} */
 let core = {
+  external: [...builtinModules],
   input: path.resolve(__dirname, "packages/core/index.ts"),
   output: {
     file: "build/@remix-run/core/index.js",
     format: "cjs"
   },
   plugins: [
+    nodeResolve({
+      extensions: [".ts", ".tsx"]
+    }),
     babel({
       babelHelpers: "bundled",
       exclude: /node_modules/,
@@ -28,6 +34,7 @@ let core = {
 
 /** @type {import('rollup').RollupOptions} */
 let express = {
+  external: [...builtinModules],
   external: ["@remix-run/core"],
   input: path.resolve(__dirname, "packages/express/index.ts"),
   output: {
@@ -35,6 +42,9 @@ let express = {
     format: "cjs"
   },
   plugins: [
+    nodeResolve({
+      extensions: [".ts", ".tsx"]
+    }),
     babel({
       babelHelpers: "bundled",
       exclude: /node_modules/,

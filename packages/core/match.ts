@@ -3,30 +3,26 @@ import { matchRoutes } from "react-router-dom";
 import { RemixConfig } from "./readRemixConfig";
 
 enum DataLoadStatus {
-  NoMatch = "NO_MATCH",
   Success = "SUCCESS",
   NotFound = "NOT_FOUND",
   Error = "ERROR"
 }
 
 export interface SuccessLoadResult {
-  data: any[];
   status: DataLoadStatus.Success;
+  id: string;
+  data: any[] | null;
 }
 
 export interface ErrorLoadResult {
-  error: Error;
   status: DataLoadStatus.Error;
+  id: string;
+  error: string;
 }
 
-export interface NoMatchLoadResult {
-  status: DataLoadStatus.NoMatch;
-}
+export type LoadResult = SuccessLoadResult | ErrorLoadResult;
 
-export type LoadResult =
-  | SuccessLoadResult
-  | NoMatchLoadResult
-  | ErrorLoadResult;
+export type MatchAndLoadResult = LoadResult[] | null;
 
 type Location = {
   pathname: string;
@@ -54,7 +50,7 @@ async function loadData(
   matches: RouteMatch[],
   loadContext: any,
   location: Location
-) {
+): Promise<LoadResult[]> {
   let loaders = matches.map(match => {
     if (match.route.loader === null) {
       return null;
@@ -70,19 +66,27 @@ async function loadData(
     return require(requirePath);
   });
 
-  let promises = loaders.map((loader, index) => {
-    if (loader === null) {
-      return null;
-    } else {
+  let promises = loaders.map(
+    async (loader, index): Promise<LoadResult> => {
+      let id = matches[index].route.id;
       let params = matches[index].params;
-      return loader({ params, context: loadContext, location });
+
+      if (loader == null) {
+        return { status: DataLoadStatus.Success, id, data: null };
+      } else {
+        try {
+          let data = await loader({ params, context: loadContext, location });
+          return { status: DataLoadStatus.Success, id, data };
+        } catch (error) {
+          return { status: DataLoadStatus.Error, id, error: error.message };
+        }
+      }
     }
-  });
+  );
 
   let results = await Promise.all(promises);
-  return results.map((data, index) => {
-    return { id: matches[index].route.id, data };
-  });
+
+  return results;
 }
 
 type fixme = any;
@@ -93,25 +97,22 @@ export async function matchAndLoadData(
   remixConfig: RemixConfig,
   url: string,
   appLoadContext: any
-): Promise<LoadResult> {
+): Promise<MatchAndLoadResult> {
   let matches = matchRoutes(remixConfig.routesConfig as fixme, url);
+
+  // TODO: Maybe warn the user about missing 404 when we first validate their
+  // routes config instead of waiting until now...
   if (matches === null) throw new Error("Missing routes/404.js");
 
   let notFound = matches.length === 1 && matches[0].route.path === "*";
-  if (notFound) {
-    return { status: DataLoadStatus.NoMatch };
-  }
+  if (notFound) return null;
 
   let location = createLocation(url);
-  let data = await loadData(
+
+  return await loadData(
     remixConfig,
     matches as fixme,
     appLoadContext,
     location
   );
-
-  return {
-    data,
-    status: DataLoadStatus.Success
-  };
 }

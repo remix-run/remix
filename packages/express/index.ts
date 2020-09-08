@@ -1,3 +1,3 @@
-import { createHttpHandler } from "@remix-run/core";
+import { createPlatform } from "@remix-run/core";
 
-export default createHttpHandler();
+export default createPlatform({});

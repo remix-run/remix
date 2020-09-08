@@ -68,6 +68,22 @@ describe("readRemixConfig", () => {
             "path": "/",
           },
           Object {
+            "children": Array [
+              Object {
+                "component": "routes/payments/error.js",
+                "id": "routes/payments/error",
+                "loader": "payments/error.js",
+                "parentId": "routes/payments",
+                "path": "error",
+              },
+            ],
+            "component": "routes/payments.js",
+            "id": "routes/payments",
+            "loader": null,
+            "parentId": null,
+            "path": "payments",
+          },
+          Object {
             "component": "pages/one.mdx",
             "id": "pages/one",
             "loader": null,

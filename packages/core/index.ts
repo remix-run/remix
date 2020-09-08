@@ -1,4 +1,1 @@
-/* export { default as createHttpHandler } from "./createHttpHandler"; */
-function createHttpHandler() {}
-
-export { createHttpHandler };
+export { default as createRemix } from "./createPlatform";
