@@ -1,11 +1,9 @@
-import path from "path";
-import { promises as fsp } from "fs";
-import { exec, spawn } from "child_process";
-import { promisify } from "util";
-import { fileURLToPath } from "url";
+const path = require("path");
+const fsp = require("fs").promises;
+const { exec, spawn } = require("child_process");
+const { promisify } = require("util");
 
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-const buildDir = path.resolve(dirname, "../build/@remix-run");
+const buildDir = path.resolve(__dirname, "../build/@remix-run");
 
 const x = promisify(exec);
 
@@ -36,7 +34,7 @@ async function run() {
 
   // 1. Publish all packages, starting with core
   let buildNames = await fsp.readdir(buildDir);
-  buildNames.sort((a, b) => (a === "core" ? -1 : 0));
+  buildNames.sort(a => (a === "core" ? -1 : 0));
 
   for (let name of buildNames) {
     await npm(["publish", path.join(buildDir, name)], {

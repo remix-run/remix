@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "noEmit": true,
+
     "lib": ["esnext", "dom", "dom.iterable"],
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -8,13 +10,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noImplicitReturns": true,
-
-    "target": "es2018",
-    "module": "commonjs",
-    "outDir": "build/@remix-run",
-    "declaration": true,
-    "sourceMap": true
+    "noImplicitReturns": true
   },
   "include": ["types/**/*", "packages/**/*"],
   "exclude": [

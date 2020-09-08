@@ -1,12 +1,11 @@
 {
   "private": true,
   "name": "remix",
-  "type": "module",
   "scripts": {
     "clean": "git clean -fdX .",
-    "build": "node ./scripts/build.js",
+    "build": "rollup -c",
     "publish": "node ./scripts/publish.js",
-    "test": "node ./scripts/test.js",
+    "test": "jest",
     "version": "node ./scripts/version.js"
   },
   "workspaces": [
@@ -19,6 +18,7 @@
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-react": "^7.10.4",
     "@babel/preset-typescript": "^7.10.4",
+    "@rollup/plugin-babel": "^5.2.0",
     "@types/jest": "^25.2.3",
     "@types/react": "^16.9.41",
     "@types/react-test-renderer": "^16.9.2",
@@ -43,6 +43,7 @@
     "react-router-dom": "0.0.0-experimental-ffd8c7d0",
     "react-test-renderer": "0.0.0-experimental-33c3af284",
     "rollup": "^2.21.0",
+    "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.2",
     "typescript": "^3.9.6"
   },

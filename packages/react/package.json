@@ -2,7 +2,6 @@
   "name": "@remix-run/react",
   "version": "0.0.0",
   "repository": "https://github.com/remix-run/packages",
-  "type": "commonjs",
   "peerDependencies": {
     "history": ">=5",
     "react": "0.0.0-experimental-33c3af284",

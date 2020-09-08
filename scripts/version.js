@@ -1,14 +1,12 @@
-import path from "path";
-import { fileURLToPath } from "url";
-import { execSync } from "child_process";
+const path = require("path");
+const { execSync } = require("child_process");
 
-import chalk from "chalk";
-import Confirm from "prompt-confirm";
-import jsonfile from "jsonfile";
-import semver from "semver";
+const chalk = require("chalk");
+const Confirm = require("prompt-confirm");
+const jsonfile = require("jsonfile");
+const semver = require("semver");
 
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-const packagesDir = path.resolve(dirname, "../packages");
+const packagesDir = path.resolve(__dirname, "../packages");
 
 function invariant(cond, message) {
   if (!cond) throw new Error(message);
