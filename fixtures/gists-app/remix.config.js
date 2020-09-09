@@ -1,22 +1,18 @@
-import { join } from "path";
-import { promises as fs } from "fs";
+const path = require("path");
+const fs = require("fs").promises;
 
-export const paths = {
-  loadersDirectory: "./loaders",
-  serverBuildDirectory: "./build",
-  clientBuildDirectory: "./public/build",
-  clientPublicPath: "/build/"
-};
+exports.loadersDirectory = "./loaders";
+exports.serverBuildDirectory = "./build";
+exports.clientBuildDirectory = "./public/build";
+exports.clientPublicPath = "/build/";
 
-export const devServer = {
-  port: 8002
-};
+exports.devServerPort = 8002;
 
 // custom routes
-export async function routes(defineRoutes) {
+exports.routes = async function (defineRoutes) {
   // test that it waits for the config
   // await new Promise(res => setTimeout(res, 5000));
-  let pages = await fs.readdir(join(__dirname, "src", "pages"));
+  let pages = await fs.readdir(path.join(__dirname, "src", "pages"));
 
   return defineRoutes(route => {
     // create some custom routes from the pages/ dir
@@ -25,4 +21,4 @@ export async function routes(defineRoutes) {
       route(path, `pages/${page}`);
     }
   });
-}
+};

@@ -60,8 +60,7 @@ async function loadData(
 
     // TODO: maybe resolve this stuff at initialization instead
     let modulePath = path.resolve(
-      remixConfig.appRoot,
-      remixConfig.paths.loadersDirectory,
+      remixConfig.loadersDirectory,
       match.route.loader
     );
     let requirePath = path.relative(__dirname, modulePath);

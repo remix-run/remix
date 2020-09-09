@@ -9,12 +9,15 @@ import replace from "@rollup/plugin-replace";
 import type { RemixConfig } from "@remix-run/core";
 import { readConfig } from "@remix-run/core";
 
-import type { CompilerMode } from "./createCompilerInputOptions";
-// import createCompilerInputOptions from "./createCompilerInputOptions";
+import manifest from "./rollup/manifest";
+
+export enum BuildMode {
+  Production = "production",
+  Development = "development"
+}
 
 export interface BuildOptions {
-  mode?: CompilerMode;
-  outputDir?: string;
+  mode?: BuildMode;
   remixRoot?: string;
 }
 
@@ -35,13 +38,20 @@ function createInputFromRoutesConfig(
 }
 
 export default async function build({
-  mode = "production",
+  mode = BuildMode.Production,
   remixRoot
 }: BuildOptions = {}) {
   let config = await readConfig(remixRoot);
-  let input = createInputFromRoutesConfig(config.routesConfig, config.appRoot);
+  let input = createInputFromRoutesConfig(
+    config.routesConfig,
+    config.rootDirectory
+  );
 
-  input.__entry_server__ = path.join(config.appRoot, "src", "entry-server");
+  input.__entry_server__ = path.join(
+    config.rootDirectory,
+    "src",
+    "entry-server"
+  );
 
   // Prune out .mdx for now...
   for (let key in input) {
@@ -81,6 +91,9 @@ export default async function build({
       commonjs(),
       replace({
         "process.env.NODE_ENV": JSON.stringify(mode)
+      }),
+      manifest({
+        outputDir: config.serverBuildDirectory
       })
     ]
   };

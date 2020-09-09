@@ -6,19 +6,13 @@ describe("readConfig", () => {
   it("generates a config", async () => {
     let root = path.resolve(__dirname, "../../../fixtures/gists-app");
     let config = await readConfig(root);
+
     expect(config).toMatchInlineSnapshot(`
       Object {
-        "appRoot": "/Users/michael/Projects/remix/fixtures/gists-app",
-        "devServer": Object {
-          "port": 8002,
-        },
-        "paths": Object {
-          "clientBuildDirectory": "./public/build",
-          "clientPublicPath": "/build/",
-          "loadersDirectory": "./loaders",
-          "serverBuildDirectory": "./build",
-        },
-        "routes": [Function],
+        "clientBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/public/build",
+        "clientPublicPath": "/build",
+        "devServerPort": 8002,
+        "loadersDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/loaders",
         "routesConfig": Array [
           Object {
             "component": "routes/404.js",
@@ -95,6 +89,8 @@ describe("readConfig", () => {
             "path": "/page/two",
           },
         ],
+        "routesDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/src/routes",
+        "serverBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/build",
       }
     `);
   });
