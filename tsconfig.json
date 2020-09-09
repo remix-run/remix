@@ -6,6 +6,8 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "jsx": "react",
+    "downlevelIteration": true,
+    "target": "es2018",
 
     "strict": true,
     "noUnusedLocals": true,
