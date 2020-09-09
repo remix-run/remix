@@ -1,5 +1,5 @@
 import React from "react";
-import { useRouteData } from "remix";
+import { useRouteData } from "@remix-run/react";
 
 export function meta() {
   return {

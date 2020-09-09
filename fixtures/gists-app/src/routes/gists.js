@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
 
 export default function Gists() {
   return (
