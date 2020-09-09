@@ -9,6 +9,7 @@
     "version": "node ./scripts/version.js"
   },
   "workspaces": [
+    "packages/compiler",
     "packages/core",
     "packages/express",
     "packages/react"
