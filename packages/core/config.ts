@@ -1,6 +1,7 @@
 import path from "path";
 
-import _defineRoutes, { ConfigRoute } from "./defineRoutes";
+import type { ConfigRoute } from "./defineRoutes";
+import _defineRoutes from "./defineRoutes";
 import getConventionalRoutes from "./getConventionalRoutes";
 
 /**
@@ -50,17 +51,15 @@ export interface RemixConfig extends AppRemixConfig {
   routesConfig: ConfigRoute[];
 }
 
-export default async function readRemixConfig(
-  root?: string
-): Promise<RemixConfig> {
-  let appRoot = root || process.env.REMIX_ROOT || process.cwd();
-  let appRemixConfigFile = path.resolve(appRoot, "remix.config.js");
+export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
+  let rootDir = remixRoot || process.env.REMIX_ROOT || process.cwd();
+  let appRemixConfigFile = path.resolve(rootDir, "remix.config.js");
   let appRemixConfig: AppRemixConfig = require(appRemixConfigFile);
 
   // get routes
   let getRoutes = appRemixConfig.routes || (() => []);
-  let conventionalRoutesDir = path.join(appRoot, "src", "routes");
-  let appLoadersDir = path.join(appRoot, appRemixConfig.paths.loadersDirectory);
+  let conventionalRoutesDir = path.join(rootDir, "src", "routes");
+  let appLoadersDir = path.join(rootDir, appRemixConfig.paths.loadersDirectory);
   let manualRoutes = await getRoutes(_defineRoutes);
   let conventionalRoutes = await getConventionalRoutes(
     conventionalRoutesDir,
@@ -71,7 +70,7 @@ export default async function readRemixConfig(
 
   return {
     ...appRemixConfig,
-    appRoot,
+    appRoot: rootDir,
     routesConfig
   };
 }

@@ -1,3 +1,6 @@
+export type { RemixConfig } from "./config";
+export { readConfig } from "./config";
+
 export type {
   HeadersInit,
   Body,
@@ -19,4 +22,3 @@ export {
   Response,
   createRequestHandler
 } from "./platform";
-// export { default as createPlatform } from "./createPlatform";

@@ -1,14 +1,11 @@
 import path from "path";
-// import { fileURLToPath } from "url";
 
-import readRemixConfig from "../readRemixConfig";
+import { readConfig } from "../config";
 
-// let dirname = path.dirname(fileURLToPath(import.meta.url));
-
-describe("readRemixConfig", () => {
+describe("readConfig", () => {
   it("generates a config", async () => {
     let root = path.resolve(__dirname, "../../../fixtures/gists-app");
-    let config = await readRemixConfig(root);
+    let config = await readConfig(root);
     expect(config).toMatchInlineSnapshot(`
       Object {
         "appRoot": "/Users/michael/Projects/remix/fixtures/gists-app",

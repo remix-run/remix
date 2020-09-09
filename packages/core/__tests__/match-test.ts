@@ -1,8 +1,9 @@
+import path from "path";
+
 import { Request } from "../platform";
 import { matchAndLoadData } from "../match";
-import type { RemixConfig } from "../readRemixConfig";
-import readRemixConfig from "../readRemixConfig";
-import path from "path";
+import type { RemixConfig } from "../config";
+import { readConfig } from "../config";
 
 describe("matchAndLoadData", () => {
   let root: string;
@@ -10,7 +11,7 @@ describe("matchAndLoadData", () => {
 
   beforeAll(async () => {
     root = path.resolve(__dirname, "../../../fixtures/gists-app");
-    config = await readRemixConfig(root);
+    config = await readConfig(root);
   });
 
   it("loads data", async () => {

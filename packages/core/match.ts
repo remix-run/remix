@@ -1,8 +1,8 @@
 import path from "path";
 import { matchRoutes } from "react-router-dom";
 
+import type { RemixConfig } from "./config";
 import type { Request } from "./platform";
-import { RemixConfig } from "./readRemixConfig";
 
 enum DataLoadStatus {
   Success = "SUCCESS",

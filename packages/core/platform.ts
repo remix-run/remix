@@ -1,7 +1,8 @@
 import { Readable } from "stream";
 import { STATUS_CODES } from "http";
+
 import { matchAndLoadData } from "./match";
-import readConfig from "./readRemixConfig";
+import { readConfig } from "./config";
 
 export type HeadersInit = Record<string, string>;
 
