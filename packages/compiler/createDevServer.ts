@@ -4,9 +4,10 @@ import morgan from "morgan";
 import * as rollup from "rollup";
 import onExit from "signal-exit";
 
-import watch from "./watch";
+import { watch } from "./core";
 import { runtime as reactRefreshRuntime } from "./reactRefresh";
 import { EsmHmrEngine } from "./vendor/esm-hmr/server";
+import { debugBundle, debugChunk } from "./rollupDebugUtils";
 
 type ReqResPair = { req: express.Request; res: express.Response };
 
@@ -26,6 +27,10 @@ export default function createDevServer({
   app.use(morgan("dev"));
   app.use(express.static(publicDir));
 
+  app.get("/favicon.ico", (_req: express.Request, res: express.Response) => {
+    res.end();
+  });
+
   app.get("/", (_req: express.Request, res: express.Response) => {
     // TODO: Add routing ... do we need to wait for the bundle to be ready
     // before we can render some HTML?
@@ -36,7 +41,16 @@ export default function createDevServer({
     res.set({ "Content-Type": "text/html" }).send(html);
   });
 
+  app.use("/_npm", handleDependencyRequest);
   app.get("*", handleRequest);
+
+  function handleDependencyRequest(
+    req: express.Request,
+    res: express.Response
+  ) {
+    let entry = req.url.slice(1).replace(/\.js$/, "");
+    // TODO
+  }
 
   let bundle: rollup.RollupOutput | null = null;
 
@@ -55,6 +69,7 @@ export default function createDevServer({
           hoistTransitiveImports: flattenWaterfall,
           sourcemap: true
         });
+        handleChanges(bundle);
         flushPendingQueue();
         break;
     }
@@ -103,7 +118,58 @@ export default function createDevServer({
     res.end(output.source);
   }
 
-  function handleHotUpdate(file) {}
+  let prevBundle: rollup.RollupOutput;
+
+  function handleChanges(bundle: rollup.RollupOutput) {
+    console.log(debugBundle(bundle));
+
+    if (prevBundle) {
+      let changedChunks = getChunks(bundle).filter(chunk => {
+        let prevChunk = getChunks(prevBundle).find(
+          item => item.name === chunk.name
+        );
+        return !prevChunk || prevChunk.code !== chunk.code;
+      });
+
+      triggerHotUpdates(changedChunks);
+    }
+
+    prevBundle = bundle;
+  }
+
+  function triggerHotUpdates(chunks: rollup.OutputChunk[]) {
+    let chunk = chunks[0];
+    let updateUrl = getOutputUrl(chunk.fileName);
+
+    console.log({ node: hmrEngine.getEntry(updateUrl) });
+
+    if (hmrEngine.getEntry(updateUrl)) {
+      updateOrBubble(updateUrl, new Set());
+    }
+  }
+
+  // Copied from https://github.com/pikapkg/snowpack/blob/34ea7af320fda46bd8a5d25d6243682a11060189/packages/snowpack/src/commands/dev.ts#L802
+  function updateOrBubble(url: string, visited: Set<string>) {
+    if (visited.has(url)) return;
+    visited.add(url);
+
+    let node = hmrEngine.getEntry(url);
+
+    if (node && node.isHmrEnabled) {
+      hmrEngine.broadcastMessage({ type: "update", url });
+    }
+
+    if (node && node.isHmrAccepted) {
+      // Found a boundary, no bubbling needed.
+    } else if (node && node.dependents.size > 0) {
+      hmrEngine.markEntryForReplacement(node, true);
+      node.dependents.forEach(dep => updateOrBubble(dep, visited));
+    } else {
+      // We've reached the top, trigger a full page refresh.
+      // hmrEngine.broadcastMessage({ type: "reload" });
+      console.log({ reload: true });
+    }
+  }
 
   // TODO: Support https/http2
   let server = http.createServer(app);
@@ -113,20 +179,51 @@ export default function createDevServer({
     hmrEngine.disconnectAllClients();
   });
 
-  setInterval(() => {
-    hmrEngine.broadcastMessage({ type: "update", url: "/_src/message.js" });
-  }, 5000);
-
   return server;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
+function serveBundle(
+  bundle: rollup.RollupOutput,
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  let url = req.url;
+  let wantsSourceMap = false;
+  if (url.endsWith(".map")) {
+    url = url.slice(0, -4);
+    wantsSourceMap = true;
+  }
+
+  let output = getOutput(bundle, url);
+  if (!output) return next();
+
+  if (output.type === "chunk") {
+    if (wantsSourceMap) {
+      sendSourceMap(res, output.map);
+    } else {
+      sendJavaScript(res, output.code, getSourceMapUrl(req));
+    }
+  } else {
+    // TODO: Get content-type from output.fileName
+    res.end(output.source);
+  }
+}
+
+function getChunks(bundle: rollup.RollupOutput): rollup.OutputChunk[] {
+  return bundle.output.filter(
+    item => item.type === "chunk"
+  ) as rollup.OutputChunk[];
+}
+
+function getOutputUrl(fileName: string) {
+  return "/" + fileName.split("\\").join("/");
+}
+
 function getOutput(bundle: rollup.RollupOutput, url: string) {
-  return bundle.output.find(item => {
-    let itemUrl = "/" + item.fileName.split("\\").join("/");
-    return url === itemUrl;
-  });
+  return bundle.output.find(item => url === getOutputUrl(item.fileName));
 }
 
 function getSourceMapUrl(req: express.Request) {
@@ -152,10 +249,8 @@ function sendJavaScript(
 }
 
 function createHtml({
-  hmrWebsocketUrl = "ws://localhost:3000/",
   moduleUrls = []
 }: {
-  hmrWebsocketUrl?: string;
   moduleUrls?: string[];
 } = {}): string {
   return `<!DOCTYPE html>
@@ -167,9 +262,6 @@ function createHtml({
   <body>
     ${reactRefreshRuntime}
     <div id="root"></div>
-    <script>
-      HMR_WEBSOCKET_URL = ${JSON.stringify(hmrWebsocketUrl)};
-    </script>
     ${moduleUrls
       .map(url => `<script type="module" src="${url}"></script>`)
       .join("")}

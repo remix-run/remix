@@ -1,7 +1,9 @@
 import path from "path";
 import { promises as fsp } from "fs";
 import pluginutils from "@rollup/pluginutils";
+import * as chokidar from "chokidar";
 import * as rollup from "rollup";
+import tmp from "tmp";
 
 import babelTransform from "./babelTransform";
 import { rewriteIds, enableMetaHot } from "./babelPlugins";
@@ -76,39 +78,69 @@ async function createProxyModule(id: string, file: string): Promise<string> {
 }
 
 /**
+ * Enables setting the compiler's input dynamically via a hook function.
+ */
+export function watchInput({
+  watchFile,
+  getInput
+}: {
+  watchFile: string;
+  getInput: (options: rollup.InputOptions) => rollup.InputOption;
+}): rollup.Plugin {
+  let tmpfile = tmp.fileSync();
+  let startedWatcher = false;
+
+  return {
+    name: "watch-input",
+    options(options: rollup.InputOptions) {
+      return {
+        ...options,
+        input: getInput(options)
+      };
+    },
+    buildStart() {
+      // This is a workaround for a bug in Rollup where this.addWatchFile does
+      // not correctly listen for files that are added to a directory.
+      // See https://github.com/rollup/rollup/issues/3704
+      if (!startedWatcher) {
+        chokidar.watch(watchFile).on("add", async () => {
+          let now = new Date();
+          await fsp.utimes(tmpfile.name, now, now);
+        });
+
+        startedWatcher = true;
+      }
+
+      this.addWatchFile(tmpfile.name);
+    }
+  };
+}
+
+/**
  * Enables hot module reloading by transforming all chunks that contain a
  * reference to `import.meta.hot` to enable that API.
  */
 export function enableHmr({
-  fileName = "_hmr/client.js",
+  fileName,
   hmrClientCode,
   include,
   exclude
 }: {
-  fileName?: string;
+  fileName: string;
   hmrClientCode: string;
   include?: string | RegExp | (string | RegExp)[];
   exclude?: string | RegExp | (string | RegExp)[];
 }): rollup.Plugin {
   let filter = pluginutils.createFilter(include, exclude);
   let hmrClientModuleId = "\0__HMR_CLIENT_MODULE_ID__";
-  let emittedChunk = false;
 
   return {
     name: "enable-hmr",
     buildStart() {
-      emittedChunk = false;
+      this.emitFile({ type: "chunk", id: hmrClientModuleId, fileName });
     },
-    resolveId(id: string, importer?: string) {
-      if (id === hmrClientModuleId) {
-        if (!emittedChunk) {
-          this.emitFile({ type: "chunk", id, importer, fileName });
-          emittedChunk = true;
-        }
-
-        return id;
-      }
-
+    resolveId(id: string) {
+      if (id === hmrClientModuleId) return id;
       return null;
     },
     load(id: string) {
@@ -159,6 +191,34 @@ export function npmChunks({
         ...options,
         manualChunks: chunks
       };
+    }
+  };
+}
+
+/**
+ * Externalizes all bare (npm) imports and optionally rewrites them to something
+ * else in the output bundle.
+ */
+export function npmExternals({
+  rewriteId
+}: {
+  rewriteId?: (id: string) => string;
+}): rollup.Plugin {
+  return {
+    name: "npm-externals",
+    resolveId(id: string) {
+      if (isMagicModuleId(id)) return null;
+      if (isBareModuleId(id)) return { id, external: true };
+      return null;
+    },
+    async generateBundle(
+      _options: rollup.OutputOptions,
+      bundle: rollup.OutputBundle
+    ) {
+      if (!rewriteId) return;
+      await rewriteChunkIds(bundle, id =>
+        isBareModuleId(id) ? rewriteId(id) : id
+      );
     }
   };
 }
@@ -236,38 +296,41 @@ export function rewriteBareIds(
       _options: rollup.OutputOptions,
       bundle: rollup.OutputBundle
     ) {
-      for (let fileName of Object.keys(bundle)) {
-        let chunkOrAsset = bundle[fileName];
-
-        if (chunkOrAsset.type === "chunk") {
-          // Rewrite all bare module ids to come from /_npm/ so the browser
-          // knows where to find them.
-          let chunk = chunkOrAsset;
-          let rewrittenIds: Record<string, string> = {};
-
-          let { code, map } = await babelTransform(chunk.code, {
-            configFile: false,
-            plugins: [
-              rewriteIds(id => {
-                if (!isBareModuleId(id)) return id;
-                let newId = rewriteId(id);
-                rewrittenIds[id] = newId;
-                return newId;
-              })
-            ],
-            inputSourceMap: chunk.map,
-            sourceFileName: fileName,
-            sourceMaps: true,
-            // Avoid trying to style this module since it can take a while.
-            comments: false,
-            compact: true
-          });
-
-          chunk.code = code as string;
-          chunk.map = map as rollup.SourceMap;
-          chunk.imports = chunk.imports.map(id => rewrittenIds[id] || id);
-        }
-      }
+      await rewriteChunkIds(bundle, id =>
+        isBareModuleId(id) ? rewriteId(id) : id
+      );
     }
   };
+}
+
+async function rewriteChunkIds(
+  bundle: rollup.OutputBundle,
+  rewriteId: (id: string) => string
+) {
+  for (let fileName of Object.keys(bundle)) {
+    let chunk = bundle[fileName];
+    if (chunk.type !== "chunk") continue;
+
+    let changedIds: Record<string, string> = {};
+    let { code, map } = await babelTransform(chunk.code, {
+      configFile: false,
+      plugins: [
+        rewriteIds(id => {
+          let newId = rewriteId(id);
+          if (id !== newId) changedIds[id] = newId;
+          return newId;
+        })
+      ],
+      inputSourceMap: chunk.map,
+      sourceFileName: fileName,
+      sourceMaps: true,
+      // Avoid trying to style this module since it can take a while.
+      comments: false,
+      compact: true
+    });
+
+    chunk.code = code as string;
+    chunk.map = map as rollup.SourceMap;
+    chunk.imports = chunk.imports.map(id => changedIds[id] || id);
+  }
 }

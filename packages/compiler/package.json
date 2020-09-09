@@ -15,7 +15,10 @@
     "@types/babel__core": "^7.1.9",
     "@types/express": "^4.17.7",
     "@types/morgan": "^1.9.1",
+    "@types/signal-exit": "^3.0.0",
+    "@types/tmp": "^0.2.0",
     "@types/ws": "^7.2.6",
+    "chokidar": "^3.4.1",
     "date-fns": "^2.14.0",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
@@ -23,6 +26,7 @@
     "react-dom": "^16.13.1",
     "rollup": "^2.21.0",
     "signal-exit": "^3.0.3",
+    "tmp": "^0.2.1",
     "ws": "^7.3.1"
   }
 }

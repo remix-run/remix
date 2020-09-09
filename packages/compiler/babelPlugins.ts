@@ -17,7 +17,7 @@ export function rewriteIds(
   transformId: (id: string) => string
 ): babel.PluginObj {
   return {
-    name: "bare-id-rewrite",
+    name: "rewrite-ids",
     manipulateOptions(
       _opts: babel.TransformOptions,
       parserOpts: babel.ParserOptions
@@ -82,7 +82,7 @@ export function enableMetaHot(
   });
 
   return {
-    name: "enableHmr",
+    name: "enable-meta-hot",
     manipulateOptions(
       _opts: babel.TransformOptions,
       parserOpts: babel.ParserOptions
