@@ -1,5 +1,7 @@
 import path from "path";
 import { matchRoutes } from "react-router-dom";
+
+import type { Request } from "./platform";
 import { RemixConfig } from "./readRemixConfig";
 
 enum DataLoadStatus {
@@ -95,10 +97,10 @@ type fixme = any;
 // take advantage of suspense
 export async function matchAndLoadData(
   remixConfig: RemixConfig,
-  url: string,
-  appLoadContext: any
+  req: Request,
+  loadContext: any
 ): Promise<MatchAndLoadResult> {
-  let matches = matchRoutes(remixConfig.routesConfig as fixme, url);
+  let matches = matchRoutes(remixConfig.routesConfig as fixme, req.url);
 
   // TODO: Maybe warn the user about missing 404 when we first validate their
   // routes config instead of waiting until now...
@@ -107,12 +109,7 @@ export async function matchAndLoadData(
   let notFound = matches.length === 1 && matches[0].route.path === "*";
   if (notFound) return null;
 
-  let location = createLocation(url);
+  let location = createLocation(req.url);
 
-  return await loadData(
-    remixConfig,
-    matches as fixme,
-    appLoadContext,
-    location
-  );
+  return await loadData(remixConfig, matches as fixme, loadContext, location);
 }

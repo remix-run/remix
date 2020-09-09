@@ -3,7 +3,8 @@ export type {
   Body,
   RequestInit,
   ResponseInit,
-  RequestHandler
+  RequestHandler,
+  LoadContext
 } from "./platform";
 export {
   Headers,

@@ -292,8 +292,10 @@ export class Response extends Message {
   }
 }
 
+export type LoadContext = any;
+
 export interface RequestHandler {
-  (request: Request): Promise<Response>;
+  (request: Request, loadContext: LoadContext): Promise<Response>;
 }
 
 /**
@@ -302,9 +304,9 @@ export interface RequestHandler {
 export function createRequestHandler(remixRoot?: string): RequestHandler {
   let configPromise = readConfig(remixRoot);
 
-  return async req => {
+  return async (req, loadContext) => {
     let config = await configPromise;
-    let result = await matchAndLoadData(config, req);
+    let result = await matchAndLoadData(config, req, loadContext);
 
     return new Response(JSON.stringify(result), {
       headers: {

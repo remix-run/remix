@@ -1,5 +1,5 @@
 import type * as express from "express";
-import type { HeadersInit, LoaderContext } from "@remix-run/core";
+import type { HeadersInit, LoadContext } from "@remix-run/core";
 import {
   Request,
   createRequestHandler as createRemixRequestHandler
@@ -31,18 +31,32 @@ function createRemixRequest(req: express.Request): Request {
  * Remix routing and data loading.
  */
 export default function createRequestHandler({
-  remixRoot
+  getLoadContext,
+  root: remixRoot
 }: {
-  remixRoot?: string;
+  getLoadContext?: (req: express.Request, res: express.Response) => LoadContext;
+  root?: string;
 }): express.RequestHandler {
   let handleRequest = createRemixRequestHandler(remixRoot);
 
   return async (req: express.Request, res: express.Response) => {
+    let loadContext;
+    if (getLoadContext) {
+      try {
+        loadContext = await getLoadContext(req, res);
+      } catch (error) {
+        console.error(error);
+        // TODO: show nicer error page
+        res.status(500).send();
+        return;
+      }
+    }
+
     let remixReq = createRemixRequest(req);
 
     let remixRes;
     try {
-      remixRes = await handleRequest(remixReq);
+      remixRes = await handleRequest(remixReq, loadContext);
     } catch (error) {
       // This is probably an error in one of the loaders.
       console.error(error);
