@@ -1,8 +1,10 @@
+import path from "path";
 import { Readable } from "stream";
 import { STATUS_CODES } from "http";
 
-import { matchAndLoadData } from "./match";
+import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
+import { matchAndLoadData } from "./match";
 
 export type HeadersInit = Record<string, string>;
 
@@ -304,15 +306,30 @@ export interface RequestHandler {
  */
 export function createRequestHandler(remixRoot?: string): RequestHandler {
   let configPromise = readConfig(remixRoot);
+  let manifestPromise = configPromise.then(readManifest);
 
   return async (req, loadContext) => {
     let config = await configPromise;
-    let result = await matchAndLoadData(config, req, loadContext);
+    let manifest = await manifestPromise;
+    let data = await matchAndLoadData(config, req, loadContext);
 
-    return new Response(JSON.stringify(result), {
+    let entry = require(manifest.__entry_server__.requirePath);
+    let html = entry.render(data);
+
+    return new Response(html, {
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "text/html"
       }
     });
+
+    // return new Response(JSON.stringify(result), {
+    //   headers: {
+    //     "Content-Type": "application/json"
+    //   }
+    // });
   };
+}
+
+function readManifest(config: RemixConfig) {
+  return require(path.join(config.serverBuildDirectory, "manifest.json"));
 }

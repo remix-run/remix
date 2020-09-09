@@ -40,6 +40,7 @@ export default function manifestPlugin({
       isWrite: boolean
     ) {
       let manifest = createManifest(outputDir, bundle);
+      console.log({ manifest });
 
       if (isWrite) {
         let file = path.join(outputDir, filename);

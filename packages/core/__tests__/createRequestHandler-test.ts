@@ -2,12 +2,24 @@ import path from "path";
 import { Request, createRequestHandler } from "../platform";
 
 describe("a remix request handler", () => {
-  it("works", async () => {
-    let handleRequest = createRequestHandler(
-      path.resolve(__dirname, "../../../fixtures/gists-app")
-    );
+  let remixRoot: string;
+  beforeAll(() => {
+    remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
+  });
 
+  it("returns html", async () => {
+    let handleRequest = createRequestHandler(remixRoot);
     let req = new Request("/gists");
+    let res = await handleRequest(req, null);
+
+    expect(res.headers.get("Content-Type")).toEqual("text/html");
+    expect(res.body).toMatchInlineSnapshot(`"hello"`);
+  });
+
+  it.skip("returns data", async () => {
+    let handleRequest = createRequestHandler(remixRoot);
+
+    let req = new Request("/_remix-data?path=/gists");
     let res = await handleRequest(req, null);
 
     expect(res.headers.get("Content-Type")).toEqual("application/json");

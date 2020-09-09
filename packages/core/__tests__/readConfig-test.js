@@ -13,6 +13,7 @@ describe("readConfig", () => {
         "clientPublicPath": "/build",
         "devServerPort": 8002,
         "loadersDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/loaders",
+        "rootDirectory": "/Users/michael/Projects/remix/fixtures/gists-app",
         "routesConfig": Array [
           Object {
             "component": "routes/404.js",
