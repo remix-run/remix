@@ -96,10 +96,10 @@ type fixme = any;
 // take advantage of suspense
 export async function matchAndLoadData(
   remixConfig: RemixConfig,
-  req: Request,
+  url: string,
   loadContext: any
 ): Promise<MatchAndLoadResult> {
-  let matches = matchRoutes(remixConfig.routesConfig as fixme, req.url);
+  let matches = matchRoutes(remixConfig.routesConfig as fixme, url);
 
   // TODO: Maybe warn the user about missing 404 when we first validate their
   // routes config instead of waiting until now...
@@ -108,7 +108,7 @@ export async function matchAndLoadData(
   let notFound = matches.length === 1 && matches[0].route.path === "*";
   if (notFound) return null;
 
-  let location = createLocation(req.url);
+  let location = createLocation(url);
 
   return await loadData(remixConfig, matches as fixme, loadContext, location);
 }

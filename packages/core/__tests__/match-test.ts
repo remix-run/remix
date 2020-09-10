@@ -1,6 +1,5 @@
 import path from "path";
 
-import { Request } from "../platform";
 import { matchAndLoadData } from "../match";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
@@ -15,9 +14,9 @@ describe("matchAndLoadData", () => {
   });
 
   it("loads data", async () => {
-    let req = new Request("/gists");
+    let url = "/gists";
     let appLoadContext = null;
-    let result = await matchAndLoadData(config, req, appLoadContext);
+    let result = await matchAndLoadData(config, url, appLoadContext);
     expect(result).toMatchInlineSnapshot(`
       Array [
         Object {
@@ -51,18 +50,18 @@ describe("matchAndLoadData", () => {
 
   describe("when there is no matching route", () => {
     it("returns null", async () => {
-      let req = new Request("/carnitas/street/tacos/are/the/best");
+      let url = "/carnitas/street/tacos/are/the/best";
       let appLoadContext = null;
-      let result = await matchAndLoadData(config, req, appLoadContext);
+      let result = await matchAndLoadData(config, url, appLoadContext);
       expect(result).toBe(null);
     });
   });
 
   describe("when a nested loader throws", () => {
     it("handles errors", async () => {
-      let req = new Request("/payments/error");
+      let url = "/payments/error";
       let appLoadContext = null;
-      let result = await matchAndLoadData(config, req, appLoadContext);
+      let result = await matchAndLoadData(config, url, appLoadContext);
       expect(result).toMatchInlineSnapshot(`
         Array [
           Object {

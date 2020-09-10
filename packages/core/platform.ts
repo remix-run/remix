@@ -311,8 +311,33 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   return async (req, loadContext) => {
     let config = await configPromise;
     let manifest = await manifestPromise;
-    let data = await matchAndLoadData(config, req, loadContext);
 
+    // /__remix_data?path=/gists
+    // /__remix_data?from=/gists&path=/gists/123
+    if (req.url.startsWith("/__remix_data")) {
+      let split = req.url.split("?");
+      let params = new URLSearchParams(split[1]);
+      let path = params.get("path");
+
+      if (!path) {
+        return new Response("Missing ?path", {
+          status: 403,
+          headers: {
+            "Content-Type": "text/html"
+          }
+        });
+      }
+
+      let data = await matchAndLoadData(config, path, loadContext);
+
+      return new Response(JSON.stringify(data), {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    let data = await matchAndLoadData(config, req.url, loadContext);
     let entry = require(manifest.__entry_server__.requirePath);
     let html = entry.render(data);
 
@@ -321,12 +346,6 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
         "Content-Type": "text/html"
       }
     });
-
-    // return new Response(JSON.stringify(result), {
-    //   headers: {
-    //     "Content-Type": "application/json"
-    //   }
-    // });
   };
 }
 

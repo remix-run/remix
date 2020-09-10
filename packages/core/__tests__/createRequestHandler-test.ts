@@ -16,10 +16,10 @@ describe("a remix request handler", () => {
     expect(res.body).toMatchInlineSnapshot(`"hello"`);
   });
 
-  it.skip("returns data", async () => {
+  it("returns data", async () => {
     let handleRequest = createRequestHandler(remixRoot);
 
-    let req = new Request("/_remix-data?path=/gists");
+    let req = new Request("/__remix_data?path=/gists");
     let res = await handleRequest(req, null);
 
     expect(res.headers.get("Content-Type")).toEqual("application/json");
