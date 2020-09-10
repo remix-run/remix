@@ -1,13 +1,14 @@
 export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
+export type { LoadContext, RemixLoader } from "./match";
+
 export type {
   HeadersInit,
   Body,
   RequestInit,
   ResponseInit,
-  RequestHandler,
-  LoadContext
+  RequestHandler
 } from "./platform";
 export {
   Headers,

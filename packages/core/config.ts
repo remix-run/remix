@@ -1,61 +1,96 @@
 import path from "path";
 
-import type { ConfigRoute } from "./defineRoutes";
-import _defineRoutes from "./defineRoutes";
-import getConventionalRoutes from "./getConventionalRoutes";
+import type { RemixRouteObject } from "./routes";
+import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
 
 /**
  * The user-provided config in remix.config.js.
  */
-export interface AppRemixConfig {
+export interface UserConfig {
   /**
-   * Absolute path where the developer wants the client build to be saved
+   * The path to the client build, may be relative to remix.config.js.
    */
   clientBuildDirectory: string;
 
   /**
-   * URL prefix of the client build.
+   * The URL prefix of the client build, may be relative to remix.config.js.
    */
   clientPublicPath: string;
 
   /**
-   * Absolute path where the loaders are found.
+   * The port number to use for the dev server.
+   */
+  devServerPort: number;
+
+  /**
+   * The path to the loaders, may be relative to remix.config.js.
    */
   loadersDirectory: string;
 
   /**
-   * Absolute path to the root of the project.
+   * The path where "conventional" routes are found, may be relative to
+   * remix.config.js. Conventional routes use the filesystem for defining
+   * route paths and nesting.
+   */
+  routesDirectory: string;
+
+  /**
+   * A function for defining custom routes.
+   */
+  routes: {
+    (defineRoutes: typeof _defineRoutes): Promise<RemixRouteObject[]>;
+  };
+
+  /**
+   * The path to the server build, may be relative to remix.config.js.
+   */
+  serverBuildDirectory: string;
+}
+
+/**
+ * Fully resolved configuration object we use throughout Remix.
+ */
+export interface RemixConfig {
+  /**
+   * The absolute path to the client build.
+   */
+  clientBuildDirectory: string;
+
+  /**
+   * The URL prefix of the client build.
+   */
+  clientPublicPath: string;
+
+  /**
+   * The port number to use for the dev server.
+   */
+  devServerPort: number;
+
+  /**
+   * The absolute path to the loaders.
+   */
+  loadersDirectory: string;
+
+  /**
+   * The absolute path to the root of the Remix project.
    */
   rootDirectory: string;
 
   /**
-   * Absolute path where the routes are found.
+   * An array of all available routes, nested according to route hierarchy.
    */
-  routesDirectory: string;
-
-  routes: {
-    (defineRoutes: typeof _defineRoutes): Promise<ConfigRoute[]>;
-  };
+  routes: RemixRouteObject[];
 
   /**
-   * Absolute path where the developer wants the server build to be saved.
+   * The absolute path to the server build.
    */
   serverBuildDirectory: string;
-
-  /**
-   * Configuration for the dev server.
-   */
-  devServerPort: number;
 }
 
 /**
- * Combined config from the app's `remix.config.js` and the route config we use
- * throughout the server.
+ * Returns a fully resolved config object from the remix.config.js in the given
+ * root directory.
  */
-export interface RemixConfig extends Omit<AppRemixConfig, "routes"> {
-  routesConfig: ConfigRoute[];
-}
-
 export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
@@ -64,44 +99,43 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   let rootDirectory = path.resolve(remixRoot);
   let configFile = path.resolve(rootDirectory, "remix.config.js");
 
-  let appRemixConfig: AppRemixConfig;
+  let userConfig: UserConfig;
   try {
-    appRemixConfig = require(configFile);
+    userConfig = require(configFile);
   } catch (error) {
     throw new Error(`Missing remix.config.js in ${rootDirectory}`);
   }
 
   let clientBuildDirectory = path.resolve(
     rootDirectory,
-    appRemixConfig.clientBuildDirectory || path.join("public", "build")
-  );
-  let clientPublicPath = path.resolve(
-    rootDirectory,
-    appRemixConfig.clientPublicPath || "/build/"
-  );
-  let devServerPort = appRemixConfig.devServerPort || 8002;
-  let loadersDirectory = path.resolve(
-    rootDirectory,
-    appRemixConfig.loadersDirectory || "loaders"
-  );
-  let routesDirectory = path.resolve(
-    rootDirectory,
-    appRemixConfig.routesDirectory || path.join("src", "routes")
-  );
-  let serverBuildDirectory = path.resolve(
-    rootDirectory,
-    appRemixConfig.serverBuildDirectory || "build"
+    userConfig.clientBuildDirectory || path.join("public", "build")
   );
 
-  // get routes
-  let getRoutes = appRemixConfig.routes || (() => []);
-  let manualRoutes = await getRoutes(_defineRoutes);
-  let conventionalRoutes = await getConventionalRoutes(
-    routesDirectory,
-    loadersDirectory
+  let clientPublicPath = userConfig.clientPublicPath || "/build/";
+
+  let devServerPort = userConfig.devServerPort || 8002;
+
+  let loadersDirectory = path.resolve(
+    rootDirectory,
+    userConfig.loadersDirectory || "loaders"
   );
-  // validateRoutes(conventionalRoutes, manualRoutes);
-  let routesConfig = [...conventionalRoutes, ...manualRoutes];
+
+  let routesDir = path.resolve(
+    rootDirectory,
+    userConfig.routesDirectory || path.join("src", "routes")
+  );
+  let routes = await getConventionalRoutes(routesDir, loadersDirectory);
+  if (userConfig.routes) {
+    let manualRoutes = await userConfig.routes(_defineRoutes);
+    routes.push(...manualRoutes);
+  }
+
+  let serverBuildDirectory = path.resolve(
+    rootDirectory,
+    userConfig.serverBuildDirectory || "build"
+  );
+
+  // TODO: validate routes
 
   let remixConfig: RemixConfig = {
     clientBuildDirectory,
@@ -109,14 +143,9 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     devServerPort,
     loadersDirectory,
     rootDirectory,
-    routesDirectory,
-    serverBuildDirectory,
-    routesConfig
+    routes,
+    serverBuildDirectory
   };
 
   return remixConfig;
 }
-
-// function validateRoutes(conventionalRoutes, manualRoutes) {
-//   // TODO: validateRoutes, make sure no dupes and stuff
-// }

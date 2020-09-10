@@ -4,6 +4,7 @@ import { STATUS_CODES } from "http";
 
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
+import type { LoadContext } from "./match";
 import { matchAndLoadData } from "./match";
 
 export type HeadersInit = Record<string, string>;
@@ -328,8 +329,6 @@ export class Response extends Message {
     throw new Error(`response.useFinalURL has not been implemented yet`);
   }
 }
-
-export type LoadContext = any;
 
 export interface RequestHandler {
   (request: Request, loadContext: LoadContext): Promise<Response>;

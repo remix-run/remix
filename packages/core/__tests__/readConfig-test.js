@@ -10,16 +10,16 @@ describe("readConfig", () => {
     expect(config).toMatchInlineSnapshot(`
       Object {
         "clientBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/public/build",
-        "clientPublicPath": "/build",
+        "clientPublicPath": "/build/",
         "devServerPort": 8002,
         "loadersDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/loaders",
         "rootDirectory": "/Users/michael/Projects/remix/fixtures/gists-app",
-        "routesConfig": Array [
+        "routes": Array [
           Object {
             "component": "routes/404.js",
             "id": "routes/404",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "*",
           },
           Object {
@@ -58,21 +58,21 @@ describe("readConfig", () => {
             "component": "routes/gists.js",
             "id": "routes/gists",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "gists",
           },
           Object {
             "component": "routes/gists.mine.js",
             "id": "routes/gists.mine",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "gists/mine",
           },
           Object {
             "component": "routes/index.js",
             "id": "routes/index",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "/",
           },
           Object {
@@ -88,7 +88,7 @@ describe("readConfig", () => {
             "component": "routes/payments.js",
             "id": "routes/payments",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "payments",
           },
           Object {
@@ -104,25 +104,24 @@ describe("readConfig", () => {
             "component": "routes/users.js",
             "id": "routes/users",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "users",
           },
           Object {
             "component": "pages/one.mdx",
             "id": "pages/one",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "/page/one",
           },
           Object {
             "component": "pages/two.mdx",
             "id": "pages/two",
             "loader": null,
-            "parentId": null,
+            "parentId": undefined,
             "path": "/page/two",
           },
         ],
-        "routesDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/src/routes",
         "serverBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/build",
       }
     `);

@@ -1,17 +1,12 @@
 import path from "path";
 
-import getConventionalRoutes from "../getConventionalRoutes";
-
-// Keep an eye on https://github.com/facebook/jest/issues/9430
-// import { fileURLToPath } from "url";
-// let dirname = path.dirname(fileURLToPath(import.meta.url));
-let dirname = __dirname;
+import { getConventionalRoutes } from "../routes";
 
 describe("getConventionalRoutes", () => {
   it("returns an array of routes from the file system", async () => {
     let routes = await getConventionalRoutes(
-      path.resolve(dirname, "../__fixtures__/routes"),
-      path.resolve(dirname, "../__fixtures__/loaders")
+      path.resolve(__dirname, "../__fixtures__/routes"),
+      path.resolve(__dirname, "../__fixtures__/loaders")
     );
 
     expect(routes).toMatchInlineSnapshot(`
@@ -20,14 +15,14 @@ describe("getConventionalRoutes", () => {
           "component": "routes/$courseId.$chapterId.js",
           "id": "routes/$courseId.$chapterId",
           "loader": "$courseId.$chapterId.js",
-          "parentId": null,
+          "parentId": undefined,
           "path": ":courseId/:chapterId",
         },
         Object {
           "component": "routes/$courseId.js",
           "id": "routes/$courseId",
           "loader": null,
-          "parentId": null,
+          "parentId": undefined,
           "path": ":courseId",
         },
         Object {
@@ -50,14 +45,14 @@ describe("getConventionalRoutes", () => {
           "component": "routes/checkout.js",
           "id": "routes/checkout",
           "loader": null,
-          "parentId": null,
+          "parentId": undefined,
           "path": "checkout",
         },
         Object {
           "component": "routes/index.js",
           "id": "routes/index",
           "loader": "index.js",
-          "parentId": null,
+          "parentId": undefined,
           "path": "/",
         },
         Object {
@@ -80,7 +75,7 @@ describe("getConventionalRoutes", () => {
           "component": "$OUTLET$",
           "id": "$OUTLET$",
           "loader": null,
-          "parentId": null,
+          "parentId": undefined,
           "path": "messages",
         },
       ]

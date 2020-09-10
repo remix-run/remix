@@ -1,4 +1,4 @@
-import defineRoutes from "../defineRoutes";
+import { defineRoutes } from "../routes";
 
 describe("defineRoutes", () => {
   it("returns an array of routes", () => {
@@ -17,7 +17,7 @@ describe("defineRoutes", () => {
           "component": "routes/home.js",
           "id": "routes/home",
           "loader": "home.js",
-          "parentId": null,
+          "parentId": undefined,
           "path": "/",
         },
         Object {
@@ -47,7 +47,7 @@ describe("defineRoutes", () => {
           "component": "routes/messages.js",
           "id": "routes/messages",
           "loader": null,
-          "parentId": null,
+          "parentId": undefined,
           "path": "inbox",
         },
       ]
@@ -69,14 +69,14 @@ describe("defineRoutes", () => {
           "component": "one.md",
           "id": "one",
           "loader": null,
-          "parentId": null,
+          "parentId": undefined,
           "path": "one",
         },
         Object {
           "component": "two.md",
           "id": "two",
           "loader": null,
-          "parentId": null,
+          "parentId": undefined,
           "path": "two",
         },
       ]

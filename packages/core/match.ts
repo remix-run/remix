@@ -2,7 +2,8 @@ import path from "path";
 import type { RouteMatch, RouteObject, Params } from "react-router";
 import { matchRoutes } from "react-router";
 
-import type { RemixConfig, ConfigRoute } from "./config";
+import type { RemixConfig } from "./config";
+import type { RemixRouteObject } from "./routes";
 
 enum DataLoadStatus {
   Copy = "COPY",
@@ -39,21 +40,73 @@ type Location = {
   search: string;
 };
 
-// interface RemixRouteObject extends Omit<RouteObject, "element"> {
-//   id: string;
-//   loader: string | null;
-// }
-
-interface RemixRouteMatch extends Omit<RouteMatch, "route"> {
-  // route: RemixRouteObject;
-  route: ConfigRoute;
-  params: {};
-}
-
 // TODO: Does history/react router have something here?
 function createLocation(url: string) {
   let [pathname, search] = url.split("?");
   return { pathname, search };
+}
+
+// TODO: we probably want this to stream data as it becomes available to fully
+// take advantage of suspense
+export async function matchAndLoadData(
+  remixConfig: RemixConfig,
+  url: string,
+  loadContext: any,
+  from: string | null = null
+): Promise<MatchAndLoadResult> {
+  let matches = matchRemixRoutes(remixConfig.routes, url);
+
+  // TODO: Maybe warn the user about missing 404 when we first validate their
+  // routes config instead of waiting until now...
+  if (matches == null) throw new Error("Missing routes/404.js");
+
+  let notFound = matches.length === 1 && matches[0].route.path === "*";
+  if (notFound) return null;
+
+  let location = createLocation(url);
+
+  if (from) {
+    // Try to load data for only the new routes!
+    let fromMatches = matchRemixRoutes(remixConfig.routes, from);
+
+    if (fromMatches) {
+      let newMatches = matches.filter(
+        match =>
+          !fromMatches!.some(fromMatch => fromMatch.pathname === match.pathname)
+      );
+
+      let data = await loadData(remixConfig, newMatches, loadContext, location);
+
+      if (data.length < matches.length) {
+        let copyMatches = matches.slice(0, matches.length - data.length);
+        let copyData = copyMatches.map(match => ({
+          status: DataLoadStatus.Copy,
+          id: match.route.id,
+          params: match.params
+        }));
+
+        // @ts-ignore
+        data.unshift(...copyData);
+      }
+
+      return data;
+    }
+  }
+
+  return await loadData(remixConfig, matches, loadContext, location);
+}
+
+export interface RemixRouteMatch extends Omit<RouteMatch, "route"> {
+  route: RemixRouteObject;
+}
+
+function matchRemixRoutes(
+  routes: RemixRouteObject[],
+  url: string
+): RemixRouteMatch[] | null {
+  return matchRoutes((routes as unknown) as RouteObject[], url) as
+    | RemixRouteMatch[]
+    | null;
 }
 
 async function loadData(
@@ -62,19 +115,9 @@ async function loadData(
   loadContext: any,
   location: Location
 ): Promise<LoadResult[]> {
-  let loaders = matches.map(match => {
-    if (match.route.loader === null) {
-      return null;
-    }
-
-    // TODO: maybe resolve this stuff at initialization instead
-    let modulePath = path.resolve(
-      remixConfig.loadersDirectory,
-      match.route.loader
-    );
-    let requirePath = path.relative(__dirname, modulePath);
-    return require(requirePath);
-  });
+  let loaders = matches.map(match =>
+    getLoader(remixConfig.loadersDirectory, match)
+  );
 
   let promises = loaders.map(
     async (loader, index): Promise<LoadResult> => {
@@ -104,59 +147,25 @@ async function loadData(
   return results;
 }
 
-// type fixme = any;
+export type LoadContext = any;
 
-function _matchRoutes(routes: ConfigRoute[], url: string) {
-  return matchRoutes(routes as RouteObject[], url) as RemixRouteMatch[] | null;
+export interface RemixLoader {
+  ({
+    params,
+    context,
+    location
+  }: {
+    params: Params;
+    context: LoadContext;
+    location: Location;
+  }): any;
 }
 
-// TODO: we probably want this to stream data as it becomes available to fully
-// take advantage of suspense
-export async function matchAndLoadData(
-  remixConfig: RemixConfig,
-  url: string,
-  loadContext: any,
-  from: string | null = null
-): Promise<MatchAndLoadResult> {
-  // let routes = remixConfig.routesConfig.map()
-  let matches = _matchRoutes(remixConfig.routesConfig, url);
-
-  // TODO: Maybe warn the user about missing 404 when we first validate their
-  // routes config instead of waiting until now...
-  if (matches == null) throw new Error("Missing routes/404.js");
-
-  let notFound = matches.length === 1 && matches[0].route.path === "*";
-  if (notFound) return null;
-
-  let location = createLocation(url);
-
-  if (from) {
-    // Try to load data for only the new routes!
-    let fromMatches = _matchRoutes(remixConfig.routesConfig, from);
-
-    if (fromMatches) {
-      let newMatches = matches.filter(
-        match =>
-          !fromMatches!.some(fromMatch => fromMatch.pathname === match.pathname)
-      );
-
-      let data = await loadData(remixConfig, newMatches, loadContext, location);
-
-      if (data.length < matches.length) {
-        let copyMatches = matches.slice(0, matches.length - data.length);
-        let copyData = copyMatches.map(match => ({
-          status: DataLoadStatus.Copy,
-          id: match.route.id,
-          params: match.params
-        }));
-
-        // @ts-ignore
-        data.unshift(...copyData);
-      }
-
-      return data;
-    }
-  }
-
-  return await loadData(remixConfig, matches, loadContext, location);
+function getLoader(
+  loadersDirectory: string,
+  match: RemixRouteMatch
+): RemixLoader | null {
+  if (match.route.loader == null) return null;
+  let requirePath = path.resolve(loadersDirectory, match.route.loader);
+  return require(requirePath);
 }
