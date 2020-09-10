@@ -22,6 +22,7 @@ describe("matchAndLoadData", () => {
         Object {
           "data": null,
           "id": "routes/gists",
+          "params": Object {},
           "status": "SUCCESS",
         },
         Object {
@@ -42,6 +43,7 @@ describe("matchAndLoadData", () => {
             },
           ],
           "id": "routes/gists/index",
+          "params": Object {},
           "status": "SUCCESS",
         },
       ]
@@ -67,11 +69,13 @@ describe("matchAndLoadData", () => {
           Object {
             "data": null,
             "id": "routes/payments",
+            "params": Object {},
             "status": "SUCCESS",
           },
           Object {
             "error": "Boom",
             "id": "routes/payments/error",
+            "params": Object {},
             "status": "ERROR",
           },
         ]

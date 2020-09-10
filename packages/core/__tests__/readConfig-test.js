@@ -25,6 +25,22 @@ describe("readConfig", () => {
           Object {
             "children": Array [
               Object {
+                "children": Array [
+                  Object {
+                    "component": "routes/gists/$username/edit.js",
+                    "id": "routes/gists/$username/edit",
+                    "loader": null,
+                    "parentId": "routes/gists/$username",
+                    "path": "edit",
+                  },
+                ],
+                "component": "routes/gists/$username.js",
+                "id": "routes/gists/$username",
+                "loader": "gists/$username.js",
+                "parentId": "routes/gists",
+                "path": ":username",
+              },
+              Object {
                 "component": "routes/gists/$username.js",
                 "id": "routes/gists/$username",
                 "loader": "gists/$username.js",
@@ -74,6 +90,22 @@ describe("readConfig", () => {
             "loader": null,
             "parentId": null,
             "path": "payments",
+          },
+          Object {
+            "children": Array [
+              Object {
+                "component": "routes/users/$username.js",
+                "id": "routes/users/$username",
+                "loader": "users/$username.js",
+                "parentId": "routes/users",
+                "path": ":username",
+              },
+            ],
+            "component": "routes/users.js",
+            "id": "routes/users",
+            "loader": null,
+            "parentId": null,
+            "path": "users",
           },
           Object {
             "component": "pages/one.mdx",

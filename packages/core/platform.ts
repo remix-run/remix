@@ -101,12 +101,33 @@ export class Headers {
  */
 export type Body = string | Buffer | Readable;
 
+async function bufferBody(body: Body): Promise<Buffer> {
+  return new Promise((accept, reject) => {
+    if (body instanceof Buffer) {
+      accept(body);
+    } else if (typeof body === "string") {
+      accept(Buffer.from(body));
+    } else {
+      let chunks: Buffer[] = [];
+      body
+        .on("error", reject)
+        .on("data", chunk => {
+          chunks.push(chunk);
+        })
+        .on("end", () => {
+          accept(Buffer.concat(chunks));
+        });
+    }
+  });
+}
+
 /**
  * A HTTP message. The base class for Request and Response.
  */
 export class Message {
   readonly body: Body;
   private _bodyUsed: boolean;
+  private _bodyBuffer: Buffer;
 
   constructor(body: Body = "") {
     this.body = body;
@@ -123,6 +144,19 @@ export class Message {
 
   get bodyUsed() {
     return this._bodyUsed;
+  }
+
+  private async bodyBuffer(): Promise<Buffer> {
+    if (!this._bodyBuffer) this._bodyBuffer = await bufferBody(this.body);
+    return this._bodyBuffer;
+  }
+
+  async json() {
+    return JSON.parse(await this.bodyBuffer());
+  }
+
+  async text() {
+    return (await this.bodyBuffer()).toString("utf-8");
   }
 }
 
@@ -318,6 +352,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
       let split = req.url.split("?");
       let params = new URLSearchParams(split[1]);
       let path = params.get("path");
+      let from = params.get("from");
 
       if (!path) {
         return new Response("Missing ?path", {
@@ -328,7 +363,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
         });
       }
 
-      let data = await matchAndLoadData(config, path, loadContext);
+      let data = await matchAndLoadData(config, path, loadContext, from);
 
       return new Response(JSON.stringify(data), {
         headers: {
