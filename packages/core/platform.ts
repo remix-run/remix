@@ -1,11 +1,5 @@
-import path from "path";
 import { Readable } from "stream";
 import { STATUS_CODES } from "http";
-
-import type { RemixConfig } from "./config";
-import { readConfig } from "./config";
-import type { LoadContext } from "./match";
-import { matchAndLoadData } from "./match";
 
 export type HeadersInit = Record<string, string>;
 
@@ -102,6 +96,62 @@ export class Headers {
  */
 export type Body = string | Buffer | Readable;
 
+/**
+ * A HTTP message. The base class for Request and Response.
+ *
+ * The main difference between this and the fetch spec is the `body` property,
+ * which may be a few data types that are common in node (instead of types that
+ * are available in the browser). As this class is only ever meant to be used in
+ * node, this is an acceptable trade-off.
+ */
+export class Message {
+  readonly body: Body;
+  private _bodyUsed: boolean;
+  private _buffer: Buffer | null;
+
+  constructor(body: Body = "") {
+    this.body = body;
+    this._buffer = null;
+
+    if (body instanceof Readable) {
+      this._bodyUsed = false;
+      body.on("end", () => {
+        this._bodyUsed = true;
+      });
+    } else {
+      this._bodyUsed = true;
+    }
+  }
+
+  get bodyUsed() {
+    return this._bodyUsed;
+  }
+
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return Uint8Array.from(await this.buffer()).buffer;
+  }
+
+  async blob() {
+    throw new Error(`blob() is not yet implemented; use arrayBuffer() instead`);
+  }
+
+  async buffer(): Promise<Buffer> {
+    return this._buffer || (this._buffer = await bufferBody(this.body));
+  }
+
+  async formData() {
+    throw new Error(`formData() is not yet implemented`);
+  }
+
+  async json(): Promise<any> {
+    return JSON.parse(await this.buffer());
+  }
+
+  async text(): Promise<string> {
+    return (await this.buffer()).toString("utf-8");
+  }
+}
+
 async function bufferBody(body: Body): Promise<Buffer> {
   return new Promise((accept, reject) => {
     if (body instanceof Buffer) {
@@ -120,45 +170,6 @@ async function bufferBody(body: Body): Promise<Buffer> {
         });
     }
   });
-}
-
-/**
- * A HTTP message. The base class for Request and Response.
- */
-export class Message {
-  readonly body: Body;
-  private _bodyUsed: boolean;
-  private _bodyBuffer: Buffer;
-
-  constructor(body: Body = "") {
-    this.body = body;
-
-    if (body instanceof Readable) {
-      this._bodyUsed = false;
-      body.on("end", () => {
-        this._bodyUsed = true;
-      });
-    } else {
-      this._bodyUsed = true;
-    }
-  }
-
-  get bodyUsed() {
-    return this._bodyUsed;
-  }
-
-  async buffer(): Promise<Buffer> {
-    if (!this._bodyBuffer) this._bodyBuffer = await bufferBody(this.body);
-    return this._bodyBuffer;
-  }
-
-  async json(): Promise<any> {
-    return JSON.parse(await this.buffer());
-  }
-
-  async text(): Promise<string> {
-    return (await this.buffer()).toString("utf-8");
-  }
 }
 
 export enum RequestCache {
@@ -292,6 +303,23 @@ export interface ResponseInit {
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Response
  */
 export class Response extends Message {
+  static clone() {
+    throw new Error(`Response.clone is not yet implemented`);
+  }
+
+  static error() {
+    throw new Error(`Response.error is not yet implemented`);
+  }
+
+  static redirect(url: string, status: number): Response {
+    return new Response("", {
+      status,
+      headers: {
+        location: url
+      }
+    });
+  }
+
   readonly headers: Headers;
   readonly ok: boolean;
   readonly redirected: boolean;
@@ -308,16 +336,20 @@ export class Response extends Message {
 
     let status = init.status || 200;
 
-    if (!(status in STATUS_CODES)) {
-      throw new Error(`Unknown HTTP status code: ${status}`);
+    if (status < 200 || status > 599) {
+      // Copied this error message from Chrome
+      throw new RangeError(
+        `Failed to construct 'Response': The status provided (${status}) is outside the range [200, 599]`
+      );
     }
 
-    this.headers = new Headers(init.headers);
+    let headers = new Headers(init.headers);
 
-    if (!this.headers.has("content-type")) {
-      this.headers.set("content-type", "text/plain;charset=UTF-8");
+    if (!headers.has("content-type")) {
+      headers.set("content-type", "text/plain;charset=UTF-8");
     }
 
+    this.headers = headers;
     this.ok = status >= 200 && status < 300;
     this.redirected = status >= 300 && status < 400;
     this.status = status;
@@ -327,62 +359,10 @@ export class Response extends Message {
   }
 
   get trailers() {
-    throw new Error(`response.trailers has not been implemented yet`);
+    throw new Error(`response.trailers is not yet implemented`);
   }
 
   get useFinalURL() {
-    throw new Error(`response.useFinalURL has not been implemented yet`);
+    throw new Error(`response.useFinalURL is not yet implemented`);
   }
-}
-
-export interface RequestHandler {
-  (request: Request, loadContext: LoadContext): Promise<Response>;
-}
-
-/**
- * Creates a HTTP request handler.
- */
-export function createRequestHandler(remixRoot?: string): RequestHandler {
-  let configPromise = readConfig(remixRoot);
-  let manifestPromise = configPromise.then(readManifest);
-
-  return async (req, loadContext) => {
-    let config = await configPromise;
-    let manifest = await manifestPromise;
-
-    // /__remix_data?path=/gists
-    // /__remix_data?from=/gists&path=/gists/123
-    if (req.url.startsWith("/__remix_data")) {
-      let split = req.url.split("?");
-      let params = new URLSearchParams(split[1]);
-      let path = params.get("path");
-      let from = params.get("from");
-
-      if (!path) {
-        return new Response("Missing ?path", {
-          status: 403,
-          headers: {
-            "Content-Type": "text/html"
-          }
-        });
-      }
-
-      let data = await matchAndLoadData(config, path, loadContext, from);
-
-      return new Response(JSON.stringify(data), {
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-    }
-
-    let data = await matchAndLoadData(config, req.url, loadContext);
-    let entry = require(manifest.__entry_server__.requirePath);
-
-    return entry.default(data);
-  };
-}
-
-function readManifest(config: RemixConfig) {
-  return require(path.join(config.serverBuildDirectory, "manifest.json"));
 }
