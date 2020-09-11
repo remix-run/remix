@@ -1,6 +1,6 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
-// import Remix from "remix/server";
+import Remix from "@remix/react/server";
 
 import { Response } from "@remix-run/core";
 
@@ -15,7 +15,7 @@ import App from "./components/App";
 //   return require(`./${path}`);
 // }
 
-export default function handleRequest(req) {
+export default function handleRequest(req, remixContext) {
   // let markup = renderToString(
   //   <Remix location={req.url} remixContext={remixContext}>
   //     <App />

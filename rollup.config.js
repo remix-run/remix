@@ -35,36 +35,36 @@ let core = {
 };
 
 /** @type {import('rollup').RollupOptions} */
-let compiler = {
-  external(id) {
-    return !(id.startsWith(".") || id.startsWith("/"));
-  },
-  input: path.resolve(__dirname, "packages/compiler/index.ts"),
-  output: {
-    dir: "build/node_modules/@remix-run/compiler",
-    format: "cjs",
-    exports: "named",
-    preserveModules: true
-  },
-  plugins: [
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/compiler/package.json"),
-          dest: "build/node_modules/@remix-run/compiler"
-        }
-      ]
-    })
-  ]
-};
+// let compiler = {
+//   external(id) {
+//     return !(id.startsWith(".") || id.startsWith("/"));
+//   },
+//   input: path.resolve(__dirname, "packages/compiler/index.ts"),
+//   output: {
+//     dir: "build/node_modules/@remix-run/compiler",
+//     format: "cjs",
+//     exports: "named",
+//     preserveModules: true
+//   },
+//   plugins: [
+//     nodeResolve({
+//       extensions: [".ts", ".tsx"]
+//     }),
+//     babel({
+//       babelHelpers: "bundled",
+//       exclude: /node_modules/,
+//       extensions: [".ts", ".tsx"]
+//     }),
+//     copy({
+//       targets: [
+//         {
+//           src: path.resolve(__dirname, "packages/compiler/package.json"),
+//           dest: "build/node_modules/@remix-run/compiler"
+//         }
+//       ]
+//     })
+//   ]
+// };
 
 /** @type {import('rollup').RollupOptions} */
 let express = {
@@ -75,7 +75,8 @@ let express = {
   output: {
     dir: "build/node_modules/@remix-run/express",
     format: "cjs",
-    preserveModules: true
+    preserveModules: true,
+    exports: "default"
   },
   plugins: [
     nodeResolve({
@@ -142,4 +143,4 @@ let react = [
   }
 ];
 
-export default [core, compiler, express, ...react];
+export default [core, express, ...react];
