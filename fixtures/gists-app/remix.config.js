@@ -17,7 +17,7 @@ exports.routes = async function (defineRoutes) {
   return defineRoutes(route => {
     // create some custom routes from the pages/ dir
     for (let page of pages) {
-      let path = `/page/${page.replace(/\.mdx$/, "")}`;
+      let path = `/page/${page.replace(/\.js$/, "")}`;
       route(path, `pages/${page}`);
     }
   });

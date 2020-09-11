@@ -108,14 +108,14 @@ describe("readConfig", () => {
             "path": "users",
           },
           Object {
-            "component": "pages/one.mdx",
+            "component": "pages/one.js",
             "id": "pages/one",
             "loader": null,
             "parentId": undefined,
             "path": "/page/one",
           },
           Object {
-            "component": "pages/two.mdx",
+            "component": "pages/two.js",
             "id": "pages/two",
             "loader": null,
             "parentId": undefined,

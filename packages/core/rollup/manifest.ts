@@ -3,22 +3,22 @@ import { promises as fsp } from "fs";
 import type { NormalizedOutputOptions, OutputBundle, Plugin } from "rollup";
 
 export interface ManifestEntry {
+  fileName: string;
   imports: string[];
-  requirePath: string;
 }
 
 type RouteId = string;
 
 export type Manifest = Record<RouteId, ManifestEntry>;
 
-function createManifest(outputDir: string, bundle: OutputBundle): Manifest {
+function createManifest(bundle: OutputBundle): Manifest {
   return Object.keys(bundle).reduce((manifest, key) => {
     let assetOrChunk = bundle[key];
 
     if (assetOrChunk.type === "chunk") {
       manifest[assetOrChunk.name] = {
-        imports: assetOrChunk.imports,
-        requirePath: path.join(outputDir, assetOrChunk.fileName)
+        fileName: assetOrChunk.fileName,
+        imports: assetOrChunk.imports
       };
     }
 
@@ -40,7 +40,7 @@ export default function manifestPlugin({
       bundle: OutputBundle,
       isWrite: boolean
     ) {
-      let manifest = createManifest(outputDir, bundle);
+      let manifest = createManifest(bundle);
 
       if (isWrite) {
         let file = path.join(outputDir, filename);

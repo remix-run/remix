@@ -35,6 +35,8 @@ describe("build", () => {
         "routes/payments/error",
         "routes/users",
         "routes/users/$username",
+        "pages/one",
+        "pages/two",
         "__entry_server__",
       ]
     `);
@@ -58,79 +60,97 @@ describe("build", () => {
     expect(manifest).toMatchInlineSnapshot(`
       Object {
         "__entry_server__": Object {
+          "fileName": "__entry_server__.js",
           "imports": Array [
             "react",
             "react-dom/server",
             "@remix-run/core",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/__entry_server__.js",
+        },
+        "pages/one": Object {
+          "fileName": "pages/one.js",
+          "imports": Array [
+            "react",
+          ],
+        },
+        "pages/two": Object {
+          "fileName": "pages/two.js",
+          "imports": Array [
+            "react",
+          ],
         },
         "routes/404": Object {
+          "fileName": "routes/404.js",
           "imports": Array [
             "react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/404.js",
         },
         "routes/gists": Object {
+          "fileName": "routes/gists.js",
           "imports": Array [
             "react",
             "react-router-dom",
             "@remix-run/react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists.js",
         },
         "routes/gists.mine": Object {
+          "fileName": "routes/gists.mine.js",
           "imports": Array [
             "react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists.mine.js",
         },
         "routes/gists/$username": Object {
+          "fileName": "routes/gists/$username.js",
           "imports": Array [
             "react",
             "react-router-dom",
             "@remix-run/react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists/$username.js",
         },
         "routes/gists/$username/edit": Object {
-          "imports": Array [],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists/$username/edit.js",
+          "fileName": "routes/gists/$username/edit.js",
+          "imports": Array [
+            "react",
+          ],
         },
         "routes/gists/index": Object {
+          "fileName": "routes/gists/index.js",
           "imports": Array [
             "react",
             "@remix-run/react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists/index.js",
         },
         "routes/index": Object {
+          "fileName": "routes/index.js",
           "imports": Array [
             "react",
             "@remix-run/react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/index.js",
         },
         "routes/payments": Object {
+          "fileName": "routes/payments.js",
           "imports": Array [
             "react",
             "react-router-dom",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/payments.js",
         },
         "routes/payments/error": Object {
+          "fileName": "routes/payments/error.js",
           "imports": Array [
             "react",
           ],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/payments/error.js",
         },
         "routes/users": Object {
-          "imports": Array [],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/users.js",
+          "fileName": "routes/users.js",
+          "imports": Array [
+            "react",
+          ],
         },
         "routes/users/$username": Object {
-          "imports": Array [],
-          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/users/$username.js",
+          "fileName": "routes/users/$username.js",
+          "imports": Array [
+            "react",
+          ],
         },
       }
     `);

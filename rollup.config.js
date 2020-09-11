@@ -12,7 +12,8 @@ let core = {
   output: {
     dir: "build/node_modules/@remix-run/core",
     format: "cjs",
-    preserveModules: true
+    preserveModules: true,
+    exports: "auto"
   },
   plugins: [
     nodeResolve({
@@ -76,7 +77,7 @@ let express = {
     dir: "build/node_modules/@remix-run/express",
     format: "cjs",
     preserveModules: true,
-    exports: "default"
+    exports: "auto"
   },
   plugins: [
     nodeResolve({

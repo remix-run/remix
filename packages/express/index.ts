@@ -5,6 +5,8 @@ import {
   createRequestHandler as createRemixRequestHandler
 } from "@remix-run/core";
 
+export type { Request };
+
 function createRemixRequest(req: express.Request): Request {
   let headers = Object.keys(req.headers).reduce((memo, key) => {
     let value = req.headers[key];
