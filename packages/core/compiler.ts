@@ -170,7 +170,7 @@ export async function watch({
   let watcher = rollup.watch(watchOptions);
 
   watcher.on("event", event => {
-    // console.log({ event });
+    console.log({ event });
 
     if (event.code === "BUNDLE_END") {
       if (onBuild) {

@@ -1,8 +1,7 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
-import Remix from "@remix/react/server";
-
 import { Response } from "@remix-run/core";
+import Remix from "@remix-run/react/server";
 
 import App from "./components/App";
 
@@ -16,14 +15,11 @@ import App from "./components/App";
 // }
 
 export default function handleRequest(req, remixContext) {
-  // let markup = renderToString(
-  //   <Remix location={req.url} remixContext={remixContext}>
-  //     <App />
-  //   </Remix>
-  // );
-  // res.write("<!DOCTYPE html>" + markup);
-  // res.end();
-  let markup = renderToString(<div>hello world</div>);
+  let markup = renderToString(
+    <Remix request={req} context={remixContext}>
+      <App />
+    </Remix>
+  );
 
   return new Response("<!DOCTYPE html>" + markup, {
     headers: {

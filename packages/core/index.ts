@@ -19,5 +19,5 @@ export {
   Response
 } from "./platform";
 
-export type { RequestHandler } from "./server";
+export type { RequestHandler, RemixContext } from "./server";
 export { createRequestHandler } from "./server";

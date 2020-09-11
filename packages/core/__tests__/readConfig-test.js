@@ -123,6 +123,7 @@ describe("readConfig", () => {
           },
         ],
         "serverBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/build",
+        "sourceDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/src",
       }
     `);
   });

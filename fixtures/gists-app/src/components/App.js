@@ -1,6 +1,6 @@
-import "../app.css";
+// import "../app.css";
 import React, { Suspense } from "react";
-import { Meta, Scripts, Styles, Routes } from "remix";
+import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
 
 export default function Chrome({ children }) {
   return (

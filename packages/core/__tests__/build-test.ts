@@ -1,6 +1,6 @@
 import path from "path";
 
-import { build } from "../compiler";
+import { build as runBuild } from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 
@@ -14,8 +14,8 @@ describe("build", () => {
   });
 
   it("generates a bundle for each input", async () => {
-    let bundle = await build({ remixRoot });
-    let { output } = await bundle.generate({
+    let { build } = await runBuild({ remixRoot });
+    let { output } = await build.generate({
       exports: "named",
       format: "cjs"
     });
@@ -43,9 +43,9 @@ describe("build", () => {
   });
 
   it("writes the manifest", async () => {
-    let bundle = await build({ remixRoot });
+    let { build } = await runBuild({ remixRoot });
 
-    await bundle.write({
+    await build.write({
       exports: "named",
       dir: remixConfig.serverBuildDirectory,
       format: "cjs"
@@ -63,8 +63,10 @@ describe("build", () => {
           "fileName": "__entry_server__.js",
           "imports": Array [
             "react",
+            "@remix-run/react",
             "react-dom/server",
             "@remix-run/core",
+            "@remix-run/react/server",
           ],
         },
         "pages/one": Object {

@@ -126,13 +126,16 @@ let react = [
     ]
   },
 
-  // Also provide CommonJS build for webpack.
+  // Also provide CommonJS build for entry-server.js
   {
     external: ["react"],
-    input: path.resolve(__dirname, "packages/react/index.tsx"),
+    input: {
+      server: path.resolve(__dirname, "packages/react/server.tsx")
+    },
     output: {
-      file: "build/node_modules/@remix-run/react/index.cjs",
-      format: "cjs"
+      dir: "build/node_modules/@remix-run/react/cjs",
+      format: "cjs",
+      preserveModules: true
     },
     plugins: [
       babel({

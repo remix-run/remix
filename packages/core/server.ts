@@ -11,11 +11,15 @@ import { matchAndLoadData } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
 
-// 1. Get a URL that matches multiple routes
-// 2. Pass a partial manifest to the app request handler, it renders a remix
-//    entry provider
-// 3. Entry provider creates a route tree from the manifest of routes w/ preload
-// 4. Remix route loads the entry dynamically
+// x Pass remixContext to the server entry
+// x Server entry requires remix-run/react/server and passes args
+// - remix-run/react/server renders <EntryProvider> w/ <StaticRouter>
+// - remix-run/react/index has <EntryProvider>
+//   - creates routes from manifest
+//   - renders
+// - <RemixRoute preload> is going to dynamically load
+//   - on the server it just gets it from the lookup table
+//   - on the client it gets it from cache or network (throws a promise)
 
 export interface RequestHandler {
   (request: Request, loadContext: LoadContext): Promise<Response>;
@@ -125,7 +129,7 @@ function createRouteEntries(
   return table;
 }
 
-interface RemixContext {
+export interface RemixContext {
   data: MatchAndLoadResult;
 }
 
