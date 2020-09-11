@@ -1,4 +1,6 @@
 import path from "path";
+import type { Location } from "history";
+import { parsePath } from "history";
 import type { RouteMatch, RouteObject, Params } from "react-router";
 import { matchRoutes } from "react-router";
 
@@ -35,15 +37,13 @@ export type LoadResult = CopyLoadResult | SuccessLoadResult | ErrorLoadResult;
 
 export type MatchAndLoadResult = LoadResult[] | null;
 
-type Location = {
-  pathname: string;
-  search: string;
-};
-
-// TODO: Does history/react router have something here?
-function createLocation(url: string) {
-  let [pathname, search] = url.split("?");
-  return { pathname, search };
+function createLocation(
+  url: string,
+  state: Location["state"] = null,
+  key: Location["key"] = "default"
+): Location {
+  let { pathname = "/", search = "", hash = "" } = parsePath(url);
+  return { pathname, search, hash, state, key };
 }
 
 // TODO: we probably want this to stream data as it becomes available to fully
@@ -54,7 +54,9 @@ export async function matchAndLoadData(
   loadContext: any,
   from: string | null = null
 ): Promise<MatchAndLoadResult> {
-  let matches = matchRemixRoutes(remixConfig.routes, url);
+  // TODO: Maybe provide location.state via a cookie?
+  let location = createLocation(url);
+  let matches = matchRemixRoutes(remixConfig.routes, location);
 
   // TODO: Maybe warn the user about missing 404 when we first validate their
   // routes config instead of waiting until now...
@@ -62,8 +64,6 @@ export async function matchAndLoadData(
 
   let notFound = matches.length === 1 && matches[0].route.path === "*";
   if (notFound) return null;
-
-  let location = createLocation(url);
 
   if (from) {
     // Try to load data for only the new routes!
@@ -102,9 +102,9 @@ export interface RemixRouteMatch extends Omit<RouteMatch, "route"> {
 
 function matchRemixRoutes(
   routes: RemixRouteObject[],
-  url: string
+  location: string | Location
 ): RemixRouteMatch[] | null {
-  return matchRoutes((routes as unknown) as RouteObject[], url) as
+  return matchRoutes((routes as unknown) as RouteObject[], location) as
     | RemixRouteMatch[]
     | null;
 }
@@ -115,9 +115,7 @@ async function loadData(
   loadContext: any,
   location: Location
 ): Promise<LoadResult[]> {
-  let loaders = matches.map(match =>
-    getLoader(remixConfig.loadersDirectory, match)
-  );
+  let loaders = matches.map(match => getLoader(remixConfig, match));
 
   let promises = loaders.map(
     async (loader, index): Promise<LoadResult> => {
@@ -162,10 +160,15 @@ export interface RemixLoader {
 }
 
 function getLoader(
-  loadersDirectory: string,
+  remixConfig: RemixConfig,
   match: RemixRouteMatch
 ): RemixLoader | null {
   if (match.route.loader == null) return null;
-  let requirePath = path.resolve(loadersDirectory, match.route.loader);
+
+  let requirePath = path.resolve(
+    remixConfig.loadersDirectory,
+    match.route.loader
+  );
+
   return require(requirePath);
 }
