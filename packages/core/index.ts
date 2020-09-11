@@ -3,13 +3,7 @@ export { readConfig } from "./config";
 
 export type { LoadContext, RemixLoader } from "./match";
 
-export type {
-  HeadersInit,
-  Body,
-  RequestInit,
-  ResponseInit,
-  RequestHandler
-} from "./platform";
+export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
   Headers,
   Message,
@@ -20,6 +14,8 @@ export {
   RequestRedirect,
   Request,
   ResponseType,
-  Response,
-  createRequestHandler
+  Response
 } from "./platform";
+
+export type { RequestHandler } from "./server";
+export { createRequestHandler } from "./server";
