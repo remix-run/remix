@@ -109,6 +109,8 @@ function matchRemixRoutes(
     | null;
 }
 
+export { matchRemixRoutes as matchRoutes };
+
 async function loadData(
   remixConfig: RemixConfig,
   matches: RemixRouteMatch[],

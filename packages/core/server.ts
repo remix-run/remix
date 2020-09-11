@@ -1,4 +1,3 @@
-import { promises as fsp } from "fs";
 import path from "path";
 import type { Component } from "react";
 import type { Params } from "react-router";
@@ -6,14 +5,21 @@ import type { Params } from "react-router";
 import type { Manifest } from "./rollup/manifest";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import type { LoadContext, MatchAndLoadResult } from "./match";
-import { matchAndLoadData } from "./match";
+import type { LoadContext, MatchAndLoadResult, RemixRouteMatch } from "./match";
+import { matchAndLoadData, matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
 
+export interface RemixContext {
+  data: MatchAndLoadResult;
+  matches: RemixRouteMatch[];
+  partialManifest: Manifest;
+  requireRoute: (id: string) => RouteEntry;
+}
+
 // x Pass remixContext to the server entry
 // x Server entry requires remix-run/react/server and passes args
-// - remix-run/react/server renders <EntryProvider> w/ <StaticRouter>
+// x remix-run/react/server renders <EntryProvider> w/ <StaticRouter>
 // - remix-run/react/index has <EntryProvider>
 //   - creates routes from manifest
 //   - renders
@@ -37,7 +43,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     //   init = initializeServer(remixRoot);
     // }
 
-    let { config, routeEntries, serverEntry } = await init;
+    let { config, manifest, routeEntries, serverEntry } = await init;
 
     // /__remix_data?path=/gists
     // /__remix_data?from=/gists&path=/gists/123
@@ -65,8 +71,34 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
       });
     }
 
+    let matches = matchRoutes(config.routes, req.url);
+
+    if (!matches) {
+      return new Response("Missing routes/404.js", {
+        status: 500,
+        headers: {
+          "Content-Type": "text/html"
+        }
+      });
+    }
+
+    // TODO: Refactor later...
     let data = await matchAndLoadData(config, req.url, loadContext);
-    let remixContext = { data };
+
+    let partialManifest = matches.reduce((memo, match) => {
+      let routeId = match.route.id;
+      memo[routeId] = manifest[routeId];
+      return memo;
+    }, {} as Manifest);
+
+    let requireRoute = (id: string) => routeEntries[id];
+
+    let remixContext: RemixContext = {
+      data,
+      matches,
+      partialManifest,
+      requireRoute
+    };
 
     return serverEntry.default(req, remixContext);
   };
@@ -82,7 +114,7 @@ async function initializeServer(remixRoot?: string) {
   );
   let serverEntry = createServerEntry(config.serverBuildDirectory, manifest);
 
-  return { config, routeEntries, serverEntry };
+  return { config, manifest, routeEntries, serverEntry };
 }
 
 function readManifest(serverBuildDirectory: string): Manifest {
@@ -127,10 +159,6 @@ function createRouteEntries(
   }
 
   return table;
-}
-
-export interface RemixContext {
-  data: MatchAndLoadResult;
 }
 
 interface ServerEntry {

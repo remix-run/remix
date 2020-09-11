@@ -16,12 +16,12 @@ let core = {
     exports: "auto"
   },
   plugins: [
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
     babel({
       babelHelpers: "bundled",
       exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    nodeResolve({
       extensions: [".ts", ".tsx"]
     }),
     copy({
@@ -36,38 +36,6 @@ let core = {
 };
 
 /** @type {import('rollup').RollupOptions} */
-// let compiler = {
-//   external(id) {
-//     return !(id.startsWith(".") || id.startsWith("/"));
-//   },
-//   input: path.resolve(__dirname, "packages/compiler/index.ts"),
-//   output: {
-//     dir: "build/node_modules/@remix-run/compiler",
-//     format: "cjs",
-//     exports: "named",
-//     preserveModules: true
-//   },
-//   plugins: [
-//     nodeResolve({
-//       extensions: [".ts", ".tsx"]
-//     }),
-//     babel({
-//       babelHelpers: "bundled",
-//       exclude: /node_modules/,
-//       extensions: [".ts", ".tsx"]
-//     }),
-//     copy({
-//       targets: [
-//         {
-//           src: path.resolve(__dirname, "packages/compiler/package.json"),
-//           dest: "build/node_modules/@remix-run/compiler"
-//         }
-//       ]
-//     })
-//   ]
-// };
-
-/** @type {import('rollup').RollupOptions} */
 let express = {
   external(id) {
     return !(id.startsWith(".") || id.startsWith("/"));
@@ -80,12 +48,12 @@ let express = {
     exports: "auto"
   },
   plugins: [
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
     babel({
       babelHelpers: "bundled",
       exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    nodeResolve({
       extensions: [".ts", ".tsx"]
     }),
     copy({
@@ -102,7 +70,9 @@ let express = {
 /** @type {import('rollup').RollupOptions[]} */
 let react = [
   {
-    external: ["react"],
+    external(id) {
+      return !(id.startsWith(".") || id.startsWith("/"));
+    },
     input: path.resolve(__dirname, "packages/react/index.tsx"),
     output: {
       file: "build/node_modules/@remix-run/react/index.js",
@@ -113,6 +83,9 @@ let react = [
       babel({
         babelHelpers: "bundled",
         exclude: /node_modules/,
+        extensions: [".ts", ".tsx"]
+      }),
+      nodeResolve({
         extensions: [".ts", ".tsx"]
       }),
       copy({
@@ -128,8 +101,12 @@ let react = [
 
   // Also provide CommonJS build for entry-server.js
   {
-    external: ["react"],
+    external(id) {
+      return !(id.startsWith(".") || id.startsWith("/"));
+    },
     input: {
+      // dom: path.resolve(__dirname, "packages/react/dom.tsx"),
+      index: path.resolve(__dirname, "packages/react/index.tsx"),
       server: path.resolve(__dirname, "packages/react/server.tsx")
     },
     output: {
@@ -141,6 +118,9 @@ let react = [
       babel({
         babelHelpers: "bundled",
         exclude: /node_modules/,
+        extensions: [".ts", ".tsx"]
+      }),
+      nodeResolve({
         extensions: [".ts", ".tsx"]
       })
     ]

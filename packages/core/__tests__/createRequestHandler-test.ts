@@ -12,14 +12,12 @@ describe("a remix request handler", () => {
   describe("serving HTML", () => {
     it("renders the server entry", async () => {
       let handleRequest = createRequestHandler(remixRoot);
-      let req = new Request("/gists");
+      let req = new Request("/");
       let res = await handleRequest(req, null);
       let text = await res.text();
 
       expect(res.headers.get("Content-Type")).toEqual("text/html");
-      expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><div data-reactroot=\\"\\">Hello from Remix</div>"`
-      );
+      expect(text).toMatchInlineSnapshot(`"<!DOCTYPE html><div>hello</div>"`);
     });
   });
 
