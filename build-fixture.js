@@ -1,15 +1,15 @@
 const path = require("path");
-const { build } = require("./build/node_modules/@remix-run/core");
+const { build: runBuild } = require("./build/node_modules/@remix-run/core");
 
 let remixRoot = path.resolve(__dirname, "fixtures/gists-app");
 
 async function run() {
   console.log("building gists-app fixture...");
 
-  let bundle = await build({ remixRoot });
+  let { remixConfig, build } = await runBuild({ remixRoot });
 
-  await bundle.write({
-    dir: path.join(remixRoot, "build"),
+  await build.write({
+    dir: remixConfig.serverBuildDirectory,
     format: "cjs",
     exports: "named"
   });

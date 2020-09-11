@@ -29,7 +29,7 @@ export interface UserConfig {
 
   /**
    * The path where "conventional" routes are found, may be relative to
-   * remix.config.js. Conventional routes use the filesystem for defining
+   * the `sourceDirectory`. Conventional routes use the filesystem for defining
    * route paths and nesting.
    */
   routesDirectory: string;
@@ -45,6 +45,11 @@ export interface UserConfig {
    * The path to the server build, may be relative to remix.config.js.
    */
   serverBuildDirectory: string;
+
+  /**
+   * The path to the source directory, may be relative to remix.config.js.
+   */
+  sourceDirectory: string;
 }
 
 /**
@@ -85,6 +90,11 @@ export interface RemixConfig {
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
+
+  /**
+   * The absolute path to the source directory.
+   */
+  sourceDirectory: string;
 }
 
 /**
@@ -120,9 +130,14 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     userConfig.loadersDirectory || "loaders"
   );
 
-  let routesDir = path.resolve(
+  let sourceDirectory = path.resolve(
     rootDirectory,
-    userConfig.routesDirectory || path.join("src", "routes")
+    userConfig.sourceDirectory || "src"
+  );
+
+  let routesDir = path.resolve(
+    sourceDirectory,
+    userConfig.routesDirectory || "routes"
   );
   let routes = await getConventionalRoutes(routesDir, loadersDirectory);
   if (userConfig.routes) {
@@ -144,7 +159,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     loadersDirectory,
     rootDirectory,
     routes,
-    serverBuildDirectory
+    serverBuildDirectory,
+    sourceDirectory
   };
 
   return remixConfig;

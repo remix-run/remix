@@ -1,3 +1,4 @@
+import { promises as fsp } from "fs";
 import path from "path";
 import type { Component } from "react";
 import type { Params } from "react-router";
@@ -5,7 +6,7 @@ import type { Params } from "react-router";
 import type { Manifest } from "./rollup/manifest";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import type { LoadContext } from "./match";
+import type { LoadContext, MatchAndLoadResult } from "./match";
 import { matchAndLoadData } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
@@ -27,7 +28,12 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   let init = initializeServer(remixRoot);
 
   return async (req, loadContext) => {
-    let { config, lookupTable, serverEntry } = await init;
+    // if (process.env.NODE_ENV === 'development') {
+    //   purgeRequireCache(remixRoot);
+    //   init = initializeServer(remixRoot);
+    // }
+
+    let { config, routeEntries, serverEntry } = await init;
 
     // /__remix_data?path=/gists
     // /__remix_data?from=/gists&path=/gists/123
@@ -56,31 +62,28 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     }
 
     let data = await matchAndLoadData(config, req.url, loadContext);
+    let remixContext = { data };
 
-    return serverEntry.default(data);
+    return serverEntry.default(req, remixContext);
   };
 }
 
 async function initializeServer(remixRoot?: string) {
   let config = await readConfig(remixRoot);
-  let manifest = readManifest(config);
-
-  let lookupTable = createRoutesLookupTable(
-    config.routes,
+  let manifest = readManifest(config.serverBuildDirectory);
+  let routeEntries = createRouteEntries(
     config.serverBuildDirectory,
+    config.routes,
     manifest
   );
+  let serverEntry = createServerEntry(config.serverBuildDirectory, manifest);
 
-  let serverEntry = require(path.join(
-    config.serverBuildDirectory,
-    manifest["__entry_server__"].fileName
-  ));
-
-  return { config, lookupTable, serverEntry };
+  return { config, routeEntries, serverEntry };
 }
 
-function readManifest(config: RemixConfig): Manifest {
-  return require(path.join(config.serverBuildDirectory, "manifest.json"));
+function readManifest(serverBuildDirectory: string): Manifest {
+  let manifestFile = path.join(serverBuildDirectory, "manifest.json");
+  return require(manifestFile);
 }
 
 interface MetaArgs {
@@ -93,19 +96,19 @@ type MetaTagName = string;
 type MetaTagContent = string;
 type MetaContents = Record<MetaTagName, MetaTagContent>;
 
-interface RouteModule {
+interface RouteEntry {
   meta?: (metaArgs: MetaArgs) => MetaContents;
   default: Component;
 }
 
-type RoutesLookupTable = Record<string, RouteModule>;
+type RouteEntries = Record<string, RouteEntry>;
 
-function createRoutesLookupTable(
-  routes: RemixConfig["routes"],
+function createRouteEntries(
   serverBuildDirectory: string,
+  routes: RemixConfig["routes"],
   manifest: Manifest,
-  table: RoutesLookupTable = {}
-): RoutesLookupTable {
+  table: RouteEntries = {}
+): RouteEntries {
   for (let route of routes) {
     let requirePath = path.join(
       serverBuildDirectory,
@@ -115,14 +118,29 @@ function createRoutesLookupTable(
     table[route.id] = require(requirePath);
 
     if (route.children) {
-      createRoutesLookupTable(
-        route.children,
-        serverBuildDirectory,
-        manifest,
-        table
-      );
+      createRouteEntries(serverBuildDirectory, route.children, manifest, table);
     }
   }
 
   return table;
+}
+
+interface RemixContext {
+  data: MatchAndLoadResult;
+}
+
+interface ServerEntry {
+  default: (req: Request, remixContext: RemixContext) => Promise<Response>;
+}
+
+function createServerEntry(
+  serverBuildDirectory: string,
+  manifest: Manifest
+): ServerEntry {
+  let requirePath = path.join(
+    serverBuildDirectory,
+    manifest["__entry_server__"].fileName
+  );
+
+  return require(requirePath);
 }
