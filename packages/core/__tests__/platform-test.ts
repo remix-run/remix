@@ -1,6 +1,7 @@
 import { createReadStream } from "fs";
 import { Readable } from "stream";
-import { Headers, Message } from "../platform";
+
+import { Headers, Message, Response } from "../platform";
 
 describe("Headers", () => {
   it("clones an existing headers object", () => {
@@ -111,5 +112,33 @@ describe("Message", () => {
     await drainStream(message.body as Readable);
 
     expect(message.bodyUsed).toBe(true);
+  });
+
+  it("can be parsed to JSON", async () => {
+    let source = { hello: "world" };
+    let message = new Message(JSON.stringify(source));
+    let json = await message.json();
+    expect(json).toMatchObject(source);
+  });
+
+  it("can be buffered", async () => {
+    let source = "hello world";
+    let message = new Message(Buffer.from(source));
+    let buffer = await message.buffer();
+    expect(buffer.toString("utf-8")).toEqual(source);
+  });
+
+  it("can return text", async () => {
+    let source = "hello world";
+    let message = new Message(Buffer.from(source));
+    let text = await message.text();
+    expect(text).toEqual(source);
+  });
+});
+
+describe("Response", () => {
+  it("has a default content-type of text/plain", () => {
+    let response = new Response();
+    expect(response.headers.get("content-type")).toMatch("text/plain");
   });
 });

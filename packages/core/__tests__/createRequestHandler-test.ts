@@ -1,5 +1,7 @@
 import path from "path";
-import { Request, createRequestHandler } from "../platform";
+
+import { createRequestHandler } from "../server";
+import { Request } from "../platform";
 
 describe("a remix request handler", () => {
   let remixRoot: string;
@@ -11,9 +13,10 @@ describe("a remix request handler", () => {
     let handleRequest = createRequestHandler(remixRoot);
     let req = new Request("/gists");
     let res = await handleRequest(req, null);
+    let text = await res.text();
 
     expect(res.headers.get("Content-Type")).toEqual("text/html");
-    expect(res.body).toMatchInlineSnapshot(
+    expect(text).toMatchInlineSnapshot(
       `"<!DOCTYPE html><div data-reactroot=\\"\\">hello world</div>"`
     );
   });

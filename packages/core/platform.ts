@@ -1,19 +1,18 @@
 import { Readable } from "stream";
 import { STATUS_CODES } from "http";
 
+export { STATUS_CODES as StatusCodes };
+
 export type HeadersInit = Record<string, string>;
 
 /**
- * The headers in a HTTP request or response.
+ * The headers in a Request or Response.
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers
  */
 export class Headers {
   private _map: Record<string, string>;
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/Headers
-   */
   constructor(init: Headers | HeadersInit = {}) {
     this._map = {};
 
@@ -28,9 +27,6 @@ export class Headers {
     }
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/append
-   */
   append(name: string, value: string): void {
     let lowerName = name.toLowerCase();
     if (this._map[lowerName]) {
@@ -40,52 +36,31 @@ export class Headers {
     }
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/delete
-   */
   delete(name: string): void {
     delete this._map[name.toLowerCase()];
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/entries
-   */
   entries(): Iterable<string[]> {
     return Object.entries(this._map);
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/get
-   */
   get(name: string): string | null {
     let value = this._map[name.toLowerCase()];
     return value == null ? null : value;
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/has
-   */
   has(name: string): boolean {
     return name.toLowerCase() in this._map;
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys
-   */
   keys(): Iterable<string> {
     return Object.keys(this._map);
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/set
-   */
   set(name: string, value: string): void {
     this._map[name.toLowerCase()] = value;
   }
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers/values
-   */
   values(): Iterable<string> {
     return Object.values(this._map);
   }
@@ -94,37 +69,25 @@ export class Headers {
 /**
  * The body of a HTTP request or response.
  */
-export type Body = string | Buffer | Readable;
+export type Body = Buffer | Readable;
 
 /**
  * A HTTP message. The base class for Request and Response.
  *
  * The main difference between this and the fetch spec is the `body` property,
- * which may be a few data types that are common in node (instead of types that
- * are available in the browser). As this class is only ever meant to be used in
- * node, this is an acceptable trade-off.
+ * which may be either a Buffer (either provided directly in the constructor or
+ * created from a string) or a Readable node stream. When backed by a Buffer,
+ * the `bodyUsed` getter always returns `false`, allowing multiple uses.
  */
 export class Message {
   readonly body: Body;
-  private _bodyUsed: boolean;
-  private _buffer: Buffer | null;
 
-  constructor(body: Body = "") {
-    this.body = body;
-    this._buffer = null;
-
-    if (body instanceof Readable) {
-      this._bodyUsed = false;
-      body.on("end", () => {
-        this._bodyUsed = true;
-      });
-    } else {
-      this._bodyUsed = true;
-    }
+  constructor(body: Body | string = "") {
+    this.body = typeof body === "string" ? Buffer.from(body) : body;
   }
 
   get bodyUsed() {
-    return this._bodyUsed;
+    return this.body instanceof Readable && this.body.readableEnded;
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
@@ -136,7 +99,9 @@ export class Message {
   }
 
   async buffer(): Promise<Buffer> {
-    return this._buffer || (this._buffer = await bufferBody(this.body));
+    if (Buffer.isBuffer(this.body)) return this.body;
+    if (this.bodyUsed) throw new Error(`body has already been used`);
+    return bufferStream(this.body);
   }
 
   async formData() {
@@ -152,23 +117,13 @@ export class Message {
   }
 }
 
-async function bufferBody(body: Body): Promise<Buffer> {
+async function bufferStream(stream: Readable): Promise<Buffer> {
   return new Promise((accept, reject) => {
-    if (body instanceof Buffer) {
-      accept(body);
-    } else if (typeof body === "string") {
-      accept(Buffer.from(body));
-    } else {
-      let chunks: Buffer[] = [];
-      body
-        .on("error", reject)
-        .on("data", chunk => {
-          chunks.push(chunk);
-        })
-        .on("end", () => {
-          accept(Buffer.concat(chunks));
-        });
-    }
+    let chunks: Buffer[] = [];
+    stream
+      .on("error", reject)
+      .on("data", chunk => chunks.push(chunk))
+      .on("end", () => accept(Buffer.concat(chunks)));
   });
 }
 
@@ -223,7 +178,7 @@ export enum RequestRedirect {
 }
 
 export interface RequestInit {
-  body?: Body;
+  body?: Body | string;
   cache?: RequestCache;
   credentials?: RequestCredentials;
   headers?: Headers | HeadersInit;
@@ -240,6 +195,10 @@ export interface RequestInit {
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Request
  */
 export class Request extends Message {
+  static clone() {
+    throw new Error(`Request.clone() is not yet implemented`);
+  }
+
   readonly cache: RequestCache;
   readonly credentials: RequestCredentials;
   readonly destination: RequestDestination;
@@ -252,9 +211,6 @@ export class Request extends Message {
   readonly referrerPolicy: string;
   readonly url: string;
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Request/Request
-   */
   constructor(input: string | Request, init: RequestInit = {}) {
     super(init.body);
 
@@ -286,6 +242,7 @@ export class Request extends Message {
 export enum ResponseType {
   Basic = "basic",
   Cors = "cors",
+  Default = "default",
   Error = "error",
   Opaque = "opaque",
   OpaqueRedirect = "opaqueredirect"
@@ -304,14 +261,14 @@ export interface ResponseInit {
  */
 export class Response extends Message {
   static clone() {
-    throw new Error(`Response.clone is not yet implemented`);
+    throw new Error(`Response.clone() is not yet implemented`);
   }
 
   static error() {
-    throw new Error(`Response.error is not yet implemented`);
+    throw new Error(`Response.error() is not yet implemented`);
   }
 
-  static redirect(url: string, status: number): Response {
+  static redirect(url: string, status = 302): Response {
     return new Response("", {
       status,
       headers: {
@@ -328,19 +285,13 @@ export class Response extends Message {
   readonly type: ResponseType;
   readonly url: string;
 
-  /**
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Response/Response
-   */
-  constructor(body?: Body, init: ResponseInit = {}) {
+  constructor(body?: Body | string, init: ResponseInit = {}) {
     super(body);
 
     let status = init.status || 200;
 
-    if (status < 200 || status > 599) {
-      // Copied this error message from Chrome
-      throw new RangeError(
-        `Failed to construct 'Response': The status provided (${status}) is outside the range [200, 599]`
-      );
+    if (!(status in STATUS_CODES)) {
+      throw new Error(`Invalid HTTP status code: ${status}`);
     }
 
     let headers = new Headers(init.headers);
@@ -354,8 +305,8 @@ export class Response extends Message {
     this.redirected = status >= 300 && status < 400;
     this.status = status;
     this.statusText = init.statusText || (STATUS_CODES[status] as string);
-    this.type = ResponseType.Basic;
-    this.url = ""; // TODO
+    this.type = ResponseType.Default;
+    this.url = "";
   }
 
   get trailers() {
