@@ -1,16 +1,18 @@
 import path from "path";
-import { builtinModules } from "module";
 import copy from "rollup-plugin-copy";
 import babel from "@rollup/plugin-babel";
 import nodeResolve from "@rollup/plugin-node-resolve";
 
 /** @type {import('rollup').RollupOptions} */
 let core = {
-  external: [...builtinModules],
+  external(id) {
+    return !(id.startsWith(".") || id.startsWith("/"));
+  },
   input: path.resolve(__dirname, "packages/core/index.ts"),
   output: {
-    file: "build/@remix-run/core/index.js",
-    format: "cjs"
+    dir: "build/node_modules/@remix-run/core",
+    format: "cjs",
+    preserveModules: true
   },
   plugins: [
     nodeResolve({
@@ -25,7 +27,39 @@ let core = {
       targets: [
         {
           src: path.resolve(__dirname, "packages/core/package.json"),
-          dest: "build/@remix-run/core"
+          dest: "build/node_modules/@remix-run/core"
+        }
+      ]
+    })
+  ]
+};
+
+/** @type {import('rollup').RollupOptions} */
+let compiler = {
+  external(id) {
+    return !(id.startsWith(".") || id.startsWith("/"));
+  },
+  input: path.resolve(__dirname, "packages/compiler/index.ts"),
+  output: {
+    dir: "build/node_modules/@remix-run/compiler",
+    format: "cjs",
+    exports: "named",
+    preserveModules: true
+  },
+  plugins: [
+    nodeResolve({
+      extensions: [".ts", ".tsx"]
+    }),
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/compiler/package.json"),
+          dest: "build/node_modules/@remix-run/compiler"
         }
       ]
     })
@@ -34,12 +68,14 @@ let core = {
 
 /** @type {import('rollup').RollupOptions} */
 let express = {
-  external: [...builtinModules],
-  external: ["@remix-run/core"],
+  external(id) {
+    return !(id.startsWith(".") || id.startsWith("/"));
+  },
   input: path.resolve(__dirname, "packages/express/index.ts"),
   output: {
-    file: "build/@remix-run/express/index.js",
-    format: "cjs"
+    dir: "build/node_modules/@remix-run/express",
+    format: "cjs",
+    preserveModules: true
   },
   plugins: [
     nodeResolve({
@@ -54,7 +90,7 @@ let express = {
       targets: [
         {
           src: path.resolve(__dirname, "packages/express/package.json"),
-          dest: "build/@remix-run/express"
+          dest: "build/node_modules/@remix-run/express"
         }
       ]
     })
@@ -67,7 +103,7 @@ let react = [
     external: ["react"],
     input: path.resolve(__dirname, "packages/react/index.tsx"),
     output: {
-      file: "build/@remix-run/react/index.js",
+      file: "build/node_modules/@remix-run/react/index.js",
       format: "esm"
     },
     plugins: [
@@ -81,18 +117,19 @@ let react = [
         targets: [
           {
             src: path.resolve(__dirname, "packages/react/package.json"),
-            dest: "build/@remix-run/react"
+            dest: "build/node_modules/@remix-run/react"
           }
         ]
       })
     ]
   },
+
   // Also provide CommonJS build for webpack.
   {
     external: ["react"],
     input: path.resolve(__dirname, "packages/react/index.tsx"),
     output: {
-      file: "build/@remix-run/react/index.cjs",
+      file: "build/node_modules/@remix-run/react/index.cjs",
       format: "cjs"
     },
     plugins: [
@@ -105,4 +142,4 @@ let react = [
   }
 ];
 
-export default [core, express, ...react];
+export default [core, compiler, express, ...react];

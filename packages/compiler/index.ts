@@ -1,2 +1,1 @@
-export { build, watch } from "./core";
-export { default as createDevServer } from "./createDevServer";
+export { default as build } from "./build";

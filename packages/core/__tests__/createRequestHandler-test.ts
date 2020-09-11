@@ -13,7 +13,9 @@ describe("a remix request handler", () => {
     let res = await handleRequest(req, null);
 
     expect(res.headers.get("Content-Type")).toEqual("text/html");
-    expect(res.body).toMatchInlineSnapshot(`"hello"`);
+    expect(res.body).toMatchInlineSnapshot(
+      `"<!DOCTYPE html><div data-reactroot=\\"\\">hello world</div>"`
+    );
   });
 });
 

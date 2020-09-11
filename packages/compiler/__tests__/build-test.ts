@@ -27,11 +27,14 @@ describe("build", () => {
         "routes/404",
         "routes/gists",
         "routes/gists/$username",
+        "routes/gists/$username/edit",
         "routes/gists/index",
         "routes/gists.mine",
         "routes/index",
         "routes/payments",
         "routes/payments/error",
+        "routes/users",
+        "routes/users/$username",
         "__entry_server__",
       ]
     `);
@@ -55,7 +58,11 @@ describe("build", () => {
     expect(manifest).toMatchInlineSnapshot(`
       Object {
         "__entry_server__": Object {
-          "imports": Array [],
+          "imports": Array [
+            "react",
+            "react-dom/server",
+            "@remix-run/core",
+          ],
           "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/__entry_server__.js",
         },
         "routes/404": Object {
@@ -86,6 +93,10 @@ describe("build", () => {
           ],
           "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists/$username.js",
         },
+        "routes/gists/$username/edit": Object {
+          "imports": Array [],
+          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/gists/$username/edit.js",
+        },
         "routes/gists/index": Object {
           "imports": Array [
             "react",
@@ -112,6 +123,14 @@ describe("build", () => {
             "react",
           ],
           "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/payments/error.js",
+        },
+        "routes/users": Object {
+          "imports": Array [],
+          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/users.js",
+        },
+        "routes/users/$username": Object {
+          "imports": Array [],
+          "requirePath": "/Users/michael/Projects/remix/fixtures/gists-app/build/routes/users/$username.js",
         },
       }
     `);

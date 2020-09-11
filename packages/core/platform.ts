@@ -147,17 +147,17 @@ export class Message {
     return this._bodyUsed;
   }
 
-  private async bodyBuffer(): Promise<Buffer> {
+  async buffer(): Promise<Buffer> {
     if (!this._bodyBuffer) this._bodyBuffer = await bufferBody(this.body);
     return this._bodyBuffer;
   }
 
-  async json() {
-    return JSON.parse(await this.bodyBuffer());
+  async json(): Promise<any> {
+    return JSON.parse(await this.buffer());
   }
 
-  async text() {
-    return (await this.bodyBuffer()).toString("utf-8");
+  async text(): Promise<string> {
+    return (await this.buffer()).toString("utf-8");
   }
 }
 
@@ -313,6 +313,11 @@ export class Response extends Message {
     }
 
     this.headers = new Headers(init.headers);
+
+    if (!this.headers.has("content-type")) {
+      this.headers.set("content-type", "text/plain;charset=UTF-8");
+    }
+
     this.ok = status >= 200 && status < 300;
     this.redirected = status >= 300 && status < 400;
     this.status = status;
@@ -373,13 +378,8 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
 
     let data = await matchAndLoadData(config, req.url, loadContext);
     let entry = require(manifest.__entry_server__.requirePath);
-    let html = entry.render(data);
 
-    return new Response(html, {
-      headers: {
-        "Content-Type": "text/html"
-      }
-    });
+    return entry.default(data);
   };
 }
 

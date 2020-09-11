@@ -22,7 +22,7 @@ export interface BuildOptions {
 }
 
 function createInputFromRoutesConfig(
-  routesConfig: RemixConfig["routesConfig"],
+  routesConfig: RemixConfig["routes"],
   appRoot: string,
   input: Record<string, string> = {}
 ) {
@@ -42,10 +42,7 @@ export default async function build({
   remixRoot
 }: BuildOptions = {}) {
   let config = await readConfig(remixRoot);
-  let input = createInputFromRoutesConfig(
-    config.routesConfig,
-    config.rootDirectory
-  );
+  let input = createInputFromRoutesConfig(config.routes, config.rootDirectory);
 
   input.__entry_server__ = path.join(
     config.rootDirectory,
