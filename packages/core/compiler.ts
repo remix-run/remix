@@ -1,16 +1,12 @@
 import path from "path";
-import type {
-  InputOptions,
-  InputOption,
-  RollupBuild,
-  RollupWatchOptions
-} from "rollup";
+import type { InputOptions, RollupBuild, RollupWatchOptions } from "rollup";
 import * as rollup from "rollup";
 import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 
+import { ManifestServerEntryKey } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import { purgeRequireCache } from "./require";
@@ -23,28 +19,32 @@ export enum BuildMode {
   Development = "development"
 }
 
-function createInputFromRoutesConfig(
+type Input = Record<string, string>;
+
+function getInputForRoutes(
+  sourceDirectory: string,
   routesConfig: RemixConfig["routes"],
-  appRoot: string,
-  input: Record<string, string> = {}
-) {
+  input: Input = {}
+): Input {
   for (let route of routesConfig) {
-    input[route.id] = path.resolve(appRoot, "src", route.component);
+    (input as { [key: string]: string })[route.id] = path.resolve(
+      sourceDirectory,
+      route.component
+    );
 
     if (route.children) {
-      createInputFromRoutesConfig(route.children, appRoot, input);
+      getInputForRoutes(sourceDirectory, route.children, input);
     }
   }
 
   return input;
 }
 
-function createInput(config: RemixConfig): InputOption {
-  let input = createInputFromRoutesConfig(config.routes, config.rootDirectory);
+function createInput(config: RemixConfig): Input {
+  let input = getInputForRoutes(config.sourceDirectory, config.routes);
 
-  input.__entry_server__ = path.join(
-    config.rootDirectory,
-    "src",
+  input[ManifestServerEntryKey] = path.join(
+    config.sourceDirectory,
     "entry-server"
   );
 
