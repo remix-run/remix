@@ -32,6 +32,12 @@ export function RemixEntryProvider({
   );
 }
 
+export function RemixRoute({ id }: { id: string }) {
+  let context = useRemixContext();
+  let mod = context.requireRoute(id);
+  return <mod.default />;
+}
+
 export function Routes() {
   let context = useRemixContext();
 
@@ -60,23 +66,6 @@ export function Routes() {
 
   return useRoutes([route!]);
 }
-
-export function RemixRoute({ id }: { id: string }) {
-  let context = useRemixContext();
-  let mod = context.requireRoute(id);
-  return <mod.default />;
-}
-
-/* useRoutes([ */
-/*   { */
-/*     path: "gists", */
-/*     element: <RemixRoute id="gists" />, */
-/*     preload: () => requireRoute("gists"), */
-/*     children: [ */
-/*       // ... */
-/*     ] */
-/*   } */
-/* ]); */
 
 export function Meta() {
   return null;

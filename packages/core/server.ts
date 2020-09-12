@@ -1,31 +1,15 @@
-import path from "path";
-import type { Component } from "react";
-import type { Params } from "react-router";
-
-import type { Manifest } from "./rollup/manifest";
-import type { RemixConfig } from "./config";
+import type { BuildManifest, RemixServerContext } from "./build";
+import {
+  getBuildManifest,
+  getRouteModules,
+  getServerEntryModule
+} from "./build";
 import { readConfig } from "./config";
-import type { LoadContext, MatchAndLoadResult, RemixRouteMatch } from "./match";
+import type { LoadContext } from "./match";
 import { matchAndLoadData, matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
-
-export interface RemixContext {
-  data: MatchAndLoadResult;
-  matches: RemixRouteMatch[];
-  partialManifest: Manifest;
-  requireRoute: (id: string) => RouteEntry;
-}
-
-// x Pass remixContext to the server entry
-// x Server entry requires remix-run/react/server and passes args
-// x remix-run/react/server renders <EntryProvider> w/ <StaticRouter>
-// - remix-run/react/index has <EntryProvider>
-//   - creates routes from manifest
-//   - renders
-// - <RemixRoute preload> is going to dynamically load
-//   - on the server it just gets it from the lookup table
-//   - on the client it gets it from cache or network (throws a promise)
+// import { purgeRequireCache } from './require'
 
 export interface RequestHandler {
   (request: Request, loadContext: LoadContext): Promise<Response>;
@@ -43,7 +27,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     //   init = initializeServer(remixRoot);
     // }
 
-    let { config, manifest, routeEntries, serverEntry } = await init;
+    let { config, manifest, serverEntryModule, routeModules } = await init;
 
     // /__remix_data?path=/gists
     // /__remix_data?from=/gists&path=/gists/123
@@ -89,90 +73,34 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
       let routeId = match.route.id;
       memo[routeId] = manifest[routeId];
       return memo;
-    }, {} as Manifest);
+    }, {} as BuildManifest);
 
-    let requireRoute = (id: string) => routeEntries[id];
-
-    let remixContext: RemixContext = {
-      data,
+    let remixContext: RemixServerContext = {
       matches,
+      data,
       partialManifest,
-      requireRoute
+      requireRoute(id: string) {
+        return routeModules[id];
+      }
     };
 
-    return serverEntry.default(req, remixContext);
+    return serverEntryModule.default(req, remixContext);
   };
 }
 
 async function initializeServer(remixRoot?: string) {
   let config = await readConfig(remixRoot);
-  let manifest = readManifest(config.serverBuildDirectory);
-  let routeEntries = createRouteEntries(
+
+  let manifest = getBuildManifest(config.serverBuildDirectory);
+  let serverEntryModule = getServerEntryModule(
+    config.serverBuildDirectory,
+    manifest
+  );
+  let routeModules = getRouteModules(
     config.serverBuildDirectory,
     config.routes,
     manifest
   );
-  let serverEntry = createServerEntry(config.serverBuildDirectory, manifest);
 
-  return { config, manifest, routeEntries, serverEntry };
-}
-
-function readManifest(serverBuildDirectory: string): Manifest {
-  let manifestFile = path.join(serverBuildDirectory, "manifest.json");
-  return require(manifestFile);
-}
-
-interface MetaArgs {
-  data: any;
-  params: Params;
-  location: Location;
-}
-
-type MetaTagName = string;
-type MetaTagContent = string;
-type MetaContents = Record<MetaTagName, MetaTagContent>;
-
-interface RouteEntry {
-  meta?: (metaArgs: MetaArgs) => MetaContents;
-  default: Component;
-}
-
-type RouteEntries = Record<string, RouteEntry>;
-
-function createRouteEntries(
-  serverBuildDirectory: string,
-  routes: RemixConfig["routes"],
-  manifest: Manifest,
-  table: RouteEntries = {}
-): RouteEntries {
-  for (let route of routes) {
-    let requirePath = path.join(
-      serverBuildDirectory,
-      manifest[route.id].fileName
-    );
-
-    table[route.id] = require(requirePath);
-
-    if (route.children) {
-      createRouteEntries(serverBuildDirectory, route.children, manifest, table);
-    }
-  }
-
-  return table;
-}
-
-interface ServerEntry {
-  default: (req: Request, remixContext: RemixContext) => Promise<Response>;
-}
-
-function createServerEntry(
-  serverBuildDirectory: string,
-  manifest: Manifest
-): ServerEntry {
-  let requirePath = path.join(
-    serverBuildDirectory,
-    manifest["__entry_server__"].fileName
-  );
-
-  return require(requirePath);
+  return { config, manifest, serverEntryModule, routeModules };
 }
