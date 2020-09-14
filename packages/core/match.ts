@@ -7,35 +7,38 @@ import { matchRoutes } from "react-router";
 import type { RemixConfig } from "./config";
 import type { RemixRouteObject } from "./routes";
 
-enum DataLoadStatus {
+export enum LoaderResultStatus {
   Copy = "COPY",
   Success = "SUCCESS",
   Error = "ERROR"
 }
 
-export interface CopyLoadResult {
-  status: DataLoadStatus.Copy;
+export interface LoaderResultCopy {
+  status: LoaderResultStatus.Copy;
   id: string;
   params: Params;
 }
 
-export interface SuccessLoadResult {
-  status: DataLoadStatus.Success;
+export interface LoaderResultSuccess {
+  status: LoaderResultStatus.Success;
   id: string;
-  data: any[] | null;
+  data: any;
   params: Params;
 }
 
-export interface ErrorLoadResult {
-  status: DataLoadStatus.Error;
+export interface LoaderResultError {
+  status: LoaderResultStatus.Error;
   id: string;
   error: string;
   params: Params;
 }
 
-export type LoadResult = CopyLoadResult | SuccessLoadResult | ErrorLoadResult;
+export type LoaderResult =
+  | LoaderResultCopy
+  | LoaderResultSuccess
+  | LoaderResultError;
 
-export type MatchAndLoadResult = LoadResult[] | null;
+export type MatchAndLoadResult = LoaderResult[] | null;
 
 function createLocation(
   url: string,
@@ -80,7 +83,7 @@ export async function matchAndLoadData(
       if (data.length < matches.length) {
         let copyMatches = matches.slice(0, matches.length - data.length);
         let copyData = copyMatches.map(match => ({
-          status: DataLoadStatus.Copy,
+          status: LoaderResultStatus.Copy,
           id: match.route.id,
           params: match.params
         }));
@@ -116,23 +119,23 @@ async function loadData(
   matches: RemixRouteMatch[],
   loadContext: any,
   location: Location
-): Promise<LoadResult[]> {
+): Promise<LoaderResult[]> {
   let loaders = matches.map(match => getLoader(remixConfig, match));
 
   let promises = loaders.map(
-    async (loader, index): Promise<LoadResult> => {
+    async (loader, index): Promise<LoaderResult> => {
       let id = matches[index].route.id;
       let params = matches[index].params;
 
       if (loader == null) {
-        return { status: DataLoadStatus.Success, id, data: null, params };
+        return { status: LoaderResultStatus.Success, id, data: null, params };
       } else {
         try {
           let data = await loader({ params, context: loadContext, location });
-          return { status: DataLoadStatus.Success, id, data, params };
+          return { status: LoaderResultStatus.Success, id, data, params };
         } catch (error) {
           return {
-            status: DataLoadStatus.Error,
+            status: LoaderResultStatus.Error,
             id,
             error: error.message,
             params
@@ -147,7 +150,7 @@ async function loadData(
   return results;
 }
 
-export type LoadContext = any;
+export type AppLoadContext = any;
 
 export interface RemixLoader {
   ({
@@ -156,7 +159,7 @@ export interface RemixLoader {
     location
   }: {
     params: Params;
-    context: LoadContext;
+    context: AppLoadContext;
     location: Location;
   }): any;
 }

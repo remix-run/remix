@@ -5,14 +5,14 @@ import {
   getServerEntryModule
 } from "./build";
 import { readConfig } from "./config";
-import type { LoadContext } from "./match";
+import type { AppLoadContext } from "./match";
 import { matchAndLoadData, matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
 // import { purgeRequireCache } from './require'
 
 export interface RequestHandler {
-  (request: Request, loadContext: LoadContext): Promise<Response>;
+  (request: Request, loadContext: AppLoadContext): Promise<Response>;
 }
 
 /**

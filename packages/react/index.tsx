@@ -4,9 +4,16 @@ import React from "react";
 import type { RouteObject } from "react-router";
 import { useLocation, useRoutes } from "react-router-dom";
 import type {
-  RemixServerContext as RemixContextType,
-  LoadResult
+  RemixServerContext,
+  LoaderResultSuccess,
+  LoaderResult
 } from "@remix-run/core";
+
+import invariant from "./invariant";
+
+interface RemixContextType extends Omit<RemixServerContext, "data"> {
+  data: LoaderResultSuccess[];
+}
 
 const RemixContext = React.createContext<RemixContextType | undefined>(
   undefined
@@ -33,7 +40,7 @@ export function RemixEntryProvider({
   children: ReactChildren;
 }) {
   let { data } = context;
-  let cache = useDataCache(data as LoadResult[]);
+  let cache = useDataCache(data);
 
   return (
     <RemixContext.Provider value={context}>
@@ -45,27 +52,27 @@ export function RemixEntryProvider({
 }
 
 interface StaticDataCache {
-  read(locationKey: string, routeId: string): LoadResult;
-}
-
-function invariant(cond: any, message?: string) {
-  if (!cond) throw new Error(message);
+  read(locationKey: string, routeId: string): LoaderResultSuccess["data"];
 }
 
 function createStaticDataCache(
   initialKey: string,
-  initialData: LoadResult[]
+  initialData: LoaderResultSuccess[]
 ): StaticDataCache {
-  let data: Record<string, LoadResult[]> = { [initialKey]: initialData };
+  let data: Record<string, LoaderResultSuccess[]> = {
+    [initialKey]: initialData
+  };
 
   return {
     read(locationKey: string, routeId: string) {
       let result = data[locationKey].find(result => result.id === routeId);
+
       invariant(
         result,
         `Missing data for route ${routeId} on location ${locationKey}`
       );
-      return result!.data;
+
+      return result.data;
     }
   };
 }
@@ -74,7 +81,7 @@ interface DataCache {
   read(routeId: string): ReturnType<StaticDataCache["read"]>;
 }
 
-function useDataCache(initialData: LoadResult[]): DataCache {
+function useDataCache(initialData: LoaderResultSuccess[]): DataCache {
   let location = useLocation();
   /* let [, forceUpdate] = React.useState(); */
 
@@ -110,8 +117,10 @@ export function RemixRoute({ id }: { id: string }) {
   );
 }
 
-export function useRouteData(): [any, setData] {
+export function useRouteData() {
   let routeId = React.useContext(RemixRouteIdContext);
+  invariant(routeId, "Missing route id on context");
+
   let cache = React.useContext(RemixCacheContext);
   let data = cache!.read(routeId);
 
@@ -122,7 +131,7 @@ export function useRouteData(): [any, setData] {
     [cache, routeId]
   );
 
-  return [data, setData];
+  return [data, setData] as const;
 }
 
 export function Routes() {

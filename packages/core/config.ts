@@ -6,7 +6,7 @@ import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
 /**
  * The user-provided config in remix.config.js.
  */
-export interface UserConfig {
+export interface AppConfig {
   /**
    * The path to the client build, may be relative to remix.config.js.
    */
@@ -109,45 +109,45 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   let rootDirectory = path.resolve(remixRoot);
   let configFile = path.resolve(rootDirectory, "remix.config.js");
 
-  let userConfig: UserConfig;
+  let appConfig: AppConfig;
   try {
-    userConfig = require(configFile);
+    appConfig = require(configFile);
   } catch (error) {
     throw new Error(`Missing remix.config.js in ${rootDirectory}`);
   }
 
   let clientBuildDirectory = path.resolve(
     rootDirectory,
-    userConfig.clientBuildDirectory || path.join("public", "build")
+    appConfig.clientBuildDirectory || path.join("public", "build")
   );
 
-  let clientPublicPath = userConfig.clientPublicPath || "/build/";
+  let clientPublicPath = appConfig.clientPublicPath || "/build/";
 
-  let devServerPort = userConfig.devServerPort || 8002;
+  let devServerPort = appConfig.devServerPort || 8002;
 
   let loadersDirectory = path.resolve(
     rootDirectory,
-    userConfig.loadersDirectory || "loaders"
+    appConfig.loadersDirectory || "loaders"
   );
 
   let sourceDirectory = path.resolve(
     rootDirectory,
-    userConfig.sourceDirectory || "src"
+    appConfig.sourceDirectory || "src"
   );
 
   let routesDir = path.resolve(
     sourceDirectory,
-    userConfig.routesDirectory || "routes"
+    appConfig.routesDirectory || "routes"
   );
   let routes = await getConventionalRoutes(routesDir, loadersDirectory);
-  if (userConfig.routes) {
-    let manualRoutes = await userConfig.routes(_defineRoutes);
+  if (appConfig.routes) {
+    let manualRoutes = await appConfig.routes(_defineRoutes);
     routes.push(...manualRoutes);
   }
 
   let serverBuildDirectory = path.resolve(
     rootDirectory,
-    userConfig.serverBuildDirectory || "build"
+    appConfig.serverBuildDirectory || "build"
   );
 
   // TODO: validate routes
