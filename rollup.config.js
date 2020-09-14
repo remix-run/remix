@@ -75,8 +75,9 @@ let react = [
     },
     input: path.resolve(__dirname, "packages/react/index.tsx"),
     output: {
-      file: "build/node_modules/@remix-run/react/index.js",
-      format: "esm"
+      dir: "build/node_modules/@remix-run/react/esm",
+      format: "esm",
+      preserveModules: true
     },
     plugins: [
       // TODO: Don't rely on main babel.config.js which targets node: current.
@@ -110,7 +111,7 @@ let react = [
       server: path.resolve(__dirname, "packages/react/server.tsx")
     },
     output: {
-      dir: "build/node_modules/@remix-run/react/cjs",
+      dir: "build/node_modules/@remix-run/react",
       format: "cjs",
       preserveModules: true
     },

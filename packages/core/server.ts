@@ -9,7 +9,7 @@ import type { AppLoadContext } from "./match";
 import { matchAndLoadData, matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
-// import { purgeRequireCache } from './require'
+import { purgeRequireCache } from "./require";
 
 export interface RequestHandler {
   (request: Request, loadContext: AppLoadContext): Promise<Response>;
@@ -22,10 +22,11 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   let init = initializeServer(remixRoot);
 
   return async (req, loadContext) => {
-    // if (process.env.NODE_ENV === 'development') {
-    //   purgeRequireCache(remixRoot);
-    //   init = initializeServer(remixRoot);
-    // }
+    if (process.env.NODE_ENV === "development") {
+      let prevInit = await init;
+      purgeRequireCache(prevInit.config.rootDirectory);
+      init = initializeServer(remixRoot);
+    }
 
     let { config, manifest, serverEntryModule, routeModules } = await init;
 

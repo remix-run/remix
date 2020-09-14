@@ -1,5 +1,5 @@
 import type * as express from "express";
-import type { HeadersInit, LoadContext } from "@remix-run/core";
+import type { HeadersInit, AppLoadContext } from "@remix-run/core";
 import {
   Request,
   createRequestHandler as createRemixRequestHandler
@@ -36,7 +36,10 @@ export default function createRequestHandler({
   getLoadContext,
   root: remixRoot
 }: {
-  getLoadContext?: (req: express.Request, res: express.Response) => LoadContext;
+  getLoadContext?: (
+    req: express.Request,
+    res: express.Response
+  ) => AppLoadContext;
   root?: string;
 }): express.RequestHandler {
   let handleRequest = createRemixRequestHandler(remixRoot);
@@ -67,9 +70,13 @@ export default function createRequestHandler({
       return;
     }
 
-    res.status(remixRes.status).set(remixRes.headers);
+    res.status(remixRes.status);
 
-    if (typeof remixRes.body === "string" || Buffer.isBuffer(remixRes.body)) {
+    for (let [key, value] of remixRes.headers.entries()) {
+      res.set(key, value);
+    }
+
+    if (Buffer.isBuffer(remixRes.body)) {
       res.send(remixRes.body);
     } else {
       remixRes.body.pipe(res);
