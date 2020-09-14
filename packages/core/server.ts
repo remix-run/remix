@@ -48,6 +48,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
 
       let data = await matchAndLoadData(config, path, loadContext, from);
 
+      // TODO: How do we cache this?
       return new Response(JSON.stringify(data), {
         headers: {
           "Content-Type": "application/json"
@@ -58,6 +59,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     let matches = matchRoutes(config.routes, req.url);
 
     if (!matches) {
+      // TODO: Maybe warn the user about missing routes/404.js before now
       return new Response("Missing routes/404.js", {
         status: 500,
         headers: {
@@ -65,6 +67,11 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
         }
       });
     }
+
+    // let notFound = matches.length === 1 && matches[0].route.path === "*";
+    // if (notFound) {
+    //   return serverNotFoundModule.default(req, remixContext);
+    // }
 
     // TODO: Refactor later...
     let data = await matchAndLoadData(config, req.url, loadContext);
@@ -77,14 +84,14 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
 
     let remixContext: RemixServerContext = {
       matches,
-      data,
+      data, // LoadResult[] | null
       partialManifest,
       requireRoute(id: string) {
         return routeModules[id];
       }
     };
 
-    return serverEntryModule.default(req, remixContext);
+    return serverEntryModule.default(req, /*resStatusCode,*/ remixContext);
   };
 }
 

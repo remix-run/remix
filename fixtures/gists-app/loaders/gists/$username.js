@@ -1,9 +1,19 @@
+// import { Redirect, Rewrite } from '@remix-run/core'
+
 module.exports = async function ({ params }) {
   if (process.env.NODE_ENV === "test") {
     return Promise.resolve(fakeGists);
   } else {
     let { username } = params;
     let res = await fetch(`https://api.github.com/users/${username}/gists`);
+
+    // if (res.status === 404) {
+    //   throw new Redirect('/some/other/place', 301)
+    //   throw new Rewrite(`/users/${params.username}/404`, 404)
+    //   throw new NotFound();
+    //   throw new Error('boom!')
+    // }
+
     return res.json();
   }
 };

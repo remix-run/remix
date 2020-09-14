@@ -14,7 +14,11 @@ import App from "./components/App";
 //   return require(`./${path}`);
 // }
 
-export default function handleRequest(request, remixContext) {
+export default function handleRequest(
+  request,
+  // responseStatusCode,
+  remixContext
+) {
   let markup = renderToString(
     <Remix request={request} context={remixContext}>
       <App />
@@ -22,6 +26,7 @@ export default function handleRequest(request, remixContext) {
   );
 
   return new Response("<!DOCTYPE html>" + markup, {
+    // status: responseStatusCode,
     headers: {
       "Content-Type": "text/html"
     }

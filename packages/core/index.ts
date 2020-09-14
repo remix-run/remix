@@ -1,9 +1,11 @@
+export type { RemixServerContext } from "./build";
+
 export { build, watch } from "./compiler";
 
 export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
-export type { LoadContext, RemixLoader } from "./match";
+export type { LoadContext, LoadResult, RemixLoader } from "./match";
 
 export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
@@ -19,5 +21,5 @@ export {
   Response
 } from "./platform";
 
-export type { RequestHandler, RemixContext } from "./server";
+export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";
