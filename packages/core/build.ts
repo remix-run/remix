@@ -29,7 +29,11 @@ export interface RemixServerContext {
 }
 
 export interface ServerEntryModule {
-  default(request: Request, context: RemixServerContext): Promise<Response>;
+  default(
+    request: Request,
+    responseStatusCode: number,
+    context: RemixServerContext
+  ): Promise<Response>;
 }
 
 export function getServerEntryModule(

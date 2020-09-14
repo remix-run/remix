@@ -16,7 +16,7 @@ import App from "./components/App";
 
 export default function handleRequest(
   request,
-  // responseStatusCode,
+  responseStatusCode,
   remixContext
 ) {
   let markup = renderToString(
@@ -26,7 +26,7 @@ export default function handleRequest(
   );
 
   return new Response("<!DOCTYPE html>" + markup, {
-    // status: responseStatusCode,
+    status: responseStatusCode,
     headers: {
       "Content-Type": "text/html"
     }

@@ -13,7 +13,7 @@ export type {
   LoaderResult,
   AppLoadContext,
   RemixLoader
-} from "./match";
+} from "./load";
 
 export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
