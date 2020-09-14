@@ -14,9 +14,9 @@ import App from "./components/App";
 //   return require(`./${path}`);
 // }
 
-export default function handleRequest(req, remixContext) {
+export default function handleRequest(request, remixContext) {
   let markup = renderToString(
-    <Remix request={req} context={remixContext}>
+    <Remix request={request} context={remixContext}>
       <App />
     </Remix>
   );

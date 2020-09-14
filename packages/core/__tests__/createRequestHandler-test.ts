@@ -17,7 +17,9 @@ describe("a remix request handler", () => {
       let text = await res.text();
 
       expect(res.headers.get("Content-Type")).toEqual("text/html");
-      expect(text).toMatchInlineSnapshot(`"<!DOCTYPE html><div>hello</div>"`);
+      expect(text).toMatchInlineSnapshot(
+        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/\\"><header><h1>Cool Gists App</h1></header><nav><ul><li><a href=\\"#\\">link</a></li><li><a href=\\"#\\">link</a></li><li><a href=\\"#\\">link</a></li></ul></nav></div><!--/$--></body></html>"`
+      );
     });
   });
 

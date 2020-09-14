@@ -62,8 +62,6 @@ export function Routes() {
     null
   );
 
-  console.log({ context, route });
-
   return useRoutes([route!]);
 }
 
