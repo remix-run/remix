@@ -1,4 +1,4 @@
-import type { ReactChildren } from "react";
+import type { ReactNode } from "react";
 import React from "react";
 // TODO: Export RouteObject from 'react-router-dom'
 import type { RouteObject } from "react-router";
@@ -37,7 +37,7 @@ export function RemixEntryProvider({
   children
 }: {
   context: RemixContextType;
-  children: ReactChildren;
+  children: ReactNode;
 }) {
   let { data } = context;
   let cache = useDataCache(data);
@@ -110,11 +110,33 @@ const RemixRouteIdContext = React.createContext<string | undefined>(undefined);
 export function RemixRoute({ id }: { id: string }) {
   let context = useRemixContext();
   let mod = context.requireRoute(id);
+
+  if (!mod) {
+    return (
+      <RemixError>
+        <RemixRouteMissing id={id} />
+      </RemixError>
+    );
+  }
+
   return (
     <RemixRouteIdContext.Provider value={id}>
       <mod.default />
     </RemixRouteIdContext.Provider>
   );
+}
+
+function RemixError({ children }: { children: ReactNode }) {
+  return (
+    <div>
+      <h1>Error!</h1>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function RemixRouteMissing({ id }: { id: string }) {
+  return <p>Missing route "{id}"!</p>;
 }
 
 export function useRouteData() {

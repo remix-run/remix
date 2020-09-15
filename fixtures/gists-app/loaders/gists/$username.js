@@ -8,6 +8,10 @@ module.exports = async function ({ params }) {
       return new NotFound();
     }
 
+    if (username === "DANGER") {
+      throw new Error("RUN FOR IT");
+    }
+
     return Promise.resolve(fakeGists);
   } else {
     let res = await fetch(`https://api.github.com/users/${username}/gists`);

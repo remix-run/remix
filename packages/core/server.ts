@@ -235,8 +235,8 @@ async function handleHtmlRequest(
     matches,
     data,
     partialManifest,
-    requireRoute(id: string) {
-      return routeModules[id];
+    requireRoute(routeId: string) {
+      return routeModules[routeId];
     }
   };
 

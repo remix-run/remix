@@ -34,6 +34,19 @@ describe("a remix request handler", () => {
         `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/404\\"><h1>404</h1></div><!--/$--></body></html>"`
       );
     });
+
+    it("renders a 500 page when the loader has an error", async () => {
+      let handleRequest = createRequestHandler(remixRoot);
+      let req = new Request("/gists/DANGER");
+      let res = await handleRequest(req, null);
+      let text = await res.text();
+
+      expect(res.status).toEqual(500);
+      expect(res.headers.get("Content-Type")).toEqual("text/html");
+      expect(text).toMatchInlineSnapshot(
+        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div><h1>Error!</h1><div><p>Missing route &quot;<!-- -->routes/500<!-- -->&quot;!</p></div></div><!--/$--></body></html>"`
+      );
+    });
   });
 
   describe("serving data", () => {
