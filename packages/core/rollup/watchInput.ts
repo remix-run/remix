@@ -8,7 +8,8 @@ import tmp from "tmp";
  */
 export default function watchInput({
   watchFile,
-  getInput
+  getInput,
+  ignored
 }: {
   watchFile: string;
   getInput: (options: InputOptions) => Promise<InputOption>;
@@ -28,10 +29,12 @@ export default function watchInput({
       // not correctly listen for files that are added to a directory.
       // See https://github.com/rollup/rollup/issues/3704
       if (!startedWatcher) {
-        chokidar.watch(watchFile).on("add", async () => {
-          let now = new Date();
-          await fsp.utimes(tmpfile.name, now, now);
-        });
+        chokidar
+          .watch(watchFile, { ignored: /node_modules/ })
+          .on("add", async () => {
+            let now = new Date();
+            await fsp.utimes(tmpfile.name, now, now);
+          });
 
         startedWatcher = true;
       }

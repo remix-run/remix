@@ -6,10 +6,10 @@
     "build": "rollup -c",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
-    "version": "node ./scripts/version.js"
+    "version": "node ./scripts/version.js",
+    "watch": "rollup -c -w"
   },
   "workspaces": [
-    "packages/compiler",
     "packages/core",
     "packages/express",
     "packages/react"
