@@ -6,7 +6,7 @@ export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
 export type {
-  LoaderResultStatus,
+  LoaderResultType as LoaderResultStatus,
   LoaderResultCopy,
   LoaderResultSuccess,
   LoaderResultError,
@@ -26,7 +26,11 @@ export {
   RequestRedirect,
   Request,
   ResponseType,
-  Response
+  Response,
+  StatusCode,
+  statusCode,
+  Redirect,
+  redirect
 } from "./platform";
 
 export type { RequestHandler } from "./server";

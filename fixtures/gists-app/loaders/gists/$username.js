@@ -8,10 +8,13 @@ module.exports = async function ({ params }) {
     let res = await fetch(`https://api.github.com/users/${username}/gists`);
 
     // if (res.status === 404) {
-    //   throw new Redirect('/some/other/place', 301)
-    //   throw new Rewrite(`/users/${params.username}/404`, 404)
-    //   throw new NotFound();
-    //   throw new Error('boom!')
+    //   throw new Error("boom!"); // global 500.js
+
+    //   return new StatusCode(404); // global 404.js
+    //   return statusCode(404); // global 404.js
+
+    //   return new Redirect("/some/other/place", 301);
+    //   return redirect("/some/other/place", 301);
     // }
 
     return res.json();

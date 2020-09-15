@@ -317,3 +317,29 @@ export class Response extends Message {
     throw new Error(`response.useFinalURL is not yet implemented`);
   }
 }
+
+export class Redirect {
+  readonly location: string;
+  readonly status: number;
+
+  constructor(location: string, httpStatus = 302) {
+    this.location = location;
+    this.status = httpStatus;
+  }
+}
+
+export function redirect(location: string, httpStatus = 302) {
+  return new Redirect(location, httpStatus);
+}
+
+export class StatusCode {
+  readonly status: number;
+
+  constructor(status: number) {
+    this.status = status;
+  }
+}
+
+export function statusCode(httpStatus: number) {
+  return new StatusCode(httpStatus);
+}

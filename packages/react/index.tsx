@@ -65,7 +65,7 @@ function createStaticDataCache(
 
   return {
     read(locationKey: string, routeId: string) {
-      let result = data[locationKey].find(result => result.id === routeId);
+      let result = data[locationKey].find(result => result.routeId === routeId);
 
       invariant(
         result,

@@ -15,7 +15,13 @@ import {
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { AppLoadContext } from "./load";
-import { loadData } from "./load";
+import {
+  loadData,
+  LoaderResult,
+  LoaderResultChangeStatusCode,
+  LoaderResultRedirect,
+  LoaderResultError
+} from "./load";
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
@@ -141,22 +147,83 @@ async function handleHtmlRequest(
 ): Promise<Response> {
   let { config, manifest, routeModules, serverEntryModule } = serverInit;
   let location = createLocation(req.url);
+
+  let statusCode = 200;
   let matches = matchRoutes(config.routes, req.url);
+  let data: LoaderResult[] = [];
 
   if (!matches) {
-    // TODO: Maybe warn the user about missing routes/404.js before now
-    return new Response("Missing routes/404.js", {
-      status: 500,
-      headers: {
-        "Content-Type": "text/html"
+    statusCode = 404;
+    matches = [
+      {
+        pathname: location.pathname,
+        params: {},
+        route: {
+          path: "*",
+          id: "routes/404",
+          component: "routes/404.js",
+          loader: null
+        }
       }
-    });
+    ];
+  } else {
+    data = await loadData(config, matches, null, loadContext, location);
+
+    let redirectResult = data.find(
+      (result): result is LoaderResultRedirect =>
+        result instanceof LoaderResultRedirect
+    );
+
+    if (redirectResult) {
+      return new Response(`Redirecting to ${redirectResult.location}`, {
+        status: redirectResult.httpStatus,
+        headers: {
+          Location: redirectResult.location
+        }
+      });
+    }
+
+    let errorResult = data.find(
+      (result: LoaderResult): result is LoaderResultError =>
+        result instanceof LoaderResultError
+    );
+    if (errorResult) {
+      statusCode = errorResult.httpStatus;
+      matches = [
+        {
+          pathname: location.pathname,
+          params: {},
+          route: {
+            path: "*",
+            id: "routes/500",
+            component: "routes/500.js",
+            loader: null
+          }
+        }
+      ];
+    } else {
+      let changeStatusCodeResult = data.find(
+        (result): result is LoaderResultChangeStatusCode =>
+          result instanceof LoaderResultChangeStatusCode
+      );
+
+      if (changeStatusCodeResult) {
+        statusCode = changeStatusCodeResult.httpStatus;
+        matches = [
+          {
+            pathname: location.pathname,
+            params: {},
+            route: {
+              path: "*",
+              id: `routes/${changeStatusCodeResult.httpStatus}`,
+              component: `routes/${changeStatusCodeResult.httpStatus}.js`,
+              loader: null
+            }
+          }
+        ];
+      }
+    }
   }
-
-  let notFound = matches.length === 1 && matches[0].route.path === "*";
-  let statusCode = notFound ? 404 : 200;
-
-  let data = await loadData(config, matches, null, loadContext, location);
 
   let partialManifest = matches.reduce((memo, match) => {
     let routeId = match.route.id;
