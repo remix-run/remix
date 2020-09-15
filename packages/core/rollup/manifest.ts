@@ -44,6 +44,7 @@ export default function manifestPlugin({
 
       if (isWrite) {
         let file = path.join(outputDir, filename);
+        await fsp.mkdir(path.dirname(file), { recursive: true });
         await fsp.writeFile(file, JSON.stringify(manifest));
       }
     }
