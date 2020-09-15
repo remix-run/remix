@@ -21,6 +21,19 @@ describe("a remix request handler", () => {
         `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/gists\\"><header><h1>Gists</h1><ul><li><a href=\\"#\\">link</a></li><li><a href=\\"#\\">link</a></li></ul></header><div data-test-id=\\"/gists/$username\\"><h2>All gists from <!-- -->ryanflorence</h2><ul><li><a>remix-server.jsx</a></li></ul></div></div><!--/$--></body></html>"`
       );
     });
+
+    it("renders a 404 page when the loader returns a NotFound", async () => {
+      let handleRequest = createRequestHandler(remixRoot);
+      let req = new Request("/gists/_why");
+      let res = await handleRequest(req, null);
+      let text = await res.text();
+
+      expect(res.status).toEqual(404);
+      expect(res.headers.get("Content-Type")).toEqual("text/html");
+      expect(text).toMatchInlineSnapshot(
+        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/404\\"><h1>404</h1></div><!--/$--></body></html>"`
+      );
+    });
   });
 
   describe("serving data", () => {

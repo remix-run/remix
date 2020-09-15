@@ -139,7 +139,7 @@ async function loadDataForMatches(
           let result = await loader({ params, context, location });
 
           if (result instanceof StatusCode) {
-            return new LoaderResultWithStatusCode(id, result.status);
+            return new LoaderResultChangeStatusCode(id, result.status);
           } else if (result instanceof Redirect) {
             return new LoaderResultRedirect(id, result.location, result.status);
           }

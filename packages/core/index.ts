@@ -30,7 +30,9 @@ export {
   StatusCode,
   statusCode,
   Redirect,
-  redirect
+  redirect,
+  NotFound,
+  notFound
 } from "./platform";
 
 export type { RequestHandler } from "./server";

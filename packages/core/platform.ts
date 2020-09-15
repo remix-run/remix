@@ -321,7 +321,6 @@ export class Response extends Message {
 export class Redirect {
   readonly location: string;
   readonly status: number;
-
   constructor(location: string, httpStatus = 302) {
     this.location = location;
     this.status = httpStatus;
@@ -334,7 +333,6 @@ export function redirect(location: string, httpStatus = 302) {
 
 export class StatusCode {
   readonly status: number;
-
   constructor(status: number) {
     this.status = status;
   }
@@ -342,4 +340,14 @@ export class StatusCode {
 
 export function statusCode(httpStatus: number) {
   return new StatusCode(httpStatus);
+}
+
+export class NotFound extends StatusCode {
+  constructor() {
+    super(404);
+  }
+}
+
+export function notFound() {
+  return new NotFound();
 }
