@@ -22,6 +22,18 @@ describe("a remix request handler", () => {
       );
     });
 
+    it("renders a 302 when the loader returns a Redirect", async () => {
+      let handleRequest = createRequestHandler(remixRoot);
+      let req = new Request("/gists/mjijackson");
+      let res = await handleRequest(req, null);
+      let text = await res.text();
+
+      expect(res.status).toEqual(302);
+      expect(res.headers.get("Content-Type")).toMatch("text/plain");
+      expect(res.headers.get("Location")).toEqual("/gists/mjackson");
+      expect(text).toMatchInlineSnapshot(`"Redirecting to /gists/mjackson"`);
+    });
+
     it("renders a 404 page when the loader returns a NotFound", async () => {
       let handleRequest = createRequestHandler(remixRoot);
       let req = new Request("/gists/_why");

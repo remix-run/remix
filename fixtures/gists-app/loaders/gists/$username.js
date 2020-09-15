@@ -1,4 +1,4 @@
-import { NotFound } from "@remix-run/core";
+import { NotFound, Redirect } from "@remix-run/core";
 
 module.exports = async function ({ params }) {
   let { username } = params;
@@ -10,6 +10,10 @@ module.exports = async function ({ params }) {
 
     if (username === "DANGER") {
       throw new Error("RUN FOR IT");
+    }
+
+    if (username === "mjijackson") {
+      return new Redirect("/gists/mjackson");
     }
 
     return Promise.resolve(fakeGists);
