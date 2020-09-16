@@ -113,7 +113,8 @@ let react = [
     output: {
       dir: "build/node_modules/@remix-run/react",
       format: "cjs",
-      preserveModules: true
+      preserveModules: true,
+      exports: "named"
     },
     plugins: [
       babel({

@@ -10,6 +10,7 @@
     "watch": "rollup -c -w"
   },
   "workspaces": [
+    "fixtures/gists-app",
     "packages/core",
     "packages/express",
     "packages/react"
