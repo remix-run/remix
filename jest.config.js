@@ -2,8 +2,17 @@
 
 module.exports = {
   projects: [
-    "<rootDir>/packages/core",
-    "<rootDir>/packages/express",
-    "<rootDir>/packages/react"
+    {
+      displayName: "core",
+      testMatch: ["<rootDir>/packages/core/**/*-test.[jt]s?(x)"]
+    },
+    {
+      displayName: "express",
+      testMatch: ["<rootDir>/packages/express/**/*-test.[jt]s?(x)"]
+    },
+    {
+      displayName: "react",
+      testMatch: ["<rootDir>/packages/react/**/*-test.[jt]s?(x)"]
+    }
   ]
 };

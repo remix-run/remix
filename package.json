@@ -39,7 +39,7 @@
     "history": "^5.0.0",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",
-    "prettier": "^2.0.5",
+    "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
     "react": "0.0.0-experimental-33c3af284",
     "react-dom": "0.0.0-experimental-33c3af284",

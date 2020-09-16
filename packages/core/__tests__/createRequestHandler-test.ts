@@ -2,6 +2,7 @@ import path from "path";
 
 import { Request } from "../platform";
 import { createRequestHandler } from "../server";
+import { prettyHtml } from "./utils";
 
 describe("a remix request handler", () => {
   let remixRoot: string;
@@ -17,9 +18,46 @@ describe("a remix request handler", () => {
       let text = await res.text();
 
       expect(res.headers.get("Content-Type")).toEqual("text/html");
-      expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><title>1 gists from ryanflorence</title><meta name=\\"description\\" content=\\"View all of the gists from ryanflorence\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/gists\\"><header><h1>Gists</h1><ul><li><a href=\\"#\\">link</a></li><li><a href=\\"#\\">link</a></li></ul></header><div data-test-id=\\"/gists/$username\\"><h2>All gists from <!-- -->ryanflorence</h2><ul><li><a>remix-server.jsx</a></li></ul></div></div><!--/$--></body></html>"`
-      );
+      expect(prettyHtml(text)).toMatchInlineSnapshot(`
+        "<!DOCTYPE html>
+        <html lang=\\"en\\">
+          <head>
+            <meta charset=\\"utf-8\\" />
+            <title>1 gists from ryanflorence</title>
+            <meta
+              name=\\"description\\"
+              content=\\"View all of the gists from ryanflorence\\"
+            />
+            <link
+              rel=\\"stylesheet\\"
+              href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+            />
+          </head>
+          <body class=\\"m-4\\">
+            <!--$-->
+            <div data-test-id=\\"/gists\\">
+              <header>
+                <h1>Gists</h1>
+                <ul>
+                  <li><a href=\\"#\\">link</a></li>
+                  <li><a href=\\"#\\">link</a></li>
+                </ul>
+              </header>
+              <div data-test-id=\\"/gists/$username\\">
+                <h2>
+                  All gists from
+                  <!-- -->ryanflorence
+                </h2>
+                <ul>
+                  <li><a>remix-server.jsx</a></li>
+                </ul>
+              </div>
+            </div>
+            <!--/$-->
+          </body>
+        </html>
+        "
+      `);
     });
 
     it("renders a 302 when the loader returns a Redirect", async () => {

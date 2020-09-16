@@ -30,9 +30,9 @@ git push origin --follow-tags
 - Server
   x HMR
   x Status codes from loaders (rewrites, redirects)
-  - Meta tags
-  - In dev, error overlays in the browser
+  x Meta tags
   - `/__remix_patch` manifest endpoint
+  - In dev, error overlays in the browser
 - Client
   - web manifest
   - hydrate React, no data
