@@ -1,12 +1,7 @@
 import type { Location } from "history";
 import { parsePath } from "history";
 
-import type {
-  BuildManifest,
-  RemixEntryContext,
-  ServerEntryModule,
-  RouteModules
-} from "./build";
+import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
 import {
   getBuildManifest,
   getRouteModules,
@@ -14,6 +9,12 @@ import {
 } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
+import type { EntryContext } from "./entry";
+import {
+  createRouteData,
+  createRouteManifest,
+  createRouteParams
+} from "./entry";
 import type { AppLoadContext } from "./loader";
 import { loadData, loadDataDiff } from "./loader";
 import {
@@ -21,10 +22,9 @@ import {
   LoaderResultChangeStatusCode,
   LoaderResultRedirect,
   LoaderResultError,
-  stringifyLoaderResults,
-  createRouteData
+  stringifyLoaderResults
 } from "./loaderResults";
-import { matchRoutes, createRouteManifest } from "./match";
+import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
 import { purgeRequireCache } from "./requireCache";
@@ -227,18 +227,20 @@ async function handleHtmlRequest(
     }
   }
 
-  let routeManifest = createRouteManifest(matches);
+  let matchedRouteIds = matches.map(match => match.route.id);
   let routeData = createRouteData(loaderResults);
+  let routeManifest = createRouteManifest(matches);
+  let routeParams = createRouteParams(matches);
 
-  // let meta = getMeta(matches, loaderResults, routeModules);
-
-  let remixContext: RemixEntryContext = {
+  let entryContext: EntryContext = {
+    matchedRouteIds,
     routeManifest,
     routeData,
+    routeParams,
     requireRoute(routeId: string) {
       return routeModules[routeId];
     }
   };
 
-  return serverEntryModule.default(req, statusCode, remixContext);
+  return serverEntryModule.default(req, statusCode, entryContext);
 }

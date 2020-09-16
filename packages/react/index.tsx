@@ -3,19 +3,15 @@ import React from "react";
 // TODO: Export RouteObject from 'react-router-dom'
 import type { RouteObject } from "react-router";
 import { useLocation, useRoutes } from "react-router-dom";
-import type {
-  RemixEntryContext,
-  RouteManifest,
-  RouteData
-} from "@remix-run/core";
+import type { EntryContext, RouteData, RouteManifest } from "@remix-run/core";
 
+import * as defaultRouteModule from "./defaultRouteModule";
 import invariant from "./invariant";
 
-const RemixContext = React.createContext<RemixEntryContext | undefined>(
-  undefined
-);
+const RemixContext = React.createContext<EntryContext | undefined>(undefined);
+const RemixCacheContext = React.createContext<DataCache | undefined>(undefined);
 
-function useRemixContext(): RemixEntryContext {
+function useRemixContext(): EntryContext {
   let context = React.useContext(RemixContext);
 
   if (!context) {
@@ -26,13 +22,11 @@ function useRemixContext(): RemixEntryContext {
   return context;
 }
 
-const RemixCacheContext = React.createContext<DataCache | undefined>(undefined);
-
 export function RemixEntryProvider({
   context,
   children
 }: {
-  context: RemixEntryContext;
+  context: EntryContext;
   children: ReactNode;
 }) {
   let cache = useDataCache(context.routeData);
@@ -108,9 +102,9 @@ export function RemixRoute({ id }: { id: string }) {
 
   if (!mod) {
     return (
-      <RemixError>
+      <defaultRouteModule.default>
         <RemixRouteMissing id={id} />
-      </RemixError>
+      </defaultRouteModule.default>
     );
   }
 
@@ -118,15 +112,6 @@ export function RemixRoute({ id }: { id: string }) {
     <RemixRouteIdContext.Provider value={id}>
       <mod.default />
     </RemixRouteIdContext.Provider>
-  );
-}
-
-function RemixError({ children }: { children: ReactNode }) {
-  return (
-    <div>
-      <h1>Error!</h1>
-      <div>{children}</div>
-    </div>
   );
 }
 
@@ -193,8 +178,34 @@ function createRoutesFromManifest(routeManifest: RouteManifest): RouteObject[] {
 }
 
 export function Meta() {
-  /* let { meta } = useContext(); */
-  return null;
+  let context = useRemixContext();
+  let location = useLocation();
+
+  let meta: { [name: string]: string } = {};
+  let allData = {};
+
+  for (let routeId of context.matchedRouteIds) {
+    let routeModule = context.requireRoute(routeId) || defaultRouteModule;
+
+    if (typeof routeModule.meta === "function") {
+      let data = context.routeData[routeId];
+      let params = context.routeParams[routeId];
+
+      Object.assign(allData, { [routeId]: data });
+      Object.assign(
+        meta,
+        routeModule.meta({ data, params, location, allData })
+      );
+    }
+  }
+
+  return Object.keys(meta).map(name =>
+    name === "title" ? (
+      <title key="title">{meta[name]}</title>
+    ) : (
+      <meta key={name} name={name} content={meta[name]} />
+    )
+  );
 }
 
 export function Scripts() {

@@ -18,7 +18,7 @@ describe("a remix request handler", () => {
 
       expect(res.headers.get("Content-Type")).toEqual("text/html");
       expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/gists\\"><header><h1>Gists</h1><ul><li><a href=\\"#\\">link</a></li><li><a href=\\"#\\">link</a></li></ul></header><div data-test-id=\\"/gists/$username\\"><h2>All gists from <!-- -->ryanflorence</h2><ul><li><a>remix-server.jsx</a></li></ul></div></div><!--/$--></body></html>"`
+        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><title>1 gists from ryanflorence</title><meta name=\\"description\\" content=\\"View all of the gists from ryanflorence\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/gists\\"><header><h1>Gists</h1><ul><li><a href=\\"#\\">link</a></li><li><a href=\\"#\\">link</a></li></ul></header><div data-test-id=\\"/gists/$username\\"><h2>All gists from <!-- -->ryanflorence</h2><ul><li><a>remix-server.jsx</a></li></ul></div></div><!--/$--></body></html>"`
       );
     });
 
@@ -43,7 +43,7 @@ describe("a remix request handler", () => {
       expect(res.status).toEqual(404);
       expect(res.headers.get("Content-Type")).toEqual("text/html");
       expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/404\\"><h1>404</h1></div><!--/$--></body></html>"`
+        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><title>Ain&#x27;t nothing here</title><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/404\\"><h1>404</h1></div><!--/$--></body></html>"`
       );
     });
 
@@ -56,7 +56,7 @@ describe("a remix request handler", () => {
       expect(res.status).toEqual(500);
       expect(res.headers.get("Content-Type")).toEqual("text/html");
       expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div><h1>Error!</h1><div><p>Missing route &quot;<!-- -->routes/500<!-- -->&quot;!</p></div></div><!--/$--></body></html>"`
+        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><title>Remix Error: Route Not Found</title><meta name=\\"description\\" content=\\"There was an error rendering this page\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div><h1>Error!</h1><div><p>Missing route &quot;<!-- -->routes/500<!-- -->&quot;!</p></div></div><!--/$--></body></html>"`
       );
     });
   });

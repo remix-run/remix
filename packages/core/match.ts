@@ -18,22 +18,3 @@ function matchRemixRoutes(
 }
 
 export { matchRemixRoutes as matchRoutes };
-
-export interface RouteManifest {
-  [routeId: string]: {
-    id: string;
-    parentId?: string;
-    path: string;
-  };
-}
-
-export function createRouteManifest(matches: RemixRouteMatch[]): RouteManifest {
-  return matches.reduce((memo, match) => {
-    memo[match.route.id] = {
-      id: match.route.id,
-      parentId: match.route.parentId,
-      path: match.route.path
-    };
-    return memo;
-  }, {} as RouteManifest);
-}

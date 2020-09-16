@@ -7,7 +7,7 @@ export default function Chrome({ children }) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        {/* <Meta /> */}
+        <Meta />
         <link
           rel="stylesheet"
           href="//unpkg.com/@exampledev/new.css@1.1.3/new.css"

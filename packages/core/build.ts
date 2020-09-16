@@ -4,8 +4,7 @@ import type { ComponentType } from "react";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";
-import type { RouteData } from "./loaderResults";
-import type { RouteManifest } from "./match";
+import type { EntryContext, RouteData } from "./entry";
 import type { Request, Response } from "./platform";
 
 export type BuildManifest = Record<string, BuildChunk>;
@@ -22,17 +21,11 @@ export function getBuildManifest(serverBuildDirectory: string): BuildManifest {
   return require(manifestFile);
 }
 
-export interface RemixEntryContext {
-  routeManifest: RouteManifest;
-  routeData: RouteData;
-  requireRoute(id: string): RouteModule;
-}
-
 export interface ServerEntryModule {
   default(
     request: Request,
     responseStatusCode: number,
-    context: RemixEntryContext
+    context: EntryContext
   ): Promise<Response>;
 }
 
@@ -49,16 +42,19 @@ export function getServerEntryModule(
 }
 
 interface MetaArgs {
-  data: any;
+  data: RouteData[string];
   params: Params;
   location: Location;
+  allData: { [routeId: string]: RouteData[string] };
 }
 
-type MetaTagName = string;
-type MetaTagContent = string;
-type MetaContents = Record<MetaTagName, MetaTagContent>;
+interface MetaContents {
+  [name: string]: string;
+}
 
-export type RouteModules = Record<string, RouteModule>;
+export interface RouteModules {
+  [routeId: string]: RouteModule;
+}
 
 export interface RouteModule {
   default: ComponentType;
