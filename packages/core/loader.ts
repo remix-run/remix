@@ -2,6 +2,7 @@ import path from "path";
 import type { Location } from "history";
 import type { Params } from "react-router";
 
+import type { RouteModules } from "./build";
 import type { RemixConfig } from "./config";
 import {
   LoaderResult,
@@ -123,3 +124,20 @@ export async function loadDataDiff(
 
   return data;
 }
+
+// export function getMeta(
+//   matches: RemixRouteMatch[],
+//   data: LoaderResult[],
+//   routeModules: RouteModules
+// ) {
+//   return matches.reduce((memo, match, index) => {
+//     let routeId = match.route.id;
+//     let routeModule = routeModules[routeId]
+
+//     if (typeof routeModule.meta === 'function') {
+//       Object.assign(memo, routeModule.meta({ params: match.params, data, parentData }))
+//     }
+
+//     return memo;
+//   }, {})
+// }

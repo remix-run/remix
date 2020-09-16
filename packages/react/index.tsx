@@ -3,19 +3,19 @@ import React from "react";
 // TODO: Export RouteObject from 'react-router-dom'
 import type { RouteObject } from "react-router";
 import { useLocation, useRoutes } from "react-router-dom";
-import type { RemixServerContext, LoaderResultSuccess } from "@remix-run/core";
+import type {
+  RemixEntryContext,
+  RouteManifest,
+  RouteData
+} from "@remix-run/core";
 
 import invariant from "./invariant";
 
-interface RemixContextType extends Omit<RemixServerContext, "data"> {
-  data: LoaderResultSuccess[];
-}
-
-const RemixContext = React.createContext<RemixContextType | undefined>(
+const RemixContext = React.createContext<RemixEntryContext | undefined>(
   undefined
 );
 
-function useRemixContext(): RemixContextType {
+function useRemixContext(): RemixEntryContext {
   let context = React.useContext(RemixContext);
 
   if (!context) {
@@ -32,11 +32,10 @@ export function RemixEntryProvider({
   context,
   children
 }: {
-  context: RemixContextType;
+  context: RemixEntryContext;
   children: ReactNode;
 }) {
-  let { data } = context;
-  let cache = useDataCache(data);
+  let cache = useDataCache(context.routeData);
 
   return (
     <RemixContext.Provider value={context}>
@@ -48,27 +47,27 @@ export function RemixEntryProvider({
 }
 
 interface StaticDataCache {
-  read(locationKey: string, routeId: string): LoaderResultSuccess["data"];
+  read(locationKey: string, routeId: string): RouteData[string];
 }
 
 function createStaticDataCache(
   initialKey: string,
-  initialData: LoaderResultSuccess[]
+  initialData: RouteData
 ): StaticDataCache {
-  let data: Record<string, LoaderResultSuccess[]> = {
+  let cache: { [locationKey: string]: RouteData } = {
     [initialKey]: initialData
   };
 
   return {
     read(locationKey: string, routeId: string) {
-      let result = data[locationKey].find(result => result.routeId === routeId);
+      let data = cache[locationKey][routeId];
 
       invariant(
-        result,
+        data,
         `Missing data for route ${routeId} on location ${locationKey}`
       );
 
-      return result.data;
+      return data;
     }
   };
 }
@@ -77,7 +76,7 @@ interface DataCache {
   read(routeId: string): ReturnType<StaticDataCache["read"]>;
 }
 
-function useDataCache(initialData: LoaderResultSuccess[]): DataCache {
+function useDataCache(initialData: RouteData): DataCache {
   let location = useLocation();
   /* let [, forceUpdate] = React.useState(); */
 
@@ -154,29 +153,43 @@ export function useRouteData() {
 
 export function Routes() {
   let context = useRemixContext();
+  let routes = createRoutesFromManifest(context.routeManifest);
+  return useRoutes(routes);
+}
 
-  let route = context.matches.reduceRight<RouteObject | null>(
-    (childRoute, match) => {
-      // TODO: Make caseSensitive optional in RouteObject type in RR
-      let route: RouteObject = {
-        caseSensitive: false,
-        path: match.route.path,
-        element: <RemixRoute id={match.route.id} />,
-        preload() {
-          // TODO
-        }
-      };
+function createRoutesFromManifest(routeManifest: RouteManifest): RouteObject[] {
+  let routeIds = Object.keys(routeManifest).sort();
+  let routes: RouteObject[] = [];
+  let addedRoutes: { [routeId: string]: RouteObject } = {};
 
-      if (childRoute) {
-        route.children = [childRoute];
+  for (let routeId of routeIds) {
+    let manifestRoute = routeManifest[routeId];
+    let route = {
+      caseSensitive: false,
+      path: manifestRoute.path,
+      element: <RemixRoute id={manifestRoute.id} />,
+      preload: () => {
+        // TODO
       }
+    };
 
-      return route;
-    },
-    null
-  );
+    if (manifestRoute.parentId == null) {
+      routes.push(route);
+    } else {
+      let parentRoute = addedRoutes[manifestRoute.parentId];
 
-  return useRoutes([route!]);
+      invariant(
+        parentRoute,
+        `Missing parent route "${manifestRoute.parentId}" for ${manifestRoute.id}`
+      );
+
+      (parentRoute.children || (parentRoute.children = [])).push(route);
+    }
+
+    addedRoutes[routeId] = route;
+  }
+
+  return routes;
 }
 
 export function Meta() {

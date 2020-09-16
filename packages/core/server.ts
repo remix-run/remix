@@ -21,9 +21,10 @@ import {
   LoaderResultChangeStatusCode,
   LoaderResultRedirect,
   LoaderResultError,
-  stringifyLoaderResults
+  stringifyLoaderResults,
+  createRouteData
 } from "./loaderResults";
-import { matchRoutes } from "./match";
+import { matchRoutes, createRouteManifest } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
 import { purgeRequireCache } from "./requireCache";
@@ -150,7 +151,7 @@ async function handleHtmlRequest(
   let location = createLocation(req.url);
   let statusCode = 200;
   let matches = matchRoutes(config.routes, req.url);
-  let data: LoaderResult[] = [];
+  let loaderResults: LoaderResult[] = [];
 
   if (!matches) {
     statusCode = 404;
@@ -167,11 +168,9 @@ async function handleHtmlRequest(
       }
     ];
   } else {
-    data = await loadData(config, matches, location, context);
+    loaderResults = await loadData(config, matches, location, context);
 
-    // meta = Object.assign({}, route1(data, params, location), route2)
-
-    let redirectResult = data.find(
+    let redirectResult = loaderResults.find(
       (result): result is LoaderResultRedirect =>
         result instanceof LoaderResultRedirect
     );
@@ -185,7 +184,7 @@ async function handleHtmlRequest(
       });
     }
 
-    let errorResult = data.find(
+    let errorResult = loaderResults.find(
       (result: LoaderResult): result is LoaderResultError =>
         result instanceof LoaderResultError
     );
@@ -205,7 +204,7 @@ async function handleHtmlRequest(
         }
       ];
     } else {
-      let changeStatusCodeResult = data.find(
+      let changeStatusCodeResult = loaderResults.find(
         (result): result is LoaderResultChangeStatusCode =>
           result instanceof LoaderResultChangeStatusCode
       );
@@ -228,16 +227,14 @@ async function handleHtmlRequest(
     }
   }
 
-  let partialManifest = matches.reduce((memo, match) => {
-    let routeId = match.route.id;
-    memo[routeId] = manifest[routeId];
-    return memo;
-  }, {} as BuildManifest);
+  let routeManifest = createRouteManifest(matches);
+  let routeData = createRouteData(loaderResults);
+
+  // let meta = getMeta(matches, loaderResults, routeModules);
 
   let remixContext: RemixEntryContext = {
-    matches,
-    data,
-    partialManifest,
+    routeManifest,
+    routeData,
     requireRoute(routeId: string) {
       return routeModules[routeId];
     }

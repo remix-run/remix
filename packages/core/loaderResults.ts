@@ -126,3 +126,16 @@ export function loaderResultJsonParseReviver(_key: string, value: any): any {
 export function parseLoaderResults(results: string): any {
   return JSON.parse(results, loaderResultJsonParseReviver);
 }
+
+export interface RouteData {
+  [routeId: string]: any;
+}
+
+export function createRouteData(
+  loaderResults: LoaderResultSuccess[]
+): RouteData {
+  return loaderResults.reduce((memo, loaderResult) => {
+    memo[loaderResult.routeId] = loaderResult.data;
+    return memo;
+  }, {} as RouteData);
+}

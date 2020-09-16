@@ -1,4 +1,4 @@
-export type { RemixEntryContext as RemixServerContext } from "./build";
+export type { RemixEntryContext } from "./build";
 
 export { build, watch } from "./compiler";
 
@@ -6,14 +6,9 @@ export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
 export type { AppLoadContext, RemixLoader } from "./loader";
-export {
-  LoaderResult,
-  LoaderResultChangeStatusCode,
-  LoaderResultCopy,
-  LoaderResultError,
-  LoaderResultRedirect,
-  LoaderResultSuccess
-} from "./loaderResults";
+export { RouteData } from "./loaderResults";
+
+export { RouteManifest } from "./match";
 
 export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
