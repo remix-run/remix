@@ -4,7 +4,8 @@ import type { Component } from "react";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";
-import type { RemixRouteMatch, MatchAndLoadResult } from "./match";
+import type { LoaderResult } from "./loaderResults";
+import type { RemixRouteMatch } from "./match";
 import type { Request, Response } from "./platform";
 
 export type BuildManifest = Record<string, BuildChunk>;
@@ -23,7 +24,7 @@ export function getBuildManifest(serverBuildDirectory: string): BuildManifest {
 
 export interface RemixServerContext {
   matches: RemixRouteMatch[];
-  data: MatchAndLoadResult;
+  data: LoaderResult[];
   partialManifest: BuildManifest;
   requireRoute(id: string): RouteModule;
 }

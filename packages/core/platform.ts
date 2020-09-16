@@ -318,19 +318,28 @@ export class Response extends Message {
   }
 }
 
+/**
+ * May be used in a loader to trigger a HTTP redirect.
+ */
 export class Redirect {
   readonly location: string;
-  readonly status: number;
-  constructor(location: string, httpStatus = 302) {
+  readonly permanent: boolean;
+  constructor(location: string, permanent = false) {
     this.location = location;
-    this.status = httpStatus;
+    this.permanent = permanent;
   }
 }
 
-export function redirect(location: string, httpStatus = 302) {
-  return new Redirect(location, httpStatus);
+/**
+ * Shorthand for creating a `new Redirect`.
+ */
+export function redirect(location: string, permanent?: boolean): Redirect {
+  return new Redirect(location, permanent);
 }
 
+/**
+ * May be used in a loader to change the HTTP status code in the response.
+ */
 export class StatusCode {
   readonly status: number;
   constructor(status: number) {
@@ -338,16 +347,27 @@ export class StatusCode {
   }
 }
 
-export function statusCode(httpStatus: number) {
+/**
+ * Shorthand for creating a `new StatusCode`.
+ */
+export function statusCode(httpStatus: number): StatusCode {
   return new StatusCode(httpStatus);
 }
 
+/**
+ * May be returned from a loader to return a 404.
+ */
 export class NotFound extends StatusCode {
-  constructor() {
+  readonly detail?: any;
+  constructor(detail?: any) {
     super(404);
+    this.detail = detail;
   }
 }
 
-export function notFound() {
-  return new NotFound();
+/**
+ * Shorthand for creating a `new NotFound`.
+ */
+export function notFound(detail?: any): NotFound {
+  return new NotFound(detail);
 }

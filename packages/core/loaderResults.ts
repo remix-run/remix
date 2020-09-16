@@ -23,9 +23,11 @@ export class LoaderResultError extends LoaderResult {
 
 export class LoaderResultRedirect extends LoaderResult {
   readonly location: string;
-  constructor(routeId: string, location: string, httpStatus = 302) {
-    super(routeId, httpStatus);
+  readonly permanent: boolean;
+  constructor(routeId: string, location: string, permanent = false) {
+    super(routeId, permanent ? 301 : 302);
     this.location = location;
+    this.permanent = permanent;
   }
 }
 
@@ -67,8 +69,8 @@ export function loaderResultJsonStringifyReplacer(
       return {
         type: "LoaderResultRedirect",
         routeId: value.routeId,
-        httpStatus: value.httpStatus,
-        location: value.location
+        location: value.location,
+        permanent: value.permanent
       };
     }
 
@@ -109,7 +111,7 @@ export function loaderResultJsonParseReviver(_key: string, value: any): any {
       return new LoaderResultRedirect(
         value.routeId,
         value.location,
-        value.httpStatus
+        value.permanent
       );
     }
 

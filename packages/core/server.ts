@@ -68,14 +68,14 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   };
 }
 
-interface ServerInit {
+interface RemixServerInit {
   config: RemixConfig;
   manifest: BuildManifest;
   serverEntryModule: ServerEntryModule;
   routeModules: RouteModules;
 }
 
-async function initializeServer(remixRoot?: string): Promise<ServerInit> {
+async function initializeServer(remixRoot?: string): Promise<RemixServerInit> {
   let config = await readConfig(remixRoot);
 
   let manifest = getBuildManifest(config.serverBuildDirectory);
@@ -93,7 +93,7 @@ async function initializeServer(remixRoot?: string): Promise<ServerInit> {
 }
 
 async function handleDataRequest(
-  serverInit: ServerInit,
+  serverInit: RemixServerInit,
   req: Request,
   context: AppLoadContext
 ): Promise<Response> {
@@ -126,7 +126,7 @@ async function handleDataRequest(
 
   let data;
   if (from) {
-    let fromMatches = matchRoutes(config.routes, from);
+    let fromMatches = matchRoutes(config.routes, from) || [];
     data = await loadDataDiff(config, matches, fromMatches, location, context);
   } else {
     data = await loadData(config, matches, location, context);
@@ -141,9 +141,9 @@ async function handleDataRequest(
 }
 
 async function handleHtmlRequest(
-  serverInit: ServerInit,
+  serverInit: RemixServerInit,
   req: Request,
-  loadContext: AppLoadContext
+  context: AppLoadContext
 ): Promise<Response> {
   let { config, manifest, routeModules, serverEntryModule } = serverInit;
   let location = createLocation(req.url);
@@ -167,7 +167,7 @@ async function handleHtmlRequest(
       }
     ];
   } else {
-    data = await loadData(config, matches, null, loadContext, location);
+    data = await loadData(config, matches, location, context);
 
     // meta = Object.assign({}, route1(data, params, location), route2)
 

@@ -3,8 +3,6 @@ import type { Location } from "history";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";
-import type { RemixRouteMatch } from "./match";
-import { StatusCode, Redirect } from "./platform";
 import {
   LoaderResult,
   LoaderResultChangeStatusCode,
@@ -13,6 +11,8 @@ import {
   LoaderResultRedirect,
   LoaderResultSuccess
 } from "./loaderResults";
+import type { RemixRouteMatch } from "./match";
+import { StatusCode, Redirect } from "./platform";
 
 /**
  * An object of data returned from the server's `getLoadContext` function. This
@@ -74,7 +74,11 @@ export async function loadData(
           if (result instanceof StatusCode) {
             return new LoaderResultChangeStatusCode(id, result.status);
           } else if (result instanceof Redirect) {
-            return new LoaderResultRedirect(id, result.location, result.status);
+            return new LoaderResultRedirect(
+              id,
+              result.location,
+              result.permanent
+            );
           }
 
           return new LoaderResultSuccess(id, result);
@@ -105,7 +109,7 @@ export async function loadDataDiff(
 ): Promise<LoaderResult[]> {
   let newMatches = matches.filter(
     match =>
-      !fromMatches!.some(fromMatch => fromMatch.pathname === match.pathname)
+      !fromMatches.some(fromMatch => fromMatch.pathname === match.pathname)
   );
 
   let data = await loadData(config, newMatches, location, context);

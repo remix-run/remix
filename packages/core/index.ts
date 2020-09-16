@@ -27,10 +27,10 @@ export {
   Request,
   ResponseType,
   Response,
-  StatusCode,
-  statusCode,
   Redirect,
   redirect,
+  StatusCode,
+  statusCode,
   NotFound,
   notFound
 } from "./platform";

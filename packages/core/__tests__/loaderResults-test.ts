@@ -14,7 +14,7 @@ describe("stringifying and parsing loader results", () => {
       new LoaderResultChangeStatusCode("changeStatusCode", 403),
       new LoaderResultCopy("copy"),
       new LoaderResultError("error", "message", "stack"),
-      new LoaderResultRedirect("redirect", "location", 301),
+      new LoaderResultRedirect("redirect", "location", true),
       new LoaderResultSuccess("success", "data")
     ];
 
@@ -40,8 +40,8 @@ describe("stringifying and parsing loader results", () => {
         {
           \\"type\\": \\"LoaderResultRedirect\\",
           \\"routeId\\": \\"redirect\\",
-          \\"httpStatus\\": 301,
-          \\"location\\": \\"location\\"
+          \\"location\\": \\"location\\",
+          \\"permanent\\": true
         },
         {
           \\"type\\": \\"LoaderResultSuccess\\",
@@ -72,6 +72,7 @@ describe("stringifying and parsing loader results", () => {
         LoaderResultRedirect {
           "httpStatus": 301,
           "location": "location",
+          "permanent": true,
           "routeId": "redirect",
         },
         LoaderResultSuccess {
