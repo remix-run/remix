@@ -29,7 +29,7 @@ git push origin --follow-tags
 
 - Server
   x HMR
-  - Status codes from loaders (rewrites, redirects)
+  x Status codes from loaders (rewrites, redirects)
   - Meta tags
   - In dev, error overlays in the browser
   - `/__remix_patch` manifest endpoint
@@ -53,4 +53,3 @@ git push origin --follow-tags
     - Watch project root, rebuild as files change
   - `remix build`
 - Browser dev tools
-

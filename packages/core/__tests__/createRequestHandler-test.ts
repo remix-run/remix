@@ -75,7 +75,7 @@ describe("a remix request handler", () => {
           Object {
             "data": null,
             "routeId": "routes/gists",
-            "type": "success",
+            "type": "LoaderResultSuccess",
           },
           Object {
             "data": Array [
@@ -95,7 +95,7 @@ describe("a remix request handler", () => {
               },
             ],
             "routeId": "routes/gists/index",
-            "type": "success",
+            "type": "LoaderResultSuccess",
           },
         ]
       `);
@@ -118,7 +118,7 @@ describe("a remix request handler", () => {
           Array [
             Object {
               "routeId": "routes/gists",
-              "type": "copy",
+              "type": "LoaderResultCopy",
             },
             Object {
               "data": Array [
@@ -138,7 +138,7 @@ describe("a remix request handler", () => {
                 },
               ],
               "routeId": "routes/gists/$username",
-              "type": "success",
+              "type": "LoaderResultSuccess",
             },
           ]
         `);
@@ -162,7 +162,7 @@ describe("a remix request handler", () => {
           Array [
             Object {
               "routeId": "routes/gists",
-              "type": "copy",
+              "type": "LoaderResultCopy",
             },
             Object {
               "data": Array [
@@ -182,7 +182,7 @@ describe("a remix request handler", () => {
                 },
               ],
               "routeId": "routes/gists/$username",
-              "type": "success",
+              "type": "LoaderResultSuccess",
             },
           ]
         `);
@@ -207,7 +207,7 @@ describe("a remix request handler", () => {
             Object {
               "data": null,
               "routeId": "routes/gists",
-              "type": "success",
+              "type": "LoaderResultSuccess",
             },
             Object {
               "data": Array [
@@ -227,7 +227,7 @@ describe("a remix request handler", () => {
                 },
               ],
               "routeId": "routes/gists/$username",
-              "type": "success",
+              "type": "LoaderResultSuccess",
             },
           ]
         `);
@@ -253,7 +253,7 @@ describe("a remix request handler", () => {
           Array [
             Object {
               "routeId": "routes/gists",
-              "type": "copy",
+              "type": "LoaderResultCopy",
             },
             Object {
               "data": Array [
@@ -273,7 +273,7 @@ describe("a remix request handler", () => {
                 },
               ],
               "routeId": "routes/gists/$username",
-              "type": "success",
+              "type": "LoaderResultSuccess",
             },
           ]
         `);

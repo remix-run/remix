@@ -14,14 +14,15 @@ import {
 } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import type { AppLoadContext } from "./load";
+import type { AppLoadContext } from "./loader";
+import { loadData, loadDataDiff } from "./loader";
 import {
-  loadData,
   LoaderResult,
   LoaderResultChangeStatusCode,
   LoaderResultRedirect,
-  LoaderResultError
-} from "./load";
+  LoaderResultError,
+  stringifyLoaderResults
+} from "./loaderResults";
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
@@ -94,7 +95,7 @@ async function initializeServer(remixRoot?: string): Promise<ServerInit> {
 async function handleDataRequest(
   serverInit: ServerInit,
   req: Request,
-  loadContext: AppLoadContext
+  context: AppLoadContext
 ): Promise<Response> {
   let { config } = serverInit;
   let location = createLocation(req.url);
@@ -123,17 +124,16 @@ async function handleDataRequest(
     });
   }
 
-  let fromMatches = from ? matchRoutes(config.routes, from) : null;
-  let data = await loadData(
-    config,
-    matches,
-    fromMatches,
-    loadContext,
-    location
-  );
+  let data;
+  if (from) {
+    let fromMatches = matchRoutes(config.routes, from);
+    data = await loadDataDiff(config, matches, fromMatches, location, context);
+  } else {
+    data = await loadData(config, matches, location, context);
+  }
 
   // TODO: How do we cache this?
-  return new Response(JSON.stringify(data), {
+  return new Response(stringifyLoaderResults(data), {
     headers: {
       "Content-Type": "application/json"
     }
@@ -169,6 +169,8 @@ async function handleHtmlRequest(
   } else {
     data = await loadData(config, matches, null, loadContext, location);
 
+    // meta = Object.assign({}, route1(data, params, location), route2)
+
     let redirectResult = data.find(
       (result): result is LoaderResultRedirect =>
         result instanceof LoaderResultRedirect
@@ -187,6 +189,7 @@ async function handleHtmlRequest(
       (result: LoaderResult): result is LoaderResultError =>
         result instanceof LoaderResultError
     );
+
     if (errorResult) {
       statusCode = errorResult.httpStatus;
       matches = [

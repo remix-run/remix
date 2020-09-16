@@ -5,15 +5,15 @@ export { build, watch } from "./compiler";
 export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
-export type {
-  LoaderResultType as LoaderResultStatus,
-  LoaderResultCopy,
-  LoaderResultSuccess,
-  LoaderResultError,
+export type { AppLoadContext, RemixLoader } from "./loader";
+export {
   LoaderResult,
-  AppLoadContext,
-  RemixLoader
-} from "./load";
+  LoaderResultChangeStatusCode,
+  LoaderResultCopy,
+  LoaderResultError,
+  LoaderResultRedirect,
+  LoaderResultSuccess
+} from "./loaderResults";
 
 export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
