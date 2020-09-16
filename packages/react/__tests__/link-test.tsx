@@ -1,10 +1,10 @@
 import React from "react";
 import { create as createTestRenderer } from "react-test-renderer";
-import { RemixLink } from "@remix-run/react";
+import { Link } from "@remix-run/react";
 
-describe("A <RemixLink>", () => {
+describe("A <Link>", () => {
   it("works", () => {
-    let renderer = createTestRenderer(<RemixLink />);
+    let renderer = createTestRenderer(<Link />);
     expect(renderer.toJSON()).toMatchInlineSnapshot(`
       <a
         href="#"

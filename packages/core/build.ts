@@ -22,7 +22,7 @@ export function getBuildManifest(serverBuildDirectory: string): BuildManifest {
   return require(manifestFile);
 }
 
-export interface RemixServerContext {
+export interface RemixEntryContext {
   matches: RemixRouteMatch[];
   data: LoaderResult[];
   partialManifest: BuildManifest;
@@ -33,7 +33,7 @@ export interface ServerEntryModule {
   default(
     request: Request,
     responseStatusCode: number,
-    context: RemixServerContext
+    context: RemixEntryContext
   ): Promise<Response>;
 }
 

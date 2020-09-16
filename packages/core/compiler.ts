@@ -9,7 +9,7 @@ import replace from "@rollup/plugin-replace";
 import { ManifestServerEntryKey } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import { purgeRequireCache } from "./require";
+import { purgeRequireCache } from "./requireCache";
 
 import manifest from "./rollup/manifest";
 import watchInput from "./rollup/watchInput";
@@ -40,7 +40,7 @@ function getInputForRoutes(
   return input;
 }
 
-function createInput(config: RemixConfig): Input {
+function getInput(config: RemixConfig): Input {
   let input = getInputForRoutes(config.sourceDirectory, config.routes);
 
   input[ManifestServerEntryKey] = path.join(
@@ -67,8 +67,8 @@ export async function build({
 }: BuildOptions = {}): Promise<BuildResult> {
   let config = await readConfig(remixRoot);
 
-  let serverProd: InputOptions = {
-    input: createInput(config),
+  let options: InputOptions = {
+    input: getInput(config),
     external(id) {
       // Ignore node_modules, bare identifiers, etc.
       return !(id.startsWith("/") || id.startsWith("."));
@@ -104,7 +104,7 @@ export async function build({
     ]
   };
 
-  let build = await rollup.rollup(serverProd);
+  let build = await rollup.rollup(options);
 
   return { build, remixConfig: config };
 }
@@ -131,7 +131,7 @@ export async function watch({
         async getInput() {
           purgeRequireCache(config.rootDirectory);
           config = await readConfig(config.rootDirectory);
-          return createInput(config);
+          return getInput(config);
         }
       }),
       babel({
@@ -163,6 +163,10 @@ export async function watch({
       })
     ],
     watch: {
+      // Skip the write here and do it in the `onBuild` callback instead. This
+      // gives us a more consistent interface between `build()` and `watch()`.
+      // Both of them give you access to the raw build and let you do the
+      // generate/write step separately.
       skipWrite: true
     }
   };

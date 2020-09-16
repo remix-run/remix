@@ -3,7 +3,7 @@ import { parsePath } from "history";
 
 import type {
   BuildManifest,
-  RemixServerContext,
+  RemixEntryContext,
   ServerEntryModule,
   RouteModules
 } from "./build";
@@ -26,7 +26,7 @@ import {
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
-import { purgeRequireCache } from "./require";
+import { purgeRequireCache } from "./requireCache";
 
 export interface RequestHandler {
   (request: Request, loadContext: AppLoadContext): Promise<Response>;
@@ -45,26 +45,26 @@ function createLocation(
  * Creates a HTTP request handler.
  */
 export function createRequestHandler(remixRoot?: string): RequestHandler {
-  let init = initializeServer(remixRoot);
+  let initPromise = initializeServer(remixRoot);
 
   return async (req, loadContext) => {
     if (process.env.NODE_ENV === "development") {
-      let { config } = await init;
+      let { config } = await initPromise;
       purgeRequireCache(config.rootDirectory);
-      init = initializeServer(remixRoot);
+      initPromise = initializeServer(remixRoot);
     }
 
-    let serverInit = await init;
+    let init = await initPromise;
 
     // /__remix_data?path=/gists
     // /__remix_data?from=/gists&path=/gists/123
     if (req.url.startsWith("/__remix_data")) {
-      return handleDataRequest(serverInit, req, loadContext);
+      return handleDataRequest(init, req, loadContext);
     }
 
     // /gists
     // /gists/123
-    return handleHtmlRequest(serverInit, req, loadContext);
+    return handleHtmlRequest(init, req, loadContext);
   };
 }
 
@@ -93,14 +93,14 @@ async function initializeServer(remixRoot?: string): Promise<RemixServerInit> {
 }
 
 async function handleDataRequest(
-  serverInit: RemixServerInit,
+  init: RemixServerInit,
   req: Request,
   context: AppLoadContext
 ): Promise<Response> {
-  let { config } = serverInit;
+  let { config } = init;
+
   let location = createLocation(req.url);
-  let split = req.url.split("?");
-  let params = new URLSearchParams(split[1]);
+  let params = new URLSearchParams(location.search);
   let path = params.get("path");
   let from = params.get("from");
 
@@ -141,13 +141,13 @@ async function handleDataRequest(
 }
 
 async function handleHtmlRequest(
-  serverInit: RemixServerInit,
+  init: RemixServerInit,
   req: Request,
   context: AppLoadContext
 ): Promise<Response> {
-  let { config, manifest, routeModules, serverEntryModule } = serverInit;
-  let location = createLocation(req.url);
+  let { config, manifest, routeModules, serverEntryModule } = init;
 
+  let location = createLocation(req.url);
   let statusCode = 200;
   let matches = matchRoutes(config.routes, req.url);
   let data: LoaderResult[] = [];
@@ -234,7 +234,7 @@ async function handleHtmlRequest(
     return memo;
   }, {} as BuildManifest);
 
-  let remixContext: RemixServerContext = {
+  let remixContext: RemixEntryContext = {
     matches,
     data,
     partialManifest,

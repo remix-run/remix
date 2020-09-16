@@ -8,8 +8,7 @@ import tmp from "tmp";
  */
 export default function watchInput({
   watchFile,
-  getInput,
-  ignored
+  getInput
 }: {
   watchFile: string;
   getInput: (options: InputOptions) => Promise<InputOption>;
@@ -19,10 +18,12 @@ export default function watchInput({
 
   return {
     name: "watch-input",
+    // The `options` hook is async, but Rollup's current typings do not use the
+    // Promise<T> return type. Should probably file a Rollup bug.
     // @ts-ignore
-    async options(options: InputOptions) {
-      let input = await getInput(options);
-      return { ...options, input };
+    async options(opts: InputOptions) {
+      let input = await getInput(opts);
+      return { ...opts, input } as InputOptions;
     },
     buildStart() {
       // This is a workaround for a bug in Rollup where this.addWatchFile does

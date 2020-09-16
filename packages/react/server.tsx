@@ -1,13 +1,13 @@
 import type { ReactChildren } from "react";
 import React from "react";
 import { StaticRouter } from "react-router-dom/server";
-import type { Request, RemixContext } from "@remix-run/core";
+import type { Request, RemixServerContext } from "@remix-run/core";
 
 import { RemixEntryProvider } from "./index";
 
 interface RemixServerProps {
   request: Request;
-  context: RemixContext;
+  context: RemixServerContext;
   children: ReactChildren;
 }
 

@@ -1,4 +1,4 @@
-export type { RemixServerContext } from "./build";
+export type { RemixEntryContext as RemixServerContext } from "./build";
 
 export { build, watch } from "./compiler";
 

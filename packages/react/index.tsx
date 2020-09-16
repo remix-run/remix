@@ -3,11 +3,7 @@ import React from "react";
 // TODO: Export RouteObject from 'react-router-dom'
 import type { RouteObject } from "react-router";
 import { useLocation, useRoutes } from "react-router-dom";
-import type {
-  RemixServerContext,
-  LoaderResultSuccess,
-  LoaderResult
-} from "@remix-run/core";
+import type { RemixServerContext, LoaderResultSuccess } from "@remix-run/core";
 
 import invariant from "./invariant";
 
