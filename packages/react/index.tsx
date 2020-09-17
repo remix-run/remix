@@ -2,8 +2,18 @@ import type { ReactNode } from "react";
 import React from "react";
 // TODO: Export RouteObject from 'react-router-dom'
 import type { RouteObject } from "react-router";
-import { useLocation, useRoutes } from "react-router-dom";
-import type { EntryContext, RouteData, RouteManifest } from "@remix-run/core";
+import {
+  useLocation,
+  useRoutes,
+  useResolvedPath,
+  Link as ReactRouterLink
+} from "react-router-dom";
+import type {
+  BuildManifest,
+  EntryContext,
+  RouteData,
+  RouteManifest
+} from "@remix-run/core";
 
 import * as defaultRouteModule from "./defaultRouteModule";
 import invariant from "./invariant";
@@ -11,6 +21,18 @@ import createHtml from "./createHtml";
 
 const RemixContext = React.createContext<EntryContext | undefined>(undefined);
 const RemixCacheContext = React.createContext<DataCache | undefined>(undefined);
+const RemixPatchContext = React.createContext<ManifestPatcher | undefined>(
+  undefined
+);
+
+interface ManifestPatcher {
+  (path: string): void;
+}
+
+interface RemixPatch {
+  build: BuildManifest;
+  routes: RouteManifest;
+}
 
 function useRemixContext(): EntryContext {
   let context = React.useContext(RemixContext);
@@ -32,10 +54,19 @@ export function RemixEntryProvider({
 }) {
   let cache = useDataCache(context.routeData);
 
+  let manifestPatcher = React.useCallback(async (path: Path) => {
+    let res = await fetch(`/__remix_patch?path=${path}`);
+    let patch = (await res.json()) as RemixPatch;
+    Object.assign(context.routeManifest, patch.routes);
+    Object.assign(context.browserManifest, patch.build);
+  }, []);
+
   return (
     <RemixContext.Provider value={context}>
       <RemixCacheContext.Provider value={cache}>
-        {children}
+        <RemixPatchContext.Provider value={manifestPatcher}>
+          {children}
+        </RemixPatchContext.Provider>
       </RemixCacheContext.Provider>
     </RemixContext.Provider>
   );
@@ -99,7 +130,7 @@ const RemixRouteIdContext = React.createContext<string | undefined>(undefined);
 
 export function RemixRoute({ id }: { id: string }) {
   let context = useRemixContext();
-  let mod = context.requireRoute(id);
+  let mod = context.routeLoader.read(id);
 
   if (!mod) {
     return (
@@ -138,24 +169,30 @@ export function useRouteData() {
 }
 
 export function Routes() {
-  let context = useRemixContext();
-  let routes = createRoutesFromManifest(context.routeManifest);
+  let routes = createRoutes(useRemixContext());
   return useRoutes(routes);
 }
 
-function createRoutesFromManifest(routeManifest: RouteManifest): RouteObject[] {
-  let routeIds = Object.keys(routeManifest).sort();
+// TODO: React Router should not be calling preload on the server because you
+// can't actually suspend on the server.
+let canUseDom = typeof window === "object";
+
+function createRoutes(context: EntryContext): RouteObject[] {
+  let routeIds = Object.keys(context.routeManifest).sort();
   let routes: RouteObject[] = [];
   let addedRoutes: { [routeId: string]: RouteObject } = {};
 
   for (let routeId of routeIds) {
-    let manifestRoute = routeManifest[routeId];
+    let manifestRoute = context.routeManifest[routeId];
     let route = {
       caseSensitive: false,
       path: manifestRoute.path,
-      element: <RemixRoute id={manifestRoute.id} />,
-      preload: () => {
-        // TODO
+      element: <RemixRoute id={routeId} />,
+      preload() {
+        if (canUseDom) {
+          context.routeLoader.load(routeId);
+          // TODO: cache.preload(location)
+        }
       }
     };
 
@@ -179,6 +216,14 @@ function createRoutesFromManifest(routeManifest: RouteManifest): RouteObject[] {
 }
 
 export function Meta() {
+  return (
+    <React.Suspense fallback={null}>
+      <AsyncMeta />
+    </React.Suspense>
+  );
+}
+
+function AsyncMeta() {
   let context = useRemixContext();
   let location = useLocation();
 
@@ -186,12 +231,11 @@ export function Meta() {
   let allData = {};
 
   for (let routeId of context.matchedRouteIds) {
-    let routeModule = context.requireRoute(routeId) || defaultRouteModule;
+    let routeModule = context.routeLoader.read(routeId) || defaultRouteModule;
 
     if (typeof routeModule.meta === "function") {
       let data = context.routeData[routeId];
       let params = context.routeParams[routeId];
-
       Object.assign(allData, { [routeId]: data });
       Object.assign(
         meta,
@@ -200,12 +244,16 @@ export function Meta() {
     }
   }
 
-  return Object.keys(meta).map(name =>
-    name === "title" ? (
-      <title key="title">{meta[name]}</title>
-    ) : (
-      <meta key={name} name={name} content={meta[name]} />
-    )
+  return (
+    <>
+      {Object.keys(meta).map(name =>
+        name === "title" ? (
+          <title key="title">{meta[name]}</title>
+        ) : (
+          <meta key={name} name={name} content={meta[name]} />
+        )
+      )}
+    </>
   );
 }
 
@@ -238,6 +286,13 @@ export function Styles() {
   return null;
 }
 
-export function Link() {
-  return <a href="#">link</a>;
+export function Link(props: any) {
+  let manifestPatcher = React.useContext(RemixPatchContext);
+  let resolvedPath = useResolvedPath(props.to);
+
+  React.useEffect(() => {
+    manifestPatcher!(resolvedPath.pathname);
+  }, [resolvedPath]);
+
+  return <ReactRouterLink {...props} />;
 }

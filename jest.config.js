@@ -4,10 +4,12 @@ module.exports = {
   projects: [
     {
       displayName: "core",
+      testEnvironment: "node",
       testMatch: ["<rootDir>/packages/core/**/*-test.[jt]s?(x)"]
     },
     {
       displayName: "express",
+      testEnvironment: "node",
       testMatch: ["<rootDir>/packages/express/**/*-test.[jt]s?(x)"]
     },
     {

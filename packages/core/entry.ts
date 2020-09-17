@@ -14,7 +14,12 @@ export interface EntryContext {
   routeData: RouteData;
   routeManifest: RouteManifest;
   routeParams: RouteParams;
-  requireRoute(id: string): RouteModule;
+  routeLoader: RouteLoader;
+}
+
+export interface RouteLoader {
+  read(routeId: string): RouteModule;
+  load(routeId: string): Promise<void>;
 }
 
 export interface RouteData {

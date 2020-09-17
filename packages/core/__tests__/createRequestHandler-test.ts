@@ -23,24 +23,38 @@ describe("a remix request handler", () => {
         <html lang=\\"en\\">
           <head>
             <meta charset=\\"utf-8\\" />
+            <!--$-->
             <title>1 gists from ryanflorence</title>
             <meta
               name=\\"description\\"
               content=\\"View all of the gists from ryanflorence\\"
             />
+            <!--/$-->
             <link
               rel=\\"stylesheet\\"
               href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
             />
           </head>
           <body class=\\"m-4\\">
+            <nav>
+              <div><a href=\\"/users\\">Users</a></div>
+              <div><a href=\\"/gists\\">Gists</a></div>
+            </nav>
             <!--$-->
             <div data-test-id=\\"/gists\\">
               <header>
                 <h1>Gists</h1>
                 <ul>
-                  <li><a href=\\"#\\">link</a></li>
-                  <li><a href=\\"#\\">link</a></li>
+                  <li>
+                    <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+                      >Ryan Florence</a
+                    >
+                  </li>
+                  <li>
+                    <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+                      >Michael Jackson</a
+                    >
+                  </li>
                 </ul>
               </header>
               <div data-test-id=\\"/gists/$username\\">
@@ -60,26 +74,25 @@ describe("a remix request handler", () => {
                   __entry_browser__: {
                     fileName: \\"__entry_browser__.js\\",
                     imports: [
-                      \\"index-af2df4c2.js\\",
-                      \\"index-a05aba86.js\\",
-                      \\"index-2b6ced74.js\\",
-                      \\"@remix/react/dom\\",
+                      \\"index-d9da1d1d.js\\",
+                      \\"index-85b12db5.js\\",
+                      \\"index-e5cb278c.js\\",
                     ],
                   },
                   \\"routes/gists\\": {
                     fileName: \\"routes/gists.js\\",
                     imports: [
-                      \\"index-af2df4c2.js\\",
-                      \\"index-a05aba86.js\\",
-                      \\"index-2b6ced74.js\\",
+                      \\"index-d9da1d1d.js\\",
+                      \\"index-85b12db5.js\\",
+                      \\"index-e5cb278c.js\\",
                     ],
                   },
                   \\"routes/gists/$username\\": {
                     fileName: \\"routes/gists/$username.js\\",
                     imports: [
-                      \\"index-af2df4c2.js\\",
-                      \\"index-a05aba86.js\\",
-                      \\"index-2b6ced74.js\\",
+                      \\"index-d9da1d1d.js\\",
+                      \\"index-85b12db5.js\\",
+                      \\"index-e5cb278c.js\\",
                     ],
                   },
                 },
@@ -202,14 +215,20 @@ describe("a remix request handler", () => {
         <html lang=\\"en\\">
           <head>
             <meta charset=\\"utf-8\\" />
+            <!--$-->
             <title>Remix Error: Route Not Found</title>
             <meta name=\\"description\\" content=\\"There was an error rendering this page\\" />
+            <!--/$-->
             <link
               rel=\\"stylesheet\\"
               href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
             />
           </head>
           <body class=\\"m-4\\">
+            <nav>
+              <div><a href=\\"/users\\">Users</a></div>
+              <div><a href=\\"/gists\\">Gists</a></div>
+            </nav>
             <!--$-->
             <div>
               <h1>Error!</h1>
@@ -224,10 +243,9 @@ describe("a remix request handler", () => {
                   __entry_browser__: {
                     fileName: \\"__entry_browser__.js\\",
                     imports: [
-                      \\"index-af2df4c2.js\\",
-                      \\"index-a05aba86.js\\",
-                      \\"index-2b6ced74.js\\",
-                      \\"@remix/react/dom\\",
+                      \\"index-d9da1d1d.js\\",
+                      \\"index-85b12db5.js\\",
+                      \\"index-e5cb278c.js\\",
                     ],
                   },
                   \\"routes/500\\": undefined,
@@ -243,6 +261,51 @@ describe("a remix request handler", () => {
           </body>
         </html>
         "
+      `);
+    });
+  });
+
+  describe("serving patches", () => {
+    it("sends the route and build manifests for a path", async () => {
+      let handleRequest = createRequestHandler(remixRoot);
+
+      let req = new Request("/__remix_patch?path=/gists");
+      let res = await handleRequest(req, null);
+      let json = await res.json();
+
+      expect(res.headers.get("Content-Type")).toEqual("application/json");
+      expect(json).toMatchInlineSnapshot(`
+        Object {
+          "build": Object {
+            "routes/gists": Object {
+              "fileName": "routes/gists.js",
+              "imports": Array [
+                "index-d9da1d1d.js",
+                "index-85b12db5.js",
+                "index-e5cb278c.js",
+              ],
+            },
+            "routes/gists/index": Object {
+              "fileName": "routes/gists/index.js",
+              "imports": Array [
+                "index-d9da1d1d.js",
+                "index-85b12db5.js",
+                "index-e5cb278c.js",
+              ],
+            },
+          },
+          "routes": Object {
+            "routes/gists": Object {
+              "id": "routes/gists",
+              "path": "gists",
+            },
+            "routes/gists/index": Object {
+              "id": "routes/gists/index",
+              "parentId": "routes/gists",
+              "path": "/",
+            },
+          },
+        }
       `);
     });
   });

@@ -1,9 +1,4 @@
-import type { BuildManifest, RouteModule } from "@remix-run/core";
-
-export interface SuspenseRouteModuleLoader {
-  read(routeId: string): RouteModule;
-  load(routeId: string): Promise<void>;
-}
+import type { BuildManifest, RouteLoader, RouteModule } from "@remix-run/core";
 
 interface RouteModuleCache {
   [routeId: string]: RouteModule;
@@ -12,7 +7,7 @@ interface RouteModuleCache {
 export function createSuspenseRouteModuleLoader(
   manifest: BuildManifest,
   publicPath: string
-): SuspenseRouteModuleLoader {
+): RouteLoader {
   let cache: RouteModuleCache = {};
 
   function read(routeId: string): RouteModule {

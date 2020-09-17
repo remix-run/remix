@@ -15,16 +15,12 @@ declare global {
 // }
 
 let context = window.__remixContext;
-let loader = createSuspenseRouteModuleLoader(
+let routeLoader = createSuspenseRouteModuleLoader(
   context.browserManifest,
   context.publicPath
 );
 
-Object.assign(context, {
-  requireRoute(routeId: string) {
-    return loader.read(routeId);
-  }
-});
+Object.assign(context, { routeLoader });
 
 export default function RemixBrowser({ children }: { children: ReactNode }) {
   return (

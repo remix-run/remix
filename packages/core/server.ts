@@ -59,14 +59,18 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
 
     let init = await initPromise;
 
-    // /__remix_data?path=/gists
-    // /__remix_data?from=/gists&path=/gists/123
+    // GET /__remix_data?path=/gists
+    // GET /__remix_data?from=/gists&path=/gists/123
     if (req.url.startsWith("/__remix_data")) {
       return handleDataRequest(init, req, loadContext);
     }
 
-    // /gists
-    // /gists/123
+    // GET /__remix_patch?path=/gists
+    if (req.url.startsWith("/__remix_patch")) {
+      return handlePatchRequest(init, req);
+    }
+
+    // GET /gists
     return handleHtmlRequest(init, req, loadContext);
   };
 }
@@ -148,6 +152,51 @@ async function handleDataRequest(
 
   // TODO: How do we cache this?
   return new Response(JSON.stringify(data), {
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+}
+
+async function handlePatchRequest(init: RemixServerInit, req: Request) {
+  let { config, browserManifest } = init;
+
+  let location = createLocation(req.url);
+  let params = new URLSearchParams(location.search);
+  let path = params.get("path");
+
+  if (!path) {
+    return new Response(JSON.stringify({ error: "Missing ?path" }), {
+      status: 403,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  let matches = matchRoutes(config.routes, path);
+
+  if (!matches) {
+    return new Response(`No matches found for ${path}`, {
+      status: 404
+    });
+  }
+
+  let matchedRouteIds = matches.map(match => match.route.id);
+  let routeManifest = createRouteManifest(matches);
+
+  // Get the browser manifest for only the matched routes.
+  let partialBrowserManifest = getPartialManifest(
+    browserManifest,
+    matchedRouteIds
+  );
+
+  let payload = {
+    build: partialBrowserManifest,
+    routes: routeManifest
+  };
+
+  return new Response(JSON.stringify(payload), {
     headers: {
       "Content-Type": "application/json"
     }
@@ -264,8 +313,15 @@ async function handleHtmlRequest(
     browserEntryContextString: jsesc(partialEntryContext, {
       isScriptContext: true
     }),
-    requireRoute(routeId: string) {
-      return routeModules[routeId];
+    routeLoader: {
+      read(routeId: string) {
+        return routeModules[routeId];
+      },
+      load() {
+        throw new Error(
+          `Cannot load routes on the server because we can't suspend`
+        );
+      }
     }
   });
 

@@ -9,7 +9,8 @@ export type {
   EntryContext,
   RouteData,
   RouteManifest,
-  RouteParams
+  RouteParams,
+  RouteLoader
 } from "./entry";
 
 export type { AppLoadContext, RemixLoader } from "./loader";
