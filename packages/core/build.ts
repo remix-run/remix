@@ -6,13 +6,9 @@ import type { Params } from "react-router";
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Request, Response } from "./platform";
+import type { BuildManifest, BuildChunk } from "./rollup/manifest";
 
-export type BuildManifest = Record<string, BuildChunk>;
-
-export interface BuildChunk {
-  fileName: string;
-  imports: string[];
-}
+export type { BuildManifest, BuildChunk };
 
 export const ManifestBrowserEntryKey = "__entry_browser__";
 export const ManifestServerEntryKey = "__entry_server__";

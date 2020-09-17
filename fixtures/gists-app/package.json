@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "prestart": "cp -r ../../build/node_modules/ node_modules",
-    "start": "node serve.js",
-    "build": "remix build",
+    "start": "node scripts/start.js",
+    "prebuild": "cp -r ../../build/node_modules/ node_modules",
+    "build": "node scripts/build.js",
     "test": "jest --testRegex \".test.js$\"",
     "test:jk": "echo \"No tests here\" && exit 0"
   },

@@ -2,17 +2,19 @@
 import React, { Suspense } from "react";
 import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
 
-export default function Chrome({ children }) {
+export default function App() {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <Meta />
+        <Suspense fallback={null}>
+          <Meta />
+        </Suspense>
         <link
           rel="stylesheet"
           href="//unpkg.com/@exampledev/new.css@1.1.3/new.css"
         />
-        {/* <Styles /> */}
+        <Styles />
       </head>
       <body className="m-4">
         <Suspense fallback={"Loading"}>

@@ -1,4 +1,4 @@
-import { NotFound, Redirect } from "@remix-run/core";
+const { NotFound, Redirect } = require("@remix-run/core");
 
 module.exports = async function ({ params }) {
   let { username } = params;

@@ -7,6 +7,7 @@ import type {
   Plugin
 } from "rollup";
 import * as rollup from "rollup";
+import alias from "@rollup/plugin-alias";
 import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
 import nodeResolve from "@rollup/plugin-node-resolve";
@@ -85,7 +86,27 @@ function getCommonPlugins(
   mode: BuildMode,
   target: BuildTarget
 ): Plugin[] {
-  return [
+  let plugins: Plugin[] = [];
+
+  if (target === BuildTarget.Browser) {
+    plugins.push(
+      alias({
+        entries: [
+          {
+            // entry-browser.js imports @remix-run/react/browser
+            // src/components/App.js imports @remix-run/react
+            find: "@remix-run/react",
+            replacement: path.resolve(
+              config.rootDirectory,
+              "node_modules/@remix-run/react/esm"
+            )
+          }
+        ]
+      })
+    );
+  }
+
+  plugins.push(
     babel({
       babelHelpers: "bundled",
       configFile: false,
@@ -117,7 +138,9 @@ function getCommonPlugins(
           ? BrowserManifestFilename
           : ServerManifestFilename
     })
-  ];
+  );
+
+  return plugins;
 }
 
 /**
@@ -188,75 +211,3 @@ export function watch(
     watcher.close();
   };
 }
-
-// export async function watch(
-//   remixRoot?: string,
-//   onBuild?: (buildResult: BuildResult) => void
-// ) {
-//   let config = await readConfig(remixRoot);
-
-//   let watchOptions: RollupWatchOptions = {
-//     external(id) {
-//       // Ignore node_modules, bare identifiers, etc.
-//       return !(id.startsWith("/") || id.startsWith("."));
-//     },
-//     plugins: [
-//       watchInput({
-//         watchFile: config.rootDirectory,
-//         async getInput() {
-//           purgeRequireCache(config.rootDirectory);
-//           config = await readConfig(config.rootDirectory);
-//           return getInput(config);
-//         }
-//       }),
-//       babel({
-//         babelHelpers: "bundled",
-//         configFile: false,
-//         exclude: /node_modules/,
-//         extensions: [".js", ".ts", ".tsx"],
-//         presets: [
-//           "@babel/preset-react",
-//           ["@babel/preset-env", { targets: { node: "12" } }],
-//           [
-//             "@babel/preset-typescript",
-//             {
-//               allExtensions: true,
-//               isTSX: true
-//             }
-//           ]
-//         ]
-//       }),
-//       nodeResolve({
-//         extensions: [".js", ".json", ".ts", ".tsx"]
-//       }),
-//       commonjs(),
-//       replace({
-//         "process.env.NODE_ENV": JSON.stringify(mode)
-//       }),
-//       manifest({
-//         outputDir: config.serverBuildDirectory
-//       })
-//     ],
-//     watch: {
-//       // Skip the write here and do it in the `onBuild` callback instead. This
-//       // gives us a more consistent interface between `build()` and `watch()`.
-//       // Both of them give you access to the raw build and let you do the
-//       // generate/write step separately.
-//       skipWrite: true
-//     }
-//   };
-
-//   let watcher = rollup.watch(watchOptions);
-
-//   watcher.on("event", event => {
-//     console.log({ event });
-
-//     if (event.code === "BUNDLE_END") {
-//       if (onBuild) {
-//         onBuild({ remixConfig: config, build: event.result });
-//       }
-//     }
-//   });
-
-//   return watcher;
-// }

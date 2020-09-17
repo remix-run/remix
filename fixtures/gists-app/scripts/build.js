@@ -1,11 +1,7 @@
 const path = require("path");
-const {
-  build,
-  readConfig,
-  BuildTarget
-} = require("./build/node_modules/@remix-run/core");
+const { build, readConfig, BuildTarget } = require("@remix-run/core");
 
-let remixRoot = path.resolve(__dirname, "fixtures/gists-app");
+const remixRoot = path.resolve(__dirname, "..");
 
 async function run() {
   console.log("building gists-app fixture...");

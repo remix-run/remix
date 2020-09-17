@@ -2,28 +2,30 @@ import path from "path";
 import { promises as fsp } from "fs";
 import type { NormalizedOutputOptions, OutputBundle, Plugin } from "rollup";
 
-export interface ManifestEntry {
+export interface BuildManifest {
+  [chunkName: string]: BuildChunk;
+}
+
+export interface BuildChunk {
   fileName: string;
   imports: string[];
+  moduleNames: string[];
 }
 
-export interface Manifest {
-  [routeId: string]: ManifestEntry;
-}
-
-function createManifest(bundle: OutputBundle): Manifest {
+function createManifest(bundle: OutputBundle): BuildManifest {
   return Object.keys(bundle).reduce((manifest, key) => {
     let assetOrChunk = bundle[key];
 
     if (assetOrChunk.type === "chunk") {
       manifest[assetOrChunk.name] = {
         fileName: assetOrChunk.fileName,
-        imports: assetOrChunk.imports
+        imports: assetOrChunk.imports,
+        moduleNames: Object.keys(assetOrChunk.modules)
       };
     }
 
     return manifest;
-  }, {} as Manifest);
+  }, {} as BuildManifest);
 }
 
 export default function manifestPlugin({
