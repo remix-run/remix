@@ -1,11 +1,15 @@
 import type { Params } from "react-router";
 
-import type { RouteModule } from "./build";
-import type { LoaderResultSuccess } from "./loaderResults";
+import type { BuildManifest, RouteModule } from "./build";
+import type { RemixConfig } from "./config";
+import type { LoaderResult } from "./loader";
+import { LoaderResultSuccess } from "./loader";
 import type { RemixRouteMatch } from "./match";
 
 export interface EntryContext {
+  browserManifest: BuildManifest;
   matchedRouteIds: string[];
+  publicPath: RemixConfig["publicPath"];
   routeData: RouteData;
   routeManifest: RouteManifest;
   routeParams: RouteParams;
@@ -16,11 +20,11 @@ export interface RouteData {
   [routeId: string]: any;
 }
 
-export function createRouteData(
-  loaderResults: LoaderResultSuccess[]
-): RouteData {
+export function createRouteData(loaderResults: LoaderResult[]): RouteData {
   return loaderResults.reduce((memo, loaderResult) => {
-    memo[loaderResult.routeId] = loaderResult.data;
+    if (loaderResult instanceof LoaderResultSuccess) {
+      memo[loaderResult.routeId] = loaderResult.data;
+    }
     return memo;
   }, {} as RouteData);
 }

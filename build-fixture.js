@@ -1,17 +1,31 @@
 const path = require("path");
-const { build: runBuild } = require("./build/node_modules/@remix-run/core");
+const {
+  build,
+  readConfig,
+  BuildTarget
+} = require("./build/node_modules/@remix-run/core");
 
 let remixRoot = path.resolve(__dirname, "fixtures/gists-app");
 
 async function run() {
   console.log("building gists-app fixture...");
 
-  let { remixConfig, build } = await runBuild({ remixRoot });
+  let config = await readConfig(remixRoot);
 
-  await build.write({
-    dir: remixConfig.serverBuildDirectory,
+  let [serverBuild, browserBuild] = await Promise.all([
+    build(config, { target: BuildTarget.Server }),
+    build(config, { target: BuildTarget.Browser })
+  ]);
+
+  await serverBuild.write({
+    dir: config.serverBuildDirectory,
     format: "cjs",
     exports: "named"
+  });
+
+  await browserBuild.write({
+    dir: config.browserBuildDirectory,
+    format: "esm"
   });
 
   console.log("done!");

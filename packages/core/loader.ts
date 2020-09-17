@@ -3,14 +3,6 @@ import type { Location } from "history";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";
-import {
-  LoaderResult,
-  LoaderResultChangeStatusCode,
-  LoaderResultCopy,
-  LoaderResultError,
-  LoaderResultRedirect,
-  LoaderResultSuccess
-} from "./loaderResults";
 import type { RemixRouteMatch } from "./match";
 import { StatusCode, Redirect } from "./platform";
 
@@ -47,6 +39,47 @@ function getLoader(
   );
 
   return require(requirePath);
+}
+
+export class LoaderResult {
+  readonly routeId: string;
+  readonly httpStatus: number;
+  constructor(routeId: string, httpStatus = 200) {
+    this.routeId = routeId;
+    this.httpStatus = httpStatus;
+  }
+}
+
+export class LoaderResultChangeStatusCode extends LoaderResult {}
+
+export class LoaderResultCopy extends LoaderResult {}
+
+export class LoaderResultError extends LoaderResult {
+  readonly message: string;
+  readonly stack?: string;
+  constructor(routeId: string, message: string, stack?: string) {
+    super(routeId, 500);
+    this.message = message;
+    this.stack = stack;
+  }
+}
+
+export class LoaderResultRedirect extends LoaderResult {
+  readonly location: string;
+  readonly permanent: boolean;
+  constructor(routeId: string, location: string, permanent = false) {
+    super(routeId, permanent ? 301 : 302);
+    this.location = location;
+    this.permanent = permanent;
+  }
+}
+
+export class LoaderResultSuccess extends LoaderResult {
+  readonly data: any;
+  constructor(routeId: string, data: any) {
+    super(routeId);
+    this.data = data;
+  }
 }
 
 /**

@@ -9,10 +9,10 @@ describe("readConfig", () => {
 
     expect(config).toMatchInlineSnapshot(`
       Object {
-        "clientBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/public/build",
-        "clientPublicPath": "/build/",
+        "browserBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/public/build",
         "devServerPort": 8002,
         "loadersDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/loaders",
+        "publicPath": "/build/",
         "rootDirectory": "/Users/michael/Projects/remix/fixtures/gists-app",
         "routes": Array [
           Object {

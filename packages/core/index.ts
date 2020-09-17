@@ -1,4 +1,4 @@
-export { build, watch } from "./compiler";
+export { build, watch, BuildMode, BuildTarget } from "./compiler";
 
 export type { RemixConfig } from "./config";
 export { readConfig } from "./config";

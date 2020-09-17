@@ -14,10 +14,21 @@ export interface BuildChunk {
   imports: string[];
 }
 
+export const ManifestBrowserEntryKey = "__entry_browser__";
 export const ManifestServerEntryKey = "__entry_server__";
 
-export function getBuildManifest(serverBuildDirectory: string): BuildManifest {
-  let manifestFile = path.join(serverBuildDirectory, "manifest.json");
+export const BrowserManifestFilename = "browser-manifest.json";
+export const ServerManifestFilename = "server-manifest.json";
+
+export function getBrowserManifest(
+  serverBuildDirectory: string
+): BuildManifest {
+  let manifestFile = path.join(serverBuildDirectory, BrowserManifestFilename);
+  return require(manifestFile);
+}
+
+export function getServerManifest(serverBuildDirectory: string): BuildManifest {
+  let manifestFile = path.join(serverBuildDirectory, ServerManifestFilename);
   return require(manifestFile);
 }
 

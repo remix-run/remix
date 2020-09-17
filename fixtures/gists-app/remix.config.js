@@ -1,10 +1,10 @@
 const path = require("path");
 const fs = require("fs").promises;
 
+exports.browserBuildDirectory = "./public/build";
+exports.publicPath = "/build/";
 exports.loadersDirectory = "./loaders";
 exports.serverBuildDirectory = "./build";
-exports.clientBuildDirectory = "./public/build";
-exports.clientPublicPath = "/build/";
 
 exports.devServerPort = 8002;
 

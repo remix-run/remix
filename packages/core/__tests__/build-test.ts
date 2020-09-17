@@ -1,28 +1,26 @@
 import path from "path";
 
-import { build as runBuild } from "../compiler";
+import { build, BuildTarget } from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
+import { getServerManifest } from "../build";
 
-describe("build", () => {
-  let remixRoot: string;
+const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
+
+describe("the server build", () => {
   let remixConfig: RemixConfig;
-
-  beforeAll(async () => {
-    remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
+  beforeEach(async () => {
     remixConfig = await readConfig(remixRoot);
   });
 
   it("generates a bundle for each input", async () => {
-    let { build } = await runBuild({ remixRoot });
-    let { output } = await build.generate({
+    let serverBuild = await build(remixConfig, { target: BuildTarget.Server });
+    let { output } = await serverBuild.generate({
       exports: "named",
       format: "cjs"
     });
 
-    let names = output.map(value => value.name);
-
-    expect(names).toMatchInlineSnapshot(`
+    expect(output.map(value => value.name)).toMatchInlineSnapshot(`
       Array [
         "routes/404",
         "routes/gists",
@@ -42,20 +40,16 @@ describe("build", () => {
     `);
   });
 
-  it("writes the manifest", async () => {
-    let { build } = await runBuild({ remixRoot });
+  it("writes the server manifest", async () => {
+    let serverBuild = await build(remixConfig, { target: BuildTarget.Server });
 
-    await build.write({
+    await serverBuild.write({
       exports: "named",
       dir: remixConfig.serverBuildDirectory,
       format: "cjs"
     });
 
-    let manifestFile = path.join(
-      remixConfig.serverBuildDirectory,
-      "manifest.json"
-    );
-    let manifest = require(manifestFile);
+    let manifest = getServerManifest(remixConfig.serverBuildDirectory);
 
     expect(manifest).toMatchInlineSnapshot(`
       Object {

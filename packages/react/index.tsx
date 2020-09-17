@@ -209,7 +209,11 @@ export function Meta() {
 }
 
 export function Scripts() {
-  return null;
+  let context = useRemixContext();
+  let { browserManifest, publicPath } = context;
+  let entryBrowser = browserManifest["__entry_browser__"];
+  let src = `${publicPath}${entryBrowser.fileName}`;
+  return <script type="module" src={src} />;
 }
 
 export function Styles() {

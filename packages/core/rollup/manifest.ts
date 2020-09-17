@@ -7,9 +7,9 @@ export interface ManifestEntry {
   imports: string[];
 }
 
-type RouteId = string;
-
-export type Manifest = Record<RouteId, ManifestEntry>;
+export interface Manifest {
+  [routeId: string]: ManifestEntry;
+}
 
 function createManifest(bundle: OutputBundle): Manifest {
   return Object.keys(bundle).reduce((manifest, key) => {

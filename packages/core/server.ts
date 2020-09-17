@@ -3,9 +3,10 @@ import { parsePath } from "history";
 
 import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
 import {
-  getBuildManifest,
+  getBrowserManifest,
   getRouteModules,
-  getServerEntryModule
+  getServerEntryModule,
+  getServerManifest
 } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
@@ -16,14 +17,14 @@ import {
   createRouteParams
 } from "./entry";
 import type { AppLoadContext } from "./loader";
-import { loadData, loadDataDiff } from "./loader";
 import {
   LoaderResult,
   LoaderResultChangeStatusCode,
   LoaderResultRedirect,
   LoaderResultError,
-  stringifyLoaderResults
-} from "./loaderResults";
+  loadData,
+  loadDataDiff
+} from "./loader";
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
@@ -71,26 +72,27 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
 
 interface RemixServerInit {
   config: RemixConfig;
-  manifest: BuildManifest;
-  serverEntryModule: ServerEntryModule;
+  browserManifest: BuildManifest;
   routeModules: RouteModules;
+  serverEntryModule: ServerEntryModule;
 }
 
 async function initializeServer(remixRoot?: string): Promise<RemixServerInit> {
   let config = await readConfig(remixRoot);
 
-  let manifest = getBuildManifest(config.serverBuildDirectory);
+  let browserManifest = getBrowserManifest(config.serverBuildDirectory);
+  let serverManifest = getServerManifest(config.serverBuildDirectory);
   let serverEntryModule = getServerEntryModule(
     config.serverBuildDirectory,
-    manifest
+    serverManifest
   );
   let routeModules = getRouteModules(
     config.serverBuildDirectory,
     config.routes,
-    manifest
+    serverManifest
   );
 
-  return { config, manifest, serverEntryModule, routeModules };
+  return { config, browserManifest, serverEntryModule, routeModules };
 }
 
 async function handleDataRequest(
@@ -125,16 +127,26 @@ async function handleDataRequest(
     });
   }
 
-  let data;
+  let loaderResults;
   if (from) {
     let fromMatches = matchRoutes(config.routes, from) || [];
-    data = await loadDataDiff(config, matches, fromMatches, location, context);
+    loaderResults = await loadDataDiff(
+      config,
+      matches,
+      fromMatches,
+      location,
+      context
+    );
   } else {
-    data = await loadData(config, matches, location, context);
+    loaderResults = await loadData(config, matches, location, context);
   }
 
+  // TODO: How to handle redirects/status code changes?
+
+  let data = createRouteData(loaderResults);
+
   // TODO: How do we cache this?
-  return new Response(stringifyLoaderResults(data), {
+  return new Response(JSON.stringify(data), {
     headers: {
       "Content-Type": "application/json"
     }
@@ -146,7 +158,7 @@ async function handleHtmlRequest(
   req: Request,
   context: AppLoadContext
 ): Promise<Response> {
-  let { config, manifest, routeModules, serverEntryModule } = init;
+  let { config, browserManifest, routeModules, serverEntryModule } = init;
 
   let location = createLocation(req.url);
   let statusCode = 200;
@@ -232,8 +244,16 @@ async function handleHtmlRequest(
   let routeManifest = createRouteManifest(matches);
   let routeParams = createRouteParams(matches);
 
+  // Get the browser manifest for only the browser entry point + the matched routes.
+  let partialBrowserManifest = getPartialManifest(
+    browserManifest,
+    ["__entry_browser__"].concat(matchedRouteIds)
+  );
+
   let entryContext: EntryContext = {
+    browserManifest: partialBrowserManifest,
     matchedRouteIds,
+    publicPath: config.publicPath,
     routeManifest,
     routeData,
     routeParams,
@@ -243,4 +263,14 @@ async function handleHtmlRequest(
   };
 
   return serverEntryModule.default(req, statusCode, entryContext);
+}
+
+function getPartialManifest(
+  manifest: BuildManifest,
+  entryNames: string[]
+): BuildManifest {
+  return entryNames.reduce((memo, entryName) => {
+    memo[entryName] = manifest[entryName];
+    return memo;
+  }, {} as BuildManifest);
 }

@@ -54,6 +54,7 @@ describe("a remix request handler", () => {
               </div>
             </div>
             <!--/$-->
+            <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
           </body>
         </html>
         "
@@ -80,9 +81,26 @@ describe("a remix request handler", () => {
 
       expect(res.status).toEqual(404);
       expect(res.headers.get("Content-Type")).toEqual("text/html");
-      expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><title>Ain&#x27;t nothing here</title><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div data-test-id=\\"/404\\"><h1>404</h1></div><!--/$--></body></html>"`
-      );
+      expect(prettyHtml(text)).toMatchInlineSnapshot(`
+        "<!DOCTYPE html>
+        <html lang=\\"en\\">
+          <head>
+            <meta charset=\\"utf-8\\" />
+            <title>Ain&#x27;t nothing here</title>
+            <link
+              rel=\\"stylesheet\\"
+              href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+            />
+          </head>
+          <body class=\\"m-4\\">
+            <!--$-->
+            <div data-test-id=\\"/404\\"><h1>404</h1></div>
+            <!--/$-->
+            <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
+          </body>
+        </html>
+        "
+      `);
     });
 
     it("renders a 500 page when the loader has an error", async () => {
@@ -93,9 +111,32 @@ describe("a remix request handler", () => {
 
       expect(res.status).toEqual(500);
       expect(res.headers.get("Content-Type")).toEqual("text/html");
-      expect(text).toMatchInlineSnapshot(
-        `"<!DOCTYPE html><html lang=\\"en\\"><head><meta charSet=\\"utf-8\\"/><title>Remix Error: Route Not Found</title><meta name=\\"description\\" content=\\"There was an error rendering this page\\"/><link rel=\\"stylesheet\\" href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"/></head><body class=\\"m-4\\"><!--$--><div><h1>Error!</h1><div><p>Missing route &quot;<!-- -->routes/500<!-- -->&quot;!</p></div></div><!--/$--></body></html>"`
-      );
+      expect(prettyHtml(text)).toMatchInlineSnapshot(`
+        "<!DOCTYPE html>
+        <html lang=\\"en\\">
+          <head>
+            <meta charset=\\"utf-8\\" />
+            <title>Remix Error: Route Not Found</title>
+            <meta name=\\"description\\" content=\\"There was an error rendering this page\\" />
+            <link
+              rel=\\"stylesheet\\"
+              href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+            />
+          </head>
+          <body class=\\"m-4\\">
+            <!--$-->
+            <div>
+              <h1>Error!</h1>
+              <div>
+                <p>Missing route &quot;<!-- -->routes/500<!-- -->&quot;!</p>
+              </div>
+            </div>
+            <!--/$-->
+            <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
+          </body>
+        </html>
+        "
+      `);
     });
   });
 
@@ -109,33 +150,25 @@ describe("a remix request handler", () => {
 
       expect(res.headers.get("Content-Type")).toEqual("application/json");
       expect(json).toMatchInlineSnapshot(`
-        Array [
-          Object {
-            "data": null,
-            "routeId": "routes/gists",
-            "type": "LoaderResultSuccess",
-          },
-          Object {
-            "data": Array [
-              Object {
-                "files": Object {
-                  "remix-server.jsx": Object {
-                    "filename": "remix-server.jsx",
-                  },
+        Object {
+          "routes/gists": null,
+          "routes/gists/index": Array [
+            Object {
+              "files": Object {
+                "remix-server.jsx": Object {
+                  "filename": "remix-server.jsx",
                 },
-                "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                "owner": Object {
-                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                  "id": 100200,
-                  "login": "ryanflorence",
-                },
-                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
               },
-            ],
-            "routeId": "routes/gists/index",
-            "type": "LoaderResultSuccess",
-          },
-        ]
+              "id": "610613b54e5b34f8122d1ba4a3da21a9",
+              "owner": Object {
+                "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                "id": 100200,
+                "login": "ryanflorence",
+              },
+              "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+            },
+          ],
+        }
       `);
     });
 
@@ -153,32 +186,24 @@ describe("a remix request handler", () => {
 
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
-          Array [
-            Object {
-              "routeId": "routes/gists",
-              "type": "LoaderResultCopy",
-            },
-            Object {
-              "data": Array [
-                Object {
-                  "files": Object {
-                    "remix-server.jsx": Object {
-                      "filename": "remix-server.jsx",
-                    },
+          Object {
+            "routes/gists/$username": Array [
+              Object {
+                "files": Object {
+                  "remix-server.jsx": Object {
+                    "filename": "remix-server.jsx",
                   },
-                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                  "owner": Object {
-                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                    "id": 100200,
-                    "login": "ryanflorence",
-                  },
-                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-              ],
-              "routeId": "routes/gists/$username",
-              "type": "LoaderResultSuccess",
-            },
-          ]
+                "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                "owner": Object {
+                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                  "id": 100200,
+                  "login": "ryanflorence",
+                },
+                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+              },
+            ],
+          }
         `);
       });
     });
@@ -197,32 +222,24 @@ describe("a remix request handler", () => {
 
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
-          Array [
-            Object {
-              "routeId": "routes/gists",
-              "type": "LoaderResultCopy",
-            },
-            Object {
-              "data": Array [
-                Object {
-                  "files": Object {
-                    "remix-server.jsx": Object {
-                      "filename": "remix-server.jsx",
-                    },
+          Object {
+            "routes/gists/$username": Array [
+              Object {
+                "files": Object {
+                  "remix-server.jsx": Object {
+                    "filename": "remix-server.jsx",
                   },
-                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                  "owner": Object {
-                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                    "id": 100200,
-                    "login": "ryanflorence",
-                  },
-                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-              ],
-              "routeId": "routes/gists/$username",
-              "type": "LoaderResultSuccess",
-            },
-          ]
+                "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                "owner": Object {
+                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                  "id": 100200,
+                  "login": "ryanflorence",
+                },
+                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+              },
+            ],
+          }
         `);
       });
     });
@@ -241,33 +258,25 @@ describe("a remix request handler", () => {
 
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
-          Array [
-            Object {
-              "data": null,
-              "routeId": "routes/gists",
-              "type": "LoaderResultSuccess",
-            },
-            Object {
-              "data": Array [
-                Object {
-                  "files": Object {
-                    "remix-server.jsx": Object {
-                      "filename": "remix-server.jsx",
-                    },
+          Object {
+            "routes/gists": null,
+            "routes/gists/$username": Array [
+              Object {
+                "files": Object {
+                  "remix-server.jsx": Object {
+                    "filename": "remix-server.jsx",
                   },
-                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                  "owner": Object {
-                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                    "id": 100200,
-                    "login": "ryanflorence",
-                  },
-                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-              ],
-              "routeId": "routes/gists/$username",
-              "type": "LoaderResultSuccess",
-            },
-          ]
+                "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                "owner": Object {
+                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                  "id": 100200,
+                  "login": "ryanflorence",
+                },
+                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+              },
+            ],
+          }
         `);
       });
     });
@@ -288,32 +297,24 @@ describe("a remix request handler", () => {
 
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
-          Array [
-            Object {
-              "routeId": "routes/gists",
-              "type": "LoaderResultCopy",
-            },
-            Object {
-              "data": Array [
-                Object {
-                  "files": Object {
-                    "remix-server.jsx": Object {
-                      "filename": "remix-server.jsx",
-                    },
+          Object {
+            "routes/gists/$username": Array [
+              Object {
+                "files": Object {
+                  "remix-server.jsx": Object {
+                    "filename": "remix-server.jsx",
                   },
-                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                  "owner": Object {
-                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                    "id": 100200,
-                    "login": "ryanflorence",
-                  },
-                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-              ],
-              "routeId": "routes/gists/$username",
-              "type": "LoaderResultSuccess",
-            },
-          ]
+                "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                "owner": Object {
+                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                  "id": 100200,
+                  "login": "ryanflorence",
+                },
+                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+              },
+            ],
+          }
         `);
       });
     });

@@ -8,14 +8,14 @@ import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
  */
 export interface AppConfig {
   /**
-   * The path to the client build, may be relative to remix.config.js.
+   * The path to the browser build, relative to remix.config.js.
    */
-  clientBuildDirectory: string;
+  browserBuildDirectory: string;
 
   /**
-   * The URL prefix of the client build, may be relative to remix.config.js.
+   * The URL prefix of the browser build, relative to remix.config.js.
    */
-  clientPublicPath: string;
+  publicPath: string;
 
   /**
    * The port number to use for the dev server.
@@ -23,7 +23,7 @@ export interface AppConfig {
   devServerPort: number;
 
   /**
-   * The path to the loaders, may be relative to remix.config.js.
+   * The path to the loaders directory, relative to remix.config.js.
    */
   loadersDirectory: string;
 
@@ -42,12 +42,12 @@ export interface AppConfig {
   };
 
   /**
-   * The path to the server build, may be relative to remix.config.js.
+   * The path to the server build, relative to remix.config.js.
    */
   serverBuildDirectory: string;
 
   /**
-   * The path to the source directory, may be relative to remix.config.js.
+   * The path to the source directory, relative to remix.config.js.
    */
   sourceDirectory: string;
 }
@@ -57,14 +57,14 @@ export interface AppConfig {
  */
 export interface RemixConfig {
   /**
-   * The absolute path to the client build.
+   * The absolute path to the browser build.
    */
-  clientBuildDirectory: string;
+  browserBuildDirectory: string;
 
   /**
-   * The URL prefix of the client build.
+   * The URL prefix of the browser build.
    */
-  clientPublicPath: string;
+  publicPath: string;
 
   /**
    * The port number to use for the dev server.
@@ -116,12 +116,12 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     throw new Error(`Missing remix.config.js in ${rootDirectory}`);
   }
 
-  let clientBuildDirectory = path.resolve(
+  let browserBuildDirectory = path.resolve(
     rootDirectory,
-    appConfig.clientBuildDirectory || path.join("public", "build")
+    appConfig.browserBuildDirectory || path.join("public", "build")
   );
 
-  let clientPublicPath = appConfig.clientPublicPath || "/build/";
+  let publicPath = appConfig.publicPath || "/build/";
 
   let devServerPort = appConfig.devServerPort || 8002;
 
@@ -153,8 +153,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   // TODO: validate routes
 
   let remixConfig: RemixConfig = {
-    clientBuildDirectory,
-    clientPublicPath,
+    browserBuildDirectory,
+    publicPath,
     devServerPort,
     loadersDirectory,
     rootDirectory,
