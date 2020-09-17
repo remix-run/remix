@@ -1,5 +1,6 @@
 import type { Location } from "history";
 import { parsePath } from "history";
+import jsesc from "jsesc";
 
 import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
 import {
@@ -250,17 +251,23 @@ async function handleHtmlRequest(
     ["__entry_browser__"].concat(matchedRouteIds)
   );
 
-  let entryContext: EntryContext = {
+  let partialEntryContext = {
     browserManifest: partialBrowserManifest,
     matchedRouteIds,
     publicPath: config.publicPath,
     routeManifest,
     routeData,
-    routeParams,
+    routeParams
+  };
+
+  let entryContext: EntryContext = Object.assign({}, partialEntryContext, {
+    browserEntryContextString: jsesc(partialEntryContext, {
+      isScriptContext: true
+    }),
     requireRoute(routeId: string) {
       return routeModules[routeId];
     }
-  };
+  });
 
   return serverEntryModule.default(req, statusCode, entryContext);
 }

@@ -54,6 +54,68 @@ describe("a remix request handler", () => {
               </div>
             </div>
             <!--/$-->
+            <script>
+              __remixContext = {
+                browserManifest: {
+                  __entry_browser__: {
+                    fileName: \\"__entry_browser__.js\\",
+                    imports: [
+                      \\"index-af2df4c2.js\\",
+                      \\"index-a05aba86.js\\",
+                      \\"index-2b6ced74.js\\",
+                      \\"@remix/react/dom\\",
+                    ],
+                  },
+                  \\"routes/gists\\": {
+                    fileName: \\"routes/gists.js\\",
+                    imports: [
+                      \\"index-af2df4c2.js\\",
+                      \\"index-a05aba86.js\\",
+                      \\"index-2b6ced74.js\\",
+                    ],
+                  },
+                  \\"routes/gists/$username\\": {
+                    fileName: \\"routes/gists/$username.js\\",
+                    imports: [
+                      \\"index-af2df4c2.js\\",
+                      \\"index-a05aba86.js\\",
+                      \\"index-2b6ced74.js\\",
+                    ],
+                  },
+                },
+                matchedRouteIds: [\\"routes/gists\\", \\"routes/gists/$username\\"],
+                publicPath: \\"/build/\\",
+                routeManifest: {
+                  \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+                  \\"routes/gists/$username\\": {
+                    id: \\"routes/gists/$username\\",
+                    path: \\":username\\",
+                    parentId: \\"routes/gists\\",
+                  },
+                },
+                routeData: {
+                  \\"routes/gists\\": null,
+                  \\"routes/gists/$username\\": [
+                    {
+                      url:
+                        \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+                      id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+                      files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+                      owner: {
+                        login: \\"ryanflorence\\",
+                        id: 100200,
+                        avatar_url:
+                          \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+                      },
+                    },
+                  ],
+                },
+                routeParams: {
+                  \\"routes/gists\\": {},
+                  \\"routes/gists/$username\\": { username: \\"ryanflorence\\" },
+                },
+              };
+            </script>
             <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
           </body>
         </html>
@@ -96,6 +158,30 @@ describe("a remix request handler", () => {
             <!--$-->
             <div data-test-id=\\"/404\\"><h1>404</h1></div>
             <!--/$-->
+            <script>
+              __remixContext = {
+                browserManifest: {
+                  __entry_browser__: {
+                    fileName: \\"__entry_browser__.js\\",
+                    imports: [
+                      \\"index-af2df4c2.js\\",
+                      \\"index-a05aba86.js\\",
+                      \\"index-2b6ced74.js\\",
+                      \\"@remix/react/dom\\",
+                    ],
+                  },
+                  \\"routes/404\\": {
+                    fileName: \\"routes/404.js\\",
+                    imports: [\\"index-af2df4c2.js\\"],
+                  },
+                },
+                matchedRouteIds: [\\"routes/404\\"],
+                publicPath: \\"/build/\\",
+                routeManifest: { \\"routes/404\\": { id: \\"routes/404\\", path: \\"*\\" } },
+                routeData: { \\"routes/gists\\": null },
+                routeParams: { \\"routes/404\\": {} },
+              };
+            </script>
             <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
           </body>
         </html>
@@ -132,6 +218,27 @@ describe("a remix request handler", () => {
               </div>
             </div>
             <!--/$-->
+            <script>
+              __remixContext = {
+                browserManifest: {
+                  __entry_browser__: {
+                    fileName: \\"__entry_browser__.js\\",
+                    imports: [
+                      \\"index-af2df4c2.js\\",
+                      \\"index-a05aba86.js\\",
+                      \\"index-2b6ced74.js\\",
+                      \\"@remix/react/dom\\",
+                    ],
+                  },
+                  \\"routes/500\\": undefined,
+                },
+                matchedRouteIds: [\\"routes/500\\"],
+                publicPath: \\"/build/\\",
+                routeManifest: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"*\\" } },
+                routeData: { \\"routes/gists\\": null },
+                routeParams: { \\"routes/500\\": {} },
+              };
+            </script>
             <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
           </body>
         </html>

@@ -8,6 +8,7 @@ import type { RemixRouteMatch } from "./match";
 
 export interface EntryContext {
   browserManifest: BuildManifest;
+  browserEntryContextString?: string; // Only needed on the server
   matchedRouteIds: string[];
   publicPath: RemixConfig["publicPath"];
   routeData: RouteData;
@@ -39,11 +40,17 @@ export interface RouteManifest {
 
 export function createRouteManifest(matches: RemixRouteMatch[]): RouteManifest {
   return matches.reduce((memo, match) => {
-    memo[match.route.id] = {
+    let route: RouteManifest[string] = {
       id: match.route.id,
-      parentId: match.route.parentId,
       path: match.route.path
     };
+
+    if (match.route.parentId) {
+      route.parentId = match.route.parentId;
+    }
+
+    memo[match.route.id] = route;
+
     return memo;
   }, {} as RouteManifest);
 }

@@ -106,7 +106,7 @@ let react = [
       return !(id.startsWith(".") || id.startsWith("/"));
     },
     input: {
-      // dom: path.resolve(__dirname, "packages/react/dom.tsx"),
+      browser: path.resolve(__dirname, "packages/react/browser.tsx"),
       index: path.resolve(__dirname, "packages/react/index.tsx"),
       server: path.resolve(__dirname, "packages/react/server.tsx")
     },

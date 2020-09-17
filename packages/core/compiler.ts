@@ -73,7 +73,7 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   } else {
     input[ManifestBrowserEntryKey] = path.join(
       config.sourceDirectory,
-      "entry-client" // TODO: Change to entry-browser
+      "entry-browser"
     );
   }
 

@@ -104,8 +104,11 @@ export function defineRoutes(
 
     let id = stripFileExtension(component);
     let parent = current[current.length - 1];
-    let parentId = parent && parent.id;
-    let route = { id, parentId, path, component, loader };
+    let route: RemixRouteObject = { id, path, component, loader };
+
+    if (parent && parent.id) {
+      route.parentId = parent.id;
+    }
 
     if (parent) {
       if (!parent.children) parent.children = [];

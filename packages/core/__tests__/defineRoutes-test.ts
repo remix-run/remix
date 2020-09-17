@@ -17,7 +17,6 @@ describe("defineRoutes", () => {
           "component": "routes/home.js",
           "id": "routes/home",
           "loader": "home.js",
-          "parentId": undefined,
           "path": "/",
         },
         Object {
@@ -47,7 +46,6 @@ describe("defineRoutes", () => {
           "component": "routes/messages.js",
           "id": "routes/messages",
           "loader": null,
-          "parentId": undefined,
           "path": "inbox",
         },
       ]
@@ -69,14 +67,12 @@ describe("defineRoutes", () => {
           "component": "one.md",
           "id": "one",
           "loader": null,
-          "parentId": undefined,
           "path": "one",
         },
         Object {
           "component": "two.md",
           "id": "two",
           "loader": null,
-          "parentId": undefined,
           "path": "two",
         },
       ]

@@ -9,6 +9,7 @@
     "@rollup/plugin-replace": "^2.3.3",
     "chokidar": "^3.4.2",
     "history": "^5.0.0",
+    "jsesc": "^3.0.1",
     "react": "0.0.0-experimental-33c3af284",
     "react-dom": "0.0.0-experimental-33c3af284",
     "react-router-dom": "0.0.0-experimental-ffd8c7d0",
@@ -16,6 +17,7 @@
     "tmp": "^0.2.1"
   },
   "devDependencies": {
+    "@types/jsesc": "^2.5.1",
     "@types/tmp": "^0.2.0"
   }
 }

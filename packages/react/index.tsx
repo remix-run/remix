@@ -7,6 +7,7 @@ import type { EntryContext, RouteData, RouteManifest } from "@remix-run/core";
 
 import * as defaultRouteModule from "./defaultRouteModule";
 import invariant from "./invariant";
+import createHtml from "./createHtml";
 
 const RemixContext = React.createContext<EntryContext | undefined>(undefined);
 const RemixCacheContext = React.createContext<DataCache | undefined>(undefined);
@@ -210,10 +211,27 @@ export function Meta() {
 
 export function Scripts() {
   let context = useRemixContext();
-  let { browserManifest, publicPath } = context;
+  let { browserManifest, publicPath, browserEntryContextString } = context;
   let entryBrowser = browserManifest["__entry_browser__"];
   let src = `${publicPath}${entryBrowser.fileName}`;
-  return <script type="module" src={src} />;
+
+  let browserIsHydrating = false;
+  if (!browserEntryContextString) {
+    browserIsHydrating = true;
+    browserEntryContextString = "{}";
+  }
+
+  return (
+    <>
+      <script
+        suppressHydrationWarning={browserIsHydrating}
+        dangerouslySetInnerHTML={createHtml(
+          `__remixContext = ${browserEntryContextString}`
+        )}
+      />
+      <script type="module" src={src} />
+    </>
+  );
 }
 
 export function Styles() {

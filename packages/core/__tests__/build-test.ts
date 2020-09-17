@@ -7,7 +7,7 @@ import { getServerManifest } from "../build";
 
 const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
 
-describe("the server build", () => {
+describe.skip("the server build", () => {
   let remixConfig: RemixConfig;
   beforeEach(async () => {
     remixConfig = await readConfig(remixRoot);
