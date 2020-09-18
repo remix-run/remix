@@ -14,6 +14,7 @@ import { readConfig } from "./config";
 import type { EntryContext } from "./entry";
 import {
   createRouteData,
+  createRouteDataResults,
   createRouteManifest,
   createRouteParams
 } from "./entry";
@@ -148,10 +149,10 @@ async function handleDataRequest(
 
   // TODO: How to handle redirects/status code changes?
 
-  let data = createRouteData(loaderResults);
+  let dataResults = createRouteDataResults(loaderResults);
 
   // TODO: How do we cache this?
-  return new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify(dataResults), {
     headers: {
       "Content-Type": "application/json"
     }

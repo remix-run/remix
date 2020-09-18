@@ -8,6 +8,7 @@ export { readConfig } from "./config";
 export type {
   EntryContext,
   RouteData,
+  RouteDataResults,
   RouteManifest,
   RouteParams,
   RouteLoader

@@ -1,23 +1,24 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
-import { Link } from "@remix-run/react";
+import { Outlet, useLocationPending } from "react-router-dom";
+import { Link, useRouteData } from "@remix-run/react";
 
 export default function Gists() {
+  let locationPending = useLocationPending();
+  let [data] = useRouteData();
+  let { users } = data;
+
   return (
     <div data-test-id="/gists">
       <header>
         <h1>Gists</h1>
         <ul>
-          <li>
-            <Link to="/gists/ryanflorence" className="text-blue-700 underline">
-              Ryan Florence
-            </Link>
-          </li>
-          <li>
-            <Link to="/gists/mjackson" className="text-blue-700 underline">
-              Michael Jackson
-            </Link>
-          </li>
+          {users.map(user => (
+            <li key={user.id}>
+              <Link to={user.id} className="text-blue-700 underline">
+                {user.name} {locationPending && "..."}
+              </Link>
+            </li>
+          ))}
         </ul>
       </header>
       <Outlet />

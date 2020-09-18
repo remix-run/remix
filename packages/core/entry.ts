@@ -3,7 +3,7 @@ import type { Params } from "react-router";
 import type { BuildManifest, RouteModule } from "./build";
 import type { RemixConfig } from "./config";
 import type { LoaderResult } from "./loader";
-import { LoaderResultSuccess } from "./loader";
+import { LoaderResultCopy, LoaderResultSuccess } from "./loader";
 import type { RemixRouteMatch } from "./match";
 
 export interface EntryContext {
@@ -26,13 +26,35 @@ export interface RouteData {
   [routeId: string]: any;
 }
 
-export function createRouteData(loaderResults: LoaderResult[]): RouteData {
+export function createRouteData(
+  loaderResults: LoaderResult[]
+): RouteDataResults {
   return loaderResults.reduce((memo, loaderResult) => {
     if (loaderResult instanceof LoaderResultSuccess) {
       memo[loaderResult.routeId] = loaderResult.data;
     }
     return memo;
   }, {} as RouteData);
+}
+
+export interface RouteDataResults {
+  [routeId: string]: {
+    type: "data" | "copy";
+    data?: any;
+  };
+}
+
+export function createRouteDataResults(
+  loaderResults: LoaderResult[]
+): RouteDataResults {
+  return loaderResults.reduce((memo, loaderResult) => {
+    if (loaderResult instanceof LoaderResultSuccess) {
+      memo[loaderResult.routeId] = { type: "data", data: loaderResult.data };
+    } else if (loaderResult instanceof LoaderResultCopy) {
+      memo[loaderResult.routeId] = { type: "copy" };
+    }
+    return memo;
+  }, {} as RouteDataResults);
 }
 
 export interface RouteManifest {
