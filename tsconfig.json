@@ -8,6 +8,7 @@
     "jsx": "react",
     "downlevelIteration": true,
     "target": "es2018",
+    "module": "esnext",
 
     "strict": true,
     "noUnusedLocals": true,

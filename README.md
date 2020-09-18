@@ -31,18 +31,18 @@ git push origin --follow-tags
   x HMR
   x Status codes from loaders (rewrites, redirects)
   x Meta tags
-  - `/__remix_patch` manifest endpoint
+  x `/__remix_patch` manifest endpoint
   - In dev, error overlays in the browser
 - Client
-  - web manifest
-  - hydrate React, no data
-  - hydrate with data (putting `__DATA__` on window)
-  - clicking links, transitions
-    - `cache.preload` triggers suspense, fetches new data from `/__remix_data`
-    - `cache.write` (includes copy results) to populate data cache for new location
-    - proper status codes in the browser (reload on 404, etc.)
-    - update `document.title`
-    - patch client manifest when links render (or on `navigate`)
+  x web manifest
+  x hydrate React, no data
+  x hydrate with data (putting `__DATA__` on window)
+  x clicking links, transitions
+  x `cache.preload` triggers suspense, fetches new data from `/__remix_data`
+  x `cache.write` (includes copy results) to populate data cache for new location
+  - proper status codes in the browser (reload on 404, etc.)
+  - update `document.title`
+    x patch client manifest when links render (or on `navigate`)
   - open questions about data cache:
     - how do you share models across locations?
     - how do you expire some data?

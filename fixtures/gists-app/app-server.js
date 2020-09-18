@@ -1,6 +1,6 @@
 global.fetch = require("node-fetch");
 const express = require("express");
-const remix = require("@remix-run/express");
+const { createRequestHandler } = require("@remix-run/express");
 
 const app = express();
 app.use(express.static("public"));
@@ -12,7 +12,7 @@ app.get("/user-gists/:username", (req, res) => {
 
 app.get(
   "*",
-  remix({
+  createRequestHandler({
     getLoadContext: (req, res) => ({ userId: 4 })
   })
 );

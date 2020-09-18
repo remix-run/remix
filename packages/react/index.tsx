@@ -122,8 +122,6 @@ function createStaticDataCache(
     [initialKey]: initialData
   };
 
-  console.log({ cache });
-
   let inflight: {
     [locationKey: string]: Promise<RouteData>;
   } = {};
@@ -157,8 +155,6 @@ function createStaticDataCache(
 
           memo[routeId] = cache[fromLocation.key][routeId];
         }
-
-        console.log({ cache });
 
         return memo;
       }, {} as RouteData);

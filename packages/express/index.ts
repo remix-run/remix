@@ -32,7 +32,7 @@ function createRemixRequest(req: express.Request): Request {
  * Creates a request handler for Express that generates the response using
  * Remix routing and data loading.
  */
-export default function createRequestHandler({
+export function createRequestHandler({
   getLoadContext,
   root: remixRoot
 }: {

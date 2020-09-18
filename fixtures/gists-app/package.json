@@ -5,9 +5,7 @@
     "prestart": "cp -r ../../build/node_modules/ node_modules",
     "start": "node scripts/start.js",
     "prebuild": "cp -r ../../build/node_modules/ node_modules",
-    "build": "node scripts/build.js",
-    "test": "jest --testRegex \".test.js$\"",
-    "test:jk": "echo \"No tests here\" && exit 0"
+    "build": "node scripts/build.js"
   },
   "dependencies": {
     "express": "^4.17.1",
@@ -15,10 +13,6 @@
     "react": "0.0.0-experimental-33c3af284",
     "react-dom": "0.0.0-experimental-33c3af284",
     "use-throttle": "^0.0.3"
-  },
-  "devDependencies": {
-    "jest": "^26.0.1",
-    "puppeteer": "^3.0.4"
   },
   "jest": {
     "testEnvironment": "node"

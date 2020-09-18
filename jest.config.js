@@ -14,6 +14,7 @@ module.exports = {
     },
     {
       displayName: "react",
+      testEnvironment: "node",
       testMatch: ["<rootDir>/packages/react/**/*-test.[jt]s?(x)"]
     }
   ]
