@@ -1,4 +1,5 @@
 import { promises as fsp } from "fs";
+import fs from "fs";
 import path from "path";
 
 const fileExtensionRegex = /(.*)\.([^.]+)$/;
@@ -31,13 +32,19 @@ export interface RemixRouteObject {
    * The path to the file that exports the React component rendered by this
    * route as its default export, relative to the src/ directory.
    */
-  component: string;
+  componentFile: string;
 
   /**
    * The path to the file that exports the data loader for this route as its
-   * default export, relative to the loaders/ directory.
+   * default export, relative to the `config.loadersDirectory`.
    */
-  loader: string | null;
+  loaderFile?: string;
+
+  /**
+   * The path to the file that contains styles for this route, relative to the
+   * `config.stylesDirectory`.
+   */
+  stylesFile?: string;
 
   /**
    * This route's child routes.
@@ -45,12 +52,30 @@ export interface RemixRouteObject {
   children?: RemixRouteObject[];
 }
 
+export interface DefineRouteOptions {
+  /**
+   * The path to the file that exports the data loader for this route as its
+   * default export, relative to the `config.loadersDirectory`. So the path for
+   * loaders/invoices.js will be invoices.js.
+   */
+  loader?: string;
+
+  /**
+   * The path to the file that defines CSS styles for this route, relative to
+   * the `config.stylesDirectory`.
+   */
+  styles?: string;
+}
+
+type DefineRouteChildren = () => void;
+
 export interface DefineRoute {
   (
     /**
      * The path this route uses to match the URL pathname.
      */
     path: string,
+
     /**
      * The path to the file that exports the React component rendered by this
      * route as its default export, relative to the src/ directory. So the path
@@ -58,16 +83,18 @@ export interface DefineRoute {
      * will be articles/welcome.md.
      */
     component: string,
+
     /**
      * The path to the file that exports the data loader for this route as its
      * default export, relative to the loaders/ directory. So the path for
      * loaders/invoices.js will be invoices.js.
      */
-    loaderOrChildren?: string | (() => void),
+    optionsOrChildren?: DefineRouteOptions | (() => void),
+
     /**
      * A function for defining this route's child routes.
      */
-    children?: () => void
+    children?: DefineRouteChildren
   ): void;
 }
 
@@ -85,29 +112,32 @@ export function defineRoutes(
   function defineRoute(
     path: string,
     component: string,
-    loaderOrChildren?: string | (() => void),
-    children?: () => void
+    optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
+    children?: DefineRouteChildren
   ): void {
     if (returned) throwAsyncError();
 
-    // signature overloading
-    let loader: string | null = null;
-    if (typeof loaderOrChildren === "function") {
-      // route(path, component, children)
-      children = loaderOrChildren;
-    } else if (loaderOrChildren != null) {
-      // route(path, component, loader, children)
-      // route(path, component, loader)
-      // route(path, component)
-      loader = loaderOrChildren;
-    }
-
     let id = stripFileExtension(component);
     let parent = current[current.length - 1];
-    let route: RemixRouteObject = { id, path, component, loader };
+    let route: RemixRouteObject = { id, path, componentFile: component };
 
     if (parent && parent.id) {
       route.parentId = parent.id;
+    }
+
+    // signature overloading
+    if (typeof optionsOrChildren === "function") {
+      // route(path, component, children)
+      children = optionsOrChildren;
+    } else if (optionsOrChildren != null) {
+      // route(path, component, options, children)
+      // route(path, component, options)
+      if (optionsOrChildren.loader) {
+        route.loaderFile = optionsOrChildren.loader;
+      }
+      if (optionsOrChildren.styles) {
+        route.stylesFile = optionsOrChildren.styles;
+      }
     }
 
     if (parent) {
@@ -143,7 +173,8 @@ function throwAsyncError() {
  */
 export async function getConventionalRoutes(
   routesDir: string,
-  loadersDir: string
+  loadersDir: string,
+  stylesDir: string
 ): Promise<RemixRouteObject[]> {
   // TODO: Validate the directories exist
   let [routesTree, loadersTree] = await Promise.all([
@@ -158,6 +189,7 @@ export async function getConventionalRoutes(
     return defineFileTree(
       routesTree,
       loadersMap,
+      stylesDir,
       parents,
       routesDirRoot,
       defineRoute
@@ -168,6 +200,7 @@ export async function getConventionalRoutes(
 function defineFileTree(
   routesTree: DirTree,
   loadersMap: LoadersMap,
+  stylesDir: string,
   parents: string[],
   routesDir: string,
   defineRoute: DefineRoute
@@ -199,11 +232,15 @@ function defineFileTree(
               routesDir,
               ...parents
             ]);
+
       let loader = findLoader(routePath, loadersMap, parents);
-      defineRoute(routePath, filePath, loader, () => {
+      let styles = findStyles(makeFullPath(routePath, parents), stylesDir);
+
+      defineRoute(routePath, filePath, { loader, styles }, () => {
         defineFileTree(
           children,
           loadersMap,
+          stylesDir,
           [...parents, dirPath],
           routesDir,
           defineRoute
@@ -226,11 +263,20 @@ function defineFileTree(
 
       let routePath = makeRoutePath(fileName);
       let loader = findLoader(routePath, loadersMap, parents);
+      let styles = findStyles(makeFullPath(routePath, parents), stylesDir);
       let filePath = makeFullPath(fileName, [routesDir, ...parents]);
 
-      defineRoute(routePath, filePath, loader);
+      defineRoute(routePath, filePath, { loader, styles });
     }
   }
+}
+
+function findStyles(routePath: string, stylesDir: string): string | undefined {
+  // /gists => /styles/gists.css
+  let stylesFile = path.join(stylesDir, `${routePath}.css`);
+  return fs.existsSync(stylesFile)
+    ? stylesFile.slice(stylesDir.length + 1)
+    : undefined;
 }
 
 type LoaderId = string;

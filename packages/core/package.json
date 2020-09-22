@@ -3,22 +3,33 @@
   "version": "0.0.0",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
+    "@rollup/plugin-alias": "^3.1.1",
     "@rollup/plugin-babel": "^5.2.1",
     "@rollup/plugin-commonjs": "^15.0.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
     "@rollup/plugin-replace": "^2.3.3",
     "chokidar": "^3.4.2",
+    "cors": "^2.8.5",
     "history": "^5.0.0",
     "jsesc": "^3.0.1",
+    "mime-types": "^2.1.27",
+    "morgan": "^1.10.0",
     "react": "0.0.0-experimental-33c3af284",
     "react-dom": "0.0.0-experimental-33c3af284",
     "react-router-dom": "0.0.0-experimental-ffd8c7d0",
+    "require-from-string": "^2.0.2",
     "rollup": "^2.26.11",
+    "rollup-plugin-postcss": "^3.1.8",
+    "signal-exit": "^3.0.3",
     "tmp": "^0.2.1"
   },
   "devDependencies": {
-    "@rollup/plugin-alias": "^3.1.1",
+    "@types/cors": "^2.8.7",
     "@types/jsesc": "^2.5.1",
+    "@types/mime-types": "^2.1.0",
+    "@types/morgan": "^1.9.1",
+    "@types/require-from-string": "^1.2.0",
+    "@types/signal-exit": "^3.0.0",
     "@types/tmp": "^0.2.0"
   }
 }

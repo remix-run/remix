@@ -9,7 +9,6 @@ import type { RemixRouteMatch } from "./match";
 export interface EntryContext {
   browserManifest: BuildManifest;
   browserEntryContextString?: string; // Only needed on the server
-  matchedRouteIds: string[];
   publicPath: RemixConfig["publicPath"];
   routeData: RouteData;
   routeManifest: RouteManifest;

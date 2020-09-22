@@ -3,12 +3,13 @@ import React from "react";
 // TODO: Export Location from 'react-router'
 import type { Location } from "history";
 // TODO: Export RouteObject from 'react-router-dom'
-import type { RouteObject } from "react-router";
+import type { RouteObject, RouteMatch } from "react-router";
 import {
   useLocation,
   useRoutes,
   useResolvedPath,
-  Link as ReactRouterLink
+  Link as ReactRouterLink,
+  matchRoutes
 } from "react-router-dom";
 import type {
   BuildManifest,
@@ -49,7 +50,8 @@ async function fetchDataResults(
 interface ClientContext {
   dataCache: DataCache;
   manifestPatcher: ManifestPatcher;
-  previousLocation: Location;
+  routes: RouteObject[];
+  matches: RouteMatch[];
 }
 
 const RemixEntryContext = React.createContext<EntryContext | undefined>(
@@ -85,20 +87,23 @@ export function RemixEntryProvider({
   }, []);
 
   let location = useLocation();
-  let [currentLocation, setCurrentLocation] = React.useState<Location>(
+  let [previousLocation, setPreviousLocation] = React.useState<Location>(
     location
   );
-  let [previousLocation, setPreviousLocation] = React.useState<
-    Location | undefined
-  >(undefined);
-  if (currentLocation !== location) {
-    setPreviousLocation(currentLocation);
-    setCurrentLocation(location);
+
+  let dataCache = useDataCache(entryContext.routeData);
+
+  if (previousLocation !== location) {
+    dataCache.preload(previousLocation);
+    setPreviousLocation(location);
   }
 
-  let dataCache = useDataCache(entryContext.routeData, previousLocation);
+  // TODO: Add renderRoutes to RR so we can manually match and render manually
+  // on the client (do our own `useRoutes`)
+  let routes = createRoutes(entryContext);
+  let matches = matchRoutes(routes, location) || [];
 
-  let clientContext = { dataCache, manifestPatcher, previousLocation };
+  let clientContext = { dataCache, manifestPatcher, routes, matches };
 
   return (
     <RemixEntryContext.Provider value={entryContext}>
@@ -110,8 +115,8 @@ export function RemixEntryProvider({
 }
 
 interface StaticDataCache {
-  preload(location: Location, fromLocation?: Location): Promise<void>;
-  read(locationKey: string, routeId: string): RouteData[string];
+  preload(location: Location, fromLocation: Location): Promise<void>;
+  read(locationKey: string, routeId?: string): RouteData[string];
 }
 
 function createStaticDataCache(
@@ -128,7 +133,7 @@ function createStaticDataCache(
 
   async function preload(
     location: Location,
-    fromLocation?: Location
+    fromLocation: Location
   ): Promise<void> {
     if (cache[location.key]) return;
 
@@ -166,19 +171,23 @@ function createStaticDataCache(
     }
   }
 
-  function read(locationKey: string, routeId: string) {
+  function read(locationKey: string, routeId?: string) {
     if (inflight[locationKey]) {
       throw inflight[locationKey];
     }
 
-    let data = cache[locationKey][routeId];
+    let locationData = cache[locationKey];
+
+    invariant(locationData, `Missing data for location ${locationKey}`);
+
+    if (!routeId) return locationData;
 
     invariant(
-      data,
+      locationData[routeId],
       `Missing data for route ${routeId} on location ${locationKey}`
     );
 
-    return data;
+    return locationData[routeId];
   }
 
   return {
@@ -188,14 +197,11 @@ function createStaticDataCache(
 }
 
 interface DataCache {
-  read(routeId: string): ReturnType<StaticDataCache["read"]>;
-  preload(): ReturnType<StaticDataCache["preload"]>;
+  preload(fromLocation: Location): ReturnType<StaticDataCache["preload"]>;
+  read(routeId?: string): ReturnType<StaticDataCache["read"]>;
 }
 
-function useDataCache(
-  initialData: RouteData,
-  fromLocation?: Location
-): DataCache {
+function useDataCache(initialData: RouteData): DataCache {
   let location = useLocation();
   /* let [, forceUpdate] = React.useState(); */
 
@@ -206,16 +212,16 @@ function useDataCache(
 
   return React.useMemo<DataCache>(
     () => ({
-      read: (routeId: string) => cacheRef.current!.read(location.key, routeId),
-      preload: () => cacheRef.current!.preload(location, fromLocation)
-      /* readAll: () => cacheRef.current.readAll(location.key), */
+      preload: (fromLocation: Location) =>
+        cacheRef.current!.preload(location, fromLocation),
+      read: (routeId?: string) => cacheRef.current!.read(location.key, routeId)
       /* getAllSync: () => cacheRef.current.getAllSync(location.key), */
       /* set: (routeId, value) => { */
       /*   cacheRef.current.set(location.key, routeId, value); */
       /*   forceUpdate({}); */
       /* } */
     }),
-    [location, fromLocation]
+    [location]
   );
 }
 
@@ -262,18 +268,15 @@ export function useRouteData() {
 }
 
 export function Routes() {
-  let routes = createRoutes(useEntryContext(), useClientContext());
-  return useRoutes(routes);
+  // TODO: Add `renderRoutes` function to RR that we can use here.
+  return useRoutes(useClientContext().routes);
 }
 
 // TODO: React Router should not be calling preload on the server because you
 // can't actually suspend on the server.
 let canUseDom = typeof window === "object";
 
-function createRoutes(
-  entryContext: EntryContext,
-  clientContext: ClientContext
-): RouteObject[] {
+function createRoutes(entryContext: EntryContext): RouteObject[] {
   let routeIds = Object.keys(entryContext.routeManifest).sort();
   let routes: RouteObject[] = [];
   let addedRoutes: { [routeId: string]: RouteObject } = {};
@@ -281,13 +284,14 @@ function createRoutes(
   for (let routeId of routeIds) {
     let manifestRoute = entryContext.routeManifest[routeId];
     let route = {
+      id: routeId,
+      // TODO: Make this optional in RR
       caseSensitive: false,
       path: manifestRoute.path,
       element: <RemixRoute id={routeId} />,
       preload() {
         if (canUseDom) {
           entryContext.routeLoader.load(routeId);
-          clientContext.dataCache.preload();
         }
       }
     };
@@ -320,18 +324,26 @@ export function Meta() {
 }
 
 function AsyncMeta() {
-  let context = useEntryContext();
+  let entryContext = useEntryContext();
+  let clientContext = useClientContext();
   let location = useLocation();
 
   let meta: { [name: string]: string } = {};
   let allData = {};
+  let routeData = clientContext.dataCache.read();
 
-  for (let routeId of context.matchedRouteIds) {
-    let routeModule = context.routeLoader.read(routeId) || defaultRouteModule;
+  for (let match of clientContext.matches) {
+    // TODO: Make RouteMatch type more flexible somehow to allow for other
+    // properties like `id`?
+    // @ts-ignore
+    let routeId = match.route.id;
+    let data = routeData[routeId];
+    let params = match.params;
+
+    let routeModule =
+      entryContext.routeLoader.read(routeId) || defaultRouteModule;
 
     if (typeof routeModule.meta === "function") {
-      let data = context.routeData[routeId];
-      let params = context.routeParams[routeId];
       Object.assign(allData, { [routeId]: data });
       Object.assign(
         meta,
@@ -379,7 +391,29 @@ export function Scripts() {
 }
 
 export function Styles() {
-  return null;
+  let { browserManifest, publicPath } = useEntryContext();
+  let { matches } = useClientContext();
+  let entryStyles = [browserManifest["__entry_styles__.css"]];
+
+  for (let match of matches) {
+    // @ts-ignore
+    let routeId = match.route.id;
+    if (browserManifest[`${routeId}.css`]) {
+      entryStyles.push(browserManifest[`${routeId}.css`]);
+    }
+  }
+
+  return (
+    <>
+      {entryStyles.map(entryStyle => (
+        <link
+          key={entryStyle.fileName}
+          rel="stylesheet"
+          href={publicPath + entryStyle.fileName}
+        />
+      ))}
+    </>
+  );
 }
 
 export function Link(props: any) {

@@ -1,3 +1,4 @@
+import { promises as fsp } from "fs";
 import path from "path";
 import type {
   ExternalOption,
@@ -21,6 +22,7 @@ import {
 } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
+import type { RemixRouteObject } from "./routes";
 import { purgeRequireCache } from "./requireCache";
 
 import manifest from "./rollup/manifest";
@@ -54,7 +56,8 @@ function getInputForRoutes(
   input: Input = {}
 ): Input {
   for (let route of routesConfig) {
-    input[route.id] = path.resolve(sourceDirectory, route.component);
+    input[route.id] = path.resolve(sourceDirectory, route.componentFile);
+
     if (route.children) {
       getInputForRoutes(sourceDirectory, route.children, input);
     }
@@ -79,6 +82,54 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   }
 
   return input;
+}
+
+async function visitRoutes(
+  routes: RemixConfig["routes"],
+  callback: (route: RemixRouteObject) => Promise<void>
+): Promise<void> {
+  for (let route of routes) {
+    await callback(route);
+
+    if (route.children) {
+      await visitRoutes(route.children, callback);
+    }
+  }
+}
+
+function postcss(config: RemixConfig): Plugin {
+  return {
+    name: "postcss",
+    // load(id: string) {
+    //   // ...
+    // },
+    // transform() {
+    //   // postcss
+    // },
+    async generateBundle() {
+      this.emitFile({
+        type: "asset",
+        name: `__entry_styles__.css`,
+        source: await fsp.readFile(
+          path.join(config.sourceDirectory, `entry.css`),
+          "utf-8"
+        )
+      });
+
+      await visitRoutes(config.routes, async route => {
+        if (route.stylesFile) {
+          this.emitFile({
+            type: "asset",
+            name: `${route.id}.css`,
+            source: await fsp.readFile(
+              path.join(config.stylesDirectory, route.stylesFile),
+              "utf-8"
+            )
+          });
+        }
+      });
+    }
+  };
 }
 
 function getCommonPlugins(
@@ -128,10 +179,12 @@ function getCommonPlugins(
       extensions: [".js", ".json", ".ts", ".tsx"]
     }),
     commonjs(),
+    postcss(config),
     replace({
       "process.env.NODE_ENV": JSON.stringify(mode)
     }),
     manifest({
+      forceWrite: true,
       outputDir: config.serverBuildDirectory,
       filename:
         target === BuildTarget.Browser
@@ -167,13 +220,15 @@ export function watch(
   config: RemixConfig,
   {
     mode = BuildMode.Development,
-    target = BuildTarget.Server,
-    onBuild,
+    target = BuildTarget.Browser,
+    onBuildStart,
+    onBuildEnd,
     onError
   }: {
     mode?: BuildMode;
     target?: BuildTarget;
-    onBuild?: (build: RollupBuild) => void;
+    onBuildStart?: () => void;
+    onBuildEnd?: (build: RollupBuild) => void;
     onError?: (error: RollupError) => void;
   } = {}
 ): () => void {
@@ -201,9 +256,15 @@ export function watch(
 
   watcher.on("event", event => {
     if (event.code === "ERROR") {
-      if (onError) onError(event.error);
+      if (onError) {
+        onError(event.error);
+      } else {
+        console.error(event.error);
+      }
+    } else if (event.code === "BUNDLE_START") {
+      if (onBuildStart) onBuildStart();
     } else if (event.code === "BUNDLE_END") {
-      if (onBuild) onBuild(event.result);
+      if (onBuildEnd) onBuildEnd(event.result);
     }
   });
 

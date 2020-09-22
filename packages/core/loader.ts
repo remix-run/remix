@@ -31,11 +31,11 @@ function getLoader(
   remixConfig: RemixConfig,
   match: RemixRouteMatch
 ): RemixLoader | null {
-  if (match.route.loader == null) return null;
+  if (match.route.loaderFile == null) return null;
 
   let requirePath = path.resolve(
     remixConfig.loadersDirectory,
-    match.route.loader
+    match.route.loaderFile
   );
 
   return require(requirePath);

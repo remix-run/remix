@@ -34,6 +34,7 @@ describe("a remix request handler", () => {
               rel=\\"stylesheet\\"
               href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
             />
+            <link rel=\\"stylesheet\\" href=\\"/build/__entry_styles__.css\\" />
           </head>
           <body class=\\"m-4\\">
             <nav>
@@ -47,13 +48,13 @@ describe("a remix request handler", () => {
                 <ul>
                   <li>
                     <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
-                      >Ryan Florence</a
-                    >
+                      >Ryan Florence<!-- -->
+                    </a>
                   </li>
                   <li>
                     <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
-                      >Michael Jackson</a
-                    >
+                      >Michael Jackson<!-- -->
+                    </a>
                   </li>
                 </ul>
               </header>
@@ -75,24 +76,25 @@ describe("a remix request handler", () => {
                     fileName: \\"__entry_browser__.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-85b12db5.js\\",
-                      \\"index-b7b1a6c3.js\\",
+                      \\"index-bb339f26.js\\",
+                      \\"index-f9f733b1.js\\",
                     ],
                   },
+                  __entry_styles__: { fileName: \\"__entry_styles__.css\\" },
                   \\"routes/gists\\": {
                     fileName: \\"routes/gists.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-85b12db5.js\\",
-                      \\"index-b7b1a6c3.js\\",
+                      \\"index-bb339f26.js\\",
+                      \\"index-f9f733b1.js\\",
                     ],
                   },
                   \\"routes/gists/$username\\": {
                     fileName: \\"routes/gists/$username.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-85b12db5.js\\",
-                      \\"index-b7b1a6c3.js\\",
+                      \\"index-bb339f26.js\\",
+                      \\"index-f9f733b1.js\\",
                     ],
                   },
                 },
@@ -107,7 +109,12 @@ describe("a remix request handler", () => {
                   },
                 },
                 routeData: {
-                  \\"routes/gists\\": null,
+                  \\"routes/gists\\": {
+                    users: [
+                      { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+                      { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+                    ],
+                  },
                   \\"routes/gists/$username\\": [
                     {
                       url:
@@ -227,6 +234,7 @@ describe("a remix request handler", () => {
               rel=\\"stylesheet\\"
               href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
             />
+            <link rel=\\"stylesheet\\" href=\\"/build/__entry_styles__.css\\" />
           </head>
           <body class=\\"m-4\\">
             <nav>
@@ -248,16 +256,24 @@ describe("a remix request handler", () => {
                     fileName: \\"__entry_browser__.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-85b12db5.js\\",
-                      \\"index-b7b1a6c3.js\\",
+                      \\"index-bb339f26.js\\",
+                      \\"index-f9f733b1.js\\",
                     ],
                   },
+                  __entry_styles__: { fileName: \\"__entry_styles__.css\\" },
                   \\"routes/500\\": undefined,
                 },
                 matchedRouteIds: [\\"routes/500\\"],
                 publicPath: \\"/build/\\",
                 routeManifest: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"*\\" } },
-                routeData: { \\"routes/gists\\": null },
+                routeData: {
+                  \\"routes/gists\\": {
+                    users: [
+                      { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+                      { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+                    ],
+                  },
+                },
                 routeParams: { \\"routes/500\\": {} },
               };
             </script>
@@ -285,16 +301,16 @@ describe("a remix request handler", () => {
               "fileName": "routes/gists.js",
               "imports": Array [
                 "index-d9da1d1d.js",
-                "index-85b12db5.js",
-                "index-b7b1a6c3.js",
+                "index-bb339f26.js",
+                "index-f9f733b1.js",
               ],
             },
             "routes/gists/index": Object {
               "fileName": "routes/gists/index.js",
               "imports": Array [
                 "index-d9da1d1d.js",
-                "index-85b12db5.js",
-                "index-b7b1a6c3.js",
+                "index-bb339f26.js",
+                "index-f9f733b1.js",
               ],
             },
           },
@@ -325,23 +341,40 @@ describe("a remix request handler", () => {
       expect(res.headers.get("Content-Type")).toEqual("application/json");
       expect(json).toMatchInlineSnapshot(`
         Object {
-          "routes/gists": null,
-          "routes/gists/index": Array [
-            Object {
-              "files": Object {
-                "remix-server.jsx": Object {
-                  "filename": "remix-server.jsx",
+          "routes/gists": Object {
+            "data": Object {
+              "users": Array [
+                Object {
+                  "id": "ryanflorence",
+                  "name": "Ryan Florence",
                 },
-              },
-              "id": "610613b54e5b34f8122d1ba4a3da21a9",
-              "owner": Object {
-                "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                "id": 100200,
-                "login": "ryanflorence",
-              },
-              "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+                Object {
+                  "id": "mjackson",
+                  "name": "Michael Jackson",
+                },
+              ],
             },
-          ],
+            "type": "data",
+          },
+          "routes/gists/index": Object {
+            "data": Array [
+              Object {
+                "files": Object {
+                  "remix-server.jsx": Object {
+                    "filename": "remix-server.jsx",
+                  },
+                },
+                "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                "owner": Object {
+                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                  "id": 100200,
+                  "login": "ryanflorence",
+                },
+                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+              },
+            ],
+            "type": "data",
+          },
         }
       `);
     });
@@ -361,22 +394,28 @@ describe("a remix request handler", () => {
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
           Object {
-            "routes/gists/$username": Array [
-              Object {
-                "files": Object {
-                  "remix-server.jsx": Object {
-                    "filename": "remix-server.jsx",
+            "routes/gists": Object {
+              "type": "copy",
+            },
+            "routes/gists/$username": Object {
+              "data": Array [
+                Object {
+                  "files": Object {
+                    "remix-server.jsx": Object {
+                      "filename": "remix-server.jsx",
+                    },
                   },
+                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                  "owner": Object {
+                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                    "id": 100200,
+                    "login": "ryanflorence",
+                  },
+                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-                "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                "owner": Object {
-                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                  "id": 100200,
-                  "login": "ryanflorence",
-                },
-                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
-              },
-            ],
+              ],
+              "type": "data",
+            },
           }
         `);
       });
@@ -397,22 +436,28 @@ describe("a remix request handler", () => {
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
           Object {
-            "routes/gists/$username": Array [
-              Object {
-                "files": Object {
-                  "remix-server.jsx": Object {
-                    "filename": "remix-server.jsx",
+            "routes/gists": Object {
+              "type": "copy",
+            },
+            "routes/gists/$username": Object {
+              "data": Array [
+                Object {
+                  "files": Object {
+                    "remix-server.jsx": Object {
+                      "filename": "remix-server.jsx",
+                    },
                   },
+                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                  "owner": Object {
+                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                    "id": 100200,
+                    "login": "ryanflorence",
+                  },
+                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-                "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                "owner": Object {
-                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                  "id": 100200,
-                  "login": "ryanflorence",
-                },
-                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
-              },
-            ],
+              ],
+              "type": "data",
+            },
           }
         `);
       });
@@ -433,23 +478,40 @@ describe("a remix request handler", () => {
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
           Object {
-            "routes/gists": null,
-            "routes/gists/$username": Array [
-              Object {
-                "files": Object {
-                  "remix-server.jsx": Object {
-                    "filename": "remix-server.jsx",
+            "routes/gists": Object {
+              "data": Object {
+                "users": Array [
+                  Object {
+                    "id": "ryanflorence",
+                    "name": "Ryan Florence",
                   },
-                },
-                "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                "owner": Object {
-                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                  "id": 100200,
-                  "login": "ryanflorence",
-                },
-                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+                  Object {
+                    "id": "mjackson",
+                    "name": "Michael Jackson",
+                  },
+                ],
               },
-            ],
+              "type": "data",
+            },
+            "routes/gists/$username": Object {
+              "data": Array [
+                Object {
+                  "files": Object {
+                    "remix-server.jsx": Object {
+                      "filename": "remix-server.jsx",
+                    },
+                  },
+                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                  "owner": Object {
+                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                    "id": 100200,
+                    "login": "ryanflorence",
+                  },
+                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+                },
+              ],
+              "type": "data",
+            },
           }
         `);
       });
@@ -472,22 +534,28 @@ describe("a remix request handler", () => {
         expect(res.headers.get("Content-Type")).toEqual("application/json");
         expect(json).toMatchInlineSnapshot(`
           Object {
-            "routes/gists/$username": Array [
-              Object {
-                "files": Object {
-                  "remix-server.jsx": Object {
-                    "filename": "remix-server.jsx",
+            "routes/gists": Object {
+              "type": "copy",
+            },
+            "routes/gists/$username": Object {
+              "data": Array [
+                Object {
+                  "files": Object {
+                    "remix-server.jsx": Object {
+                      "filename": "remix-server.jsx",
+                    },
                   },
+                  "id": "610613b54e5b34f8122d1ba4a3da21a9",
+                  "owner": Object {
+                    "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+                    "id": 100200,
+                    "login": "ryanflorence",
+                  },
+                  "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
                 },
-                "id": "610613b54e5b34f8122d1ba4a3da21a9",
-                "owner": Object {
-                  "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-                  "id": 100200,
-                  "login": "ryanflorence",
-                },
-                "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
-              },
-            ],
+              ],
+              "type": "data",
+            },
           }
         `);
       });

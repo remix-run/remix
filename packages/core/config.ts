@@ -23,14 +23,15 @@ export interface AppConfig {
   devServerPort: number;
 
   /**
-   * The path to the loaders directory, relative to remix.config.js.
+   * The path to the loaders directory, relative to remix.config.js. Defaults to
+   * "loaders".
    */
   loadersDirectory: string;
 
   /**
    * The path where "conventional" routes are found, may be relative to
    * the `sourceDirectory`. Conventional routes use the filesystem for defining
-   * route paths and nesting.
+   * route paths and nesting. Defaults to "routes".
    */
   routesDirectory: string;
 
@@ -47,9 +48,16 @@ export interface AppConfig {
   serverBuildDirectory: string;
 
   /**
-   * The path to the source directory, relative to remix.config.js.
+   * The path to the source directory, relative to remix.config.js. Defaults to
+   * "src".
    */
   sourceDirectory: string;
+
+  /**
+   * The path to the styles directory, relative to the `sourceDirectory`.
+   * Defaults to "styles".
+   */
+  stylesDirectory: string;
 }
 
 /**
@@ -95,6 +103,11 @@ export interface RemixConfig {
    * The absolute path to the source directory.
    */
   sourceDirectory: string;
+
+  /**
+   * The absolute path to the styles directory.
+   */
+  stylesDirectory: string;
 }
 
 /**
@@ -135,11 +148,21 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     appConfig.sourceDirectory || "src"
   );
 
+  let stylesDirectory = path.resolve(
+    sourceDirectory,
+    appConfig.stylesDirectory || "styles"
+  );
+
   let routesDir = path.resolve(
     sourceDirectory,
     appConfig.routesDirectory || "routes"
   );
-  let routes = await getConventionalRoutes(routesDir, loadersDirectory);
+
+  let routes = await getConventionalRoutes(
+    routesDir,
+    loadersDirectory,
+    stylesDirectory
+  );
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(_defineRoutes);
     routes.push(...manualRoutes);
@@ -160,7 +183,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     rootDirectory,
     routes,
     serverBuildDirectory,
-    sourceDirectory
+    sourceDirectory,
+    stylesDirectory
   };
 
   return remixConfig;

@@ -2,11 +2,14 @@ import path from "path";
 import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router";
+import requireFromString from "require-from-string";
+import type { RollupOutput, OutputChunk } from "rollup";
 
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Request, Response } from "./platform";
 import type { BuildManifest, BuildChunk } from "./rollup/manifest";
+import invariant from "./invariant";
 
 export type { BuildManifest, BuildChunk };
 
@@ -48,6 +51,21 @@ export function getServerEntryModule(
   return require(requirePath);
 }
 
+export function getDevServerEntryModule(
+  serverBuildDirectory: string,
+  output: RollupOutput["output"]
+): ServerEntryModule {
+  for (let chunkOrAsset of output) {
+    if (
+      chunkOrAsset.type === "chunk" &&
+      chunkOrAsset.name === ManifestServerEntryKey
+    ) {
+      let filename = path.resolve(serverBuildDirectory, chunkOrAsset.fileName);
+      return requireFromString(chunkOrAsset.code, filename);
+    }
+  }
+}
+
 interface MetaArgs {
   data: RouteData[string];
   params: Params;
@@ -84,6 +102,38 @@ export function getRouteModules(
 
     if (route.children) {
       getRouteModules(serverBuildDirectory, route.children, manifest, modules);
+    }
+  }
+
+  return modules;
+}
+
+export function getDevRouteModules(
+  serverBuildDirectory: string,
+  routes: RemixConfig["routes"],
+  output: RollupOutput["output"],
+  modules: RouteModules = {}
+): RouteModules {
+  for (let route of routes) {
+    let chunk = output.find(
+      chunkOrAsset =>
+        chunkOrAsset.type === "chunk" && chunkOrAsset.name === route.id
+    );
+
+    invariant(
+      chunk,
+      `Missing chunk in build output for route id "${route.id}"`
+    );
+
+    let filename = path.resolve(serverBuildDirectory, chunk.fileName);
+
+    modules[route.id] = requireFromString(
+      (chunk as OutputChunk).code,
+      filename
+    );
+
+    if (route.children) {
+      getDevRouteModules(serverBuildDirectory, route.children, output, modules);
     }
   }
 

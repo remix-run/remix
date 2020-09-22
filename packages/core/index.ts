@@ -1,5 +1,7 @@
 export type { BuildManifest, BuildChunk, RouteModule } from "./build";
 
+export { run } from "./cli";
+
 export { build, watch, BuildMode, BuildTarget } from "./compiler";
 
 export type { RemixConfig } from "./config";

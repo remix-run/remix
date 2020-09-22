@@ -8,7 +8,7 @@ export interface BuildManifest {
 
 export interface BuildChunk {
   fileName: string;
-  imports: string[];
+  imports?: string[];
 }
 
 function createManifest(bundle: OutputBundle): BuildManifest {
@@ -24,6 +24,13 @@ function createManifest(bundle: OutputBundle): BuildManifest {
         fileName: assetOrChunk.fileName,
         imports: assetOrChunk.imports
       };
+    } else if (
+      assetOrChunk.type === "asset" &&
+      typeof assetOrChunk.name !== "undefined"
+    ) {
+      manifest[assetOrChunk.name] = {
+        fileName: assetOrChunk.fileName
+      };
     }
 
     return manifest;
@@ -32,9 +39,11 @@ function createManifest(bundle: OutputBundle): BuildManifest {
 
 export default function manifestPlugin({
   filename = "manifest.json",
+  forceWrite = false,
   outputDir
 }: {
   filename?: string;
+  forceWrite?: boolean;
   outputDir: string;
 }): Plugin {
   return {
@@ -46,7 +55,7 @@ export default function manifestPlugin({
     ) {
       let manifest = createManifest(bundle);
 
-      if (isWrite) {
+      if (isWrite || forceWrite) {
         let file = path.join(outputDir, filename);
         await fsp.mkdir(path.dirname(file), { recursive: true });
         await fsp.writeFile(file, JSON.stringify(manifest));

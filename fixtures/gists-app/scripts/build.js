@@ -13,6 +13,15 @@ async function run() {
     build(config, { target: BuildTarget.Browser })
   ]);
 
+  // let { output } = await serverBuild.generate({
+  //   format: "cjs",
+  //   exports: "named"
+  // });
+
+  // console.log({ names: output.map(item => item.name) });
+  // // console.log({ keys: Object.keys(output) });
+  // process.exit();
+
   await serverBuild.write({
     dir: config.serverBuildDirectory,
     format: "cjs",

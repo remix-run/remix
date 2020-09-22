@@ -15,14 +15,6 @@ export default function App() {
         <Styles />
       </head>
       <body className="m-4">
-        <nav>
-          <div>
-            <Link to="users">Users</Link>
-          </div>
-          <div>
-            <Link to="gists">Gists</Link>
-          </div>
-        </nav>
         <Suspense fallback={"Loading"}>
           <Routes />
         </Suspense>
