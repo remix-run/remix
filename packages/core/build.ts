@@ -3,33 +3,21 @@ import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router";
 import requireFromString from "require-from-string";
-import type { RollupOutput, OutputChunk } from "rollup";
+import type { RollupOutput } from "rollup";
+import fetch from "node-fetch";
 
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Request, Response } from "./platform";
 import type { BuildManifest, BuildChunk } from "./rollup/manifest";
-import invariant from "./invariant";
 
 export type { BuildManifest, BuildChunk };
 
-export const ManifestBrowserEntryKey = "__entry_browser__";
-export const ManifestServerEntryKey = "__entry_server__";
+export const BrowserEntryManifestKey = "__entry_browser__";
+export const ServerEntryManifestKey = "__entry_server__";
 
 export const BrowserManifestFilename = "browser-manifest.json";
 export const ServerManifestFilename = "server-manifest.json";
-
-export function getBrowserManifest(
-  serverBuildDirectory: string
-): BuildManifest {
-  let manifestFile = path.join(serverBuildDirectory, BrowserManifestFilename);
-  return require(manifestFile);
-}
-
-export function getServerManifest(serverBuildDirectory: string): BuildManifest {
-  let manifestFile = path.join(serverBuildDirectory, ServerManifestFilename);
-  return require(manifestFile);
-}
 
 export interface ServerEntryModule {
   default(
@@ -39,31 +27,13 @@ export interface ServerEntryModule {
   ): Promise<Response>;
 }
 
-export function getServerEntryModule(
-  serverBuildDirectory: string,
-  manifest: BuildManifest
-): ServerEntryModule {
-  let requirePath = path.join(
-    serverBuildDirectory,
-    manifest[ManifestServerEntryKey].fileName
-  );
-
-  return require(requirePath);
+export interface RouteModule {
+  default: ComponentType;
+  meta?(metaArgs: MetaArgs): MetaContents;
 }
 
-export function getDevServerEntryModule(
-  serverBuildDirectory: string,
-  output: RollupOutput["output"]
-): ServerEntryModule {
-  for (let chunkOrAsset of output) {
-    if (
-      chunkOrAsset.type === "chunk" &&
-      chunkOrAsset.name === ManifestServerEntryKey
-    ) {
-      let filename = path.resolve(serverBuildDirectory, chunkOrAsset.fileName);
-      return requireFromString(chunkOrAsset.code, filename);
-    }
-  }
+export interface RouteModules {
+  [routeId: string]: RouteModule;
 }
 
 interface MetaArgs {
@@ -77,65 +47,139 @@ interface MetaContents {
   [name: string]: string;
 }
 
-export interface RouteModules {
-  [routeId: string]: RouteModule;
+/**
+ * Reads the browser manifest from the build on the filesystem.
+ */
+export function getBrowserBuildManifest(
+  serverBuildDirectory: string
+): BuildManifest {
+  let manifestFile = path.resolve(
+    serverBuildDirectory,
+    BrowserManifestFilename
+  );
+
+  return require(manifestFile);
 }
 
-export interface RouteModule {
-  default: ComponentType;
-  meta?(metaArgs: MetaArgs): MetaContents;
+/**
+ * Reads the server manifest from the build on the filesystem.
+ */
+export function getServerBuildManifest(
+  serverBuildDirectory: string
+): BuildManifest {
+  let manifestFile = path.resolve(serverBuildDirectory, ServerManifestFilename);
+  return require(manifestFile);
 }
 
+/**
+ * Gets the serve entry module from the build on the filesystem.
+ */
+export function getServerEntryModule(
+  serverBuildDirectory: string,
+  serverBuildManifest: BuildManifest
+): ServerEntryModule {
+  let requirePath = path.resolve(
+    serverBuildDirectory,
+    serverBuildManifest[ServerEntryManifestKey].fileName
+  );
+
+  return require(requirePath);
+}
+
+/**
+ * Gets all route modules from the build on the filesystem.
+ */
 export function getRouteModules(
   serverBuildDirectory: string,
   routes: RemixConfig["routes"],
-  manifest: BuildManifest,
+  serverBuildManifest: BuildManifest,
   modules: RouteModules = {}
 ): RouteModules {
   for (let route of routes) {
     let requirePath = path.join(
       serverBuildDirectory,
-      manifest[route.id].fileName
+      serverBuildManifest[route.id].fileName
     );
 
     modules[route.id] = require(requirePath);
 
     if (route.children) {
-      getRouteModules(serverBuildDirectory, route.children, manifest, modules);
+      getRouteModules(
+        serverBuildDirectory,
+        route.children,
+        serverBuildManifest,
+        modules
+      );
     }
   }
 
   return modules;
 }
 
+/**
+ * Fetches the browser manifest from the development server.
+ */
+export async function getDevBrowserBuildManifest(
+  remixRunOrigin: string
+): Promise<BuildManifest> {
+  let res = await fetch(remixRunOrigin + BrowserManifestFilename);
+  return res.json();
+}
+
+/**
+ * Gets the server entry module from the server build output.
+ */
+export function getDevServerEntryModule(
+  serverBuildDirectory: string,
+  serverBuildOutput: RollupOutput["output"]
+): ServerEntryModule {
+  return requireChunk<ServerEntryModule>(
+    serverBuildDirectory,
+    serverBuildOutput,
+    ServerEntryManifestKey
+  );
+}
+
+/**
+ * Gets the route modules from the server build output.
+ */
 export function getDevRouteModules(
   serverBuildDirectory: string,
   routes: RemixConfig["routes"],
-  output: RollupOutput["output"],
+  serverBuildOutput: RollupOutput["output"],
   modules: RouteModules = {}
 ): RouteModules {
   for (let route of routes) {
-    let chunk = output.find(
-      chunkOrAsset =>
-        chunkOrAsset.type === "chunk" && chunkOrAsset.name === route.id
-    );
-
-    invariant(
-      chunk,
-      `Missing chunk in build output for route id "${route.id}"`
-    );
-
-    let filename = path.resolve(serverBuildDirectory, chunk.fileName);
-
-    modules[route.id] = requireFromString(
-      (chunk as OutputChunk).code,
-      filename
+    modules[route.id] = requireChunk<RouteModule>(
+      serverBuildDirectory,
+      serverBuildOutput,
+      route.id
     );
 
     if (route.children) {
-      getDevRouteModules(serverBuildDirectory, route.children, output, modules);
+      getDevRouteModules(
+        serverBuildDirectory,
+        route.children,
+        serverBuildOutput,
+        modules
+      );
     }
   }
 
   return modules;
+}
+
+function requireChunk<T>(
+  serverBuildDirectory: string,
+  serverBuildOutput: RollupOutput["output"],
+  chunkName: string
+): T {
+  for (let chunkOrAsset of serverBuildOutput) {
+    if (chunkOrAsset.type === "chunk" && chunkOrAsset.name === chunkName) {
+      let filename = path.resolve(serverBuildDirectory, chunkOrAsset.fileName);
+      return requireFromString(chunkOrAsset.code, filename);
+    }
+  }
+
+  throw new Error(`Missing chunk "${chunkName}" in server build output`);
 }

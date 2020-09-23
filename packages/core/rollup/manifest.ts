@@ -38,11 +38,10 @@ function createManifest(bundle: OutputBundle): BuildManifest {
 }
 
 export default function manifestPlugin({
-  filename = "manifest.json",
-  forceWrite = false,
+  fileName = "manifest.json",
   outputDir
 }: {
-  filename?: string;
+  fileName?: string;
   forceWrite?: boolean;
   outputDir: string;
 }): Plugin {
@@ -55,10 +54,16 @@ export default function manifestPlugin({
     ) {
       let manifest = createManifest(bundle);
 
-      if (isWrite || forceWrite) {
-        let file = path.join(outputDir, filename);
+      if (isWrite) {
+        let file = path.join(outputDir, fileName);
         await fsp.mkdir(path.dirname(file), { recursive: true });
         await fsp.writeFile(file, JSON.stringify(manifest));
+      } else {
+        this.emitFile({
+          type: "asset",
+          fileName: fileName,
+          source: JSON.stringify(manifest)
+        });
       }
     }
   };

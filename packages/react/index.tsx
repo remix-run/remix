@@ -27,13 +27,13 @@ interface ManifestPatcher {
   (path: string): void;
 }
 
-interface RemixPatch {
-  build: BuildManifest;
-  routes: RouteManifest;
+interface ManifestPatch {
+  buildManifest: BuildManifest;
+  routeManifest: RouteManifest;
 }
 
-async function fetchManifestPatch(path: string): Promise<RemixPatch> {
-  let res = await fetch(`/__remix_patch?path=${path}`);
+async function fetchManifestPatch(path: string): Promise<ManifestPatch> {
+  let res = await fetch(`/__remix_manifest?path=${path}`);
   return await res.json();
 }
 
@@ -82,8 +82,8 @@ export function RemixEntryProvider({
 }) {
   let manifestPatcher = React.useCallback(async (path: string) => {
     let patch = await fetchManifestPatch(path);
-    Object.assign(entryContext.routeManifest, patch.routes);
-    Object.assign(entryContext.browserManifest, patch.build);
+    Object.assign(entryContext.browserManifest, patch.buildManifest);
+    Object.assign(entryContext.routeManifest, patch.routeManifest);
   }, []);
 
   let location = useLocation();
@@ -228,10 +228,10 @@ function useDataCache(initialData: RouteData): DataCache {
 const RemixRouteIdContext = React.createContext<string | undefined>(undefined);
 
 export function RemixRoute({ id }: { id: string }) {
-  let context = useEntryContext();
-  let mod = context.routeLoader.read(id);
+  let { routeLoader } = useEntryContext();
+  let routeModule = routeLoader.read(id);
 
-  if (!mod) {
+  if (!routeModule) {
     return (
       <defaultRouteModule.default>
         <RemixRouteMissing id={id} />
@@ -241,7 +241,7 @@ export function RemixRoute({ id }: { id: string }) {
 
   return (
     <RemixRouteIdContext.Provider value={id}>
-      <mod.default />
+      <routeModule.default />
     </RemixRouteIdContext.Provider>
   );
 }
@@ -324,15 +324,15 @@ export function Meta() {
 }
 
 function AsyncMeta() {
-  let entryContext = useEntryContext();
-  let clientContext = useClientContext();
+  let { routeLoader } = useEntryContext();
+  let { dataCache, matches } = useClientContext();
   let location = useLocation();
 
   let meta: { [name: string]: string } = {};
   let allData = {};
-  let routeData = clientContext.dataCache.read();
+  let routeData = dataCache.read();
 
-  for (let match of clientContext.matches) {
+  for (let match of matches) {
     // TODO: Make RouteMatch type more flexible somehow to allow for other
     // properties like `id`?
     // @ts-ignore
@@ -340,8 +340,7 @@ function AsyncMeta() {
     let data = routeData[routeId];
     let params = match.params;
 
-    let routeModule =
-      entryContext.routeLoader.read(routeId) || defaultRouteModule;
+    let routeModule = routeLoader.read(routeId) || defaultRouteModule;
 
     if (typeof routeModule.meta === "function") {
       Object.assign(allData, { [routeId]: data });
@@ -366,8 +365,12 @@ function AsyncMeta() {
 }
 
 export function Scripts() {
-  let context = useEntryContext();
-  let { browserManifest, publicPath, browserEntryContextString } = context;
+  let {
+    browserManifest,
+    publicPath,
+    browserEntryContextString
+  } = useEntryContext();
+
   let entryBrowser = browserManifest["__entry_browser__"];
   let src = `${publicPath}${entryBrowser.fileName}`;
 

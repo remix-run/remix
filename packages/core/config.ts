@@ -8,56 +8,59 @@ import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
  */
 export interface AppConfig {
   /**
-   * The path to the browser build, relative to remix.config.js.
+   * The path to the browser build, relative to remix.config.js. Defaults to
+   * "public/build".
    */
-  browserBuildDirectory: string;
+  browserBuildDirectory?: string;
 
   /**
-   * The URL prefix of the browser build, relative to remix.config.js.
+   * The port number to use for the dev server. Defaults to 8002.
    */
-  publicPath: string;
-
-  /**
-   * The port number to use for the dev server.
-   */
-  devServerPort: number;
+  devServerPort?: number;
 
   /**
    * The path to the loaders directory, relative to remix.config.js. Defaults to
    * "loaders".
    */
-  loadersDirectory: string;
+  loadersDirectory?: string;
 
   /**
-   * The path where "conventional" routes are found, may be relative to
-   * the `sourceDirectory`. Conventional routes use the filesystem for defining
+   * The URL prefix of the browser build with a trailing slash. Defaults to
+   * "/build/".
+   */
+  publicPath?: string;
+
+  /**
+   * The path where "conventional" routes are found, relative to the
+   * `sourceDirectory`. Conventional routes use the filesystem for defining
    * route paths and nesting. Defaults to "routes".
    */
-  routesDirectory: string;
+  routesDirectory?: string;
 
   /**
    * A function for defining custom routes.
    */
-  routes: {
+  routes?: {
     (defineRoutes: typeof _defineRoutes): Promise<RemixRouteObject[]>;
   };
 
   /**
-   * The path to the server build, relative to remix.config.js.
+   * The path to the server build, relative to remix.config.js. Defaults to
+   * "build".
    */
-  serverBuildDirectory: string;
+  serverBuildDirectory?: string;
 
   /**
    * The path to the source directory, relative to remix.config.js. Defaults to
    * "src".
    */
-  sourceDirectory: string;
+  sourceDirectory?: string;
 
   /**
    * The path to the styles directory, relative to the `sourceDirectory`.
    * Defaults to "styles".
    */
-  stylesDirectory: string;
+  stylesDirectory?: string;
 }
 
 /**
@@ -70,11 +73,6 @@ export interface RemixConfig {
   browserBuildDirectory: string;
 
   /**
-   * The URL prefix of the browser build.
-   */
-  publicPath: string;
-
-  /**
    * The port number to use for the dev server.
    */
   devServerPort: number;
@@ -83,6 +81,11 @@ export interface RemixConfig {
    * The absolute path to the loaders.
    */
   loadersDirectory: string;
+
+  /**
+   * The URL prefix of the browser build with a trailing slash.
+   */
+  publicPath: string;
 
   /**
    * The absolute path to the root of the Remix project.
@@ -135,6 +138,9 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   );
 
   let publicPath = appConfig.publicPath || "/build/";
+  if (!publicPath.endsWith("/")) {
+    publicPath += "/";
+  }
 
   let devServerPort = appConfig.devServerPort || 8002;
 
@@ -177,9 +183,9 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
 
   let remixConfig: RemixConfig = {
     browserBuildDirectory,
-    publicPath,
     devServerPort,
     loadersDirectory,
+    publicPath,
     rootDirectory,
     routes,
     serverBuildDirectory,

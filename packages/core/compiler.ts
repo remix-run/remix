@@ -5,6 +5,7 @@ import type {
   InputOption,
   RollupBuild,
   RollupError,
+  RollupOutput,
   Plugin
 } from "rollup";
 import * as rollup from "rollup";
@@ -15,8 +16,8 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 
 import {
-  ManifestBrowserEntryKey,
-  ManifestServerEntryKey,
+  BrowserEntryManifestKey,
+  ServerEntryManifestKey,
   BrowserManifestFilename,
   ServerManifestFilename
 } from "./build";
@@ -70,12 +71,12 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   let input = getInputForRoutes(config.sourceDirectory, config.routes);
 
   if (target === BuildTarget.Server) {
-    input[ManifestServerEntryKey] = path.join(
+    input[ServerEntryManifestKey] = path.join(
       config.sourceDirectory,
       "entry-server"
     );
   } else {
-    input[ManifestBrowserEntryKey] = path.join(
+    input[BrowserEntryManifestKey] = path.join(
       config.sourceDirectory,
       "entry-browser"
     );
@@ -184,9 +185,8 @@ function getCommonPlugins(
       "process.env.NODE_ENV": JSON.stringify(mode)
     }),
     manifest({
-      forceWrite: true,
       outputDir: config.serverBuildDirectory,
-      filename:
+      fileName:
         target === BuildTarget.Browser
           ? BrowserManifestFilename
           : ServerManifestFilename
@@ -210,6 +210,25 @@ export function build(
     external: getExternalOption(target),
     input: getInputOption(config, target),
     plugins: getCommonPlugins(config, mode, target)
+  });
+}
+
+/**
+ * Runs the server build in dev as requests come in. At this point, the config
+ * object has been trimmed down to contain only the routes matched in the
+ * request, which should speed up the build considerably.
+ */
+export async function generateDevServerBuild(
+  config: RemixConfig
+): Promise<RollupOutput> {
+  let serverBuild = await build(config, {
+    mode: BuildMode.Development,
+    target: BuildTarget.Server
+  });
+
+  return serverBuild.generate({
+    format: "cjs",
+    exports: "named"
   });
 }
 

@@ -4,14 +4,15 @@ import jsesc from "jsesc";
 
 import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
 import {
-  getBrowserManifest,
-  getRouteModules,
-  getDevRouteModules,
+  getBrowserBuildManifest,
+  getServerBuildManifest,
   getServerEntryModule,
+  getRouteModules,
+  getDevBrowserBuildManifest,
   getDevServerEntryModule,
-  getServerManifest
+  getDevRouteModules
 } from "./build";
-import { BuildMode, BuildTarget, build } from "./compiler";
+import { generateDevServerBuild } from "./compiler";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { EntryContext } from "./entry";
@@ -71,9 +72,9 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
       return handleDataRequest(config, req, loadContext);
     }
 
-    // GET /__remix_patch?path=/gists
-    if (req.url.startsWith("/__remix_patch")) {
-      return handlePatchRequest(config, req);
+    // GET /__remix_manifest?path=/gists
+    if (req.url.startsWith("/__remix_manifest")) {
+      return handleManifestRequest(config, req);
     }
 
     // GET /gists
@@ -81,35 +82,17 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   };
 }
 
-interface RemixServerInit {
-  config: RemixConfig;
-  browserManifest: BuildManifest;
-  routeModules: RouteModules;
-  serverEntryModule: ServerEntryModule;
+function json(payload: any, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
 }
 
-async function initializeServer(remixRoot?: string): Promise<RemixServerInit> {
-  let config = await readConfig(remixRoot);
-
-  // TODO: Get this from the asset server (`remix run`) in dev
-  let browserManifest = getBrowserManifest(config.serverBuildDirectory);
-
-  // Production only
-  let serverManifest = getServerManifest(config.serverBuildDirectory);
-  let serverEntryModule = getServerEntryModule(
-    config.serverBuildDirectory,
-    serverManifest
-  );
-  let routeModules = getRouteModules(
-    config.serverBuildDirectory,
-    config.routes,
-    serverManifest
-  );
-
-  // In development
-  // only build and load the routes we need for this request
-
-  return { config, browserManifest, serverEntryModule, routeModules };
+function jsonError(error: string, status = 403) {
+  return json({ error }, status);
 }
 
 async function handleDataRequest(
@@ -123,28 +106,19 @@ async function handleDataRequest(
   let from = params.get("from");
 
   if (!path) {
-    return new Response(JSON.stringify({ error: "Missing ?path" }), {
-      status: 403,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
+    return jsonError(`Missing ?path`, 403);
   }
 
   let matches = matchRoutes(config.routes, path);
 
   if (!matches) {
-    return new Response(JSON.stringify({ error: "No routes matched" }), {
-      status: 404,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
+    return jsonError(`No routes matched path "${path}"`, 404);
   }
 
   let loaderResults;
   if (from) {
     let fromMatches = matchRoutes(config.routes, from) || [];
+
     loaderResults = await loadDataDiff(
       config,
       matches,
@@ -160,57 +134,47 @@ async function handleDataRequest(
 
   let dataResults = createRouteDataResults(loaderResults);
 
-  // TODO: How do we cache this?
-  return new Response(JSON.stringify(dataResults), {
-    headers: {
-      "Content-Type": "application/json"
-    }
-  });
+  return json(dataResults);
 }
 
-async function handlePatchRequest(config: RemixConfig, req: Request) {
-  let browserManifest = getBrowserManifest(config.serverBuildDirectory);
-
+async function handleManifestRequest(config: RemixConfig, req: Request) {
   let location = createLocation(req.url);
   let params = new URLSearchParams(location.search);
   let path = params.get("path");
 
   if (!path) {
-    return new Response(JSON.stringify({ error: "Missing ?path" }), {
-      status: 403,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
+    return jsonError(`Missing ?path`, 403);
   }
 
   let matches = matchRoutes(config.routes, path);
 
   if (!matches) {
-    return new Response(`No matches found for ${path}`, {
-      status: 404
-    });
+    return jsonError(`No routes matched path "${path}"`, 404);
   }
 
-  let matchedRouteIds = matches.map(match => match.route.id);
-  let routeManifest = createRouteManifest(matches);
+  let browserManifest: BuildManifest;
+  if (process.env.NODE_ENV === "development") {
+    rewriteConfigPublicPath(config);
+
+    try {
+      browserManifest = await getDevBrowserBuildManifest(config.publicPath);
+    } catch (error) {
+      // The dev server is not running. This is just a manifest patch request, so
+      // return an empty patch. We will serve an error page on the HTML request.
+      browserManifest = {};
+    }
+  } else {
+    browserManifest = getBrowserBuildManifest(config.serverBuildDirectory);
+  }
 
   // Get the browser manifest for only the matched routes.
   let partialBrowserManifest = getPartialManifest(
     browserManifest,
-    matchedRouteIds
+    matches.map(match => match.route.id)
   );
+  let routeManifest = createRouteManifest(matches);
 
-  let payload = {
-    build: partialBrowserManifest,
-    routes: routeManifest
-  };
-
-  return new Response(JSON.stringify(payload), {
-    headers: {
-      "Content-Type": "application/json"
-    }
-  });
+  return json({ buildManifest: partialBrowserManifest, routeManifest });
 }
 
 async function handleHtmlRequest(
@@ -295,38 +259,40 @@ async function handleHtmlRequest(
     }
   }
 
-  // TODO: Get this from the dev server...
-  let browserManifest = getBrowserManifest(config.serverBuildDirectory);
-
+  let browserManifest: BuildManifest;
   let serverEntryModule: ServerEntryModule;
   let routeModules: RouteModules;
   if (process.env.NODE_ENV === "development") {
     // Adjust `config.routes` so that only the routes that are matched in the
-    // current request are available.
+    // current request are available. This should speed up the build since we
+    // only build the matched routes.
     rewriteConfigRoutes(config, matches);
+    rewriteConfigPublicPath(config);
 
-    config.publicPath = "http://localhost:8002/";
+    try {
+      browserManifest = await getDevBrowserBuildManifest(config.publicPath);
+    } catch (error) {
+      // The dev server is not running.
+      // TODO: Show a nice error page.
+      throw error;
+    }
 
-    let serverBuild = await build(config, {
-      mode: BuildMode.Development,
-      target: BuildTarget.Server
-    });
-    let { output } = await serverBuild.generate({
-      format: "cjs",
-      exports: "named"
-    });
+    let { output: serverBuildOutput } = await generateDevServerBuild(config);
 
     serverEntryModule = getDevServerEntryModule(
       config.serverBuildDirectory,
-      output
+      serverBuildOutput
     );
     routeModules = getDevRouteModules(
       config.serverBuildDirectory,
       config.routes,
-      output
+      serverBuildOutput
     );
   } else {
-    let serverManifest = getServerManifest(config.serverBuildDirectory);
+    browserManifest = getBrowserBuildManifest(config.serverBuildDirectory);
+
+    let serverManifest = getServerBuildManifest(config.serverBuildDirectory);
+
     serverEntryModule = getServerEntryModule(
       config.serverBuildDirectory,
       serverManifest
@@ -342,11 +308,14 @@ async function handleHtmlRequest(
   let routeManifest = createRouteManifest(matches);
   let routeParams = createRouteParams(matches);
 
-  // Get the browser manifest for only the browser entry point + the matched routes.
-  let matchedRouteIds = matches.map(match => match.route.id);
+  // Get the browser manifest for only the browser entry point + the matched
+  // routes. The client will fill in the rest by making requests to the manifest
+  // endpoint as needed.
   let partialBrowserManifest = getPartialManifest(
     browserManifest,
-    ["__entry_browser__", "__entry_styles__.css"].concat(matchedRouteIds)
+    ["__entry_browser__", "__entry_styles__.css"].concat(
+      matches.map(match => match.route.id)
+    )
   );
 
   let partialEntryContext = {
@@ -381,7 +350,9 @@ function getPartialManifest(
   entryNames: string[]
 ): BuildManifest {
   return entryNames.reduce((memo, entryName) => {
-    memo[entryName] = manifest[entryName];
+    if (manifest[entryName]) {
+      memo[entryName] = manifest[entryName];
+    }
 
     if (manifest[`${entryName}.css`]) {
       memo[`${entryName}.css`] = manifest[`${entryName}.css`];
@@ -402,4 +373,9 @@ function rewriteConfigRoutes(config: RemixConfig, matches: RemixRouteMatch[]) {
   );
 
   config.routes = [route!];
+}
+
+function rewriteConfigPublicPath(config: RemixConfig) {
+  config.publicPath =
+    process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
 }
