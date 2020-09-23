@@ -36,12 +36,9 @@ describe("transitioning to a new route with data", () => {
             rel=\\"stylesheet\\"
             href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
           />
+          <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
         </head>
         <body class=\\"m-4\\">
-          <nav>
-            <div><a href=\\"/users\\">Users</a></div>
-            <div><a href=\\"/gists\\">Gists</a></div>
-          </nav>
           <!--$-->
           <div data-test-id=\\"/\\">
             <header><h1>Cool Gists App</h1></header>
@@ -65,31 +62,31 @@ describe("transitioning to a new route with data", () => {
           <script>
             __remixContext = {
               browserManifest: {
-                __entry_browser__: {
-                  fileName: \\"__entry_browser__.js\\",
+                \\"entry-browser\\": {
+                  fileName: \\"entry-browser.js\\",
                   imports: [
                     \\"index-d9da1d1d.js\\",
-                    \\"index-bb339f26.js\\",
-                    \\"index-dc0da983.js\\",
+                    \\"index-dcc9183b.js\\",
+                    \\"index-0ae7d24f.js\\",
                   ],
                 },
+                \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
                 \\"routes/index\\": {
                   fileName: \\"routes/index.js\\",
                   imports: [
                     \\"index-d9da1d1d.js\\",
-                    \\"index-bb339f26.js\\",
-                    \\"index-dc0da983.js\\",
+                    \\"index-dcc9183b.js\\",
+                    \\"index-0ae7d24f.js\\",
                   ],
                 },
               },
-              matchedRouteIds: [\\"routes/index\\"],
               publicPath: \\"/build/\\",
               routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
               routeData: { \\"routes/index\\": null },
               routeParams: { \\"routes/index\\": {} },
             };
           </script>
-          <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
+          <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
         </body>
       </html>
       "
@@ -112,12 +109,13 @@ describe("transitioning to a new route with data", () => {
             rel=\\"stylesheet\\"
             href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
           />
+          <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+          <link
+            rel=\\"stylesheet\\"
+            href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+          />
         </head>
         <body class=\\"m-4\\">
-          <nav>
-            <div><a href=\\"/users\\">Users</a></div>
-            <div><a href=\\"/gists\\">Gists</a></div>
-          </nav>
           <!--$-->
           <div data-test-id=\\"/gists\\">
             <header>
@@ -146,32 +144,35 @@ describe("transitioning to a new route with data", () => {
           <script>
             __remixContext = {
               browserManifest: {
-                __entry_browser__: {
-                  fileName: \\"__entry_browser__.js\\",
+                \\"entry-browser\\": {
+                  fileName: \\"entry-browser.js\\",
                   imports: [
                     \\"index-d9da1d1d.js\\",
-                    \\"index-bb339f26.js\\",
-                    \\"index-dc0da983.js\\",
+                    \\"index-dcc9183b.js\\",
+                    \\"index-0ae7d24f.js\\",
                   ],
                 },
+                \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
                 \\"routes/gists\\": {
                   fileName: \\"routes/gists.js\\",
                   imports: [
                     \\"index-d9da1d1d.js\\",
-                    \\"index-bb339f26.js\\",
-                    \\"index-dc0da983.js\\",
+                    \\"index-dcc9183b.js\\",
+                    \\"index-0ae7d24f.js\\",
                   ],
                 },
                 \\"routes/gists/index\\": {
                   fileName: \\"routes/gists/index.js\\",
                   imports: [
                     \\"index-d9da1d1d.js\\",
-                    \\"index-bb339f26.js\\",
-                    \\"index-dc0da983.js\\",
+                    \\"index-dcc9183b.js\\",
+                    \\"index-0ae7d24f.js\\",
                   ],
                 },
+                \\"style/routes/gists.css\\": {
+                  fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+                },
               },
-              matchedRouteIds: [\\"routes/gists\\", \\"routes/gists/index\\"],
               publicPath: \\"/build/\\",
               routeManifest: {
                 \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
@@ -206,7 +207,7 @@ describe("transitioning to a new route with data", () => {
               routeParams: { \\"routes/gists\\": {}, \\"routes/gists/index\\": {} },
             };
           </script>
-          <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
+          <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
         </body>
       </html>
       "

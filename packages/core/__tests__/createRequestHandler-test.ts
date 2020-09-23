@@ -34,13 +34,13 @@ describe("a remix request handler", () => {
               rel=\\"stylesheet\\"
               href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
             />
-            <link rel=\\"stylesheet\\" href=\\"/build/__entry_styles__.css\\" />
+            <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+            <link
+              rel=\\"stylesheet\\"
+              href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+            />
           </head>
           <body class=\\"m-4\\">
-            <nav>
-              <div><a href=\\"/users\\">Users</a></div>
-              <div><a href=\\"/gists\\">Gists</a></div>
-            </nav>
             <!--$-->
             <div data-test-id=\\"/gists\\">
               <header>
@@ -72,33 +72,35 @@ describe("a remix request handler", () => {
             <script>
               __remixContext = {
                 browserManifest: {
-                  __entry_browser__: {
-                    fileName: \\"__entry_browser__.js\\",
+                  \\"entry-browser\\": {
+                    fileName: \\"entry-browser.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-bb339f26.js\\",
-                      \\"index-f9f733b1.js\\",
+                      \\"index-dcc9183b.js\\",
+                      \\"index-0ae7d24f.js\\",
                     ],
                   },
-                  __entry_styles__: { fileName: \\"__entry_styles__.css\\" },
+                  \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
                   \\"routes/gists\\": {
                     fileName: \\"routes/gists.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-bb339f26.js\\",
-                      \\"index-f9f733b1.js\\",
+                      \\"index-dcc9183b.js\\",
+                      \\"index-0ae7d24f.js\\",
                     ],
                   },
                   \\"routes/gists/$username\\": {
                     fileName: \\"routes/gists/$username.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-bb339f26.js\\",
-                      \\"index-f9f733b1.js\\",
+                      \\"index-dcc9183b.js\\",
+                      \\"index-0ae7d24f.js\\",
                     ],
                   },
+                  \\"style/routes/gists.css\\": {
+                    fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+                  },
                 },
-                matchedRouteIds: [\\"routes/gists\\", \\"routes/gists/$username\\"],
                 publicPath: \\"/build/\\",
                 routeManifest: {
                   \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
@@ -136,7 +138,7 @@ describe("a remix request handler", () => {
                 },
               };
             </script>
-            <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
+            <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
           </body>
         </html>
         "
@@ -234,13 +236,9 @@ describe("a remix request handler", () => {
               rel=\\"stylesheet\\"
               href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
             />
-            <link rel=\\"stylesheet\\" href=\\"/build/__entry_styles__.css\\" />
+            <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
           </head>
           <body class=\\"m-4\\">
-            <nav>
-              <div><a href=\\"/users\\">Users</a></div>
-              <div><a href=\\"/gists\\">Gists</a></div>
-            </nav>
             <!--$-->
             <div>
               <h1>Error!</h1>
@@ -252,18 +250,16 @@ describe("a remix request handler", () => {
             <script>
               __remixContext = {
                 browserManifest: {
-                  __entry_browser__: {
-                    fileName: \\"__entry_browser__.js\\",
+                  \\"entry-browser\\": {
+                    fileName: \\"entry-browser.js\\",
                     imports: [
                       \\"index-d9da1d1d.js\\",
-                      \\"index-bb339f26.js\\",
-                      \\"index-f9f733b1.js\\",
+                      \\"index-dcc9183b.js\\",
+                      \\"index-0ae7d24f.js\\",
                     ],
                   },
-                  __entry_styles__: { fileName: \\"__entry_styles__.css\\" },
-                  \\"routes/500\\": undefined,
+                  \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
                 },
-                matchedRouteIds: [\\"routes/500\\"],
                 publicPath: \\"/build/\\",
                 routeManifest: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"*\\" } },
                 routeData: {
@@ -277,7 +273,7 @@ describe("a remix request handler", () => {
                 routeParams: { \\"routes/500\\": {} },
               };
             </script>
-            <script type=\\"module\\" src=\\"/build/__entry_browser__.js\\"></script>
+            <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
           </body>
         </html>
         "
@@ -289,32 +285,35 @@ describe("a remix request handler", () => {
     it("sends the route and build manifests for a path", async () => {
       let handleRequest = createRequestHandler(remixRoot);
 
-      let req = new Request("/__remix_patch?path=/gists");
+      let req = new Request("/__remix_manifest?path=/gists");
       let res = await handleRequest(req, null);
       let json = await res.json();
 
       expect(res.headers.get("Content-Type")).toEqual("application/json");
       expect(json).toMatchInlineSnapshot(`
         Object {
-          "build": Object {
+          "buildManifest": Object {
             "routes/gists": Object {
               "fileName": "routes/gists.js",
               "imports": Array [
                 "index-d9da1d1d.js",
-                "index-bb339f26.js",
-                "index-f9f733b1.js",
+                "index-dcc9183b.js",
+                "index-0ae7d24f.js",
               ],
             },
             "routes/gists/index": Object {
               "fileName": "routes/gists/index.js",
               "imports": Array [
                 "index-d9da1d1d.js",
-                "index-bb339f26.js",
-                "index-f9f733b1.js",
+                "index-dcc9183b.js",
+                "index-0ae7d24f.js",
               ],
             },
+            "style/routes/gists.css": Object {
+              "fileName": "assets/style/routes/gists-d45b2a57.css",
+            },
           },
-          "routes": Object {
+          "routeManifest": Object {
             "routes/gists": Object {
               "id": "routes/gists",
               "path": "gists",

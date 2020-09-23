@@ -13,9 +13,9 @@ import type { BuildManifest, BuildChunk } from "./rollup/manifest";
 
 export type { BuildManifest, BuildChunk };
 
-export const BrowserEntryManifestKey = "entry-browser";
-export const BrowserEntryStylesManifestKey = "entry-styles";
-export const ServerEntryManifestKey = "entry-server";
+// export const EntryBrowserManifestKey = "entry-browser";
+// export const EntryServerManifestKey = "entry-server";
+// export const GlobalStylesManifestKey = "global-styles";
 
 export const BrowserManifestFilename = "browser-manifest.json";
 export const ServerManifestFilename = "server-manifest.json";
@@ -81,7 +81,7 @@ export function getServerEntryModule(
 ): ServerEntryModule {
   let requirePath = path.resolve(
     serverBuildDirectory,
-    serverBuildManifest[ServerEntryManifestKey].fileName
+    serverBuildManifest["entry-server"].fileName
   );
 
   return require(requirePath);
@@ -137,7 +137,7 @@ export function getDevServerEntryModule(
   return requireChunk<ServerEntryModule>(
     serverBuildDirectory,
     serverBuildOutput,
-    ServerEntryManifestKey
+    "entry-server"
   );
 }
 

@@ -15,13 +15,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 
-import {
-  BrowserEntryManifestKey,
-  BrowserEntryStylesManifestKey,
-  ServerEntryManifestKey,
-  BrowserManifestFilename,
-  ServerManifestFilename
-} from "./build";
+import { BrowserManifestFilename, ServerManifestFilename } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { RemixRouteObject } from "./routes";
@@ -72,12 +66,12 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   let input = getInputForRoutes(config.sourceDirectory, config.routes);
 
   if (target === BuildTarget.Server) {
-    input[ServerEntryManifestKey] = path.join(
+    input["entry-server"] = path.resolve(
       config.sourceDirectory,
       "entry-server"
     );
   } else {
-    input[BrowserEntryManifestKey] = path.join(
+    input["entry-browser"] = path.resolve(
       config.sourceDirectory,
       "entry-browser"
     );
@@ -111,10 +105,9 @@ function postcss(config: RemixConfig): Plugin {
     async generateBundle() {
       this.emitFile({
         type: "asset",
-        name: BrowserEntryStylesManifestKey,
-        fileName: "entry.css",
+        name: "global.css",
         source: await fsp.readFile(
-          path.join(config.sourceDirectory, "entry.css"),
+          path.join(config.sourceDirectory, "global.css"),
           "utf-8"
         )
       });
@@ -123,8 +116,7 @@ function postcss(config: RemixConfig): Plugin {
         if (route.stylesFile) {
           this.emitFile({
             type: "asset",
-            name: `style/${route.id}`,
-            fileName: `${route.id}.css`,
+            name: `style/${route.id}.css`,
             source: await fsp.readFile(
               path.join(config.stylesDirectory, route.stylesFile),
               "utf-8"

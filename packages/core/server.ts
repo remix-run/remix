@@ -4,8 +4,6 @@ import jsesc from "jsesc";
 
 import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
 import {
-  BrowserEntryManifestKey,
-  BrowserEntryStylesManifestKey,
   getBrowserBuildManifest,
   getServerBuildManifest,
   getServerEntryModule,
@@ -170,9 +168,13 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   }
 
   // Get the browser manifest for only the matched routes.
+  let manifestKeys = [
+    ...matches.map(match => match.route.id),
+    ...matches.map(match => `style/${match.route.id}.css`)
+  ];
   let partialBrowserManifest = getPartialManifest(
     browserManifest,
-    matches.map(match => match.route.id)
+    manifestKeys
   );
   let routeManifest = createRouteManifest(matches);
 
@@ -197,7 +199,7 @@ async function handleHtmlRequest(
         pathname: location.pathname,
         params: {},
         route: {
-          path: "*",
+          path: location.pathname,
           id: "routes/404",
           componentFile: "routes/404.js"
         }
@@ -313,11 +315,15 @@ async function handleHtmlRequest(
   // Get the browser manifest for only the browser entry point + the matched
   // routes. The client will fill in the rest by making requests to the manifest
   // endpoint as needed.
+  let manifestKeys = [
+    "entry-browser",
+    "global.css",
+    ...matches.map(match => match.route.id),
+    ...matches.map(match => `style/${match.route.id}.css`)
+  ];
   let partialBrowserManifest = getPartialManifest(
     browserManifest,
-    [BrowserEntryManifestKey, BrowserEntryStylesManifestKey].concat(
-      matches.map(match => match.route.id)
-    )
+    manifestKeys
   );
 
   let partialEntryContext = {
@@ -349,15 +355,11 @@ async function handleHtmlRequest(
 
 function getPartialManifest(
   browserManifest: BuildManifest,
-  entryNames: string[]
+  keys: string[]
 ): BuildManifest {
-  return entryNames.reduce((memo, entryName) => {
-    if (browserManifest[entryName]) {
-      memo[entryName] = browserManifest[entryName];
-    }
-
-    if (browserManifest[`style/${entryName}`]) {
-      memo[`style/${entryName}`] = browserManifest[`style/${entryName}`];
+  return keys.reduce((memo, key) => {
+    if (browserManifest[key]) {
+      memo[key] = browserManifest[key];
     }
 
     return memo;
