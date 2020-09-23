@@ -1,218 +1,57 @@
+import type { Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
 import { prettyHtml } from "../../core/__tests__/utils";
 
-import app from "../../../fixtures/gists-app/app-server";
+function reactIsHydrated(page: Page) {
+  return page.waitForFunction("window.reactIsHydrated === true");
+}
 
-describe("transitioning to a new route with data", () => {
-  let server;
-  beforeAll(() => {
-    server = app.listen(3000);
+describe("route transitions", () => {
+  describe("transitioning to a new route with data", () => {
+    it("works", async () => {
+      let browser = await puppeteer.launch();
+      let page = await browser.newPage();
+      await page.goto("http://localhost:3000");
+      await reactIsHydrated(page);
+      let content = await page.content();
+
+      expect(prettyHtml(content)).toMatchSnapshot();
+
+      await page.click('a[href="/gists"]');
+      await page.waitForSelector('[data-test-id="/gists/index"]');
+      content = await page.content();
+
+      expect(prettyHtml(content)).toMatchSnapshot();
+
+      return browser.close();
+    });
   });
 
-  afterAll(() => {
-    server.close();
-  });
+  describe("transitioning back after a reload", () => {
+    it("works", async () => {
+      let browser = await puppeteer.launch();
+      let page = await browser.newPage();
+      await page.goto("http://localhost:3000/gists");
+      await reactIsHydrated(page);
+      let content = await page.content();
 
-  it("works", async () => {
-    let browser = await puppeteer.launch();
-    let page = await browser.newPage();
-    await page.goto("http://localhost:3000");
-    let content = await page.content();
+      expect(prettyHtml(content)).toMatchSnapshot();
 
-    expect(prettyHtml(content)).toMatchInlineSnapshot(`
-      "<!DOCTYPE html>
-      <html lang=\\"en\\">
-        <head>
-          <meta charset=\\"utf-8\\" />
-          <!--$-->
-          <title>Gists Fixture App</title>
-          <meta
-            name=\\"description\\"
-            content=\\"We're just tryin' to make sure stuff works, ya know?!\\"
-          />
-          <!--/$-->
-          <link
-            rel=\\"stylesheet\\"
-            href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
-          />
-          <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
-        </head>
-        <body class=\\"m-4\\">
-          <!--$-->
-          <div data-test-id=\\"/\\">
-            <header><h1>Cool Gists App</h1></header>
-            <nav>
-              <ul>
-                <li>
-                  <a class=\\"text-blue-700 underline\\" href=\\"/gists\\">View Some gists</a>
-                </li>
-                <li>
-                  <a class=\\"text-blue-700 underline\\" href=\\"/user-gists/ryanflorence\\"
-                    >Server Redirect</a
-                  >
-                </li>
-                <li>
-                  <a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a>
-                </li>
-              </ul>
-            </nav>
-          </div>
-          <!--/$-->
-          <script>
-            __remixContext = {
-              browserManifest: {
-                \\"entry-browser\\": {
-                  fileName: \\"entry-browser.js\\",
-                  imports: [
-                    \\"index-d9da1d1d.js\\",
-                    \\"index-dcc9183b.js\\",
-                    \\"index-0ae7d24f.js\\",
-                  ],
-                },
-                \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
-                \\"routes/index\\": {
-                  fileName: \\"routes/index.js\\",
-                  imports: [
-                    \\"index-d9da1d1d.js\\",
-                    \\"index-dcc9183b.js\\",
-                    \\"index-0ae7d24f.js\\",
-                  ],
-                },
-              },
-              publicPath: \\"/build/\\",
-              routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-              routeData: { \\"routes/index\\": null },
-              routeParams: { \\"routes/index\\": {} },
-            };
-          </script>
-          <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
-        </body>
-      </html>
-      "
-    `);
+      await page.click('a[href="/gists/mjackson"]');
+      await page.waitForSelector('[data-test-id="/gists/$username"]');
+      content = await page.content();
 
-    await page.click('a[href="/gists"]');
-    await page.waitForSelector('[data-test-id="/gists/index"]');
-    content = await page.content();
+      expect(prettyHtml(content)).toMatchSnapshot();
 
-    expect(prettyHtml(content)).toMatchInlineSnapshot(`
-      "<!DOCTYPE html>
-      <html lang=\\"en\\">
-        <head>
-          <meta charset=\\"utf-8\\" />
-          <!--$-->
-          <title>Public Gists</title>
-          <meta name=\\"description\\" content=\\"View the latest gists from the public\\" />
-          <!--/$-->
-          <link
-            rel=\\"stylesheet\\"
-            href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
-          />
-          <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
-          <link
-            rel=\\"stylesheet\\"
-            href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
-          />
-        </head>
-        <body class=\\"m-4\\">
-          <!--$-->
-          <div data-test-id=\\"/gists\\">
-            <header>
-              <h1>Gists</h1>
-              <ul>
-                <li>
-                  <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
-                    >Ryan Florence<!-- -->
-                  </a>
-                </li>
-                <li>
-                  <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
-                    >Michael Jackson<!-- -->
-                  </a>
-                </li>
-              </ul>
-            </header>
-            <div data-test-id=\\"/gists/index\\">
-              <h2>Public Gists</h2>
-              <ul>
-                <li><a>remix-server.jsx</a></li>
-              </ul>
-            </div>
-          </div>
-          <!--/$-->
-          <script>
-            __remixContext = {
-              browserManifest: {
-                \\"entry-browser\\": {
-                  fileName: \\"entry-browser.js\\",
-                  imports: [
-                    \\"index-d9da1d1d.js\\",
-                    \\"index-dcc9183b.js\\",
-                    \\"index-0ae7d24f.js\\",
-                  ],
-                },
-                \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
-                \\"routes/gists\\": {
-                  fileName: \\"routes/gists.js\\",
-                  imports: [
-                    \\"index-d9da1d1d.js\\",
-                    \\"index-dcc9183b.js\\",
-                    \\"index-0ae7d24f.js\\",
-                  ],
-                },
-                \\"routes/gists/index\\": {
-                  fileName: \\"routes/gists/index.js\\",
-                  imports: [
-                    \\"index-d9da1d1d.js\\",
-                    \\"index-dcc9183b.js\\",
-                    \\"index-0ae7d24f.js\\",
-                  ],
-                },
-                \\"style/routes/gists.css\\": {
-                  fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
-                },
-              },
-              publicPath: \\"/build/\\",
-              routeManifest: {
-                \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
-                \\"routes/gists/index\\": {
-                  id: \\"routes/gists/index\\",
-                  path: \\"/\\",
-                  parentId: \\"routes/gists\\",
-                },
-              },
-              routeData: {
-                \\"routes/gists\\": {
-                  users: [
-                    { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
-                    { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
-                  ],
-                },
-                \\"routes/gists/index\\": [
-                  {
-                    url:
-                      \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
-                    id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
-                    files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
-                    owner: {
-                      login: \\"ryanflorence\\",
-                      id: 100200,
-                      avatar_url:
-                        \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
-                    },
-                  },
-                ],
-              },
-              routeParams: { \\"routes/gists\\": {}, \\"routes/gists/index\\": {} },
-            };
-          </script>
-          <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
-        </body>
-      </html>
-      "
-    `);
+      await page.reload();
+      await reactIsHydrated(page);
 
-    return browser.close();
+      await page.goBack();
+      await page.waitForSelector('[data-test-id="/gists"]');
+      content = await page.content();
+
+      expect(prettyHtml(content)).toMatchSnapshot();
+    });
   });
 });

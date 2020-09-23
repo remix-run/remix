@@ -1,8 +1,13 @@
 // import "../app.css";
 import React, { Suspense } from "react";
-import { Meta, Scripts, Styles, Routes, Link } from "@remix-run/react";
+import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
 
 export default function App() {
+  React.useEffect(() => {
+    // We use this in the tests to wait for React to hydrate the page.
+    window.reactIsHydrated = true;
+  });
+
   return (
     <html lang="en">
       <head>

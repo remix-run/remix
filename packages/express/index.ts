@@ -1,5 +1,5 @@
 import type * as express from "express";
-import type { HeadersInit, AppLoadContext } from "@remix-run/core";
+import type { HeadersInit, AppLoadContext, Response } from "@remix-run/core";
 import {
   Request,
   createRequestHandler as createRemixRequestHandler
@@ -45,7 +45,7 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(remixRoot);
 
   return async (req: express.Request, res: express.Response) => {
-    let loadContext;
+    let loadContext: AppLoadContext;
     if (getLoadContext) {
       try {
         loadContext = await getLoadContext(req, res);
@@ -59,7 +59,7 @@ export function createRequestHandler({
 
     let remixReq = createRemixRequest(req);
 
-    let remixRes;
+    let remixRes: Response;
     try {
       remixRes = await handleRequest(remixReq, loadContext);
     } catch (error) {
