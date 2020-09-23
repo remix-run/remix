@@ -4,6 +4,8 @@ import jsesc from "jsesc";
 
 import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
 import {
+  BrowserEntryManifestKey,
+  BrowserEntryStylesManifestKey,
   getBrowserBuildManifest,
   getServerBuildManifest,
   getServerEntryModule,
@@ -313,7 +315,7 @@ async function handleHtmlRequest(
   // endpoint as needed.
   let partialBrowserManifest = getPartialManifest(
     browserManifest,
-    ["__entry_browser__", "__entry_styles__.css"].concat(
+    [BrowserEntryManifestKey, BrowserEntryStylesManifestKey].concat(
       matches.map(match => match.route.id)
     )
   );
@@ -346,16 +348,16 @@ async function handleHtmlRequest(
 }
 
 function getPartialManifest(
-  manifest: BuildManifest,
+  browserManifest: BuildManifest,
   entryNames: string[]
 ): BuildManifest {
   return entryNames.reduce((memo, entryName) => {
-    if (manifest[entryName]) {
-      memo[entryName] = manifest[entryName];
+    if (browserManifest[entryName]) {
+      memo[entryName] = browserManifest[entryName];
     }
 
-    if (manifest[`${entryName}.css`]) {
-      memo[`${entryName}.css`] = manifest[`${entryName}.css`];
+    if (browserManifest[`style/${entryName}`]) {
+      memo[`style/${entryName}`] = browserManifest[`style/${entryName}`];
     }
 
     return memo;

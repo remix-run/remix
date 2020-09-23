@@ -371,7 +371,7 @@ export function Scripts() {
     browserEntryContextString
   } = useEntryContext();
 
-  let entryBrowser = browserManifest["__entry_browser__"];
+  let entryBrowser = browserManifest["entry-browser"];
   let src = `${publicPath}${entryBrowser.fileName}`;
 
   let browserIsHydrating = false;
@@ -396,24 +396,20 @@ export function Scripts() {
 export function Styles() {
   let { browserManifest, publicPath } = useEntryContext();
   let { matches } = useClientContext();
-  let entryStyles = [browserManifest["__entry_styles__.css"]];
+  let styleFiles = [browserManifest["entry-styles"].fileName];
 
   for (let match of matches) {
     // @ts-ignore
     let routeId = match.route.id;
-    if (browserManifest[`${routeId}.css`]) {
-      entryStyles.push(browserManifest[`${routeId}.css`]);
+    if (browserManifest[`style/${routeId}`]) {
+      styleFiles.push(browserManifest[`style/${routeId}`].fileName);
     }
   }
 
   return (
     <>
-      {entryStyles.map(entryStyle => (
-        <link
-          key={entryStyle.fileName}
-          rel="stylesheet"
-          href={publicPath + entryStyle.fileName}
-        />
+      {styleFiles.map(fileName => (
+        <link key={fileName} rel="stylesheet" href={publicPath + fileName} />
       ))}
     </>
   );

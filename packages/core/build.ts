@@ -13,8 +13,9 @@ import type { BuildManifest, BuildChunk } from "./rollup/manifest";
 
 export type { BuildManifest, BuildChunk };
 
-export const BrowserEntryManifestKey = "__entry_browser__";
-export const ServerEntryManifestKey = "__entry_server__";
+export const BrowserEntryManifestKey = "entry-browser";
+export const BrowserEntryStylesManifestKey = "entry-styles";
+export const ServerEntryManifestKey = "entry-server";
 
 export const BrowserManifestFilename = "browser-manifest.json";
 export const ServerManifestFilename = "server-manifest.json";

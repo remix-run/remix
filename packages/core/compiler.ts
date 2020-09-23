@@ -17,6 +17,7 @@ import replace from "@rollup/plugin-replace";
 
 import {
   BrowserEntryManifestKey,
+  BrowserEntryStylesManifestKey,
   ServerEntryManifestKey,
   BrowserManifestFilename,
   ServerManifestFilename
@@ -110,9 +111,10 @@ function postcss(config: RemixConfig): Plugin {
     async generateBundle() {
       this.emitFile({
         type: "asset",
-        name: `__entry_styles__.css`,
+        name: BrowserEntryStylesManifestKey,
+        fileName: "entry.css",
         source: await fsp.readFile(
-          path.join(config.sourceDirectory, `entry.css`),
+          path.join(config.sourceDirectory, "entry.css"),
           "utf-8"
         )
       });
@@ -121,7 +123,8 @@ function postcss(config: RemixConfig): Plugin {
         if (route.stylesFile) {
           this.emitFile({
             type: "asset",
-            name: `${route.id}.css`,
+            name: `style/${route.id}`,
+            fileName: `${route.id}.css`,
             source: await fsp.readFile(
               path.join(config.stylesDirectory, route.stylesFile),
               "utf-8"
