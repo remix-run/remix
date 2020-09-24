@@ -339,13 +339,16 @@ async function handleHtmlRequest(
       isScriptContext: true
     }),
     routeLoader: {
-      read(routeId: string) {
+      preload() {
+        throw new Error(
+          `Cannot preload routes on the server because we can't suspend`
+        );
+      },
+      read(_assets: any, routeId: string) {
         return routeModules[routeId];
       },
-      load() {
-        throw new Error(
-          `Cannot load routes on the server because we can't suspend`
-        );
+      readSafely(_assets: any, routeId: string) {
+        return routeModules[routeId];
       }
     }
   });

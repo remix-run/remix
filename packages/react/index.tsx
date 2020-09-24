@@ -23,144 +23,23 @@ import * as defaultRouteModule from "./defaultRouteModule";
 import invariant from "./invariant";
 import createHtml from "./createHtml";
 
-async function fetchDataResults(
-  path: string,
-  from?: string
-): Promise<RouteDataResults> {
-  let url = `/__remix_data?path=${path}`;
-  if (from) url += `&from=${from}`;
-  let res = await fetch(url);
-  return await res.json();
+function useBetterRef<T>(initFunc: () => T) {
+  let ref = React.useRef<T | null>(null);
+  if (ref.current == null) ref.current = initFunc();
+  return ref.current!;
 }
 
-interface RemixContextType {
-  browserEntryContextString?: string;
-  browserManifest: BuildManifest;
-  dataCache: DataCache;
-  matches: RouteMatch[] | null;
-  publicPath: string;
-  routeLoader: EntryContext["routeLoader"];
-  routeManifest: RouteManifest;
-  routes: RouteObject[];
-}
+////////////////////////////////////////////////////////////////////////////////
 
-const RemixContext = React.createContext<RemixContextType | undefined>(
-  undefined
-);
-
-function useRemixContext(): RemixContextType {
-  let context = React.useContext(RemixContext);
-  invariant(context, "You must render this element in a <Remix> component");
-  return context;
-}
-
-export function RemixEntryProvider({
-  context: entryContext,
-  children
-}: {
-  context: EntryContext;
-  children: ReactNode;
-}) {
-  let {
-    browserEntryContextString,
-    browserManifest,
-    publicPath,
-    routeData,
-    routeLoader,
-    routeManifest
-  } = entryContext;
-
-  let dataCache = useDataCache(routeData);
-
-  // TODO: Add renderRoutes to RR so we can manually match and render manually
-  // on the client (do our own `useRoutes`)
-  let routes = createRoutes(routeManifest, routeLoader);
-
-  let location = useLocation();
-  let [previousLocation, setPreviousLocation] = React.useState<Location>(
-    location
-  );
-
-  if (previousLocation !== location) {
-    dataCache.preload(previousLocation);
-    setPreviousLocation(location);
-  }
-
-  let matches = matchRoutes(routes, location);
-
-  let remixContext = {
-    browserEntryContextString,
-    browserManifest,
-    dataCache,
-    matches,
-    publicPath,
-    routeLoader,
-    routeManifest,
-    routes
-  };
-
-  return (
-    <RemixContext.Provider value={remixContext}>
-      {children}
-    </RemixContext.Provider>
-  );
-}
-
-// TODO: RR should not be calling preload on the server because you
-// can't actually suspend on the server.
-let canUseDom = typeof window === "object";
-
-function createRoutes(
-  routeManifest: RouteManifest,
-  routeLoader: EntryContext["routeLoader"]
-): RouteObject[] {
-  let routeIds = Object.keys(routeManifest).sort();
-  let routes: RouteObject[] = [];
-  let addedRoutes: { [routeId: string]: RouteObject } = {};
-
-  for (let routeId of routeIds) {
-    let manifestRoute = routeManifest[routeId];
-    let route = {
-      id: routeId,
-      // TODO: Make this optional in RR
-      caseSensitive: false,
-      path: manifestRoute.path,
-      element: <RemixRoute id={routeId} />,
-      preload() {
-        if (canUseDom) {
-          routeLoader.load(routeId);
-        }
-      }
-    };
-
-    if (manifestRoute.parentId == null) {
-      routes.push(route);
-    } else {
-      let parentRoute = addedRoutes[manifestRoute.parentId];
-
-      invariant(
-        parentRoute,
-        `Missing parent route "${manifestRoute.parentId}" for ${manifestRoute.id}`
-      );
-
-      (parentRoute.children || (parentRoute.children = [])).push(route);
-    }
-
-    addedRoutes[routeId] = route;
-  }
-
-  return routes;
-}
-
-interface StaticDataCache {
+interface DataCache {
   preload(location: Location, fromLocation: Location): Promise<void>;
   read(locationKey: string, routeId?: string): RouteData[string];
 }
 
-function createStaticDataCache(
+function createDataCache(
   initialKey: string,
   initialData: RouteData
-): StaticDataCache {
+): DataCache {
   let cache: { [locationKey: string]: RouteData } = {
     [initialKey]: initialData
   };
@@ -228,46 +107,237 @@ function createStaticDataCache(
     return locationData[routeId];
   }
 
-  return {
-    preload,
-    read
+  return { preload, read };
+}
+
+async function fetchDataResults(
+  path: string,
+  from?: string
+): Promise<RouteDataResults> {
+  let url = `/__remix_data?path=${path}`;
+  if (from) url += `&from=${from}`;
+  let res = await fetch(url);
+  return await res.json();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+interface Manifest {
+  assets: BuildManifest;
+  routes: RouteManifest;
+}
+
+interface ManifestCache {
+  preload(pathname: string): Promise<ManifestPatch | null>;
+  read(pathname: string): Manifest;
+}
+
+interface ManifestPatch {
+  buildManifest: BuildManifest;
+  routeManifest: RouteManifest;
+}
+
+function createManifestCache(
+  initialPathname: string,
+  initialAssets: BuildManifest,
+  initialRoutes: RouteManifest
+): ManifestCache {
+  let patchCache: { [pathname: string]: ManifestPatch | null } = {
+    [initialPathname]: {
+      buildManifest: initialAssets,
+      routeManifest: initialRoutes
+    }
   };
-}
 
-interface DataCache {
-  preload(fromLocation: Location): ReturnType<StaticDataCache["preload"]>;
-  read(routeId?: string): ReturnType<StaticDataCache["read"]>;
-}
+  let cache = {
+    assets: initialAssets,
+    routes: initialRoutes
+  };
 
-function useDataCache(initialData: RouteData): DataCache {
-  let location = useLocation();
-  /* let [, forceUpdate] = React.useState(); */
+  async function preload(pathname: string) {
+    if (patchCache[pathname]) {
+      return patchCache[pathname];
+    }
 
-  let cacheRef = React.useRef<StaticDataCache>();
-  if (!cacheRef.current) {
-    cacheRef.current = createStaticDataCache(location.key, initialData);
+    let patch = await fetchManifestPatch(pathname);
+    patchCache[pathname] = patch;
+
+    if (patch) {
+      Object.assign(cache.assets, patch.buildManifest);
+      Object.assign(cache.routes, patch.routeManifest);
+    }
+
+    return patch;
   }
 
-  return React.useMemo<DataCache>(
-    () => ({
-      preload: (fromLocation: Location) =>
-        cacheRef.current!.preload(location, fromLocation),
-      read: (routeId?: string) => cacheRef.current!.read(location.key, routeId)
-      /* getAllSync: () => cacheRef.current.getAllSync(location.key), */
-      /* set: (routeId, value) => { */
-      /*   cacheRef.current.set(location.key, routeId, value); */
-      /*   forceUpdate({}); */
-      /* } */
-    }),
-    [location]
+  async function preloadOrReload(pathname: string) {
+    let patch = await preload(pathname);
+
+    if (patch == null) {
+      // Never resolve so suspense will not try to rerender this
+      // page before the reload.
+      return new Promise(() => {
+        window.location.reload();
+      });
+    }
+  }
+
+  function read(pathname: string) {
+    if (!(pathname in patchCache)) throw preloadOrReload(pathname);
+    return cache;
+  }
+
+  return { preload, read };
+}
+
+async function fetchManifestPatch(path: string): Promise<ManifestPatch | null> {
+  let res = await fetch(`/__remix_manifest?path=${path}`);
+  if (res.status === 404) return null;
+  return await res.json();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// TODO: RR should not be calling preload on the server because you
+// can't actually suspend on the server.
+let canUseDom = typeof window === "object";
+
+function createRoutes(
+  pathname: string,
+  manifestCache: ManifestCache,
+  routeLoader: EntryContext["routeLoader"]
+): RouteObject[] {
+  let manifest = manifestCache.read(pathname);
+  let routeIds = Object.keys(manifest.routes).sort();
+  let routes: RouteObject[] = [];
+  let addedRoutes: { [routeId: string]: RouteObject } = {};
+
+  for (let routeId of routeIds) {
+    let manifestRoute = manifest.routes[routeId];
+    let route = {
+      id: routeId,
+      // TODO: Make this optional in RR
+      caseSensitive: false,
+      path: manifestRoute.path,
+      element: <RemixRoute id={routeId} />,
+      preload() {
+        if (canUseDom) {
+          routeLoader.preload(manifest.assets, routeId);
+        }
+      }
+    };
+
+    if (manifestRoute.parentId == null) {
+      routes.push(route);
+    } else {
+      let parentRoute = addedRoutes[manifestRoute.parentId];
+
+      invariant(
+        parentRoute,
+        `Missing parent route "${manifestRoute.parentId}" for ${manifestRoute.id}`
+      );
+
+      (parentRoute.children || (parentRoute.children = [])).push(route);
+    }
+
+    addedRoutes[routeId] = route;
+  }
+
+  return routes;
+}
+
+// This is just a stopgap for now because we need the matches in 3 places:
+// <Meta>, <Styles>, and <Routes>. We would do this in <RemixEntry>, but then we
+// would need a suspense boundary around the HTML document. Eventually React
+// will let us suspend indefinitely, at which point we can move this logic up
+// the tree and share the matches with all 3 components.
+// See https://github.com/facebook/react/commit/8da0da0937af154b775b243c9d28b6aa50db696b
+function useMatches(): RouteMatch[] {
+  let { manifestCache, routeLoader } = useRemixEntryContext();
+  let location = useLocation();
+
+  // TODO: Add `renderMatches` to RR so we can manually match and render manually
+  // on the client (do our own `useRoutes`)
+  let routes = createRoutes(location.pathname, manifestCache, routeLoader);
+  let matches = matchRoutes(routes, location);
+
+  invariant(matches, "Missing matches");
+
+  return matches;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+interface RemixEntryContextType {
+  browserEntryContextString?: string;
+  dataCache: DataCache;
+  manifestCache: ManifestCache;
+  publicPath: string;
+  routeLoader: EntryContext["routeLoader"];
+}
+
+const RemixEntryContext = React.createContext<
+  RemixEntryContextType | undefined
+>(undefined);
+
+export function RemixEntry({
+  context: entryContext,
+  children
+}: {
+  context: EntryContext;
+  children: ReactNode;
+}) {
+  let {
+    browserEntryContextString,
+    browserManifest,
+    publicPath,
+    routeData,
+    routeLoader,
+    routeManifest
+  } = entryContext;
+
+  let location = useLocation();
+  let dataCache = useBetterRef(() => createDataCache(location.key, routeData));
+  let manifestCache = useBetterRef(() =>
+    createManifestCache(location.pathname, browserManifest, routeManifest)
+  );
+
+  let [previousLocation, setPreviousLocation] = React.useState(location);
+  if (previousLocation !== location) {
+    dataCache.preload(location, previousLocation);
+    setPreviousLocation(location);
+  }
+
+  let remixContext = {
+    browserEntryContextString,
+    dataCache,
+    manifestCache,
+    publicPath,
+    routeLoader
+  };
+
+  return (
+    <RemixEntryContext.Provider value={remixContext}>
+      {children}
+    </RemixEntryContext.Provider>
   );
 }
 
-const RemixRouteIdContext = React.createContext<string | undefined>(undefined);
+function useRemixEntryContext(): RemixEntryContextType {
+  let context = React.useContext(RemixEntryContext);
+  invariant(context, "You must render this element in a <Remix> component");
+  return context;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+const RemixRouteContext = React.createContext("");
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeLoader } = useRemixContext();
-  let routeModule = routeLoader.read(id);
+  let { routeLoader, manifestCache } = useRemixEntryContext();
+  let location = useLocation();
+  let manifest = manifestCache.read(location.pathname);
+  let routeModule = routeLoader.read(manifest.assets, id);
 
   if (!routeModule) {
     return (
@@ -278,9 +348,9 @@ export function RemixRoute({ id }: { id: string }) {
   }
 
   return (
-    <RemixRouteIdContext.Provider value={id}>
+    <RemixRouteContext.Provider value={id}>
       <routeModule.default />
-    </RemixRouteIdContext.Provider>
+    </RemixRouteContext.Provider>
   );
 }
 
@@ -288,100 +358,7 @@ function RemixRouteMissing({ id }: { id: string }) {
   return <p>Missing route "{id}"!</p>;
 }
 
-export function useRouteData() {
-  let routeId = React.useContext(RemixRouteIdContext);
-  invariant(routeId, "Missing route id on context");
-
-  let { dataCache } = useRemixContext();
-  let data = dataCache!.read(routeId);
-
-  let setData = React.useCallback(
-    nextData => {
-      /* cache.set(routeId, nextData); */
-    },
-    [dataCache, routeId]
-  );
-
-  return [data, setData] as const;
-}
-
-export function Routes() {
-  let { browserManifest, dataCache, routeManifest, routes } = useRemixContext();
-
-  let location = useLocation();
-  let [previousLocation, setPreviousLocation] = React.useState<Location>(
-    location
-  );
-
-  if (previousLocation !== location) {
-    dataCache.preload(previousLocation);
-    ensureManifests(location.pathname, browserManifest, routeManifest);
-    setPreviousLocation(location);
-  }
-
-  // TODO: Add `renderRoutes` function to RR that we can use here.
-  return useRoutes(routes);
-}
-
-interface ManifestPatch {
-  buildManifest: BuildManifest;
-  routeManifest: RouteManifest;
-}
-
-async function fetchManifestPatch(path: string): Promise<ManifestPatch | null> {
-  let res = await fetch(`/__remix_manifest?path=${path}`);
-  if (res.status === 404) return null;
-  return await res.json();
-}
-
-let patchCache: { [pathname: string]: ManifestPatch } = {};
-
-function ensureManifests(
-  pathname: string,
-  browserManifest: BuildManifest,
-  routeManifest: RouteManifest
-) {
-  console.log("ensureManifests");
-  if (patchCache[pathname]) return;
-  throw doubleCheck(pathname, browserManifest, routeManifest);
-}
-
-async function patchManifests(
-  pathname: string,
-  browserManifest: BuildManifest,
-  routeManifest: RouteManifest
-) {
-  if (patchCache[pathname]) {
-    return patchCache[pathname];
-  }
-
-  let patch = await fetchManifestPatch(pathname);
-
-  if (patch) {
-    Object.assign(browserManifest, patch.buildManifest);
-    Object.assign(routeManifest, patch.routeManifest);
-    patchCache[pathname] = patch;
-  }
-
-  return patch;
-}
-
-async function doubleCheck(
-  pathname: string,
-  browserManifest: BuildManifest,
-  routeManifest: RouteManifest
-) {
-  console.log("doubleCheck");
-  let patch = await patchManifests(pathname, browserManifest, routeManifest);
-
-  if (!patch) {
-    return new Promise(() => {
-      // Never resolve so suspense will not try to
-      // rerender this page before the reload.
-      window.location.reload();
-    });
-  }
-}
+////////////////////////////////////////////////////////////////////////////////
 
 export function Meta() {
   return (
@@ -392,14 +369,17 @@ export function Meta() {
 }
 
 function AsyncMeta() {
-  let location = useLocation();
-  let { dataCache, matches, routeLoader } = useRemixContext();
+  let { dataCache, manifestCache, routeLoader } = useRemixEntryContext();
 
-  if (!matches) return null;
+  let matches = useMatches();
+  let location = useLocation();
+  let manifest = manifestCache.read(location.pathname);
+  let routeData = dataCache.read(location.key);
+
+  if (!routeData) return null;
 
   let meta: { [name: string]: string } = {};
   let allData = {};
-  let routeData = dataCache.read();
 
   for (let match of matches) {
     // TODO: Make RouteMatch type more flexible somehow to allow for other
@@ -409,7 +389,8 @@ function AsyncMeta() {
     let data = routeData[routeId];
     let params = match.params;
 
-    let routeModule = routeLoader.read(routeId) || defaultRouteModule;
+    let routeModule =
+      routeLoader.read(manifest.assets, routeId) || defaultRouteModule;
 
     if (typeof routeModule.meta === "function") {
       Object.assign(allData, { [routeId]: data });
@@ -435,12 +416,14 @@ function AsyncMeta() {
 
 export function Scripts() {
   let {
-    browserManifest,
-    publicPath,
-    browserEntryContextString
-  } = useRemixContext();
+    browserEntryContextString,
+    manifestCache,
+    publicPath
+  } = useRemixEntryContext();
 
-  let entryBrowser = browserManifest["entry-browser"];
+  let initialLocationRef = React.useRef(useLocation());
+  let manifest = manifestCache.read(initialLocationRef.current.pathname);
+  let entryBrowser = manifest.assets["entry-browser"];
   let src = `${publicPath}${entryBrowser.fileName}`;
 
   let browserIsHydrating = false;
@@ -463,17 +446,27 @@ export function Scripts() {
 }
 
 export function Styles() {
-  let { browserManifest, matches, publicPath } = useRemixContext();
+  return (
+    <React.Suspense fallback={null}>
+      <AsyncStyles />
+    </React.Suspense>
+  );
+}
 
-  if (!matches) return null;
+function AsyncStyles() {
+  let { manifestCache, publicPath } = useRemixEntryContext();
 
-  let styleFiles = [browserManifest["global.css"].fileName];
+  let matches = useMatches();
+  let location = useLocation();
+  let manifest = manifestCache.read(location.pathname);
+
+  let styleFiles = [manifest.assets["global.css"].fileName];
 
   for (let match of matches) {
     // @ts-ignore
     let routeId = match.route.id;
-    if (browserManifest[`style/${routeId}.css`]) {
-      styleFiles.push(browserManifest[`style/${routeId}.css`].fileName);
+    if (manifest.assets[`style/${routeId}.css`]) {
+      styleFiles.push(manifest.assets[`style/${routeId}.css`].fileName);
     }
   }
 
@@ -486,13 +479,45 @@ export function Styles() {
   );
 }
 
+export function Routes() {
+  let { manifestCache, routeLoader } = useRemixEntryContext();
+  let location = useLocation();
+
+  // Make sure we have the manifest for the page we are transitioning to.
+  manifestCache.read(location.pathname);
+
+  // TODO: Add `renderMatches` function to RR that we can use here with the
+  // matches we get from context once we can hoist that logic up higher.
+  let routes = createRoutes(location.pathname, manifestCache, routeLoader);
+  return useRoutes(routes);
+}
+
 export function Link(props: any) {
-  let { browserManifest, routeManifest } = useRemixContext();
+  let { manifestCache } = useRemixEntryContext();
   let resolvedPath = useResolvedPath(props.to);
 
   React.useEffect(() => {
-    patchManifests(resolvedPath.pathname, browserManifest, routeManifest);
+    manifestCache.preload(resolvedPath.pathname);
   }, [resolvedPath]);
 
   return <ReactRouterLink {...props} />;
+}
+
+export function useRouteData() {
+  let routeId = React.useContext(RemixRouteContext);
+  invariant(routeId, "Missing route id on context");
+
+  let { dataCache } = useRemixEntryContext();
+
+  let location = useLocation();
+  let data = dataCache.read(location.key, routeId);
+
+  let setData = React.useCallback(
+    nextData => {
+      /* cache.set(routeId, nextData); */
+    },
+    [dataCache, routeId]
+  );
+
+  return [data, setData] as const;
 }

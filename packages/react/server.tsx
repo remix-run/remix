@@ -3,7 +3,7 @@ import React from "react";
 import { StaticRouter } from "react-router-dom/server";
 import type { Request, EntryContext } from "@remix-run/core";
 
-import { RemixEntryProvider } from "./index";
+import { RemixEntry } from "./index";
 
 interface RemixServerProps {
   request: Request;
@@ -11,14 +11,14 @@ interface RemixServerProps {
   children: ReactChildren;
 }
 
-export default function Remix({
+export default function RemixServer({
   request,
   context,
   children
 }: RemixServerProps) {
   return (
     <StaticRouter location={request.url}>
-      <RemixEntryProvider context={context} children={children} />
+      <RemixEntry context={context} children={children} />
     </StaticRouter>
   );
 }

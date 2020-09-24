@@ -1,28 +1,28 @@
 import type { BuildManifest, RouteLoader, RouteModule } from "@remix-run/core";
 
-interface RouteModuleCache {
-  [routeId: string]: RouteModule;
-}
+export function createRouteLoader(publicPath: string): RouteLoader {
+  let cache: { [routeId: string]: RouteModule } = {};
 
-export function createSuspenseRouteModuleLoader(
-  manifest: BuildManifest,
-  publicPath: string
-): RouteLoader {
-  let cache: RouteModuleCache = {};
-
-  function read(routeId: string): RouteModule {
-    let routeModule = cache[routeId];
-    if (routeModule) return routeModule;
-    throw load(routeId);
-  }
-
-  async function load(routeId: string) {
-    let entry = manifest[routeId];
+  async function preload(assets: BuildManifest, routeId: string) {
+    let entry = assets[routeId];
     let url = publicPath + entry.fileName;
+
     // @ts-ignore
-    let mod = await import(url);
-    cache[routeId] = mod;
+    let routeModule = await import(url);
+
+    cache[routeId] = routeModule;
+
+    return routeModule;
   }
 
-  return { read, load };
+  function read(assets: BuildManifest, routeId: string): RouteModule {
+    if (!cache[routeId]) throw preload(assets, routeId);
+    return cache[routeId];
+  }
+
+  function readSafely(_assets: BuildManifest, routeId: string) {
+    return cache[routeId] || null;
+  }
+
+  return { preload, read, readSafely };
 }

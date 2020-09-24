@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import React from "react";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import { EntryContext } from "@remix-run/core";
 
-import { RemixEntryProvider } from "./index";
-import { createSuspenseRouteModuleLoader } from "./browserModules";
+import { RemixEntry } from "./index";
+import { createRouteLoader } from "./browserModules";
 
 declare global {
   var __remixContext: EntryContext;
@@ -15,19 +15,12 @@ declare global {
 // }
 
 let context = window.__remixContext;
-
-let routeLoader = createSuspenseRouteModuleLoader(
-  context.browserManifest,
-  context.publicPath
-);
+let routeLoader = createRouteLoader(context.publicPath);
 
 export default function RemixBrowser({ children }: { children: ReactNode }) {
   return (
-    <Router>
-      <RemixEntryProvider
-        context={{ ...context, routeLoader }}
-        children={children}
-      />
-    </Router>
+    <BrowserRouter timeoutMs={20000}>
+      <RemixEntry context={{ ...context, routeLoader }} children={children} />
+    </BrowserRouter>
   );
 }

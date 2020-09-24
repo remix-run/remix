@@ -17,8 +17,9 @@ export interface EntryContext {
 }
 
 export interface RouteLoader {
-  read(routeId: string): RouteModule;
-  load(routeId: string): Promise<void>;
+  preload(assets: BuildManifest, routeId: string): Promise<RouteModule>;
+  read(assets: BuildManifest, routeId: string): RouteModule;
+  readSafely(assets: BuildManifest, routeId: string): RouteModule | null;
 }
 
 export interface RouteData {

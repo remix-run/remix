@@ -4,7 +4,7 @@ const morgan = require("morgan");
 const { createRequestHandler } = require("@remix-run/express");
 
 const app = express();
-app.use(morgan("combined"));
+app.use(morgan("dev"));
 app.use(express.static("public"));
 
 // serverside redirect
