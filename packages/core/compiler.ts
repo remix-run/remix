@@ -47,15 +47,15 @@ interface Input {
 }
 
 function getInputForRoutes(
-  sourceDirectory: string,
+  appDirectory: string,
   routesConfig: RemixConfig["routes"],
   input: Input = {}
 ): Input {
   for (let route of routesConfig) {
-    input[route.id] = path.resolve(sourceDirectory, route.componentFile);
+    input[route.id] = path.resolve(appDirectory, route.componentFile);
 
     if (route.children) {
-      getInputForRoutes(sourceDirectory, route.children, input);
+      getInputForRoutes(appDirectory, route.children, input);
     }
   }
 
@@ -63,18 +63,12 @@ function getInputForRoutes(
 }
 
 function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
-  let input = getInputForRoutes(config.sourceDirectory, config.routes);
+  let input = getInputForRoutes(config.appDirectory, config.routes);
 
   if (target === BuildTarget.Server) {
-    input["entry-server"] = path.resolve(
-      config.sourceDirectory,
-      "entry-server"
-    );
+    input["entry-server"] = path.resolve(config.appDirectory, "entry-server");
   } else {
-    input["entry-browser"] = path.resolve(
-      config.sourceDirectory,
-      "entry-browser"
-    );
+    input["entry-browser"] = path.resolve(config.appDirectory, "entry-browser");
   }
 
   return input;
@@ -107,7 +101,7 @@ function postcss(config: RemixConfig): Plugin {
         type: "asset",
         name: "global.css",
         source: await fsp.readFile(
-          path.join(config.sourceDirectory, "global.css"),
+          path.join(config.appDirectory, "global.css"),
           "utf-8"
         )
       });
@@ -118,7 +112,7 @@ function postcss(config: RemixConfig): Plugin {
             type: "asset",
             name: `style/${route.id}.css`,
             source: await fsp.readFile(
-              path.join(config.stylesDirectory, route.stylesFile),
+              path.join(config.appDirectory, route.stylesFile),
               "utf-8"
             )
           });

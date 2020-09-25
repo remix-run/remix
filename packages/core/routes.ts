@@ -2,10 +2,13 @@ import { promises as fsp } from "fs";
 import fs from "fs";
 import path from "path";
 
-const fileExtensionRegex = /(.*)\.([^.]+)$/;
-
 function stripFileExtension(file: string): string {
-  return file.replace(fileExtensionRegex, "$1");
+  let extname = path.extname(file);
+  return extname ? file.slice(0, -extname.length) : file;
+}
+
+function normalizeSlashes(file: string): string {
+  return file.split(path.win32.sep).join("/");
 }
 
 /**
@@ -14,7 +17,8 @@ function stripFileExtension(file: string): string {
  */
 export interface RemixRouteObject {
   /**
-   * The unique id for this route.
+   * The unique id for this route, named like the `componentFile`. So
+   * `routes/gists/$username.js` will have an `id` of `routes/gists/$username`.
    */
   id: string;
 
@@ -30,19 +34,23 @@ export interface RemixRouteObject {
 
   /**
    * The path to the file that exports the React component rendered by this
-   * route as its default export, relative to the src/ directory.
+   * route as its default export, relative to the `config.appDirectory`. So the
+   * component file for route id `routes/gists/$username` will be
+   * `routes/gists/$username.js`.
    */
   componentFile: string;
 
   /**
    * The path to the file that exports the data loader for this route as its
-   * default export, relative to the `config.loadersDirectory`.
+   * default export, relative to the `config.dataDirectory`. So the loader for
+   * `routes/gists/$username.js` will be `loaders/gists/$username.js`.
    */
   loaderFile?: string;
 
   /**
    * The path to the file that contains styles for this route, relative to the
-   * `config.stylesDirectory`.
+   * `config.appDirectory`. So the styles for `routes/gists/$username.js` will
+   * be `styles/gists/$username.css`.
    */
   stylesFile?: string;
 
@@ -56,13 +64,14 @@ export interface DefineRouteOptions {
   /**
    * The path to the file that exports the data loader for this route as its
    * default export, relative to the `config.loadersDirectory`. So the path for
-   * loaders/invoices.js will be invoices.js.
+   * `src/routes/invoices.js` will be `loaders/routes/invoices.js`.
    */
   loader?: string;
 
   /**
    * The path to the file that defines CSS styles for this route, relative to
-   * the `config.stylesDirectory`.
+   * the `config.stylesDirectory`. So the path for `src/routes/invoices.js` will
+   * be `src/styles/invoices.js`.
    */
   styles?: string;
 }
@@ -171,196 +180,107 @@ function throwAsyncError() {
  * Reads routes from the filesystem using a naming and nesting convention to
  * define route paths and nested relations.
  */
-export async function getConventionalRoutes(
-  routesDir: string,
-  loadersDir: string,
-  stylesDir: string
-): Promise<RemixRouteObject[]> {
-  // TODO: Validate the directories exist
-  let [routesTree, loadersTree] = await Promise.all([
-    readdirRecursively(routesDir),
-    readdirRecursively(loadersDir)
-  ]);
-  let routesDirRoot = path.basename(routesDir);
-  let loadersMap = createLoadersMap(loadersTree, [], {});
-
+export function getConventionalRoutes(
+  appDirectory: string,
+  dataDirectory: string
+): RemixRouteObject[] {
   return defineRoutes(defineRoute => {
-    let parents: string[] = [];
-    return defineFileTree(
-      routesTree,
-      loadersMap,
-      stylesDir,
-      parents,
-      routesDirRoot,
-      defineRoute
+    defineRoutesInDirectory(
+      defineRoute,
+      appDirectory,
+      dataDirectory,
+      path.join(appDirectory, "routes")
     );
   });
 }
 
-function defineFileTree(
-  routesTree: DirTree,
-  loadersMap: LoadersMap,
-  stylesDir: string,
-  parents: string[],
-  routesDir: string,
-  defineRoute: DefineRoute
+function defineRoutesInDirectory(
+  defineRoute: DefineRoute,
+  appDirectory: string,
+  dataDirectory: string,
+  currentDir: string
 ): void {
-  // calculate this stuff first so we don't have to loop inside of our loop
-  // to match up a directory to a route ("checkout.js" and "checkout/")
-  let dirs = [];
-  let routePaths = [];
-  for (let filePath of routesTree) {
-    let isDir = Array.isArray(filePath);
-    dirs.push(isDir ? filePath[0] : false);
-    routePaths.push(isDir ? false : makeRoutePath(filePath as string));
-  }
+  let files = fs.readdirSync(currentDir);
 
-  for (let index = 0, l = routesTree.length; index < l; index++) {
-    let item = routesTree[index];
-    let isDir = dirs[index];
+  for (let filename of files) {
+    let file = path.join(currentDir, filename);
 
-    // define a route from a directory
-    if (isDir) {
-      let dirPath = item[0];
-      let children = item[1] as DirTree;
-      let routePath = makeRoutePath(dirPath);
-      let layoutPathIndex = routePaths.indexOf(routePath);
-      let filePath =
-        layoutPathIndex === -1
-          ? "$OUTLET$"
-          : makeFullPath(routesTree[layoutPathIndex] as string, [
-              routesDir,
-              ...parents
-            ]);
+    if (fs.lstatSync(file).isDirectory()) {
+      let layoutFilename = files.find(
+        f => f !== filename && stripFileExtension(f) === filename
+      );
 
-      let loader = findLoader(routePath, loadersMap, parents);
-      let styles = findStyles(makeFullPath(routePath, parents), stylesDir);
+      if (!layoutFilename) {
+        throw new Error(`No layout exists for directory ${file}`);
+      }
 
-      defineRoute(routePath, filePath, { loader, styles }, () => {
-        defineFileTree(
-          children,
-          loadersMap,
-          stylesDir,
-          [...parents, dirPath],
-          routesDir,
-          defineRoute
-        );
+      let routePath = filename.replace(/\$/g, ":").replace(/\./g, "/"); // :username
+      let component = path.relative(
+        appDirectory,
+        path.join(currentDir, layoutFilename)
+      ); // routes/gists/$username.js
+      let loader = findFileWithRouteId(dataDirectory, "loaders", component); // loaders/gists/$username.js
+      let styles = findFileWithRouteId(appDirectory, "styles", component); // styles/gists/$username.css
+
+      defineRoute(routePath, component, { loader, styles }, () => {
+        defineRoutesInDirectory(defineRoute, appDirectory, dataDirectory, file);
       });
-    }
-
-    // define a route from a file
-    else {
-      let fileName = item as string;
-
-      // ignore "checkout.js" because "checkout" will define it
-      let maybeDirName = makeRoutePath(fileName);
-      let dirExists = dirs.indexOf(maybeDirName) !== -1;
-      if (dirExists) continue;
-
-      // ignore routes.json and whatever weird stuff they have
-      let ignore = !/\.(jsx?|tsx?|mdx?)$/.test(fileName);
-      if (ignore) continue;
-
-      let routePath = makeRoutePath(fileName);
-      let loader = findLoader(routePath, loadersMap, parents);
-      let styles = findStyles(makeFullPath(routePath, parents), stylesDir);
-      let filePath = makeFullPath(fileName, [routesDir, ...parents]);
-
-      defineRoute(routePath, filePath, { loader, styles });
-    }
-  }
-}
-
-function findStyles(routePath: string, stylesDir: string): string | undefined {
-  // /gists => /styles/gists.css
-  let stylesFile = path.join(stylesDir, `${routePath}.css`);
-  return fs.existsSync(stylesFile)
-    ? stylesFile.slice(stylesDir.length + 1)
-    : undefined;
-}
-
-type LoaderId = string;
-type LoaderPath = string;
-type LoadersMap = Record<LoaderId, LoaderPath>;
-
-function createLoadersMap(
-  loadersTree: DirTree,
-  parents: string[],
-  map: LoadersMap
-): LoadersMap {
-  for (let index = 0, l = loadersTree.length; index < l; index++) {
-    let item = loadersTree[index];
-    let isDirectory = Array.isArray(item);
-    if (isDirectory) {
-      let dirPath = item[0];
-      createLoadersMap(item[1] as DirTree, [...parents, dirPath], map);
     } else {
-      let fileName = item as string;
-      let routePath = makeRoutePath(fileName);
-      let loaderId = [...parents, routePath]
-        .join("/")
-        // hackin' around index routes
-        .replace(/\/$/, "index");
-      map[loaderId] = [...parents, fileName].join("/");
+      let isLayout = files.some(
+        f => f !== filename && f === stripFileExtension(path.basename(filename))
+      );
+
+      if (isLayout) {
+        // This is a layout file with sub-routes that were already/will be
+        // defined when the directory entry is processed.
+        continue;
+      }
+
+      // This is a "leaf" route.
+      let routePath =
+        stripFileExtension(filename) === "index"
+          ? "/" // index route
+          : stripFileExtension(filename.replace(/\$/g, ":")).replace(
+              /\./g,
+              "/"
+            ); // :username
+      let component = path.relative(appDirectory, file); // routes/gists/$username.js
+      let loader = findFileWithRouteId(dataDirectory, "loaders", component); // loaders/gists/$username.js
+      let styles = findFileWithRouteId(appDirectory, "styles", component); // styles/gists/$username.css
+
+      defineRoute(routePath, component, { loader, styles });
     }
   }
-  return map;
 }
 
-function findLoader(
-  routePath: string,
-  loadersMap: LoadersMap,
-  parents: string[]
-) {
-  let loaderPath = makeFullPath(routePath, parents)
-    // hackin' around index routes
-    .replace(/\/$/, "/index")
-    .replace(/^\//, "");
-  return loadersMap[loaderPath];
-}
+// Find the loader/styles file in the directory with the same basename
+// as the route component file, regardless of its file extension.
+// gists/$username => gists/$username.js
+// gists/$username => gists/$username.ts
+// gists/$username => gists/$username.css
+function findFileWithRouteId(
+  baseDir: string,
+  subDir: string,
+  componentFile: string
+): string | undefined {
+  // baseDir = app
+  // subDir = styles
+  // componentFile = routes/gists/$username.js
+  // target = styles/gists/$username
+  let target = stripFileExtension(componentFile.replace(/^routes\b/, subDir));
+  // dir = app/styles/gists
+  let dir = path.dirname(path.join(baseDir, target));
 
-type DirTreeNode = string | [string, DirTree];
-type DirTree = DirTreeNode[];
-
-async function readdirRecursively(dirPath: string): Promise<DirTree> {
-  let filePaths = await fsp.readdir(dirPath);
-
-  let dirs = await Promise.all(
-    filePaths.map(async file => {
-      let stat = await fsp.lstat(path.join(dirPath, file));
-      return stat.isDirectory();
-    })
-  );
-
-  let tree: DirTree = [];
-  for (let index = 0, l = filePaths.length; index < l; index++) {
-    let filePath = filePaths[index];
-    let isDir = dirs[index];
-    if (isDir) {
-      let children = await readdirRecursively(path.join(dirPath, filePath));
-      tree.push([filePath, children]);
-    } else {
-      tree.push(filePath);
-    }
+  if (fs.existsSync(dir) && fs.lstatSync(dir).isDirectory()) {
+    let files = fs.readdirSync(dir);
+    let basename = path.basename(target);
+    let file = files.find(
+      f =>
+        !fs.lstatSync(path.join(dir, f)).isDirectory() &&
+        stripFileExtension(f) === basename
+    );
+    if (file) return `${target}${path.extname(file)}`;
   }
 
-  return tree;
-}
-
-function makeRoutePath(filePath: string) {
-  let filePathWithoutExt = stripFileExtension(filePath);
-  let routePath =
-    filePathWithoutExt === "index"
-      ? "/"
-      : filePathWithoutExt.replace(/\./g, "/").replace(/\$/g, ":");
-  return routePath === "404" ? "*" : routePath;
-}
-
-function makeFullPath(child: string, parents: string[]) {
-  return (
-    [...parents, child]
-      .join("/")
-      // TODO: probably a better way to kill the gross double "//" on index routes
-      .replace(/\/\/$/, "/")
-  );
+  return undefined;
 }

@@ -1,4 +1,3 @@
-// import "../app.css";
 import React, { Suspense } from "react";
 import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
 

@@ -34,7 +34,7 @@ function getLoader(
   if (match.route.loaderFile == null) return null;
 
   let requirePath = path.resolve(
-    remixConfig.loadersDirectory,
+    remixConfig.dataDirectory,
     match.route.loaderFile
   );
 

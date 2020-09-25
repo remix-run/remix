@@ -1,9 +1,10 @@
 const path = require("path");
 const fs = require("fs").promises;
 
+exports.appDirectory = "./app";
 exports.browserBuildDirectory = "./public/build";
+exports.dataDirectory = "./data";
 exports.publicPath = "/build/";
-exports.loadersDirectory = "./loaders";
 exports.serverBuildDirectory = "./build";
 
 exports.devServerPort = 8002;
@@ -12,7 +13,7 @@ exports.devServerPort = 8002;
 exports.routes = async function (defineRoutes) {
   // test that it waits for the config
   // await new Promise(res => setTimeout(res, 5000));
-  let pages = await fs.readdir(path.join(__dirname, "src", "pages"));
+  let pages = await fs.readdir(path.join(__dirname, "app", "pages"));
 
   return defineRoutes(route => {
     // create some custom routes from the pages/ dir

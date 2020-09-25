@@ -9,16 +9,17 @@ describe("readConfig", () => {
 
     expect(config).toMatchInlineSnapshot(`
       Object {
+        "appDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/app",
         "browserBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/public/build",
+        "dataDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/data",
         "devServerPort": 8002,
-        "loadersDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/loaders",
         "publicPath": "/build/",
         "rootDirectory": "/Users/michael/Projects/remix/fixtures/gists-app",
         "routes": Array [
           Object {
             "componentFile": "routes/404.js",
             "id": "routes/404",
-            "path": "*",
+            "path": "404",
           },
           Object {
             "children": Array [
@@ -33,29 +34,23 @@ describe("readConfig", () => {
                 ],
                 "componentFile": "routes/gists/$username.js",
                 "id": "routes/gists/$username",
-                "loaderFile": "gists/$username.js",
-                "parentId": "routes/gists",
-                "path": ":username",
-              },
-              Object {
-                "componentFile": "routes/gists/$username.js",
-                "id": "routes/gists/$username",
-                "loaderFile": "gists/$username.js",
+                "loaderFile": "loaders/gists/$username.js",
                 "parentId": "routes/gists",
                 "path": ":username",
               },
               Object {
                 "componentFile": "routes/gists/index.js",
                 "id": "routes/gists/index",
-                "loaderFile": "gists/index.js",
+                "loaderFile": "loaders/gists/index.js",
                 "parentId": "routes/gists",
                 "path": "/",
               },
             ],
             "componentFile": "routes/gists.js",
             "id": "routes/gists",
-            "loaderFile": "gists.js",
+            "loaderFile": "loaders/gists.js",
             "path": "gists",
+            "stylesFile": "styles/gists.css",
           },
           Object {
             "componentFile": "routes/gists.mine.js",
@@ -72,7 +67,7 @@ describe("readConfig", () => {
               Object {
                 "componentFile": "routes/payments/error.js",
                 "id": "routes/payments/error",
-                "loaderFile": "payments/error.js",
+                "loaderFile": "loaders/payments/error.js",
                 "parentId": "routes/payments",
                 "path": "error",
               },
@@ -86,7 +81,7 @@ describe("readConfig", () => {
               Object {
                 "componentFile": "routes/users/$username.js",
                 "id": "routes/users/$username",
-                "loaderFile": "users/$username.js",
+                "loaderFile": "loaders/users/$username.js",
                 "parentId": "routes/users",
                 "path": ":username",
               },
@@ -94,7 +89,7 @@ describe("readConfig", () => {
             "componentFile": "routes/users.js",
             "id": "routes/users",
             "path": "users",
-            "stylesFile": "users.css",
+            "stylesFile": "styles/users.css",
           },
           Object {
             "componentFile": "pages/one.js",
@@ -108,8 +103,6 @@ describe("readConfig", () => {
           },
         ],
         "serverBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/build",
-        "sourceDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/src",
-        "stylesDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/src/styles",
       }
     `);
   });

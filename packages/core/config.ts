@@ -8,10 +8,22 @@ import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
  */
 export interface AppConfig {
   /**
+   * The path to the `app` directory, relative to remix.config.js. Defaults to
+   * "src".
+   */
+  appDirectory?: string;
+
+  /**
    * The path to the browser build, relative to remix.config.js. Defaults to
    * "public/build".
    */
   browserBuildDirectory?: string;
+
+  /**
+   * The path to the `data` directory, relative to remix.config.js. Defaults to
+   * "loaders".
+   */
+  dataDirectory?: string;
 
   /**
    * The port number to use for the dev server. Defaults to 8002.
@@ -19,23 +31,10 @@ export interface AppConfig {
   devServerPort?: number;
 
   /**
-   * The path to the loaders directory, relative to remix.config.js. Defaults to
-   * "loaders".
-   */
-  loadersDirectory?: string;
-
-  /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
    * "/build/".
    */
   publicPath?: string;
-
-  /**
-   * The path where "conventional" routes are found, relative to the
-   * `sourceDirectory`. Conventional routes use the filesystem for defining
-   * route paths and nesting. Defaults to "routes".
-   */
-  routesDirectory?: string;
 
   /**
    * A function for defining custom routes.
@@ -49,18 +48,6 @@ export interface AppConfig {
    * "build".
    */
   serverBuildDirectory?: string;
-
-  /**
-   * The path to the source directory, relative to remix.config.js. Defaults to
-   * "src".
-   */
-  sourceDirectory?: string;
-
-  /**
-   * The path to the styles directory, relative to the `sourceDirectory`.
-   * Defaults to "styles".
-   */
-  stylesDirectory?: string;
 }
 
 /**
@@ -68,19 +55,24 @@ export interface AppConfig {
  */
 export interface RemixConfig {
   /**
+   * The absolute path to the source directory.
+   */
+  appDirectory: string;
+
+  /**
    * The absolute path to the browser build.
    */
   browserBuildDirectory: string;
 
   /**
+   * The absolute path to the `data` directory.
+   */
+  dataDirectory: string;
+
+  /**
    * The port number to use for the dev server.
    */
   devServerPort: number;
-
-  /**
-   * The absolute path to the loaders.
-   */
-  loadersDirectory: string;
 
   /**
    * The URL prefix of the browser build with a trailing slash.
@@ -101,16 +93,6 @@ export interface RemixConfig {
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
-
-  /**
-   * The absolute path to the source directory.
-   */
-  sourceDirectory: string;
-
-  /**
-   * The absolute path to the styles directory.
-   */
-  stylesDirectory: string;
 }
 
 /**
@@ -144,31 +126,17 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
 
   let devServerPort = appConfig.devServerPort || 8002;
 
-  let loadersDirectory = path.resolve(
+  let dataDirectory = path.resolve(
     rootDirectory,
-    appConfig.loadersDirectory || "loaders"
+    appConfig.dataDirectory || "data"
   );
 
-  let sourceDirectory = path.resolve(
+  let appDirectory = path.resolve(
     rootDirectory,
-    appConfig.sourceDirectory || "src"
+    appConfig.appDirectory || "app"
   );
 
-  let stylesDirectory = path.resolve(
-    sourceDirectory,
-    appConfig.stylesDirectory || "styles"
-  );
-
-  let routesDir = path.resolve(
-    sourceDirectory,
-    appConfig.routesDirectory || "routes"
-  );
-
-  let routes = await getConventionalRoutes(
-    routesDir,
-    loadersDirectory,
-    stylesDirectory
-  );
+  let routes = getConventionalRoutes(appDirectory, dataDirectory);
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(_defineRoutes);
     routes.push(...manualRoutes);
@@ -182,15 +150,14 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   // TODO: validate routes
 
   let remixConfig: RemixConfig = {
+    appDirectory,
     browserBuildDirectory,
+    dataDirectory,
     devServerPort,
-    loadersDirectory,
     publicPath,
     rootDirectory,
     routes,
-    serverBuildDirectory,
-    sourceDirectory,
-    stylesDirectory
+    serverBuildDirectory
   };
 
   return remixConfig;
