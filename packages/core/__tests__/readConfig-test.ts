@@ -1,20 +1,33 @@
 import path from "path";
 
+import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 
-describe("readConfig", () => {
-  it("generates a config", async () => {
-    let root = path.resolve(__dirname, "../../../fixtures/gists-app");
-    let config = await readConfig(root);
+const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
 
-    expect(config).toMatchInlineSnapshot(`
+describe("readConfig", () => {
+  let config: RemixConfig;
+  beforeEach(async () => {
+    config = await readConfig(remixRoot);
+  });
+
+  it("generates a config", async () => {
+    expect(config).toMatchInlineSnapshot(
+      {
+        appDirectory: expect.any(String),
+        browserBuildDirectory: expect.any(String),
+        dataDirectory: expect.any(String),
+        rootDirectory: expect.any(String),
+        serverBuildDirectory: expect.any(String)
+      },
+      `
       Object {
-        "appDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/app",
-        "browserBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/public/build",
-        "dataDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/data",
+        "appDirectory": Any<String>,
+        "browserBuildDirectory": Any<String>,
+        "dataDirectory": Any<String>,
         "devServerPort": 8002,
         "publicPath": "/build/",
-        "rootDirectory": "/Users/michael/Projects/remix/fixtures/gists-app",
+        "rootDirectory": Any<String>,
         "routes": Array [
           Object {
             "componentFile": "routes/404.js",
@@ -102,8 +115,9 @@ describe("readConfig", () => {
             "path": "/page/two",
           },
         ],
-        "serverBuildDirectory": "/Users/michael/Projects/remix/fixtures/gists-app/build",
+        "serverBuildDirectory": Any<String>,
       }
-    `);
+    `
+    );
   });
 });

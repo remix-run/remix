@@ -5,7 +5,7 @@
     "clean": "git clean -fdX .",
     "build": "rollup -c",
     "publish": "node ./scripts/publish.js",
-    "test": "jest",
+    "test": "jest packages/core",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w"
   },

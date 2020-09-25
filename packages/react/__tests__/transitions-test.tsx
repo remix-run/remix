@@ -52,6 +52,8 @@ describe("route transitions", () => {
       content = await page.content();
 
       expect(prettyHtml(content)).toMatchSnapshot();
+
+      return browser.close();
     });
   });
 });

@@ -114,27 +114,27 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     throw new Error(`Missing remix.config.js in ${rootDirectory}`);
   }
 
+  let appDirectory = path.resolve(
+    rootDirectory,
+    appConfig.appDirectory || "app"
+  );
+
   let browserBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.browserBuildDirectory || path.join("public", "build")
   );
-
-  let publicPath = appConfig.publicPath || "/build/";
-  if (!publicPath.endsWith("/")) {
-    publicPath += "/";
-  }
-
-  let devServerPort = appConfig.devServerPort || 8002;
 
   let dataDirectory = path.resolve(
     rootDirectory,
     appConfig.dataDirectory || "data"
   );
 
-  let appDirectory = path.resolve(
-    rootDirectory,
-    appConfig.appDirectory || "app"
-  );
+  let devServerPort = appConfig.devServerPort || 8002;
+
+  let publicPath = appConfig.publicPath || "/build/";
+  if (!publicPath.endsWith("/")) {
+    publicPath += "/";
+  }
 
   let routes = getConventionalRoutes(appDirectory, dataDirectory);
   if (appConfig.routes) {

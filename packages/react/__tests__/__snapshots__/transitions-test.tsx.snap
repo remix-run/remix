@@ -55,7 +55,7 @@ exports[`route transitions transitioning back after a reload works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -64,7 +64,7 @@ exports[`route transitions transitioning back after a reload works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"routes/gists/index\\": {
@@ -72,22 +72,15 @@ exports[`route transitions transitioning back after a reload works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
           },
         },
+        globalData: { useScripts: true },
         publicPath: \\"/build/\\",
-        routeManifest: {
-          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
-          \\"routes/gists/index\\": {
-            id: \\"routes/gists/index\\",
-            path: \\"/\\",
-            parentId: \\"routes/gists\\",
-          },
-        },
         routeData: {
           \\"routes/gists\\": {
             users: [
@@ -109,6 +102,14 @@ exports[`route transitions transitioning back after a reload works 1`] = `
               },
             },
           ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
         },
         routeParams: { \\"routes/gists\\": {}, \\"routes/gists/index\\": {} },
       };
@@ -174,7 +175,7 @@ exports[`route transitions transitioning back after a reload works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -183,7 +184,7 @@ exports[`route transitions transitioning back after a reload works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"routes/gists/index\\": {
@@ -191,22 +192,15 @@ exports[`route transitions transitioning back after a reload works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
           },
         },
+        globalData: { useScripts: true },
         publicPath: \\"/build/\\",
-        routeManifest: {
-          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
-          \\"routes/gists/index\\": {
-            id: \\"routes/gists/index\\",
-            path: \\"/\\",
-            parentId: \\"routes/gists\\",
-          },
-        },
         routeData: {
           \\"routes/gists\\": {
             users: [
@@ -228,6 +222,14 @@ exports[`route transitions transitioning back after a reload works 2`] = `
               },
             },
           ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
         },
         routeParams: { \\"routes/gists\\": {}, \\"routes/gists/index\\": {} },
       };
@@ -293,7 +295,7 @@ exports[`route transitions transitioning back after a reload works 3`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -302,7 +304,7 @@ exports[`route transitions transitioning back after a reload works 3`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"routes/gists/$username\\": {
@@ -310,22 +312,15 @@ exports[`route transitions transitioning back after a reload works 3`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
           },
         },
+        globalData: { useScripts: true },
         publicPath: \\"/build/\\",
-        routeManifest: {
-          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
-          \\"routes/gists/$username\\": {
-            id: \\"routes/gists/$username\\",
-            path: \\":username\\",
-            parentId: \\"routes/gists\\",
-          },
-        },
         routeData: {
           \\"routes/gists\\": {
             users: [
@@ -347,6 +342,14 @@ exports[`route transitions transitioning back after a reload works 3`] = `
               },
             },
           ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/$username\\": {
+            id: \\"routes/gists/$username\\",
+            path: \\":username\\",
+            parentId: \\"routes/gists\\",
+          },
         },
         routeParams: {
           \\"routes/gists\\": {},
@@ -409,7 +412,7 @@ exports[`route transitions transitioning to a new route with data works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -418,13 +421,14 @@ exports[`route transitions transitioning to a new route with data works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
         },
+        globalData: { useScripts: true },
         publicPath: \\"/build/\\",
-        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
         routeData: { \\"routes/index\\": null },
+        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
         routeParams: { \\"routes/index\\": {} },
       };
     </script>
@@ -488,7 +492,7 @@ exports[`route transitions transitioning to a new route with data works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -497,13 +501,14 @@ exports[`route transitions transitioning to a new route with data works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-557aef33.js\\",
+              \\"index-f1a8126e.js\\",
             ],
           },
         },
+        globalData: { useScripts: true },
         publicPath: \\"/build/\\",
-        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
         routeData: { \\"routes/index\\": null },
+        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
         routeParams: { \\"routes/index\\": {} },
       };
     </script>
