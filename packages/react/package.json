@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "repository": "https://github.com/remix-run/packages",
   "peerDependencies": {
     "history": ">=5",
