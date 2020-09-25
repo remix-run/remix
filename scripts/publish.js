@@ -3,7 +3,10 @@ const fsp = require("fs").promises;
 const { exec, spawn } = require("child_process");
 const { promisify } = require("util");
 
-const buildDir = path.resolve(__dirname, "../build/@remix-run");
+const npmModulesDir = path.resolve(
+  __dirname,
+  "../build/node_modules/@remix-run"
+);
 
 const x = promisify(exec);
 
@@ -33,11 +36,11 @@ async function run() {
   );
 
   // 1. Publish all packages, starting with core
-  let buildNames = await fsp.readdir(buildDir);
-  buildNames.sort(a => (a === "core" ? -1 : 0));
+  let basePackageNames = await fsp.readdir(npmModulesDir);
+  basePackageNames.sort(a => (a === "core" ? -1 : 0));
 
-  for (let name of buildNames) {
-    await npm(["publish", path.join(buildDir, name)], {
+  for (let name of basePackageNames) {
+    await npm(["publish", path.join(npmModulesDir, name)], {
       stdio: "inherit"
     });
   }
