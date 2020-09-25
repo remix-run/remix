@@ -15,8 +15,8 @@ import {
 import { generateDevServerBuild } from "./compiler";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import type { EntryContext } from "./entry";
 import {
+  createGlobalData,
   createRouteData,
   createRouteDataResults,
   createRouteManifest,
@@ -26,8 +26,10 @@ import type { AppLoadContext } from "./loader";
 import {
   LoaderResult,
   LoaderResultChangeStatusCode,
-  LoaderResultRedirect,
   LoaderResultError,
+  LoaderResultRedirect,
+  LoaderResultSuccess,
+  loadGlobalData,
   loadData,
   loadDataDiff
 } from "./loader";
@@ -206,9 +208,14 @@ async function handleHtmlRequest(
       }
     ];
   } else {
-    loaderResults = await loadData(config, matches, location, context);
+    let [globalLoaderResult, matchLoaderResults] = await Promise.all([
+      loadGlobalData(config, location, context),
+      loadData(config, matches, location, context)
+    ]);
 
-    let redirectResult = loaderResults.find(
+    loaderResults = [globalLoaderResult, ...matchLoaderResults];
+
+    let redirectResult = matchLoaderResults.find(
       (result): result is LoaderResultRedirect =>
         result instanceof LoaderResultRedirect
     );
@@ -222,7 +229,7 @@ async function handleHtmlRequest(
       });
     }
 
-    let errorResult = loaderResults.find(
+    let errorResult = matchLoaderResults.find(
       (result: LoaderResult): result is LoaderResultError =>
         result instanceof LoaderResultError
     );
@@ -241,7 +248,7 @@ async function handleHtmlRequest(
         }
       ];
     } else {
-      let changeStatusCodeResult = loaderResults.find(
+      let changeStatusCodeResult = matchLoaderResults.find(
         (result): result is LoaderResultChangeStatusCode =>
           result instanceof LoaderResultChangeStatusCode
       );
@@ -308,6 +315,10 @@ async function handleHtmlRequest(
     );
   }
 
+  let globalLoaderResult = loaderResults.shift();
+  let globalData = globalLoaderResult
+    ? createGlobalData(globalLoaderResult as LoaderResultSuccess)
+    : null;
   let routeData = createRouteData(loaderResults);
   let routeManifest = createRouteManifest(matches);
   let routeParams = createRouteParams(matches);
@@ -326,18 +337,24 @@ async function handleHtmlRequest(
     manifestKeys
   );
 
-  let partialEntryContext = {
+  let browserEntryContext = {
     browserManifest: partialBrowserManifest,
+    globalData,
     publicPath: config.publicPath,
-    routeManifest,
     routeData,
+    routeManifest,
     routeParams
   };
 
-  let entryContext: EntryContext = Object.assign({}, partialEntryContext, {
-    browserEntryContextString: jsesc(partialEntryContext, {
-      isScriptContext: true
-    }),
+  // Use jsesc to escape data returned from the loaders. This string is
+  // inserted directly into the HTML in the `<Scripts>` element.
+  let browserEntryContextString = jsesc(browserEntryContext, {
+    isScriptContext: true
+  });
+
+  let serverEntryContext = {
+    ...browserEntryContext,
+    browserEntryContextString,
     routeLoader: {
       preload() {
         throw new Error(
@@ -346,14 +363,11 @@ async function handleHtmlRequest(
       },
       read(_assets: any, routeId: string) {
         return routeModules[routeId];
-      },
-      readSafely(_assets: any, routeId: string) {
-        return routeModules[routeId];
       }
     }
-  });
+  };
 
-  return serverEntryModule.default(req, statusCode, entryContext);
+  return serverEntryModule.default(req, statusCode, serverEntryContext);
 }
 
 function getPartialManifest(

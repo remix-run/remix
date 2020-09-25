@@ -1,10 +1,21 @@
 import type { BuildManifest, RouteLoader, RouteModule } from "@remix-run/core";
 
+import invariant from "./invariant";
+
+export type { RouteLoader };
+
+interface RouteModuleCache {
+  [routeId: string]: RouteModule;
+}
+
 export function createRouteLoader(publicPath: string): RouteLoader {
-  let cache: { [routeId: string]: RouteModule } = {};
+  let cache: RouteModuleCache = {};
 
   async function preload(assets: BuildManifest, routeId: string) {
     let entry = assets[routeId];
+
+    invariant(entry, `Route "${routeId}" isn't in the build manifest`);
+
     let url = publicPath + entry.fileName;
 
     // @ts-ignore
@@ -20,9 +31,5 @@ export function createRouteLoader(publicPath: string): RouteLoader {
     return cache[routeId];
   }
 
-  function readSafely(_assets: BuildManifest, routeId: string) {
-    return cache[routeId] || null;
-  }
-
-  return { preload, read, readSafely };
+  return { preload, read };
 }

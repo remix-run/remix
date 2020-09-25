@@ -1,8 +1,7 @@
-module.exports = () => {
+module.exports = ({ location }) => {
+  let params = new URLSearchParams(location.search);
+
   return {
-    users: [
-      { id: "ryanflorence", name: "Ryan Florence" },
-      { id: "mjackson", name: "Michael Jackson" }
-    ]
+    useScripts: params.get("disableJs") == null
   };
 };

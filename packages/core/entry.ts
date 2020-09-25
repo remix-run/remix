@@ -9,6 +9,7 @@ import type { RemixRouteMatch } from "./match";
 export interface EntryContext {
   browserManifest: BuildManifest;
   browserEntryContextString?: string; // Only needed on the server
+  globalData: GlobalData;
   publicPath: RemixConfig["publicPath"];
   routeData: RouteData;
   routeManifest: RouteManifest;
@@ -19,7 +20,12 @@ export interface EntryContext {
 export interface RouteLoader {
   preload(assets: BuildManifest, routeId: string): Promise<RouteModule>;
   read(assets: BuildManifest, routeId: string): RouteModule;
-  readSafely(assets: BuildManifest, routeId: string): RouteModule | null;
+}
+
+export type GlobalData = any;
+
+export function createGlobalData(loaderResult: LoaderResultSuccess) {
+  return loaderResult.data;
 }
 
 export interface RouteData {

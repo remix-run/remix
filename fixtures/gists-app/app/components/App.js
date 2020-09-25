@@ -1,7 +1,9 @@
 import React, { Suspense } from "react";
-import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
+import { Meta, Scripts, Styles, Routes, useGlobalData } from "@remix-run/react";
 
 export default function App() {
+  let [data, setData] = useGlobalData();
+
   React.useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
@@ -22,7 +24,7 @@ export default function App() {
         <Suspense fallback={"Loading"}>
           <Routes />
         </Suspense>
-        <Scripts />
+        {data.useScripts && <Scripts />}
       </body>
     </html>
   );

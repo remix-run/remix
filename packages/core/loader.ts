@@ -29,15 +29,9 @@ export interface RemixLoader {
 
 function getLoader(
   remixConfig: RemixConfig,
-  match: RemixRouteMatch
+  loaderFile: string
 ): RemixLoader | null {
-  if (match.route.loaderFile == null) return null;
-
-  let requirePath = path.resolve(
-    remixConfig.dataDirectory,
-    match.route.loaderFile
-  );
-
+  let requirePath = path.resolve(remixConfig.dataDirectory, loaderFile);
   return require(requirePath);
 }
 
@@ -82,6 +76,55 @@ export class LoaderResultSuccess extends LoaderResult {
   }
 }
 
+async function executeLoader(
+  loader: RemixLoader | null,
+  routeId: string,
+  params: Params,
+  location: Location,
+  context: any
+): Promise<LoaderResult> {
+  if (loader == null) {
+    return new LoaderResultSuccess(routeId, null);
+  } else {
+    try {
+      let result = await loader({ params, context, location });
+
+      if (result instanceof StatusCode) {
+        return new LoaderResultChangeStatusCode(routeId, result.status);
+      } else if (result instanceof Redirect) {
+        return new LoaderResultRedirect(
+          routeId,
+          result.location,
+          result.permanent
+        );
+      }
+
+      return new LoaderResultSuccess(routeId, result);
+    } catch (error) {
+      return new LoaderResultError(routeId, error);
+    }
+  }
+}
+
+/**
+ * Loads data from the "global" loader, which lives in `data/global.js`.
+ */
+export async function loadGlobalData(
+  config: RemixConfig,
+  location: Location,
+  context: any
+): Promise<LoaderResult> {
+  let loader;
+  try {
+    loader = getLoader(config, "global");
+  } catch (error) {
+    // No global loader, no problem.
+    return new LoaderResultSuccess("global", null);
+  }
+
+  return executeLoader(loader, "global", {}, location, context);
+}
+
 /**
  * Loads data for all the given routes.
  */
@@ -91,34 +134,15 @@ export async function loadData(
   location: Location,
   context: any
 ): Promise<LoaderResult[]> {
-  let loaders = matches.map(match => getLoader(config, match));
+  let loaders = matches.map(match =>
+    match.route.loaderFile ? getLoader(config, match.route.loaderFile) : null
+  );
 
   let promises = loaders.map(
     async (loader, index): Promise<LoaderResult> => {
       let id = matches[index].route.id;
       let params = matches[index].params;
-
-      if (loader == null) {
-        return new LoaderResultSuccess(id, null);
-      } else {
-        try {
-          let result = await loader({ params, context, location });
-
-          if (result instanceof StatusCode) {
-            return new LoaderResultChangeStatusCode(id, result.status);
-          } else if (result instanceof Redirect) {
-            return new LoaderResultRedirect(
-              id,
-              result.location,
-              result.permanent
-            );
-          }
-
-          return new LoaderResultSuccess(id, result);
-        } catch (error) {
-          return new LoaderResultError(id, error);
-        }
-      }
+      return executeLoader(loader, id, params, location, context);
     }
   );
 
