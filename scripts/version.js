@@ -8,6 +8,8 @@ const semver = require("semver");
 
 const packagesDir = path.resolve(__dirname, "../packages");
 
+const platforms = ["express"];
+
 function invariant(cond, message) {
   if (!cond) throw new Error(message);
 }
@@ -91,25 +93,33 @@ async function run(args) {
 
   if (answer === false) return 0;
 
-  // 3. Update @remix-run/react version
-  await updatePackageConfig("react", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
-  );
+  let coreConfig;
 
-  // 4. Update @remix-run/core version
+  // 3. Update @remix-run/core version
   await updatePackageConfig("core", config => {
     config.version = nextVersion;
+    coreConfig = config;
   });
   console.log(
     chalk.green(`  Updated @remix-run/core to version ${nextVersion}`)
   );
 
-  const platforms = ["express"];
+  // 4. Update @remix-run/react version + react deps to match core
+  await updatePackageConfig("react", config => {
+    config.version = nextVersion;
 
-  // 5. Update @remix-run/express version + react-router dep
+    // These are pinned for now. Will probably need to adjust
+    // once experimental React and React Router are stable.
+    config.peerDependencies["react"] = coreConfig.dependencies["react"];
+    config.peerDependencies["react-dom"] = coreConfig.dependencies["react-dom"];
+    config.peerDependencies["react-router-dom"] =
+      coreConfig.dependencies["react-router-dom"];
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
+  );
+
+  // 5. Update platform versions + @remix-run/core dep
   for (let platform of platforms) {
     await updatePackageConfig(platform, config => {
       config.version = nextVersion;
