@@ -1,4 +1,3 @@
-import { promises as fsp } from "fs";
 import fs from "fs";
 import path from "path";
 
@@ -126,7 +125,7 @@ export function defineRoutes(
   ): void {
     if (returned) throwAsyncError();
 
-    let id = stripFileExtension(component);
+    let id = normalizeSlashes(stripFileExtension(component));
     let parent = current[current.length - 1];
     let route: RemixRouteObject = { id, path, componentFile: component };
 
@@ -181,23 +180,23 @@ function throwAsyncError() {
  * define route paths and nested relations.
  */
 export function getConventionalRoutes(
-  appDirectory: string,
-  dataDirectory: string
+  appDir: string,
+  dataDir: string
 ): RemixRouteObject[] {
   return defineRoutes(defineRoute => {
     defineRoutesInDirectory(
       defineRoute,
-      appDirectory,
-      dataDirectory,
-      path.join(appDirectory, "routes")
+      appDir,
+      dataDir,
+      path.join(appDir, "routes")
     );
   });
 }
 
 function defineRoutesInDirectory(
   defineRoute: DefineRoute,
-  appDirectory: string,
-  dataDirectory: string,
+  appDir: string,
+  dataDir: string,
   currentDir: string
 ): void {
   let files = fs.readdirSync(currentDir);
@@ -214,16 +213,16 @@ function defineRoutesInDirectory(
         throw new Error(`No layout exists for directory ${file}`);
       }
 
-      let routePath = filename.replace(/\$/g, ":").replace(/\./g, "/"); // :username
+      let routePath = createRoutePath(filename); // :username
       let component = path.relative(
-        appDirectory,
+        appDir,
         path.join(currentDir, layoutFilename)
       ); // routes/gists/$username.js
-      let loader = findFileWithRouteId(dataDirectory, "loaders", component); // loaders/gists/$username.js
-      let styles = findFileWithRouteId(appDirectory, "styles", component); // styles/gists/$username.css
+      let loader = findFileForComponent(dataDir, "loaders", component); // loaders/gists/$username.js
+      let styles = findFileForComponent(appDir, "styles", component); // styles/gists/$username.css
 
       defineRoute(routePath, component, { loader, styles }, () => {
-        defineRoutesInDirectory(defineRoute, appDirectory, dataDirectory, file);
+        defineRoutesInDirectory(defineRoute, appDir, dataDir, file);
       });
     } else {
       let isLayout = files.some(
@@ -237,20 +236,22 @@ function defineRoutesInDirectory(
       }
 
       // This is a "leaf" route.
+      let filenameWithoutExt = stripFileExtension(filename);
       let routePath =
-        stripFileExtension(filename) === "index"
+        filenameWithoutExt === "index"
           ? "/" // index route
-          : stripFileExtension(filename.replace(/\$/g, ":")).replace(
-              /\./g,
-              "/"
-            ); // :username
-      let component = path.relative(appDirectory, file); // routes/gists/$username.js
-      let loader = findFileWithRouteId(dataDirectory, "loaders", component); // loaders/gists/$username.js
-      let styles = findFileWithRouteId(appDirectory, "styles", component); // styles/gists/$username.css
+          : createRoutePath(filenameWithoutExt); // :username
+      let component = path.relative(appDir, file); // routes/gists/$username.js
+      let loader = findFileForComponent(dataDir, "loaders", component); // loaders/gists/$username.js
+      let styles = findFileForComponent(appDir, "styles", component); // styles/gists/$username.css
 
       defineRoute(routePath, component, { loader, styles });
     }
   }
+}
+
+function createRoutePath(filenameWithoutExt: string) {
+  return filenameWithoutExt.replace(/\$/g, ":").replace(/\./g, "/");
 }
 
 // Find the loader/styles file in the directory with the same basename
@@ -258,7 +259,7 @@ function defineRoutesInDirectory(
 // gists/$username => gists/$username.js
 // gists/$username => gists/$username.ts
 // gists/$username => gists/$username.css
-function findFileWithRouteId(
+function findFileForComponent(
   baseDir: string,
   subDir: string,
   componentFile: string
