@@ -5,7 +5,59 @@ import {
   createRequestHandler as createRemixRequestHandler
 } from "@remix-run/core";
 
-export type { Request };
+/**
+ * Creates a request handler for Express that generates the response using
+ * Remix routing and data loading.
+ */
+export function createRequestHandler({
+  getLoadContext,
+  root: remixRoot
+}: {
+  getLoadContext?: (
+    req: express.Request,
+    res: express.Response
+  ) => AppLoadContext;
+  root?: string;
+} = {}): express.RequestHandler {
+  let handleRequest = createRemixRequestHandler(remixRoot);
+
+  return async (req: express.Request, res: express.Response) => {
+    let loadContext: AppLoadContext;
+    if (getLoadContext) {
+      try {
+        loadContext = await getLoadContext(req, res);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send();
+        return;
+      }
+    }
+
+    let remixReq = createRemixRequest(req);
+
+    let remixRes: Response;
+    try {
+      remixRes = await handleRequest(remixReq, loadContext);
+    } catch (error) {
+      // This is probably an error in one of the loaders.
+      console.error(error);
+      res.status(500).send();
+      return;
+    }
+
+    res.status(remixRes.status);
+
+    for (let [key, value] of remixRes.headers.entries()) {
+      res.set(key, value);
+    }
+
+    if (Buffer.isBuffer(remixRes.body)) {
+      res.send(remixRes.body);
+    } else {
+      remixRes.body.pipe(res);
+    }
+  };
+}
 
 function createRemixRequest(req: express.Request): Request {
   let headers = Object.keys(req.headers).reduce((memo, key) => {
@@ -26,60 +78,4 @@ function createRemixRequest(req: express.Request): Request {
     method: req.method,
     referrer: req.headers.referer
   });
-}
-
-/**
- * Creates a request handler for Express that generates the response using
- * Remix routing and data loading.
- */
-export function createRequestHandler({
-  getLoadContext,
-  root: remixRoot
-}: {
-  getLoadContext?: (
-    req: express.Request,
-    res: express.Response
-  ) => AppLoadContext;
-  root?: string;
-}): express.RequestHandler {
-  let handleRequest = createRemixRequestHandler(remixRoot);
-
-  return async (req: express.Request, res: express.Response) => {
-    let loadContext: AppLoadContext;
-    if (getLoadContext) {
-      try {
-        loadContext = await getLoadContext(req, res);
-      } catch (error) {
-        console.error(error);
-        // TODO: show nicer error page
-        res.status(500).send();
-        return;
-      }
-    }
-
-    let remixReq = createRemixRequest(req);
-
-    let remixRes: Response;
-    try {
-      remixRes = await handleRequest(remixReq, loadContext);
-    } catch (error) {
-      // This is probably an error in one of the loaders.
-      console.error(error);
-      // TODO: Show nicer error page
-      res.status(500).send();
-      return;
-    }
-
-    res.status(remixRes.status);
-
-    for (let [key, value] of remixRes.headers.entries()) {
-      res.set(key, value);
-    }
-
-    if (Buffer.isBuffer(remixRes.body)) {
-      res.send(remixRes.body);
-    } else {
-      remixRes.body.pipe(res);
-    }
-  };
 }

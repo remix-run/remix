@@ -40,10 +40,6 @@ import { Response } from "./platform";
 import type { RemixRouteObject } from "./routes";
 import { purgeRequireCache } from "./requireCache";
 
-export interface RequestHandler {
-  (request: Request, loadContext: AppLoadContext): Promise<Response>;
-}
-
 function createLocation(
   url: string,
   state: Location["state"] = null,
@@ -54,12 +50,27 @@ function createLocation(
 }
 
 /**
+ * The main request handler for a Remix server. This handler runs in the context
+ * of a cloud provider's server (e.g. Express on Firebase) or locally via their
+ * dev tools.
+ *
+ * The server picks `development` or `production` mode based on the value of
+ * `process.env.NODE_ENV`. In production, the server reads the build from disk.
+ * In development, it re-evaluates the config and all app modules on every
+ * request and dynamically generates the build for only the modules needed to
+ * serve it.
+ */
+export interface RequestHandler {
+  (request: Request, loadContext?: AppLoadContext): Promise<Response>;
+}
+
+/**
  * Creates a HTTP request handler.
  */
 export function createRequestHandler(remixRoot?: string): RequestHandler {
   let configPromise = readConfig(remixRoot);
 
-  return async (req, loadContext) => {
+  return async (req, loadContext = {}) => {
     if (process.env.NODE_ENV === "development") {
       let config = await configPromise;
       purgeRequireCache(config.rootDirectory);
@@ -68,33 +79,16 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
 
     let config = await configPromise;
 
-    // GET /__remix_data?path=/gists
-    // GET /__remix_data?from=/gists&path=/gists/123
     if (req.url.startsWith("/__remix_data")) {
       return handleDataRequest(config, req, loadContext);
     }
 
-    // GET /__remix_manifest?path=/gists
     if (req.url.startsWith("/__remix_manifest")) {
       return handleManifestRequest(config, req);
     }
 
-    // GET /gists
     return handleHtmlRequest(config, req, loadContext);
   };
-}
-
-function json(payload: any, status = 200) {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: {
-      "Content-Type": "application/json"
-    }
-  });
-}
-
-function jsonError(error: string, status = 403) {
-  return json({ error }, status);
 }
 
 async function handleDataRequest(
@@ -399,4 +393,19 @@ function rewriteConfigRoutes(config: RemixConfig, matches: RemixRouteMatch[]) {
 function rewriteConfigPublicPath(config: RemixConfig) {
   config.publicPath =
     process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+function json(payload: any, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+}
+
+function jsonError(error: string, status = 403) {
+  return json({ error }, status);
 }
