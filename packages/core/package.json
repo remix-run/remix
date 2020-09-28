@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
     "@rollup/plugin-alias": "^3.1.1",
