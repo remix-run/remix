@@ -31,7 +31,7 @@ export function createDataCache(
 
     inflight[location.key] = fetchDataResults(
       location.pathname,
-      fromLocation?.pathname
+      fromLocation.pathname
     );
 
     try {
@@ -43,11 +43,6 @@ export function createDataCache(
         if (dataResult.type === "data") {
           memo[routeId] = dataResult.data;
         } else if (dataResult.type === "copy") {
-          invariant(
-            fromLocation,
-            `Cannot get a copy result with no fromLocation`
-          );
-
           memo[routeId] = cache[fromLocation.key][routeId];
         }
 
