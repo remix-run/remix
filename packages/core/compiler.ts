@@ -34,6 +34,104 @@ export enum BuildTarget {
   Server = "server"
 }
 
+/**
+ * Runs the build.
+ */
+export function build(
+  config: RemixConfig,
+  {
+    mode = BuildMode.Production,
+    target = BuildTarget.Server
+  }: { mode?: BuildMode; target?: BuildTarget } = {}
+): Promise<RollupBuild> {
+  return rollup.rollup({
+    external: getExternalOption(target),
+    input: getInputOption(config, target),
+    plugins: getCommonPlugins(config, mode, target)
+  });
+}
+
+/**
+ * Runs the build in watch mode.
+ */
+export function watch(
+  config: RemixConfig,
+  {
+    mode = BuildMode.Development,
+    target = BuildTarget.Browser,
+    onBuildStart,
+    onBuildEnd,
+    onError
+  }: {
+    mode?: BuildMode;
+    target?: BuildTarget;
+    onBuildStart?: () => void;
+    onBuildEnd?: (build: RollupBuild) => void;
+    onError?: (error: RollupError) => void;
+  } = {}
+): () => void {
+  let watcher = rollup.watch({
+    external: getExternalOption(target),
+    plugins: [
+      watchInput({
+        watchFile: config.rootDirectory,
+        async getInput() {
+          purgeRequireCache(config.rootDirectory);
+          config = await readConfig(config.rootDirectory);
+          return getInputOption(config, target);
+        }
+      }),
+      ...getCommonPlugins(config, mode, target)
+    ],
+    watch: {
+      // Skip the write here and do it in a callback instead. This gives us
+      // a more consistent interface between `build` and `watch`. Both of them
+      // give you access to the raw build and let you do the generate/write
+      // step separately.
+      skipWrite: true
+    }
+  });
+
+  watcher.on("event", event => {
+    if (event.code === "ERROR") {
+      if (onError) {
+        onError(event.error);
+      } else {
+        console.error(event.error);
+      }
+    } else if (event.code === "BUNDLE_START") {
+      if (onBuildStart) onBuildStart();
+    } else if (event.code === "BUNDLE_END") {
+      if (onBuildEnd) onBuildEnd(event.result);
+    }
+  });
+
+  return () => {
+    watcher.close();
+  };
+}
+
+/**
+ * Runs the server build in dev as requests come in. At this point, the config
+ * object has been trimmed down to contain only the routes matched in the
+ * request, which should speed up the build considerably.
+ */
+export async function generateDevServerBuild(
+  config: RemixConfig
+): Promise<RollupOutput> {
+  let serverBuild = await build(config, {
+    mode: BuildMode.Development,
+    target: BuildTarget.Server
+  });
+
+  return serverBuild.generate({
+    format: "cjs",
+    exports: "named"
+  });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 function getExternalOption(target: BuildTarget): ExternalOption | undefined {
   return target === BuildTarget.Server
     ? // Ignore node_modules, bare identifiers, etc.
@@ -183,100 +281,4 @@ function getCommonPlugins(
   );
 
   return plugins;
-}
-
-/**
- * Runs the build.
- */
-export function build(
-  config: RemixConfig,
-  {
-    mode = BuildMode.Production,
-    target = BuildTarget.Server
-  }: { mode?: BuildMode; target?: BuildTarget } = {}
-): Promise<RollupBuild> {
-  return rollup.rollup({
-    external: getExternalOption(target),
-    input: getInputOption(config, target),
-    plugins: getCommonPlugins(config, mode, target)
-  });
-}
-
-/**
- * Runs the server build in dev as requests come in. At this point, the config
- * object has been trimmed down to contain only the routes matched in the
- * request, which should speed up the build considerably.
- */
-export async function generateDevServerBuild(
-  config: RemixConfig
-): Promise<RollupOutput> {
-  let serverBuild = await build(config, {
-    mode: BuildMode.Development,
-    target: BuildTarget.Server
-  });
-
-  return serverBuild.generate({
-    format: "cjs",
-    exports: "named"
-  });
-}
-
-/**
- * Runs the build in watch mode.
- */
-export function watch(
-  config: RemixConfig,
-  {
-    mode = BuildMode.Development,
-    target = BuildTarget.Browser,
-    onBuildStart,
-    onBuildEnd,
-    onError
-  }: {
-    mode?: BuildMode;
-    target?: BuildTarget;
-    onBuildStart?: () => void;
-    onBuildEnd?: (build: RollupBuild) => void;
-    onError?: (error: RollupError) => void;
-  } = {}
-): () => void {
-  let watcher = rollup.watch({
-    external: getExternalOption(target),
-    plugins: [
-      watchInput({
-        watchFile: config.rootDirectory,
-        async getInput() {
-          purgeRequireCache(config.rootDirectory);
-          config = await readConfig(config.rootDirectory);
-          return getInputOption(config, target);
-        }
-      }),
-      ...getCommonPlugins(config, mode, target)
-    ],
-    watch: {
-      // Skip the write here and do it in a callback instead. This gives us
-      // a more consistent interface between `build` and `watch`. Both of them
-      // give you access to the raw build and let you do the generate/write
-      // step separately.
-      skipWrite: true
-    }
-  });
-
-  watcher.on("event", event => {
-    if (event.code === "ERROR") {
-      if (onError) {
-        onError(event.error);
-      } else {
-        console.error(event.error);
-      }
-    } else if (event.code === "BUNDLE_START") {
-      if (onBuildStart) onBuildStart();
-    } else if (event.code === "BUNDLE_END") {
-      if (onBuildEnd) onBuildEnd(event.result);
-    }
-  });
-
-  return () => {
-    watcher.close();
-  };
 }

@@ -1,6 +1,6 @@
 export type { BuildManifest, BuildChunk, RouteModule } from "./build";
 
-export { run } from "./commands";
+export * as commands from "./commands";
 
 export { build, watch, BuildMode, BuildTarget } from "./compiler";
 

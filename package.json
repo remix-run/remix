@@ -1,6 +1,9 @@
 {
   "private": true,
   "name": "remix",
+  "bin": {
+    "remix": "./build/node_modules/@remix-run/cli"
+  },
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c",
@@ -40,6 +43,7 @@
     "history": "^5.0.0",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",
+    "meow": "^7.1.1",
     "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
     "puppeteer": "^5.3.0",

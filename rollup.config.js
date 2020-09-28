@@ -3,10 +3,14 @@ import copy from "rollup-plugin-copy";
 import babel from "@rollup/plugin-babel";
 import nodeResolve from "@rollup/plugin-node-resolve";
 
+function isLocalModuleId(id) {
+  return id.startsWith(".") || id.startsWith("/");
+}
+
 /** @type {import('rollup').RollupOptions} */
 let core = {
   external(id) {
-    return !(id.startsWith(".") || id.startsWith("/"));
+    return !isLocalModuleId(id);
   },
   input: path.resolve(__dirname, "packages/core/index.ts"),
   output: {
@@ -36,9 +40,40 @@ let core = {
 };
 
 /** @type {import('rollup').RollupOptions} */
+let cli = {
+  external(id) {
+    return !isLocalModuleId(id);
+  },
+  input: path.resolve(__dirname, "packages/cli/index.ts"),
+  output: {
+    dir: "build/node_modules/@remix-run/cli",
+    format: "cjs",
+    banner: "#!/usr/bin/env node -e"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    }),
+    nodeResolve({
+      extensions: [".ts"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/cli/package.json"),
+          dest: "build/node_modules/@remix-run/cli"
+        }
+      ]
+    })
+  ]
+};
+
+/** @type {import('rollup').RollupOptions} */
 let express = {
   external(id) {
-    return !(id.startsWith(".") || id.startsWith("/"));
+    return !isLocalModuleId(id);
   },
   input: path.resolve(__dirname, "packages/express/index.ts"),
   output: {
@@ -70,7 +105,7 @@ let express = {
 let react = [
   {
     external(id) {
-      return !(id.startsWith(".") || id.startsWith("/"));
+      return !isLocalModuleId(id);
     },
     input: {
       index: path.resolve(__dirname, "packages/react/index.tsx"),
@@ -105,7 +140,7 @@ let react = [
   // Also provide CommonJS build for entry-server.js
   {
     external(id) {
-      return !(id.startsWith(".") || id.startsWith("/"));
+      return !isLocalModuleId(id);
     },
     input: {
       index: path.resolve(__dirname, "packages/react/index.tsx"),
@@ -130,4 +165,4 @@ let react = [
   }
 ];
 
-export default [core, express, ...react];
+export default [core, cli, express, ...react];

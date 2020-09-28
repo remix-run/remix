@@ -1,0 +1,11 @@
+{
+  "name": "@remix-run/cli",
+  "version": "0.1.0",
+  "repository": "https://github.com/remix-run/packages",
+  "bin": {
+    "remix": "index.js"
+  },
+  "dependencies": {
+    "meow": "^7.1.1"
+  }
+}
