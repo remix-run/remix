@@ -48,7 +48,7 @@ let cli = {
   output: {
     dir: "build/node_modules/@remix-run/cli",
     format: "cjs",
-    banner: "#!/usr/bin/env node -e"
+    banner: "#!/usr/bin/env node"
   },
   plugins: [
     babel({

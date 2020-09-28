@@ -5,9 +5,9 @@
     "prestart": "cp -r ../../build/node_modules/ node_modules",
     "start": "node scripts/start.js",
     "prebuild": "cp -r ../../build/node_modules/ node_modules",
-    "build": "node ../../remix.js build",
+    "build": "node node_modules/@remix-run/cli build",
     "predev": "cp -r ../../build/node_modules/ node_modules",
-    "dev": "node ../../remix.js run"
+    "dev": "node node_modules/@remix-run/cli run"
   },
   "dependencies": {
     "express": "^4.17.1",
