@@ -6,6 +6,7 @@
     "remix": "index.js"
   },
   "dependencies": {
+    "@remix-run/core": "0.1.0",
     "meow": "^7.1.1"
   }
 }

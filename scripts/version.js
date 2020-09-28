@@ -8,8 +8,6 @@ const semver = require("semver");
 
 const packagesDir = path.resolve(__dirname, "../packages");
 
-const platforms = ["express"];
-
 function invariant(cond, message) {
   if (!cond) throw new Error(message);
 }
@@ -76,26 +74,23 @@ async function run(args) {
   let givenVersion = args[0];
   let prereleaseId = args[1];
 
-  // 0. Make sure the working directory is clean
   ensureCleanWorkingDirectory();
 
-  // 1. Get the next version number
+  // - Get the next version number
   let currentVersion = await getPackageVersion("react");
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(currentVersion, givenVersion, prereleaseId);
   }
 
-  // 2. Confirm the next version number
+  // - Confirm the next version number
   let answer = await prompt(
     `Are you sure you want to bump version ${currentVersion} to ${nextVersion}? [Yn] `
   );
-
   if (answer === false) return 0;
 
+  // - Update @remix-run/core version
   let coreConfig;
-
-  // 3. Update @remix-run/core version
   await updatePackageConfig("core", config => {
     config.version = nextVersion;
     coreConfig = config;
@@ -104,7 +99,7 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/core to version ${nextVersion}`)
   );
 
-  // 4. Update @remix-run/react version + react deps to match core
+  // - Update @remix-run/react version + react deps to match core
   await updatePackageConfig("react", config => {
     config.version = nextVersion;
 
@@ -119,8 +114,17 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
   );
 
-  // 5. Update platform versions + @remix-run/core dep
-  for (let platform of platforms) {
+  // - Update @remix-run/cli version + @remix-run/core dep
+  await updatePackageConfig("cli", config => {
+    config.version = nextVersion;
+    config.dependencies["@remix-run/core"] = nextVersion;
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/cli to version ${nextVersion}`)
+  );
+
+  // - Update platform versions + @remix-run/core dep
+  for (let platform of ["express"]) {
     await updatePackageConfig(platform, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/core"] = nextVersion;
@@ -130,7 +134,7 @@ async function run(args) {
     );
   }
 
-  // 6. Commit and tag
+  // - Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
   execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
 
