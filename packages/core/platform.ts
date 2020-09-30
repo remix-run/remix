@@ -3,7 +3,7 @@ import { STATUS_CODES } from "http";
 
 export { STATUS_CODES as StatusCodes };
 
-export type HeadersInit = Record<string, string>;
+export type HeadersInit = { [headerName: string]: string };
 
 /**
  * The headers in a Request or Response.
@@ -11,7 +11,7 @@ export type HeadersInit = Record<string, string>;
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers
  */
 export class Headers {
-  private _map: Record<string, string>;
+  private _map: { [headerName: string]: string };
 
   constructor(init: Headers | HeadersInit = {}) {
     this._map = {};

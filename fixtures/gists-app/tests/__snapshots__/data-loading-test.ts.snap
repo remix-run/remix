@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`route transitions transitioning back after a reload works 1`] = `
+exports[`data loading transitioning back after a reload loads data for the previous route 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -55,7 +55,7 @@ exports[`route transitions transitioning back after a reload works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -64,7 +64,7 @@ exports[`route transitions transitioning back after a reload works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"routes/gists/index\\": {
@@ -72,7 +72,7 @@ exports[`route transitions transitioning back after a reload works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
@@ -120,7 +120,7 @@ exports[`route transitions transitioning back after a reload works 1`] = `
 "
 `;
 
-exports[`route transitions transitioning back after a reload works 2`] = `
+exports[`data loading transitioning back after a reload loads data for the previous route 2`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -175,7 +175,7 @@ exports[`route transitions transitioning back after a reload works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -184,7 +184,7 @@ exports[`route transitions transitioning back after a reload works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"routes/gists/index\\": {
@@ -192,7 +192,7 @@ exports[`route transitions transitioning back after a reload works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
@@ -240,7 +240,34 @@ exports[`route transitions transitioning back after a reload works 2`] = `
 "
 `;
 
-exports[`route transitions transitioning back after a reload works 3`] = `
+exports[`data loading transitioning back after a reload loads data for the previous route 3`] = `
+Object {
+  "routes/gists": Object {
+    "type": "copy",
+  },
+  "routes/gists/index": Object {
+    "data": Array [
+      Object {
+        "files": Object {
+          "remix-server.jsx": Object {
+            "filename": "remix-server.jsx",
+          },
+        },
+        "id": "610613b54e5b34f8122d1ba4a3da21a9",
+        "owner": Object {
+          "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+          "id": 100200,
+          "login": "ryanflorence",
+        },
+        "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+      },
+    ],
+    "type": "data",
+  },
+}
+`;
+
+exports[`data loading transitioning back after a reload loads data for the previous route 4`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -295,7 +322,7 @@ exports[`route transitions transitioning back after a reload works 3`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -304,7 +331,7 @@ exports[`route transitions transitioning back after a reload works 3`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"routes/gists/$username\\": {
@@ -312,7 +339,7 @@ exports[`route transitions transitioning back after a reload works 3`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
@@ -363,7 +390,7 @@ exports[`route transitions transitioning back after a reload works 3`] = `
 "
 `;
 
-exports[`route transitions transitioning to a new route with data works 1`] = `
+exports[`data loading transitioning to a new route loads data for the new route 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -412,7 +439,7 @@ exports[`route transitions transitioning to a new route with data works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -421,7 +448,7 @@ exports[`route transitions transitioning to a new route with data works 1`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
         },
@@ -438,7 +465,46 @@ exports[`route transitions transitioning to a new route with data works 1`] = `
 "
 `;
 
-exports[`route transitions transitioning to a new route with data works 2`] = `
+exports[`data loading transitioning to a new route loads data for the new route 2`] = `
+Object {
+  "routes/gists": Object {
+    "data": Object {
+      "users": Array [
+        Object {
+          "id": "ryanflorence",
+          "name": "Ryan Florence",
+        },
+        Object {
+          "id": "mjackson",
+          "name": "Michael Jackson",
+        },
+      ],
+    },
+    "type": "data",
+  },
+  "routes/gists/index": Object {
+    "data": Array [
+      Object {
+        "files": Object {
+          "remix-server.jsx": Object {
+            "filename": "remix-server.jsx",
+          },
+        },
+        "id": "610613b54e5b34f8122d1ba4a3da21a9",
+        "owner": Object {
+          "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
+          "id": 100200,
+          "login": "ryanflorence",
+        },
+        "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
+      },
+    ],
+    "type": "data",
+  },
+}
+`;
+
+exports[`data loading transitioning to a new route loads data for the new route 3`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -492,7 +558,7 @@ exports[`route transitions transitioning to a new route with data works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -501,7 +567,7 @@ exports[`route transitions transitioning to a new route with data works 2`] = `
             imports: [
               \\"index-d9da1d1d.js\\",
               \\"index-dcc9183b.js\\",
-              \\"index-f1a8126e.js\\",
+              \\"index-76e7e8b5.js\\",
             ],
           },
         },

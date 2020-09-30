@@ -1,0 +1,117 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`loader results when a loader returns not found sends a not found page 1`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <!--$-->
+    <title>Ain't nothing here</title>
+    <!--/$-->
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <!--$-->
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <!--/$-->
+  </head>
+  <body class=\\"m-4\\">
+    <!--$-->
+    <div data-test-id=\\"/404\\"><h1>404</h1></div>
+    <!--/$-->
+    <script>
+      __remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-d9da1d1d.js\\",
+              \\"index-dcc9183b.js\\",
+              \\"index-76e7e8b5.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/404\\": {
+            fileName: \\"routes/404.js\\",
+            imports: [\\"index-d9da1d1d.js\\"],
+          },
+        },
+        globalData: { useScripts: true },
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+        },
+        routeManifest: { \\"routes/404\\": { id: \\"routes/404\\", path: \\"*\\" } },
+        routeParams: { \\"routes/404\\": {} },
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`loader results when the loader has an error sends a server error page 1`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <!--$-->
+    <title>Remix Error: Route Not Found</title>
+    <meta name=\\"description\\" content=\\"There was an error rendering this page\\" />
+    <!--/$-->
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <!--$-->
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <!--/$-->
+  </head>
+  <body class=\\"m-4\\">
+    <!--$-->
+    <div>
+      <h1>Error!</h1>
+      <div>
+        <p>Missing route \\"<!-- -->routes/500<!-- -->\\"!</p>
+      </div>
+    </div>
+    <!--/$-->
+    <script>
+      __remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-d9da1d1d.js\\",
+              \\"index-dcc9183b.js\\",
+              \\"index-76e7e8b5.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+        },
+        globalData: { useScripts: true },
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+        },
+        routeManifest: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"*\\" } },
+        routeParams: { \\"routes/500\\": {} },
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;

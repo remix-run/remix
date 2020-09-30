@@ -1,21 +1,19 @@
-// TODO: Do NOT run the fixtures dir through Babel. That's cheating.
-
 module.exports = {
   projects: [
+    {
+      displayName: "cli",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/cli/**/*-test.[jt]s?(x)"]
+    },
     {
       displayName: "core",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/core/**/*-test.[jt]s?(x)"]
     },
     {
-      displayName: "express",
+      displayName: "gists-app",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/express/**/*-test.[jt]s?(x)"]
-    },
-    {
-      displayName: "react",
-      testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/react/**/*-test.[jt]s?(x)"]
+      testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"]
     }
   ]
 };
