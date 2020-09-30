@@ -13,14 +13,14 @@ export type HeadersInit = { [headerName: string]: string };
 export class Headers {
   private _map: { [headerName: string]: string };
 
-  constructor(init: Headers | HeadersInit = {}) {
+  constructor(init: Headers | HeadersInit | undefined) {
     this._map = {};
 
     if (init instanceof Headers) {
       for (let pair of init.entries()) {
         this.set(pair[0], pair[1]);
       }
-    } else {
+    } else if (init) {
       for (let key in init) {
         this.set(key, init[key]);
       }
@@ -95,7 +95,7 @@ export class Message {
   }
 
   async blob() {
-    throw new Error(`blob() is not yet implemented; use arrayBuffer() instead`);
+    throw new Error(`blob() is not implemented; use arrayBuffer() instead`);
   }
 
   async buffer(): Promise<Buffer> {
@@ -105,7 +105,7 @@ export class Message {
   }
 
   async formData() {
-    throw new Error(`formData() is not yet implemented`);
+    throw new Error(`formData() is not implemented`);
   }
 
   async json(): Promise<any> {
@@ -196,7 +196,7 @@ export interface RequestInit {
  */
 export class Request extends Message {
   static clone() {
-    throw new Error(`Request.clone() is not yet implemented`);
+    throw new Error(`Request.clone() is not implemented`);
   }
 
   readonly cache: RequestCache;
@@ -224,7 +224,7 @@ export class Request extends Message {
       this.headers = new Headers(init.headers);
     }
 
-    this.integrity = init.credentials || "";
+    this.integrity = init.integrity || "";
     this.method = init.method || "GET";
     this.mode = init.mode || RequestMode.SameOrigin; // Default on web is "cors"
     this.redirect = init.redirect || RequestRedirect.Follow;
@@ -261,11 +261,11 @@ export interface ResponseInit {
  */
 export class Response extends Message {
   static clone() {
-    throw new Error(`Response.clone() is not yet implemented`);
+    throw new Error(`Response.clone() is not implemented`);
   }
 
   static error() {
-    throw new Error(`Response.error() is not yet implemented`);
+    throw new Error(`Response.error() is not implemented`);
   }
 
   static redirect(url: string, status = 302): Response {
@@ -310,11 +310,11 @@ export class Response extends Message {
   }
 
   get trailers() {
-    throw new Error(`response.trailers is not yet implemented`);
+    throw new Error(`response.trailers is not implemented`);
   }
 
   get useFinalURL() {
-    throw new Error(`response.useFinalURL is not yet implemented`);
+    throw new Error(`response.useFinalURL is not implemented`);
   }
 }
 
