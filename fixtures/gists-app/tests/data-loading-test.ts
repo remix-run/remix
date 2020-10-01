@@ -25,16 +25,15 @@ describe("data loading", () => {
 
       expect(prettyHtml(await page.content())).toMatchSnapshot();
 
-      let responses = collectResponses(page);
+      let dataResponses = collectResponses(
+        page,
+        url => url.pathname === "/__remix_data"
+      );
 
       await page.click('a[href="/gists"]');
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      let dataResponses = responses.filter(
-        res => new URL(res.url()).pathname === "/__remix_data"
-      );
       expect(dataResponses.length).toEqual(2);
-
       expect(prettyHtml(await page.content())).toMatchSnapshot();
     });
   });
@@ -46,31 +45,29 @@ describe("data loading", () => {
 
       expect(prettyHtml(await page.content())).toMatchSnapshot();
 
-      let responses = collectResponses(page);
+      let dataResponses = collectResponses(
+        page,
+        url => url.pathname === "/__remix_data"
+      );
 
       await page.click('a[href="/gists/mjackson"]');
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
-      let dataResponses = responses.filter(
-        res => new URL(res.url()).pathname === "/__remix_data"
-      );
       expect(dataResponses.length).toEqual(1);
-
       expect(prettyHtml(await page.content())).toMatchSnapshot();
 
       await page.reload();
       await reactIsHydrated(page);
 
-      responses = collectResponses(page);
+      dataResponses = collectResponses(
+        page,
+        url => url.pathname === "/__remix_data"
+      );
 
       await page.goBack();
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      dataResponses = responses.filter(
-        res => new URL(res.url()).pathname === "/__remix_data"
-      );
       expect(dataResponses.length).toEqual(1);
-
       expect(prettyHtml(await page.content())).toMatchSnapshot();
     });
   });

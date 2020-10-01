@@ -9,21 +9,31 @@ export function reactIsHydrated(page: Page) {
   return page.waitForFunction("window.reactIsHydrated === true");
 }
 
-export function collectRequests(page: Page): Request[] {
+export function collectRequests(
+  page: Page,
+  filter?: (url: URL) => boolean
+): Request[] {
   let requests: Request[] = [];
 
   page.on("request", req => {
-    requests.push(req);
+    if (filter && filter(new URL(req.url()))) {
+      requests.push(req);
+    }
   });
 
   return requests;
 }
 
-export function collectResponses(page: Page): Response[] {
+export function collectResponses(
+  page: Page,
+  filter?: (url: URL) => boolean
+): Response[] {
   let responses: Response[] = [];
 
   page.on("response", res => {
-    responses.push(res);
+    if (filter && filter(new URL(res.url()))) {
+      responses.push(res);
+    }
   });
 
   return responses;
