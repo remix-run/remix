@@ -18,7 +18,7 @@ import replace from "@rollup/plugin-replace";
 import { BrowserManifestFilename, ServerManifestFilename } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import type { RemixRouteObject } from "./routes";
+import type { ManifestRouteObject } from "./routes";
 import { purgeRequireCache } from "./requireCache";
 
 import manifest from "./rollup/manifest";
@@ -174,7 +174,7 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
 
 async function visitRoutes(
   routes: RemixConfig["routes"],
-  callback: (route: RemixRouteObject) => Promise<void>
+  callback: (route: ManifestRouteObject) => Promise<void>
 ): Promise<void> {
   for (let route of routes) {
     await callback(route);

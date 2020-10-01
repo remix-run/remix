@@ -1,25 +1,62 @@
 import type { Params } from "react-router";
 
 import type { BuildManifest, RouteModule } from "./build";
-import type { RemixConfig } from "./config";
 import type { LoaderResult } from "./loader";
 import { LoaderResultCopy, LoaderResultSuccess } from "./loader";
-import type { RemixRouteMatch } from "./match";
+import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 
 export interface EntryContext {
+  browserEntryContextString?: string;
   browserManifest: BuildManifest;
-  browserEntryContextString?: string; // Only needed on the server
   globalData: GlobalData;
-  publicPath: RemixConfig["publicPath"];
+  matches: EntryRouteMatch[];
+  publicPath: string;
   routeData: RouteData;
-  routeManifest: RouteManifest;
-  routeParams: RouteParams;
   routeLoader: RouteLoader;
+  routeManifest: RouteManifest;
+}
+
+export interface EntryRouteObject {
+  caseSensitive?: boolean;
+  id: string;
+  parentId?: string;
+  path: string;
+}
+
+export interface EntryRouteMatch {
+  params: Params;
+  pathname: string;
+  route: EntryRouteObject;
+}
+
+function createRoute(configRoute: ConfigRouteObject): EntryRouteObject {
+  let route: EntryRouteObject = {
+    id: configRoute.id,
+    path: configRoute.path
+  };
+
+  if (typeof configRoute.caseSensitive !== "undefined") {
+    route.caseSensitive = configRoute.caseSensitive;
+  }
+
+  if (configRoute.parentId) {
+    route.parentId = configRoute.parentId;
+  }
+
+  return route;
+}
+
+export function createMatches(matches: ConfigRouteMatch[]): EntryRouteMatch[] {
+  return matches.map(match => ({
+    params: match.params,
+    pathname: match.pathname,
+    route: createRoute(match.route)
+  }));
 }
 
 export interface RouteLoader {
   preload(assets: BuildManifest, routeId: string): Promise<RouteModule>;
-  read(assets: BuildManifest, routeId: string): RouteModule;
+  read(routeId: string): RouteModule;
 }
 
 export type GlobalData = any;
@@ -64,37 +101,14 @@ export function createRouteDataResults(
 }
 
 export interface RouteManifest {
-  [routeId: string]: {
-    id: string;
-    parentId?: string;
-    path: string;
-  };
+  [routeId: string]: EntryRouteObject;
 }
 
-export function createRouteManifest(matches: RemixRouteMatch[]): RouteManifest {
+export function createRouteManifest(
+  matches: ConfigRouteMatch[]
+): RouteManifest {
   return matches.reduce((memo, match) => {
-    let route: RouteManifest[string] = {
-      id: match.route.id,
-      path: match.route.path
-    };
-
-    if (match.route.parentId) {
-      route.parentId = match.route.parentId;
-    }
-
-    memo[match.route.id] = route;
-
+    memo[match.route.id] = createRoute(match.route);
     return memo;
   }, {} as RouteManifest);
-}
-
-export interface RouteParams {
-  [routeId: string]: Params;
-}
-
-export function createRouteParams(matches: RemixRouteMatch[]): RouteParams {
-  return matches.reduce((memo, match) => {
-    memo[match.route.id] = match.params;
-    return memo;
-  }, {} as RouteParams);
 }

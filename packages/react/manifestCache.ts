@@ -6,8 +6,8 @@ interface Manifest {
 }
 
 export interface ManifestCache {
-  preload(pathname: string): Promise<ManifestPatch | null>;
-  read(pathname: string): Manifest;
+  preload(pathname: string, reloadOnNotFound?: boolean): Promise<unknown>;
+  read(): Manifest;
 }
 
 interface ManifestPatch {
@@ -32,7 +32,7 @@ export function createManifestCache(
     routes: initialRoutes
   };
 
-  async function preload(pathname: string) {
+  async function preload(pathname: string, reloadOnNotFound = false) {
     if (patchCache[pathname]) {
       return patchCache[pathname];
     }
@@ -43,16 +43,8 @@ export function createManifestCache(
     if (patch) {
       Object.assign(cache.assets, patch.buildManifest);
       Object.assign(cache.routes, patch.routeManifest);
-    }
-
-    return patch;
-  }
-
-  async function preloadOrReload(pathname: string) {
-    let patch = await preload(pathname);
-
-    if (patch == null) {
-      // Never resolve so suspense will not try to rerender this
+    } else if (reloadOnNotFound) {
+      // Never resolve so we will not try to rerender this
       // page before the reload.
       return new Promise(() => {
         window.location.reload();
@@ -60,8 +52,7 @@ export function createManifestCache(
     }
   }
 
-  function read(pathname: string) {
-    if (!(pathname in patchCache)) throw preloadOrReload(pathname);
+  function read() {
     return cache;
   }
 

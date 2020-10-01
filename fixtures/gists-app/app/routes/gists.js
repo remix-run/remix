@@ -1,6 +1,6 @@
 import React from "react";
-import { Outlet, useLocationPending } from "react-router-dom";
-import { Link, useRouteData } from "@remix-run/react";
+import { Outlet } from "react-router-dom";
+import { Link, useRouteData, useLocationPending } from "@remix-run/react";
 
 export default function Gists() {
   let locationPending = useLocationPending();

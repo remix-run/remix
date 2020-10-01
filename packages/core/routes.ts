@@ -14,12 +14,37 @@ function normalizeSlashes(file: string): string {
  * A route that was created using defineRoutes or created conventionally from
  * looking at the files on the filesystem.
  */
-export interface RemixRouteObject {
+export interface ConfigRouteObject {
+  /**
+   * Should be `true` if the `path` is case-sensitive.
+   */
+  caseSensitive?: boolean;
+
+  /**
+   * This route's child routes.
+   */
+  children?: ConfigRouteObject[];
+
+  /**
+   * The path to the file that exports the React component rendered by this
+   * route as its default export, relative to the `config.appDirectory`. So the
+   * component file for route id `routes/gists/$username` will be
+   * `routes/gists/$username.js`.
+   */
+  componentFile: string;
+
   /**
    * The unique id for this route, named like the `componentFile`. So
    * `routes/gists/$username.js` will have an `id` of `routes/gists/$username`.
    */
   id: string;
+
+  /**
+   * The path to the file that exports the data loader for this route as its
+   * default export, relative to the `config.dataDirectory`. So the loader for
+   * `routes/gists/$username.js` will be `loaders/gists/$username.js`.
+   */
+  loaderFile?: string;
 
   /**
    * The unique id for this route's parent route, if there is one.
@@ -32,34 +57,19 @@ export interface RemixRouteObject {
   path: string;
 
   /**
-   * The path to the file that exports the React component rendered by this
-   * route as its default export, relative to the `config.appDirectory`. So the
-   * component file for route id `routes/gists/$username` will be
-   * `routes/gists/$username.js`.
-   */
-  componentFile: string;
-
-  /**
-   * The path to the file that exports the data loader for this route as its
-   * default export, relative to the `config.dataDirectory`. So the loader for
-   * `routes/gists/$username.js` will be `loaders/gists/$username.js`.
-   */
-  loaderFile?: string;
-
-  /**
    * The path to the file that contains styles for this route, relative to the
    * `config.appDirectory`. So the styles for `routes/gists/$username.js` will
    * be `styles/gists/$username.css`.
    */
   stylesFile?: string;
-
-  /**
-   * This route's child routes.
-   */
-  children?: RemixRouteObject[];
 }
 
 export interface DefineRouteOptions {
+  /**
+   * Should be `true` if the route `path` is case-sensitive.
+   */
+  caseSensitive?: boolean;
+
   /**
    * The path to the file that exports the data loader for this route as its
    * default export, relative to the `config.loadersDirectory`. So the path for
@@ -112,9 +122,9 @@ export interface DefineRoute {
  */
 export function defineRoutes(
   getRoutes: (defineRoute: DefineRoute) => void
-): RemixRouteObject[] {
-  let routes: RemixRouteObject[] = [];
-  let current: RemixRouteObject[] = [];
+): ConfigRouteObject[] {
+  let routes: ConfigRouteObject[] = [];
+  let current: ConfigRouteObject[] = [];
   let returned = false;
 
   function defineRoute(
@@ -127,7 +137,7 @@ export function defineRoutes(
 
     let id = normalizeSlashes(stripFileExtension(component));
     let parent = current[current.length - 1];
-    let route: RemixRouteObject = { id, path, componentFile: component };
+    let route: ConfigRouteObject = { id, path, componentFile: component };
 
     if (parent && parent.id) {
       route.parentId = parent.id;
@@ -140,6 +150,9 @@ export function defineRoutes(
     } else if (optionsOrChildren != null) {
       // route(path, component, options, children)
       // route(path, component, options)
+      if (typeof optionsOrChildren.caseSensitive !== "undefined") {
+        route.caseSensitive = !!optionsOrChildren.caseSensitive;
+      }
       if (optionsOrChildren.loader) {
         route.loaderFile = optionsOrChildren.loader;
       }
@@ -182,7 +195,7 @@ function throwAsyncError() {
 export function getConventionalRoutes(
   appDir: string,
   dataDir: string
-): RemixRouteObject[] {
+): ConfigRouteObject[] {
   return defineRoutes(defineRoute => {
     defineRoutesInDirectory(
       defineRoute,

@@ -1,20 +1,30 @@
 import type { Location } from "history";
-import type { RouteMatch, RouteObject } from "react-router";
+import type { RouteObject, Params } from "react-router";
 import { matchRoutes } from "react-router";
 
-import type { RemixRouteObject } from "./routes";
+import type { ConfigRouteObject } from "./routes";
 
-export interface RemixRouteMatch extends Omit<RouteMatch, "route"> {
-  route: RemixRouteObject;
+export type { ConfigRouteObject };
+
+export interface ConfigRouteMatch {
+  params: Params;
+  pathname: string;
+  route: ConfigRouteObject;
 }
 
-function matchRemixRoutes(
-  routes: RemixRouteObject[],
+function matchConfigRoutes(
+  routes: ConfigRouteObject[],
   location: string | Location
-): RemixRouteMatch[] | null {
-  return matchRoutes((routes as unknown) as RouteObject[], location) as
-    | RemixRouteMatch[]
-    | null;
+): ConfigRouteMatch[] | null {
+  let matches = matchRoutes((routes as unknown) as RouteObject[], location);
+
+  if (!matches) return null;
+
+  return matches.map(match => ({
+    params: match.params,
+    pathname: match.pathname,
+    route: (match.route as unknown) as ConfigRouteObject
+  }));
 }
 
-export { matchRemixRoutes as matchRoutes };
+export { matchConfigRoutes as matchRoutes };

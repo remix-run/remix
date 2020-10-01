@@ -1,6 +1,6 @@
 import path from "path";
 
-import type { RemixRouteObject } from "./routes";
+import type { ConfigRouteObject } from "./routes";
 import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
 
 /**
@@ -39,9 +39,7 @@ export interface AppConfig {
   /**
    * A function for defining custom routes.
    */
-  routes?: {
-    (defineRoutes: typeof _defineRoutes): Promise<RemixRouteObject[]>;
-  };
+  routes?: (defineRoutes: typeof _defineRoutes) => Promise<ConfigRouteObject[]>;
 
   /**
    * The path to the server build, relative to remix.config.js. Defaults to
@@ -87,7 +85,7 @@ export interface RemixConfig {
   /**
    * An array of all available routes, nested according to route hierarchy.
    */
-  routes: RemixRouteObject[];
+  routes: ConfigRouteObject[];
 
   /**
    * The absolute path to the server build.

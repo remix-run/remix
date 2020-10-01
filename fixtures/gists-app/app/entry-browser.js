@@ -4,8 +4,9 @@ import Remix from "@remix-run/react/browser";
 
 import App from "./components/App";
 
-ReactDOM.unstable_createRoot(document, { hydrate: true }).render(
+ReactDOM.hydrate(
   <Remix>
     <App />
-  </Remix>
+  </Remix>,
+  document
 );

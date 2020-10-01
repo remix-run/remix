@@ -57,10 +57,6 @@ export function createDataCache(
   }
 
   function read(locationKey: string, routeId?: string) {
-    if (inflight[locationKey]) {
-      throw inflight[locationKey];
-    }
-
     let locationData = cache[locationKey];
 
     invariant(locationData, `Missing data for location ${locationKey}`);

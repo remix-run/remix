@@ -1,15 +1,23 @@
-import type { BuildManifest, RouteLoader, RouteModule } from "@remix-run/core";
+import type {
+  BuildManifest,
+  RouteLoader,
+  RouteModule,
+  RouteManifest
+} from "@remix-run/core";
 
 import invariant from "./invariant";
 
-export type { RouteLoader };
+export type { RouteLoader, RouteManifest };
 
-interface RouteModuleCache {
+export interface RouteModuleCache {
   [routeId: string]: RouteModule;
 }
 
-export function createRouteLoader(publicPath: string): RouteLoader {
-  let cache: RouteModuleCache = {};
+export function createRouteLoader(
+  initialRoutes: RouteModuleCache,
+  publicPath: string
+): RouteLoader {
+  let cache: RouteModuleCache = initialRoutes;
 
   async function preload(assets: BuildManifest, routeId: string) {
     let entry = assets[routeId];
@@ -26,8 +34,7 @@ export function createRouteLoader(publicPath: string): RouteLoader {
     return routeModule;
   }
 
-  function read(assets: BuildManifest, routeId: string): RouteModule {
-    if (!cache[routeId]) throw preload(assets, routeId);
+  function read(routeId: string): RouteModule {
     return cache[routeId];
   }
 

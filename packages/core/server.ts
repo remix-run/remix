@@ -17,10 +17,10 @@ import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import {
   createGlobalData,
+  createMatches,
   createRouteData,
   createRouteDataResults,
-  createRouteManifest,
-  createRouteParams
+  createRouteManifest
 } from "./entry";
 import type { AppLoadContext } from "./loader";
 import {
@@ -33,11 +33,10 @@ import {
   loadData,
   loadDataDiff
 } from "./loader";
-import type { RemixRouteMatch } from "./match";
+import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
-import type { RemixRouteObject } from "./routes";
 import { purgeRequireCache } from "./requireCache";
 
 function createLocation(
@@ -117,13 +116,13 @@ async function handleDataRequest(
 
     loaderResults = await loadDataDiff(
       config,
-      matches,
-      fromMatches,
+      context,
       location,
-      context
+      matches,
+      fromMatches
     );
   } else {
-    loaderResults = await loadData(config, matches, location, context);
+    loaderResults = await loadData(config, context, location, matches);
   }
 
   // TODO: How to handle redirects/status code changes?
@@ -150,7 +149,7 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
 
   let browserManifest: BuildManifest;
   if (process.env.NODE_ENV === "development") {
-    rewriteConfigPublicPath(config);
+    rewritePublicPath(config);
 
     try {
       browserManifest = await getDevBrowserBuildManifest(config.publicPath);
@@ -185,26 +184,26 @@ async function handleHtmlRequest(
   let matches = matchRoutes(config.routes, req.url);
 
   let location = createLocation(req.url);
-  let statusCode = 200;
   let loaderResults: LoaderResult[] = [];
+  let statusCode = 200;
 
   if (!matches) {
     statusCode = 404;
     matches = [
       {
-        pathname: location.pathname,
         params: {},
+        pathname: location.pathname,
         route: {
-          path: location.pathname,
           id: "routes/404",
+          path: location.pathname,
           componentFile: "routes/404.js"
         }
       }
     ];
   } else {
     let [globalLoaderResult, matchLoaderResults] = await Promise.all([
-      loadGlobalData(config, location, context),
-      loadData(config, matches, location, context)
+      loadGlobalData(config, context, location),
+      loadData(config, context, location, matches)
     ]);
 
     loaderResults = [globalLoaderResult, ...matchLoaderResults];
@@ -232,11 +231,11 @@ async function handleHtmlRequest(
       statusCode = errorResult.httpStatus;
       matches = [
         {
-          pathname: location.pathname,
           params: {},
+          pathname: location.pathname,
           route: {
-            path: "*",
             id: "routes/500",
+            path: "*",
             componentFile: "routes/500.js"
           }
         }
@@ -251,11 +250,11 @@ async function handleHtmlRequest(
         statusCode = changeStatusCodeResult.httpStatus;
         matches = [
           {
-            pathname: location.pathname,
             params: {},
+            pathname: location.pathname,
             route: {
-              path: "*",
               id: `routes/${changeStatusCodeResult.httpStatus}`,
+              path: "*",
               componentFile: `routes/${changeStatusCodeResult.httpStatus}.js`
             }
           }
@@ -271,8 +270,8 @@ async function handleHtmlRequest(
     // Adjust `config.routes` so that only the routes that are matched in the
     // current request are available. This should speed up the build since we
     // only build the matched routes.
-    rewriteConfigRoutes(config, matches);
-    rewriteConfigPublicPath(config);
+    rewriteRoutes(config, matches);
+    rewritePublicPath(config);
 
     try {
       browserManifest = await getDevBrowserBuildManifest(config.publicPath);
@@ -313,9 +312,9 @@ async function handleHtmlRequest(
   let globalData = globalLoaderResult
     ? createGlobalData(globalLoaderResult as LoaderResultSuccess)
     : null;
+  let clientMatches = createMatches(matches);
   let routeData = createRouteData(loaderResults);
   let routeManifest = createRouteManifest(matches);
-  let routeParams = createRouteParams(matches);
 
   // Get the browser manifest for only the browser entry point + the matched
   // routes. The client will fill in the rest by making requests to the manifest
@@ -334,10 +333,10 @@ async function handleHtmlRequest(
   let browserEntryContext = {
     browserManifest: partialBrowserManifest,
     globalData,
+    matches: clientMatches,
     publicPath: config.publicPath,
     routeData,
-    routeManifest,
-    routeParams
+    routeManifest
   };
 
   // Use jsesc to escape data returned from the loaders. This string is
@@ -355,7 +354,7 @@ async function handleHtmlRequest(
           `Cannot preload routes on the server because we can't suspend`
         );
       },
-      read(_assets: any, routeId: string) {
+      read(routeId: string) {
         return routeModules[routeId];
       }
     }
@@ -369,28 +368,20 @@ function getPartialManifest(
   keys: string[]
 ): BuildManifest {
   return keys.reduce((memo, key) => {
-    if (browserManifest[key]) {
-      memo[key] = browserManifest[key];
-    }
-
+    if (browserManifest[key]) memo[key] = browserManifest[key];
     return memo;
   }, {} as BuildManifest);
 }
 
-function rewriteConfigRoutes(config: RemixConfig, matches: RemixRouteMatch[]) {
-  let route = matches.reduceRight<RemixRouteObject | null>(
-    (childRoute, match) => {
-      let route = match.route;
-      if (childRoute) route.children = [childRoute];
-      return route;
-    },
-    null
-  );
-
-  config.routes = [route!];
+function rewriteRoutes(config: RemixConfig, matches: ConfigRouteMatch[]) {
+  config.routes = matches.reduceRight((children, match) => {
+    let route = { ...match.route };
+    if (children.length) route.children = children;
+    return [route];
+  }, [] as ConfigRouteObject[]);
 }
 
-function rewriteConfigPublicPath(config: RemixConfig) {
+function rewritePublicPath(config: RemixConfig) {
   config.publicPath =
     process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
 }

@@ -3,7 +3,7 @@ import type { Location } from "history";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";
-import type { RemixRouteMatch } from "./match";
+import type { ConfigRouteMatch } from "./match";
 import { StatusCode, Redirect } from "./platform";
 
 /**
@@ -13,26 +13,10 @@ import { StatusCode, Redirect } from "./platform";
 export type AppLoadContext = any;
 
 /**
- * A function that loads data for a route.
+ * A function that loads data for a route or the global data loader.
  */
-export interface RemixLoader {
-  ({
-    context,
-    location,
-    params
-  }: {
-    context: AppLoadContext;
-    location: Location;
-    params: Params;
-  }): any;
-}
-
-function getLoader(
-  remixConfig: RemixConfig,
-  loaderFile: string
-): RemixLoader | null {
-  let requirePath = path.resolve(remixConfig.dataDirectory, loaderFile);
-  return require(requirePath);
+export interface DataLoader {
+  (args: { context: AppLoadContext; location: Location; params: Params }): any;
 }
 
 export class LoaderResult {
@@ -76,18 +60,23 @@ export class LoaderResultSuccess extends LoaderResult {
   }
 }
 
+function requireLoader(config: RemixConfig, loaderFile: string): DataLoader {
+  let requirePath = path.resolve(config.dataDirectory, loaderFile);
+  return require(requirePath);
+}
+
 async function executeLoader(
-  loader: RemixLoader | null,
+  loader: DataLoader | null,
   routeId: string,
-  params: Params,
+  context: AppLoadContext,
   location: Location,
-  context: any
+  params: Params = {}
 ): Promise<LoaderResult> {
   if (loader == null) {
     return new LoaderResultSuccess(routeId, null);
   } else {
     try {
-      let result = await loader({ params, context, location });
+      let result = await loader({ context, location, params });
 
       if (result instanceof StatusCode) {
         return new LoaderResultChangeStatusCode(routeId, result.status);
@@ -111,18 +100,17 @@ async function executeLoader(
  */
 export async function loadGlobalData(
   config: RemixConfig,
-  location: Location,
-  context: any
+  context: AppLoadContext,
+  location: Location
 ): Promise<LoaderResult> {
   let loader;
   try {
-    loader = getLoader(config, "global");
+    loader = requireLoader(config, "global");
   } catch (error) {
-    // No global loader, no problem.
-    return new LoaderResultSuccess("global", null);
+    loader = null;
   }
 
-  return executeLoader(loader, "global", {}, location, context);
+  return executeLoader(loader, "global", context, location);
 }
 
 /**
@@ -130,20 +118,25 @@ export async function loadGlobalData(
  */
 export async function loadData(
   config: RemixConfig,
-  matches: RemixRouteMatch[],
+  context: AppLoadContext,
   location: Location,
-  context: any
+  matches: ConfigRouteMatch[]
 ): Promise<LoaderResult[]> {
   let loaders = matches.map(match =>
-    match.route.loaderFile ? getLoader(config, match.route.loaderFile) : null
+    match.route.loaderFile
+      ? requireLoader(config, match.route.loaderFile)
+      : null
   );
 
   let promises = loaders.map(
-    async (loader, index): Promise<LoaderResult> => {
-      let id = matches[index].route.id;
-      let params = matches[index].params;
-      return executeLoader(loader, id, params, location, context);
-    }
+    async (loader, index): Promise<LoaderResult> =>
+      executeLoader(
+        loader,
+        matches[index].route.id,
+        context,
+        location,
+        matches[index].params
+      )
   );
 
   let results = await Promise.all(promises);
@@ -159,17 +152,16 @@ export async function loadData(
  */
 export async function loadDataDiff(
   config: RemixConfig,
-  matches: RemixRouteMatch[],
-  fromMatches: RemixRouteMatch[],
+  context: AppLoadContext,
   location: Location,
-  context: any
+  matches: ConfigRouteMatch[],
+  fromMatches: ConfigRouteMatch[]
 ): Promise<LoaderResult[]> {
   let newMatches = matches.filter(
     match =>
       !fromMatches.some(fromMatch => fromMatch.pathname === match.pathname)
   );
-
-  let data = await loadData(config, newMatches, location, context);
+  let data = await loadData(config, context, location, newMatches);
 
   if (data.length < matches.length) {
     let copyMatches = matches.slice(0, matches.length - data.length);

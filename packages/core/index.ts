@@ -9,14 +9,15 @@ export { readConfig } from "./config";
 
 export type {
   EntryContext,
+  EntryRouteObject,
+  EntryRouteMatch,
   RouteData,
   RouteDataResults,
   RouteManifest,
-  RouteParams,
   RouteLoader
 } from "./entry";
 
-export type { AppLoadContext, RemixLoader } from "./loader";
+export type { AppLoadContext, DataLoader } from "./loader";
 
 export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
