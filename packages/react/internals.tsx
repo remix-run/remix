@@ -159,7 +159,6 @@ export function RemixEntry({
     pending: false
   });
   let { action, location, matches, pending } = state;
-  /* let [transition, setTransition] = React.useState<Promise<void> | null>(null); */
 
   let globalDataState = React.useState(globalData);
   let dataCache = useLazyRef(() => createDataCache(location.key, routeData));
@@ -174,15 +173,17 @@ export function RemixEntry({
 
     setState(state => ({ ...state, pending: true }));
 
-    // TODO: Interrupt this transition when a new one starts.
     (async () => {
-      let dataPromise = dataCache.preload(nextLocation, location);
-
       await manifestCache.preload(nextLocation.pathname, true);
 
       let manifest = manifestCache.read();
       let routes = createClientRoutes(manifest.routes);
       let matches = matchClientRoutes(routes, nextLocation);
+
+      // TODO: Filter out routes that are already on the page.
+      let dataPromise = Promise.all(
+        matches.map(match => dataCache.preload(nextLocation, match))
+      );
 
       await Promise.all(
         matches.map(match =>

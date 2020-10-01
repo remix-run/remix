@@ -16,7 +16,12 @@ export type AppLoadContext = any;
  * A function that loads data for a route or the global data loader.
  */
 export interface DataLoader {
-  (args: { context: AppLoadContext; location: Location; params: Params }): any;
+  (args: {
+    context: AppLoadContext;
+    pathname: string;
+    search: string;
+    params: Params;
+  }): any;
 }
 
 export class LoaderResult {
@@ -69,14 +74,15 @@ async function executeLoader(
   loader: DataLoader | null,
   routeId: string,
   context: AppLoadContext,
-  location: Location,
+  pathname: string,
+  search: string,
   params: Params = {}
 ): Promise<LoaderResult> {
   if (loader == null) {
     return new LoaderResultSuccess(routeId, null);
   } else {
     try {
-      let result = await loader({ context, location, params });
+      let result = await loader({ context, pathname, search, params });
 
       if (result instanceof StatusCode) {
         return new LoaderResultChangeStatusCode(routeId, result.status);
@@ -101,7 +107,8 @@ async function executeLoader(
 export async function loadGlobalData(
   config: RemixConfig,
   context: AppLoadContext,
-  location: Location
+  pathname: string,
+  search: string
 ): Promise<LoaderResult> {
   let loader;
   try {
@@ -110,65 +117,44 @@ export async function loadGlobalData(
     loader = null;
   }
 
-  return executeLoader(loader, "global", context, location);
+  return executeLoader(loader, "global", context, pathname, search);
 }
 
 /**
  * Loads data for all the given routes.
  */
-export async function loadData(
+export function loadData(
   config: RemixConfig,
   context: AppLoadContext,
-  location: Location,
+  pathname: string,
+  search: string,
   matches: ConfigRouteMatch[]
 ): Promise<LoaderResult[]> {
-  let loaders = matches.map(match =>
-    match.route.loaderFile
-      ? requireLoader(config, match.route.loaderFile)
-      : null
-  );
-
-  let promises = loaders.map(
-    async (loader, index): Promise<LoaderResult> =>
-      executeLoader(
-        loader,
-        matches[index].route.id,
+  return Promise.all(
+    matches.map(match =>
+      loadRouteData(
+        config,
+        match.route.id,
         context,
-        location,
-        matches[index].params
+        pathname,
+        search,
+        match.params
       )
+    )
   );
-
-  let results = await Promise.all(promises);
-
-  return results;
 }
 
-/**
- * Loads only the data for the new routes in a route transition. Data for routes
- * that have not changed are backfilled with "copy" results, indicating that
- * data for that route should be copied from the previous values that are
- * probably already cached somewhere (on the client).
- */
-export async function loadDataDiff(
+export function loadRouteData(
   config: RemixConfig,
+  routeId: string,
   context: AppLoadContext,
-  location: Location,
-  matches: ConfigRouteMatch[],
-  fromMatches: ConfigRouteMatch[]
-): Promise<LoaderResult[]> {
-  let newMatches = matches.filter(
-    match =>
-      !fromMatches.some(fromMatch => fromMatch.pathname === match.pathname)
-  );
-  let data = await loadData(config, context, location, newMatches);
-
-  if (data.length < matches.length) {
-    let copyMatches = matches.slice(0, matches.length - data.length);
-    data.unshift(
-      ...copyMatches.map(match => new LoaderResultCopy(match.route.id))
-    );
-  }
-
-  return data;
+  pathname: string,
+  search: string,
+  params: Params
+): Promise<LoaderResult> {
+  let route = config.routeManifest[routeId];
+  let loader = route.loaderFile
+    ? requireLoader(config, route.loaderFile)
+    : null;
+  return executeLoader(loader, routeId, context, pathname, search, params);
 }

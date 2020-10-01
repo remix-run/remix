@@ -1,10 +1,12 @@
 import type { Location } from "history";
-import type { RouteData, RouteDataResults } from "@remix-run/core";
+import type { Params } from "react-router";
+import type { RouteData } from "@remix-run/core";
 
+import type { ClientRouteMatch } from "./internals";
 import invariant from "./invariant";
 
 export interface DataCache {
-  preload(location: Location, fromLocation: Location): Promise<void>;
+  preload(location: Location, match: ClientRouteMatch): Promise<void>;
   read(locationKey: string): RouteData;
   read(locationKey: string, routeId: string): RouteData[string];
 }
@@ -23,36 +25,30 @@ export function createDataCache(
 
   async function preload(
     location: Location,
-    fromLocation: Location
+    match: ClientRouteMatch
   ): Promise<void> {
-    if (cache[location.key]) return;
+    let locationKey = location.key;
+    let routeId = match.route.id;
 
-    if (inflight[location.key]) return;
+    if (cache[locationKey] && cache[locationKey][routeId]) return;
 
-    inflight[location.key] = fetchDataResults(
-      location.pathname,
-      fromLocation.pathname
-    );
+    let inflightKey = locationKey + ":" + routeId;
+
+    if (inflight[inflightKey]) return;
+
+    inflight[inflightKey] = fetchRouteData(location, routeId, match.params);
 
     try {
-      let dataResults = await inflight[location.key];
+      let result = await inflight[inflightKey];
 
-      cache[location.key] = Object.keys(dataResults).reduce((memo, routeId) => {
-        let dataResult = dataResults[routeId];
+      if (!cache[locationKey]) cache[locationKey] = {};
 
-        if (dataResult.type === "data") {
-          memo[routeId] = dataResult.data;
-        } else if (dataResult.type === "copy") {
-          memo[routeId] = cache[fromLocation.key][routeId];
-        }
-
-        return memo;
-      }, {} as RouteData);
+      cache[locationKey][routeId] = result.data;
     } catch (error) {
       // TODO: Handle errors
       console.error(error);
     } finally {
-      delete inflight[location.key];
+      delete inflight[locationKey];
     }
   }
 
@@ -74,12 +70,27 @@ export function createDataCache(
   return { preload, read };
 }
 
-async function fetchDataResults(
-  path: string,
-  from?: string
-): Promise<RouteDataResults> {
-  let url = `/__remix_data?path=${path}`;
-  if (from) url += `&from=${from}`;
+interface RouteDataResult {
+  data: any;
+}
+
+async function fetchRouteData(
+  location: Location,
+  routeId: string,
+  params: Params
+): Promise<RouteDataResult> {
+  let search = createSearch({
+    pathname: location.pathname,
+    search: location.search,
+    id: routeId,
+    params: JSON.stringify(params)
+  });
+  let url = `/__remix_data${search}`;
   let res = await fetch(url);
   return await res.json();
+}
+
+function createSearch(pairs: { [paramName: string]: string }): string {
+  let params = new URLSearchParams(pairs);
+  return "?" + params.toString();
 }

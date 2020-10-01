@@ -88,6 +88,11 @@ export interface RemixConfig {
   routes: ConfigRouteObject[];
 
   /**
+   * A route lookup table for the data loaders.
+   */
+  routeManifest: RouteManifest;
+
+  /**
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
@@ -140,6 +145,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     routes.push(...manualRoutes);
   }
 
+  let routeManifest = createRouteManifest(routes);
+
   let serverBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.serverBuildDirectory || "build"
@@ -155,8 +162,28 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     publicPath,
     rootDirectory,
     routes,
+    routeManifest,
     serverBuildDirectory
   };
 
   return remixConfig;
+}
+
+interface RouteManifest<T> {
+  [routeId: string]: T;
+}
+
+function createRouteManifest(
+  routes: ConfigRouteObject[],
+  manifest: RouteManifest<ConfigRouteObject> = {}
+): RouteManifest<ConfigRouteObject> {
+  for (let route of routes) {
+    manifest[route.id] = route;
+
+    if (route.children) {
+      createRouteManifest(route.children, manifest);
+    }
+  }
+
+  return manifest;
 }

@@ -31,7 +31,8 @@ import {
   LoaderResultSuccess,
   loadGlobalData,
   loadData,
-  loadDataDiff
+  loadDataDiff,
+  loadRouteData
 } from "./loader";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
@@ -95,41 +96,35 @@ async function handleDataRequest(
   req: Request,
   context: AppLoadContext
 ): Promise<Response> {
-  let location = createLocation(req.url);
-  let params = new URLSearchParams(location.search);
-  let path = params.get("path");
-  let from = params.get("from");
+  let reqSearch = req.url.slice(req.url.indexOf("?"));
+  let reqParams = new URLSearchParams(reqSearch);
 
-  if (!path) {
+  let pathname = reqParams.get("pathname");
+  let search = reqParams.get("search") || "";
+  let routeId = reqParams.get("id");
+  let params = JSON.parse(reqParams.get("params") || "{}");
+
+  if (!pathname) {
     return jsonError(`Missing ?path`, 403);
   }
-
-  let matches = matchRoutes(config.routes, path);
-
-  if (!matches) {
-    return jsonError(`No routes matched path "${path}"`, 404);
+  if (!routeId) {
+    return jsonError(`Missing ?id`, 403);
   }
 
-  let loaderResults;
-  if (from) {
-    let fromMatches = matchRoutes(config.routes, from) || [];
-
-    loaderResults = await loadDataDiff(
-      config,
-      context,
-      location,
-      matches,
-      fromMatches
-    );
-  } else {
-    loaderResults = await loadData(config, context, location, matches);
-  }
+  let loaderResult = await loadRouteData(
+    config,
+    routeId,
+    context,
+    pathname,
+    search,
+    params
+  );
 
   // TODO: How to handle redirects/status code changes?
 
-  let dataResults = createRouteDataResults(loaderResults);
+  // let dataResults = createRouteDataResults(loaderResults);
 
-  return json(dataResults);
+  return json({ data: (loaderResult as LoaderResultSuccess).data });
 }
 
 async function handleManifestRequest(config: RemixConfig, req: Request) {
@@ -202,8 +197,8 @@ async function handleHtmlRequest(
     ];
   } else {
     let [globalLoaderResult, matchLoaderResults] = await Promise.all([
-      loadGlobalData(config, context, location),
-      loadData(config, context, location, matches)
+      loadGlobalData(config, context, location.pathname, location.search),
+      loadData(config, context, location.pathname, location.search, matches)
     ]);
 
     loaderResults = [globalLoaderResult, ...matchLoaderResults];

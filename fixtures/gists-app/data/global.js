@@ -1,5 +1,5 @@
-module.exports = ({ location }) => {
-  let params = new URLSearchParams(location.search);
+module.exports = ({ search }) => {
+  let params = new URLSearchParams(search);
 
   return {
     useScripts: params.get("disableJs") == null

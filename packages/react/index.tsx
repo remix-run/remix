@@ -18,6 +18,7 @@ import {
  * Renders the `<title>` and `<meta>` tags for the current routes.
  */
 export function Meta() {
+  console.log("Meta");
   let { dataCache, routeLoader, matches } = useRemixEntryContext();
   let location = useLocation();
   let routeData = dataCache.read(location.key);
