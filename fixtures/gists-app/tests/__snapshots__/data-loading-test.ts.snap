@@ -49,7 +49,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -58,7 +58,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"routes/gists/index\\": {
@@ -66,7 +66,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
@@ -186,7 +186,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -195,7 +195,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"routes/gists/index\\": {
@@ -203,7 +203,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
@@ -323,7 +323,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -332,7 +332,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"routes/gists/$username\\": {
@@ -340,7 +340,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-a228a70c.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"style/routes/gists.css\\": {
@@ -454,7 +454,7 @@ exports[`data loading transitioning to a new route loads data for the new route 
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-c7c83a0d.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -463,7 +463,7 @@ exports[`data loading transitioning to a new route loads data for the new route 
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-c7c83a0d.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
         },
@@ -491,45 +491,6 @@ exports[`data loading transitioning to a new route loads data for the new route 
 `;
 
 exports[`data loading transitioning to a new route loads data for the new route 2`] = `
-Object {
-  "routes/gists": Object {
-    "data": Object {
-      "users": Array [
-        Object {
-          "id": "ryanflorence",
-          "name": "Ryan Florence",
-        },
-        Object {
-          "id": "mjackson",
-          "name": "Michael Jackson",
-        },
-      ],
-    },
-    "type": "data",
-  },
-  "routes/gists/index": Object {
-    "data": Array [
-      Object {
-        "files": Object {
-          "remix-server.jsx": Object {
-            "filename": "remix-server.jsx",
-          },
-        },
-        "id": "610613b54e5b34f8122d1ba4a3da21a9",
-        "owner": Object {
-          "avatar_url": "https://avatars0.githubusercontent.com/u/100200?v=4",
-          "id": 100200,
-          "login": "ryanflorence",
-        },
-        "url": "https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9",
-      },
-    ],
-    "type": "data",
-  },
-}
-`;
-
-exports[`data loading transitioning to a new route loads data for the new route 3`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -578,7 +539,7 @@ exports[`data loading transitioning to a new route loads data for the new route 
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-c7c83a0d.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -587,7 +548,7 @@ exports[`data loading transitioning to a new route loads data for the new route 
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-c7c83a0d.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
         },

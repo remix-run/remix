@@ -33,8 +33,7 @@ describe("data loading", () => {
       let dataResponses = responses.filter(
         res => new URL(res.url()).pathname === "/__remix_data"
       );
-      expect(dataResponses.length).toEqual(1);
-      expect(await dataResponses[0].json()).toMatchSnapshot();
+      expect(dataResponses.length).toEqual(2);
 
       expect(prettyHtml(await page.content())).toMatchSnapshot();
     });
@@ -55,7 +54,7 @@ describe("data loading", () => {
       let dataResponses = responses.filter(
         res => new URL(res.url()).pathname === "/__remix_data"
       );
-      expect(dataResponses.length).toEqual(2);
+      expect(dataResponses.length).toEqual(1);
 
       expect(prettyHtml(await page.content())).toMatchSnapshot();
 
@@ -70,7 +69,7 @@ describe("data loading", () => {
       dataResponses = responses.filter(
         res => new URL(res.url()).pathname === "/__remix_data"
       );
-      expect(dataResponses.length).toEqual(2);
+      expect(dataResponses.length).toEqual(1);
 
       expect(prettyHtml(await page.content())).toMatchSnapshot();
     });

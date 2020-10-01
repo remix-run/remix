@@ -22,7 +22,7 @@ exports[`loader results when a loader returns not found sends a not found page 1
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-c7c83a0d.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
@@ -89,7 +89,7 @@ exports[`loader results when the loader has an error sends a server error page 1
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-c7c83a0d.js\\",
+              \\"index-94ec1dc6.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },

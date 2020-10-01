@@ -178,15 +178,17 @@ export function RemixEntry({
 
       let manifest = manifestCache.read();
       let routes = createClientRoutes(manifest.routes);
-      let matches = matchClientRoutes(routes, nextLocation);
+      let nextMatches = matchClientRoutes(routes, nextLocation);
 
-      // TODO: Filter out routes that are already on the page.
-      let dataPromise = Promise.all(
-        matches.map(match => dataCache.preload(nextLocation, match))
+      let dataPromise = dataCache.preload(
+        location,
+        nextLocation,
+        matches,
+        nextMatches
       );
 
       await Promise.all(
-        matches.map(match =>
+        nextMatches.map(match =>
           routeLoader.preload(manifest.assets, match.route.id)
         )
       );
@@ -197,7 +199,7 @@ export function RemixEntry({
         setState({
           action: nextAction,
           location: nextLocation,
-          matches,
+          matches: nextMatches,
           pending: false
         });
       }
@@ -206,7 +208,7 @@ export function RemixEntry({
     return () => {
       isCurrent = false;
     };
-  }, [nextAction, nextLocation, location]);
+  }, [nextAction, nextLocation, location, matches]);
 
   let context = {
     browserEntryContextString,

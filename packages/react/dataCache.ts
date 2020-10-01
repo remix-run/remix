@@ -6,7 +6,12 @@ import type { ClientRouteMatch } from "./internals";
 import invariant from "./invariant";
 
 export interface DataCache {
-  preload(location: Location, match: ClientRouteMatch): Promise<void>;
+  preload(
+    prevLocation: Location,
+    nextLocation: Location,
+    prevMatches: ClientRouteMatch[],
+    nextMatches: ClientRouteMatch[]
+  ): Promise<void>;
   read(locationKey: string): RouteData;
   read(locationKey: string, routeId: string): RouteData[string];
 }
@@ -24,31 +29,57 @@ export function createDataCache(
   } = {};
 
   async function preload(
-    location: Location,
-    match: ClientRouteMatch
+    prevLocation: Location,
+    nextLocation: Location,
+    prevMatches: ClientRouteMatch[],
+    nextMatches: ClientRouteMatch[]
   ): Promise<void> {
-    let locationKey = location.key;
-    let routeId = match.route.id;
+    if (cache[nextLocation.key]) return;
 
-    if (cache[locationKey] && cache[locationKey][routeId]) return;
+    let cachedOrFetchedData = await Promise.all(
+      nextMatches.map(match => {
+        let prevMatch = prevMatches.find(
+          prev => prev.pathname === match.pathname
+        );
+        return prevMatch && prevLocation.search === nextLocation.search
+          ? read(prevLocation.key, match.route.id)
+          : load(nextLocation, match.route.id, match.params);
+      })
+    );
 
-    let inflightKey = locationKey + ":" + routeId;
+    cache[nextLocation.key] = cachedOrFetchedData.reduce(
+      (routeData, data, index) => {
+        let match = nextMatches[index];
+        routeData[match.route.id] = data;
+        return routeData;
+      },
+      {} as RouteData
+    );
+  }
 
-    if (inflight[inflightKey]) return;
+  async function load(location: Location, routeId: string, params: Params) {
+    invariant(
+      !(cache[location.key] && cache[location.key][routeId]),
+      `Already loaded data for route ${routeId} on location ${location.key}`
+    );
 
-    inflight[inflightKey] = fetchRouteData(location, routeId, match.params);
+    let inflightKey = location.key + ":" + routeId;
+
+    if (inflight[inflightKey]) {
+      return inflight[inflightKey];
+    }
+
+    inflight[inflightKey] = fetchRouteData(location, routeId, params);
 
     try {
       let result = await inflight[inflightKey];
-
-      if (!cache[locationKey]) cache[locationKey] = {};
-
-      cache[locationKey][routeId] = result.data;
+      return result.data;
     } catch (error) {
-      // TODO: Handle errors
       console.error(error);
+      // TODO: Show an error page
+      return null;
     } finally {
-      delete inflight[locationKey];
+      delete inflight[inflightKey];
     }
   }
 
