@@ -23,6 +23,7 @@ import { purgeRequireCache } from "./requireCache";
 
 import manifest from "./rollup/manifest";
 import watchInput from "./rollup/watchInput";
+import mdxTransform from "./rollup/mdx";
 
 export enum BuildMode {
   Development = "development",
@@ -246,11 +247,12 @@ function getCommonPlugins(
   }
 
   plugins.push(
+    mdxTransform(),
     babel({
       babelHelpers: "bundled",
       configFile: false,
       exclude: /node_modules/,
-      extensions: [".js", ".ts", ".tsx"],
+      extensions: [".js", ".ts", ".tsx", ".md", ".mdx"],
       presets: [
         "@babel/preset-react",
         ["@babel/preset-env", { targets: { node: "12" } }],

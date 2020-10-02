@@ -30,12 +30,12 @@ describe("readConfig", () => {
         "rootDirectory": Any<String>,
         "routeManifest": Object {
           "pages/one": Object {
-            "componentFile": "pages/one.js",
+            "componentFile": "pages/one.mdx",
             "id": "pages/one",
             "path": "/page/one",
           },
           "pages/two": Object {
-            "componentFile": "pages/two.js",
+            "componentFile": "pages/two.mdx",
             "id": "pages/two",
             "path": "/page/two",
           },
@@ -234,12 +234,12 @@ describe("readConfig", () => {
             "stylesFile": "styles/users.css",
           },
           Object {
-            "componentFile": "pages/one.js",
+            "componentFile": "pages/one.mdx",
             "id": "pages/one",
             "path": "/page/one",
           },
           Object {
-            "componentFile": "pages/two.js",
+            "componentFile": "pages/two.mdx",
             "id": "pages/two",
             "path": "/page/two",
           },

@@ -1,5 +1,131 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`data loading mdx works: page 1`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+  </head>
+  <body class=\\"m-4\\">
+    <h1>Page One</h1>
+    <p>I am a page.</p>
+    <p>This is stateful:</p>
+    <button data-test-id=\\"counter-button\\">Clicked 0</button>
+    <p>Here's a code block.</p>
+    <pre><code class=\\"language-jsx\\">import React from \\"react\\";
+
+export default function PageOne() {
+  return &lt;div&gt;Page One&lt;/div&gt;;
+}
+</code></pre>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-2acc50e8.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"pages/one\\": {
+            fileName: \\"pages/one.js\\",
+            imports: [\\"index-35628953.js\\", \\"esm-964311bc.js\\"],
+          },
+        },
+        globalData: { enableScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/page/one\\",
+            route: { id: \\"pages/one\\", path: \\"/page/one\\" },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: { \\"pages/one\\": null },
+        routeManifest: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/pages/one.js\\";
+      window.__remixRoutes = { \\"pages/one\\": route0 };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading mdx works: page 2`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+  </head>
+  <body class=\\"m-4\\">
+    <h1>Page One</h1>
+    <p>I am a page.</p>
+    <p>This is stateful:</p>
+    <button data-test-id=\\"counter-button\\">Clicked 1</button>
+    <p>Here's a code block.</p>
+    <pre><code class=\\"language-jsx\\">import React from \\"react\\";
+
+export default function PageOne() {
+  return &lt;div&gt;Page One&lt;/div&gt;;
+}
+</code></pre>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-2acc50e8.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"pages/one\\": {
+            fileName: \\"pages/one.js\\",
+            imports: [\\"index-35628953.js\\", \\"esm-964311bc.js\\"],
+          },
+        },
+        globalData: { enableScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/page/one\\",
+            route: { id: \\"pages/one\\", path: \\"/page/one\\" },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: { \\"pages/one\\": null },
+        routeManifest: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/pages/one.js\\";
+      window.__remixRoutes = { \\"pages/one\\": route0 };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
 exports[`data loading transitioning back after a reload loads data for the previous route: page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">

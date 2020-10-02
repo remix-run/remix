@@ -3,7 +3,7 @@ import { build, BuildTarget } from "./compiler";
 import { startDevServer } from "./devServer";
 
 async function buildCommand(remixRoot: string) {
-  console.log("Building Remix...");
+  console.log("Building Remix App...");
 
   let config = await readConfig(remixRoot);
 

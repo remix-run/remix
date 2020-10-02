@@ -36,6 +36,7 @@ describe("the server build", () => {
         "pages/one",
         "pages/two",
         "entry-server",
+        "_rollupPluginBabelHelpers",
         "global.css",
         "style/routes/gists.css",
         "style/routes/users.css",

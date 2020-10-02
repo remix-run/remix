@@ -10,6 +10,7 @@
     "dev": "node node_modules/@remix-run/cli run"
   },
   "dependencies": {
+    "@mdx-js/react": "^1.6.18",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.0",

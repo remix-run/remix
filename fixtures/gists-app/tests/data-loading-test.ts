@@ -20,7 +20,7 @@ describe("data loading", () => {
 
   describe("transitioning to a new route", () => {
     it("loads data for all routes on the page", async () => {
-      await page.goto(testServer);
+      await page.goto(`${testServer}/`);
       await reactIsHydrated(page);
 
       expect(prettyHtml(await page.content())).toMatchSnapshot("page");
@@ -92,6 +92,19 @@ describe("data loading", () => {
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
       expect(dataResponses.length).toEqual(0);
+      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
+    });
+  });
+
+  describe("mdx", () => {
+    it("works", async () => {
+      await page.goto(`${testServer}/page/one`);
+      await reactIsHydrated(page);
+
+      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
+
+      await page.click('[data-test-id="counter-button"]');
+
       expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
