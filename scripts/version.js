@@ -90,10 +90,8 @@ async function run(args) {
   if (answer === false) return 0;
 
   // - Update @remix-run/core version
-  let coreConfig;
   await updatePackageConfig("core", config => {
     config.version = nextVersion;
-    coreConfig = config;
   });
   console.log(
     chalk.green(`  Updated @remix-run/core to version ${nextVersion}`)
@@ -102,13 +100,6 @@ async function run(args) {
   // - Update @remix-run/react version + react deps to match core
   await updatePackageConfig("react", config => {
     config.version = nextVersion;
-
-    // These are pinned for now. Will probably need to adjust
-    // once experimental React and React Router are stable.
-    config.peerDependencies["react"] = coreConfig.dependencies["react"];
-    config.peerDependencies["react-dom"] = coreConfig.dependencies["react-dom"];
-    config.peerDependencies["react-router-dom"] =
-      coreConfig.dependencies["react-router-dom"];
   });
   console.log(
     chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
