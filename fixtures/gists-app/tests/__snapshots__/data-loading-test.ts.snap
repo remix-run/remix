@@ -411,6 +411,1129 @@ exports[`data loading transitioning back after a reload loads data for the previ
 "
 `;
 
+exports[`data loading transitioning back after a reload loads data for the previous route: page 1`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Public Gists</title>
+    <meta name=\\"description\\" content=\\"View the latest gists from the public\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/index\\">
+        <h2>Public Gists</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/index\\": {
+            fileName: \\"routes/gists/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: {},
+            pathname: \\"/gists/\\",
+            route: {
+              id: \\"routes/gists/index\\",
+              path: \\"/\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/index\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/index\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning back after a reload loads data for the previous route: page 2`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>1 gists from mjackson</title>
+    <meta name=\\"description\\" content=\\"View all of the gists from mjackson\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/$username\\">
+        <h2>All gists from mjackson</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/index\\": {
+            fileName: \\"routes/gists/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: {},
+            pathname: \\"/gists/\\",
+            route: {
+              id: \\"routes/gists/index\\",
+              path: \\"/\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/index\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/index\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning back after a reload loads data for the previous route: page 3`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Public Gists</title>
+    <meta name=\\"description\\" content=\\"View the latest gists from the public\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/index\\">
+        <h2>Public Gists</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/$username\\": {
+            fileName: \\"routes/gists/$username.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: { username: \\"mjackson\\" },
+            pathname: \\"/gists/mjackson\\",
+            route: {
+              id: \\"routes/gists/$username\\",
+              path: \\":username\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/$username\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/$username\\": {
+            id: \\"routes/gists/$username\\",
+            path: \\":username\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/$username.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/$username\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 1`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Public Gists</title>
+    <meta name=\\"description\\" content=\\"View the latest gists from the public\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/index\\">
+        <h2>Public Gists</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/index\\": {
+            fileName: \\"routes/gists/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: {},
+            pathname: \\"/gists/\\",
+            route: {
+              id: \\"routes/gists/index\\",
+              path: \\"/\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/index\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/index\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 2`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>1 gists from mjackson</title>
+    <meta name=\\"description\\" content=\\"View all of the gists from mjackson\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/$username\\">
+        <h2>All gists from mjackson</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/index\\": {
+            fileName: \\"routes/gists/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: {},
+            pathname: \\"/gists/\\",
+            route: {
+              id: \\"routes/gists/index\\",
+              path: \\"/\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/index\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/index\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 3`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Public Gists</title>
+    <meta name=\\"description\\" content=\\"View the latest gists from the public\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/index\\">
+        <h2>Public Gists</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/index\\": {
+            fileName: \\"routes/gists/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: {},
+            pathname: \\"/gists/\\",
+            route: {
+              id: \\"routes/gists/index\\",
+              path: \\"/\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/index\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/index\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 4`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>1 gists from mjackson</title>
+    <meta name=\\"description\\" content=\\"View all of the gists from mjackson\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence<!-- -->
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson<!-- -->
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/$username\\">
+        <h2>All gists from mjackson</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"routes/gists/index\\": {
+            fileName: \\"routes/gists/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: {},
+            pathname: \\"/gists/\\",
+            route: {
+              id: \\"routes/gists/index\\",
+              path: \\"/\\",
+              parentId: \\"routes/gists\\",
+            },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/gists\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+          \\"routes/gists/index\\": [
+            {
+              url:
+                \\"https://api.github.com/gists/610613b54e5b34f8122d1ba4a3da21a9\\",
+              id: \\"610613b54e5b34f8122d1ba4a3da21a9\\",
+              files: { \\"remix-server.jsx\\": { filename: \\"remix-server.jsx\\" } },
+              owner: {
+                login: \\"ryanflorence\\",
+                id: 100200,
+                avatar_url:
+                  \\"https://avatars0.githubusercontent.com/u/100200?v=4\\",
+              },
+            },
+          ],
+        },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/index\\": {
+            id: \\"routes/gists/index\\",
+            path: \\"/\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/index\\": route1,
+      };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning to a new route loads data for all routes on the page: page 1`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Gists Fixture App</title>
+    <meta
+      name=\\"description\\"
+      content=\\"We're just tryin' to make sure stuff works, ya know?!\\"
+    />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/\\">
+      <header><h1>Cool Gists App</h1></header>
+      <nav>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists\\">View Some gists</a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/user-gists/ryanflorence\\"
+              >Server Redirect</a
+            >
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/index\\": {
+            fileName: \\"routes/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/\\",
+            route: { id: \\"routes/index\\", path: \\"/\\" },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: { \\"routes/index\\": null },
+        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/index.js\\";
+      window.__remixRoutes = { \\"routes/index\\": route0 };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
+exports[`data loading transitioning to a new route loads data for all routes on the page: page 2`] = `
+"<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Public Gists</title>
+    <meta name=\\"description\\" content=\\"View the latest gists from the public\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/index\\">
+        <h2>Public Gists</h2>
+        <ul>
+          <li><a>remix-server.jsx</a></li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      window.__remixContext = {
+        browserManifest: {
+          \\"entry-browser\\": {
+            fileName: \\"entry-browser.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
+          \\"routes/index\\": {
+            fileName: \\"routes/index.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-94ec1dc6.js\\",
+            ],
+          },
+        },
+        globalData: { useScripts: true },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/\\",
+            route: { id: \\"routes/index\\", path: \\"/\\" },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: { \\"routes/index\\": null },
+        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/index.js\\";
+      window.__remixRoutes = { \\"routes/index\\": route0 };
+    </script>
+    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+  </body>
+</html>
+"
+`;
+
 exports[`data loading transitioning to a new route loads data for the new route 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
