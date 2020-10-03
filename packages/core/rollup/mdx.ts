@@ -31,14 +31,14 @@ export default function mdxTransform(): Plugin {
       } = parseFrontMatter(content);
 
       let meta;
-      if (attributes?.meta) {
+      if (attributes && attributes.meta) {
         meta = `export function meta() { return ${JSON.stringify(
           attributes.meta
         )}}`;
       }
 
       let headers;
-      if (attributes?.headers) {
+      if (attributes && attributes.headers) {
         headers = `export function headers() { return ${JSON.stringify(
           attributes.headers
         )}}`;
