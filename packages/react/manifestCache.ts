@@ -59,8 +59,16 @@ export function createManifestCache(
   return { preload, read };
 }
 
-async function fetchManifestPatch(path: string): Promise<ManifestPatch | null> {
-  let res = await fetch(`/__remix_manifest?path=${path}`);
-  if (res.status === 404) return null;
-  return await res.json();
+async function fetchManifestPatch(
+  pathname: string
+): Promise<ManifestPatch | null> {
+  let url = new URL(pathname, window.location.origin);
+  let params = new URLSearchParams({ url: url.toString() });
+  let res = await fetch(`/__remix_manifest?${params.toString()}`);
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  return res.json();
 }

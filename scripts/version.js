@@ -97,14 +97,6 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/core to version ${nextVersion}`)
   );
 
-  // - Update @remix-run/react version + react deps to match core
-  await updatePackageConfig("react", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
-  );
-
   // - Update @remix-run/cli version + @remix-run/core dep
   await updatePackageConfig("cli", config => {
     config.version = nextVersion;
@@ -112,6 +104,23 @@ async function run(args) {
   });
   console.log(
     chalk.green(`  Updated @remix-run/cli to version ${nextVersion}`)
+  );
+
+  // - Update @remix-run/loader version + @remix-run/core dep
+  await updatePackageConfig("loader", config => {
+    config.version = nextVersion;
+    config.dependencies["@remix-run/core"] = nextVersion;
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/loader to version ${nextVersion}`)
+  );
+
+  // - Update @remix-run/react version
+  await updatePackageConfig("react", config => {
+    config.version = nextVersion;
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
   );
 
   // - Update platform versions + @remix-run/core dep

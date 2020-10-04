@@ -8,35 +8,28 @@ export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
 export type {
+  AppData,
+  AppLoadContext,
+  AppLoadResult,
+  DataLoader
+} from "./data";
+
+export type {
   EntryContext,
   EntryRouteObject,
   EntryRouteMatch,
   RouteData,
-  RouteDataResults,
   RouteManifest,
   RouteLoader
 } from "./entry";
 
-export type { AppLoadContext, DataLoader } from "./loader";
-
-export type { HeadersInit, Body, RequestInit, ResponseInit } from "./platform";
 export {
+  StatusCodes,
   Headers,
-  Message,
-  RequestCache,
-  RequestCredentials,
-  RequestDestination,
-  RequestMode,
-  RequestRedirect,
   Request,
-  ResponseType,
   Response,
-  Redirect,
-  redirect,
-  StatusCode,
-  statusCode,
-  NotFound,
-  notFound
+  isResponseLike,
+  isRedirectStatusCode
 } from "./platform";
 
 export type { RequestHandler } from "./server";

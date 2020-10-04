@@ -101,6 +101,37 @@ let express = {
   ]
 };
 
+/** @type {import('rollup').RollupOptions} */
+let loader = {
+  external(id) {
+    return !isLocalModuleId(id);
+  },
+  input: path.resolve(__dirname, "packages/loader/index.ts"),
+  output: {
+    dir: "build/node_modules/@remix-run/loader",
+    format: "cjs",
+    preserveModules: true
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    nodeResolve({
+      extensions: [".ts", ".tsx"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/loader/package.json"),
+          dest: "build/node_modules/@remix-run/loader"
+        }
+      ]
+    })
+  ]
+};
+
 /** @type {import('rollup').RollupOptions[]} */
 let react = [
   {
@@ -165,4 +196,4 @@ let react = [
   }
 ];
 
-export default [core, cli, express, ...react];
+export default [core, cli, express, loader, ...react];

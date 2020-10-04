@@ -1,14 +1,14 @@
 import type { Params } from "react-router";
 
-import type { BuildManifest, RouteModule } from "./build";
-import type { LoaderResult } from "./loader";
-import { LoaderResultCopy, LoaderResultSuccess } from "./loader";
+import type { BuildManifest, RouteModule, RouteModules } from "./build";
+import type { AppLoadResult, AppData } from "./data";
+import { extractData } from "./data";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 
 export interface EntryContext {
   browserEntryContextString?: string;
   browserManifest: BuildManifest;
-  globalData: GlobalData;
+  globalData: AppData;
   matches: EntryRouteMatch[];
   publicPath: string;
   routeData: RouteData;
@@ -23,13 +23,9 @@ export interface EntryRouteObject {
   path: string;
 }
 
-export interface EntryRouteMatch {
-  params: Params;
-  pathname: string;
-  route: EntryRouteObject;
-}
-
-function createRoute(configRoute: ConfigRouteObject): EntryRouteObject {
+export function createEntryRoute(
+  configRoute: ConfigRouteObject
+): EntryRouteObject {
   let route: EntryRouteObject = {
     id: configRoute.id,
     path: configRoute.path
@@ -46,12 +42,39 @@ function createRoute(configRoute: ConfigRouteObject): EntryRouteObject {
   return route;
 }
 
-export function createMatches(matches: ConfigRouteMatch[]): EntryRouteMatch[] {
+export interface EntryRouteMatch {
+  params: Params;
+  pathname: string;
+  route: EntryRouteObject;
+}
+
+export function createEntryMatches(
+  matches: ConfigRouteMatch[]
+): EntryRouteMatch[] {
   return matches.map(match => ({
     params: match.params,
     pathname: match.pathname,
-    route: createRoute(match.route)
+    route: createEntryRoute(match.route)
   }));
+}
+
+export function createGlobalData(loadResult: AppLoadResult): Promise<AppData> {
+  return extractData(loadResult);
+}
+
+export interface RouteData {
+  [routeId: string]: AppData;
+}
+
+export async function createRouteData(
+  loadResults: AppLoadResult[],
+  matches: ConfigRouteMatch[]
+): Promise<RouteData> {
+  let data = await Promise.all(loadResults.map(extractData));
+  return matches.reduce((memo, match, index) => {
+    memo[match.route.id] = data[index];
+    return memo;
+  }, {} as RouteData);
 }
 
 export interface RouteLoader {
@@ -59,45 +82,17 @@ export interface RouteLoader {
   read(routeId: string): RouteModule;
 }
 
-export type GlobalData = any;
-
-export function createGlobalData(loaderResult: LoaderResultSuccess) {
-  return loaderResult.data;
-}
-
-export interface RouteData {
-  [routeId: string]: any;
-}
-
-export function createRouteData(
-  loaderResults: LoaderResult[]
-): RouteDataResults {
-  return loaderResults.reduce((memo, loaderResult) => {
-    if (loaderResult instanceof LoaderResultSuccess) {
-      memo[loaderResult.routeId] = loaderResult.data;
+export function createRouteLoader(routeModules: RouteModules): RouteLoader {
+  return {
+    preload() {
+      throw new Error(
+        `Cannot preload routes on the server because we can't suspend`
+      );
+    },
+    read(routeId: string) {
+      return routeModules[routeId];
     }
-    return memo;
-  }, {} as RouteData);
-}
-
-export interface RouteDataResults {
-  [routeId: string]: {
-    type: "data" | "copy";
-    data?: any;
   };
-}
-
-export function createRouteDataResults(
-  loaderResults: LoaderResult[]
-): RouteDataResults {
-  return loaderResults.reduce((memo, loaderResult) => {
-    if (loaderResult instanceof LoaderResultSuccess) {
-      memo[loaderResult.routeId] = { type: "data", data: loaderResult.data };
-    } else if (loaderResult instanceof LoaderResultCopy) {
-      memo[loaderResult.routeId] = { type: "copy" };
-    }
-    return memo;
-  }, {} as RouteDataResults);
 }
 
 export interface RouteManifest {
@@ -108,7 +103,7 @@ export function createRouteManifest(
   matches: ConfigRouteMatch[]
 ): RouteManifest {
   return matches.reduce((memo, match) => {
-    memo[match.route.id] = createRoute(match.route);
+    memo[match.route.id] = createEntryRoute(match.route);
     return memo;
   }, {} as RouteManifest);
 }

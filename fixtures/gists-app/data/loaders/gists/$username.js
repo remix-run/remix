@@ -1,37 +1,27 @@
-const { NotFound, Redirect } = require("@remix-run/core");
+const { redirect, notFound } = require("@remix-run/loader");
 
-module.exports = async function ({ params }) {
+module.exports = function ({ params }) {
   let { username } = params;
 
   if (process.env.NODE_ENV === "test") {
+    if (username === "mjijackson") {
+      return redirect("/gists/mjackson");
+    }
+
     if (username === "_why") {
-      return new NotFound();
+      return notFound();
     }
 
     if (username === "DANGER") {
       throw new Error("RUN FOR IT");
     }
 
-    if (username === "mjijackson") {
-      return new Redirect("/gists/mjackson");
-    }
-
-    return Promise.resolve(fakeGists);
-  } else {
-    let res = await fetch(`https://api.github.com/users/${username}/gists`);
-
-    // if (res.status === 404) {
-    //   throw new Error("boom!"); // global 500.js
-
-    //   return new StatusCode(404); // global 404.js
-    //   return statusCode(404); // global 404.js
-
-    //   return new Redirect("/some/other/place", 301);
-    //   return redirect("/some/other/place", 301);
-    // }
-
-    return res.json();
+    return fakeGists;
   }
+
+  return fetch(`https://api.github.com/users/${username}/gists`, {
+    compress: false
+  });
 };
 
 let fakeGists = [

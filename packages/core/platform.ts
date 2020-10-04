@@ -228,7 +228,7 @@ export class Request extends Message {
   readonly referrerPolicy: string;
   readonly url: string;
 
-  constructor(input: string | Request, init: RequestInit = {}) {
+  constructor(input: any, init: RequestInit = {}) {
     super(init.body);
 
     this.cache = init.cache || RequestCache.Default;
@@ -248,12 +248,27 @@ export class Request extends Message {
     this.referrer = init.referrer || ""; // Default on web is "about:client"
     this.referrerPolicy = "";
 
-    if (input instanceof Request) {
-      this.url = input.url;
-    } else {
-      this.url = input;
-    }
+    this.url =
+      typeof input === "string"
+        ? input
+        : input && typeof input.url === "string"
+        ? input.url
+        : String(input);
   }
+}
+
+/**
+ * Returns `true` if the given object is a `Request`, or has a similar API.
+ */
+export function isRequestLike(object: any): object is Request {
+  return (
+    object &&
+    typeof object.method === "string" &&
+    typeof object.url === "string" &&
+    typeof object.headers === "object" &&
+    typeof object.body === "object" &&
+    typeof object.bodyUsed === "boolean"
+  );
 }
 
 export enum ResponseType {
@@ -285,7 +300,15 @@ export class Response extends Message {
     throw new Error(`Response.error() is not implemented`);
   }
 
+  /**
+   * Creates a redirect response to the given URL. Defaults to a temporary
+   * redirect (302).
+   */
   static redirect(url: string, status = 302): Response {
+    if (!isRedirectStatusCode(status)) {
+      throw new RangeError(`Invalid HTTP redirect status code: ${status}`);
+    }
+
     return new Response("", {
       status,
       headers: {
@@ -336,55 +359,28 @@ export class Response extends Message {
 }
 
 /**
- * May be used in a loader to trigger a HTTP redirect.
+ * Returns `true` if the given object is a `Response`, or has a similar API.
  */
-export class Redirect {
-  readonly location: string;
-  readonly permanent: boolean;
-  constructor(location: string, permanent = false) {
-    this.location = location;
-    this.permanent = permanent;
-  }
+export function isResponseLike(object: any): object is Response {
+  // I'm being intentionally vague here because we don't know what fetch
+  // libraries people will be using in node. There's `node-fetch` but there's
+  // also `minipass-fetch` which is used in `make-fetch-happen`. So we do a
+  // rough duck-test here to see if it's similar to the web's `Response` API. If
+  // so, we'll just assume we can use that.
+  return (
+    object &&
+    typeof object.status === "number" &&
+    typeof object.headers === "object" &&
+    typeof object.body === "object" &&
+    typeof object.bodyUsed === "boolean"
+  );
 }
 
 /**
- * Shorthand for creating a `new Redirect`.
+ * Returns `true` if the given status code indicates a redirect.
+ *
+ * @see https://fetch.spec.whatwg.org/#redirect-status
  */
-export function redirect(location: string, permanent?: boolean): Redirect {
-  return new Redirect(location, permanent);
-}
-
-/**
- * May be used in a loader to change the HTTP status code in the response.
- */
-export class StatusCode {
-  readonly status: number;
-  constructor(status: number) {
-    this.status = status;
-  }
-}
-
-/**
- * Shorthand for creating a `new StatusCode`.
- */
-export function statusCode(httpStatus: number): StatusCode {
-  return new StatusCode(httpStatus);
-}
-
-/**
- * May be returned from a loader to return a 404.
- */
-export class NotFound extends StatusCode {
-  readonly detail?: any;
-  constructor(detail?: any) {
-    super(404);
-    this.detail = detail;
-  }
-}
-
-/**
- * Shorthand for creating a `new NotFound`.
- */
-export function notFound(detail?: any): NotFound {
-  return new NotFound(detail);
+export function isRedirectStatusCode(status: number): boolean {
+  return [301, 302, 303, 307, 308].includes(status);
 }

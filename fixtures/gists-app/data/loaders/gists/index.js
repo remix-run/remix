@@ -1,9 +1,10 @@
-module.exports = async function () {
+module.exports = function () {
   if (process.env.NODE_ENV === "test") {
     return Promise.resolve(fakeGists);
   } else {
-    let res = await fetch(`https://api.github.com/gists`);
-    return res.json();
+    return fetch(`https://api.github.com/gists`, {
+      compress: false
+    });
   }
 };
 

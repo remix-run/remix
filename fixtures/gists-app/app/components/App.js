@@ -22,7 +22,7 @@ export default function App() {
       </head>
       <body className="m-4">
         <Routes />
-        {data.useScripts && <Scripts />}
+        {data.enableScripts && <Scripts />}
       </body>
     </html>
   );

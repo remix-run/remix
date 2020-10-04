@@ -1,19 +1,41 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`loader results when a loader returns not found sends a not found page 1`] = `
+exports[`loader results when a loader returns not found sends a not found page: page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
     <meta charset=\\"utf-8\\" />
-    <title>Ain't nothing here</title>
+    <title>User _why not found</title>
+    <meta name=\\"description\\" content=\\"View all of the gists from _why\\" />
     <link
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
     <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"/build/assets/style/routes/gists-d45b2a57.css\\"
+    />
   </head>
   <body class=\\"m-4\\">
-    <div data-test-id=\\"/404\\"><h1>404</h1></div>
+    <div data-test-id=\\"/gists\\">
+      <header>
+        <h1>Gists</h1>
+        <ul>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+              >Ryan Florence
+            </a>
+          </li>
+          <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+              >Michael Jackson
+            </a>
+          </li>
+        </ul>
+      </header>
+      <div data-test-id=\\"/gists/$username\\"><h2>No gists for _why</h2></div>
+    </div>
     <script>
       window.__remixContext = {
         browserManifest: {
@@ -22,21 +44,45 @@ exports[`loader results when a loader returns not found sends a not found page 1
             imports: [
               \\"index-35628953.js\\",
               \\"index-7d0517c7.js\\",
-              \\"index-94ec1dc6.js\\",
+              \\"index-2acc50e8.js\\",
             ],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
-          \\"routes/404\\": {
-            fileName: \\"routes/404.js\\",
-            imports: [\\"index-35628953.js\\"],
+          \\"routes/gists\\": {
+            fileName: \\"routes/gists.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-2acc50e8.js\\",
+            ],
+          },
+          \\"routes/gists/$username\\": {
+            fileName: \\"routes/gists/$username.js\\",
+            imports: [
+              \\"index-35628953.js\\",
+              \\"index-7d0517c7.js\\",
+              \\"index-2acc50e8.js\\",
+            ],
+          },
+          \\"style/routes/gists.css\\": {
+            fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
           },
         },
-        globalData: { useScripts: true },
+        globalData: { enableScripts: true },
         matches: [
           {
             params: {},
+            pathname: \\"/gists\\",
+            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+          },
+          {
+            params: { username: \\"_why\\" },
             pathname: \\"/gists/_why\\",
-            route: { id: \\"routes/404\\", path: \\"*\\" },
+            route: {
+              id: \\"routes/gists/$username\\",
+              path: \\":username\\",
+              parentId: \\"routes/gists\\",
+            },
           },
         ],
         publicPath: \\"/build/\\",
@@ -47,13 +93,25 @@ exports[`loader results when a loader returns not found sends a not found page 1
               { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
             ],
           },
+          \\"routes/gists/$username\\": \\"\\",
         },
-        routeManifest: { \\"routes/404\\": { id: \\"routes/404\\", path: \\"*\\" } },
+        routeManifest: {
+          \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+          \\"routes/gists/$username\\": {
+            id: \\"routes/gists/$username\\",
+            path: \\":username\\",
+            parentId: \\"routes/gists\\",
+          },
+        },
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/404.js\\";
-      window.__remixRoutes = { \\"routes/404\\": route0 };
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/$username.js\\";
+      window.__remixRoutes = {
+        \\"routes/gists\\": route0,
+        \\"routes/gists/$username\\": route1,
+      };
     </script>
     <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
   </body>
@@ -61,7 +119,7 @@ exports[`loader results when a loader returns not found sends a not found page 1
 "
 `;
 
-exports[`loader results when the loader has an error sends a server error page 1`] = `
+exports[`loader results when the loader has an error sends a server error page: page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -75,44 +133,8 @@ exports[`loader results when the loader has an error sends a server error page 1
     <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
   </head>
   <body class=\\"m-4\\">
-    <div>
-      <h1>Error!</h1>
-      <div>
-        <p>Missing route \\"<!-- -->routes/500<!-- -->\\"!</p>
-      </div>
-    </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
-          \\"entry-browser\\": {
-            fileName: \\"entry-browser.js\\",
-            imports: [
-              \\"index-35628953.js\\",
-              \\"index-7d0517c7.js\\",
-              \\"index-94ec1dc6.js\\",
-            ],
-          },
-          \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
-        },
-        globalData: { useScripts: true },
-        matches: [
-          {
-            params: {},
-            pathname: \\"/gists/DANGER\\",
-            route: { id: \\"routes/500\\", path: \\"*\\" },
-          },
-        ],
-        publicPath: \\"/build/\\",
-        routeData: {
-          \\"routes/gists\\": {
-            users: [
-              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
-              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
-            ],
-          },
-        },
-        routeManifest: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"*\\" } },
-      };
+      window.__remixContext = {'browserManifest':{'entry-browser':{'fileName':'entry-browser.js','imports':['index-35628953.js','index-7d0517c7.js','index-2acc50e8.js']},'global.css':{'fileName':'assets/global-ec887178.css'}},'globalData':{'enableScripts':true},'matches':[{'params':{'error':Error: RUN FOR IT},'pathname':'/gists/DANGER','route':{'id':'routes/500','path':'/gists/DANGER'}}],'publicPath':'/build/','routeData':{'routes/500':{'users':[{'id':'ryanflorence','name':'Ryan Florence'},{'id':'mjackson','name':'Michael Jackson'}]}},'routeManifest':{'routes/500':{'id':'routes/500','path':'/gists/DANGER'}}}
     </script>
     <script type=\\"module\\">
       window.__remixRoutes = {};

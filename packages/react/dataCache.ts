@@ -1,6 +1,6 @@
 import type { Location } from "history";
 import type { Params } from "react-router";
-import type { RouteData } from "@remix-run/core";
+import type { AppData, RouteData } from "@remix-run/core";
 
 import type { ClientRouteMatch } from "./internals";
 import invariant from "./invariant";
@@ -25,7 +25,7 @@ export function createDataCache(
   };
 
   let inflight: {
-    [locationKey: string]: Promise<RouteData>;
+    [locationKey: string]: Promise<AppData>;
   } = {};
 
   async function preload(
@@ -57,7 +57,11 @@ export function createDataCache(
     );
   }
 
-  async function load(location: Location, routeId: string, params: Params) {
+  async function load(
+    location: Location,
+    routeId: string,
+    params: Params
+  ): Promise<AppData> {
     invariant(
       !(cache[location.key] && cache[location.key][routeId]),
       `Already loaded data for route ${routeId} on location ${location.key}`
@@ -69,15 +73,13 @@ export function createDataCache(
       return inflight[inflightKey];
     }
 
-    inflight[inflightKey] = fetchRouteData(location, routeId, params);
+    inflight[inflightKey] = fetchDataForRoute(location, routeId, params);
 
     try {
-      let result = await inflight[inflightKey];
-      return result.data;
+      return await inflight[inflightKey];
     } catch (error) {
       console.error(error);
-      // TODO: Show an error page
-      return null;
+      throw error;
     } finally {
       delete inflight[inflightKey];
     }
@@ -101,27 +103,26 @@ export function createDataCache(
   return { preload, read };
 }
 
-interface RouteDataResult {
-  data: any;
-}
-
-async function fetchRouteData(
+async function fetchDataForRoute(
   location: Location,
   routeId: string,
-  params: Params
-): Promise<RouteDataResult> {
-  let search = createSearch({
-    pathname: location.pathname,
-    search: location.search,
+  routeParams: Params
+): Promise<AppData> {
+  let url = new URL(
+    location.pathname + location.search,
+    window.location.origin
+  );
+  let params = new URLSearchParams({
+    url: url.toString(),
     id: routeId,
-    params: JSON.stringify(params)
+    params: JSON.stringify(routeParams)
   });
-  let url = `/__remix_data${search}`;
-  let res = await fetch(url);
-  return await res.json();
-}
+  let res = await fetch(`/__remix_data?${params.toString()}`);
+  let contentType = res.headers.get("Content-Type");
 
-function createSearch(pairs: { [paramName: string]: string }): string {
-  let params = new URLSearchParams(pairs);
-  return "?" + params.toString();
+  if (contentType && /\bapplication\/json\b/.test(contentType)) {
+    return res.json();
+  }
+
+  return res.text();
 }

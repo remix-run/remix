@@ -1,5 +1,3 @@
-import type { Location } from "history";
-import { parsePath } from "history";
 import jsesc from "jsesc";
 
 import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
@@ -15,39 +13,20 @@ import {
 import { generateDevServerBuild } from "./compiler";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
+import type { AppLoadContext, AppLoadResult } from "./data";
+import { loadGlobalData, loadRouteData } from "./data";
 import {
+  createEntryMatches,
   createGlobalData,
-  createMatches,
   createRouteData,
-  createRouteDataResults,
+  createRouteLoader,
   createRouteManifest
 } from "./entry";
-import type { AppLoadContext } from "./loader";
-import {
-  LoaderResult,
-  LoaderResultChangeStatusCode,
-  LoaderResultError,
-  LoaderResultRedirect,
-  LoaderResultSuccess,
-  loadGlobalData,
-  loadData,
-  loadDataDiff,
-  loadRouteData
-} from "./loader";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
 import { Response } from "./platform";
 import { purgeRequireCache } from "./requireCache";
-
-function createLocation(
-  url: string,
-  state: Location["state"] = null,
-  key: Location["key"] = "default"
-): Location {
-  let { pathname = "/", search = "", hash = "" } = parsePath(url);
-  return { pathname, search, hash, state, key };
-}
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -78,68 +57,33 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     }
 
     let config = await configPromise;
+    let url = new URL(req.url);
 
-    if (req.url.startsWith("/__remix_data")) {
-      return handleDataRequest(config, req, loadContext);
+    if (url.pathname.startsWith("/__remix_manifest")) {
+      return handleManifestRequest(config, req);
     }
 
-    if (req.url.startsWith("/__remix_manifest")) {
-      return handleManifestRequest(config, req);
+    if (url.pathname.startsWith("/__remix_data")) {
+      return handleDataRequest(config, req, loadContext);
     }
 
     return handleHtmlRequest(config, req, loadContext);
   };
 }
 
-async function handleDataRequest(
-  config: RemixConfig,
-  req: Request,
-  context: AppLoadContext
-): Promise<Response> {
-  let reqSearch = req.url.slice(req.url.indexOf("?"));
-  let reqParams = new URLSearchParams(reqSearch);
-
-  let pathname = reqParams.get("pathname");
-  let search = reqParams.get("search") || "";
-  let routeId = reqParams.get("id");
-  let params = JSON.parse(reqParams.get("params") || "{}");
-
-  if (!pathname) {
-    return jsonError(`Missing ?path`, 403);
-  }
-  if (!routeId) {
-    return jsonError(`Missing ?id`, 403);
-  }
-
-  let loaderResult = await loadRouteData(
-    config,
-    routeId,
-    context,
-    pathname,
-    search,
-    params
-  );
-
-  // TODO: How to handle redirects/status code changes?
-
-  // let dataResults = createRouteDataResults(loaderResults);
-
-  return json({ data: (loaderResult as LoaderResultSuccess).data });
-}
-
 async function handleManifestRequest(config: RemixConfig, req: Request) {
-  let location = createLocation(req.url);
-  let params = new URLSearchParams(location.search);
-  let path = params.get("path");
+  let searchParams = new URL(req.url).searchParams;
+  let urlParam = searchParams.get("url");
 
-  if (!path) {
-    return jsonError(`Missing ?path`, 403);
+  if (!urlParam) {
+    return jsonError(`Missing ?url`, 403);
   }
 
-  let matches = matchRoutes(config.routes, path);
+  let url = new URL(urlParam);
+  let matches = matchRoutes(config.routes, url.pathname);
 
   if (!matches) {
-    return jsonError(`No routes matched path "${path}"`, 404);
+    return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
   let browserManifest: BuildManifest;
@@ -171,90 +115,125 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   return json({ buildManifest: partialBrowserManifest, routeManifest });
 }
 
+async function handleDataRequest(
+  config: RemixConfig,
+  req: Request,
+  loadContext: AppLoadContext
+): Promise<Response> {
+  let searchParams = new URL(req.url).searchParams;
+  let urlParam = searchParams.get("url");
+  let routeId = searchParams.get("id");
+  let params = JSON.parse(searchParams.get("params") || "{}");
+
+  if (!urlParam) {
+    return jsonError(`Missing ?url`, 403);
+  }
+  if (!routeId) {
+    return jsonError(`Missing ?id`, 403);
+  }
+
+  let url = new URL(urlParam);
+  let loadResult = await loadRouteData(
+    config,
+    routeId,
+    params,
+    loadContext,
+    url
+  );
+
+  if (!loadResult) {
+    return json(null);
+  }
+
+  return loadResult;
+}
+
 async function handleHtmlRequest(
   config: RemixConfig,
   req: Request,
-  context: AppLoadContext
+  loadContext: AppLoadContext
 ): Promise<Response> {
-  let matches = matchRoutes(config.routes, req.url);
+  let url = new URL(req.url);
 
-  let location = createLocation(req.url);
-  let loaderResults: LoaderResult[] = [];
   let statusCode = 200;
+  let matches = matchRoutes(config.routes, url.pathname);
+
+  function handleDataLoadError(error: any) {
+    console.error(error);
+
+    statusCode = 500;
+    matches = [
+      {
+        params: { error },
+        pathname: url.pathname,
+        route: {
+          id: "routes/500",
+          path: url.pathname,
+          componentFile: "routes/500.js"
+        }
+      }
+    ];
+  }
+
+  let globalLoadResult: AppLoadResult = null;
+  let routeLoadResults: AppLoadResult[] = [];
 
   if (!matches) {
     statusCode = 404;
     matches = [
       {
         params: {},
-        pathname: location.pathname,
+        pathname: url.pathname,
         route: {
           id: "routes/404",
-          path: location.pathname,
+          path: url.pathname,
           componentFile: "routes/404.js"
         }
       }
     ];
   } else {
-    let [globalLoaderResult, matchLoaderResults] = await Promise.all([
-      loadGlobalData(config, context, location.pathname, location.search),
-      loadData(config, context, location.pathname, location.search, matches)
-    ]);
+    // Run all data loaders in parallel.
+    let globalLoadResultPromise = loadGlobalData(config, loadContext, url);
+    let routeLoadResultPromises = matches.map(match =>
+      loadRouteData(config, match.route.id, match.params, loadContext, url)
+    );
 
-    loaderResults = [globalLoaderResult, ...matchLoaderResults];
+    try {
+      globalLoadResult = await globalLoadResultPromise;
+    } catch (error) {
+      console.error(`There was an error running the global data loader`);
+      handleDataLoadError(error);
+    }
 
-    let redirectResult = matchLoaderResults.find(
-      (result): result is LoaderResultRedirect =>
-        result instanceof LoaderResultRedirect
+    for (let promise of routeLoadResultPromises) {
+      try {
+        routeLoadResults.push(await promise);
+      } catch (error) {
+        let match = matches[routeLoadResults.length];
+        console.error(
+          `There was an error running the data loader for route ${match.route.id}`
+        );
+        routeLoadResults.push(null);
+        handleDataLoadError(error);
+      }
+    }
+
+    // Check for redirect.
+    let redirectResult = [globalLoadResult, ...routeLoadResults].find(
+      result => result && (result.status === 301 || result.status === 302)
     );
 
     if (redirectResult) {
-      return new Response(`Redirecting to ${redirectResult.location}`, {
-        status: redirectResult.httpStatus,
-        headers: {
-          Location: redirectResult.location
-        }
-      });
+      return redirectResult;
     }
 
-    let errorResult = matchLoaderResults.find(
-      (result: LoaderResult): result is LoaderResultError =>
-        result instanceof LoaderResultError
+    // Check for a result with a non-200 status code.
+    let notOkResult = [globalLoadResult, ...routeLoadResults].find(
+      result => result && result.status !== 200
     );
 
-    if (errorResult) {
-      statusCode = errorResult.httpStatus;
-      matches = [
-        {
-          params: {},
-          pathname: location.pathname,
-          route: {
-            id: "routes/500",
-            path: "*",
-            componentFile: "routes/500.js"
-          }
-        }
-      ];
-    } else {
-      let changeStatusCodeResult = matchLoaderResults.find(
-        (result): result is LoaderResultChangeStatusCode =>
-          result instanceof LoaderResultChangeStatusCode
-      );
-
-      if (changeStatusCodeResult) {
-        statusCode = changeStatusCodeResult.httpStatus;
-        matches = [
-          {
-            params: {},
-            pathname: location.pathname,
-            route: {
-              id: `routes/${changeStatusCodeResult.httpStatus}`,
-              path: "*",
-              componentFile: `routes/${changeStatusCodeResult.httpStatus}.js`
-            }
-          }
-        ];
-      }
+    if (notOkResult) {
+      statusCode = notOkResult.status;
     }
   }
 
@@ -303,12 +282,9 @@ async function handleHtmlRequest(
     );
   }
 
-  let globalLoaderResult = loaderResults.shift();
-  let globalData = globalLoaderResult
-    ? createGlobalData(globalLoaderResult as LoaderResultSuccess)
-    : null;
-  let clientMatches = createMatches(matches);
-  let routeData = createRouteData(loaderResults);
+  let entryMatches = createEntryMatches(matches);
+  let globalData = await createGlobalData(globalLoadResult);
+  let routeData = await createRouteData(routeLoadResults, matches);
   let routeManifest = createRouteManifest(matches);
 
   // Get the browser manifest for only the browser entry point + the matched
@@ -328,7 +304,7 @@ async function handleHtmlRequest(
   let browserEntryContext = {
     browserManifest: partialBrowserManifest,
     globalData,
-    matches: clientMatches,
+    matches: entryMatches,
     publicPath: config.publicPath,
     routeData,
     routeManifest
@@ -343,29 +319,10 @@ async function handleHtmlRequest(
   let serverEntryContext = {
     ...browserEntryContext,
     browserEntryContextString,
-    routeLoader: {
-      preload() {
-        throw new Error(
-          `Cannot preload routes on the server because we can't suspend`
-        );
-      },
-      read(routeId: string) {
-        return routeModules[routeId];
-      }
-    }
+    routeLoader: createRouteLoader(routeModules)
   };
 
   return serverEntryModule.default(req, statusCode, serverEntryContext);
-}
-
-function getPartialManifest(
-  browserManifest: BuildManifest,
-  keys: string[]
-): BuildManifest {
-  return keys.reduce((memo, key) => {
-    if (browserManifest[key]) memo[key] = browserManifest[key];
-    return memo;
-  }, {} as BuildManifest);
 }
 
 function rewriteRoutes(config: RemixConfig, matches: ConfigRouteMatch[]) {
@@ -379,6 +336,16 @@ function rewriteRoutes(config: RemixConfig, matches: ConfigRouteMatch[]) {
 function rewritePublicPath(config: RemixConfig) {
   config.publicPath =
     process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
+}
+
+function getPartialManifest(
+  browserManifest: BuildManifest,
+  keys: string[]
+): BuildManifest {
+  return keys.reduce((memo, key) => {
+    if (browserManifest[key]) memo[key] = browserManifest[key];
+    return memo;
+  }, {} as BuildManifest);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

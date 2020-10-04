@@ -32,7 +32,7 @@ describe("loader results", () => {
     it("sends a not found page", async () => {
       let res = await page.goto(`${testServer}/gists/_why`);
       expect(res.status()).toEqual(404);
-      expect(prettyHtml(await page.content())).toMatchSnapshot();
+      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
 
@@ -40,7 +40,7 @@ describe("loader results", () => {
     it("sends a server error page", async () => {
       let res = await page.goto(`${testServer}/gists/DANGER`);
       expect(res.status()).toEqual(500);
-      expect(prettyHtml(await page.content())).toMatchSnapshot();
+      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
 });

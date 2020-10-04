@@ -28,14 +28,14 @@ async function getTaggedVersion() {
 }
 
 async function run() {
-  // 0. Make sure there's a current tag
+  // - Make sure there's a current tag
   let taggedVersion = await getTaggedVersion();
   invariant(
     taggedVersion !== "",
     `Missing release version. Run the version script first.`
   );
 
-  // 1. Publish all packages, starting with core
+  // - Publish all packages, starting with core
   let basePackageNames = await fsp.readdir(npmModulesDir);
   basePackageNames.sort(a => (a === "core" ? -1 : 0));
 

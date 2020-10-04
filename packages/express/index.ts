@@ -1,6 +1,7 @@
 import type * as express from "express";
-import type { HeadersInit, AppLoadContext, Response } from "@remix-run/core";
+import type { AppLoadContext, Response } from "@remix-run/core";
 import {
+  Headers,
   Request,
   createRequestHandler as createRemixRequestHandler
 } from "@remix-run/core";
@@ -60,22 +61,30 @@ export function createRequestHandler({
 }
 
 function createRemixRequest(req: express.Request): Request {
-  let headers = Object.keys(req.headers).reduce((memo, key) => {
-    let value = req.headers[key];
+  let origin = `${req.protocol}://${req.headers.host}`;
+  let url = new URL(req.url, origin);
 
-    if (typeof value === "string") {
-      memo[key] = value;
-    } else if (Array.isArray(value)) {
-      memo[key] = value.join(",");
-    }
-
-    return memo;
-  }, {} as HeadersInit);
-
-  return new Request(req.url, {
-    body: req,
-    headers: headers,
+  return new Request(url, {
     method: req.method,
-    referrer: req.headers.referer
+    body: req,
+    headers: createRemixHeaders(req.headers)
   });
+}
+
+function createRemixHeaders(
+  requestHeaders: express.Request["headers"]
+): Headers {
+  return new Headers(
+    Object.keys(requestHeaders).reduce((memo, key) => {
+      let value = requestHeaders[key];
+
+      if (typeof value === "string") {
+        memo[key] = value;
+      } else if (Array.isArray(value)) {
+        memo[key] = value.join(",");
+      }
+
+      return memo;
+    }, {} as { [headerName: string]: string })
+  );
 }

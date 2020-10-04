@@ -178,10 +178,12 @@ function createRouteManifest(
   manifest: RouteManifest<ConfigRouteObject> = {}
 ): RouteManifest<ConfigRouteObject> {
   for (let route of routes) {
-    manifest[route.id] = route;
+    let { children, ...rest } = route;
 
-    if (route.children) {
-      createRouteManifest(route.children, manifest);
+    manifest[route.id] = rest;
+
+    if (children) {
+      createRouteManifest(children, manifest);
     }
   }
 
