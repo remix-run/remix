@@ -1,5 +1,6 @@
 {
   "name": "@remix-run/core",
+  "description": "The core classes and functions of Remix",
   "version": "0.1.2",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
@@ -20,9 +21,9 @@
     "mime-types": "^2.1.27",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.1",
-    "react": "0.0.0-experimental-33c3af284",
-    "react-dom": "0.0.0-experimental-33c3af284",
-    "react-router-dom": "0.0.0-experimental-ffd8c7d0",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-router-dom": "^6.0.0-beta.0",
     "require-from-string": "^2.0.2",
     "rollup": "^2.26.11",
     "rollup-plugin-postcss": "^3.1.8",

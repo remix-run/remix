@@ -1,5 +1,6 @@
 {
   "name": "@remix-run/cli",
+  "description": "The Remix CLI interface",
   "version": "0.1.2",
   "repository": "https://github.com/remix-run/packages",
   "bin": {

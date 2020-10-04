@@ -6821,15 +6821,6 @@ raw-body@2.4.0:
     iconv-lite "0.4.24"
     unpipe "1.0.0"
 
-react-dom@0.0.0-experimental-33c3af284:
-  version "0.0.0-experimental-33c3af284"
-  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-0.0.0-experimental-33c3af284.tgz#d4acd21209a299832d9233ceafc25a6fe1b1d076"
-  integrity sha512-z1/EQD8iKjqkRRd/lEs6oh4FNcS9tPmO91219w4UlLhP0g28wTWClJOYDEnKgQh2nJeZQ5MlBDECIRZYwrZp5A==
-  dependencies:
-    loose-envify "^1.1.0"
-    object-assign "^4.1.1"
-    scheduler "0.0.0-experimental-33c3af284"
-
 react-dom@^16.13.1:
   version "16.13.1"
   resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-16.13.1.tgz#c1bd37331a0486c078ee54c4740720993b2e0e7f"
@@ -6845,14 +6836,6 @@ react-is@^16.12.0, react-is@^16.8.1:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-react-router-dom@0.0.0-experimental-ffd8c7d0:
-  version "0.0.0-experimental-ffd8c7d0"
-  resolved "https://registry.yarnpkg.com/react-router-dom/-/react-router-dom-0.0.0-experimental-ffd8c7d0.tgz#8742c2c7dbbc01237ea2fb97005ec3ace4be6937"
-  integrity sha512-tu8XLvu7ZpOeCP6xO4lNGzf+Iy9G8ElsiU/UlC/T4gb5ZbfxB/IAfZIKSzgqn8+Oh/dGca+1Xr1HZbKrib2Hfw==
-  dependencies:
-    prop-types "^15.7.2"
-    react-router "0.0.0-experimental-ffd8c7d0"
-
 react-router-dom@^6.0.0-beta.0:
   version "6.0.0-beta.0"
   resolved "https://registry.yarnpkg.com/react-router-dom/-/react-router-dom-6.0.0-beta.0.tgz#9dcc8555365f22f7fbd09f26b6b82543f3eb97d6"
@@ -6861,27 +6844,12 @@ react-router-dom@^6.0.0-beta.0:
     prop-types "^15.7.2"
     react-router "6.0.0-beta.0"
 
-react-router@0.0.0-experimental-ffd8c7d0:
-  version "0.0.0-experimental-ffd8c7d0"
-  resolved "https://registry.yarnpkg.com/react-router/-/react-router-0.0.0-experimental-ffd8c7d0.tgz#ccc6187d554a4082bc503ad392318d407ea652ac"
-  integrity sha512-DMEkLwdFfpKnPaQi2M739iIW4erffoAF/fkbxE8j9c/uIqyX+Sy632DEGt8UsoCJEGNfrkaIUFmNqfTSz2JBzA==
-  dependencies:
-    prop-types "^15.7.2"
-
 react-router@6.0.0-beta.0:
   version "6.0.0-beta.0"
   resolved "https://registry.yarnpkg.com/react-router/-/react-router-6.0.0-beta.0.tgz#3e11f39b6ded4412c2fed9e4f989dd4c8156724d"
   integrity sha512-VgMdfpVcmFQki/LZuLh8E/MNACekDetz4xqft+a6fBZvvJnVqKbLqebF7hyoawGrV1HcO5tVaUang2Og4W2j1Q==
   dependencies:
     prop-types "^15.7.2"
-
-react@0.0.0-experimental-33c3af284:
-  version "0.0.0-experimental-33c3af284"
-  resolved "https://registry.yarnpkg.com/react/-/react-0.0.0-experimental-33c3af284.tgz#63842e46a441e4d5a8a5623a21791973196e8bbf"
-  integrity sha512-dk0eQhyiA05TYtSWShwfl4vxlJAOrwNLtESbWxM6O06Xn0nuzlXYZUjsY3sJkZrpXK0kywZ+Hbs24tA8u/1KzQ==
-  dependencies:
-    loose-envify "^1.1.0"
-    object-assign "^4.1.1"
 
 react@^16.13.1:
   version "16.13.1"
@@ -7319,14 +7287,6 @@ saxes@^5.0.0:
   integrity sha512-5LBh1Tls8c9xgGjw3QrMwETmTMVk0oFgvrFSvWx62llR2hcEInrKNZ2GZCCuuy2lvWrdl5jhbpeqc5hRYKFOcw==
   dependencies:
     xmlchars "^2.2.0"
-
-scheduler@0.0.0-experimental-33c3af284:
-  version "0.0.0-experimental-33c3af284"
-  resolved "https://registry.yarnpkg.com/scheduler/-/scheduler-0.0.0-experimental-33c3af284.tgz#69e1db9ceb7cb1b654ff0a0057ea7d4fb23dfbd2"
-  integrity sha512-m9eyhFt9uGi9y3HcN9hMrbnw1AbFEWcWn+IjF1N+GGVGfQmgB0F/mQ9rQkmrX7gPNIDBKwlFdOsrENtHTn4XUQ==
-  dependencies:
-    loose-envify "^1.1.0"
-    object-assign "^4.1.1"
 
 scheduler@^0.19.1:
   version "0.19.1"
