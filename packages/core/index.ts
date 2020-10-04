@@ -27,6 +27,7 @@ export {
   StatusCodes,
   Headers,
   Request,
+  isRequestLike,
   Response,
   isResponseLike,
   isRedirectStatusCode
