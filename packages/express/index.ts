@@ -1,5 +1,5 @@
 import type * as express from "express";
-import type { AppLoadContext, Response } from "@remix-run/core";
+import type { AppLoadContext, HeadersInit, Response } from "@remix-run/core";
 import {
   Headers,
   Request,
@@ -64,7 +64,7 @@ function createRemixRequest(req: express.Request): Request {
   let origin = `${req.protocol}://${req.headers.host}`;
   let url = new URL(req.url, origin);
 
-  return new Request(url, {
+  return new Request(url.toString(), {
     method: req.method,
     body: req,
     headers: createRemixHeaders(req.headers)
@@ -85,6 +85,6 @@ function createRemixHeaders(
       }
 
       return memo;
-    }, {} as { [headerName: string]: string })
+    }, {} as HeadersInit)
   );
 }

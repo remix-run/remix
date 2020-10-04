@@ -23,6 +23,7 @@ export type {
   RouteLoader
 } from "./entry";
 
+export type { HeadersInit, RequestInit, ResponseInit } from "./platform";
 export {
   StatusCodes,
   Headers,
