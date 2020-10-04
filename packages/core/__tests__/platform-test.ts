@@ -12,7 +12,7 @@ describe("Headers", () => {
 
     let headers = new Headers(originalHeaders);
 
-    expect(headers.entries()).toMatchInlineSnapshot(`
+    expect(Array.from(headers.entries())).toMatchInlineSnapshot(`
       Array [
         Array [
           "content-type",
@@ -51,7 +51,7 @@ describe("Headers", () => {
     headers.set("Content-Type", "text/html");
     headers.set("Content-Length", "123");
 
-    expect(headers.keys()).toMatchInlineSnapshot(`
+    expect(Array.from(headers.keys())).toMatchInlineSnapshot(`
       Array [
         "content-type",
         "content-length",
@@ -64,7 +64,7 @@ describe("Headers", () => {
     headers.set("Content-Type", "text/html");
     headers.set("Content-Length", "123");
 
-    expect(headers.values()).toMatchInlineSnapshot(`
+    expect(Array.from(headers.values())).toMatchInlineSnapshot(`
       Array [
         "text/html",
         "123",
@@ -77,7 +77,7 @@ describe("Headers", () => {
     headers.set("Content-Type", "text/html");
     headers.set("Content-Length", "123");
 
-    expect(headers.entries()).toMatchInlineSnapshot(`
+    expect(Array.from(headers.entries())).toMatchInlineSnapshot(`
       Array [
         Array [
           "content-type",

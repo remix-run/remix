@@ -45,30 +45,6 @@ describe("readConfig", () => {
             "path": "404",
           },
           "routes/gists": Object {
-            "children": Array [
-              Object {
-                "children": Array [
-                  Object {
-                    "componentFile": "routes/gists/$username/edit.js",
-                    "id": "routes/gists/$username/edit",
-                    "parentId": "routes/gists/$username",
-                    "path": "edit",
-                  },
-                ],
-                "componentFile": "routes/gists/$username.js",
-                "id": "routes/gists/$username",
-                "loaderFile": "loaders/gists/$username.js",
-                "parentId": "routes/gists",
-                "path": ":username",
-              },
-              Object {
-                "componentFile": "routes/gists/index.js",
-                "id": "routes/gists/index",
-                "loaderFile": "loaders/gists/index.js",
-                "parentId": "routes/gists",
-                "path": "/",
-              },
-            ],
             "componentFile": "routes/gists.js",
             "id": "routes/gists",
             "loaderFile": "loaders/gists.js",
@@ -81,14 +57,6 @@ describe("readConfig", () => {
             "path": "gists/mine",
           },
           "routes/gists/$username": Object {
-            "children": Array [
-              Object {
-                "componentFile": "routes/gists/$username/edit.js",
-                "id": "routes/gists/$username/edit",
-                "parentId": "routes/gists/$username",
-                "path": "edit",
-              },
-            ],
             "componentFile": "routes/gists/$username.js",
             "id": "routes/gists/$username",
             "loaderFile": "loaders/gists/$username.js",
@@ -114,15 +82,6 @@ describe("readConfig", () => {
             "path": "/",
           },
           "routes/payments": Object {
-            "children": Array [
-              Object {
-                "componentFile": "routes/payments/error.js",
-                "id": "routes/payments/error",
-                "loaderFile": "loaders/payments/error.js",
-                "parentId": "routes/payments",
-                "path": "error",
-              },
-            ],
             "componentFile": "routes/payments.js",
             "id": "routes/payments",
             "path": "payments",
@@ -135,15 +94,6 @@ describe("readConfig", () => {
             "path": "error",
           },
           "routes/users": Object {
-            "children": Array [
-              Object {
-                "componentFile": "routes/users/$username.js",
-                "id": "routes/users/$username",
-                "loaderFile": "loaders/users/$username.js",
-                "parentId": "routes/users",
-                "path": ":username",
-              },
-            ],
             "componentFile": "routes/users.js",
             "id": "routes/users",
             "path": "users",

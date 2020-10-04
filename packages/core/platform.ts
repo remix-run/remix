@@ -18,7 +18,7 @@ const map = Symbol("map");
 export class Headers {
   private [map]: Map<string, string>;
 
-  constructor(init: Headers | HeadersInit | undefined) {
+  constructor(init?: Headers | HeadersInit) {
     this[map] = new Map();
 
     if (init instanceof Headers) {

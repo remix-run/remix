@@ -23,7 +23,12 @@ const flags: AnyFlags = {
   }
 };
 
-const cli = meow(helpText, { autoHelp: true, autoVersion: false, flags });
+const cli = meow(helpText, {
+  autoHelp: true,
+  autoVersion: false,
+  description: false,
+  flags
+});
 
 if (cli.flags.version) {
   cli.showVersion();
