@@ -81,31 +81,6 @@ describe("readConfig", () => {
             "id": "routes/index",
             "path": "/",
           },
-          "routes/payments": Object {
-            "componentFile": "routes/payments.js",
-            "id": "routes/payments",
-            "path": "payments",
-          },
-          "routes/payments/error": Object {
-            "componentFile": "routes/payments/error.js",
-            "id": "routes/payments/error",
-            "loaderFile": "loaders/payments/error.js",
-            "parentId": "routes/payments",
-            "path": "error",
-          },
-          "routes/users": Object {
-            "componentFile": "routes/users.js",
-            "id": "routes/users",
-            "path": "users",
-            "stylesFile": "styles/users.css",
-          },
-          "routes/users/$username": Object {
-            "componentFile": "routes/users/$username.js",
-            "id": "routes/users/$username",
-            "loaderFile": "loaders/users/$username.js",
-            "parentId": "routes/users",
-            "path": ":username",
-          },
         },
         "routes": Array [
           Object {
@@ -153,35 +128,6 @@ describe("readConfig", () => {
             "componentFile": "routes/index.js",
             "id": "routes/index",
             "path": "/",
-          },
-          Object {
-            "children": Array [
-              Object {
-                "componentFile": "routes/payments/error.js",
-                "id": "routes/payments/error",
-                "loaderFile": "loaders/payments/error.js",
-                "parentId": "routes/payments",
-                "path": "error",
-              },
-            ],
-            "componentFile": "routes/payments.js",
-            "id": "routes/payments",
-            "path": "payments",
-          },
-          Object {
-            "children": Array [
-              Object {
-                "componentFile": "routes/users/$username.js",
-                "id": "routes/users/$username",
-                "loaderFile": "loaders/users/$username.js",
-                "parentId": "routes/users",
-                "path": ":username",
-              },
-            ],
-            "componentFile": "routes/users.js",
-            "id": "routes/users",
-            "path": "users",
-            "stylesFile": "styles/users.css",
           },
           Object {
             "componentFile": "pages/one.mdx",

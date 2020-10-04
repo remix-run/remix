@@ -29,17 +29,12 @@ describe("the server build", () => {
         "routes/gists/index",
         "routes/gists.mine",
         "routes/index",
-        "routes/payments",
-        "routes/payments/error",
-        "routes/users",
-        "routes/users/$username",
         "pages/one",
         "pages/two",
         "entry-server",
         "_rollupPluginBabelHelpers",
         "global.css",
         "style/routes/gists.css",
-        "style/routes/users.css",
       ]
     `);
   });
