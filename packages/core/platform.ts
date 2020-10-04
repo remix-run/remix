@@ -1,6 +1,8 @@
 import { Readable } from "stream";
 import { STATUS_CODES } from "http";
 
+import { bufferStream } from "./stream";
+
 /**
  * A map of HTTP status codes to their text descriptions.
  */
@@ -132,16 +134,6 @@ export class Message {
   async text(): Promise<string> {
     return (await this.buffer()).toString("utf-8");
   }
-}
-
-async function bufferStream(stream: Readable): Promise<Buffer> {
-  return new Promise((accept, reject) => {
-    let chunks: Buffer[] = [];
-    stream
-      .on("error", reject)
-      .on("data", chunk => chunks.push(chunk))
-      .on("end", () => accept(Buffer.concat(chunks)));
-  });
 }
 
 export enum RequestCache {

@@ -2,6 +2,7 @@ import { createReadStream } from "fs";
 import { Readable } from "stream";
 
 import { Headers, Message, Response } from "../platform";
+import { drainStream } from "../stream";
 
 describe("Headers", () => {
   it("clones an existing headers object", () => {
@@ -91,16 +92,6 @@ describe("Headers", () => {
     `);
   });
 });
-
-function drainStream(stream: Readable) {
-  return new Promise(accept => {
-    stream
-      .on("data", () => {})
-      .on("end", () => {
-        accept();
-      });
-  });
-}
 
 describe("Message", () => {
   it("knows when a stream body has been used", async () => {
