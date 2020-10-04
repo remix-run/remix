@@ -1,9 +1,14 @@
 import { Readable } from "stream";
 import { STATUS_CODES } from "http";
 
-export { STATUS_CODES as StatusCodes };
+/**
+ * A map of HTTP status codes to their text descriptions.
+ */
+export const StatusCodes = STATUS_CODES;
 
 export type HeadersInit = { [headerName: string]: string };
+
+const map = Symbol("map");
 
 /**
  * The headers in a Request or Response.
@@ -11,58 +16,70 @@ export type HeadersInit = { [headerName: string]: string };
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers
  */
 export class Headers {
-  private _map: { [headerName: string]: string };
+  private [map]: Map<string, string>;
 
   constructor(init: Headers | HeadersInit | undefined) {
-    this._map = {};
+    this[map] = new Map();
 
     if (init instanceof Headers) {
       for (let pair of init.entries()) {
-        this.set(pair[0], pair[1]);
+        this.set(...pair);
       }
     } else if (init) {
-      for (let key in init) {
+      for (let key of Object.keys(init)) {
         this.set(key, init[key]);
       }
     }
   }
 
   append(name: string, value: string): void {
-    let lowerName = name.toLowerCase();
-    if (this._map[lowerName]) {
-      this._map[lowerName] += `,${value}`;
+    let key = name.toLowerCase();
+    if (this[map].has(key)) {
+      this[map].set(key, this[map].get(key) + `,${value}`);
     } else {
-      this._map[lowerName] = value;
+      this[map].set(key, value);
     }
   }
 
   delete(name: string): void {
-    delete this._map[name.toLowerCase()];
+    this[map].delete(name.toLowerCase());
   }
 
-  entries(): Iterable<string[]> {
-    return Object.entries(this._map);
+  entries(): Iterable<[string, string]> {
+    return this[map].entries();
   }
 
   get(name: string): string | null {
-    let value = this._map[name.toLowerCase()];
-    return value == null ? null : value;
+    return this[map].get(name.toLowerCase()) || null;
   }
 
   has(name: string): boolean {
-    return name.toLowerCase() in this._map;
+    return this[map].has(name.toLowerCase());
   }
 
   keys(): Iterable<string> {
-    return Object.keys(this._map);
+    return this[map].keys();
   }
 
   set(name: string, value: string): void {
-    this._map[name.toLowerCase()] = value;
+    this[map].set(name.toLowerCase(), value);
   }
 
   values(): Iterable<string> {
-    return Object.values(this._map);
+    return this[map].values();
+  }
+
+  [Symbol.iterator]() {
+    return this.entries();
+  }
+
+  forEach(
+    callback: (this: any, [key, value]: [string, string]) => void,
+    thisArg?: any
+  ) {
+    for (let pair of this.entries()) {
+      callback.call(thisArg, pair);
+    }
   }
 }
 
@@ -290,7 +307,7 @@ export class Response extends Message {
 
     let status = init.status || 200;
 
-    if (!(status in STATUS_CODES)) {
+    if (!(status in StatusCodes)) {
       throw new Error(`Invalid HTTP status code: ${status}`);
     }
 
@@ -304,7 +321,7 @@ export class Response extends Message {
     this.ok = status >= 200 && status < 300;
     this.redirected = status >= 300 && status < 400;
     this.status = status;
-    this.statusText = init.statusText || (STATUS_CODES[status] as string);
+    this.statusText = init.statusText || (StatusCodes[status] as string);
     this.type = ResponseType.Default;
     this.url = "";
   }
