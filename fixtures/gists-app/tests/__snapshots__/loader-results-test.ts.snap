@@ -24,45 +24,38 @@ exports[`loader results when a loader returns not found sends a not found page: 
         <ul>
           <li>
             <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
-              >Ryan Florence
+              >Ryan Florence<!-- -->
             </a>
           </li>
           <li>
             <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
-              >Michael Jackson
+              >Michael Jackson<!-- -->
             </a>
           </li>
         </ul>
       </header>
-      <div data-test-id=\\"/gists/$username\\"><h2>No gists for _why</h2></div>
+      <div data-test-id=\\"/gists/$username\\">
+        <h2>
+          No gists for
+          <!-- -->_why
+        </h2>
+      </div>
     </div>
     <script>
       window.__remixContext = {
         browserManifest: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [
-              \\"index-35628953.js\\",
-              \\"index-7d0517c7.js\\",
-              \\"index-2acc50e8.js\\",
-            ],
+            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [
-              \\"index-35628953.js\\",
-              \\"index-7d0517c7.js\\",
-              \\"index-2acc50e8.js\\",
-            ],
+            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
           },
           \\"routes/gists/$username\\": {
             fileName: \\"routes/gists/$username.js\\",
-            imports: [
-              \\"index-35628953.js\\",
-              \\"index-7d0517c7.js\\",
-              \\"index-2acc50e8.js\\",
-            ],
+            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -133,8 +126,14 @@ exports[`loader results when the loader has an error sends a server error page: 
     <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
   </head>
   <body class=\\"m-4\\">
+    <div>
+      <h1>Error!</h1>
+      <div>
+        <p>Missing route \\"<!-- -->routes/500<!-- -->\\"!</p>
+      </div>
+    </div>
     <script>
-      window.__remixContext = {'browserManifest':{'entry-browser':{'fileName':'entry-browser.js','imports':['index-35628953.js','index-7d0517c7.js','index-2acc50e8.js']},'global.css':{'fileName':'assets/global-ec887178.css'}},'globalData':{'enableScripts':true},'matches':[{'params':{'error':Error: RUN FOR IT},'pathname':'/gists/DANGER','route':{'id':'routes/500','path':'/gists/DANGER'}}],'publicPath':'/build/','routeData':{'routes/500':{'users':[{'id':'ryanflorence','name':'Ryan Florence'},{'id':'mjackson','name':'Michael Jackson'}]}},'routeManifest':{'routes/500':{'id':'routes/500','path':'/gists/DANGER'}}}
+      window.__remixContext = {'browserManifest':{'entry-browser':{'fileName':'entry-browser.js','imports':['index-35628953.js','index-09584737.js']},'global.css':{'fileName':'assets/global-ec887178.css'}},'globalData':{'enableScripts':true},'matches':[{'params':{'error':Error: RUN FOR IT},'pathname':'/gists/DANGER','route':{'id':'routes/500','path':'/gists/DANGER'}}],'publicPath':'/build/','routeData':{'routes/500':{'users':[{'id':'ryanflorence','name':'Ryan Florence'},{'id':'mjackson','name':'Michael Jackson'}]}},'routeManifest':{'routes/500':{'id':'routes/500','path':'/gists/DANGER'}}}
     </script>
     <script type=\\"module\\">
       window.__remixRoutes = {};

@@ -1,24 +1,13 @@
-import type { ReactChildren } from "react";
+import type { Location, To } from "history";
+import { Action, createPath } from "history";
+import type { ReactNode } from "react";
 import React from "react";
 import type { Request, EntryContext } from "@remix-run/core";
-import type { Location, To } from "history";
-import { Action, createPath, parsePath } from "history";
 
 import { RemixEntry } from "./internals";
 
-function createLocation(url: string): Location {
-  let path = parsePath(url);
-  return {
-    pathname: path.pathname || "/",
-    search: path.search || "",
-    hash: path.hash || "",
-    state: null,
-    key: "default"
-  };
-}
-
 interface RemixServerProps {
-  children: ReactChildren;
+  children: ReactNode;
   context: EntryContext;
   request: Request;
 }
@@ -28,6 +17,15 @@ export default function RemixServer({
   context,
   request
 }: RemixServerProps) {
+  let url = new URL(request.url);
+  let location: Location = {
+    pathname: url.pathname,
+    search: url.search,
+    hash: "",
+    state: null,
+    key: "default"
+  };
+
   let staticNavigator = {
     createHref(to: To) {
       return typeof to === "string" ? to : createPath(to);
@@ -76,10 +74,10 @@ export default function RemixServer({
 
   return (
     <RemixEntry
-      context={context}
       children={children}
+      context={context}
       action={Action.Pop}
-      location={createLocation(request.url)}
+      location={location}
       navigator={staticNavigator}
       static={true}
     />
