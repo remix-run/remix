@@ -46,6 +46,9 @@ export interface AppConfig {
    * "build".
    */
   serverBuildDirectory?: string;
+
+  /* TODO: MDX options, there is no type for it, we need to make one */
+  mdx: any;
 }
 
 /**
@@ -96,6 +99,9 @@ export interface RemixConfig {
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
+
+  /* TODO: MDX has no types yet, these are the options sent to mdx */
+  mdx: any;
 }
 
 /**
@@ -163,7 +169,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     rootDirectory,
     routes,
     routeManifest,
-    serverBuildDirectory
+    serverBuildDirectory,
+    mdx: appConfig.mdx
   };
 
   return remixConfig;

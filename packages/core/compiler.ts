@@ -247,7 +247,7 @@ function getCommonPlugins(
   }
 
   plugins.push(
-    mdxTransform(),
+    mdxTransform(config.mdx),
     babel({
       babelHelpers: "bundled",
       configFile: false,

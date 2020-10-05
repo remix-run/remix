@@ -14,7 +14,7 @@ interface RemixFrontMatter {
   headers?: { [header: string]: string };
 }
 
-export default function mdxTransform(): Plugin {
+export default function mdxTransform(mdxOptions: any): Plugin {
   return {
     name: "mdx",
     async transform(content, filename) {
@@ -44,7 +44,7 @@ export default function mdxTransform(): Plugin {
         )}}`;
       }
 
-      let source = await mdx(body, {});
+      let source = await mdx(body, mdxOptions);
       let code = [imports, headers, meta, source].filter(Boolean).join("\n");
 
       return { code, map: null };
