@@ -249,7 +249,14 @@ function getCommonPlugins(
   plugins.push(
     mdxTransform(config.mdx),
     babel({
-      babelHelpers: "bundled",
+      babelHelpers:
+        mode === BuildMode.Development && target === BuildTarget.Server
+          ? // Everything needs to be inlined into the server bundles in
+            // development since they are served directly out of the build
+            // in memory instead of from on disk, so there is no way they
+            // can require() something else from the build.
+            "inline"
+          : "bundled",
       configFile: false,
       exclude: /node_modules/,
       extensions: [".js", ".ts", ".tsx", ".md", ".mdx"],
