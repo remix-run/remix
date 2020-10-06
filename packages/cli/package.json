@@ -1,13 +1,13 @@
 {
   "name": "@remix-run/cli",
   "description": "The Remix CLI interface",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "repository": "https://github.com/remix-run/packages",
   "bin": {
     "remix": "index.js"
   },
   "dependencies": {
-    "@remix-run/core": "0.1.3",
+    "@remix-run/core": "0.1.4",
     "meow": "^7.1.1"
   }
 }
