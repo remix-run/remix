@@ -11,7 +11,7 @@ export default function handleRequest(
   remixContext
 ) {
   let markup = ReactDOMServer.renderToString(
-    <Remix request={request} context={remixContext}>
+    <Remix context={remixContext} url={request.url}>
       <App />
     </Remix>
   );

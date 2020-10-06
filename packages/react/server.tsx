@@ -2,22 +2,25 @@ import type { Location, To } from "history";
 import { Action, createPath } from "history";
 import type { ReactNode } from "react";
 import React from "react";
-import type { Request, EntryContext } from "@remix-run/core";
+import type { EntryContext } from "@remix-run/core";
 
 import { RemixEntry } from "./internals";
 
-interface RemixServerProps {
+export interface RemixServerProps {
   children: ReactNode;
   context: EntryContext;
-  request: Request;
+  url: string | URL;
 }
 
 export default function RemixServer({
   children,
   context,
-  request
+  url
 }: RemixServerProps) {
-  let url = new URL(request.url);
+  if (typeof url === "string") {
+    url = new URL(url);
+  }
+
   let location: Location = {
     pathname: url.pathname,
     search: url.search,
