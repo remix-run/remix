@@ -8,7 +8,7 @@ import { bufferStream } from "./stream";
  */
 export const StatusCodes = STATUS_CODES;
 
-export type HeadersInit = { [headerName: string]: string };
+export type HeadersInit = string[][] | { [headerName: string]: string };
 
 const map = Symbol("map");
 
@@ -25,7 +25,11 @@ export class Headers {
 
     if (init instanceof Headers) {
       for (let pair of init.entries()) {
-        this.set(...pair);
+        this.append(...pair);
+      }
+    } else if (Array.isArray(init)) {
+      for (let pair of init) {
+        this.append(pair[0], pair[1]);
       }
     } else if (init) {
       for (let key of Object.keys(init)) {
