@@ -1,4 +1,4 @@
-interface SafeHtml {
+export interface SafeHtml {
   __html: string;
 }
 

@@ -23,7 +23,11 @@ let browserEntryContext = {
   routeLoader: createRouteLoader(window.__remixRoutes, serverHandoff.publicPath)
 };
 
-export default function RemixBrowser({ children }: { children: ReactNode }) {
+export interface RemixBrowserProps {
+  children: ReactNode;
+}
+
+export default function RemixBrowser({ children }: RemixBrowserProps) {
   let historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
     historyRef.current = createBrowserHistory({ window });
@@ -42,8 +46,8 @@ export default function RemixBrowser({ children }: { children: ReactNode }) {
 
   return (
     <RemixEntry
-      context={browserEntryContext}
       children={children}
+      context={browserEntryContext}
       action={state.action}
       location={state.location}
       navigator={history}

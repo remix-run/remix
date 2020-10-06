@@ -1,6 +1,6 @@
 import path from "path";
-import copy from "rollup-plugin-copy";
 import babel from "@rollup/plugin-babel";
+import copy from "rollup-plugin-copy";
 import nodeResolve from "@rollup/plugin-node-resolve";
 
 function isLocalModuleId(id) {
@@ -46,9 +46,9 @@ let cli = {
   },
   input: path.resolve(__dirname, "packages/cli/index.ts"),
   output: {
+    banner: "#!/usr/bin/env node",
     dir: "build/node_modules/@remix-run/cli",
-    format: "cjs",
-    banner: "#!/usr/bin/env node"
+    format: "cjs"
   },
   plugins: [
     babel({
@@ -134,21 +134,34 @@ let loader = {
 
 /** @type {import('rollup').RollupOptions[]} */
 let react = [
+  // We need 2 builds for @remix-run/react. Here's why:
+  //
+  // - ESM build runs in the browser and uses dynamic `import()` in the route
+  //   loader to load route modules from the server
+  // - CommonJS build runs on the server. It doesn't need to do any dynamic code
+  //   loading because it loads all route modules up front when the server boots
+  //
+  // The compiler aliases @remix-run/react to @remix-run/react/esm when building
+  // browser bundles (see packages/core/compiler.ts).
+  //
+  // TODO: We may eventually need a 3rd build that uses SystemJS for the route
+  // loader in a <script nomodule> for older browsers (IE 11), depending on what
+  // our browser support level is.
   {
     external(id) {
       return !isLocalModuleId(id);
     },
     input: {
-      index: path.resolve(__dirname, "packages/react/index.tsx"),
-      browser: path.resolve(__dirname, "packages/react/browser.tsx")
+      browser: path.resolve(__dirname, "packages/react/browser.tsx"),
+      index: path.resolve(__dirname, "packages/react/index.tsx")
     },
     output: {
       dir: "build/node_modules/@remix-run/react/esm",
       format: "esm",
-      preserveModules: true
+      preserveModules: true,
+      exports: "auto"
     },
     plugins: [
-      // TODO: Don't rely on main babel.config.js which targets node: current.
       babel({
         babelHelpers: "bundled",
         exclude: /node_modules/,
@@ -167,8 +180,6 @@ let react = [
       })
     ]
   },
-
-  // Also provide CommonJS build for entry-server.js
   {
     external(id) {
       return !isLocalModuleId(id);
@@ -181,7 +192,7 @@ let react = [
       dir: "build/node_modules/@remix-run/react",
       format: "cjs",
       preserveModules: true,
-      exports: "named"
+      exports: "auto"
     },
     plugins: [
       babel({
