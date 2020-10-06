@@ -9,15 +9,8 @@ export function notFound() {
   return new Response("", { status: 404 });
 }
 
-/**
- * A redirect response. Defaults to a temporary redirect (302).
- */
-export function redirect(url: string, status = 302) {
-  return Response.redirect(url, status);
-}
-
 // TODO: Make these global so people can just use them in their loaders w/out
-// importing anything?
+// importing anything
 // global.Headers = Headers;
 // global.Request = Request;
 // global.Response = Response;

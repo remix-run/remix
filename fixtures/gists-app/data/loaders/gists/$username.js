@@ -1,11 +1,11 @@
-const { redirect, notFound } = require("@remix-run/loader");
+const { Response, notFound } = require("@remix-run/loader");
 
 module.exports = function ({ params }) {
   let { username } = params;
 
   if (process.env.NODE_ENV === "test") {
     if (username === "mjijackson") {
-      return redirect("/gists/mjackson");
+      return Response.redirect("/gists/mjackson");
     }
 
     if (username === "_why") {
