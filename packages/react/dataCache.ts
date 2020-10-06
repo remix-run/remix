@@ -63,7 +63,12 @@ export function createDataCache(
     params: Params
   ): Promise<AppData> {
     invariant(
-      !(cache[location.key] && cache[location.key][routeId]),
+      !cache[location.key],
+      `Already loaded data for location ${location.key}`
+    );
+
+    invariant(
+      !(cache[location.key] && routeId in cache[location.key]),
       `Already loaded data for route ${routeId} on location ${location.key}`
     );
 
@@ -93,7 +98,7 @@ export function createDataCache(
     if (!routeId) return locationData;
 
     invariant(
-      locationData[routeId],
+      locationData[routeId] !== undefined,
       `Missing data for route ${routeId} on location ${locationKey}`
     );
 
