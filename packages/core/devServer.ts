@@ -25,7 +25,7 @@ export async function startDevServer(
     onRebuild?: () => void;
   } = {}
 ) {
-  let requestHandler = createDevRequestHandler(config, {
+  let requestHandler = createRequestHandler(config, {
     onReady,
     onRebuild
   });
@@ -39,7 +39,7 @@ export async function startDevServer(
   });
 }
 
-function createDevRequestHandler(
+function createRequestHandler(
   config: RemixConfig,
   {
     onReady,

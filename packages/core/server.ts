@@ -6,11 +6,11 @@ import {
   getServerBuildManifest,
   getServerEntryModule,
   getRouteModules,
+  generateDevServerBuild,
   getDevBrowserBuildManifest,
   getDevServerEntryModule,
   getDevRouteModules
 } from "./build";
-import { generateDevServerBuild } from "./compiler";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { AppLoadContext, AppLoadResult } from "./data";

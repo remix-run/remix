@@ -112,25 +112,6 @@ export function watch(
   };
 }
 
-/**
- * Runs the server build in dev as requests come in. At this point, the config
- * object has been trimmed down to contain only the routes matched in the
- * request, which should speed up the build considerably.
- */
-export async function generateDevServerBuild(
-  config: RemixConfig
-): Promise<RollupOutput> {
-  let serverBuild = await build(config, {
-    mode: BuildMode.Development,
-    target: BuildTarget.Server
-  });
-
-  return serverBuild.generate({
-    format: "cjs",
-    exports: "named"
-  });
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 function getExternalOption(target: BuildTarget): ExternalOption | undefined {

@@ -6,6 +6,7 @@ import requireFromString from "require-from-string";
 import type { RollupOutput } from "rollup";
 import fetch from "node-fetch";
 
+import { BuildMode, BuildTarget, build } from "./compiler";
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Request, Response } from "./platform";
@@ -125,6 +126,23 @@ export async function getDevBrowserBuildManifest(
 ): Promise<BuildManifest> {
   let res = await fetch(remixRunOrigin + BrowserManifestFilename);
   return res.json();
+}
+
+/**
+ * Runs the server build in dev as requests come in.
+ */
+export async function generateDevServerBuild(
+  config: RemixConfig
+): Promise<RollupOutput> {
+  let serverBuild = await build(config, {
+    mode: BuildMode.Development,
+    target: BuildTarget.Server
+  });
+
+  return serverBuild.generate({
+    format: "cjs",
+    exports: "named"
+  });
 }
 
 /**
