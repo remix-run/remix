@@ -26,6 +26,7 @@ describe("readConfig", () => {
         "browserBuildDirectory": Any<String>,
         "dataDirectory": Any<String>,
         "devServerPort": 8002,
+        "mdx": undefined,
         "publicPath": "/build/",
         "rootDirectory": Any<String>,
         "routeManifest": Object {
