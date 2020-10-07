@@ -122,7 +122,7 @@ const RemixEntryContext = React.createContext<
 
 export function useRemixEntryContext(): RemixEntryContextType {
   let context = React.useContext(RemixEntryContext);
-  invariant(context, "You must render this element in a <Remix> component");
+  invariant(context, "You must render this element inside a <Remix> element");
   return context;
 }
 

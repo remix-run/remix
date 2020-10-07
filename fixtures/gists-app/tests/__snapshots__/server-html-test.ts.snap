@@ -40,12 +40,12 @@ exports[`the server HTML is correct: page 1`] = `
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/index\\": {
             fileName: \\"routes/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
         },
         globalData: { enableScripts: true },

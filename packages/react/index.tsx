@@ -20,12 +20,12 @@ import {
 export function Meta() {
   let { dataCache, routeLoader, matches } = useRemixEntryContext();
   let location = useLocation();
-  let routeData = dataCache.read(location.key);
 
+  let routeData = dataCache.read(location.key);
   if (!routeData) return null;
 
   let meta: { [name: string]: string } = {};
-  let allData = {};
+  let parentsData = {};
 
   for (let match of matches) {
     let routeId = match.route.id;
@@ -35,11 +35,11 @@ export function Meta() {
     let routeModule = routeLoader.read(routeId) || defaultRouteModule;
 
     if (typeof routeModule.meta === "function") {
-      Object.assign(allData, { [routeId]: data });
       Object.assign(
         meta,
-        routeModule.meta({ data, params, location, allData })
+        routeModule.meta({ data, parentsData, params, location })
       );
+      Object.assign(parentsData, { [routeId]: data });
     }
   }
 

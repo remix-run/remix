@@ -37,26 +37,38 @@ export interface ServerEntryModule {
   ): Promise<Response>;
 }
 
-export interface RouteModules {
-  [routeId: string]: RouteModule;
+/**
+ * A function that returns HTTP headers to be used for a route. These headers
+ * will be merged with (and take precedence over) headers from parent routes.
+ */
+export interface HeadersFunction {
+  (args: { loaderHeaders: Headers; parentsHeaders: Headers }):
+    | Headers
+    | HeadersInit;
+}
+
+/**
+ * A function that returns an object of name + content pairs to use for
+ * `<meta>` tags for this route. These tags will be merged with (and take
+ * precedence over) tags from parent routes.
+ */
+export interface MetaFunction {
+  (args: {
+    data: RouteData[string];
+    parentsData: RouteData;
+    params: Params;
+    location: Location;
+  }): { [name: string]: string };
 }
 
 export interface RouteModule {
-  headers?(args: {
-    loaderHeaders: Headers;
-    parentsHeaders: Headers;
-  }): Headers | HeadersInit;
-  meta?(args: {
-    allData: RouteData;
-    data: RouteData[string];
-    location: Location;
-    params: Params;
-  }): MetaContents;
+  headers?: HeadersFunction;
+  meta?: MetaFunction;
   default: ComponentType;
 }
 
-interface MetaContents {
-  [name: string]: string;
+export interface RouteModules {
+  [routeId: string]: RouteModule;
 }
 
 /**

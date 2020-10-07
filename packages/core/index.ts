@@ -1,4 +1,9 @@
-export type { AssetManifest, RouteModule } from "./build";
+export type {
+  AssetManifest,
+  HeadersFunction,
+  MetaFunction,
+  RouteModule
+} from "./build";
 
 export * as commands from "./commands";
 

@@ -30,7 +30,7 @@ export default function PageOne() {
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"pages/one\\": {
@@ -91,7 +91,7 @@ export default function PageOne() {
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"pages/one\\": {
@@ -168,16 +168,16 @@ exports[`data loading transitioning back after a reload loads data for the previ
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -293,16 +293,16 @@ exports[`data loading transitioning back after a reload loads data for the previ
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -418,16 +418,16 @@ exports[`data loading transitioning back after a reload loads data for the previ
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/$username\\": {
             fileName: \\"routes/gists/$username.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -543,16 +543,16 @@ exports[`data loading transitioning forward to a page we have already seen does 
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -668,16 +668,16 @@ exports[`data loading transitioning forward to a page we have already seen does 
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -793,16 +793,16 @@ exports[`data loading transitioning forward to a page we have already seen does 
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -918,16 +918,16 @@ exports[`data loading transitioning forward to a page we have already seen does 
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -1037,12 +1037,12 @@ exports[`data loading transitioning to a new route loads data for all routes on 
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/index\\": {
             fileName: \\"routes/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
         },
         globalData: { enableScripts: true },
@@ -1114,12 +1114,12 @@ exports[`data loading transitioning to a new route loads data for all routes on 
         assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/index\\": {
             fileName: \\"routes/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-da741ef2.js\\"],
           },
         },
         globalData: { enableScripts: true },

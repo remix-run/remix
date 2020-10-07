@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "@remix-run/react";
 
-export function meta({ params, data, location }) {
+export function meta() {
   return {
     title: "Gists Fixture App",
     description: "We're just tryin' to make sure stuff works, ya know?!"

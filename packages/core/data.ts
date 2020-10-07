@@ -24,12 +24,7 @@ export type AppLoadResult = Response | null;
  * A function that loads data for a route or the global data loader.
  */
 export interface DataLoader {
-  (args: {
-    context: AppLoadContext;
-    pathname: string;
-    search: string;
-    params: Params;
-  }): AppData;
+  (args: { context: AppLoadContext; params: Params; url: URL }): AppData;
 }
 
 function requireLoader(config: RemixConfig, loaderFile: string): DataLoader {
@@ -47,9 +42,8 @@ async function executeLoader(
 
   let value = await loader({
     context: loadContext,
-    pathname: url.pathname,
-    search: url.search,
-    params: routeParams
+    params: routeParams,
+    url
   });
 
   if (isResponseLike(value)) {

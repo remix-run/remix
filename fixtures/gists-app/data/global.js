@@ -1,7 +1,5 @@
-module.exports = ({ search }) => {
-  let params = new URLSearchParams(search);
-
+module.exports = ({ url }) => {
   return {
-    enableScripts: params.get("disableJs") == null
+    enableScripts: url.searchParams.get("disableJs") == null
   };
 };
