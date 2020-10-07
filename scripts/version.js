@@ -1,3 +1,4 @@
+const fsp = require("fs").promises;
 const path = require("path");
 const { execSync } = require("child_process");
 
@@ -70,6 +71,16 @@ async function updatePackageConfig(packageName, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
+async function updateChanges(version, date = new Date()) {
+  let file = path.resolve(__dirname, "../CHANGES.md");
+  let contents = await fsp.readFile(file, "utf-8");
+  let updated = contents.replace(
+    /## Unreleased/,
+    `## ${version} - ${date.toDateString()}`
+  );
+  await fsp.writeFile(file, updated);
+}
+
 async function run(args) {
   let givenVersion = args[0];
   let prereleaseId = args[1];
@@ -133,6 +144,10 @@ async function run(args) {
       chalk.green(`  Updated @remix-run/${platform} to version ${nextVersion}`)
     );
   }
+
+  // - Update CHANGES.md release date
+  await updateChanges(nextVersion);
+  console.log(chalk.green(`  Updated release version and date in CHANGES.md`));
 
   // - Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
