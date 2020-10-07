@@ -47,8 +47,24 @@ export interface AppConfig {
    */
   serverBuildDirectory?: string;
 
-  /* TODO: MDX options, there is no type for it, we need to make one */
-  mdx: any;
+  /**
+   * Options to use when compiling MDX.
+   */
+  mdx: {
+    /**
+     * List of rehype plugins to use.
+     *
+     * @see https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
+     */
+    rehypePlugins?: any[];
+
+    /**
+     * List of remark plugins to use.
+     *
+     * @see https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
+     */
+    remarkPlugins?: any[];
+  };
 }
 
 /**

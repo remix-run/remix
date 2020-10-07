@@ -45,6 +45,11 @@ describe("readConfig", () => {
             "id": "routes/404",
             "path": "404",
           },
+          "routes/500": Object {
+            "componentFile": "routes/500.js",
+            "id": "routes/500",
+            "path": "500",
+          },
           "routes/gists": Object {
             "componentFile": "routes/gists.js",
             "id": "routes/gists",
@@ -88,6 +93,11 @@ describe("readConfig", () => {
             "componentFile": "routes/404.js",
             "id": "routes/404",
             "path": "404",
+          },
+          Object {
+            "componentFile": "routes/500.js",
+            "id": "routes/500",
+            "path": "500",
           },
           Object {
             "children": Array [

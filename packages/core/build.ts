@@ -8,7 +8,7 @@ import fetch from "node-fetch";
 
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
-import type { Request, Response } from "./platform";
+import type { Headers, HeadersInit, Request, Response } from "./platform";
 import type { BuildManifest } from "./rollup/manifest";
 
 /**
@@ -32,24 +32,27 @@ export interface ServerEntryModule {
   default(
     request: Request,
     responseStatusCode: number,
+    responseHeaders: Headers,
     context: EntryContext
   ): Promise<Response>;
-}
-
-export interface RouteModule {
-  default: ComponentType;
-  meta?(metaArgs: MetaArgs): MetaContents;
 }
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
 }
 
-interface MetaArgs {
-  data: RouteData[string];
-  params: Params;
-  location: Location;
-  allData: { [routeId: string]: RouteData[string] };
+export interface RouteModule {
+  headers?(args: {
+    loaderHeaders: Headers;
+    parentsHeaders: Headers;
+  }): Headers | HeadersInit;
+  meta?(args: {
+    allData: RouteData;
+    data: RouteData[string];
+    location: Location;
+    params: Params;
+  }): MetaContents;
+  default: ComponentType;
 }
 
 interface MetaContents {

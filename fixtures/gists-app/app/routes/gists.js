@@ -2,6 +2,12 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import { Link, useRouteData, useLocationPending } from "@remix-run/react";
 
+export function headers() {
+  return {
+    "cache-control": "public, max-age=60"
+  };
+}
+
 export default function Gists() {
   let locationPending = useLocationPending();
   let [data] = useRouteData();

@@ -26,11 +26,11 @@ export default function PageOne() {
 }
 </code></pre>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"pages/one\\": {
@@ -48,14 +48,14 @@ export default function PageOne() {
         ],
         publicPath: \\"/build/\\",
         routeData: { \\"pages/one\\": null },
-        routeManifest: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
+        routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
       };
     </script>
     <script type=\\"module\\">
       import * as route0 from \\"/build/pages/one.js\\";
       window.__remixRoutes = { \\"pages/one\\": route0 };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -87,11 +87,11 @@ export default function PageOne() {
 }
 </code></pre>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"pages/one\\": {
@@ -109,14 +109,14 @@ export default function PageOne() {
         ],
         publicPath: \\"/build/\\",
         routeData: { \\"pages/one\\": null },
-        routeManifest: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
+        routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
       };
     </script>
     <script type=\\"module\\">
       import * as route0 from \\"/build/pages/one.js\\";
       window.__remixRoutes = { \\"pages/one\\": route0 };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -164,20 +164,20 @@ exports[`data loading transitioning back after a reload loads data for the previ
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -223,7 +223,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/index\\": {
             id: \\"routes/gists/index\\",
@@ -241,7 +241,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -289,20 +289,20 @@ exports[`data loading transitioning back after a reload loads data for the previ
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -348,7 +348,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/index\\": {
             id: \\"routes/gists/index\\",
@@ -366,7 +366,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -414,20 +414,20 @@ exports[`data loading transitioning back after a reload loads data for the previ
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/$username\\": {
             fileName: \\"routes/gists/$username.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -473,7 +473,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/$username\\": {
             id: \\"routes/gists/$username\\",
@@ -491,7 +491,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -539,20 +539,20 @@ exports[`data loading transitioning forward to a page we have already seen does 
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -598,7 +598,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/index\\": {
             id: \\"routes/gists/index\\",
@@ -616,7 +616,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -664,20 +664,20 @@ exports[`data loading transitioning forward to a page we have already seen does 
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -723,7 +723,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/index\\": {
             id: \\"routes/gists/index\\",
@@ -741,7 +741,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -789,20 +789,20 @@ exports[`data loading transitioning forward to a page we have already seen does 
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -848,7 +848,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/index\\": {
             id: \\"routes/gists/index\\",
@@ -866,7 +866,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -914,20 +914,20 @@ exports[`data loading transitioning forward to a page we have already seen does 
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/index\\": {
             fileName: \\"routes/gists/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -973,7 +973,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             },
           ],
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/index\\": {
             id: \\"routes/gists/index\\",
@@ -991,7 +991,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -1033,16 +1033,16 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       </nav>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/index\\": {
             fileName: \\"routes/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
         },
         globalData: { enableScripts: true },
@@ -1055,14 +1055,14 @@ exports[`data loading transitioning to a new route loads data for all routes on 
         ],
         publicPath: \\"/build/\\",
         routeData: { \\"routes/index\\": null },
-        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
+        routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
       };
     </script>
     <script type=\\"module\\">
       import * as route0 from \\"/build/routes/index.js\\";
       window.__remixRoutes = { \\"routes/index\\": route0 };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -1110,16 +1110,16 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/index\\": {
             fileName: \\"routes/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
         },
         globalData: { enableScripts: true },
@@ -1132,14 +1132,14 @@ exports[`data loading transitioning to a new route loads data for all routes on 
         ],
         publicPath: \\"/build/\\",
         routeData: { \\"routes/index\\": null },
-        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
+        routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
       };
     </script>
     <script type=\\"module\\">
       import * as route0 from \\"/build/routes/index.js\\";
       window.__remixRoutes = { \\"routes/index\\": route0 };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

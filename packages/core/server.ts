@@ -24,7 +24,7 @@ import {
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import type { Request } from "./platform";
-import { Response } from "./platform";
+import { Headers, Response } from "./platform";
 import { purgeRequireCache } from "./requireCache";
 
 /**
@@ -217,8 +217,11 @@ async function handleHtmlRequest(
       }
     }
 
-    // Check for redirect.
-    let redirectResult = [globalLoadResult, ...routeLoadResults].find(
+    let allResults = [globalLoadResult, ...routeLoadResults];
+
+    // Check for redirect. A redirect in a loader takes precedence over all
+    // other responses and is immediately returned.
+    let redirectResult = allResults.find(
       result => result && (result.status === 301 || result.status === 302)
     );
 
@@ -226,8 +229,9 @@ async function handleHtmlRequest(
       return redirectResult;
     }
 
-    // Check for a result with a non-200 status code.
-    let notOkResult = [globalLoadResult, ...routeLoadResults].find(
+    // Check for a result with a non-200 status code. The first loader with a
+    // non-200 status code determines the status code for the whole response.
+    let notOkResult = allResults.find(
       result => result && result.status !== 200
     );
 
@@ -284,9 +288,10 @@ async function handleHtmlRequest(
   let entryMatches = createEntryMatches(matches);
   let globalData = await createGlobalData(globalLoadResult);
   let routeData = await createRouteData(routeLoadResults, matches);
+  let routeLoader = createRouteLoader(routeModules);
   let partialRouteManifest = createRouteManifest(matches);
 
-  // Get the browser manifest for only the browser entry point + the matched
+  // Get the asset manifest for only the browser entry point + the matched
   // routes. The client will fill in the rest by making requests to the manifest
   // endpoint as needed.
   let assetManifestKeys = [
@@ -311,11 +316,46 @@ async function handleHtmlRequest(
 
   let serverEntryContext = {
     ...serverHandoff,
-    routeLoader: createRouteLoader(routeModules),
+    routeLoader,
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
-  return serverEntryModule.default(req, statusCode, serverEntryContext);
+  // Calculate response headers from the matched routes.
+  let headers = matches.reduce((parentsHeaders, match, index) => {
+    let routeId = match.route.id;
+    let routeModule = routeLoader.read(routeId);
+
+    if (typeof routeModule.headers === "function") {
+      try {
+        let loadResult = routeLoadResults[index];
+        let loaderHeaders = loadResult ? loadResult.headers : new Headers();
+        let routeHeaders = routeModule.headers({
+          loaderHeaders,
+          parentsHeaders
+        });
+
+        if (routeHeaders) {
+          new Headers(routeHeaders).forEach(pair => {
+            parentsHeaders.set(...pair);
+          });
+        }
+      } catch (error) {
+        console.error(
+          `There was an error getting headers for route ${routeId}`
+        );
+        console.error(error);
+      }
+    }
+
+    return parentsHeaders;
+  }, new Headers());
+
+  return serverEntryModule.default(
+    req,
+    statusCode,
+    headers,
+    serverEntryContext
+  );
 }
 
 function rewriteRoutes(config: RemixConfig, matches: ConfigRouteMatch[]) {

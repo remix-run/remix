@@ -42,20 +42,20 @@ exports[`loader results when a loader returns not found sends a not found page: 
       </div>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/gists\\": {
             fileName: \\"routes/gists.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"routes/gists/$username\\": {
             fileName: \\"routes/gists/$username.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"style/routes/gists.css\\": {
             fileName: \\"assets/style/routes/gists-d45b2a57.css\\",
@@ -88,7 +88,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
           },
           \\"routes/gists/$username\\": \\"\\",
         },
-        routeManifest: {
+        routes: {
           \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
           \\"routes/gists/$username\\": {
             id: \\"routes/gists/$username\\",
@@ -106,7 +106,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -117,8 +117,7 @@ exports[`loader results when the loader has an error sends a server error page: 
 <html lang=\\"en\\">
   <head>
     <meta charset=\\"utf-8\\" />
-    <title>Remix Error: Route Not Found</title>
-    <meta name=\\"description\\" content=\\"There was an error rendering this page\\" />
+    <title>Error</title>
     <link
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
@@ -126,19 +125,15 @@ exports[`loader results when the loader has an error sends a server error page: 
     <link rel=\\"stylesheet\\" href=\\"/build/assets/global-ec887178.css\\" />
   </head>
   <body class=\\"m-4\\">
-    <div>
-      <h1>Error!</h1>
-      <div>
-        <p>Missing route \\"<!-- -->routes/500<!-- -->\\"!</p>
-      </div>
-    </div>
+    <div data-test-id=\\"errors/500\\"><h1>500</h1></div>
     <script>
-      window.__remixContext = {'browserManifest':{'entry-browser':{'fileName':'entry-browser.js','imports':['index-35628953.js','index-09584737.js']},'global.css':{'fileName':'assets/global-ec887178.css'}},'globalData':{'enableScripts':true},'matches':[{'params':{'error':Error: RUN FOR IT},'pathname':'/gists/DANGER','route':{'id':'routes/500','path':'/gists/DANGER'}}],'publicPath':'/build/','routeData':{'routes/500':{'users':[{'id':'ryanflorence','name':'Ryan Florence'},{'id':'mjackson','name':'Michael Jackson'}]}},'routeManifest':{'routes/500':{'id':'routes/500','path':'/gists/DANGER'}}}
+      window.__remixServerHandoff = {'assets':{'entry-browser':{'fileName':'entry-browser.js','imports':['index-35628953.js','index-86c35ba0.js']},'global.css':{'fileName':'assets/global-ec887178.css'},'routes/500':{'fileName':'routes/500.js','imports':['index-35628953.js']}},'globalData':{'enableScripts':true},'matches':[{'params':{'error':Error: RUN FOR IT},'pathname':'/gists/DANGER','route':{'id':'routes/500','path':'/gists/DANGER'}}],'publicPath':'/build/','routeData':{'routes/500':{'users':[{'id':'ryanflorence','name':'Ryan Florence'},{'id':'mjackson','name':'Michael Jackson'}]}},'routes':{'routes/500':{'id':'routes/500','path':'/gists/DANGER'}}}
     </script>
     <script type=\\"module\\">
-      window.__remixRoutes = {};
+      import * as route0 from \\"/build/routes/500.js\\";
+      window.__remixRoutes = { \\"routes/500\\": route0 };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

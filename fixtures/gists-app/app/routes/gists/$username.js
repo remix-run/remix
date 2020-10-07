@@ -2,6 +2,12 @@ import React from "react";
 import { useRouteData } from "@remix-run/react";
 import { useParams } from "react-router-dom";
 
+export function headers() {
+  return {
+    "cache-control": "public, max-age=300"
+  };
+}
+
 export function meta({ data, params }) {
   let { username } = params;
   return {

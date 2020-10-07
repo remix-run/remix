@@ -36,16 +36,16 @@ exports[`the server HTML is correct: page 1`] = `
       </nav>
     </div>
     <script>
-      window.__remixContext = {
-        browserManifest: {
+      window.__remixServerHandoff = {
+        assets: {
           \\"entry-browser\\": {
             fileName: \\"entry-browser.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
           \\"global.css\\": { fileName: \\"assets/global-ec887178.css\\" },
           \\"routes/index\\": {
             fileName: \\"routes/index.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-09584737.js\\"],
+            imports: [\\"index-35628953.js\\", \\"index-86c35ba0.js\\"],
           },
         },
         globalData: { enableScripts: true },
@@ -58,14 +58,14 @@ exports[`the server HTML is correct: page 1`] = `
         ],
         publicPath: \\"/build/\\",
         routeData: { \\"routes/index\\": null },
-        routeManifest: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
+        routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
       };
     </script>
     <script type=\\"module\\">
       import * as route0 from \\"/build/routes/index.js\\";
       window.__remixRoutes = { \\"routes/index\\": route0 };
     </script>
-    <script type=\\"module\\" src=\\"/build/entry-browser.js\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

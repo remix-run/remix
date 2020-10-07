@@ -8,7 +8,7 @@ export function meta() {
 
 export default function FourOhFour() {
   return (
-    <div data-test-id="/404">
+    <div data-test-id="errors/404">
       <h1>404</h1>
     </div>
   );

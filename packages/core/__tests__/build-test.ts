@@ -23,6 +23,7 @@ describe("the server build", () => {
       .toMatchInlineSnapshot(`
       Array [
         "routes/404",
+        "routes/500",
         "routes/gists",
         "routes/gists/$username",
         "routes/gists/$username/edit",

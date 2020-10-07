@@ -8,6 +8,7 @@ import App from "./components/App";
 export default function handleRequest(
   request,
   responseStatusCode,
+  responseHeaders,
   remixContext
 ) {
   let markup = ReactDOMServer.renderToString(
@@ -19,6 +20,7 @@ export default function handleRequest(
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
     headers: {
+      ...Object.fromEntries(responseHeaders),
       "Content-Type": "text/html"
     }
   });

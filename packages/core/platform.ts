@@ -38,7 +38,7 @@ export class Headers {
     }
   }
 
-  append(name: string, value: string): void {
+  append(name: string, value: string) {
     let key = name.toLowerCase();
     if (this[map].has(key)) {
       this[map].set(key, this[map].get(key) + `,${value}`);
@@ -47,31 +47,31 @@ export class Headers {
     }
   }
 
-  delete(name: string): void {
-    this[map].delete(name.toLowerCase());
+  delete(name: string) {
+    return this[map].delete(name.toLowerCase());
   }
 
-  entries(): Iterable<[string, string]> {
+  entries() {
     return this[map].entries();
   }
 
-  get(name: string): string | null {
+  get(name: string) {
     return this[map].get(name.toLowerCase()) || null;
   }
 
-  has(name: string): boolean {
+  has(name: string) {
     return this[map].has(name.toLowerCase());
   }
 
-  keys(): Iterable<string> {
+  keys() {
     return this[map].keys();
   }
 
-  set(name: string, value: string): void {
-    this[map].set(name.toLowerCase(), value);
+  set(name: string, value: string) {
+    return this[map].set(name.toLowerCase(), value);
   }
 
-  values(): Iterable<string> {
+  values() {
     return this[map].values();
   }
 
