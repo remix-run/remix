@@ -2,22 +2,22 @@ import type { ReactNode } from "react";
 import React from "react";
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
-import type { EntryContext } from "@remix-run/core";
+import type { ServerHandoff } from "@remix-run/core";
 
 import { RemixEntry } from "./internals";
 import type { RouteModuleCache } from "./routeModuleCache";
 import { createRouteLoader } from "./routeModuleCache";
 
 declare global {
-  var __remixContext: EntryContext;
   var __remixRoutes: RouteModuleCache;
+  var __remixServerHandoff: ServerHandoff;
 }
 
 // if ("scrollRestoration" in window.history) {
 //   window.history.scrollRestoration = "manual";
 // }
 
-let serverHandoff = window.__remixContext;
+let serverHandoff = window.__remixServerHandoff;
 let browserEntryContext = {
   ...serverHandoff,
   routeLoader: createRouteLoader(window.__remixRoutes, serverHandoff.publicPath)

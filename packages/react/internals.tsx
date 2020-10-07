@@ -12,7 +12,7 @@ import type {
 
 import type { DataCache } from "./dataCache";
 import { createDataCache } from "./dataCache";
-import * as defaultRouteModule from "./defaultRouteModule";
+import defaultRouteModule from "./defaultRouteModule";
 import type { ManifestCache } from "./manifestCache";
 import { createManifestCache } from "./manifestCache";
 import type { RouteLoader, RouteManifest } from "./routeModuleCache";
@@ -44,7 +44,7 @@ export function createClientRoute(
 }
 
 export function createClientRoutes(
-  routeManifest: RouteManifest
+  routeManifest: RouteManifest<EntryRouteObject>
 ): ClientRouteObject[] {
   let routes: ClientRouteObject[] = [];
   let addedRoutes: { [routeId: string]: ClientRouteObject } = {};
@@ -106,7 +106,6 @@ function useLazyRef<T>(init: () => T): T {
 }
 
 interface RemixEntryContextType {
-  browserEntryContextString?: string;
   dataCache: DataCache;
   globalDataState: ReturnType<typeof React.useState>;
   manifestCache: ManifestCache;
@@ -114,6 +113,7 @@ interface RemixEntryContextType {
   pending: boolean; // TODO: Move into RR v6
   publicPath: string;
   routeLoader: RouteLoader;
+  serverHandoffString?: string;
 }
 
 const RemixEntryContext = React.createContext<
@@ -142,14 +142,14 @@ export function RemixEntry({
   static?: boolean;
 }) {
   let {
-    browserEntryContextString,
-    browserManifest,
+    assets: assetManifest,
     globalData,
     matches: entryMatches,
     publicPath,
     routeData,
     routeLoader,
-    routeManifest
+    routes: routeManifest,
+    serverHandoffString
   } = entryContext;
 
   let [state, setState] = React.useState({
@@ -163,7 +163,7 @@ export function RemixEntry({
   let globalDataState = React.useState(globalData);
   let dataCache = useLazyRef(() => createDataCache(location.key, routeData));
   let manifestCache = useLazyRef(() =>
-    createManifestCache(location.pathname, browserManifest, routeManifest)
+    createManifestCache(location.pathname, assetManifest, routeManifest)
   );
 
   React.useEffect(() => {
@@ -211,14 +211,14 @@ export function RemixEntry({
   }, [nextAction, nextLocation, location, matches]);
 
   let context = {
-    browserEntryContextString,
     dataCache,
     globalDataState,
     manifestCache,
     matches,
     pending, // TODO: Move into RR v6
     publicPath,
-    routeLoader
+    routeLoader,
+    serverHandoffString
   };
 
   return (

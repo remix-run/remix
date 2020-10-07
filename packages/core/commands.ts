@@ -1,6 +1,6 @@
 import { readConfig } from "./config";
-import { build, BuildTarget } from "./compiler";
-import { startDevServer } from "./devServer";
+import { BuildTarget, build, write } from "./compiler";
+import { startAssetServer } from "./assetServer";
 
 async function buildCommand(remixRoot: string) {
   console.log("Building Remix App...");
@@ -12,16 +12,8 @@ async function buildCommand(remixRoot: string) {
     build(config, { target: BuildTarget.Browser })
   ]);
 
-  await serverBuild.write({
-    dir: config.serverBuildDirectory,
-    format: "cjs",
-    exports: "named"
-  });
-
-  await browserBuild.write({
-    dir: config.browserBuildDirectory,
-    format: "esm"
-  });
+  await write(serverBuild, config);
+  await write(browserBuild, config);
 
   console.log("done!");
 }
@@ -31,7 +23,7 @@ export { buildCommand as build };
 export async function run(remixRoot: string) {
   let config = await readConfig(remixRoot);
 
-  startDevServer(config, {
+  startAssetServer(config, {
     onListen() {
       console.log(
         `Remix dev server running on port ${config.devServerPort}...`

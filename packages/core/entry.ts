@@ -1,19 +1,24 @@
+import jsesc from "jsesc";
 import type { Params } from "react-router";
 
-import type { BuildManifest, RouteModule, RouteModules } from "./build";
+import type { AssetManifest, RouteModule, RouteModules } from "./build";
+import type { RouteManifest } from "./config";
 import type { AppLoadResult, AppData } from "./data";
 import { extractData } from "./data";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 
-export interface EntryContext {
-  browserEntryContextString?: string;
-  browserManifest: BuildManifest;
+export interface ServerHandoff {
+  assets: AssetManifest;
   globalData: AppData;
   matches: EntryRouteMatch[];
   publicPath: string;
   routeData: RouteData;
+  routes: RouteManifest<EntryRouteObject>;
+}
+
+export interface EntryContext extends ServerHandoff {
   routeLoader: RouteLoader;
-  routeManifest: RouteManifest;
+  serverHandoffString?: string;
 }
 
 export interface EntryRouteObject {
@@ -78,7 +83,7 @@ export async function createRouteData(
 }
 
 export interface RouteLoader {
-  preload(assets: BuildManifest, routeId: string): Promise<RouteModule>;
+  preload(assets: AssetManifest, routeId: string): Promise<RouteModule>;
   read(routeId: string): RouteModule;
 }
 
@@ -95,15 +100,19 @@ export function createRouteLoader(routeModules: RouteModules): RouteLoader {
   };
 }
 
-export interface RouteManifest {
-  [routeId: string]: EntryRouteObject;
-}
-
 export function createRouteManifest(
   matches: ConfigRouteMatch[]
-): RouteManifest {
+): RouteManifest<EntryRouteObject> {
   return matches.reduce((memo, match) => {
     memo[match.route.id] = createEntryRoute(match.route);
     return memo;
-  }, {} as RouteManifest);
+  }, {} as RouteManifest<EntryRouteObject>);
+}
+
+export function createServerHandoffString(
+  serverHandoff: ServerHandoff
+): string {
+  // Use jsesc to escape data returned from the loaders. This string is
+  // inserted directly into the HTML in the `<Scripts>` element.
+  return jsesc(serverHandoff, { isScriptContext: true });
 }

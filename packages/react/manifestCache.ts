@@ -1,8 +1,12 @@
-import type { BuildManifest, RouteManifest } from "@remix-run/core";
+import type {
+  AssetManifest,
+  EntryRouteObject,
+  RouteManifest
+} from "@remix-run/core";
 
 interface Manifest {
-  assets: BuildManifest;
-  routes: RouteManifest;
+  assets: AssetManifest;
+  routes: RouteManifest<EntryRouteObject>;
 }
 
 export interface ManifestCache {
@@ -10,20 +14,15 @@ export interface ManifestCache {
   read(): Manifest;
 }
 
-interface ManifestPatch {
-  buildManifest: BuildManifest;
-  routeManifest: RouteManifest;
-}
-
 export function createManifestCache(
   initialPathname: string,
-  initialAssets: BuildManifest,
-  initialRoutes: RouteManifest
+  initialAssets: AssetManifest,
+  initialRoutes: RouteManifest<EntryRouteObject>
 ): ManifestCache {
-  let patchCache: { [pathname: string]: ManifestPatch | null } = {
+  let patchCache: { [pathname: string]: Manifest | null } = {
     [initialPathname]: {
-      buildManifest: initialAssets,
-      routeManifest: initialRoutes
+      assets: initialAssets,
+      routes: initialRoutes
     }
   };
 
@@ -41,8 +40,8 @@ export function createManifestCache(
     patchCache[pathname] = patch;
 
     if (patch) {
-      Object.assign(cache.assets, patch.buildManifest);
-      Object.assign(cache.routes, patch.routeManifest);
+      Object.assign(cache.assets, patch.assets);
+      Object.assign(cache.routes, patch.routes);
     } else if (reloadOnNotFound) {
       // Never resolve so we will not try to rerender this
       // page before the reload.
@@ -59,9 +58,7 @@ export function createManifestCache(
   return { preload, read };
 }
 
-async function fetchManifestPatch(
-  pathname: string
-): Promise<ManifestPatch | null> {
+async function fetchManifestPatch(pathname: string): Promise<Manifest | null> {
   let url = new URL(pathname, window.location.origin);
   let params = new URLSearchParams({ url: url.toString() });
   let res = await fetch(`/__remix_manifest?${params.toString()}`);

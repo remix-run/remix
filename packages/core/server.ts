@@ -1,16 +1,14 @@
-import jsesc from "jsesc";
-
-import type { BuildManifest, ServerEntryModule, RouteModules } from "./build";
+import type { AssetManifest, ServerEntryModule, RouteModules } from "./build";
 import {
-  getBrowserBuildManifest,
-  getServerBuildManifest,
+  getAssetManifest,
+  getServerManifest,
   getServerEntryModule,
   getRouteModules,
-  generateDevServerBuild,
-  getDevBrowserBuildManifest,
+  getDevAssetManifest,
   getDevServerEntryModule,
   getDevRouteModules
 } from "./build";
+import { generateDevServerBuild } from "./compiler";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { AppLoadContext, AppLoadResult } from "./data";
@@ -20,7 +18,8 @@ import {
   createGlobalData,
   createRouteData,
   createRouteLoader,
-  createRouteManifest
+  createRouteManifest,
+  createServerHandoffString
 } from "./entry";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
@@ -86,33 +85,33 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
-  let browserManifest: BuildManifest;
+  let assetManifest: AssetManifest;
   if (process.env.NODE_ENV === "development") {
     rewritePublicPath(config);
 
     try {
-      browserManifest = await getDevBrowserBuildManifest(config.publicPath);
+      assetManifest = await getDevAssetManifest(config.publicPath);
     } catch (error) {
       // The dev server is not running. This is just a manifest patch request, so
       // return an empty patch. We will serve an error page on the HTML request.
-      browserManifest = {};
+      assetManifest = {};
     }
   } else {
-    browserManifest = getBrowserBuildManifest(config.serverBuildDirectory);
+    assetManifest = getAssetManifest(config.serverBuildDirectory);
   }
 
   // Get the browser manifest for only the matched routes.
-  let manifestKeys = [
+  let assetManifestKeys = [
     ...matches.map(match => match.route.id),
     ...matches.map(match => `style/${match.route.id}.css`)
   ];
-  let partialBrowserManifest = getPartialManifest(
-    browserManifest,
-    manifestKeys
+  let partialAssetManifest = getPartialManifest(
+    assetManifest,
+    assetManifestKeys
   );
   let routeManifest = createRouteManifest(matches);
 
-  return json({ buildManifest: partialBrowserManifest, routeManifest });
+  return json({ assets: partialAssetManifest, routes: routeManifest });
 }
 
 async function handleDataRequest(
@@ -237,7 +236,7 @@ async function handleHtmlRequest(
     }
   }
 
-  let browserManifest: BuildManifest;
+  let assetManifest: AssetManifest;
   let serverEntryModule: ServerEntryModule;
   let routeModules: RouteModules;
   if (process.env.NODE_ENV === "development") {
@@ -248,7 +247,7 @@ async function handleHtmlRequest(
     rewritePublicPath(config);
 
     try {
-      browserManifest = await getDevBrowserBuildManifest(config.publicPath);
+      assetManifest = await getDevAssetManifest(config.publicPath);
     } catch (error) {
       // The dev server is not running.
       // TODO: Show a nice error page.
@@ -267,9 +266,9 @@ async function handleHtmlRequest(
       serverBuildOutput
     );
   } else {
-    browserManifest = getBrowserBuildManifest(config.serverBuildDirectory);
+    assetManifest = getAssetManifest(config.serverBuildDirectory);
 
-    let serverManifest = getServerBuildManifest(config.serverBuildDirectory);
+    let serverManifest = getServerManifest(config.serverBuildDirectory);
 
     serverEntryModule = getServerEntryModule(
       config.serverBuildDirectory,
@@ -285,41 +284,35 @@ async function handleHtmlRequest(
   let entryMatches = createEntryMatches(matches);
   let globalData = await createGlobalData(globalLoadResult);
   let routeData = await createRouteData(routeLoadResults, matches);
-  let routeManifest = createRouteManifest(matches);
+  let partialRouteManifest = createRouteManifest(matches);
 
   // Get the browser manifest for only the browser entry point + the matched
   // routes. The client will fill in the rest by making requests to the manifest
   // endpoint as needed.
-  let manifestKeys = [
+  let assetManifestKeys = [
     "entry-browser",
     "global.css",
     ...matches.map(match => match.route.id),
     ...matches.map(match => `style/${match.route.id}.css`)
   ];
-  let partialBrowserManifest = getPartialManifest(
-    browserManifest,
-    manifestKeys
+  let partialAssetManifest = getPartialManifest(
+    assetManifest,
+    assetManifestKeys
   );
 
-  let browserEntryContext = {
-    browserManifest: partialBrowserManifest,
+  let serverHandoff = {
+    assets: partialAssetManifest,
     globalData,
     matches: entryMatches,
     publicPath: config.publicPath,
     routeData,
-    routeManifest
+    routes: partialRouteManifest
   };
 
-  // Use jsesc to escape data returned from the loaders. This string is
-  // inserted directly into the HTML in the `<Scripts>` element.
-  let browserEntryContextString = jsesc(browserEntryContext, {
-    isScriptContext: true
-  });
-
   let serverEntryContext = {
-    ...browserEntryContext,
-    browserEntryContextString,
-    routeLoader: createRouteLoader(routeModules)
+    ...serverHandoff,
+    routeLoader: createRouteLoader(routeModules),
+    serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
   return serverEntryModule.default(req, statusCode, serverEntryContext);
@@ -339,13 +332,13 @@ function rewritePublicPath(config: RemixConfig) {
 }
 
 function getPartialManifest(
-  browserManifest: BuildManifest,
+  assetManifest: AssetManifest,
   keys: string[]
-): BuildManifest {
+): AssetManifest {
   return keys.reduce((memo, key) => {
-    if (browserManifest[key]) memo[key] = browserManifest[key];
+    if (assetManifest[key]) memo[key] = assetManifest[key];
     return memo;
-  }, {} as BuildManifest);
+  }, {} as AssetManifest);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

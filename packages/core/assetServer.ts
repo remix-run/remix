@@ -8,12 +8,12 @@ import morgan from "morgan";
 import type { RollupOutput } from "rollup";
 import signalExit from "signal-exit";
 
-import { BuildMode, BuildTarget, watch } from "./compiler";
+import { BuildMode, BuildTarget, watch, generate } from "./compiler";
 import type { RemixConfig } from "./config";
 
 type ReqResPair = { req: Request; res: Response };
 
-export async function startDevServer(
+export async function startAssetServer(
   config: RemixConfig,
   {
     onListen,
@@ -58,10 +58,7 @@ function createRequestHandler(
       output = null;
     },
     async onBuildEnd(build) {
-      output = await build.generate({
-        format: "esm"
-      });
-
+      output = await generate(build);
       if (onReady) onReady();
       flushPendingQueue();
     },

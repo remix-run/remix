@@ -1,10 +1,10 @@
-export type { BuildManifest, BuildChunk, RouteModule } from "./build";
+export type { AssetManifest, RouteModule } from "./build";
 
 export * as commands from "./commands";
 
 export { build, watch, BuildMode, BuildTarget } from "./compiler";
 
-export type { RemixConfig } from "./config";
+export type { RemixConfig, RouteManifest } from "./config";
 export { readConfig } from "./config";
 
 export type {
@@ -15,11 +15,11 @@ export type {
 } from "./data";
 
 export type {
+  ServerHandoff,
   EntryContext,
   EntryRouteObject,
   EntryRouteMatch,
   RouteData,
-  RouteManifest,
   RouteLoader
 } from "./entry";
 

@@ -93,7 +93,7 @@ export interface RemixConfig {
   /**
    * A route lookup table for the data loaders.
    */
-  routeManifest: RouteManifest;
+  routeManifest: RouteManifest<ConfigRouteObject>;
 
   /**
    * The absolute path to the server build.
@@ -176,8 +176,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   return remixConfig;
 }
 
-interface RouteManifest<T> {
-  [routeId: string]: T;
+export interface RouteManifest<RouteObject> {
+  [routeId: string]: RouteObject;
 }
 
 function createRouteManifest(

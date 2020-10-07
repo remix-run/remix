@@ -1,5 +1,5 @@
 import type * as express from "express";
-import type { AppLoadContext, HeadersInit, Response } from "@remix-run/core";
+import type { AppLoadContext, Response } from "@remix-run/core";
 import {
   Headers,
   Request,
@@ -85,6 +85,6 @@ function createRemixHeaders(
       }
 
       return memo;
-    }, {} as HeadersInit)
+    }, {} as { [headerName: string]: string })
   );
 }

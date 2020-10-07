@@ -6,6 +6,7 @@ import type {
   RollupBuild,
   RollupError,
   RollupOutput,
+  OutputOptions,
   Plugin
 } from "rollup";
 import * as rollup from "rollup";
@@ -15,7 +16,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 
-import { BrowserManifestFilename, ServerManifestFilename } from "./build";
+import { AssetManifestFilename, ServerManifestFilename } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { ConfigRouteObject } from "./routes";
@@ -36,20 +37,35 @@ export enum BuildTarget {
 }
 
 /**
+ * A Rollup build with our build options attached.
+ */
+export interface RemixBuild extends RollupBuild {
+  options: {
+    mode: BuildMode;
+    target: BuildTarget;
+  };
+}
+
+/**
  * Runs the build.
  */
-export function build(
+export async function build(
   config: RemixConfig,
   {
     mode = BuildMode.Production,
     target = BuildTarget.Server
   }: { mode?: BuildMode; target?: BuildTarget } = {}
-): Promise<RollupBuild> {
-  return rollup.rollup({
+): Promise<RemixBuild> {
+  let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
     input: getInputOption(config, target),
     plugins: getCommonPlugins(config, mode, target)
   });
+
+  return {
+    ...rollupBuild,
+    options: { mode, target }
+  };
 }
 
 /**
@@ -67,7 +83,7 @@ export function watch(
     mode?: BuildMode;
     target?: BuildTarget;
     onBuildStart?: () => void;
-    onBuildEnd?: (build: RollupBuild) => void;
+    onBuildEnd?: (build: RemixBuild) => void;
     onError?: (error: RollupError) => void;
   } = {}
 ): () => void {
@@ -103,13 +119,69 @@ export function watch(
     } else if (event.code === "BUNDLE_START") {
       if (onBuildStart) onBuildStart();
     } else if (event.code === "BUNDLE_END") {
-      if (onBuildEnd) onBuildEnd(event.result);
+      if (onBuildEnd) {
+        let rollupBuild = event.result;
+        onBuildEnd({
+          ...rollupBuild,
+          options: { mode, target }
+        });
+      }
     }
   });
 
   return () => {
     watcher.close();
   };
+}
+
+/**
+ * Creates an in-memory build. This is useful in both the asset server and the
+ * main server in dev mode to avoid writing the builds to disk.
+ */
+export function generate(build: RemixBuild): Promise<RollupOutput> {
+  let { target } = build.options;
+
+  let options: OutputOptions = {
+    format: target === BuildTarget.Server ? "cjs" : "esm",
+    exports: target === BuildTarget.Server ? "named" : undefined
+  };
+
+  return build.generate(options);
+}
+
+/**
+ * Writes the build to disk.
+ */
+export function write(
+  build: RemixBuild,
+  config: RemixConfig
+): Promise<RollupOutput> {
+  let { target } = build.options;
+
+  let options: OutputOptions = {
+    dir:
+      target === BuildTarget.Server
+        ? config.serverBuildDirectory
+        : config.browserBuildDirectory,
+    format: target === BuildTarget.Server ? "cjs" : "esm",
+    exports: target === BuildTarget.Server ? "named" : undefined
+  };
+
+  return build.write(options);
+}
+
+/**
+ * Runs the server build in dev as requests come in.
+ */
+export async function generateDevServerBuild(
+  config: RemixConfig
+): Promise<RollupOutput> {
+  let serverBuild = await build(config, {
+    mode: BuildMode.Development,
+    target: BuildTarget.Server
+  });
+
+  return generate(serverBuild);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -265,7 +337,7 @@ function getCommonPlugins(
       outputDir: config.serverBuildDirectory,
       fileName:
         target === BuildTarget.Browser
-          ? BrowserManifestFilename
+          ? AssetManifestFilename
           : ServerManifestFilename
     })
   );

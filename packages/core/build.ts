@@ -6,19 +6,26 @@ import requireFromString from "require-from-string";
 import type { RollupOutput } from "rollup";
 import fetch from "node-fetch";
 
-import { BuildMode, BuildTarget, build } from "./compiler";
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Request, Response } from "./platform";
-import type { BuildManifest, BuildChunk } from "./rollup/manifest";
+import type { BuildManifest } from "./rollup/manifest";
 
-export type { BuildManifest, BuildChunk };
+/**
+ * A manifest of all assets (JavaScript, CSS, etc.) in the browser build.
+ */
+export type AssetManifest = BuildManifest;
+
+/**
+ * A manifest of all modules in the server build.
+ */
+export type ServerManifest = BuildManifest;
 
 // export const EntryBrowserManifestKey = "entry-browser";
 // export const EntryServerManifestKey = "entry-server";
 // export const GlobalStylesManifestKey = "global-styles";
 
-export const BrowserManifestFilename = "browser-manifest.json";
+export const AssetManifestFilename = "asset-manifest.json";
 export const ServerManifestFilename = "server-manifest.json";
 
 export interface ServerEntryModule {
@@ -52,23 +59,15 @@ interface MetaContents {
 /**
  * Reads the browser manifest from the build on the filesystem.
  */
-export function getBrowserBuildManifest(
-  serverBuildDirectory: string
-): BuildManifest {
-  let manifestFile = path.resolve(
-    serverBuildDirectory,
-    BrowserManifestFilename
-  );
-
+export function getAssetManifest(serverBuildDirectory: string): BuildManifest {
+  let manifestFile = path.resolve(serverBuildDirectory, AssetManifestFilename);
   return require(manifestFile);
 }
 
 /**
  * Reads the server manifest from the build on the filesystem.
  */
-export function getServerBuildManifest(
-  serverBuildDirectory: string
-): BuildManifest {
+export function getServerManifest(serverBuildDirectory: string): BuildManifest {
   let manifestFile = path.resolve(serverBuildDirectory, ServerManifestFilename);
   return require(manifestFile);
 }
@@ -78,11 +77,11 @@ export function getServerBuildManifest(
  */
 export function getServerEntryModule(
   serverBuildDirectory: string,
-  serverBuildManifest: BuildManifest
+  serverManifest: BuildManifest
 ): ServerEntryModule {
   let requirePath = path.resolve(
     serverBuildDirectory,
-    serverBuildManifest["entry-server"].fileName
+    serverManifest["entry-server"].fileName
   );
 
   return require(requirePath);
@@ -94,13 +93,13 @@ export function getServerEntryModule(
 export function getRouteModules(
   serverBuildDirectory: string,
   routes: RemixConfig["routes"],
-  serverBuildManifest: BuildManifest,
+  serverManifest: BuildManifest,
   modules: RouteModules = {}
 ): RouteModules {
   for (let route of routes) {
     let requirePath = path.join(
       serverBuildDirectory,
-      serverBuildManifest[route.id].fileName
+      serverManifest[route.id].fileName
     );
 
     modules[route.id] = require(requirePath);
@@ -109,7 +108,7 @@ export function getRouteModules(
       getRouteModules(
         serverBuildDirectory,
         route.children,
-        serverBuildManifest,
+        serverManifest,
         modules
       );
     }
@@ -119,30 +118,13 @@ export function getRouteModules(
 }
 
 /**
- * Fetches the browser manifest from the development server.
+ * Fetches the asset manifest from the asset server.
  */
-export async function getDevBrowserBuildManifest(
+export async function getDevAssetManifest(
   remixRunOrigin: string
 ): Promise<BuildManifest> {
-  let res = await fetch(remixRunOrigin + BrowserManifestFilename);
+  let res = await fetch(remixRunOrigin + AssetManifestFilename);
   return res.json();
-}
-
-/**
- * Runs the server build in dev as requests come in.
- */
-export async function generateDevServerBuild(
-  config: RemixConfig
-): Promise<RollupOutput> {
-  let serverBuild = await build(config, {
-    mode: BuildMode.Development,
-    target: BuildTarget.Server
-  });
-
-  return serverBuild.generate({
-    format: "cjs",
-    exports: "named"
-  });
 }
 
 /**

@@ -1,5 +1,5 @@
 import type {
-  BuildManifest,
+  AssetManifest,
   RouteLoader,
   RouteModule,
   RouteManifest
@@ -19,7 +19,7 @@ export function createRouteLoader(
 ): RouteLoader {
   let cache: RouteModuleCache = initialRoutes;
 
-  async function preload(assets: BuildManifest, routeId: string) {
+  async function preload(assets: AssetManifest, routeId: string) {
     let entry = assets[routeId];
 
     invariant(entry, `Route "${routeId}" isn't in the build manifest`);

@@ -62,9 +62,9 @@ export function Meta() {
  */
 export function Scripts() {
   let {
-    browserEntryContextString,
     manifestCache,
-    publicPath
+    publicPath,
+    serverHandoffString
   } = useRemixEntryContext();
 
   let manifest = manifestCache.read();
@@ -72,12 +72,12 @@ export function Scripts() {
   let src = `${publicPath}${entryBrowser.fileName}`;
 
   let browserIsHydrating = false;
-  if (!browserEntryContextString) {
+  if (!serverHandoffString) {
     browserIsHydrating = true;
-    browserEntryContextString = "{}";
+    serverHandoffString = "{}";
   }
 
-  let remixContext = `window.__remixContext = ${browserEntryContextString}`;
+  let remixServerHandoff = `window.__remixServerHandoff = ${serverHandoffString}`;
 
   let routeIds = Object.keys(manifest.routes).filter(
     routeId => routeId in manifest.assets
@@ -99,13 +99,13 @@ export function Scripts() {
       <>
         <script
           suppressHydrationWarning={browserIsHydrating}
-          dangerouslySetInnerHTML={createHtml(remixContext)}
+          dangerouslySetInnerHTML={createHtml(remixServerHandoff)}
         />
         <script
-          type="module"
           dangerouslySetInnerHTML={createHtml(remixRoutes)}
+          type="module"
         />
-        <script type="module" src={src} />
+        <script src={src} type="module" />
       </>
     ),
     []
