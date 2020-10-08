@@ -1,15 +1,6 @@
 import fs from "fs";
 import path from "path";
 
-function stripFileExtension(file: string): string {
-  let extname = path.extname(file);
-  return extname ? file.slice(0, -extname.length) : file;
-}
-
-function normalizeSlashes(file: string): string {
-  return file.split(path.win32.sep).join("/");
-}
-
 /**
  * A route that was created using defineRoutes or created conventionally from
  * looking at the files on the filesystem.
@@ -107,7 +98,7 @@ export interface DefineRoute {
      * default export, relative to the loaders/ directory. So the path for
      * loaders/invoices.js will be invoices.js.
      */
-    optionsOrChildren?: DefineRouteOptions | (() => void),
+    optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
 
     /**
      * A function for defining this route's child routes.
@@ -188,6 +179,15 @@ function throwAsyncError() {
   );
 }
 
+function normalizeSlashes(file: string): string {
+  return file.split(path.win32.sep).join("/");
+}
+
+function stripFileExtension(file: string): string {
+  let extname = path.extname(file);
+  return extname ? file.slice(0, -extname.length) : file;
+}
+
 /**
  * Reads routes from the filesystem using a naming and nesting convention to
  * define route paths and nested relations.
@@ -212,89 +212,133 @@ function defineRoutesInDirectory(
   dataDir: string,
   currentDir: string
 ): void {
-  let files = fs.readdirSync(currentDir);
+  let routesDir = path.resolve(appDir, "routes");
+  let loadersDir = path.resolve(dataDir, "loaders");
 
-  for (let filename of files) {
-    let file = path.join(currentDir, filename);
+  let filenames = fs.readdirSync(currentDir);
+
+  for (let filename of filenames) {
+    let file = path.resolve(currentDir, filename);
 
     if (fs.lstatSync(file).isDirectory()) {
-      let layoutFilename = files.find(
-        f => f !== filename && stripFileExtension(f) === filename
+      let layoutFilename = filenames.find(
+        f => isRouteModuleFilename(f) && barename(f) === filename
       );
 
       if (!layoutFilename) {
         throw new Error(`No layout exists for directory ${file}`);
       }
 
-      let routePath = createRoutePath(filename); // :username
-      let component = path.relative(
-        appDir,
-        path.join(currentDir, layoutFilename)
-      ); // routes/gists/$username.js
-      let loader = findFileForComponent(dataDir, "loaders", component); // loaders/gists/$username.js
-      let styles = findFileForComponent(appDir, "styles", component); // styles/gists/$username.css
+      // This is a layout route (has children and an <Outlet>).
+      let routePath = createRoutePath(filename);
+
+      let componentFile = path.resolve(currentDir, layoutFilename);
+      let loaderFile = findLoaderFile(
+        path.resolve(
+          loadersDir,
+          path.dirname(path.relative(routesDir, componentFile))
+        ),
+        componentFile
+      );
+      let stylesFile = findStylesFile(path.dirname(file), componentFile);
+
+      let component = path.relative(appDir, componentFile);
+      let loader = loaderFile && path.relative(dataDir, loaderFile);
+      let styles = stylesFile && path.relative(appDir, stylesFile);
 
       defineRoute(routePath, component, { loader, styles }, () => {
         defineRoutesInDirectory(defineRoute, appDir, dataDir, file);
       });
-    } else {
-      let isLayout = files.some(
-        f => f !== filename && f === stripFileExtension(path.basename(filename))
+    } else if (isRouteModuleFilename(filename)) {
+      let isLayout = filenames.some(
+        f => f !== filename && f === barename(filename)
       );
 
       if (isLayout) {
-        // This is a layout file with sub-routes that were already/will be
+        // This is a layout file with sub-routes that will be
         // defined when the directory entry is processed.
         continue;
       }
 
-      // This is a "leaf" route.
-      let filenameWithoutExt = stripFileExtension(filename);
+      // This is a leaf route.
       let routePath =
-        filenameWithoutExt === "index"
-          ? "/" // index route
-          : createRoutePath(filenameWithoutExt); // :username
-      let component = path.relative(appDir, file); // routes/gists/$username.js
-      let loader = findFileForComponent(dataDir, "loaders", component); // loaders/gists/$username.js
-      let styles = findFileForComponent(appDir, "styles", component); // styles/gists/$username.css
+        barename(filename) === "index"
+          ? "/"
+          : createRoutePath(barename(filename));
+
+      let componentFile = path.resolve(currentDir, filename);
+      let loaderFile = findLoaderFile(
+        path.resolve(
+          loadersDir,
+          path.dirname(path.relative(routesDir, componentFile))
+        ),
+        componentFile
+      );
+      let stylesFile = findStylesFile(path.dirname(file), componentFile);
+
+      let component = path.relative(appDir, componentFile);
+      let loader = loaderFile && path.relative(dataDir, loaderFile);
+      let styles = stylesFile && path.relative(appDir, stylesFile);
 
       defineRoute(routePath, component, { loader, styles });
     }
   }
 }
 
-function createRoutePath(filenameWithoutExt: string) {
+function createRoutePath(filenameWithoutExt: string): string {
   return filenameWithoutExt.replace(/\$/g, ":").replace(/\./g, "/");
 }
 
-// Find the loader/styles file in the directory with the same basename
-// as the route component file, regardless of its file extension.
-// gists/$username => gists/$username.js
-// gists/$username => gists/$username.ts
-// gists/$username => gists/$username.css
-function findFileForComponent(
-  baseDir: string,
-  subDir: string,
+const routeModuleExts = [".js", ".jsx", ".cjs", ".mjs", ".ts", ".tsx"];
+
+function isRouteModuleFilename(filename: string): boolean {
+  return routeModuleExts.includes(path.extname(filename));
+}
+
+const loaderExts = [".js", ".cjs"];
+
+function isLoaderFilename(filename: string): boolean {
+  return loaderExts.includes(path.extname(filename));
+}
+
+const stylesExts = [".css", ".sass", ".scss", ".less"];
+
+function isStylesFilename(filename: string): boolean {
+  return stylesExts.includes(path.extname(filename));
+}
+
+function findLoaderFile(
+  dir: string,
   componentFile: string
 ): string | undefined {
-  // baseDir = app
-  // subDir = styles
-  // componentFile = routes/gists/$username.js
-  // target = styles/gists/$username
-  let target = stripFileExtension(componentFile.replace(/^routes\b/, subDir));
-  // dir = app/styles/gists
-  let dir = path.dirname(path.join(baseDir, target));
+  return findFile(
+    dir,
+    filename =>
+      isLoaderFilename(filename) &&
+      barename(filename) === barename(componentFile)
+  );
+}
 
-  if (fs.existsSync(dir) && fs.lstatSync(dir).isDirectory()) {
-    let files = fs.readdirSync(dir);
-    let basename = path.basename(target);
-    let file = files.find(
-      f =>
-        !fs.lstatSync(path.join(dir, f)).isDirectory() &&
-        stripFileExtension(f) === basename
-    );
-    if (file) return `${target}${path.extname(file)}`;
-  }
+function findStylesFile(
+  dir: string,
+  componentFile: string
+): string | undefined {
+  return findFile(
+    dir,
+    filename =>
+      isStylesFilename(filename) &&
+      barename(filename) === barename(componentFile)
+  );
+}
 
-  return undefined;
+function findFile(
+  dir: string,
+  test: (filename: string) => boolean
+): string | undefined {
+  let filename = fs.existsSync(dir) && fs.readdirSync(dir).find(test);
+  return filename ? path.join(dir, filename) : undefined;
+}
+
+function barename(file: string): string {
+  return path.basename(file, path.extname(file));
 }

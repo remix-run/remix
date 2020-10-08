@@ -55,7 +55,7 @@ describe("readConfig", () => {
             "id": "routes/gists",
             "loaderFile": "loaders/gists.js",
             "path": "gists",
-            "stylesFile": "styles/gists.css",
+            "stylesFile": "routes/gists.css",
           },
           "routes/gists.mine": Object {
             "componentFile": "routes/gists.mine.js",
@@ -68,12 +68,6 @@ describe("readConfig", () => {
             "loaderFile": "loaders/gists/$username.js",
             "parentId": "routes/gists",
             "path": ":username",
-          },
-          "routes/gists/$username/edit": Object {
-            "componentFile": "routes/gists/$username/edit.js",
-            "id": "routes/gists/$username/edit",
-            "parentId": "routes/gists/$username",
-            "path": "edit",
           },
           "routes/gists/index": Object {
             "componentFile": "routes/gists/index.js",
@@ -102,14 +96,6 @@ describe("readConfig", () => {
           Object {
             "children": Array [
               Object {
-                "children": Array [
-                  Object {
-                    "componentFile": "routes/gists/$username/edit.js",
-                    "id": "routes/gists/$username/edit",
-                    "parentId": "routes/gists/$username",
-                    "path": "edit",
-                  },
-                ],
                 "componentFile": "routes/gists/$username.js",
                 "id": "routes/gists/$username",
                 "loaderFile": "loaders/gists/$username.js",
@@ -128,7 +114,7 @@ describe("readConfig", () => {
             "id": "routes/gists",
             "loaderFile": "loaders/gists.js",
             "path": "gists",
-            "stylesFile": "styles/gists.css",
+            "stylesFile": "routes/gists.css",
           },
           Object {
             "componentFile": "routes/gists.mine.js",
