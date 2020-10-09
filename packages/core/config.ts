@@ -3,6 +3,24 @@ import path from "path";
 import type { ConfigRouteObject } from "./routes";
 import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
 
+type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
+
+interface MDXOptions {
+  /**
+   * List of rehype plugins to use.
+   *
+   * @see https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
+   */
+  rehypePlugins: any[];
+
+  /**
+   * List of remark plugins to use.
+   *
+   * @see https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
+   */
+  remarkPlugins: any[];
+}
+
 /**
  * The user-provided config in remix.config.js.
  */
@@ -31,6 +49,11 @@ export interface AppConfig {
   devServerPort?: number;
 
   /**
+   * Options to use when compiling MDX.
+   */
+  mdx?: Partial<MDXOptions>;
+
+  /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
    * "/build/".
    */
@@ -46,25 +69,6 @@ export interface AppConfig {
    * "build".
    */
   serverBuildDirectory?: string;
-
-  /**
-   * Options to use when compiling MDX.
-   */
-  mdx: {
-    /**
-     * List of rehype plugins to use.
-     *
-     * @see https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
-     */
-    rehypePlugins?: any[];
-
-    /**
-     * List of remark plugins to use.
-     *
-     * @see https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
-     */
-    remarkPlugins?: any[];
-  };
 }
 
 /**
@@ -92,6 +96,11 @@ export interface RemixConfig {
   devServerPort: number;
 
   /**
+   * Options to use when compiling MDX.
+   */
+  mdx?: Partial<MDXOptions>;
+
+  /**
    * The URL prefix of the browser build with a trailing slash.
    */
   publicPath: string;
@@ -109,15 +118,12 @@ export interface RemixConfig {
   /**
    * A route lookup table for the data loaders.
    */
-  routeManifest: RouteManifest<ConfigRouteObject>;
+  routeManifest: RouteManifest<FlatConfigRouteObject>;
 
   /**
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
-
-  /* TODO: MDX has no types yet, these are the options sent to mdx */
-  mdx: any;
 }
 
 /**
@@ -181,12 +187,12 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     browserBuildDirectory,
     dataDirectory,
     devServerPort,
+    mdx: appConfig.mdx,
     publicPath,
     rootDirectory,
     routes,
     routeManifest,
-    serverBuildDirectory,
-    mdx: appConfig.mdx
+    serverBuildDirectory
   };
 
   return remixConfig;
@@ -199,7 +205,7 @@ export interface RouteManifest<RouteObject> {
 function createRouteManifest(
   routes: ConfigRouteObject[],
   manifest: RouteManifest<ConfigRouteObject> = {}
-): RouteManifest<ConfigRouteObject> {
+): RouteManifest<FlatConfigRouteObject> {
   for (let route of routes) {
     let { children, ...rest } = route;
 
