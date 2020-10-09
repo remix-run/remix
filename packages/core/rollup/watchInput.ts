@@ -7,14 +7,37 @@ import tmp from "tmp";
  * Enables setting the compiler's input dynamically via a hook function.
  */
 export default function watchInput({
-  watchFile,
+  sourceDir,
   getInput
 }: {
-  watchFile: string;
+  sourceDir: string;
   getInput: (options: InputOptions) => Promise<InputOption>;
 }): Plugin {
   let tmpfile = tmp.fileSync();
   let startedWatcher = false;
+
+  function startWatcher() {
+    return new Promise((accept, reject) => {
+      chokidar
+        .watch(sourceDir, {
+          ignoreInitial: true,
+          ignored: /node_modules/,
+          followSymlinks: false
+        })
+        .on("add", handleAdd)
+        .on("ready", accept)
+        .on("error", reject);
+    });
+  }
+
+  async function triggerRebuild() {
+    let now = new Date();
+    await fsp.utimes(tmpfile.name, now, now);
+  }
+
+  function handleAdd() {
+    triggerRebuild();
+  }
 
   return {
     name: "watch-input",
@@ -25,18 +48,12 @@ export default function watchInput({
       let input = await getInput(opts);
       return { ...opts, input } as InputOptions;
     },
-    buildStart() {
+    async buildStart() {
       // This is a workaround for a bug in Rollup where this.addWatchFile does
       // not correctly listen for files that are added to a directory.
       // See https://github.com/rollup/rollup/issues/3704
       if (!startedWatcher) {
-        chokidar
-          .watch(watchFile, { ignored: /node_modules/ })
-          .on("add", async () => {
-            let now = new Date();
-            await fsp.utimes(tmpfile.name, now, now);
-          });
-
+        await startWatcher();
         startedWatcher = true;
       }
 

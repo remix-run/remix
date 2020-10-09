@@ -1,4 +1,3 @@
-import { promises as fsp } from "fs";
 import path from "path";
 import type {
   ExternalOption,
@@ -19,12 +18,13 @@ import replace from "@rollup/plugin-replace";
 import { AssetManifestFilename, ServerManifestFilename } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import type { ConfigRouteObject } from "./routes";
 import { purgeRequireCache } from "./requireCache";
 
 import manifest from "./rollup/manifest";
 import watchInput from "./rollup/watchInput";
+import watchStyles from "./rollup/watchStyles";
 import mdxTransform from "./rollup/mdx";
+import styles from "./rollup/styles";
 
 export enum BuildMode {
   Development = "development",
@@ -40,10 +40,18 @@ export enum BuildTarget {
  * A Rollup build with our build options attached.
  */
 export interface RemixBuild extends RollupBuild {
-  options: {
-    mode: BuildMode;
-    target: BuildTarget;
-  };
+  options: BuildOptions;
+}
+
+function createBuild(build: RollupBuild, options: BuildOptions): RemixBuild {
+  let remixBuild = (build as unknown) as RemixBuild;
+  remixBuild.options = options;
+  return remixBuild;
+}
+
+export interface BuildOptions {
+  mode: BuildMode;
+  target: BuildTarget;
 }
 
 /**
@@ -54,18 +62,29 @@ export async function build(
   {
     mode = BuildMode.Production,
     target = BuildTarget.Server
-  }: { mode?: BuildMode; target?: BuildTarget } = {}
+  }: Partial<BuildOptions> = {}
 ): Promise<RemixBuild> {
+  let plugins: Plugin[] = [];
+
+  if (target === BuildTarget.Browser) {
+    plugins.push(styles({ sourceDir: config.appDirectory }));
+  }
+
+  plugins.push(...getCommonPlugins(config, mode, target));
+
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
     input: getInputOption(config, target),
-    plugins: getCommonPlugins(config, mode, target)
+    plugins
   });
 
-  return {
-    ...rollupBuild,
-    options: { mode, target }
-  };
+  return createBuild(rollupBuild, { mode, target });
+}
+
+export interface WatchOptions extends BuildOptions {
+  onBuildStart: () => void;
+  onBuildEnd: (build: RemixBuild) => void;
+  onError: (error: RollupError) => void;
 }
 
 /**
@@ -79,24 +98,21 @@ export function watch(
     onBuildStart,
     onBuildEnd,
     onError
-  }: {
-    mode?: BuildMode;
-    target?: BuildTarget;
-    onBuildStart?: () => void;
-    onBuildEnd?: (build: RemixBuild) => void;
-    onError?: (error: RollupError) => void;
-  } = {}
+  }: Partial<WatchOptions> = {}
 ): () => void {
   let watcher = rollup.watch({
     external: getExternalOption(target),
     plugins: [
       watchInput({
-        watchFile: config.rootDirectory,
+        sourceDir: config.rootDirectory,
         async getInput() {
           purgeRequireCache(config.rootDirectory);
           config = await readConfig(config.rootDirectory);
           return getInputOption(config, target);
         }
+      }),
+      watchStyles({
+        sourceDir: config.appDirectory
       }),
       ...getCommonPlugins(config, mode, target)
     ],
@@ -120,11 +136,7 @@ export function watch(
       if (onBuildStart) onBuildStart();
     } else if (event.code === "BUNDLE_END") {
       if (onBuildEnd) {
-        let rollupBuild = event.result;
-        onBuildEnd({
-          ...rollupBuild,
-          options: { mode, target }
-        });
+        onBuildEnd(createBuild(event.result, { mode, target }));
       }
     }
   });
@@ -134,19 +146,28 @@ export function watch(
   };
 }
 
+function getCommonOutputOptions(build: RemixBuild): OutputOptions {
+  let { mode, target } = build.options;
+
+  return {
+    format: target === BuildTarget.Server ? "cjs" : "esm",
+    exports: target === BuildTarget.Server ? "named" : undefined,
+    entryFileNames:
+      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js",
+    chunkFileNames: "[name]-[hash].js",
+    assetFileNames:
+      mode === BuildMode.Production
+        ? "[name]-[hash][extname]"
+        : "[name][extname]"
+  };
+}
+
 /**
  * Creates an in-memory build. This is useful in both the asset server and the
  * main server in dev mode to avoid writing the builds to disk.
  */
 export function generate(build: RemixBuild): Promise<RollupOutput> {
-  let { target } = build.options;
-
-  let options: OutputOptions = {
-    format: target === BuildTarget.Server ? "cjs" : "esm",
-    exports: target === BuildTarget.Server ? "named" : undefined
-  };
-
-  return build.generate(options);
+  return build.generate(getCommonOutputOptions(build));
 }
 
 /**
@@ -159,12 +180,11 @@ export function write(
   let { target } = build.options;
 
   let options: OutputOptions = {
+    ...getCommonOutputOptions(build),
     dir:
       target === BuildTarget.Server
         ? config.serverBuildDirectory
-        : config.browserBuildDirectory,
-    format: target === BuildTarget.Server ? "cjs" : "esm",
-    exports: target === BuildTarget.Server ? "named" : undefined
+        : config.browserBuildDirectory
   };
 
   return build.write(options);
@@ -190,88 +210,24 @@ function getExternalOption(target: BuildTarget): ExternalOption | undefined {
   return target === BuildTarget.Server
     ? // Ignore node_modules, bare identifiers, etc.
       (id: string) => !(id.startsWith("/") || id.startsWith("."))
-    : // Bundle everything.
-      undefined;
-}
-
-interface Input {
-  [entryName: string]: string;
-}
-
-function getInputForRoutes(
-  appDirectory: string,
-  routesConfig: RemixConfig["routes"],
-  input: Input = {}
-): Input {
-  for (let route of routesConfig) {
-    input[route.id] = path.resolve(appDirectory, route.componentFile);
-
-    if (route.children) {
-      getInputForRoutes(appDirectory, route.children, input);
-    }
-  }
-
-  return input;
+    : undefined;
 }
 
 function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
-  let input = getInputForRoutes(config.appDirectory, config.routes);
+  let input: { [entryName: string]: string } = {};
 
-  if (target === BuildTarget.Server) {
-    input["entry-server"] = path.resolve(config.appDirectory, "entry-server");
-  } else {
+  if (target === BuildTarget.Browser) {
     input["entry-browser"] = path.resolve(config.appDirectory, "entry-browser");
+  } else if (target === BuildTarget.Server) {
+    input["entry-server"] = path.resolve(config.appDirectory, "entry-server");
+  }
+
+  for (let key in config.routeManifest) {
+    let route = config.routeManifest[key];
+    input[route.id] = path.resolve(config.appDirectory, route.componentFile);
   }
 
   return input;
-}
-
-async function visitRoutes(
-  routes: RemixConfig["routes"],
-  callback: (route: ConfigRouteObject) => Promise<void>
-): Promise<void> {
-  for (let route of routes) {
-    await callback(route);
-
-    if (route.children) {
-      await visitRoutes(route.children, callback);
-    }
-  }
-}
-
-function postcss(config: RemixConfig): Plugin {
-  return {
-    name: "postcss",
-    // load(id: string) {
-    //   // ...
-    // },
-    // transform() {
-    //   // postcss
-    // },
-    async generateBundle() {
-      this.emitFile({
-        type: "asset",
-        name: "global.css",
-        source: await fsp.readFile(
-          path.join(config.appDirectory, "global.css"),
-          "utf-8"
-        )
-      });
-
-      await visitRoutes(config.routes, async route => {
-        if (route.stylesFile) {
-          this.emitFile({
-            type: "asset",
-            name: `style/${route.id}.css`,
-            source: await fsp.readFile(
-              path.join(config.appDirectory, route.stylesFile),
-              "utf-8"
-            )
-          });
-        }
-      });
-    }
-  };
 }
 
 function getCommonPlugins(
@@ -286,8 +242,6 @@ function getCommonPlugins(
       alias({
         entries: [
           {
-            // entry-browser.js imports @remix-run/react/browser
-            // src/components/App.js imports @remix-run/react
             find: "@remix-run/react",
             replacement: path.resolve(
               config.rootDirectory,
@@ -329,7 +283,6 @@ function getCommonPlugins(
       extensions: [".js", ".json", ".ts", ".tsx"]
     }),
     commonjs(),
-    postcss(config),
     replace({
       "process.env.NODE_ENV": JSON.stringify(mode)
     }),

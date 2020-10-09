@@ -17,7 +17,7 @@ let core = {
     dir: "build/node_modules/@remix-run/core",
     format: "cjs",
     preserveModules: true,
-    exports: "auto"
+    exports: "named"
   },
   plugins: [
     babel({

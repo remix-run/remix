@@ -3,8 +3,8 @@ import mdx from "@mdx-js/mdx";
 import type { Plugin } from "rollup";
 
 const imports = `
-import React from 'react'
-import { mdx } from '@mdx-js/react'
+import React from "react";
+import { mdx } from "@mdx-js/react";
 `;
 
 let regex = /\.mdx?$/;

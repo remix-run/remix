@@ -287,19 +287,19 @@ function createRoutePath(filenameWithoutExt: string): string {
 
 const routeModuleExts = [".js", ".jsx", ".cjs", ".mjs", ".ts", ".tsx"];
 
-function isRouteModuleFilename(filename: string): boolean {
+export function isRouteModuleFilename(filename: string): boolean {
   return routeModuleExts.includes(path.extname(filename));
 }
 
 const loaderExts = [".js", ".cjs"];
 
-function isLoaderFilename(filename: string): boolean {
+export function isLoaderFilename(filename: string): boolean {
   return loaderExts.includes(path.extname(filename));
 }
 
 const stylesExts = [".css", ".sass", ".scss", ".less"];
 
-function isStylesFilename(filename: string): boolean {
+export function isStylesFilename(filename: string): boolean {
   return stylesExts.includes(path.extname(filename));
 }
 

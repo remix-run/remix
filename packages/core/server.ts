@@ -103,7 +103,7 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   // Get the browser manifest for only the matched routes.
   let assetManifestKeys = [
     ...matches.map(match => match.route.id),
-    ...matches.map(match => `style/${match.route.id}.css`)
+    ...matches.map(match => `${match.route.id}.css`)
   ];
   let partialAssetManifest = getPartialManifest(
     assetManifest,
@@ -298,7 +298,7 @@ async function handleHtmlRequest(
     "entry-browser",
     "global.css",
     ...matches.map(match => match.route.id),
-    ...matches.map(match => `style/${match.route.id}.css`)
+    ...matches.map(match => `${match.route.id}.css`)
   ];
   let partialAssetManifest = getPartialManifest(
     assetManifest,
@@ -372,13 +372,14 @@ function rewritePublicPath(config: RemixConfig) {
 }
 
 function getPartialManifest(
-  assetManifest: AssetManifest,
+  manifest: AssetManifest,
   keys: string[]
 ): AssetManifest {
-  return keys.reduce((memo, key) => {
-    if (assetManifest[key]) memo[key] = assetManifest[key];
-    return memo;
-  }, {} as AssetManifest);
+  let partialManifest: AssetManifest = {};
+  for (let key of keys) {
+    if (key in manifest) partialManifest[key] = manifest[key];
+  }
+  return partialManifest;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -122,9 +122,9 @@ export function Styles() {
   let styleFiles = [manifest.assets["global.css"].fileName];
 
   for (let match of matches) {
-    let routeId = match.route.id;
-    if (manifest.assets[`style/${routeId}.css`]) {
-      styleFiles.push(manifest.assets[`style/${routeId}.css`].fileName);
+    let key = `${match.route.id}.css`;
+    if (manifest.assets[key]) {
+      styleFiles.push(manifest.assets[key].fileName);
     }
   }
 

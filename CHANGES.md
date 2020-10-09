@@ -4,6 +4,10 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Unreleased
 
+### Features
+
+- Added support for watching `.css` files in `remix run`
+
 ### Breaking Changes
 
 - Moved styles from `app/styles` into `app/routes`
