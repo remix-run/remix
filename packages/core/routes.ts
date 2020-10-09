@@ -212,13 +212,14 @@ function defineRoutesInDirectory(
   dataDir: string,
   currentDir: string
 ): void {
-  let routesDir = path.resolve(appDir, "routes");
-  let loadersDir = path.resolve(dataDir, "loaders");
-
   let filenames = fs.readdirSync(currentDir);
 
   for (let filename of filenames) {
     let file = path.resolve(currentDir, filename);
+
+    let routePath: string;
+    let componentFile: string;
+    let defineChildren: DefineRouteChildren | undefined;
 
     if (fs.lstatSync(file).isDirectory()) {
       let layoutFilename = filenames.find(
@@ -230,25 +231,11 @@ function defineRoutesInDirectory(
       }
 
       // This is a layout route (has children and an <Outlet>).
-      let routePath = createRoutePath(filename);
-
-      let componentFile = path.resolve(currentDir, layoutFilename);
-      let loaderFile = findLoaderFile(
-        path.resolve(
-          loadersDir,
-          path.dirname(path.relative(routesDir, componentFile))
-        ),
-        componentFile
-      );
-      let stylesFile = findStylesFile(path.dirname(file), componentFile);
-
-      let component = path.relative(appDir, componentFile);
-      let loader = loaderFile && path.relative(dataDir, loaderFile);
-      let styles = stylesFile && path.relative(appDir, stylesFile);
-
-      defineRoute(routePath, component, { loader, styles }, () => {
+      routePath = createRoutePath(filename);
+      componentFile = path.resolve(currentDir, layoutFilename);
+      defineChildren = () => {
         defineRoutesInDirectory(defineRoute, appDir, dataDir, file);
-      });
+      };
     } else if (isRouteModuleFilename(filename)) {
       let isLayout = filenames.some(
         f => f !== filename && f === barename(filename)
@@ -261,27 +248,36 @@ function defineRoutesInDirectory(
       }
 
       // This is a leaf route.
-      let routePath =
+      routePath =
         barename(filename) === "index"
           ? "/"
           : createRoutePath(barename(filename));
-
-      let componentFile = path.resolve(currentDir, filename);
-      let loaderFile = findLoaderFile(
-        path.resolve(
-          loadersDir,
-          path.dirname(path.relative(routesDir, componentFile))
-        ),
-        componentFile
-      );
-      let stylesFile = findStylesFile(path.dirname(file), componentFile);
-
-      let component = path.relative(appDir, componentFile);
-      let loader = loaderFile && path.relative(dataDir, loaderFile);
-      let styles = stylesFile && path.relative(appDir, stylesFile);
-
-      defineRoute(routePath, component, { loader, styles });
+      componentFile = path.resolve(currentDir, filename);
+      defineChildren = undefined;
+    } else {
+      // Not a directory or a route module, so it's probably a styles file.
+      continue;
     }
+
+    let loaderFile = findLoaderFile(
+      path.dirname(
+        path.resolve(
+          path.join(dataDir, "routes"),
+          path.relative(path.join(appDir, "routes"), componentFile)
+        )
+      ),
+      barename(componentFile)
+    );
+    let stylesFile = findStylesFile(
+      path.dirname(file),
+      barename(componentFile)
+    );
+
+    let component = path.relative(appDir, componentFile);
+    let loader = loaderFile && path.relative(dataDir, loaderFile);
+    let styles = stylesFile && path.relative(appDir, stylesFile);
+
+    defineRoute(routePath, component, { loader, styles }, defineChildren);
   }
 }
 
@@ -307,27 +303,17 @@ function isStylesFilename(filename: string): boolean {
   return stylesExts.includes(path.extname(filename));
 }
 
-function findLoaderFile(
-  dir: string,
-  componentFile: string
-): string | undefined {
+function findLoaderFile(dir: string, name: string): string | undefined {
   return findFile(
     dir,
-    filename =>
-      isLoaderFilename(filename) &&
-      barename(filename) === barename(componentFile)
+    filename => isLoaderFilename(filename) && barename(filename) === name
   );
 }
 
-function findStylesFile(
-  dir: string,
-  componentFile: string
-): string | undefined {
+function findStylesFile(dir: string, name: string): string | undefined {
   return findFile(
     dir,
-    filename =>
-      isStylesFilename(filename) &&
-      barename(filename) === barename(componentFile)
+    filename => isStylesFilename(filename) && barename(filename) === name
   );
 }
 

@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Breaking Changes
+
+- Moved styles from `app/styles` into `app/routes`
+- Moved route data loaders from `data/loaders` to `data/routes`
+
 ## 0.2.0 - Wed Oct 07 2020
 
 ### Features
