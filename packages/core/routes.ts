@@ -112,11 +112,11 @@ export interface DefineRoute {
  * filesystem convention.
  */
 export function defineRoutes(
-  getRoutes: (defineRoute: DefineRoute) => void
+  callback: (defineRoute: DefineRoute) => void
 ): ConfigRouteObject[] {
   let routes: ConfigRouteObject[] = [];
   let current: ConfigRouteObject[] = [];
-  let returned = false;
+  let alreadyReturned = false;
 
   function defineRoute(
     path: string,
@@ -124,7 +124,13 @@ export function defineRoutes(
     optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
     children?: DefineRouteChildren
   ): void {
-    if (returned) throwAsyncError();
+    if (alreadyReturned) {
+      throw new Error(
+        "You tried to define routes asynchronously but started defining " +
+          "routes before the async work was done. Please await all async " +
+          "data before calling `defineRoutes()`"
+      );
+    }
 
     let id = normalizeSlashes(stripFileExtension(component));
     let parent = current[current.length - 1];
@@ -141,14 +147,15 @@ export function defineRoutes(
     } else if (optionsOrChildren != null) {
       // route(path, component, options, children)
       // route(path, component, options)
-      if (typeof optionsOrChildren.caseSensitive !== "undefined") {
-        route.caseSensitive = !!optionsOrChildren.caseSensitive;
+      let options = optionsOrChildren;
+      if (typeof options.caseSensitive !== "undefined") {
+        route.caseSensitive = !!options.caseSensitive;
       }
-      if (optionsOrChildren.loader) {
-        route.loaderFile = optionsOrChildren.loader;
+      if (options.loader) {
+        route.loaderFile = options.loader;
       }
-      if (optionsOrChildren.styles) {
-        route.stylesFile = optionsOrChildren.styles;
+      if (options.styles) {
+        route.stylesFile = options.styles;
       }
     }
 
@@ -166,17 +173,11 @@ export function defineRoutes(
     }
   }
 
-  getRoutes(defineRoute);
+  callback(defineRoute);
 
-  returned = true;
+  alreadyReturned = true;
 
   return routes;
-}
-
-function throwAsyncError() {
-  throw new Error(
-    "You tried to define routes asynchronously but started defining routes before the async work was done. Please await all async data before calling `defineRoutes()`"
-  );
 }
 
 function normalizeSlashes(file: string): string {

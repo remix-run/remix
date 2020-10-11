@@ -196,12 +196,12 @@ export function write(
 export async function generateDevServerBuild(
   config: RemixConfig
 ): Promise<RollupOutput> {
-  let serverBuild = await build(config, {
-    mode: BuildMode.Development,
-    target: BuildTarget.Server
-  });
-
-  return generate(serverBuild);
+  return generate(
+    await build(config, {
+      mode: BuildMode.Development,
+      target: BuildTarget.Server
+    })
+  );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,10 +243,7 @@ function getCommonPlugins(
         entries: [
           {
             find: "@remix-run/react",
-            replacement: path.resolve(
-              config.rootDirectory,
-              "node_modules/@remix-run/react/esm"
-            )
+            replacement: "@remix-run/react/esm"
           }
         ]
       })

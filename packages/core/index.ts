@@ -7,7 +7,14 @@ export type {
 
 export * as commands from "./commands";
 
-export { build, watch, BuildMode, BuildTarget } from "./compiler";
+export {
+  BuildMode,
+  BuildTarget,
+  build,
+  watch,
+  generate,
+  write
+} from "./compiler";
 
 export type { RemixConfig, RouteManifest } from "./config";
 export { readConfig } from "./config";

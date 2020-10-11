@@ -1,15 +1,21 @@
 import { readConfig } from "./config";
-import { BuildTarget, build, write } from "./compiler";
+import { BuildMode, BuildTarget, build, write } from "./compiler";
 import { startAssetServer } from "./assetServer";
 
-async function buildCommand(remixRoot: string) {
-  console.log("Building Remix App...");
+/**
+ * Runs the build for a Remix app.
+ */
+async function buildCommand(
+  remixRoot: string,
+  mode: BuildMode = BuildMode.Production
+) {
+  console.log("Building Remix app...");
 
   let config = await readConfig(remixRoot);
 
   let [serverBuild, browserBuild] = await Promise.all([
-    build(config, { target: BuildTarget.Server }),
-    build(config, { target: BuildTarget.Browser })
+    build(config, { mode, target: BuildTarget.Server }),
+    build(config, { mode, target: BuildTarget.Browser })
   ]);
 
   await write(serverBuild, config);
@@ -20,6 +26,9 @@ async function buildCommand(remixRoot: string) {
 
 export { buildCommand as build };
 
+/**
+ * Runs the dev (asset) server for a Remix app.
+ */
 export async function run(remixRoot: string) {
   let config = await readConfig(remixRoot);
 
