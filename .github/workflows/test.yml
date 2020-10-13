@@ -39,5 +39,9 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Setup Fixture
+        run: cd fixtures/gists-app && yarn prebuild
+
       - name: Test
         run: yarn test
+

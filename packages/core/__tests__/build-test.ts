@@ -18,6 +18,10 @@ describe("building", () => {
     config = await readConfig(remixRoot);
   });
 
+  beforeEach(() => {
+    jest.setTimeout(10000);
+  });
+
   describe("the development server build", () => {
     it("generates the correct bundles and manifest", async () => {
       let { output } = await generateBuild(config, {

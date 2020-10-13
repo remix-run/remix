@@ -19,7 +19,8 @@ export default function styles({ sourceDir }: { sourceDir: string }): Plugin {
   return {
     name: "styles",
     async buildStart() {
-      for (let file of await readdir(sourceDir, { recursive: true })) {
+      let sourceFiles = await readdir(sourceDir, { recursive: true });
+      for (let file of sourceFiles) {
         if (isStylesFilename(path.basename(file))) {
           files.push(file);
         }
@@ -34,6 +35,7 @@ export default function styles({ sourceDir }: { sourceDir: string }): Plugin {
             path.basename(file, path.extname(file)) + ".css"
           )
         );
+
         let source = await loadStyles(file);
 
         this.emitFile({ type: "asset", name, source });
