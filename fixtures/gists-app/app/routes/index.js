@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "@remix-run/react";
+import Shared from "../components/Shared";
 
 export function meta() {
   return {
@@ -36,6 +37,7 @@ export default function Index() {
           </li>
         </ul>
       </nav>
+      <Shared />
     </div>
   );
 }

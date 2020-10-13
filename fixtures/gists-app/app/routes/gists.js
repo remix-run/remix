@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Link, useRouteData, useLocationPending } from "@remix-run/react";
+import Shared from "../components/Shared";
 
 export function headers() {
   return {
@@ -28,6 +29,7 @@ export default function Gists() {
         </ul>
       </header>
       <Outlet />
+      <Shared />
     </div>
   );
 }
