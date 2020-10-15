@@ -7,11 +7,13 @@ This is a history of changes to [Remix](https://remix.run).
 ### Bug Fixes
 
 - Fixed code splitting causing errors with shared chunks in development
-- Fixed dev server crash when renaming/deleting CSS files (#11)
+- Fixed dev server crash when renaming/deleting CSS files
+  ([#11](https://github.com/remix-run/remix/issues/11))
 
 ### Breaking Changes
 
-- Default to development mode when running the server (#10)
+- Default to development mode when running the server
+  ([#10](https://github.com/remix-run/remix/issues/10))
 
 ## 0.3.0 - Tue Oct 13 2020
 
