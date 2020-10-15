@@ -41,6 +41,7 @@ describe("building", () => {
           "routes/index.js",
           "pages/one.js",
           "pages/two.js",
+          "_shared/Shared-4f69c99e.js",
           "server-manifest.json",
         ]
       `);
@@ -92,6 +93,7 @@ describe("building", () => {
               "react",
               "@remix-run/react",
               "react-router-dom",
+              "_shared/Shared-4f69c99e.js",
             ],
           },
           "routes/gists.mine": Object {
@@ -120,6 +122,7 @@ describe("building", () => {
             "imports": Array [
               "react",
               "@remix-run/react",
+              "_shared/Shared-4f69c99e.js",
             ],
           },
         }
@@ -139,14 +142,15 @@ describe("building", () => {
           "entry-server-ec81fe4f.js",
           "routes/404-660aace6.js",
           "routes/500-3568401c.js",
-          "routes/gists-77c65246.js",
+          "routes/gists-1f3a6394.js",
           "routes/gists/$username-6467bc2d.js",
           "routes/gists/index-eda98f93.js",
           "routes/gists.mine-9c786e2b.js",
-          "routes/index-7c07748d.js",
-          "pages/one-5a7ab0cd.js",
-          "pages/two-7fb52f96.js",
-          "_rollupPluginBabelHelpers-9bd7278f.js",
+          "routes/index-933c0125.js",
+          "pages/one-57b1bc15.js",
+          "pages/two-c45d0835.js",
+          "_shared/Shared-4f69c99e.js",
+          "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
           "server-manifest.json",
         ]
       `);
@@ -168,17 +172,17 @@ describe("building", () => {
             ],
           },
           "pages/one": Object {
-            "fileName": "pages/one-5a7ab0cd.js",
+            "fileName": "pages/one-57b1bc15.js",
             "imports": Array [
               "react",
-              "_rollupPluginBabelHelpers-9bd7278f.js",
+              "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
               "@mdx-js/react",
             ],
           },
           "pages/two": Object {
-            "fileName": "pages/two-7fb52f96.js",
+            "fileName": "pages/two-c45d0835.js",
             "imports": Array [
-              "_rollupPluginBabelHelpers-9bd7278f.js",
+              "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
               "@mdx-js/react",
             ],
           },
@@ -195,11 +199,12 @@ describe("building", () => {
             ],
           },
           "routes/gists": Object {
-            "fileName": "routes/gists-77c65246.js",
+            "fileName": "routes/gists-1f3a6394.js",
             "imports": Array [
               "react",
               "@remix-run/react",
               "react-router-dom",
+              "_shared/Shared-4f69c99e.js",
             ],
           },
           "routes/gists.mine": Object {
@@ -224,10 +229,11 @@ describe("building", () => {
             ],
           },
           "routes/index": Object {
-            "fileName": "routes/index-7c07748d.js",
+            "fileName": "routes/index-933c0125.js",
             "imports": Array [
               "react",
               "@remix-run/react",
+              "_shared/Shared-4f69c99e.js",
             ],
           },
         }
@@ -254,9 +260,10 @@ describe("building", () => {
           "routes/index.js",
           "pages/one.js",
           "pages/two.js",
-          "index-8737e582.js",
-          "index-9cd505a2.js",
-          "esm-fe9de3ed.js",
+          "_shared/index-6a53de4a.js",
+          "_shared/index-05dfd21a.js",
+          "_shared/Shared-ee27405e.js",
+          "_shared/esm-733856b1.js",
           "global.css",
           "routes/gists.css",
           "asset-manifest.json",
@@ -272,8 +279,8 @@ describe("building", () => {
           "entry-browser": Object {
             "fileName": "entry-browser.js",
             "imports": Array [
-              "index-8737e582.js",
-              "index-9cd505a2.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/index-05dfd21a.js",
             ],
           },
           "global.css": Object {
@@ -282,34 +289,35 @@ describe("building", () => {
           "pages/one": Object {
             "fileName": "pages/one.js",
             "imports": Array [
-              "index-8737e582.js",
-              "esm-fe9de3ed.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/esm-733856b1.js",
             ],
           },
           "pages/two": Object {
             "fileName": "pages/two.js",
             "imports": Array [
-              "index-8737e582.js",
-              "esm-fe9de3ed.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/esm-733856b1.js",
             ],
           },
           "routes/404": Object {
             "fileName": "routes/404.js",
             "imports": Array [
-              "index-8737e582.js",
+              "_shared/index-6a53de4a.js",
             ],
           },
           "routes/500": Object {
             "fileName": "routes/500.js",
             "imports": Array [
-              "index-8737e582.js",
+              "_shared/index-6a53de4a.js",
             ],
           },
           "routes/gists": Object {
             "fileName": "routes/gists.js",
             "imports": Array [
-              "index-8737e582.js",
-              "index-9cd505a2.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/index-05dfd21a.js",
+              "_shared/Shared-ee27405e.js",
             ],
           },
           "routes/gists.css": Object {
@@ -318,28 +326,29 @@ describe("building", () => {
           "routes/gists.mine": Object {
             "fileName": "routes/gists.mine.js",
             "imports": Array [
-              "index-8737e582.js",
+              "_shared/index-6a53de4a.js",
             ],
           },
           "routes/gists/$username": Object {
             "fileName": "routes/gists/$username.js",
             "imports": Array [
-              "index-8737e582.js",
-              "index-9cd505a2.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/index-05dfd21a.js",
             ],
           },
           "routes/gists/index": Object {
             "fileName": "routes/gists/index.js",
             "imports": Array [
-              "index-8737e582.js",
-              "index-9cd505a2.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/index-05dfd21a.js",
             ],
           },
           "routes/index": Object {
             "fileName": "routes/index.js",
             "imports": Array [
-              "index-8737e582.js",
-              "index-9cd505a2.js",
+              "_shared/index-6a53de4a.js",
+              "_shared/index-05dfd21a.js",
+              "_shared/Shared-ee27405e.js",
             ],
           },
         }
@@ -356,19 +365,20 @@ describe("building", () => {
 
       expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
         Array [
-          "entry-browser-b964a8b4.js",
-          "routes/404-ee7a8fa3.js",
-          "routes/500-0ed7b250.js",
-          "routes/gists-b954eabb.js",
-          "routes/gists/$username-4ef5b1c1.js",
-          "routes/gists/index-fe2366f3.js",
-          "routes/gists.mine-960acbb5.js",
-          "routes/index-eae14122.js",
-          "pages/one-e5e06b1b.js",
-          "pages/two-035bf744.js",
-          "index-3921cad2.js",
-          "index-3428c457.js",
-          "esm-26aee512.js",
+          "entry-browser-cf97a1b8.js",
+          "routes/404-1d515a6b.js",
+          "routes/500-7a377214.js",
+          "routes/gists-07445af8.js",
+          "routes/gists/$username-29d77931.js",
+          "routes/gists/index-6a75a231.js",
+          "routes/gists.mine-9663993e.js",
+          "routes/index-84a94de4.js",
+          "pages/one-473f069d.js",
+          "pages/two-6a6433e1.js",
+          "_shared/index-c6ac21e6.js",
+          "_shared/index-d91e9823.js",
+          "_shared/Shared-e118765d.js",
+          "_shared/esm-7b00c7dc.js",
           "global-ec887178.css",
           "routes/gists-a6d2a823.css",
           "asset-manifest.json",
@@ -382,76 +392,78 @@ describe("building", () => {
       expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(`
         Object {
           "entry-browser": Object {
-            "fileName": "entry-browser-b964a8b4.js",
+            "fileName": "entry-browser-cf97a1b8.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "index-3428c457.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/index-d91e9823.js",
             ],
           },
           "global.css": Object {
             "fileName": "global-ec887178.css",
           },
           "pages/one": Object {
-            "fileName": "pages/one-e5e06b1b.js",
+            "fileName": "pages/one-473f069d.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "esm-26aee512.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/esm-7b00c7dc.js",
             ],
           },
           "pages/two": Object {
-            "fileName": "pages/two-035bf744.js",
+            "fileName": "pages/two-6a6433e1.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "esm-26aee512.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/esm-7b00c7dc.js",
             ],
           },
           "routes/404": Object {
-            "fileName": "routes/404-ee7a8fa3.js",
+            "fileName": "routes/404-1d515a6b.js",
             "imports": Array [
-              "index-3921cad2.js",
+              "_shared/index-c6ac21e6.js",
             ],
           },
           "routes/500": Object {
-            "fileName": "routes/500-0ed7b250.js",
+            "fileName": "routes/500-7a377214.js",
             "imports": Array [
-              "index-3921cad2.js",
+              "_shared/index-c6ac21e6.js",
             ],
           },
           "routes/gists": Object {
-            "fileName": "routes/gists-b954eabb.js",
+            "fileName": "routes/gists-07445af8.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "index-3428c457.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/index-d91e9823.js",
+              "_shared/Shared-e118765d.js",
             ],
           },
           "routes/gists.css": Object {
             "fileName": "routes/gists-a6d2a823.css",
           },
           "routes/gists.mine": Object {
-            "fileName": "routes/gists.mine-960acbb5.js",
+            "fileName": "routes/gists.mine-9663993e.js",
             "imports": Array [
-              "index-3921cad2.js",
+              "_shared/index-c6ac21e6.js",
             ],
           },
           "routes/gists/$username": Object {
-            "fileName": "routes/gists/$username-4ef5b1c1.js",
+            "fileName": "routes/gists/$username-29d77931.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "index-3428c457.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/index-d91e9823.js",
             ],
           },
           "routes/gists/index": Object {
-            "fileName": "routes/gists/index-fe2366f3.js",
+            "fileName": "routes/gists/index-6a75a231.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "index-3428c457.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/index-d91e9823.js",
             ],
           },
           "routes/index": Object {
-            "fileName": "routes/index-eae14122.js",
+            "fileName": "routes/index-84a94de4.js",
             "imports": Array [
-              "index-3921cad2.js",
-              "index-3428c457.js",
+              "_shared/index-c6ac21e6.js",
+              "_shared/index-d91e9823.js",
+              "_shared/Shared-e118765d.js",
             ],
           },
         }

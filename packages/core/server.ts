@@ -50,7 +50,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   let configPromise = readConfig(remixRoot);
 
   return async (req, loadContext = {}) => {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV !== "production") {
       let config = await configPromise;
       purgeRequireCache(config.rootDirectory);
       configPromise = readConfig(remixRoot);
@@ -87,7 +87,7 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   }
 
   let assetManifest: AssetManifest;
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV !== "production") {
     rewritePublicPath(config);
 
     try {
@@ -243,7 +243,7 @@ async function handleHtmlRequest(
 
   let serverBuildDirectory: string;
   let assetManifest: AssetManifest;
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV !== "production") {
     // Adjust the config object so it contains only the routes and manifest for
     // the matches. That way we build only the minimum number of bundles.
     rewriteRoutes(config, matches);
