@@ -4,7 +4,7 @@ import type {
   RouteManifest
 } from "@remix-run/core";
 
-interface Manifest {
+export interface Manifest {
   assets: AssetManifest;
   routes: RouteManifest<EntryRouteObject>;
 }

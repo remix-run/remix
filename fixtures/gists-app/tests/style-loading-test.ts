@@ -30,7 +30,9 @@ describe("style loading", () => {
       await page.click('a[href="/gists"]');
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      expect(dataResponses.length).toBe(1);
+      // first response is the preload in the transition
+      // second response is the <link> from <Styles>
+      expect(dataResponses.length).toBe(2);
     });
   });
 });
