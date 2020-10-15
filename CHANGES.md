@@ -4,6 +4,12 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Unreleased
 
+### Features
+
+- Add support for `.md` and `.mdx` in conventional routes (`app/routes`)
+- Wait for CSS `<link>` tags to load before transitioning to a new route
+  ([#16](https://github.com/remix-run/remix/pull/16))
+
 ### Bug Fixes
 
 - Fixed code splitting causing errors with shared chunks in development

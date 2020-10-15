@@ -81,6 +81,16 @@ describe("readConfig", () => {
             "id": "routes/index",
             "path": "/",
           },
+          "routes/page/four": Object {
+            "componentFile": "routes/page/four.mdx",
+            "id": "routes/page/four",
+            "path": "page/four",
+          },
+          "routes/page/three": Object {
+            "componentFile": "routes/page/three.md",
+            "id": "routes/page/three",
+            "path": "page/three",
+          },
         },
         "routes": Array [
           Object {
@@ -125,6 +135,16 @@ describe("readConfig", () => {
             "componentFile": "routes/index.js",
             "id": "routes/index",
             "path": "/",
+          },
+          Object {
+            "componentFile": "routes/page/four.mdx",
+            "id": "routes/page/four",
+            "path": "page/four",
+          },
+          Object {
+            "componentFile": "routes/page/three.md",
+            "id": "routes/page/three",
+            "path": "page/three",
           },
           Object {
             "componentFile": "pages/one.mdx",

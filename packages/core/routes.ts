@@ -234,7 +234,8 @@ function defineRoutesInDirectory(
   defineRoute: DefineRoute,
   appDir: string,
   dataDir: string,
-  currentDir: string
+  currentDir: string,
+  basePath = ""
 ): void {
   let filenames = fs.readdirSync(currentDir);
 
@@ -251,33 +252,39 @@ function defineRoutesInDirectory(
       );
 
       if (!layoutFilename) {
-        throw new Error(`No layout exists for directory ${file}`);
+        // There is no layout route for this directory. Continue reading
+        // conventional routes from the subdirectory.
+        let base = (basePath ? `${basePath}/` : "") + filename;
+        defineRoutesInDirectory(defineRoute, appDir, dataDir, file, base);
       }
 
-      // This is a layout route (has children and an <Outlet>).
-      routePath = createRoutePath(filename);
-      componentFile = path.resolve(currentDir, layoutFilename);
-      defineChildren = () => {
-        defineRoutesInDirectory(defineRoute, appDir, dataDir, file);
-      };
+      continue;
     } else if (isRouteModuleFilename(filename)) {
-      let isLayout = filenames.some(
-        f => f !== filename && f === barename(filename)
-      );
-
-      if (isLayout) {
-        // This is a layout file with sub-routes that will be
-        // defined when the directory entry is processed.
-        continue;
-      }
-
-      // This is a leaf route.
       routePath =
         barename(filename) === "index"
           ? "/"
-          : createRoutePath(barename(filename));
+          : createRoutePath(
+              (basePath ? `${basePath}/` : "") + barename(filename)
+            );
       componentFile = path.resolve(currentDir, filename);
-      defineChildren = undefined;
+
+      let layoutDir = filenames.find(
+        f =>
+          f !== filename &&
+          f === barename(filename) &&
+          fs.lstatSync(path.join(currentDir, f)).isDirectory()
+      );
+
+      if (layoutDir) {
+        // This is a layout route.
+        let subdir = path.join(currentDir, layoutDir);
+        defineChildren = () => {
+          defineRoutesInDirectory(defineRoute, appDir, dataDir, subdir);
+        };
+      } else {
+        // This is a leaf route.
+        defineChildren = undefined;
+      }
     } else {
       // Not a directory or a route module, so it's probably a styles file.
       continue;
@@ -309,7 +316,7 @@ function createRoutePath(filenameWithoutExt: string): string {
   return filenameWithoutExt.replace(/\$/g, ":").replace(/\./g, "/");
 }
 
-const routeModuleExts = [".js", ".jsx", ".cjs", ".mjs", ".ts", ".tsx"];
+const routeModuleExts = [".js", ".jsx", ".md", ".mdx", ".ts", ".tsx"];
 
 export function isRouteModuleFilename(filename: string): boolean {
   return routeModuleExts.includes(path.extname(filename));

@@ -39,6 +39,8 @@ describe("building", () => {
           "routes/gists/index.js",
           "routes/gists.mine.js",
           "routes/index.js",
+          "routes/page/four.js",
+          "routes/page/three.js",
           "pages/one.js",
           "pages/two.js",
           "_shared/Shared-4f69c99e.js",
@@ -125,6 +127,18 @@ describe("building", () => {
               "_shared/Shared-4f69c99e.js",
             ],
           },
+          "routes/page/four": Object {
+            "fileName": "routes/page/four.js",
+            "imports": Array [
+              "@mdx-js/react",
+            ],
+          },
+          "routes/page/three": Object {
+            "fileName": "routes/page/three.js",
+            "imports": Array [
+              "@mdx-js/react",
+            ],
+          },
         }
       `);
     });
@@ -147,6 +161,8 @@ describe("building", () => {
           "routes/gists/index-eda98f93.js",
           "routes/gists.mine-9c786e2b.js",
           "routes/index-933c0125.js",
+          "routes/page/four-c9ce2fc6.js",
+          "routes/page/three-cbc19f53.js",
           "pages/one-57b1bc15.js",
           "pages/two-c45d0835.js",
           "_shared/Shared-4f69c99e.js",
@@ -236,6 +252,20 @@ describe("building", () => {
               "_shared/Shared-4f69c99e.js",
             ],
           },
+          "routes/page/four": Object {
+            "fileName": "routes/page/four-c9ce2fc6.js",
+            "imports": Array [
+              "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
+              "@mdx-js/react",
+            ],
+          },
+          "routes/page/three": Object {
+            "fileName": "routes/page/three-cbc19f53.js",
+            "imports": Array [
+              "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
+              "@mdx-js/react",
+            ],
+          },
         }
       `);
     });
@@ -258,6 +288,8 @@ describe("building", () => {
           "routes/gists/index.js",
           "routes/gists.mine.js",
           "routes/index.js",
+          "routes/page/four.js",
+          "routes/page/three.js",
           "pages/one.js",
           "pages/two.js",
           "_shared/index-6a53de4a.js",
@@ -351,6 +383,20 @@ describe("building", () => {
               "_shared/Shared-ee27405e.js",
             ],
           },
+          "routes/page/four": Object {
+            "fileName": "routes/page/four.js",
+            "imports": Array [
+              "_shared/index-6a53de4a.js",
+              "_shared/esm-733856b1.js",
+            ],
+          },
+          "routes/page/three": Object {
+            "fileName": "routes/page/three.js",
+            "imports": Array [
+              "_shared/index-6a53de4a.js",
+              "_shared/esm-733856b1.js",
+            ],
+          },
         }
       `);
     });
@@ -373,6 +419,8 @@ describe("building", () => {
           "routes/gists/index-8144b77f.js",
           "routes/gists.mine-9663993e.js",
           "routes/index-ee9b502b.js",
+          "routes/page/four-d3d923cc.js",
+          "routes/page/three-00cfabbf.js",
           "pages/one-473f069d.js",
           "pages/two-6a6433e1.js",
           "_shared/index-c6ac21e6.js",
@@ -464,6 +512,20 @@ describe("building", () => {
               "_shared/index-c6ac21e6.js",
               "_shared/index-24845393.js",
               "_shared/Shared-e118765d.js",
+            ],
+          },
+          "routes/page/four": Object {
+            "fileName": "routes/page/four-d3d923cc.js",
+            "imports": Array [
+              "_shared/index-c6ac21e6.js",
+              "_shared/esm-7b00c7dc.js",
+            ],
+          },
+          "routes/page/three": Object {
+            "fileName": "routes/page/three-00cfabbf.js",
+            "imports": Array [
+              "_shared/index-c6ac21e6.js",
+              "_shared/esm-7b00c7dc.js",
             ],
           },
         }
