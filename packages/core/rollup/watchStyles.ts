@@ -7,6 +7,14 @@ import tmp from "tmp";
 import { isStylesFilename } from "../routes";
 import { loadStyles } from "./styles";
 
+function relname(file: string): string {
+  return path.relative(process.cwd(), file);
+}
+
+function filter(file: string): boolean {
+  return isStylesFilename(path.basename(file));
+}
+
 /**
  * Rollup plugin that watches the given `sourceDir` for changes and outputs CSS
  * files in development.
@@ -43,24 +51,27 @@ export default function watchStyles({
   }
 
   function handleAdd(file: string) {
-    if (!files.includes(file) && isStylesFilename(path.basename(file))) {
+    if (!filter(path.basename(file))) return;
+    if (!files.includes(file)) {
       files.push(file);
-
       if (startedWatcher) {
-        console.log(`Added file ${file}`);
+        console.log(`Added file ${relname(file)}`);
         triggerRebuild();
       }
     }
   }
 
   function handleChange(file: string) {
-    console.log(`Changed file ${file}`);
+    if (!filter(path.basename(file))) return;
+    console.log(`Changed file ${relname(file)}`);
     delete cache[file];
     triggerRebuild();
   }
 
   function handleUnlink(file: string) {
-    console.log(`Deleted ${file}`);
+    if (!filter(path.basename(file))) return;
+    console.log(`Deleted ${relname(file)}`);
+    files.splice(files.indexOf(file), 1);
     delete cache[file];
     triggerRebuild();
   }

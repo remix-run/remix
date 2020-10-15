@@ -1,25 +1,11 @@
 import path from "path";
 
-import type { ConfigRouteObject } from "./routes";
-import { defineRoutes as _defineRoutes, getConventionalRoutes } from "./routes";
-
-type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
-
-interface MDXOptions {
-  /**
-   * List of rehype plugins to use.
-   *
-   * @see https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
-   */
-  rehypePlugins: any[];
-
-  /**
-   * List of remark plugins to use.
-   *
-   * @see https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
-   */
-  remarkPlugins: any[];
-}
+import type { ConfigRouteObject, RouteManifest } from "./routes";
+import {
+  createRouteManifest,
+  defineRoutes as _defineRoutes,
+  getConventionalRoutes
+} from "./routes";
 
 /**
  * The user-provided config in remix.config.js.
@@ -118,12 +104,28 @@ export interface RemixConfig {
   /**
    * A route lookup table for the data loaders.
    */
-  routeManifest: RouteManifest<FlatConfigRouteObject>;
+  routeManifest: RouteManifest;
 
   /**
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
+}
+
+interface MDXOptions {
+  /**
+   * List of rehype plugins to use.
+   *
+   * @see https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
+   */
+  rehypePlugins: any[];
+
+  /**
+   * List of remark plugins to use.
+   *
+   * @see https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
+   */
+  remarkPlugins: any[];
 }
 
 /**
@@ -196,25 +198,4 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   };
 
   return remixConfig;
-}
-
-export interface RouteManifest<RouteObject> {
-  [routeId: string]: RouteObject;
-}
-
-function createRouteManifest(
-  routes: ConfigRouteObject[],
-  manifest: RouteManifest<ConfigRouteObject> = {}
-): RouteManifest<FlatConfigRouteObject> {
-  for (let route of routes) {
-    let { children, ...rest } = route;
-
-    manifest[route.id] = rest;
-
-    if (children) {
-      createRouteManifest(children, manifest);
-    }
-  }
-
-  return manifest;
 }

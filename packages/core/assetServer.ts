@@ -49,7 +49,7 @@ function createRequestHandler(
     onRebuild?: () => void;
   }
 ) {
-  let output: RollupOutput | null = null;
+  let output: RollupOutput["output"] | null = null;
   let unwatch = watch(config, {
     mode: BuildMode.Development,
     target: BuildTarget.Browser,
@@ -58,7 +58,8 @@ function createRequestHandler(
       output = null;
     },
     async onBuildEnd(build) {
-      output = await generate(build);
+      let result = await generate(build);
+      output = result.output;
       if (onReady) onReady();
       flushPendingQueue();
     },
@@ -100,10 +101,12 @@ function createRequestHandler(
   return app;
 }
 
-function serveBuildOutput(req: Request, res: Response, output: RollupOutput) {
-  let chunkOrAsset = output.output.find(
-    item => req.url === getFileUrl(item.fileName)
-  );
+function serveBuildOutput(
+  req: Request,
+  res: Response,
+  output: RollupOutput["output"]
+) {
+  let chunkOrAsset = output.find(item => req.url === getFileUrl(item.fileName));
 
   if (!chunkOrAsset) {
     res.status(404).send();

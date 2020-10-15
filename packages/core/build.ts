@@ -2,8 +2,6 @@ import path from "path";
 import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router";
-import requireFromString from "require-from-string";
-import type { RollupOutput } from "rollup";
 import fetch from "node-fetch";
 
 import type { RemixConfig } from "./config";
@@ -21,13 +19,12 @@ export type AssetManifest = BuildManifest;
  */
 export type ServerManifest = BuildManifest;
 
-// export const EntryBrowserManifestKey = "entry-browser";
-// export const EntryServerManifestKey = "entry-server";
-// export const GlobalStylesManifestKey = "global-styles";
-
 export const AssetManifestFilename = "asset-manifest.json";
 export const ServerManifestFilename = "server-manifest.json";
 
+/**
+ * A module that renders the HTML on the server.
+ */
 export interface ServerEntryModule {
   default(
     request: Request,
@@ -35,6 +32,20 @@ export interface ServerEntryModule {
     responseHeaders: Headers,
     context: EntryContext
   ): Promise<Response>;
+}
+
+export interface RouteModules {
+  [routeId: string]: RouteModule;
+}
+
+/**
+ * A module that contains info about a route including headers, meta tags, and
+ * the route component for rendering HTML markup.
+ */
+export interface RouteModule {
+  default: ComponentType;
+  headers?: HeadersFunction;
+  meta?: MetaFunction;
 }
 
 /**
@@ -61,75 +72,46 @@ export interface MetaFunction {
   }): { [name: string]: string };
 }
 
-export interface RouteModule {
-  headers?: HeadersFunction;
-  meta?: MetaFunction;
-  default: ComponentType;
-}
-
-export interface RouteModules {
-  [routeId: string]: RouteModule;
-}
-
 /**
  * Reads the browser manifest from the build on the filesystem.
  */
-export function getAssetManifest(serverBuildDirectory: string): BuildManifest {
-  let manifestFile = path.resolve(serverBuildDirectory, AssetManifestFilename);
-  return require(manifestFile);
+export function getAssetManifest(dir: string): AssetManifest {
+  let file = path.resolve(dir, AssetManifestFilename);
+  return require(file);
 }
 
 /**
  * Reads the server manifest from the build on the filesystem.
  */
-export function getServerManifest(serverBuildDirectory: string): BuildManifest {
-  let manifestFile = path.resolve(serverBuildDirectory, ServerManifestFilename);
-  return require(manifestFile);
+export function getServerManifest(dir: string): ServerManifest {
+  let file = path.resolve(dir, ServerManifestFilename);
+  return require(file);
 }
 
 /**
  * Gets the serve entry module from the build on the filesystem.
  */
 export function getServerEntryModule(
-  serverBuildDirectory: string,
-  serverManifest: BuildManifest
+  dir: string,
+  manifest: ServerManifest
 ): ServerEntryModule {
-  let requirePath = path.resolve(
-    serverBuildDirectory,
-    serverManifest["entry-server"].fileName
-  );
-
-  return require(requirePath);
+  let file = path.resolve(dir, manifest["entry-server"].fileName);
+  return require(file);
 }
 
 /**
  * Gets all route modules from the build on the filesystem.
  */
 export function getRouteModules(
-  serverBuildDirectory: string,
-  routes: RemixConfig["routes"],
-  serverManifest: BuildManifest,
-  modules: RouteModules = {}
+  dir: string,
+  routeManifest: RemixConfig["routeManifest"],
+  manifest: ServerManifest
 ): RouteModules {
-  for (let route of routes) {
-    let requirePath = path.join(
-      serverBuildDirectory,
-      serverManifest[route.id].fileName
-    );
-
-    modules[route.id] = require(requirePath);
-
-    if (route.children) {
-      getRouteModules(
-        serverBuildDirectory,
-        route.children,
-        serverManifest,
-        modules
-      );
-    }
-  }
-
-  return modules;
+  return Object.keys(routeManifest).reduce((routeModules, routeId) => {
+    let file = path.join(dir, manifest[routeId].fileName);
+    routeModules[routeId] = require(file);
+    return routeModules;
+  }, {} as RouteModules);
 }
 
 /**
@@ -137,65 +119,7 @@ export function getRouteModules(
  */
 export async function getDevAssetManifest(
   remixRunOrigin: string
-): Promise<BuildManifest> {
+): Promise<AssetManifest> {
   let res = await fetch(remixRunOrigin + AssetManifestFilename);
   return res.json();
-}
-
-/**
- * Gets the server entry module from the server build output.
- */
-export function getDevServerEntryModule(
-  serverBuildDirectory: string,
-  serverBuildOutput: RollupOutput["output"]
-): ServerEntryModule {
-  return requireChunk<ServerEntryModule>(
-    serverBuildDirectory,
-    serverBuildOutput,
-    "entry-server"
-  );
-}
-
-/**
- * Gets the route modules from the server build output.
- */
-export function getDevRouteModules(
-  serverBuildDirectory: string,
-  routes: RemixConfig["routes"],
-  serverBuildOutput: RollupOutput["output"],
-  modules: RouteModules = {}
-): RouteModules {
-  for (let route of routes) {
-    modules[route.id] = requireChunk<RouteModule>(
-      serverBuildDirectory,
-      serverBuildOutput,
-      route.id
-    );
-
-    if (route.children) {
-      getDevRouteModules(
-        serverBuildDirectory,
-        route.children,
-        serverBuildOutput,
-        modules
-      );
-    }
-  }
-
-  return modules;
-}
-
-function requireChunk<T>(
-  serverBuildDirectory: string,
-  serverBuildOutput: RollupOutput["output"],
-  chunkName: string
-): T {
-  for (let chunkOrAsset of serverBuildOutput) {
-    if (chunkOrAsset.type === "chunk" && chunkOrAsset.name === chunkName) {
-      let filename = path.resolve(serverBuildDirectory, chunkOrAsset.fileName);
-      return requireFromString(chunkOrAsset.code, filename);
-    }
-  }
-
-  throw new Error(`Missing chunk "${chunkName}" in server build output`);
 }

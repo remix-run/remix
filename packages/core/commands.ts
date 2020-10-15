@@ -13,13 +13,24 @@ async function buildCommand(
 
   let config = await readConfig(remixRoot);
 
-  let [serverBuild, browserBuild] = await Promise.all([
-    build(config, { mode, target: BuildTarget.Server }),
-    build(config, { mode, target: BuildTarget.Browser })
+  await Promise.all([
+    write(
+      await build(config, {
+        mode,
+        target: BuildTarget.Server,
+        manifestDir: config.serverBuildDirectory
+      }),
+      config.serverBuildDirectory
+    ),
+    write(
+      await build(config, {
+        mode,
+        target: BuildTarget.Browser,
+        manifestDir: config.serverBuildDirectory
+      }),
+      config.browserBuildDirectory
+    )
   ]);
-
-  await write(serverBuild, config);
-  await write(browserBuild, config);
 
   console.log("done!");
 }
@@ -35,11 +46,11 @@ export async function run(remixRoot: string) {
   startAssetServer(config, {
     onListen() {
       console.log(
-        `Remix dev server running on port ${config.devServerPort}...`
+        `Remix asset server running on port ${config.devServerPort}...`
       );
     },
     onReady() {
-      console.log(`Remix dev server ready for requests!`);
+      console.log(`Remix asset server ready for requests!`);
     },
     onRebuild() {
       console.log(`Restarting the build...`);

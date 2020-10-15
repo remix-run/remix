@@ -1,3 +1,4 @@
+/.cache
 /build
 /public/build
 /yarn-error.log

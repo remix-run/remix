@@ -116,3 +116,14 @@ export function createServerHandoffString(
   // inserted directly into the HTML in the `<Scripts>` element.
   return jsesc(serverHandoff, { isScriptContext: true });
 }
+
+export function getPartialManifest(
+  manifest: AssetManifest,
+  keys: string[]
+): AssetManifest {
+  let partialManifest: AssetManifest = {};
+  for (let key of keys) {
+    if (key in manifest) partialManifest[key] = manifest[key];
+  }
+  return partialManifest;
+}

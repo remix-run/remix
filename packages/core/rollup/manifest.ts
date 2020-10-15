@@ -37,14 +37,14 @@ function createManifest(bundle: OutputBundle): BuildManifest {
 
 export default function manifestPlugin({
   fileName = "manifest.json",
-  outputDir
+  outputDir = "."
 }: {
   fileName?: string;
   forceWrite?: boolean;
-  outputDir: string;
+  outputDir?: string;
 }): Plugin {
   return {
-    name: "manifest-plugin",
+    name: "manifest",
     async generateBundle(
       _options: NormalizedOutputOptions,
       bundle: OutputBundle,

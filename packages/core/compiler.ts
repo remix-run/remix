@@ -52,6 +52,7 @@ function createBuild(build: RollupBuild, options: BuildOptions): RemixBuild {
 export interface BuildOptions {
   mode: BuildMode;
   target: BuildTarget;
+  manifestDir?: string;
 }
 
 /**
@@ -61,7 +62,8 @@ export async function build(
   config: RemixConfig,
   {
     mode = BuildMode.Production,
-    target = BuildTarget.Server
+    target = BuildTarget.Server,
+    manifestDir
   }: Partial<BuildOptions> = {}
 ): Promise<RemixBuild> {
   let plugins: Plugin[] = [];
@@ -70,7 +72,7 @@ export async function build(
     plugins.push(styles({ sourceDir: config.appDirectory }));
   }
 
-  plugins.push(...getCommonPlugins(config, mode, target));
+  plugins.push(...getBuildPlugins(config, mode, target, manifestDir));
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
@@ -95,6 +97,7 @@ export function watch(
   {
     mode = BuildMode.Development,
     target = BuildTarget.Browser,
+    manifestDir,
     onBuildStart,
     onBuildEnd,
     onError
@@ -114,7 +117,7 @@ export function watch(
       watchStyles({
         sourceDir: config.appDirectory
       }),
-      ...getCommonPlugins(config, mode, target)
+      ...getBuildPlugins(config, mode, target, manifestDir)
     ],
     watch: {
       // Skip the write here and do it in a callback instead. This gives us
@@ -146,22 +149,6 @@ export function watch(
   };
 }
 
-function getCommonOutputOptions(build: RemixBuild): OutputOptions {
-  let { mode, target } = build.options;
-
-  return {
-    format: target === BuildTarget.Server ? "cjs" : "esm",
-    exports: target === BuildTarget.Server ? "named" : undefined,
-    entryFileNames:
-      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js",
-    chunkFileNames: "[name]-[hash].js",
-    assetFileNames:
-      mode === BuildMode.Production
-        ? "[name]-[hash][extname]"
-        : "[name][extname]"
-  };
-}
-
 /**
  * Creates an in-memory build. This is useful in both the asset server and the
  * main server in dev mode to avoid writing the builds to disk.
@@ -173,34 +160,24 @@ export function generate(build: RemixBuild): Promise<RollupOutput> {
 /**
  * Writes the build to disk.
  */
-export function write(
-  build: RemixBuild,
-  config: RemixConfig
-): Promise<RollupOutput> {
-  let { target } = build.options;
-
-  let options: OutputOptions = {
-    ...getCommonOutputOptions(build),
-    dir:
-      target === BuildTarget.Server
-        ? config.serverBuildDirectory
-        : config.browserBuildDirectory
-  };
-
-  return build.write(options);
+export function write(build: RemixBuild, dir: string): Promise<RollupOutput> {
+  return build.write({ ...getCommonOutputOptions(build), dir });
 }
 
 /**
  * Runs the server build in dev as requests come in.
  */
-export async function generateDevServerBuild(
-  config: RemixConfig
+export async function writeDevServerBuild(
+  config: RemixConfig,
+  dir: string
 ): Promise<RollupOutput> {
-  return generate(
+  return write(
     await build(config, {
       mode: BuildMode.Development,
-      target: BuildTarget.Server
-    })
+      target: BuildTarget.Server,
+      manifestDir: dir
+    }),
+    dir
   );
 }
 
@@ -230,10 +207,11 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   return input;
 }
 
-function getCommonPlugins(
+function getBuildPlugins(
   config: RemixConfig,
   mode: BuildMode,
-  target: BuildTarget
+  target: BuildTarget,
+  manifestDir?: string
 ): Plugin[] {
   let plugins: Plugin[] = [];
 
@@ -284,7 +262,7 @@ function getCommonPlugins(
       "process.env.NODE_ENV": JSON.stringify(mode)
     }),
     manifest({
-      outputDir: config.serverBuildDirectory,
+      outputDir: manifestDir,
       fileName:
         target === BuildTarget.Browser
           ? AssetManifestFilename
@@ -293,4 +271,20 @@ function getCommonPlugins(
   );
 
   return plugins;
+}
+
+function getCommonOutputOptions(build: RemixBuild): OutputOptions {
+  let { mode, target } = build.options;
+
+  return {
+    format: target === BuildTarget.Server ? "cjs" : "esm",
+    exports: target === BuildTarget.Server ? "named" : undefined,
+    assetFileNames:
+      mode === BuildMode.Production
+        ? "[name]-[hash][extname]"
+        : "[name][extname]",
+    chunkFileNames: "_shared/[name]-[hash].js",
+    entryFileNames:
+      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js"
+  };
 }

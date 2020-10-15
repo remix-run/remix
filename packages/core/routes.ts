@@ -55,6 +55,29 @@ export interface ConfigRouteObject {
   stylesFile?: string;
 }
 
+export type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
+
+export interface RouteManifest<RouteObject = FlatConfigRouteObject> {
+  [routeId: string]: RouteObject;
+}
+
+export function createRouteManifest(
+  routes: ConfigRouteObject[],
+  manifest: RouteManifest = {}
+): RouteManifest {
+  for (let route of routes) {
+    let { children, ...rest } = route;
+
+    manifest[route.id] = rest;
+
+    if (children) {
+      createRouteManifest(children, manifest);
+    }
+  }
+
+  return manifest;
+}
+
 export interface DefineRouteOptions {
   /**
    * Should be `true` if the route `path` is case-sensitive.

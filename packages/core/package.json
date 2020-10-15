@@ -26,7 +26,6 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-router-dom": "^6.0.0-beta.0",
-    "require-from-string": "^2.0.2",
     "rollup": "^2.26.11",
     "rollup-plugin-postcss": "^3.1.8",
     "signal-exit": "^3.0.3",
