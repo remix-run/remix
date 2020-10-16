@@ -2,7 +2,6 @@ import React from "react";
 import {
   useLocation,
   useRoutes,
-  useResolvedPath,
   Link as ReactRouterLink
 } from "react-router-dom";
 
@@ -61,15 +60,7 @@ export function Meta() {
  * Additional scripts are loaded later as needed.
  */
 export function Scripts() {
-  let {
-    manifestCache,
-    publicPath,
-    serverHandoffString
-  } = useRemixEntryContext();
-
-  let manifest = manifestCache.read();
-  let entryBrowser = manifest.assets["entry-browser"];
-  let src = `${publicPath}${entryBrowser.fileName}`;
+  let { manifest, publicPath, serverHandoffString } = useRemixEntryContext();
 
   let browserIsHydrating = false;
   if (!serverHandoffString) {
@@ -77,7 +68,7 @@ export function Scripts() {
     serverHandoffString = "{}";
   }
 
-  let remixServerHandoff = `window.__remixServerHandoff = ${serverHandoffString}`;
+  let remixServerHandoff = `window.__remixServerHandoff = ${serverHandoffString};`;
 
   let routeIds = Object.keys(manifest.routes).filter(
     routeId => routeId in manifest.assets
@@ -94,6 +85,8 @@ export function Scripts() {
       .map((routeId, index) => `${JSON.stringify(routeId)}:route${index}`)
       .join(",")}};`;
 
+  let entryBrowser = manifest.assets["entry-browser"];
+
   return React.useMemo(
     () => (
       <>
@@ -105,7 +98,7 @@ export function Scripts() {
           dangerouslySetInnerHTML={createHtml(remixRoutes)}
           type="module"
         />
-        <script src={src} type="module" />
+        <script src={publicPath + entryBrowser.fileName} type="module" />
       </>
     ),
     []
@@ -116,8 +109,7 @@ export function Scripts() {
  * Renders the styles needed for the current routes.
  */
 export function Styles() {
-  let { manifestCache, publicPath, matches } = useRemixEntryContext();
-  let manifest = manifestCache.read();
+  let { manifest, matches, publicPath } = useRemixEntryContext();
 
   let styleFiles = [manifest.assets["global.css"].fileName];
 
@@ -144,8 +136,8 @@ export function Styles() {
 export function Routes() {
   // TODO: Add `renderMatches` function to RR that we
   // can use here with the matches we get from context.
-  let { manifestCache } = useRemixEntryContext();
-  let routes = createClientRoutes(manifestCache.read().routes);
+  let { manifest } = useRemixEntryContext();
+  let routes = createClientRoutes(manifest.routes);
   return useRoutes(routes);
 }
 
@@ -153,14 +145,8 @@ export function Routes() {
  * Renders a <a> element for navigating around the site.
  */
 export function Link(props: any) {
-  let { manifestCache } = useRemixEntryContext();
-
-  let resolvedPath = useResolvedPath(props.to);
-
-  React.useEffect(() => {
-    manifestCache.preload(resolvedPath.pathname);
-  }, [resolvedPath]);
-
+  // TODO: Detect build version change and do a full page refresh on the next
+  // link click.
   return <ReactRouterLink {...props} />;
 }
 
@@ -192,7 +178,31 @@ export function useRouteData() {
   return [data, setData] as const;
 }
 
-// TODO: Move this back into RR v6 beta (out of experimental)
+/**
+ * Returns `true` if a location change is pending. This is useful for showing
+ * a "loading..." indicator during route transitions.
+ *
+ * TODO: Move this hook back into RR v6 beta (out of experimental)
+ */
 export function useLocationPending(): boolean {
   return useRemixEntryContext().pending;
+}
+
+/**
+ * Setup a callback to be fired on the window's `beforeunload` event. This is
+ * useful for saving some data to `window.localStorage` just before the page
+ * refreshes, which automatically happens on the next `<Link>` click when Remix
+ * detects a new version of the app is available on the server.
+ *
+ * Note: The `callback` argument should be a function created with
+ * `React.useCallback()`.
+ */
+export function useBeforeUnload(callback: () => any) {
+  React.useEffect(() => {
+    window.addEventListener("beforeunload", callback);
+
+    return () => {
+      window.removeEventListener("beforeunload", callback);
+    };
+  }, [callback]);
 }

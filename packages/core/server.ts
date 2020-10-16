@@ -12,14 +12,14 @@ import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import type { AppLoadContext, AppLoadResult } from "./data";
 import { loadGlobalData, loadRouteData } from "./data";
+import type { EntryManifest, ServerHandoff } from "./entry";
 import {
   createEntryMatches,
   createGlobalData,
   createRouteData,
   createRouteLoader,
   createRouteManifest,
-  createServerHandoffString,
-  getPartialManifest
+  createServerHandoffString
 } from "./entry";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
@@ -27,6 +27,7 @@ import type { Request } from "./platform";
 import { Headers, Response } from "./platform";
 import { purgeRequireCache } from "./requireCache";
 import type { RouteManifest } from "./routes";
+import { oneYear } from "./seconds";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -50,7 +51,10 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   let configPromise = readConfig(remixRoot);
 
   return async (req, loadContext = {}) => {
-    if (process.env.NODE_ENV !== "production") {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.NODE_ENV !== "test"
+    ) {
       let config = await configPromise;
       purgeRequireCache(config.rootDirectory);
       configPromise = readConfig(remixRoot);
@@ -59,60 +63,16 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     let config = await configPromise;
     let url = new URL(req.url);
 
-    if (url.pathname.startsWith("/__remix_manifest")) {
-      return handleManifestRequest(config, req);
-    }
-
     if (url.pathname.startsWith("/__remix_data")) {
       return handleDataRequest(config, req, loadContext);
     }
 
+    if (url.pathname.startsWith("/__remix_manifest")) {
+      return handleManifestRequest(config, req);
+    }
+
     return handleHtmlRequest(config, req, loadContext);
   };
-}
-
-async function handleManifestRequest(config: RemixConfig, req: Request) {
-  let searchParams = new URL(req.url).searchParams;
-  let urlParam = searchParams.get("url");
-
-  if (!urlParam) {
-    return jsonError(`Missing ?url`, 403);
-  }
-
-  let url = new URL(urlParam);
-  let matches = matchRoutes(config.routes, url.pathname);
-
-  if (!matches) {
-    return jsonError(`No routes matched path "${url.pathname}"`, 404);
-  }
-
-  let assetManifest: AssetManifest;
-  if (process.env.NODE_ENV !== "production") {
-    rewritePublicPath(config);
-
-    try {
-      assetManifest = await getDevAssetManifest(config.publicPath);
-    } catch (error) {
-      // The dev server is not running. This is just a manifest patch request, so
-      // return an empty patch. We will serve an error page on the HTML request.
-      assetManifest = {};
-    }
-  } else {
-    assetManifest = getAssetManifest(config.serverBuildDirectory);
-  }
-
-  // Get the browser manifest for only the matched routes.
-  let assetManifestKeys = [
-    ...matches.map(match => match.route.id),
-    ...matches.map(match => `${match.route.id}.css`)
-  ];
-  let partialAssetManifest = getPartialManifest(
-    assetManifest,
-    assetManifestKeys
-  );
-  let routeManifest = createRouteManifest(matches);
-
-  return json({ assets: partialAssetManifest, routes: routeManifest });
 }
 
 async function handleDataRequest(
@@ -146,6 +106,63 @@ async function handleDataRequest(
   }
 
   return loadResult;
+}
+
+async function handleManifestRequest(config: RemixConfig, req: Request) {
+  let searchParams = new URL(req.url).searchParams;
+  let urlParam = searchParams.get("url");
+
+  if (!urlParam) {
+    return jsonError(`Missing ?url`, 403);
+  }
+
+  let url = new URL(urlParam);
+  let matches = matchRoutes(config.routes, url.pathname);
+
+  if (!matches) {
+    return jsonError(`No routes matched path "${url.pathname}"`, 404);
+  }
+
+  let assetManifest: AssetManifest;
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.NODE_ENV !== "test"
+  ) {
+    rewritePublicPath(config);
+
+    try {
+      assetManifest = await getDevAssetManifest(config.publicPath);
+    } catch (error) {
+      console.error(error);
+      console.error(
+        `Unable to fetch the asset manifest. Are you running \`remix run\`?`
+      );
+
+      return jsonError(`Unable to fetch asset manifest`, 500);
+    }
+  } else {
+    assetManifest = getAssetManifest(config.serverBuildDirectory);
+  }
+
+  // Get the manifest for only the matched routes.
+  let matchedAssetKeys = [
+    ...matches.map(match => match.route.id),
+    ...matches.map(match => `${match.route.id}.css`)
+  ];
+
+  let entryManifest: EntryManifest = {
+    assets: getPartialEntries(assetManifest.entries, matchedAssetKeys),
+    routes: createRouteManifest(matches),
+    version: assetManifest.version
+  };
+
+  return new Response(JSON.stringify(entryManifest), {
+    headers: {
+      "Cache-Control": `public, max-age=${oneYear}`,
+      "Content-Type": "application/json",
+      ETag: entryManifest.version
+    }
+  });
 }
 
 async function handleHtmlRequest(
@@ -243,7 +260,10 @@ async function handleHtmlRequest(
 
   let serverBuildDirectory: string;
   let assetManifest: AssetManifest;
-  if (process.env.NODE_ENV !== "production") {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.NODE_ENV !== "test"
+  ) {
     // Adjust the config object so it contains only the routes and manifest for
     // the matches. That way we build only the minimum number of bundles.
     rewriteRoutes(config, matches);
@@ -281,28 +301,29 @@ async function handleHtmlRequest(
   let globalData = await createGlobalData(globalLoadResult);
   let routeData = await createRouteData(routeLoadResults, matches);
   let routeLoader = createRouteLoader(routeModules);
-  let entryRouteManifest = createRouteManifest(matches);
 
   // Get the asset manifest for only the browser entry point + the matched
   // routes. The client will fill in the rest by making requests to the manifest
   // endpoint as needed.
-  let assetManifestKeys = [
+  let matchedAssetKeys = [
     "entry-browser",
     "global.css",
     ...matches.map(match => match.route.id),
     ...matches.map(match => `${match.route.id}.css`)
   ];
-  let entryAssetManifest = getPartialManifest(assetManifest, assetManifestKeys);
 
-  let serverHandoff = {
-    assets: entryAssetManifest,
+  let entryManifest: EntryManifest = {
+    assets: getPartialEntries(assetManifest.entries, matchedAssetKeys),
+    routes: createRouteManifest(matches),
+    version: assetManifest.version
+  };
+  let serverHandoff: ServerHandoff = {
     globalData,
+    manifest: entryManifest,
     matches: entryMatches,
     publicPath: config.publicPath,
-    routeData,
-    routes: entryRouteManifest
+    routeData
   };
-
   let serverEntryContext = {
     ...serverHandoff,
     routeLoader,
@@ -345,6 +366,16 @@ async function handleHtmlRequest(
     headers,
     serverEntryContext
   );
+}
+
+function getPartialEntries<T = any>(
+  entries: { [key: string]: T },
+  keys: string[]
+): { [key: string]: T } {
+  return keys.reduce((memo, key) => {
+    if (key in entries) memo[key] = entries[key];
+    return memo;
+  }, {} as { [key: string]: T });
 }
 
 function rewriteRoutes(config: RemixConfig, matches: ConfigRouteMatch[]) {

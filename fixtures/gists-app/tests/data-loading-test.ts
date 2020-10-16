@@ -14,9 +14,7 @@ describe("data loading", () => {
     page = await browser.newPage();
   });
 
-  afterEach(() => {
-    return browser.close();
-  });
+  afterEach(() => browser.close());
 
   describe("transitioning to a new route", () => {
     it("loads data for all routes on the page", async () => {

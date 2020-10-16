@@ -2,23 +2,28 @@ import jsesc from "jsesc";
 import type { Params } from "react-router";
 
 import type { AssetManifest, RouteModule, RouteModules } from "./build";
-import type { RouteManifest } from "./config";
 import type { AppLoadResult, AppData } from "./data";
 import { extractData } from "./data";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
+import type { RouteManifest } from "./routes";
 
 export interface ServerHandoff {
-  assets: AssetManifest;
   globalData: AppData;
+  manifest: EntryManifest;
   matches: EntryRouteMatch[];
   publicPath: string;
   routeData: RouteData;
-  routes: RouteManifest<EntryRouteObject>;
 }
 
 export interface EntryContext extends ServerHandoff {
   routeLoader: RouteLoader;
   serverHandoffString?: string;
+}
+
+export interface EntryManifest {
+  assets: AssetManifest["entries"];
+  routes: RouteManifest<EntryRouteObject>;
+  version: AssetManifest["version"];
 }
 
 export interface EntryRouteObject {
@@ -39,7 +44,6 @@ export function createEntryRoute(
   if (typeof configRoute.caseSensitive !== "undefined") {
     route.caseSensitive = configRoute.caseSensitive;
   }
-
   if (configRoute.parentId) {
     route.parentId = configRoute.parentId;
   }
@@ -83,7 +87,10 @@ export async function createRouteData(
 }
 
 export interface RouteLoader {
-  preload(assets: AssetManifest, routeId: string): Promise<RouteModule>;
+  preload(
+    assets: AssetManifest["entries"],
+    routeId: string
+  ): Promise<RouteModule>;
   read(routeId: string): RouteModule;
 }
 
@@ -115,15 +122,4 @@ export function createServerHandoffString(
   // Use jsesc to escape data returned from the loaders. This string is
   // inserted directly into the HTML in the `<Scripts>` element.
   return jsesc(serverHandoff, { isScriptContext: true });
-}
-
-export function getPartialManifest(
-  manifest: AssetManifest,
-  keys: string[]
-): AssetManifest {
-  let partialManifest: AssetManifest = {};
-  for (let key of keys) {
-    if (key in manifest) partialManifest[key] = manifest[key];
-  }
-  return partialManifest;
 }

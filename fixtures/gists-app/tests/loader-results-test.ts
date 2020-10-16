@@ -14,9 +14,7 @@ describe("loader results", () => {
     page = await browser.newPage();
   });
 
-  afterEach(() => {
-    return browser.close();
-  });
+  afterEach(() => browser.close());
 
   describe("when a loader returns a redirect", () => {
     it("sends a redirect", async () => {

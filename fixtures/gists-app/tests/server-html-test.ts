@@ -14,9 +14,7 @@ describe("the server HTML", () => {
     page = await browser.newPage();
   });
 
-  afterEach(() => {
-    return browser.close();
-  });
+  afterEach(() => browser.close());
 
   it("is correct", async () => {
     await page.goto(`${testServer}/`);

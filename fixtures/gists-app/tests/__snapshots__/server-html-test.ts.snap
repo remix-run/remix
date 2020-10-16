@@ -34,21 +34,33 @@ exports[`the server HTML is correct: page 1`] = `
           </li>
         </ul>
       </nav>
+      <div>I am shared</div>
     </div>
     <script>
       window.__remixServerHandoff = {
-        assets: {
-          \\"entry-browser\\": {
-            fileName: \\"entry-browser-184fdf50.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-d4208e12.js\\"],
-          },
-          \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
-          \\"routes/index\\": {
-            fileName: \\"routes/index-1f9a4701.js\\",
-            imports: [\\"index-35628953.js\\", \\"index-d4208e12.js\\"],
-          },
-        },
         globalData: { enableScripts: true },
+        manifest: {
+          assets: {
+            \\"entry-browser\\": {
+              fileName: \\"entry-browser-c7e14c78.js\\",
+              imports: [
+                \\"_shared/index-27f12631.js\\",
+                \\"_shared/index-fe6f4507.js\\",
+              ],
+            },
+            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"routes/index\\": {
+              fileName: \\"routes/index-2925bc5f.js\\",
+              imports: [
+                \\"_shared/index-27f12631.js\\",
+                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/Shared-fb04e9d8.js\\",
+              ],
+            },
+          },
+          routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
+          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+        },
         matches: [
           {
             params: {},
@@ -58,14 +70,13 @@ exports[`the server HTML is correct: page 1`] = `
         ],
         publicPath: \\"/build/\\",
         routeData: { \\"routes/index\\": null },
-        routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-1f9a4701.js\\";
+      import * as route0 from \\"/build/routes/index-2925bc5f.js\\";
       window.__remixRoutes = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-184fdf50.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

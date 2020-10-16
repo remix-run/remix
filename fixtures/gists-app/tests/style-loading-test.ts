@@ -14,9 +14,7 @@ describe("style loading", () => {
     page = await browser.newPage();
   });
 
-  afterEach(() => {
-    return browser.close();
-  });
+  afterEach(() => browser.close());
 
   describe("transitioning to a new route", () => {
     it("waits for new styles to load before transitioning", async () => {

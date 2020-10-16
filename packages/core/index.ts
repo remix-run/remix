@@ -16,7 +16,7 @@ export {
   write
 } from "./compiler";
 
-export type { RemixConfig, RouteManifest } from "./config";
+export type { RemixConfig } from "./config";
 export { readConfig } from "./config";
 
 export type {
@@ -29,6 +29,7 @@ export type {
 export type {
   ServerHandoff,
   EntryContext,
+  EntryManifest,
   EntryRouteObject,
   EntryRouteMatch,
   RouteData,
@@ -45,6 +46,8 @@ export {
   isResponseLike,
   isRedirectStatusCode
 } from "./platform";
+
+export type { RouteManifest } from "./routes";
 
 export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";

@@ -14,9 +14,7 @@ describe("route headers", () => {
     page = await browser.newPage();
   });
 
-  afterEach(() => {
-    return browser.close();
-  });
+  afterEach(() => browser.close());
 
   describe("from a JavaScript route", () => {
     it("are correct", async () => {
@@ -33,10 +31,10 @@ describe("route headers", () => {
         Object {
           "cache-control": "public, max-age=60",
           "connection": "keep-alive",
-          "content-length": "2415",
+          "content-length": "2581",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"96f-RFOe5L4IuyXxLGijXEtor4jnN1s\\"",
+          "etag": "W/\\"a15-gdaBeSRjBpm8/z0agYT2O0DSmkE\\"",
           "x-powered-by": "Express",
         }
       `
@@ -62,10 +60,10 @@ describe("route headers", () => {
         Object {
           "cache-control": "public, max-age=300",
           "connection": "keep-alive",
-          "content-length": "2522",
+          "content-length": "2688",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"9da-IDcBQl+j0Ndad7zR9KXqaLrgRtw\\"",
+          "etag": "W/\\"a80-P+eSHKn/h7ykl06uty0TtwsqSqo\\"",
           "x-powered-by": "Express",
         }
       `
@@ -91,10 +89,10 @@ describe("route headers", () => {
         Object {
           "cache-control": "max-age=0, public, must-revalidate",
           "connection": "keep-alive",
-          "content-length": "1403",
+          "content-length": "1502",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"57b-TUvfkCRTA5mnC+SvU0MkGBrpcHc\\"",
+          "etag": "W/\\"5de-IWXahAR+CxrwtbR2fRHy9M8yVXA\\"",
           "x-powered-by": "Express",
         }
       `

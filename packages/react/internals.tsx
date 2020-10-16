@@ -6,6 +6,7 @@ import type { RouteObject, Navigator, Params } from "react-router";
 import { matchRoutes, Router } from "react-router-dom";
 import type {
   EntryContext,
+  EntryManifest,
   EntryRouteObject,
   EntryRouteMatch
 } from "@remix-run/core";
@@ -13,8 +14,7 @@ import type {
 import type { DataCache } from "./dataCache";
 import { createDataCache } from "./dataCache";
 import defaultRouteModule from "./defaultRouteModule";
-import type { ManifestCache, Manifest } from "./manifestCache";
-import { createManifestCache } from "./manifestCache";
+import { patchManifest } from "./manifest";
 import type { RouteLoader, RouteManifest } from "./routeModuleCache";
 import invariant from "./invariant";
 
@@ -108,7 +108,7 @@ function useLazyRef<T>(init: () => T): T {
 interface RemixEntryContextType {
   dataCache: DataCache;
   globalDataState: ReturnType<typeof React.useState>;
-  manifestCache: ManifestCache;
+  manifest: EntryManifest;
   matches: ClientRouteMatch[];
   pending: boolean; // TODO: Move into RR v6
   publicPath: string;
@@ -142,13 +142,12 @@ export function RemixEntry({
   static?: boolean;
 }) {
   let {
-    assets: assetManifest,
     globalData,
+    manifest: entryManifest,
     matches: entryMatches,
     publicPath,
     routeData,
     routeLoader,
-    routes: routeManifest,
     serverHandoffString
   } = entryContext;
 
@@ -162,9 +161,7 @@ export function RemixEntry({
 
   let globalDataState = React.useState(globalData);
   let dataCache = useLazyRef(() => createDataCache(location.key, routeData));
-  let manifestCache = useLazyRef(() =>
-    createManifestCache(location.pathname, assetManifest, routeManifest)
-  );
+  let manifest = React.useRef(entryManifest).current;
 
   React.useEffect(() => {
     if (location === nextLocation) return;
@@ -174,9 +171,8 @@ export function RemixEntry({
     setState(state => ({ ...state, pending: true }));
 
     (async () => {
-      await manifestCache.preload(nextLocation.pathname, true);
+      await patchManifest(manifest, nextLocation.pathname);
 
-      let manifest = manifestCache.read();
       let routes = createClientRoutes(manifest.routes);
       let nextMatches = matchClientRoutes(routes, nextLocation);
 
@@ -220,7 +216,7 @@ export function RemixEntry({
   let context = {
     dataCache,
     globalDataState,
-    manifestCache,
+    manifest,
     matches,
     pending, // TODO: Move into RR v6
     publicPath,
@@ -301,7 +297,7 @@ function RemixRouteMissing({ id }: { id: string }) {
 // FOUC in production.
 function loadStylesheets(
   matches: ClientRouteMatch[],
-  manifest: Manifest,
+  manifest: EntryManifest,
   publicPath: string
 ) {
   let hrefs = [];

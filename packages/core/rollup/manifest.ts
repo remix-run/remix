@@ -1,20 +1,39 @@
 import path from "path";
 import { promises as fsp } from "fs";
+import crypto from "crypto";
 import type { NormalizedOutputOptions, OutputBundle, Plugin } from "rollup";
 
 export interface BuildManifest {
-  [chunkName: string]: BuildChunk;
+  version: string;
+  entries: {
+    [entryName: string]: {
+      fileName: string;
+      imports?: string[];
+    };
+  };
 }
 
-export interface BuildChunk {
-  fileName: string;
-  imports?: string[];
-}
+function createChecksum(bundle: OutputBundle): string {
+  let keys = Object.keys(bundle).sort();
+  let hash = crypto.createHash("sha1");
 
-function createManifest(bundle: OutputBundle): BuildManifest {
-  return Object.keys(bundle).reduce((manifest, key) => {
+  for (let key of keys) {
     let assetOrChunk = bundle[key];
+    if (assetOrChunk.type === "asset") {
+      hash.update(assetOrChunk.source);
+    } else {
+      hash.update(assetOrChunk.code);
+    }
+  }
 
+  return hash.digest("hex");
+}
+
+function createEntries(bundle: OutputBundle): BuildManifest["entries"] {
+  let manifest: BuildManifest["entries"] = {};
+
+  for (let key of Object.keys(bundle)) {
+    let assetOrChunk = bundle[key];
     if (assetOrChunk.type === "chunk") {
       if (assetOrChunk.isEntry) {
         manifest[assetOrChunk.name] = {
@@ -30,9 +49,9 @@ function createManifest(bundle: OutputBundle): BuildManifest {
         fileName: assetOrChunk.fileName
       };
     }
+  }
 
-    return manifest;
-  }, {} as BuildManifest);
+  return manifest;
 }
 
 export default function manifestPlugin({
@@ -50,7 +69,10 @@ export default function manifestPlugin({
       bundle: OutputBundle,
       isWrite: boolean
     ) {
-      let manifest = createManifest(bundle);
+      let manifest: BuildManifest = {
+        version: createChecksum(bundle),
+        entries: createEntries(bundle)
+      };
 
       if (isWrite) {
         let file = path.join(outputDir, fileName);
