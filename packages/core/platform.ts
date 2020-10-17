@@ -38,7 +38,7 @@ export class Headers {
     }
   }
 
-  append(name: string, value: string) {
+  append(name: string, value: any) {
     let key = name.toLowerCase();
     if (this[map].has(key)) {
       this[map].set(key, this[map].get(key) + `,${value}`);
@@ -67,8 +67,8 @@ export class Headers {
     return this[map].keys();
   }
 
-  set(name: string, value: string) {
-    return this[map].set(name.toLowerCase(), value);
+  set(name: string, value: any) {
+    return this[map].set(name.toLowerCase(), String(value));
   }
 
   values() {

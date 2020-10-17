@@ -31,10 +31,10 @@ describe("route headers", () => {
         Object {
           "cache-control": "public, max-age=60",
           "connection": "keep-alive",
-          "content-length": "2581",
+          "content-length": "2666",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"a15-gdaBeSRjBpm8/z0agYT2O0DSmkE\\"",
+          "etag": "W/\\"a6a-C6qk9a8fmQwKmB/mw2MylovlKPA\\"",
           "x-powered-by": "Express",
         }
       `
@@ -60,10 +60,10 @@ describe("route headers", () => {
         Object {
           "cache-control": "public, max-age=300",
           "connection": "keep-alive",
-          "content-length": "2688",
+          "content-length": "2773",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"a80-P+eSHKn/h7ykl06uty0TtwsqSqo\\"",
+          "etag": "W/\\"ad5-3gHzfY/rXTTyKfeubbzfkM5DFIM\\"",
           "x-powered-by": "Express",
         }
       `
@@ -89,10 +89,10 @@ describe("route headers", () => {
         Object {
           "cache-control": "max-age=0, public, must-revalidate",
           "connection": "keep-alive",
-          "content-length": "1502",
+          "content-length": "1489",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"5de-IWXahAR+CxrwtbR2fRHy9M8yVXA\\"",
+          "etag": "W/\\"5d1-8/RmPlS18LdNhYE7xBuKoT/Mmds\\"",
           "x-powered-by": "Express",
         }
       `

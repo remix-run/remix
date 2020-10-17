@@ -11,8 +11,8 @@ exports[`loader results when a loader returns not found sends a not found page: 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -40,50 +40,58 @@ exports[`loader results when a loader returns not found sends a not found page: 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/$username\\": {
-              fileName: \\"routes/gists/$username-ced94f73.js\\",
+              fileName: \\"routes/gists/$username.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/$username\\": {
               id: \\"routes/gists/$username\\",
               path: \\":username\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: { username: \\"_why\\" },
@@ -91,6 +99,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
             route: {
               id: \\"routes/gists/$username\\",
               path: \\":username\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -108,14 +117,14 @@ exports[`loader results when a loader returns not found sends a not found page: 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/$username-ced94f73.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/$username.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -123,27 +132,5 @@ exports[`loader results when a loader returns not found sends a not found page: 
 
 exports[`loader results when the loader has an error sends a server error page: page 1`] = `
 "<!DOCTYPE html>
-<html lang=\\"en\\">
-  <head>
-    <meta charset=\\"utf-8\\" />
-    <title>Error</title>
-    <link
-      rel=\\"stylesheet\\"
-      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
-    />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-  </head>
-  <body class=\\"m-4\\">
-    <div data-test-id=\\"errors/500\\"><h1>500</h1></div>
-    <script>
-      window.__remixServerHandoff = {'globalData':{'enableScripts':true},'manifest':{'assets':{'entry-browser':{'fileName':'entry-browser-c7e14c78.js','imports':['_shared/index-27f12631.js','_shared/index-fe6f4507.js']},'global.css':{'fileName':'global-ec887178.css'},'routes/500':{'fileName':'routes/500-54d87db0.js','imports':['_shared/index-27f12631.js']}},'routes':{'routes/500':{'id':'routes/500','path':'/gists/DANGER'}},'version':'d5b82f9f94846cacb67f0168dacac7da7ea224ea'},'matches':[{'params':{'error':Error: RUN FOR IT},'pathname':'/gists/DANGER','route':{'id':'routes/500','path':'/gists/DANGER'}}],'publicPath':'/build/','routeData':{'routes/500':{'users':[{'id':'ryanflorence','name':'Ryan Florence'},{'id':'mjackson','name':'Michael Jackson'}]}}};
-    </script>
-    <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/500-54d87db0.js\\";
-      window.__remixRoutes = { \\"routes/500\\": route0 };
-    </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
-  </body>
-</html>
 "
 `;

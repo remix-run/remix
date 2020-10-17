@@ -2,26 +2,19 @@ import type { ReactNode } from "react";
 import React from "react";
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
-import type { ServerHandoff } from "@remix-run/core";
+import type { EntryContext } from "@remix-run/core";
 
-import { RemixEntry } from "./internals";
-import type { RouteModuleCache } from "./routeModuleCache";
-import { createRouteLoader } from "./routeModuleCache";
+import { RemixEntry } from "./components";
 
 declare global {
-  var __remixRoutes: RouteModuleCache;
-  var __remixServerHandoff: ServerHandoff;
+  var __remixContext: EntryContext;
 }
 
 // if ("scrollRestoration" in window.history) {
 //   window.history.scrollRestoration = "manual";
 // }
 
-let serverHandoff = window.__remixServerHandoff;
-let browserEntryContext = {
-  ...serverHandoff,
-  routeLoader: createRouteLoader(window.__remixRoutes, serverHandoff.publicPath)
-};
+const entryContext = window.__remixContext;
 
 export interface RemixBrowserProps {
   children: ReactNode;
@@ -47,7 +40,7 @@ export default function RemixBrowser({ children }: RemixBrowserProps) {
   return (
     <RemixEntry
       children={children}
-      context={browserEntryContext}
+      context={entryContext}
       action={state.action}
       location={state.location}
       navigator={history}

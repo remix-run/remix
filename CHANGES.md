@@ -2,6 +2,24 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+## Features
+
+- Added Cache-Control to `/__remix_manifest` responses for better cacheability
+  ([#4](https://github.com/remix-run/remix/issues/4))
+- Remove location-based browser data cache, use built-in caching instead
+  ([#15](https://github.com/remix-run/remix/issues/15))
+- Automatically reload the page when we detect the build has changed
+  ([#7](https://github.com/remix-run/remix/issues/7))
+- Added `useBeforeUnload` hook for saving state immediately before reload
+- Added `json` and `redirect` helpers to `@remix-run/loader`
+
+## Bug Fixes
+
+- Don't call `/__remix_data` for routes that don't have data loaders
+  ([#3](https://github.com/remix-run/remix/issues/3))
+
 ## 0.4.0 - Thu Oct 15 2020
 
 ### Features

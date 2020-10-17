@@ -1,7 +1,12 @@
 import type { EntryManifest } from "@remix-run/core";
 
-export async function patchManifest(
-  manifest: EntryManifest,
+export type Manifest = EntryManifest;
+
+/**
+ * Dynamically loads a portion of the manifest from the server.
+ */
+export async function loadManifest(
+  manifest: Manifest,
   pathname: string,
   autoReload = true
 ): Promise<void> {
@@ -21,7 +26,7 @@ export async function patchManifest(
 async function fetchManifestPatch(
   pathname: string,
   currentVersion: string
-): Promise<EntryManifest | null> {
+): Promise<Manifest | null> {
   let params = new URLSearchParams({
     url: new URL(pathname, window.location.origin).toString(),
     // Include the version so the browser can cache the response forever.

@@ -2,6 +2,7 @@ export type {
   AssetManifest,
   HeadersFunction,
   MetaFunction,
+  RouteModules,
   RouteModule
 } from "./build";
 
@@ -32,8 +33,7 @@ export type {
   EntryManifest,
   EntryRouteObject,
   EntryRouteMatch,
-  RouteData,
-  RouteLoader
+  RouteData
 } from "./entry";
 
 export type { HeadersInit, RequestInit, ResponseInit } from "./platform";

@@ -14,7 +14,7 @@ exports[`the server HTML is correct: page 1`] = `
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/\\">
@@ -37,29 +37,30 @@ exports[`the server HTML is correct: page 1`] = `
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/index\\": {
-              fileName: \\"routes/index-2925bc5f.js\\",
+              fileName: \\"routes/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
               ],
             },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
@@ -73,10 +74,10 @@ exports[`the server HTML is correct: page 1`] = `
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-2925bc5f.js\\";
-      window.__remixRoutes = { \\"routes/index\\": route0 };
+      import * as route0 from \\"/build/routes/index.js\\";
+      window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

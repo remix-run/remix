@@ -59,7 +59,7 @@ describe("data loading", () => {
       await page.goBack();
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      expect(dataResponses.length).toEqual(1);
+      expect(dataResponses.length).toEqual(2);
       expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
@@ -89,7 +89,7 @@ describe("data loading", () => {
       await page.goForward();
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
-      expect(dataResponses.length).toEqual(0);
+      expect(dataResponses.length).toEqual(2);
       expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });

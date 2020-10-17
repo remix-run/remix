@@ -17,7 +17,6 @@ import {
   createEntryMatches,
   createGlobalData,
   createRouteData,
-  createRouteLoader,
   createRouteManifest,
   createServerHandoffString
 } from "./entry";
@@ -300,7 +299,6 @@ async function handleHtmlRequest(
   let entryMatches = createEntryMatches(matches);
   let globalData = await createGlobalData(globalLoadResult);
   let routeData = await createRouteData(routeLoadResults, matches);
-  let routeLoader = createRouteLoader(routeModules);
 
   // Get the asset manifest for only the browser entry point + the matched
   // routes. The client will fill in the rest by making requests to the manifest
@@ -326,14 +324,14 @@ async function handleHtmlRequest(
   };
   let serverEntryContext = {
     ...serverHandoff,
-    routeLoader,
+    routeModules,
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
   // Calculate response headers from the matched routes.
   let headers = matches.reduce((parentsHeaders, match, index) => {
     let routeId = match.route.id;
-    let routeModule = routeLoader.read(routeId);
+    let routeModule = routeModules[routeId];
 
     if (typeof routeModule.headers === "function") {
       try {

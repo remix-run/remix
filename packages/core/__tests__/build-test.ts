@@ -299,8 +299,9 @@ describe("building", () => {
           "pages/one.js",
           "pages/two.js",
           "_shared/index-6a53de4a.js",
-          "_shared/index-90393731.js",
-          "_shared/Shared-ee27405e.js",
+          "_shared/index-718e6fb1.js",
+          "_shared/components-8878d443.js",
+          "_shared/Shared-8e56fbb3.js",
           "_shared/esm-733856b1.js",
           "global.css",
           "routes/gists.css",
@@ -319,7 +320,8 @@ describe("building", () => {
               "fileName": "entry-browser.js",
               "imports": Array [
                 "_shared/index-6a53de4a.js",
-                "_shared/index-90393731.js",
+                "_shared/index-718e6fb1.js",
+                "_shared/components-8878d443.js",
               ],
             },
             "global.css": Object {
@@ -355,8 +357,9 @@ describe("building", () => {
               "fileName": "routes/gists.js",
               "imports": Array [
                 "_shared/index-6a53de4a.js",
-                "_shared/index-90393731.js",
-                "_shared/Shared-ee27405e.js",
+                "_shared/index-718e6fb1.js",
+                "_shared/Shared-8e56fbb3.js",
+                "_shared/components-8878d443.js",
               ],
             },
             "routes/gists.css": Object {
@@ -372,22 +375,24 @@ describe("building", () => {
               "fileName": "routes/gists/$username.js",
               "imports": Array [
                 "_shared/index-6a53de4a.js",
-                "_shared/index-90393731.js",
+                "_shared/index-718e6fb1.js",
+                "_shared/components-8878d443.js",
               ],
             },
             "routes/gists/index": Object {
               "fileName": "routes/gists/index.js",
               "imports": Array [
                 "_shared/index-6a53de4a.js",
-                "_shared/index-90393731.js",
+                "_shared/index-718e6fb1.js",
+                "_shared/components-8878d443.js",
               ],
             },
             "routes/index": Object {
               "fileName": "routes/index.js",
               "imports": Array [
                 "_shared/index-6a53de4a.js",
-                "_shared/index-90393731.js",
-                "_shared/Shared-ee27405e.js",
+                "_shared/index-718e6fb1.js",
+                "_shared/Shared-8e56fbb3.js",
               ],
             },
             "routes/page/four": Object {
@@ -405,7 +410,7 @@ describe("building", () => {
               ],
             },
           },
-          "version": "9a737b7f607de805368d5715616402524e6cbb6e",
+          "version": "61d164f8708bd55c53aae99a6f47dad19d9ea4fb",
         }
       `);
     });
@@ -420,21 +425,22 @@ describe("building", () => {
 
       expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
         Array [
-          "entry-browser-b2d191f1.js",
+          "entry-browser-9b2d1603.js",
           "routes/404-1d515a6b.js",
           "routes/500-7a377214.js",
-          "routes/gists-0f157fcd.js",
-          "routes/gists/$username-bfe535e4.js",
-          "routes/gists/index-ca135fba.js",
+          "routes/gists-2f0a5270.js",
+          "routes/gists/$username-5e9758d3.js",
+          "routes/gists/index-7d56943b.js",
           "routes/gists.mine-9663993e.js",
-          "routes/index-26bba664.js",
+          "routes/index-ffbede6a.js",
           "routes/page/four-d3d923cc.js",
           "routes/page/three-00cfabbf.js",
           "pages/one-473f069d.js",
           "pages/two-6a6433e1.js",
           "_shared/index-c6ac21e6.js",
-          "_shared/index-01b7abde.js",
-          "_shared/Shared-e118765d.js",
+          "_shared/index-4f34fd44.js",
+          "_shared/components-1b90e512.js",
+          "_shared/Shared-54dd4117.js",
           "_shared/esm-7b00c7dc.js",
           "global-ec887178.css",
           "routes/gists-a6d2a823.css",
@@ -450,10 +456,11 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "fileName": "entry-browser-b2d191f1.js",
+              "fileName": "entry-browser-9b2d1603.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
-                "_shared/index-01b7abde.js",
+                "_shared/index-4f34fd44.js",
+                "_shared/components-1b90e512.js",
               ],
             },
             "global.css": Object {
@@ -486,11 +493,12 @@ describe("building", () => {
               ],
             },
             "routes/gists": Object {
-              "fileName": "routes/gists-0f157fcd.js",
+              "fileName": "routes/gists-2f0a5270.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
-                "_shared/index-01b7abde.js",
-                "_shared/Shared-e118765d.js",
+                "_shared/index-4f34fd44.js",
+                "_shared/Shared-54dd4117.js",
+                "_shared/components-1b90e512.js",
               ],
             },
             "routes/gists.css": Object {
@@ -503,25 +511,27 @@ describe("building", () => {
               ],
             },
             "routes/gists/$username": Object {
-              "fileName": "routes/gists/$username-bfe535e4.js",
+              "fileName": "routes/gists/$username-5e9758d3.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
-                "_shared/index-01b7abde.js",
+                "_shared/index-4f34fd44.js",
+                "_shared/components-1b90e512.js",
               ],
             },
             "routes/gists/index": Object {
-              "fileName": "routes/gists/index-ca135fba.js",
+              "fileName": "routes/gists/index-7d56943b.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
-                "_shared/index-01b7abde.js",
+                "_shared/index-4f34fd44.js",
+                "_shared/components-1b90e512.js",
               ],
             },
             "routes/index": Object {
-              "fileName": "routes/index-26bba664.js",
+              "fileName": "routes/index-ffbede6a.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
-                "_shared/index-01b7abde.js",
-                "_shared/Shared-e118765d.js",
+                "_shared/index-4f34fd44.js",
+                "_shared/Shared-54dd4117.js",
               ],
             },
             "routes/page/four": Object {
@@ -539,7 +549,7 @@ describe("building", () => {
               ],
             },
           },
-          "version": "6a08e57cf52868de96676e4cc7378427a543c76f",
+          "version": "71a426ec6d097e57440e9951e199fe32e13a764c",
         }
       `);
     });

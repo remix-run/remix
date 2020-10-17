@@ -23,16 +23,16 @@ describe("remix cli", () => {
       expect(stdout).toMatchInlineSnapshot(`
         "
           Usage
-            $ remix run [remixRoot]
             $ remix build [remixRoot]
+            $ remix run [remixRoot]
 
           Options
             --help              Print this help message and exit
             --version, -v       Print the CLI version and exit
 
           Examples
-            $ remix run my-website
             $ remix build my-website
+            $ remix run my-website
 
         "
       `);

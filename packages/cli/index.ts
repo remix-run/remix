@@ -4,16 +4,16 @@ import { BuildMode, commands } from "@remix-run/core";
 
 const helpText = `
 Usage
-  $ remix run [remixRoot]
   $ remix build [remixRoot]
+  $ remix run [remixRoot]
 
 Options
   --help              Print this help message and exit
   --version, -v       Print the CLI version and exit
 
 Examples
-  $ remix run my-website
   $ remix build my-website
+  $ remix run my-website
 `;
 
 const flags: AnyFlags = {
@@ -38,7 +38,7 @@ switch (cli.input[0]) {
   case "build":
     commands.build(
       cli.input[1],
-      process.env.NODE_ENV === "development"
+      process.env.NODE_ENV === BuildMode.Development
         ? BuildMode.Development
         : BuildMode.Production
     );

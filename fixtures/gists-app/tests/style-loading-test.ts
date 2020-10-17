@@ -1,7 +1,7 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
-import { reactIsHydrated, collectResponses } from "./utils";
+import { reactIsHydrated, collectResponses, prettyHtml } from "./utils";
 
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
@@ -22,7 +22,7 @@ describe("style loading", () => {
       await reactIsHydrated(page);
 
       let cssResponses = collectResponses(page, url =>
-        /routes\/gists-[a-z0-9]+\.css/.test(url.pathname)
+        url.pathname.endsWith("routes/gists.css")
       );
 
       await page.click('a[href="/gists"]');
@@ -30,7 +30,7 @@ describe("style loading", () => {
 
       // first response is the preload in the transition
       // second response is the <link> from <Styles>
-      expect(cssResponses.length).toBe(2);
+      expect(cssResponses.length).toEqual(2);
     });
   });
 });

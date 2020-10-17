@@ -11,7 +11,7 @@ exports[`data loading mdx works: page 1`] = `
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
   </head>
   <body class=\\"m-4\\">
     <h1>Page One</h1>
@@ -26,25 +26,26 @@ export default function PageOne() {
 }
 </code></pre>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"pages/one\\": {
-              fileName: \\"pages/one-eec37527.js\\",
-              imports: [\\"_shared/index-27f12631.js\\", \\"_shared/esm-73f17297.js\\"],
+              fileName: \\"pages/one.js\\",
+              imports: [\\"_shared/index-67ee0970.js\\", \\"_shared/esm-b22eb961.js\\"],
             },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
@@ -58,10 +59,10 @@ export default function PageOne() {
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/pages/one-eec37527.js\\";
-      window.__remixRoutes = { \\"pages/one\\": route0 };
+      import * as route0 from \\"/build/pages/one.js\\";
+      window.__remixContext.routeModules = { \\"pages/one\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -78,7 +79,7 @@ exports[`data loading mdx works: page 2`] = `
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
   </head>
   <body class=\\"m-4\\">
     <h1>Page One</h1>
@@ -93,25 +94,26 @@ export default function PageOne() {
 }
 </code></pre>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"pages/one\\": {
-              fileName: \\"pages/one-eec37527.js\\",
-              imports: [\\"_shared/index-27f12631.js\\", \\"_shared/esm-73f17297.js\\"],
+              fileName: \\"pages/one.js\\",
+              imports: [\\"_shared/index-67ee0970.js\\", \\"_shared/esm-b22eb961.js\\"],
             },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
@@ -125,10 +127,10 @@ export default function PageOne() {
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/pages/one-eec37527.js\\";
-      window.__remixRoutes = { \\"pages/one\\": route0 };
+      import * as route0 from \\"/build/pages/one.js\\";
+      window.__remixContext.routeModules = { \\"pages/one\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -145,8 +147,8 @@ exports[`data loading transitioning back after a reload loads data for the previ
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -174,50 +176,58 @@ exports[`data loading transitioning back after a reload loads data for the previ
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index-a24a2fe0.js\\",
+              fileName: \\"routes/gists/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/index\\": {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: {},
@@ -225,6 +235,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             route: {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -255,14 +266,14 @@ exports[`data loading transitioning back after a reload loads data for the previ
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/index-a24a2fe0.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -279,8 +290,8 @@ exports[`data loading transitioning back after a reload loads data for the previ
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -308,50 +319,58 @@ exports[`data loading transitioning back after a reload loads data for the previ
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index-a24a2fe0.js\\",
+              fileName: \\"routes/gists/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/index\\": {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: {},
@@ -359,6 +378,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             route: {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -389,14 +409,14 @@ exports[`data loading transitioning back after a reload loads data for the previ
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/index-a24a2fe0.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -413,8 +433,8 @@ exports[`data loading transitioning back after a reload loads data for the previ
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -442,50 +462,58 @@ exports[`data loading transitioning back after a reload loads data for the previ
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/$username\\": {
-              fileName: \\"routes/gists/$username-ced94f73.js\\",
+              fileName: \\"routes/gists/$username.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/$username\\": {
               id: \\"routes/gists/$username\\",
               path: \\":username\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: { username: \\"mjackson\\" },
@@ -493,6 +521,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
             route: {
               id: \\"routes/gists/$username\\",
               path: \\":username\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -523,14 +552,14 @@ exports[`data loading transitioning back after a reload loads data for the previ
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/$username-ced94f73.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/$username.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -547,8 +576,8 @@ exports[`data loading transitioning forward to a page we have already seen does 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -576,50 +605,58 @@ exports[`data loading transitioning forward to a page we have already seen does 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index-a24a2fe0.js\\",
+              fileName: \\"routes/gists/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/index\\": {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: {},
@@ -627,6 +664,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             route: {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -657,14 +695,14 @@ exports[`data loading transitioning forward to a page we have already seen does 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/index-a24a2fe0.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -681,8 +719,8 @@ exports[`data loading transitioning forward to a page we have already seen does 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -710,50 +748,58 @@ exports[`data loading transitioning forward to a page we have already seen does 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index-a24a2fe0.js\\",
+              fileName: \\"routes/gists/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/index\\": {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: {},
@@ -761,6 +807,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             route: {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -791,14 +838,14 @@ exports[`data loading transitioning forward to a page we have already seen does 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/index-a24a2fe0.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -815,8 +862,8 @@ exports[`data loading transitioning forward to a page we have already seen does 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -844,50 +891,58 @@ exports[`data loading transitioning forward to a page we have already seen does 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index-a24a2fe0.js\\",
+              fileName: \\"routes/gists/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/index\\": {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: {},
@@ -895,6 +950,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             route: {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -925,14 +981,14 @@ exports[`data loading transitioning forward to a page we have already seen does 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/index-a24a2fe0.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -949,8 +1005,8 @@ exports[`data loading transitioning forward to a page we have already seen does 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -978,50 +1034,58 @@ exports[`data loading transitioning forward to a page we have already seen does 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/gists\\": {
-              fileName: \\"routes/gists-ee32124d.js\\",
+              fileName: \\"routes/gists.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
             \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index-a24a2fe0.js\\",
+              fileName: \\"routes/gists/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists-a6d2a823.css\\" },
+            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
           },
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              id: \\"routes/gists\\",
+              path: \\"gists\\",
+              hasLoader: true,
+            },
             \\"routes/gists/index\\": {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: { id: \\"routes/gists\\", path: \\"gists\\", hasLoader: true },
           },
           {
             params: {},
@@ -1029,6 +1093,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
             route: {
               id: \\"routes/gists/index\\",
               path: \\"/\\",
+              hasLoader: true,
               parentId: \\"routes/gists\\",
             },
           },
@@ -1059,14 +1124,14 @@ exports[`data loading transitioning forward to a page we have already seen does 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-ee32124d.js\\";
-      import * as route1 from \\"/build/routes/gists/index-a24a2fe0.js\\";
-      window.__remixRoutes = {
+      import * as route0 from \\"/build/routes/gists.js\\";
+      import * as route1 from \\"/build/routes/gists/index.js\\";
+      window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/index\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -1086,7 +1151,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/\\">
@@ -1109,29 +1174,30 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/index\\": {
-              fileName: \\"routes/index-2925bc5f.js\\",
+              fileName: \\"routes/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
               ],
             },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
@@ -1145,10 +1211,10 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-2925bc5f.js\\";
-      window.__remixRoutes = { \\"routes/index\\": route0 };
+      import * as route0 from \\"/build/routes/index.js\\";
+      window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -1165,8 +1231,8 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -1194,29 +1260,30 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       <div>I am shared</div>
     </div>
     <script>
-      window.__remixServerHandoff = {
+      window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
             \\"entry-browser\\": {
-              fileName: \\"entry-browser-c7e14c78.js\\",
+              fileName: \\"entry-browser.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/components-f79e0f87.js\\",
               ],
             },
-            \\"global.css\\": { fileName: \\"global-ec887178.css\\" },
+            \\"global.css\\": { fileName: \\"global.css\\" },
             \\"routes/index\\": {
-              fileName: \\"routes/index-2925bc5f.js\\",
+              fileName: \\"routes/index.js\\",
               imports: [
-                \\"_shared/index-27f12631.js\\",
-                \\"_shared/index-fe6f4507.js\\",
-                \\"_shared/Shared-fb04e9d8.js\\",
+                \\"_shared/index-67ee0970.js\\",
+                \\"_shared/index-a426eba5.js\\",
+                \\"_shared/Shared-8fd0b30d.js\\",
               ],
             },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"d5b82f9f94846cacb67f0168dacac7da7ea224ea\\",
+          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
         },
         matches: [
           {
@@ -1230,10 +1297,10 @@ exports[`data loading transitioning to a new route loads data for all routes on 
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-2925bc5f.js\\";
-      window.__remixRoutes = { \\"routes/index\\": route0 };
+      import * as route0 from \\"/build/routes/index.js\\";
+      window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-c7e14c78.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

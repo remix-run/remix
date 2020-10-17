@@ -1,7 +1,7 @@
 import jsesc from "jsesc";
 import type { Params } from "react-router";
 
-import type { AssetManifest, RouteModule, RouteModules } from "./build";
+import type { AssetManifest, RouteModules } from "./build";
 import type { AppLoadResult, AppData } from "./data";
 import { extractData } from "./data";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
@@ -16,7 +16,7 @@ export interface ServerHandoff {
 }
 
 export interface EntryContext extends ServerHandoff {
-  routeLoader: RouteLoader;
+  routeModules: RouteModules;
   serverHandoffString?: string;
 }
 
@@ -28,6 +28,7 @@ export interface EntryManifest {
 
 export interface EntryRouteObject {
   caseSensitive?: boolean;
+  hasLoader?: boolean;
   id: string;
   parentId?: string;
   path: string;
@@ -43,6 +44,9 @@ export function createEntryRoute(
 
   if (typeof configRoute.caseSensitive !== "undefined") {
     route.caseSensitive = configRoute.caseSensitive;
+  }
+  if (configRoute.loaderFile) {
+    route.hasLoader = true;
   }
   if (configRoute.parentId) {
     route.parentId = configRoute.parentId;
@@ -84,27 +88,6 @@ export async function createRouteData(
     memo[match.route.id] = data[index];
     return memo;
   }, {} as RouteData);
-}
-
-export interface RouteLoader {
-  preload(
-    assets: AssetManifest["entries"],
-    routeId: string
-  ): Promise<RouteModule>;
-  read(routeId: string): RouteModule;
-}
-
-export function createRouteLoader(routeModules: RouteModules): RouteLoader {
-  return {
-    preload() {
-      throw new Error(
-        `Cannot preload routes on the server because we can't suspend`
-      );
-    },
-    read(routeId: string) {
-      return routeModules[routeId];
-    }
-  };
 }
 
 export function createRouteManifest(

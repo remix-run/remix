@@ -3,15 +3,8 @@ import { Action, createPath } from "history";
 import type { ReactNode } from "react";
 import React from "react";
 import type { EntryContext } from "@remix-run/core";
-// import { Headers, Request, Response } from '@remix-run/core';
 
-import { RemixEntry } from "./internals";
-
-// TODO: Make these global so people can use them in entry-server.js w/out
-// importing anything
-// global.Headers = Headers;
-// global.Request = Request;
-// global.Response = Response;
+import { RemixEntry } from "./components";
 
 export interface RemixServerProps {
   children: ReactNode;
