@@ -52,7 +52,11 @@ describe("building", () => {
         item => item.fileName === "server-manifest.json"
       ) as OutputAsset;
 
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(`
+      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+        {
+          version: expect.any(String)
+        },
+        `
         Object {
           "entries": Object {
             "entry-server": Object {
@@ -141,9 +145,10 @@ describe("building", () => {
               ],
             },
           },
-          "version": "b79e8ef4a22ccb26a45c12247f291841b25cae50",
+          "version": Any<String>,
         }
-      `);
+      `
+      );
     });
   });
 
@@ -178,7 +183,11 @@ describe("building", () => {
         item => item.fileName === "server-manifest.json"
       ) as OutputAsset;
 
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(`
+      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+        {
+          version: expect.any(String)
+        },
+        `
         Object {
           "entries": Object {
             "entry-server": Object {
@@ -271,9 +280,10 @@ describe("building", () => {
               ],
             },
           },
-          "version": "5c711f5e2511bf1fd8166f346f7b77bd72e99079",
+          "version": Any<String>,
         }
-      `);
+      `
+      );
     });
   });
 
@@ -300,7 +310,7 @@ describe("building", () => {
           "pages/two.js",
           "_shared/index-6a53de4a.js",
           "_shared/index-718e6fb1.js",
-          "_shared/components-8878d443.js",
+          "_shared/components-a5fb950d.js",
           "_shared/Shared-8e56fbb3.js",
           "_shared/esm-733856b1.js",
           "global.css",
@@ -313,7 +323,11 @@ describe("building", () => {
         item => item.fileName === "asset-manifest.json"
       ) as OutputAsset;
 
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(`
+      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+        {
+          version: expect.any(String)
+        },
+        `
         Object {
           "entries": Object {
             "entry-browser": Object {
@@ -321,7 +335,7 @@ describe("building", () => {
               "imports": Array [
                 "_shared/index-6a53de4a.js",
                 "_shared/index-718e6fb1.js",
-                "_shared/components-8878d443.js",
+                "_shared/components-a5fb950d.js",
               ],
             },
             "global.css": Object {
@@ -359,7 +373,7 @@ describe("building", () => {
                 "_shared/index-6a53de4a.js",
                 "_shared/index-718e6fb1.js",
                 "_shared/Shared-8e56fbb3.js",
-                "_shared/components-8878d443.js",
+                "_shared/components-a5fb950d.js",
               ],
             },
             "routes/gists.css": Object {
@@ -376,7 +390,7 @@ describe("building", () => {
               "imports": Array [
                 "_shared/index-6a53de4a.js",
                 "_shared/index-718e6fb1.js",
-                "_shared/components-8878d443.js",
+                "_shared/components-a5fb950d.js",
               ],
             },
             "routes/gists/index": Object {
@@ -384,7 +398,7 @@ describe("building", () => {
               "imports": Array [
                 "_shared/index-6a53de4a.js",
                 "_shared/index-718e6fb1.js",
-                "_shared/components-8878d443.js",
+                "_shared/components-a5fb950d.js",
               ],
             },
             "routes/index": Object {
@@ -410,9 +424,10 @@ describe("building", () => {
               ],
             },
           },
-          "version": "61d164f8708bd55c53aae99a6f47dad19d9ea4fb",
+          "version": Any<String>,
         }
-      `);
+      `
+      );
     });
   });
 
@@ -425,12 +440,12 @@ describe("building", () => {
 
       expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
         Array [
-          "entry-browser-9b2d1603.js",
+          "entry-browser-2b1a887c.js",
           "routes/404-1d515a6b.js",
           "routes/500-7a377214.js",
-          "routes/gists-2f0a5270.js",
-          "routes/gists/$username-5e9758d3.js",
-          "routes/gists/index-7d56943b.js",
+          "routes/gists-a8b0ce68.js",
+          "routes/gists/$username-ea04ba74.js",
+          "routes/gists/index-02db2684.js",
           "routes/gists.mine-9663993e.js",
           "routes/index-ffbede6a.js",
           "routes/page/four-d3d923cc.js",
@@ -439,7 +454,7 @@ describe("building", () => {
           "pages/two-6a6433e1.js",
           "_shared/index-c6ac21e6.js",
           "_shared/index-4f34fd44.js",
-          "_shared/components-1b90e512.js",
+          "_shared/components-1363a556.js",
           "_shared/Shared-54dd4117.js",
           "_shared/esm-7b00c7dc.js",
           "global-ec887178.css",
@@ -452,15 +467,19 @@ describe("building", () => {
         item => item.fileName === "asset-manifest.json"
       ) as OutputAsset;
 
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(`
+      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+        {
+          version: expect.any(String)
+        },
+        `
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "fileName": "entry-browser-9b2d1603.js",
+              "fileName": "entry-browser-2b1a887c.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
                 "_shared/index-4f34fd44.js",
-                "_shared/components-1b90e512.js",
+                "_shared/components-1363a556.js",
               ],
             },
             "global.css": Object {
@@ -493,12 +512,12 @@ describe("building", () => {
               ],
             },
             "routes/gists": Object {
-              "fileName": "routes/gists-2f0a5270.js",
+              "fileName": "routes/gists-a8b0ce68.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
                 "_shared/index-4f34fd44.js",
                 "_shared/Shared-54dd4117.js",
-                "_shared/components-1b90e512.js",
+                "_shared/components-1363a556.js",
               ],
             },
             "routes/gists.css": Object {
@@ -511,19 +530,19 @@ describe("building", () => {
               ],
             },
             "routes/gists/$username": Object {
-              "fileName": "routes/gists/$username-5e9758d3.js",
+              "fileName": "routes/gists/$username-ea04ba74.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
                 "_shared/index-4f34fd44.js",
-                "_shared/components-1b90e512.js",
+                "_shared/components-1363a556.js",
               ],
             },
             "routes/gists/index": Object {
-              "fileName": "routes/gists/index-7d56943b.js",
+              "fileName": "routes/gists/index-02db2684.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
                 "_shared/index-4f34fd44.js",
-                "_shared/components-1b90e512.js",
+                "_shared/components-1363a556.js",
               ],
             },
             "routes/index": Object {
@@ -549,9 +568,10 @@ describe("building", () => {
               ],
             },
           },
-          "version": "71a426ec6d097e57440e9951e199fe32e13a764c",
+          "version": Any<String>,
         }
-      `);
+      `
+      );
     });
   });
 });
