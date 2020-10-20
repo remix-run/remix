@@ -1,33 +1,21 @@
+import type { ResponseInit } from "@remix-run/core";
 import { Headers, Request, Response } from "@remix-run/core";
 
-// TODO: Make these global in loaders so they don't have to import anything.
+// These are already global, but just re-export them here for convenience.
 export { Headers, Request, Response };
 
 /**
- * A JSON response. Defaults to a 200 status with a
- * `Content-Type: application/json; charset=utf-8` header.
+ * A JSON response. This helper takes care of converting the `data` to JSON
+ * (using `JSON.stringify(data)`) and setting the `Content-Type` header.
  */
-export function json(
-  data: any,
-  {
-    status = 200,
-    headers: headersInit
-  }: {
-    status?: number;
-    headers?: ConstructorParameters<typeof Headers>[0];
-  } = {}
-) {
-  let content = JSON.stringify(data);
-  let headers = new Headers(headersInit);
+export function json(data: any, init: ResponseInit = {}) {
+  let headers = new Headers(init.headers);
 
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
-  if (!headers.has("Content-Length")) {
-    headers.set("Content-Length", content.length);
-  }
 
-  return new Response(content, { status, headers });
+  return new Response(JSON.stringify(data), { ...init, headers });
 }
 
 /**

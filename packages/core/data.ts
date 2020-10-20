@@ -2,7 +2,7 @@ import path from "path";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";
-import { Response, isResponseLike } from "./platform";
+import { Response, isResponseLike } from "./fetch";
 
 /**
  * Some data that was returned from a data loader.

@@ -6,7 +6,7 @@ import fetch from "node-fetch";
 
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
-import type { Headers, HeadersInit, Request, Response } from "./platform";
+import type { Headers, HeadersInit, Request, Response } from "./fetch";
 import type { BuildManifest } from "./rollup/manifest";
 
 /**

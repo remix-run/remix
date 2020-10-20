@@ -36,16 +36,21 @@ export type {
   RouteData
 } from "./entry";
 
-export type { HeadersInit, RequestInit, ResponseInit } from "./platform";
+export type {
+  HeadersInit,
+  RequestInfo,
+  RequestInit,
+  ResponseInit
+} from "./fetch";
 export {
-  StatusCodes,
   Headers,
   Request,
   isRequestLike,
   Response,
   isResponseLike,
-  isRedirectStatusCode
-} from "./platform";
+  fetch,
+  isRedirect
+} from "./fetch";
 
 export type { RouteManifest } from "./routes";
 
