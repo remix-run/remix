@@ -19,8 +19,8 @@ describe("the server HTML", () => {
   it("is correct", async () => {
     await page.goto(`${testServer}/`);
 
-    // Important: Do NOT wait for React to hydrate because we want to test the
-    // server HTML output.
+    // Important: Do NOT wait for React to hydrate
+    // because we want to test the server HTML output.
 
     expect(prettyHtml(await page.content())).toMatchSnapshot("page");
   });

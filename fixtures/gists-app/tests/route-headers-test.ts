@@ -34,7 +34,7 @@ describe("route headers", () => {
           "content-length": "2666",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"a6a-C6qk9a8fmQwKmB/mw2MylovlKPA\\"",
+          "etag": "W/\\"a6a-qqpBvk9aagz6uN1eFYjeQfO+Jb8\\"",
           "x-powered-by": "Express",
         }
       `
@@ -63,7 +63,7 @@ describe("route headers", () => {
           "content-length": "2773",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"ad5-3gHzfY/rXTTyKfeubbzfkM5DFIM\\"",
+          "etag": "W/\\"ad5-REIzb1QIlM0JqX5NrkRHoW6hByE\\"",
           "x-powered-by": "Express",
         }
       `
@@ -92,7 +92,7 @@ describe("route headers", () => {
           "content-length": "1489",
           "content-type": "text/html; charset=utf-8",
           "date": Any<String>,
-          "etag": "W/\\"5d1-8/RmPlS18LdNhYE7xBuKoT/Mmds\\"",
+          "etag": "W/\\"5d1-4l6lO6QXr5V28OQJGBICvRs3LFQ\\"",
           "x-powered-by": "Express",
         }
       `

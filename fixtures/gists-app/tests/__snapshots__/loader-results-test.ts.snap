@@ -49,7 +49,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
               imports: [
                 \\"_shared/index-67ee0970.js\\",
                 \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-f79e0f87.js\\",
+                \\"_shared/components-b9a3520e.js\\",
               ],
             },
             \\"global.css\\": { fileName: \\"global.css\\" },
@@ -59,7 +59,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
                 \\"_shared/index-67ee0970.js\\",
                 \\"_shared/index-a426eba5.js\\",
                 \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-f79e0f87.js\\",
+                \\"_shared/components-b9a3520e.js\\",
               ],
             },
             \\"routes/gists/$username\\": {
@@ -67,7 +67,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
               imports: [
                 \\"_shared/index-67ee0970.js\\",
                 \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-f79e0f87.js\\",
+                \\"_shared/components-b9a3520e.js\\",
               ],
             },
             \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
@@ -85,7 +85,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b552aeeae481d8f98264f299d5891160849585ae\\",
+          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
         },
         matches: [
           {
