@@ -55,7 +55,8 @@
     "rollup": "^2.26.11",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.2",
-    "typescript": "^3.9.6"
+    "typescript": "^3.9.6",
+    "unified": "^9.2.0"
   },
   "eslintConfig": {
     "extends": "react-app"

@@ -1,4 +1,5 @@
 import path from "path";
+import type { MdxOptions } from "@mdx-js/mdx";
 
 import type { ConfigRouteObject, RouteManifest } from "./routes";
 import {
@@ -37,7 +38,7 @@ export interface AppConfig {
   /**
    * Options to use when compiling MDX.
    */
-  mdx?: Partial<MDXOptions>;
+  mdx?: MdxOptions;
 
   /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
@@ -84,7 +85,7 @@ export interface RemixConfig {
   /**
    * Options to use when compiling MDX.
    */
-  mdx?: Partial<MDXOptions>;
+  mdx?: MdxOptions;
 
   /**
    * The URL prefix of the browser build with a trailing slash.
@@ -110,22 +111,6 @@ export interface RemixConfig {
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
-}
-
-interface MDXOptions {
-  /**
-   * List of rehype plugins to use.
-   *
-   * @see https://github.com/rehypejs/rehype/blob/main/doc/plugins.md#list-of-plugins
-   */
-  rehypePlugins: any[];
-
-  /**
-   * List of remark plugins to use.
-   *
-   * @see https://github.com/remarkjs/remark/blob/main/doc/plugins.md#list-of-plugins
-   */
-  remarkPlugins: any[];
 }
 
 /**
