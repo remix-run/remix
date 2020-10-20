@@ -9,7 +9,7 @@ export function meta() {
 }
 
 export default function GistsIndex() {
-  let [data] = useRouteData();
+  let data = useRouteData();
 
   return (
     <div data-test-id="/gists/index">

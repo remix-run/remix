@@ -20,7 +20,7 @@ export function meta({ data, params }) {
 
 export default function UserGists() {
   let { username } = useParams();
-  let [data] = useRouteData();
+  let data = useRouteData();
 
   return (
     <div data-test-id="/gists/$username">

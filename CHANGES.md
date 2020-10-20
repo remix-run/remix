@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Breaking Changes
+
+- Return data directly (instead of `useState` tuple) from `useGlobalData` and
+  `useRouteData`
+
 ## 0.4.1 - Mon Oct 19 2020
 
 ## Features

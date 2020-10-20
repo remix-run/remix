@@ -30,10 +30,7 @@ export function createClientRoute(
     id: entryRoute.id,
     path: entryRoute.path,
     element: React.createElement(elementType, {
-      id: entryRoute.id,
-      // We need to use a key here because <RemixRoute> is stateful, so we need
-      // new state each time it represents a different route.
-      key: entryRoute.id
+      id: entryRoute.id
     })
   };
 }

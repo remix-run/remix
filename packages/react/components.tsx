@@ -22,13 +22,11 @@ import {
 } from "./routes";
 import { loadRouteStyleSheet } from "./stylesheets";
 
-type UseStateTuple<T> = [T, Dispatch<SetStateAction<T>>];
-
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
 interface RemixEntryContextType {
-  globalDataState: UseStateTuple<AppData>;
+  globalData: AppData;
   manifest: Manifest;
   matches: ClientRouteMatch[];
   pending: boolean;
@@ -81,8 +79,6 @@ export function RemixEntry({
     routeData: entryRouteData
   });
   let { action, location, matches, pending, routeData } = state;
-
-  let globalDataState = React.useState(globalData);
 
   React.useEffect(() => {
     if (location === nextLocation) return;
@@ -141,7 +137,7 @@ export function RemixEntry({
   }, [nextAction, nextLocation, location, matches, publicPath]);
 
   let context: RemixEntryContextType = {
-    globalDataState,
+    globalData,
     manifest,
     matches,
     pending,
@@ -169,7 +165,7 @@ export function RemixEntry({
 // RemixRoute
 
 interface RemixRouteContextType {
-  dataState: UseStateTuple<AppData>;
+  data: AppData;
   id: string;
 }
 
@@ -186,7 +182,7 @@ function useRemixRouteContext(): RemixRouteContextType {
 export function RemixRoute({ id: routeId }: { id: string }) {
   let { routeData, routeModules } = useRemixEntryContext();
 
-  let routeDataState = React.useState(routeData[routeId]);
+  let data = routeData[routeId];
   let routeModule = routeModules[routeId];
 
   if (!routeModule) {
@@ -198,7 +194,7 @@ export function RemixRoute({ id: routeId }: { id: string }) {
   }
 
   let context: RemixRouteContextType = {
-    dataState: routeDataState,
+    data,
     id: routeId
   };
 
@@ -345,15 +341,15 @@ export function Routes() {
 /**
  * Returns the data from `data/global.js`.
  */
-export function useGlobalData() {
-  return useRemixEntryContext().globalDataState;
+export function useGlobalData(): AppData {
+  return useRemixEntryContext().globalData;
 }
 
 /**
  * Returns the data for the current route from `data/routes/*`.
  */
-export function useRouteData() {
-  return useRemixRouteContext().dataState;
+export function useRouteData(): AppData {
+  return useRemixRouteContext().data;
 }
 
 /**
@@ -362,7 +358,7 @@ export function useRouteData() {
  *
  * TODO: Move this hook back into RR v6 beta (out of experimental)
  */
-export function useLocationPending() {
+export function useLocationPending(): boolean {
   return useRemixEntryContext().pending;
 }
 
@@ -375,7 +371,7 @@ export function useLocationPending() {
  * Note: The `callback` argument should be a function created with
  * `React.useCallback()`.
  */
-export function useBeforeUnload(callback: () => any) {
+export function useBeforeUnload(callback: () => any): void {
   React.useEffect(() => {
     window.addEventListener("beforeunload", callback);
 

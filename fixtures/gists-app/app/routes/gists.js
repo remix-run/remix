@@ -12,8 +12,7 @@ export function headers() {
 
 export default function Gists() {
   let locationPending = useLocationPending();
-  let [data] = useRouteData();
-  let { users } = data;
+  let { users } = useRouteData();
 
   return (
     <div data-test-id="/gists">
