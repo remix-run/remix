@@ -8,6 +8,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 - Return data directly (instead of `useState` tuple) from `useGlobalData` and
   `useRouteData`
+- Default to `NODE_ENV=development` in `remix build`
 
 ## 0.4.1 - Mon Oct 19 2020
 

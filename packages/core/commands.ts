@@ -9,7 +9,7 @@ async function buildCommand(
   remixRoot: string,
   mode: BuildMode = BuildMode.Production
 ) {
-  console.log("Building Remix app...");
+  console.log(`Building Remix app for ${mode}...`);
 
   let config = await readConfig(remixRoot);
 

@@ -38,9 +38,9 @@ switch (cli.input[0]) {
   case "build":
     commands.build(
       cli.input[1],
-      process.env.NODE_ENV === BuildMode.Development
-        ? BuildMode.Development
-        : BuildMode.Production
+      process.env.NODE_ENV === BuildMode.Production
+        ? BuildMode.Production
+        : BuildMode.Development
     );
     break;
   case "run":
