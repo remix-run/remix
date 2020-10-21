@@ -23,21 +23,8 @@ describe("route headers", () => {
       await page.goto(`${testServer}/gists`);
 
       expect(responses).toHaveLength(1);
-      expect(responses[0].headers()).toMatchInlineSnapshot(
-        {
-          date: expect.any(String)
-        },
-        `
-        Object {
-          "cache-control": "public, max-age=60",
-          "connection": "keep-alive",
-          "content-length": "2666",
-          "content-type": "text/html; charset=utf-8",
-          "date": Any<String>,
-          "etag": "W/\\"a6a-qqpBvk9aagz6uN1eFYjeQfO+Jb8\\"",
-          "x-powered-by": "Express",
-        }
-      `
+      expect(responses[0].headers()["cache-control"]).toEqual(
+        "public, max-age=60"
       );
     });
   });
@@ -52,21 +39,8 @@ describe("route headers", () => {
       await page.goto(`${testServer}/gists/mjackson`);
 
       expect(responses).toHaveLength(1);
-      expect(responses[0].headers()).toMatchInlineSnapshot(
-        {
-          date: expect.any(String)
-        },
-        `
-        Object {
-          "cache-control": "public, max-age=300",
-          "connection": "keep-alive",
-          "content-length": "2773",
-          "content-type": "text/html; charset=utf-8",
-          "date": Any<String>,
-          "etag": "W/\\"ad5-REIzb1QIlM0JqX5NrkRHoW6hByE\\"",
-          "x-powered-by": "Express",
-        }
-      `
+      expect(responses[0].headers()["cache-control"]).toEqual(
+        "public, max-age=300"
       );
     });
   });
@@ -81,21 +55,8 @@ describe("route headers", () => {
       await page.goto(`${testServer}/page/one`);
 
       expect(responses).toHaveLength(1);
-      expect(responses[0].headers()).toMatchInlineSnapshot(
-        {
-          date: expect.any(String)
-        },
-        `
-        Object {
-          "cache-control": "max-age=0, public, must-revalidate",
-          "connection": "keep-alive",
-          "content-length": "1489",
-          "content-type": "text/html; charset=utf-8",
-          "date": Any<String>,
-          "etag": "W/\\"5d1-4l6lO6QXr5V28OQJGBICvRs3LFQ\\"",
-          "x-powered-by": "Express",
-        }
-      `
+      expect(responses[0].headers()["cache-control"]).toEqual(
+        "public, max-age=0, must-revalidate"
       );
     });
   });

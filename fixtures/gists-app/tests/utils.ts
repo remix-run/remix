@@ -9,10 +9,11 @@ export function reactIsHydrated(page: Page) {
   return page.waitForFunction("window.reactIsHydrated === true");
 }
 
-export function collectResponses(
-  page: Page,
-  filter?: (url: URL) => boolean
-): Response[] {
+interface UrlFilter {
+  (url: URL): boolean;
+}
+
+export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
   let responses: Response[] = [];
 
   page.on("response", res => {
