@@ -171,7 +171,7 @@ describe("building", () => {
           "routes/index-933c0125.js",
           "routes/page/four-c9ce2fc6.js",
           "routes/page/three-cbc19f53.js",
-          "pages/one-57b1bc15.js",
+          "pages/one-84a0981a.js",
           "pages/two-c45d0835.js",
           "_shared/Shared-4f69c99e.js",
           "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
@@ -201,7 +201,7 @@ describe("building", () => {
               ],
             },
             "pages/one": Object {
-              "fileName": "pages/one-57b1bc15.js",
+              "fileName": "pages/one-84a0981a.js",
               "imports": Array [
                 "react",
                 "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
@@ -450,7 +450,7 @@ describe("building", () => {
           "routes/index-ffbede6a.js",
           "routes/page/four-d3d923cc.js",
           "routes/page/three-00cfabbf.js",
-          "pages/one-473f069d.js",
+          "pages/one-cac2d94e.js",
           "pages/two-6a6433e1.js",
           "_shared/index-c6ac21e6.js",
           "_shared/index-4f34fd44.js",
@@ -486,7 +486,7 @@ describe("building", () => {
               "fileName": "global-ec887178.css",
             },
             "pages/one": Object {
-              "fileName": "pages/one-473f069d.js",
+              "fileName": "pages/one-cac2d94e.js",
               "imports": Array [
                 "_shared/index-c6ac21e6.js",
                 "_shared/esm-7b00c7dc.js",

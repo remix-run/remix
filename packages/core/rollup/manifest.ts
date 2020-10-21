@@ -70,7 +70,7 @@ export default function manifestPlugin({
       isWrite: boolean
     ) {
       let manifest: BuildManifest = {
-        version: createChecksum(bundle),
+        version: createChecksum(bundle).slice(0, 8),
         entries: createEntries(bundle)
       };
 

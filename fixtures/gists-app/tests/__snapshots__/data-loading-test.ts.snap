@@ -45,7 +45,7 @@ export default function PageOne() {
             },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -113,7 +113,7 @@ export default function PageOne() {
             },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -221,7 +221,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -364,7 +364,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -507,7 +507,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -650,7 +650,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -793,7 +793,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -936,7 +936,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -1079,7 +1079,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -1197,7 +1197,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
             },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
@@ -1283,7 +1283,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
             },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {

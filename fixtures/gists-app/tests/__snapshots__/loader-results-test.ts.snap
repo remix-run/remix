@@ -85,7 +85,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"2c7e35af870ac0b5687329ab992cb0cce999c60d\\",
+          version: \\"befe7fb2\\",
         },
         matches: [
           {
