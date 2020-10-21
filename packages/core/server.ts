@@ -28,6 +28,10 @@ import { purgeRequireCache } from "./requireCache";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
 
+const PROD = process.env.NODE_ENV === "production";
+const TEST = process.env.NODE_ENV === "test";
+const DEV = !(PROD || TEST);
+
 /**
  * The main request handler for a Remix server. This handler runs in the context
  * of a cloud provider's server (e.g. Express on Firebase) or locally via their
@@ -50,10 +54,7 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
   let configPromise = readConfig(remixRoot);
 
   return async (req, loadContext = {}) => {
-    if (
-      process.env.NODE_ENV !== "production" &&
-      process.env.NODE_ENV !== "test"
-    ) {
+    if (DEV) {
       let config = await configPromise;
       purgeRequireCache(config.rootDirectory);
       configPromise = readConfig(remixRoot);
@@ -123,11 +124,8 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   }
 
   let assetManifest: AssetManifest;
-  if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.NODE_ENV !== "test"
-  ) {
-    rewritePublicPath(config);
+  if (DEV) {
+    adjustDevConfig(config, matches);
 
     try {
       assetManifest = await getDevAssetManifest(config.publicPath);
@@ -175,7 +173,9 @@ async function handleHtmlRequest(
   let matches = matchRoutes(config.routes, url.pathname);
 
   function handleDataLoadError(error: any) {
-    console.error(error);
+    if (!TEST) {
+      console.error(error);
+    }
 
     statusCode = 500;
     matches = [
@@ -191,9 +191,6 @@ async function handleHtmlRequest(
     ];
   }
 
-  let globalLoadResult: AppLoadResult = null;
-  let routeLoadResults: AppLoadResult[] = [];
-
   if (!matches) {
     statusCode = 404;
     matches = [
@@ -207,67 +204,59 @@ async function handleHtmlRequest(
         }
       }
     ];
-  } else {
-    // Run all data loaders in parallel.
-    let globalLoadResultPromise = loadGlobalData(config, loadContext, url);
-    let routeLoadResultPromises = matches.map(match =>
-      loadRouteData(config, match.route.id, match.params, loadContext, url)
-    );
+  }
 
+  // Run all data loaders in parallel and await them individually below.
+  let globalLoadResultPromise = loadGlobalData(config, loadContext, url);
+  let routeLoadResultPromises = matches.map(match =>
+    loadRouteData(config, match.route.id, match.params, loadContext, url)
+  );
+
+  let globalLoadResult: AppLoadResult = null;
+  try {
+    globalLoadResult = await globalLoadResultPromise;
+  } catch (error) {
+    console.error(`There was an error running the global data loader`);
+  }
+
+  let routeLoadResults: AppLoadResult[] = [];
+  for (let promise of routeLoadResultPromises) {
     try {
-      globalLoadResult = await globalLoadResultPromise;
+      routeLoadResults.push(await promise);
     } catch (error) {
-      console.error(`There was an error running the global data loader`);
+      let match = matches[routeLoadResults.length];
+      console.error(
+        `There was an error running the data loader for route ${match.route.id}`
+      );
+      routeLoadResults.push(null);
       handleDataLoadError(error);
     }
+  }
 
-    for (let promise of routeLoadResultPromises) {
-      try {
-        routeLoadResults.push(await promise);
-      } catch (error) {
-        let match = matches[routeLoadResults.length];
-        console.error(
-          `There was an error running the data loader for route ${match.route.id}`
-        );
-        routeLoadResults.push(null);
-        handleDataLoadError(error);
-      }
-    }
+  let allResults = [globalLoadResult, ...routeLoadResults];
 
-    let allResults = [globalLoadResult, ...routeLoadResults];
+  // Check for redirect. A redirect in a loader takes precedence over all
+  // other responses and is immediately returned.
+  let redirectResult = allResults.find(
+    result => result && (result.status === 301 || result.status === 302)
+  );
 
-    // Check for redirect. A redirect in a loader takes precedence over all
-    // other responses and is immediately returned.
-    let redirectResult = allResults.find(
-      result => result && (result.status === 301 || result.status === 302)
-    );
+  if (redirectResult) {
+    return redirectResult;
+  }
 
-    if (redirectResult) {
-      return redirectResult;
-    }
+  // Check for a result with a non-200 status code. The first loader with a
+  // non-200 status code determines the status code for the whole response.
+  let notOkResult = allResults.find(result => result && result.status !== 200);
 
-    // Check for a result with a non-200 status code. The first loader with a
-    // non-200 status code determines the status code for the whole response.
-    let notOkResult = allResults.find(
-      result => result && result.status !== 200
-    );
-
-    if (notOkResult) {
-      statusCode = notOkResult.status;
-    }
+  if (notOkResult) {
+    statusCode = notOkResult.status;
   }
 
   let serverBuildDirectory: string;
   let assetManifest: AssetManifest;
-  if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.NODE_ENV !== "test"
-  ) {
-    // Adjust the config object so it contains only the routes and manifest for
-    // the matches. That way we build only the minimum number of bundles.
-    rewriteRoutes(config, matches);
-    rewriteRouteManifest(config, matches);
-    rewritePublicPath(config);
+  if (DEV) {
+    adjustDevConfig(config, matches);
 
     serverBuildDirectory = getCacheDir(config.rootDirectory, "build");
 
@@ -366,6 +355,26 @@ async function handleHtmlRequest(
   );
 }
 
+function adjustDevConfig(config: RemixConfig, matches: ConfigRouteMatch[]) {
+  // Modify routes and routeManifest so they contain only the matched routes.
+  // This speeds up the build considerably.
+  config.routes = matches.reduceRight((children, match) => {
+    let route = { ...match.route };
+    if (children.length) route.children = children;
+    return [route];
+  }, [] as ConfigRouteObject[]);
+
+  config.routeManifest = matches.reduce((routeManifest, match) => {
+    let { children, ...route } = match.route;
+    routeManifest[route.id] = route;
+    return routeManifest;
+  }, {} as RouteManifest);
+
+  // Modify publicPath to point to the dev server.
+  config.publicPath =
+    process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
+}
+
 function getPartialEntries<T = any>(
   entries: { [key: string]: T },
   keys: string[]
@@ -374,30 +383,6 @@ function getPartialEntries<T = any>(
     if (key in entries) memo[key] = entries[key];
     return memo;
   }, {} as { [key: string]: T });
-}
-
-function rewriteRoutes(config: RemixConfig, matches: ConfigRouteMatch[]) {
-  config.routes = matches.reduceRight((children, match) => {
-    let route = { ...match.route };
-    if (children.length) route.children = children;
-    return [route];
-  }, [] as ConfigRouteObject[]);
-}
-
-function rewriteRouteManifest(
-  config: RemixConfig,
-  matches: ConfigRouteMatch[]
-) {
-  config.routeManifest = matches.reduce((routeManifest, match) => {
-    let { children, ...route } = match.route;
-    routeManifest[route.id] = route;
-    return routeManifest;
-  }, {} as RouteManifest);
-}
-
-function rewritePublicPath(config: RemixConfig) {
-  config.publicPath =
-    process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

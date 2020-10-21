@@ -13,7 +13,9 @@ module.exports = {
     {
       displayName: "gists-app",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"]
+      testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
+      globalSetup: "<rootDir>/fixtures/gists-app/jest/global-setup.js",
+      globalTeardown: "<rootDir>/fixtures/gists-app/jest/global-teardown.js"
     }
   ]
 };

@@ -6,7 +6,10 @@ const { createRequestHandler } = require("@remix-run/express");
 
 const app = express();
 
-app.use(morgan("dev"));
+if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
+  app.use(morgan("dev"));
+}
+
 app.use(express.static("public"));
 
 // serverside redirect

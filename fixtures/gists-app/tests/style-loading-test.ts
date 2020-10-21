@@ -1,7 +1,7 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
-import { reactIsHydrated, collectResponses, prettyHtml } from "./utils";
+import { reactIsHydrated, collectResponses } from "./utils";
 
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
