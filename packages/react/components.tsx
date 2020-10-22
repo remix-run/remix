@@ -1,5 +1,5 @@
 import type { Action, Location } from "history";
-import type { ReactNode, Dispatch, SetStateAction } from "react";
+import type { ReactNode } from "react";
 import React from "react";
 import type { Navigator } from "react-router";
 import { Router, Link, useLocation, useRoutes } from "react-router-dom";
@@ -341,14 +341,14 @@ export function Routes() {
 /**
  * Returns the data from `data/global.js`.
  */
-export function useGlobalData(): AppData {
+export function useGlobalData<T = AppData>(): T {
   return useRemixEntryContext().globalData;
 }
 
 /**
  * Returns the data for the current route from `data/routes/*`.
  */
-export function useRouteData(): AppData {
+export function useRouteData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 

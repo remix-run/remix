@@ -28,18 +28,16 @@ export interface DataLoader {
 }
 
 function requireLoader(config: RemixConfig, loaderFile: string): DataLoader {
-  let requirePath = path.resolve(config.dataDirectory, loaderFile);
+  let requirePath = path.resolve(config.loadersDirectory, loaderFile);
   return require(requirePath);
 }
 
 async function executeLoader(
-  loader: DataLoader | null,
+  loader: DataLoader,
   loadContext: AppLoadContext,
   url: URL,
   routeParams: Params = {}
-): Promise<AppLoadResult> {
-  if (!loader) return null;
-
+): Promise<Response> {
   let value = await loader({
     context: loadContext,
     params: routeParams,
@@ -52,7 +50,7 @@ async function executeLoader(
 
   return new Response(JSON.stringify(value), {
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json; charset=utf-8"
     }
   });
 }

@@ -15,6 +15,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Breaking Changes
 
+- Renamed `data` directory back to `loaders`
 - Return data directly (instead of `useState` tuple) from `useGlobalData` and
   `useRouteData`
 - Default to `NODE_ENV=development` in `remix build`

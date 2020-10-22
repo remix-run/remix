@@ -25,20 +25,21 @@ export interface ConfigRouteObject {
   componentFile: string;
 
   /**
-   * The unique id for this route, named like the `componentFile`. So
-   * `routes/gists/$username.js` will have an `id` of `routes/gists/$username`.
+   * The unique id for this route, named like the `componentFile` but without
+   * the file extension. So `routes/gists/$username.js` will have an `id` of
+   * `routes/gists/$username`.
    */
   id: string;
 
   /**
    * The path to the file that exports the data loader for this route as its
-   * default export, relative to the `config.dataDirectory`. So the loader for
-   * `routes/gists/$username.js` will be `loaders/gists/$username.js`.
+   * default export, relative to `config.loadersDirectory`. So the loader for
+   * `routes/gists/$username.js` will be `routes/gists/$username.js`.
    */
   loaderFile?: string;
 
   /**
-   * The unique id for this route's parent route, if there is one.
+   * The unique `id` for this route's parent route, if there is one.
    */
   parentId?: string;
 
@@ -48,9 +49,9 @@ export interface ConfigRouteObject {
   path: string;
 
   /**
-   * The path to the file that contains styles for this route, relative to the
+   * The path to the file that contains styles for this route, relative to
    * `config.appDirectory`. So the styles for `routes/gists/$username.js` will
-   * be `styles/gists/$username.css`.
+   * be `routes/gists/$username.css`.
    */
   stylesFile?: string;
 }
@@ -80,27 +81,34 @@ export function createRouteManifest(
 
 export interface DefineRouteOptions {
   /**
-   * Should be `true` if the route `path` is case-sensitive.
+   * Should be `true` if the route `path` is case-sensitive. Defaults to
+   * `false`.
    */
   caseSensitive?: boolean;
 
   /**
    * The path to the file that exports the data loader for this route as its
-   * default export, relative to the `config.loadersDirectory`. So the path for
-   * `src/routes/invoices.js` will be `loaders/routes/invoices.js`.
+   * default export, relative to `config.loadersDirectory`.
    */
   loader?: string;
 
   /**
    * The path to the file that defines CSS styles for this route, relative to
-   * the `config.stylesDirectory`. So the path for `src/routes/invoices.js` will
-   * be `src/styles/invoices.js`.
+   * `config.appDirectory`.
    */
   styles?: string;
 }
 
-type DefineRouteChildren = () => void;
+/**
+ * A function for defining child routes.
+ */
+interface DefineRouteChildren {
+  (): void;
+}
 
+/**
+ * A function for defining a route.
+ */
 export interface DefineRoute {
   (
     /**
@@ -110,22 +118,11 @@ export interface DefineRoute {
 
     /**
      * The path to the file that exports the React component rendered by this
-     * route as its default export, relative to the src/ directory. So the path
-     * for src/routes/home.js will be routes/home.js and src/articles/welcome.md
-     * will be articles/welcome.md.
+     * route as its default export, relative to `config.appDirectory`.
      */
     component: string,
 
-    /**
-     * The path to the file that exports the data loader for this route as its
-     * default export, relative to the loaders/ directory. So the path for
-     * loaders/invoices.js will be invoices.js.
-     */
     optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
-
-    /**
-     * A function for defining this route's child routes.
-     */
     children?: DefineRouteChildren
   ): void;
 }
@@ -233,7 +230,7 @@ export function getConventionalRoutes(
 function defineRoutesInDirectory(
   defineRoute: DefineRoute,
   appDir: string,
-  dataDir: string,
+  loadersDir: string,
   currentDir: string,
   basePath = ""
 ): void {
@@ -255,7 +252,7 @@ function defineRoutesInDirectory(
         // There is no layout route for this directory. Continue reading
         // conventional routes from the subdirectory.
         let base = (basePath ? `${basePath}/` : "") + filename;
-        defineRoutesInDirectory(defineRoute, appDir, dataDir, file, base);
+        defineRoutesInDirectory(defineRoute, appDir, loadersDir, file, base);
       }
 
       continue;
@@ -279,7 +276,7 @@ function defineRoutesInDirectory(
         // This is a layout route.
         let subdir = path.join(currentDir, layoutDir);
         defineChildren = () => {
-          defineRoutesInDirectory(defineRoute, appDir, dataDir, subdir);
+          defineRoutesInDirectory(defineRoute, appDir, loadersDir, subdir);
         };
       } else {
         // This is a leaf route.
@@ -293,7 +290,7 @@ function defineRoutesInDirectory(
     let loaderFile = findLoaderFile(
       path.dirname(
         path.resolve(
-          path.join(dataDir, "routes"),
+          path.join(loadersDir, "routes"),
           path.relative(path.join(appDir, "routes"), componentFile)
         )
       ),
@@ -305,7 +302,7 @@ function defineRoutesInDirectory(
     );
 
     let component = path.relative(appDir, componentFile);
-    let loader = loaderFile && path.relative(dataDir, loaderFile);
+    let loader = loaderFile && path.relative(loadersDir, loaderFile);
     let styles = stylesFile && path.relative(appDir, stylesFile);
 
     defineRoute(routePath, component, { loader, styles }, defineChildren);
@@ -316,19 +313,19 @@ function createRoutePath(filenameWithoutExt: string): string {
   return filenameWithoutExt.replace(/\$/g, ":").replace(/\./g, "/");
 }
 
-const routeModuleExts = [".js", ".jsx", ".md", ".mdx", ".ts", ".tsx"];
+const routeModuleExts = [".cjs", ".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
 
 export function isRouteModuleFilename(filename: string): boolean {
   return routeModuleExts.includes(path.extname(filename));
 }
 
-const loaderExts = [".js", ".cjs"];
+const loaderExts = [".cjs", ".js", ".jsx", ".ts", ".tsx"];
 
 export function isLoaderFilename(filename: string): boolean {
   return loaderExts.includes(path.extname(filename));
 }
 
-const stylesExts = [".css", ".sass", ".scss", ".less"];
+const stylesExts = [".css"];
 
 export function isStylesFilename(filename: string): boolean {
   return stylesExts.includes(path.extname(filename));

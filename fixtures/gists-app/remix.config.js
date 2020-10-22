@@ -3,7 +3,7 @@ const fs = require("fs").promises;
 
 exports.appDirectory = "./app";
 exports.browserBuildDirectory = "./public/build";
-exports.dataDirectory = "./data";
+exports.loadersDirectory = "./loaders";
 exports.publicPath = "/build/";
 exports.serverBuildDirectory = "./build";
 

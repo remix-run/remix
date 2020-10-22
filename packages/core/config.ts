@@ -25,15 +25,15 @@ export interface AppConfig {
   browserBuildDirectory?: string;
 
   /**
-   * The path to the `data` directory, relative to remix.config.js. Defaults to
-   * "loaders".
-   */
-  dataDirectory?: string;
-
-  /**
    * The port number to use for the dev server. Defaults to 8002.
    */
   devServerPort?: number;
+
+  /**
+   * The path to the `loaders` directory, relative to remix.config.js. Defaults to
+   * "loaders".
+   */
+  loadersDirectory?: string;
 
   /**
    * Options to use when compiling MDX.
@@ -73,9 +73,9 @@ export interface RemixConfig {
   browserBuildDirectory: string;
 
   /**
-   * The absolute path to the `data` directory.
+   * The absolute path to the `loaders` directory.
    */
-  dataDirectory: string;
+  loadersDirectory: string;
 
   /**
    * The port number to use for the dev server.
@@ -142,9 +142,9 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     appConfig.browserBuildDirectory || path.join("public", "build")
   );
 
-  let dataDirectory = path.resolve(
+  let loadersDirectory = path.resolve(
     rootDirectory,
-    appConfig.dataDirectory || "data"
+    appConfig.loadersDirectory || "loaders"
   );
 
   let devServerPort = appConfig.devServerPort || 8002;
@@ -154,7 +154,7 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     publicPath += "/";
   }
 
-  let routes = getConventionalRoutes(appDirectory, dataDirectory);
+  let routes = getConventionalRoutes(appDirectory, loadersDirectory);
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(_defineRoutes);
     routes.push(...manualRoutes);
@@ -172,8 +172,8 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
   let remixConfig: RemixConfig = {
     appDirectory,
     browserBuildDirectory,
-    dataDirectory,
     devServerPort,
+    loadersDirectory,
     mdx: appConfig.mdx,
     publicPath,
     rootDirectory,

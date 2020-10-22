@@ -16,7 +16,7 @@ describe("readConfig", () => {
       {
         appDirectory: expect.any(String),
         browserBuildDirectory: expect.any(String),
-        dataDirectory: expect.any(String),
+        loadersDirectory: expect.any(String),
         rootDirectory: expect.any(String),
         serverBuildDirectory: expect.any(String)
       },
@@ -24,8 +24,8 @@ describe("readConfig", () => {
       Object {
         "appDirectory": Any<String>,
         "browserBuildDirectory": Any<String>,
-        "dataDirectory": Any<String>,
         "devServerPort": 8002,
+        "loadersDirectory": Any<String>,
         "mdx": undefined,
         "publicPath": "/build/",
         "rootDirectory": Any<String>,
