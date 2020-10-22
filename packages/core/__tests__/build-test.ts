@@ -1,5 +1,5 @@
 import path from "path";
-import type { OutputAsset } from "rollup";
+import type { OutputAsset, RollupOutput } from "rollup";
 
 import type { BuildOptions } from "../compiler";
 import { BuildMode, BuildTarget, build, generate } from "../compiler";
@@ -8,6 +8,18 @@ import { readConfig } from "../config";
 
 async function generateBuild(config: RemixConfig, options: BuildOptions) {
   return await generate(await build(config, options));
+}
+
+function getFilenames(output: RollupOutput) {
+  return output.output.map(item => item.fileName).sort();
+}
+
+function getManifest(output: RollupOutput, name: string) {
+  let asset = output.output.find(
+    item => item.type === "asset" && item.fileName === name
+  ) as OutputAsset;
+
+  return JSON.parse(asset.source as string);
 }
 
 const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
@@ -24,35 +36,31 @@ describe("building", () => {
 
   describe("the development server build", () => {
     it("generates the correct bundles and manifest", async () => {
-      let { output } = await generateBuild(config, {
+      let output = await generateBuild(config, {
         mode: BuildMode.Development,
         target: BuildTarget.Server
       });
 
-      expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
+      expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
+          "_shared/Shared-4f69c99e.js",
           "entry-server.js",
+          "pages/one.js",
+          "pages/two.js",
           "routes/404.js",
           "routes/500.js",
           "routes/gists.js",
+          "routes/gists.mine.js",
           "routes/gists/$username.js",
           "routes/gists/index.js",
-          "routes/gists.mine.js",
           "routes/index.js",
           "routes/page/four.js",
           "routes/page/three.js",
-          "pages/one.js",
-          "pages/two.js",
-          "_shared/Shared-4f69c99e.js",
           "server-manifest.json",
         ]
       `);
 
-      let manifest = output.find(
-        item => item.fileName === "server-manifest.json"
-      ) as OutputAsset;
-
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+      expect(getManifest(output, "server-manifest.json")).toMatchInlineSnapshot(
         {
           version: expect.any(String)
         },
@@ -60,89 +68,40 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-server": Object {
-              "fileName": "entry-server.js",
-              "imports": Array [
-                "react",
-                "react-dom/server",
-                "@remix-run/core",
-                "@remix-run/react/server",
-                "@remix-run/react",
-              ],
+              "file": "entry-server.js",
             },
             "pages/one": Object {
-              "fileName": "pages/one.js",
-              "imports": Array [
-                "react",
-                "@mdx-js/react",
-              ],
+              "file": "pages/one.js",
             },
             "pages/two": Object {
-              "fileName": "pages/two.js",
-              "imports": Array [
-                "@mdx-js/react",
-              ],
+              "file": "pages/two.js",
             },
             "routes/404": Object {
-              "fileName": "routes/404.js",
-              "imports": Array [
-                "react",
-              ],
+              "file": "routes/404.js",
             },
             "routes/500": Object {
-              "fileName": "routes/500.js",
-              "imports": Array [
-                "react",
-              ],
+              "file": "routes/500.js",
             },
             "routes/gists": Object {
-              "fileName": "routes/gists.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-                "react-router-dom",
-                "_shared/Shared-4f69c99e.js",
-              ],
+              "file": "routes/gists.js",
             },
             "routes/gists.mine": Object {
-              "fileName": "routes/gists.mine.js",
-              "imports": Array [
-                "react",
-              ],
+              "file": "routes/gists.mine.js",
             },
             "routes/gists/$username": Object {
-              "fileName": "routes/gists/$username.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-                "react-router-dom",
-              ],
+              "file": "routes/gists/$username.js",
             },
             "routes/gists/index": Object {
-              "fileName": "routes/gists/index.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-              ],
+              "file": "routes/gists/index.js",
             },
             "routes/index": Object {
-              "fileName": "routes/index.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-                "_shared/Shared-4f69c99e.js",
-              ],
+              "file": "routes/index.js",
             },
             "routes/page/four": Object {
-              "fileName": "routes/page/four.js",
-              "imports": Array [
-                "@mdx-js/react",
-              ],
+              "file": "routes/page/four.js",
             },
             "routes/page/three": Object {
-              "fileName": "routes/page/three.js",
-              "imports": Array [
-                "@mdx-js/react",
-              ],
+              "file": "routes/page/three.js",
             },
           },
           "version": Any<String>,
@@ -154,36 +113,32 @@ describe("building", () => {
 
   describe("the production server build", () => {
     it("generates the correct bundles and manifest", async () => {
-      let { output } = await generateBuild(config, {
+      let output = await generateBuild(config, {
         mode: BuildMode.Production,
         target: BuildTarget.Server
       });
 
-      expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
+      expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
+          "_shared/Shared-4f69c99e.js",
+          "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
           "entry-server-ff11ed1b.js",
+          "pages/one-84a0981a.js",
+          "pages/two-c45d0835.js",
           "routes/404-660aace6.js",
           "routes/500-3568401c.js",
           "routes/gists-30e67783.js",
+          "routes/gists.mine-9c786e2b.js",
           "routes/gists/$username-ebf86aaf.js",
           "routes/gists/index-c6bcfd56.js",
-          "routes/gists.mine-9c786e2b.js",
           "routes/index-933c0125.js",
           "routes/page/four-c9ce2fc6.js",
           "routes/page/three-cbc19f53.js",
-          "pages/one-84a0981a.js",
-          "pages/two-c45d0835.js",
-          "_shared/Shared-4f69c99e.js",
-          "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
           "server-manifest.json",
         ]
       `);
 
-      let manifest = output.find(
-        item => item.fileName === "server-manifest.json"
-      ) as OutputAsset;
-
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+      expect(getManifest(output, "server-manifest.json")).toMatchInlineSnapshot(
         {
           version: expect.any(String)
         },
@@ -191,93 +146,40 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-server": Object {
-              "fileName": "entry-server-ff11ed1b.js",
-              "imports": Array [
-                "react",
-                "react-dom/server",
-                "@remix-run/core",
-                "@remix-run/react/server",
-                "@remix-run/react",
-              ],
+              "file": "entry-server-ff11ed1b.js",
             },
             "pages/one": Object {
-              "fileName": "pages/one-84a0981a.js",
-              "imports": Array [
-                "react",
-                "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
-                "@mdx-js/react",
-              ],
+              "file": "pages/one-84a0981a.js",
             },
             "pages/two": Object {
-              "fileName": "pages/two-c45d0835.js",
-              "imports": Array [
-                "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
-                "@mdx-js/react",
-              ],
+              "file": "pages/two-c45d0835.js",
             },
             "routes/404": Object {
-              "fileName": "routes/404-660aace6.js",
-              "imports": Array [
-                "react",
-              ],
+              "file": "routes/404-660aace6.js",
             },
             "routes/500": Object {
-              "fileName": "routes/500-3568401c.js",
-              "imports": Array [
-                "react",
-              ],
+              "file": "routes/500-3568401c.js",
             },
             "routes/gists": Object {
-              "fileName": "routes/gists-30e67783.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-                "react-router-dom",
-                "_shared/Shared-4f69c99e.js",
-              ],
+              "file": "routes/gists-30e67783.js",
             },
             "routes/gists.mine": Object {
-              "fileName": "routes/gists.mine-9c786e2b.js",
-              "imports": Array [
-                "react",
-              ],
+              "file": "routes/gists.mine-9c786e2b.js",
             },
             "routes/gists/$username": Object {
-              "fileName": "routes/gists/$username-ebf86aaf.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-                "react-router-dom",
-              ],
+              "file": "routes/gists/$username-ebf86aaf.js",
             },
             "routes/gists/index": Object {
-              "fileName": "routes/gists/index-c6bcfd56.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-              ],
+              "file": "routes/gists/index-c6bcfd56.js",
             },
             "routes/index": Object {
-              "fileName": "routes/index-933c0125.js",
-              "imports": Array [
-                "react",
-                "@remix-run/react",
-                "_shared/Shared-4f69c99e.js",
-              ],
+              "file": "routes/index-933c0125.js",
             },
             "routes/page/four": Object {
-              "fileName": "routes/page/four-c9ce2fc6.js",
-              "imports": Array [
-                "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
-                "@mdx-js/react",
-              ],
+              "file": "routes/page/four-c9ce2fc6.js",
             },
             "routes/page/three": Object {
-              "fileName": "routes/page/three-cbc19f53.js",
-              "imports": Array [
-                "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
-                "@mdx-js/react",
-              ],
+              "file": "routes/page/three-cbc19f53.js",
             },
           },
           "version": Any<String>,
@@ -289,41 +191,46 @@ describe("building", () => {
 
   describe("the development browser build", () => {
     it("generates the correct bundles and manifest", async () => {
-      let { output } = await generateBuild(config, {
+      let output = await generateBuild(config, {
         mode: BuildMode.Development,
         target: BuildTarget.Browser
       });
 
-      expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
+      expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
+          "_shared/Shared-cef07a94.js",
+          "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
+          "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
+          "_shared/node_modules/@mdx-js/react-0e8f3297.js",
+          "_shared/node_modules/@remix-run/react-64b3f353.js",
+          "_shared/node_modules/history-45437576.js",
+          "_shared/node_modules/object-assign-c47a16a6.js",
+          "_shared/node_modules/prop-types-a68204f7.js",
+          "_shared/node_modules/react-409c253d.js",
+          "_shared/node_modules/react-dom-756cf4b2.js",
+          "_shared/node_modules/react-is-fda2a98c.js",
+          "_shared/node_modules/react-router-2cee1434.js",
+          "_shared/node_modules/react-router-dom-3388b7e7.js",
+          "_shared/node_modules/scheduler-e81ceb73.js",
+          "asset-manifest.json",
           "entry-browser.js",
+          "global.css",
+          "pages/one.js",
+          "pages/two.js",
           "routes/404.js",
           "routes/500.js",
+          "routes/gists.css",
           "routes/gists.js",
+          "routes/gists.mine.js",
           "routes/gists/$username.js",
           "routes/gists/index.js",
-          "routes/gists.mine.js",
           "routes/index.js",
           "routes/page/four.js",
           "routes/page/three.js",
-          "pages/one.js",
-          "pages/two.js",
-          "_shared/index-6a53de4a.js",
-          "_shared/index-718e6fb1.js",
-          "_shared/components-77fba020.js",
-          "_shared/Shared-8e56fbb3.js",
-          "_shared/esm-733856b1.js",
-          "global.css",
-          "routes/gists.css",
-          "asset-manifest.json",
         ]
       `);
 
-      let manifest = output.find(
-        item => item.fileName === "asset-manifest.json"
-      ) as OutputAsset;
-
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+      expect(getManifest(output, "asset-manifest.json")).toMatchInlineSnapshot(
         {
           version: expect.any(String)
         },
@@ -331,97 +238,46 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "fileName": "entry-browser.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/index-718e6fb1.js",
-                "_shared/components-77fba020.js",
-              ],
+              "file": "entry-browser.js",
             },
             "global.css": Object {
-              "fileName": "global.css",
+              "file": "global.css",
             },
             "pages/one": Object {
-              "fileName": "pages/one.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/esm-733856b1.js",
-              ],
+              "file": "pages/one.js",
             },
             "pages/two": Object {
-              "fileName": "pages/two.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/esm-733856b1.js",
-              ],
+              "file": "pages/two.js",
             },
             "routes/404": Object {
-              "fileName": "routes/404.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-              ],
+              "file": "routes/404.js",
             },
             "routes/500": Object {
-              "fileName": "routes/500.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-              ],
+              "file": "routes/500.js",
             },
             "routes/gists": Object {
-              "fileName": "routes/gists.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/index-718e6fb1.js",
-                "_shared/Shared-8e56fbb3.js",
-                "_shared/components-77fba020.js",
-              ],
+              "file": "routes/gists.js",
             },
             "routes/gists.css": Object {
-              "fileName": "routes/gists.css",
+              "file": "routes/gists.css",
             },
             "routes/gists.mine": Object {
-              "fileName": "routes/gists.mine.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-              ],
+              "file": "routes/gists.mine.js",
             },
             "routes/gists/$username": Object {
-              "fileName": "routes/gists/$username.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/index-718e6fb1.js",
-                "_shared/components-77fba020.js",
-              ],
+              "file": "routes/gists/$username.js",
             },
             "routes/gists/index": Object {
-              "fileName": "routes/gists/index.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/index-718e6fb1.js",
-                "_shared/components-77fba020.js",
-              ],
+              "file": "routes/gists/index.js",
             },
             "routes/index": Object {
-              "fileName": "routes/index.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/index-718e6fb1.js",
-                "_shared/Shared-8e56fbb3.js",
-              ],
+              "file": "routes/index.js",
             },
             "routes/page/four": Object {
-              "fileName": "routes/page/four.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/esm-733856b1.js",
-              ],
+              "file": "routes/page/four.js",
             },
             "routes/page/three": Object {
-              "fileName": "routes/page/three.js",
-              "imports": Array [
-                "_shared/index-6a53de4a.js",
-                "_shared/esm-733856b1.js",
-              ],
+              "file": "routes/page/three.js",
             },
           },
           "version": Any<String>,
@@ -433,41 +289,46 @@ describe("building", () => {
 
   describe("the production browser build", () => {
     it("generates the correct bundles and manifest", async () => {
-      let { output } = await generateBuild(config, {
+      let output = await generateBuild(config, {
         mode: BuildMode.Production,
         target: BuildTarget.Browser
       });
 
-      expect(output.map(item => item.fileName)).toMatchInlineSnapshot(`
+      expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "entry-browser-2058a789.js",
-          "routes/404-1d515a6b.js",
-          "routes/500-7a377214.js",
-          "routes/gists-aa1660e6.js",
-          "routes/gists/$username-616006a1.js",
-          "routes/gists/index-f7f0e729.js",
-          "routes/gists.mine-9663993e.js",
-          "routes/index-ffbede6a.js",
-          "routes/page/four-d3d923cc.js",
-          "routes/page/three-00cfabbf.js",
-          "pages/one-cac2d94e.js",
-          "pages/two-6a6433e1.js",
-          "_shared/index-c6ac21e6.js",
-          "_shared/index-4f34fd44.js",
-          "_shared/components-39014c4d.js",
-          "_shared/Shared-54dd4117.js",
-          "_shared/esm-7b00c7dc.js",
-          "global-ec887178.css",
-          "routes/gists-a6d2a823.css",
+          "_shared/Shared-2223a4e1.js",
+          "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
+          "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
+          "_shared/node_modules/@mdx-js/react-fa2b156c.js",
+          "_shared/node_modules/@remix-run/react-01fd43e0.js",
+          "_shared/node_modules/history-8b818913.js",
+          "_shared/node_modules/object-assign-c47a16a6.js",
+          "_shared/node_modules/prop-types-d4c4f9f2.js",
+          "_shared/node_modules/react-dom-5925df33.js",
+          "_shared/node_modules/react-e32d0f6a.js",
+          "_shared/node_modules/react-is-f87125b7.js",
+          "_shared/node_modules/react-router-dom-2942caf0.js",
+          "_shared/node_modules/react-router-fa8780cf.js",
+          "_shared/node_modules/scheduler-99859fcd.js",
           "asset-manifest.json",
+          "entry-browser-75303439.js",
+          "global-ec887178.css",
+          "pages/one-33b3e281.js",
+          "pages/two-6e39a2d3.js",
+          "routes/404-81cdf991.js",
+          "routes/500-0c9b194f.js",
+          "routes/gists-69effcd0.js",
+          "routes/gists-a6d2a823.css",
+          "routes/gists.mine-f12f3533.js",
+          "routes/gists/$username-6ac12690.js",
+          "routes/gists/index-6e736fbf.js",
+          "routes/index-990e13ed.js",
+          "routes/page/four-7c11fa85.js",
+          "routes/page/three-5de4b3e5.js",
         ]
       `);
 
-      let manifest = output.find(
-        item => item.fileName === "asset-manifest.json"
-      ) as OutputAsset;
-
-      expect(JSON.parse(manifest.source as string)).toMatchInlineSnapshot(
+      expect(getManifest(output, "asset-manifest.json")).toMatchInlineSnapshot(
         {
           version: expect.any(String)
         },
@@ -475,97 +336,46 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "fileName": "entry-browser-2058a789.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/index-4f34fd44.js",
-                "_shared/components-39014c4d.js",
-              ],
+              "file": "entry-browser-75303439.js",
             },
             "global.css": Object {
-              "fileName": "global-ec887178.css",
+              "file": "global-ec887178.css",
             },
             "pages/one": Object {
-              "fileName": "pages/one-cac2d94e.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/esm-7b00c7dc.js",
-              ],
+              "file": "pages/one-33b3e281.js",
             },
             "pages/two": Object {
-              "fileName": "pages/two-6a6433e1.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/esm-7b00c7dc.js",
-              ],
+              "file": "pages/two-6e39a2d3.js",
             },
             "routes/404": Object {
-              "fileName": "routes/404-1d515a6b.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-              ],
+              "file": "routes/404-81cdf991.js",
             },
             "routes/500": Object {
-              "fileName": "routes/500-7a377214.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-              ],
+              "file": "routes/500-0c9b194f.js",
             },
             "routes/gists": Object {
-              "fileName": "routes/gists-aa1660e6.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/index-4f34fd44.js",
-                "_shared/Shared-54dd4117.js",
-                "_shared/components-39014c4d.js",
-              ],
+              "file": "routes/gists-69effcd0.js",
             },
             "routes/gists.css": Object {
-              "fileName": "routes/gists-a6d2a823.css",
+              "file": "routes/gists-a6d2a823.css",
             },
             "routes/gists.mine": Object {
-              "fileName": "routes/gists.mine-9663993e.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-              ],
+              "file": "routes/gists.mine-f12f3533.js",
             },
             "routes/gists/$username": Object {
-              "fileName": "routes/gists/$username-616006a1.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/index-4f34fd44.js",
-                "_shared/components-39014c4d.js",
-              ],
+              "file": "routes/gists/$username-6ac12690.js",
             },
             "routes/gists/index": Object {
-              "fileName": "routes/gists/index-f7f0e729.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/index-4f34fd44.js",
-                "_shared/components-39014c4d.js",
-              ],
+              "file": "routes/gists/index-6e736fbf.js",
             },
             "routes/index": Object {
-              "fileName": "routes/index-ffbede6a.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/index-4f34fd44.js",
-                "_shared/Shared-54dd4117.js",
-              ],
+              "file": "routes/index-990e13ed.js",
             },
             "routes/page/four": Object {
-              "fileName": "routes/page/four-d3d923cc.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/esm-7b00c7dc.js",
-              ],
+              "file": "routes/page/four-7c11fa85.js",
             },
             "routes/page/three": Object {
-              "fileName": "routes/page/three-00cfabbf.js",
-              "imports": Array [
-                "_shared/index-c6ac21e6.js",
-                "_shared/esm-7b00c7dc.js",
-              ],
+              "file": "routes/page/three-5de4b3e5.js",
             },
           },
           "version": Any<String>,

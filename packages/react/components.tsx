@@ -274,7 +274,7 @@ export function Scripts() {
     .map(
       (routeId, index) =>
         `import * as route${index} from ${JSON.stringify(
-          publicPath + manifest.assets[routeId].fileName
+          publicPath + manifest.assets[routeId].file
         )};`
     )
     .join("\n")}
@@ -295,7 +295,7 @@ export function Scripts() {
           dangerouslySetInnerHTML={createHtml(contextRouteModulesScript)}
           type="module"
         />
-        <script src={publicPath + entryBrowser.fileName} type="module" />
+        <script src={publicPath + entryBrowser.file} type="module" />
       </>
     ),
     []
@@ -308,19 +308,19 @@ export function Scripts() {
 export function Styles() {
   let { manifest, matches, publicPath } = useRemixEntryContext();
 
-  let styleFiles = [manifest.assets["global.css"].fileName];
+  let styleFiles = [manifest.assets["global.css"].file];
 
   for (let match of matches) {
     let key = `${match.route.id}.css`;
     if (manifest.assets[key]) {
-      styleFiles.push(manifest.assets[key].fileName);
+      styleFiles.push(manifest.assets[key].file);
     }
   }
 
   return (
     <>
-      {styleFiles.map(fileName => (
-        <link key={fileName} rel="stylesheet" href={publicPath + fileName} />
+      {styleFiles.map(file => (
+        <link key={file} rel="stylesheet" href={publicPath + file} />
       ))}
     </>
   );

@@ -4,6 +4,15 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Unreleased
 
+### Improvements
+
+- `node_modules` dependencies now load in their own bundle which should improve
+  caching
+
+### Bug Fixes
+
+- Fixed route data not updating when params change
+
 ### Breaking Changes
 
 - Return data directly (instead of `useState` tuple) from `useGlobalData` and

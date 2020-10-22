@@ -22,7 +22,7 @@ export async function loadRouteModule(
 
   invariant(asset, `Route "${routeId}" isn't in the asset manifest`);
 
-  let url = publicPath + asset.fileName;
+  let url = publicPath + asset.file;
   let routeModule = await import(url);
 
   routeModulesCache[routeId] = routeModule;

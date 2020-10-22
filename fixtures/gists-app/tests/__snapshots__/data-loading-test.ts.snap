@@ -30,22 +30,12 @@ export default function PageOne() {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"pages/one\\": {
-              fileName: \\"pages/one.js\\",
-              imports: [\\"_shared/index-67ee0970.js\\", \\"_shared/esm-b22eb961.js\\"],
-            },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"pages/one\\": { file: \\"pages/one.js\\" },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -98,22 +88,12 @@ export default function PageOne() {
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"pages/one\\": {
-              fileName: \\"pages/one.js\\",
-              imports: [\\"_shared/index-67ee0970.js\\", \\"_shared/esm-b22eb961.js\\"],
-            },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"pages/one\\": { file: \\"pages/one.js\\" },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -180,33 +160,11 @@ exports[`data loading transitioning back after a reload loads data for the previ
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/index\\": { file: \\"routes/gists/index.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -221,7 +179,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -323,33 +281,11 @@ exports[`data loading transitioning back after a reload loads data for the previ
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/index\\": { file: \\"routes/gists/index.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -364,7 +300,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -466,33 +402,11 @@ exports[`data loading transitioning back after a reload loads data for the previ
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/$username\\": {
-              fileName: \\"routes/gists/$username.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/$username\\": { file: \\"routes/gists/$username.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -507,7 +421,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -609,33 +523,11 @@ exports[`data loading transitioning forward to a page we have already seen does 
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/index\\": { file: \\"routes/gists/index.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -650,7 +542,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -752,33 +644,11 @@ exports[`data loading transitioning forward to a page we have already seen does 
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/index\\": { file: \\"routes/gists/index.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -793,7 +663,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -895,33 +765,11 @@ exports[`data loading transitioning forward to a page we have already seen does 
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/index\\": { file: \\"routes/gists/index.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -936,7 +784,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -1038,33 +886,11 @@ exports[`data loading transitioning forward to a page we have already seen does 
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/gists\\": {
-              fileName: \\"routes/gists.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists/index\\": {
-              fileName: \\"routes/gists/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"routes/gists.css\\": { fileName: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
+            \\"routes/gists/index\\": { file: \\"routes/gists/index.js\\" },
+            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -1079,7 +905,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -1178,26 +1004,12 @@ exports[`data loading transitioning to a new route loads data for all routes on 
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/index\\": {
-              fileName: \\"routes/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-              ],
-            },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {
@@ -1264,26 +1076,12 @@ exports[`data loading transitioning to a new route loads data for all routes on 
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/index\\": {
-              fileName: \\"routes/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-              ],
-            },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {

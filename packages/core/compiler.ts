@@ -285,6 +285,22 @@ function getCommonOutputOptions(build: RemixBuild): OutputOptions {
         : "[name][extname]",
     chunkFileNames: "_shared/[name]-[hash].js",
     entryFileNames:
-      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js"
+      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js",
+    manualChunks(id: string) {
+      let pieces = id.split(path.sep);
+      let index = pieces.lastIndexOf("node_modules");
+
+      if (index !== -1 && pieces.length > index + 1) {
+        let packageName = pieces[index + 1];
+
+        if (packageName.startsWith("@") && pieces.length > index + 2) {
+          packageName += "/" + pieces[index + 2];
+        }
+
+        return "node_modules/" + packageName;
+      }
+
+      return undefined;
+    }
   };
 }

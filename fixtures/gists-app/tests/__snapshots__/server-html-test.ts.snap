@@ -41,26 +41,12 @@ exports[`the server HTML is correct: page 1`] = `
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": {
-              fileName: \\"entry-browser.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/components-b9a3520e.js\\",
-              ],
-            },
-            \\"global.css\\": { fileName: \\"global.css\\" },
-            \\"routes/index\\": {
-              fileName: \\"routes/index.js\\",
-              imports: [
-                \\"_shared/index-67ee0970.js\\",
-                \\"_shared/index-a426eba5.js\\",
-                \\"_shared/Shared-8fd0b30d.js\\",
-              ],
-            },
+            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
+            \\"global.css\\": { file: \\"global.css\\" },
+            \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"befe7fb2\\",
+          version: \\"23a3d943\\",
         },
         matches: [
           {

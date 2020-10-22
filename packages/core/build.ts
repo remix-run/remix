@@ -95,7 +95,7 @@ export function getServerEntryModule(
   dir: string,
   manifest: ServerManifest
 ): ServerEntryModule {
-  let file = path.resolve(dir, manifest.entries["entry-server"].fileName);
+  let file = path.resolve(dir, manifest.entries["entry-server"].file);
   return require(file);
 }
 
@@ -108,7 +108,7 @@ export function getRouteModules(
   manifest: ServerManifest
 ): RouteModules {
   return Object.keys(routeManifest).reduce((routeModules, routeId) => {
-    let file = path.join(dir, manifest.entries[routeId].fileName);
+    let file = path.join(dir, manifest.entries[routeId].file);
     routeModules[routeId] = require(file);
     return routeModules;
   }, {} as RouteModules);

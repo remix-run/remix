@@ -6,10 +6,7 @@ import type { NormalizedOutputOptions, OutputBundle, Plugin } from "rollup";
 export interface BuildManifest {
   version: string;
   entries: {
-    [entryName: string]: {
-      fileName: string;
-      imports?: string[];
-    };
+    [entryName: string]: { file: string };
   };
 }
 
@@ -30,28 +27,23 @@ function createChecksum(bundle: OutputBundle): string {
 }
 
 function createEntries(bundle: OutputBundle): BuildManifest["entries"] {
-  let manifest: BuildManifest["entries"] = {};
+  let entries: BuildManifest["entries"] = {};
 
   for (let key of Object.keys(bundle)) {
     let assetOrChunk = bundle[key];
     if (assetOrChunk.type === "chunk") {
       if (assetOrChunk.isEntry) {
-        manifest[assetOrChunk.name] = {
-          fileName: assetOrChunk.fileName,
-          imports: assetOrChunk.imports
-        };
+        entries[assetOrChunk.name] = { file: assetOrChunk.fileName };
       }
     } else if (
       assetOrChunk.type === "asset" &&
       typeof assetOrChunk.name !== "undefined"
     ) {
-      manifest[assetOrChunk.name] = {
-        fileName: assetOrChunk.fileName
-      };
+      entries[assetOrChunk.name] = { file: assetOrChunk.fileName };
     }
   }
 
-  return manifest;
+  return entries;
 }
 
 export default function manifestPlugin({

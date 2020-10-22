@@ -30,7 +30,7 @@ export function loadRouteStyleSheet(
     return Promise.resolve();
   }
 
-  let href = publicPath + asset.fileName;
+  let href = publicPath + asset.file;
 
   return loadStyleSheet(href);
 }
