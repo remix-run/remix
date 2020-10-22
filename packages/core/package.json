@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/core",
   "description": "The core classes and functions of Remix",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
     "@babel/core": "^7.11.6",
