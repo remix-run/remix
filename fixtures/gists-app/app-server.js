@@ -1,5 +1,3 @@
-global.fetch = require("node-fetch");
-
 const express = require("express");
 const morgan = require("morgan");
 const { createRequestHandler } = require("@remix-run/express");

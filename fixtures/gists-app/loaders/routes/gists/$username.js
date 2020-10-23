@@ -1,4 +1,4 @@
-const { Response, notFound } = require("@remix-run/loader");
+const { notFound } = require("@remix-run/loader");
 
 module.exports = function ({ params }) {
   let { username } = params;

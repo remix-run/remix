@@ -1,3 +1,5 @@
+import "./globals";
+
 export type {
   AssetManifest,
   HeadersFunction,
@@ -48,8 +50,7 @@ export {
   isRequestLike,
   Response,
   isResponseLike,
-  fetch,
-  isRedirect
+  fetch
 } from "./fetch";
 
 export type { RouteManifest } from "./routes";

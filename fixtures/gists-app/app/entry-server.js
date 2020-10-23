@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOMServer from "react-dom/server";
-import { Response } from "@remix-run/core";
 import Remix from "@remix-run/react/server";
 
 import App from "./components/App";

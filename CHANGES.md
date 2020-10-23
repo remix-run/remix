@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Features
+
+- Added `fetch` globals to server code including `entry-server.js` and data
+  loaders
+
 ## 0.5.0 - Thu Oct 22 2020
 
 ### Improvements

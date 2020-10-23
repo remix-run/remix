@@ -1,4 +1,5 @@
 declare module "make-fetch-happen" {
+  import type { URL } from "url";
   import type { ClientRequestArgs } from "http";
   import type { ConnectionOptions } from "tls";
   import type { TimeoutsOptions } from "retry";
@@ -23,6 +24,16 @@ declare module "make-fetch-happen" {
     Response,
     ResponseInit
   };
+
+  // From the make-fetch-happen README:
+  // If an object is provided, it will be assumed to be a compliant Cache
+  // instance. Only Cache.match(), Cache.put(), and Cache.delete() are
+  // required. Options objects will not be passed in to match() or delete().
+  export interface Cache {
+    match(request: Request): Promise<Response>;
+    put(request: Request, response: Response): Promise<void>;
+    delete(request: Request): Promise<boolean>;
+  }
 
   export type RequestInit = MinipassFetchRequestInit & {
     cacheManager?: string | Cache;

@@ -1,5 +1,6 @@
+import { URL } from "url";
 import type * as express from "express";
-import type { AppLoadContext, Response } from "@remix-run/core";
+import type { AppLoadContext, RequestInit, Response } from "@remix-run/core";
 import {
   Headers,
   Request,
@@ -53,7 +54,7 @@ export function createRequestHandler({
     }
 
     if (Buffer.isBuffer(remixRes.body)) {
-      res.send(remixRes.body);
+      res.end(remixRes.body);
     } else {
       remixRes.body.pipe(res);
     }
@@ -64,11 +65,16 @@ function createRemixRequest(req: express.Request): Request {
   let origin = `${req.protocol}://${req.headers.host}`;
   let url = new URL(req.url, origin);
 
-  return new Request(url.toString(), {
+  let init: RequestInit = {
     method: req.method,
-    body: req,
     headers: createRemixHeaders(req.headers)
-  });
+  };
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    init.body = req;
+  }
+
+  return new Request(url.toString(), init);
 }
 
 function createRemixHeaders(

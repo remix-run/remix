@@ -2,11 +2,11 @@ import path from "path";
 import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router";
-import fetch from "node-fetch";
 
 import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
+import { fetch } from "./fetch";
 import type { BuildManifest } from "./rollup/manifest";
 
 /**

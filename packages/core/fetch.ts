@@ -4,7 +4,7 @@ import type {
   RequestInit,
   ResponseInit
 } from "make-fetch-happen";
-import fetch from "make-fetch-happen";
+import makeFetchHappen from "make-fetch-happen";
 import {
   Headers as MinipassFetchHeaders,
   Request as MinipassFetchRequest,
@@ -28,9 +28,6 @@ export class Headers extends MinipassFetchHeaders {}
  */
 export class Request extends MinipassFetchRequest {}
 
-/**
- * Returns `true` if the given object is a `Request`, or has a similar API.
- */
 export function isRequestLike(object: any): object is Request {
   return (
     object &&
@@ -67,9 +64,6 @@ export class Response extends MinipassFetchResponse {
   }
 }
 
-/**
- * Returns `true` if the given object is a `Response`, or has a similar API.
- */
 export function isResponseLike(object: any): object is Response {
   return (
     object &&
@@ -80,11 +74,9 @@ export function isResponseLike(object: any): object is Response {
   );
 }
 
-const defaultFetch = fetch.defaults({
-  // Disable decompression of responses by default. This makes it easier to use
-  // fetch inside a data loader and proxy the response straight through w/out
-  // modifying the Content-Encoding header.
-  compress: false
-});
-
-export { defaultFetch as fetch };
+/**
+ * A `fetch` function for node.js.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
+ */
+export const fetch = makeFetchHappen;

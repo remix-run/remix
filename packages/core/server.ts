@@ -1,3 +1,5 @@
+import { URL } from "url";
+
 import type { AssetManifest } from "./build";
 import {
   getAssetManifest,
@@ -20,24 +22,14 @@ import {
   createRouteManifest,
   createServerHandoffString
 } from "./entry";
-import { Headers, Request, Response, fetch } from "./fetch";
+import type { Request } from "./fetch";
+import { Headers, Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import { purgeRequireCache } from "./requireCache";
+import { json, jsonError } from "./responseHelpers";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
-
-// TODO: Need to figure out how to properly expose these in a node environment
-// with TypeScript. We may need to provide our own thing similar to @types/node
-// for our users.
-// @ts-ignore
-global.fetch = fetch;
-// @ts-ignore
-global.Headers = Headers;
-// @ts-ignore
-global.Request = Request;
-// @ts-ignore
-global.Response = Response;
 
 const PROD = process.env.NODE_ENV === "production";
 const TEST = process.env.NODE_ENV === "test";
@@ -167,7 +159,7 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   return new Response(JSON.stringify(entryManifest), {
     headers: {
       "Cache-Control": `public, max-age=${oneYear}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=utf-8",
       ETag: entryManifest.version
     }
   });
@@ -343,9 +335,9 @@ async function handleHtmlRequest(
         });
 
         if (routeHeaders) {
-          new Headers(routeHeaders).forEach(pair => {
-            parentsHeaders.set(pair[0], pair[1]);
-          });
+          for (let [key, value] of new Headers(routeHeaders).entries()) {
+            parentsHeaders.set(key, value);
+          }
         }
       } catch (error) {
         console.error(
@@ -394,19 +386,4 @@ function getPartialEntries<T = any>(
     if (key in entries) memo[key] = entries[key];
     return memo;
   }, {} as { [key: string]: T });
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-function json(payload: any, status = 200) {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: {
-      "Content-Type": "application/json"
-    }
-  });
-}
-
-function jsonError(error: string, status = 403) {
-  return json({ error }, status);
 }
