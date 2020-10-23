@@ -6,7 +6,7 @@
   },
   "scripts": {
     "clean": "git clean -fdX .",
-    "build": "rollup -c",
+    "build": "rollup -c && tsc -b",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
     "version": "node ./scripts/version.js",

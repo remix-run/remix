@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig-node.json",
+  "compilerOptions": {
+    "outDir": "../../build/node_modules/@remix-run/cli",
+    "rootDir": "."
+  },
+  "include": [
+    "../../types/**/*",
+    "**/*"
+  ]
+}
+

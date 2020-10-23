@@ -6,6 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Features
 
+- Added TypeScript declarations
 - Added `fetch` globals to server code including `entry-server.js` and data
   loaders
 

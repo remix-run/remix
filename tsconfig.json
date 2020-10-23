@@ -1,25 +1,10 @@
 {
-  "compilerOptions": {
-    "noEmit": true,
-
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "jsx": "react",
-    "downlevelIteration": true,
-    "target": "es2018",
-    "module": "esnext",
-
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true
-  },
-  "include": ["types/**/*", "packages/**/*"],
-  "exclude": [
-    "node_modules",
-    "**/__tests__/**",
-    "**/__fixtures__/**",
-    "**/__snapshots__/**"
+  "files": [],
+  "references": [
+    { "path": "packages/cli" },
+    { "path": "packages/core" },
+    { "path": "packages/express" },
+    { "path": "packages/loader" },
+    { "path": "packages/react" }
   ]
 }

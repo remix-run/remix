@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig-browser.json",
+  "compilerOptions": {
+    "outDir": "../../build/node_modules/@remix-run/react",
+    "rootDir": "."
+  },
+  "include": [
+    "../../types/**/*",
+    "**/*"
+  ]
+}
+
