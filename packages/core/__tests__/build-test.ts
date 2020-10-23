@@ -44,6 +44,7 @@ describe("building", () => {
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
           "_shared/Shared-4f69c99e.js",
+          "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
           "entry-server.js",
           "pages/one.js",
           "pages/two.js",
@@ -122,7 +123,7 @@ describe("building", () => {
         Array [
           "_shared/Shared-4f69c99e.js",
           "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
-          "entry-server-ff11ed1b.js",
+          "entry-server-8861fcaf.js",
           "pages/one-84a0981a.js",
           "pages/two-c45d0835.js",
           "routes/404-660aace6.js",
@@ -146,7 +147,7 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-server": Object {
-              "file": "entry-server-ff11ed1b.js",
+              "file": "entry-server-8861fcaf.js",
             },
             "pages/one": Object {
               "file": "pages/one-84a0981a.js",
