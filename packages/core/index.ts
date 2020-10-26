@@ -53,7 +53,7 @@ export {
   fetch
 } from "./fetch";
 
-export type { RouteManifest } from "./routes";
+export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";

@@ -107,7 +107,8 @@ interface DefineRouteChildren {
 }
 
 /**
- * A function for defining a route.
+ * A function for defining a route that is passed as the argument to the
+ * `defineRoutes` callback.
  */
 export interface DefineRoute {
   (
@@ -127,8 +128,10 @@ export interface DefineRoute {
   ): void;
 }
 
+export type DefineRoutes = typeof defineRoutes;
+
 /**
- * The interface for defining routes programmatically, instead of using the
+ * A function for defining routes programmatically, instead of using the
  * filesystem convention.
  */
 export function defineRoutes(

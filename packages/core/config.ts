@@ -1,7 +1,7 @@
 import path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
-import type { ConfigRouteObject, RouteManifest } from "./routes";
+import type { ConfigRouteObject, RouteManifest, DefineRoutes } from "./routes";
 import {
   createRouteManifest,
   defineRoutes as _defineRoutes,
@@ -14,20 +14,15 @@ import {
 export interface AppConfig {
   /**
    * The path to the `app` directory, relative to remix.config.js. Defaults to
-   * "src".
+   * "app".
    */
   appDirectory?: string;
 
   /**
-   * The path to the browser build, relative to remix.config.js. Defaults to
-   * "public/build".
+   * A function for defining custom routes, in addition to those already defined
+   * using the filesystem convention in `app/routes`.
    */
-  browserBuildDirectory?: string;
-
-  /**
-   * The port number to use for the dev server. Defaults to 8002.
-   */
-  devServerPort?: number;
+  routes?: (defineRoutes: DefineRoutes) => Promise<ReturnType<DefineRoutes>>;
 
   /**
    * The path to the `loaders` directory, relative to remix.config.js. Defaults to
@@ -36,9 +31,10 @@ export interface AppConfig {
   loadersDirectory?: string;
 
   /**
-   * Options to use when compiling MDX.
+   * The path to the browser build, relative to remix.config.js. Defaults to
+   * "public/build".
    */
-  mdx?: MdxOptions;
+  browserBuildDirectory?: string;
 
   /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
@@ -47,15 +43,20 @@ export interface AppConfig {
   publicPath?: string;
 
   /**
-   * A function for defining custom routes.
-   */
-  routes?: (defineRoutes: typeof _defineRoutes) => Promise<ConfigRouteObject[]>;
-
-  /**
    * The path to the server build, relative to remix.config.js. Defaults to
    * "build".
    */
   serverBuildDirectory?: string;
+
+  /**
+   * The port number to use for the dev server. Defaults to 8002.
+   */
+  devServerPort?: number;
+
+  /**
+   * Options to use when compiling MDX.
+   */
+  mdx?: MdxOptions;
 }
 
 /**
@@ -63,39 +64,14 @@ export interface AppConfig {
  */
 export interface RemixConfig {
   /**
-   * The absolute path to the source directory.
-   */
-  appDirectory: string;
-
-  /**
-   * The absolute path to the browser build.
-   */
-  browserBuildDirectory: string;
-
-  /**
-   * The absolute path to the `loaders` directory.
-   */
-  loadersDirectory: string;
-
-  /**
-   * The port number to use for the dev server.
-   */
-  devServerPort: number;
-
-  /**
-   * Options to use when compiling MDX.
-   */
-  mdx?: MdxOptions;
-
-  /**
-   * The URL prefix of the browser build with a trailing slash.
-   */
-  publicPath: string;
-
-  /**
    * The absolute path to the root of the Remix project.
    */
   rootDirectory: string;
+
+  /**
+   * The absolute path to the source directory.
+   */
+  appDirectory: string;
 
   /**
    * An array of all available routes, nested according to route hierarchy.
@@ -108,9 +84,34 @@ export interface RemixConfig {
   routeManifest: RouteManifest;
 
   /**
+   * The absolute path to the `loaders` directory.
+   */
+  loadersDirectory: string;
+
+  /**
+   * The absolute path to the browser build.
+   */
+  browserBuildDirectory: string;
+
+  /**
+   * The URL prefix of the browser build with a trailing slash.
+   */
+  publicPath: string;
+
+  /**
    * The absolute path to the server build.
    */
   serverBuildDirectory: string;
+
+  /**
+   * The port number to use for the dev server.
+   */
+  devServerPort: number;
+
+  /**
+   * Options to use when compiling MDX.
+   */
+  mdx?: MdxOptions;
 }
 
 /**
