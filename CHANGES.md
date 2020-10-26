@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Preload stylesheets in 1 request instead of 2
+
 ## 0.5.1 - Fri Oct 23 2020
 
 ### Features

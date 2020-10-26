@@ -28,9 +28,7 @@ describe("style loading", () => {
       await page.click('a[href="/gists"]');
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      // first response is the preload in the transition
-      // second response is the <link> from <Styles>
-      expect(cssResponses.length).toEqual(2);
+      expect(cssResponses.length).toEqual(1);
     });
   });
 });

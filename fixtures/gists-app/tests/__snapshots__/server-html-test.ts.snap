@@ -46,7 +46,7 @@ exports[`the server HTML is correct: page 1`] = `
             \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"23a3d943\\",
+          version: \\"b34abdc9\\",
         },
         matches: [
           {

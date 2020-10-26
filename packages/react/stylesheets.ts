@@ -39,13 +39,9 @@ function loadStyleSheet(href: string): Promise<void> {
   return new Promise(accept => {
     let link = document.createElement("link");
 
-    // setting to "print" prevents these styles from applying before the
-    // transition is complete (or ever ... really)
-    link.media = "print";
-    link.rel = "stylesheet";
-    link.type = "text/css";
+    link.rel = "preload";
+    link.as = "style";
     link.href = href;
-
     link.onload = () => {
       document.head.removeChild(link);
       accept();
