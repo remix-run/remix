@@ -25,7 +25,7 @@ describe("data loading", () => {
 
       let dataResponses = collectResponses(
         page,
-        url => url.pathname === "/__remix_data"
+        url => url.pathname === "/_remix/data"
       );
 
       await page.click('a[href="/gists"]');
@@ -53,7 +53,7 @@ describe("data loading", () => {
 
       let dataResponses = collectResponses(
         page,
-        url => url.pathname === "/__remix_data"
+        url => url.pathname === "/_remix/data"
       );
 
       await page.goBack();
@@ -83,7 +83,7 @@ describe("data loading", () => {
 
       let dataResponses = collectResponses(
         page,
-        url => url.pathname === "/__remix_data"
+        url => url.pathname === "/_remix/data"
       );
 
       await page.goForward();

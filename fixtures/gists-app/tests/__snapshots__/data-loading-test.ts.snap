@@ -35,7 +35,7 @@ export default function PageOne() {
             \\"pages/one\\": { file: \\"pages/one.js\\" },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -93,7 +93,7 @@ export default function PageOne() {
             \\"pages/one\\": { file: \\"pages/one.js\\" },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -179,7 +179,7 @@ exports[`data loading transitioning back after a reload loads data for only the 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -300,7 +300,7 @@ exports[`data loading transitioning back after a reload loads data for only the 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -421,7 +421,7 @@ exports[`data loading transitioning back after a reload loads data for only the 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -542,7 +542,7 @@ exports[`data loading transitioning forward to a page we have already seen loads
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -663,7 +663,7 @@ exports[`data loading transitioning forward to a page we have already seen loads
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -784,7 +784,7 @@ exports[`data loading transitioning forward to a page we have already seen loads
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -905,7 +905,7 @@ exports[`data loading transitioning forward to a page we have already seen loads
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -1009,7 +1009,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
             \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {
@@ -1081,7 +1081,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
             \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {

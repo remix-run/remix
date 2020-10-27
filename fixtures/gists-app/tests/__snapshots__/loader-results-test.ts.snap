@@ -63,7 +63,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"936cdcaa\\",
+          version: \\"9959e4f2\\",
         },
         matches: [
           {

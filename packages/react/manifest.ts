@@ -33,7 +33,7 @@ async function fetchManifestPatch(
     v: currentVersion
   });
 
-  let res = await fetch(`/__remix_manifest?${params.toString()}`);
+  let res = await fetch(`/_remix/manifest?${params.toString()}`);
 
   if (
     res.status === 200 &&

@@ -9,6 +9,9 @@ This is a history of changes to [Remix](https://remix.run).
 - Re-use data we already have for routes already on the page instead of making a
   separate data request
 - Preload stylesheets in 1 request instead of 2
+- Changed `__remix_data` and `__remix_manifest` endpoints to `/_remix/data` and
+  `/_remix/manifest` respectively to shorten the visible portion of the URL
+  pathname in Chrome's network tab
 
 ## 0.5.1 - Fri Oct 23 2020
 

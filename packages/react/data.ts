@@ -41,7 +41,7 @@ async function fetchData(
     params: JSON.stringify(routeParams),
     id: routeId
   });
-  let res = await fetch(`/__remix_data?${params.toString()}`);
+  let res = await fetch(`/_remix/data?${params.toString()}`);
   let contentType = res.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {

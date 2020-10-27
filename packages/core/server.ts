@@ -66,11 +66,11 @@ export function createRequestHandler(remixRoot?: string): RequestHandler {
     let config = await configPromise;
     let url = new URL(req.url);
 
-    if (url.pathname.startsWith("/__remix_data")) {
+    if (url.pathname.startsWith("/_remix/data")) {
       return handleDataRequest(config, req, loadContext);
     }
 
-    if (url.pathname.startsWith("/__remix_manifest")) {
+    if (url.pathname.startsWith("/_remix/manifest")) {
       return handleManifestRequest(config, req);
     }
 
