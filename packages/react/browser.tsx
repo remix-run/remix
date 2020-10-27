@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import React from "react";
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
@@ -20,7 +20,14 @@ export interface RemixBrowserProps {
   children: ReactNode;
 }
 
-export default function RemixBrowser({ children }: RemixBrowserProps) {
+/**
+ * The entry point for a Remix app when it is rendered in the browser (in
+ * `entry-browser.js`). This component is used by React to hydrate the HTML
+ * that was received from the server.
+ */
+export default function RemixBrowser({
+  children
+}: RemixBrowserProps): ReactElement {
   let historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
     historyRef.current = createBrowserHistory({ window });

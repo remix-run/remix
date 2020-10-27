@@ -13,6 +13,10 @@ This is a history of changes to [Remix](https://remix.run).
   `/_remix/manifest` respectively to shorten the visible portion of the URL
   pathname in Chrome's network tab
 
+### Bug Fixes
+
+- Use the right return type for `<RemixBrowser>` and `<RemixServer>`
+
 ## 0.5.1 - Fri Oct 23 2020
 
 ### Features

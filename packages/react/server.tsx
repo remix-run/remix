@@ -1,6 +1,6 @@
 import type { Location, To } from "history";
 import { Action, createPath } from "history";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import React from "react";
 import type { EntryContext } from "@remix-run/core";
 
@@ -12,11 +12,16 @@ export interface RemixServerProps {
   url: string | URL;
 }
 
+/**
+ * The entry point for a Remix app when it is rendered on the server (in
+ * `entry-server.js`). This component is used to generate the HTML in the
+ * response from the server.
+ */
 export default function RemixServer({
   children,
   context,
   url
-}: RemixServerProps) {
+}: RemixServerProps): ReactElement {
   if (typeof url === "string") {
     url = new URL(url);
   }
