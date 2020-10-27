@@ -35,8 +35,14 @@ export function loadRouteStyleSheet(
   return loadStyleSheet(href);
 }
 
+let preloads: { [href: string]: Promise<void> } = {};
+
 function loadStyleSheet(href: string): Promise<void> {
-  return new Promise(accept => {
+  if (preloads[href]) {
+    return preloads[href];
+  }
+
+  let preloadPromise = new Promise<void>(accept => {
     let link = document.createElement("link");
 
     link.rel = "preload";
@@ -50,4 +56,8 @@ function loadStyleSheet(href: string): Promise<void> {
     // have to append to get it to actually load
     document.head.appendChild(link);
   });
+
+  preloads[href] = preloadPromise;
+
+  return preloadPromise;
 }

@@ -6,6 +6,8 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Re-use data we already have for routes already on the page instead of making a
+  separate data request
 - Preload stylesheets in 1 request instead of 2
 
 ## 0.5.1 - Fri Oct 23 2020

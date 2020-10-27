@@ -203,7 +203,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-0e8f3297.js",
-          "_shared/node_modules/@remix-run/react-8d54131a.js",
+          "_shared/node_modules/@remix-run/react-75827a5b.js",
           "_shared/node_modules/history-45437576.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-a68204f7.js",
@@ -301,7 +301,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-fa2b156c.js",
-          "_shared/node_modules/@remix-run/react-570c1c45.js",
+          "_shared/node_modules/@remix-run/react-82d9eb26.js",
           "_shared/node_modules/history-8b818913.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-d4c4f9f2.js",
@@ -312,17 +312,17 @@ describe("building", () => {
           "_shared/node_modules/react-router-fa8780cf.js",
           "_shared/node_modules/scheduler-99859fcd.js",
           "asset-manifest.json",
-          "entry-browser-de5a0e60.js",
+          "entry-browser-52040a01.js",
           "global-ec887178.css",
           "pages/one-33b3e281.js",
           "pages/two-6e39a2d3.js",
           "routes/404-81cdf991.js",
           "routes/500-0c9b194f.js",
           "routes/gists-a6d2a823.css",
-          "routes/gists-e9ff3bf8.js",
+          "routes/gists-dd17eb73.js",
           "routes/gists.mine-f12f3533.js",
-          "routes/gists/$username-0bd267b7.js",
-          "routes/gists/index-a5e7dff4.js",
+          "routes/gists/$username-3e69b133.js",
+          "routes/gists/index-09378e5d.js",
           "routes/index-990e13ed.js",
           "routes/page/four-7c11fa85.js",
           "routes/page/three-5de4b3e5.js",
@@ -337,7 +337,7 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-de5a0e60.js",
+              "file": "entry-browser-52040a01.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
@@ -355,7 +355,7 @@ describe("building", () => {
               "file": "routes/500-0c9b194f.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-e9ff3bf8.js",
+              "file": "routes/gists-dd17eb73.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-a6d2a823.css",
@@ -364,10 +364,10 @@ describe("building", () => {
               "file": "routes/gists.mine-f12f3533.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-0bd267b7.js",
+              "file": "routes/gists/$username-3e69b133.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-a5e7dff4.js",
+              "file": "routes/gists/index-09378e5d.js",
             },
             "routes/index": Object {
               "file": "routes/index-990e13ed.js",

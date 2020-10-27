@@ -37,7 +37,7 @@ describe("data loading", () => {
   });
 
   describe("transitioning back after a reload", () => {
-    it("loads data for the previous route", async () => {
+    it("loads data for only the changed route", async () => {
       await page.goto(`${testServer}/gists`);
       await reactIsHydrated(page);
 
@@ -59,13 +59,13 @@ describe("data loading", () => {
       await page.goBack();
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      expect(dataResponses.length).toEqual(2);
+      expect(dataResponses.length).toEqual(1);
       expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
 
   describe("transitioning forward to a page we have already seen", () => {
-    it("does not fetch any data for that page", async () => {
+    it("loads data for only the changed route", async () => {
       await page.goto(`${testServer}/gists`);
       await reactIsHydrated(page);
 
@@ -89,7 +89,7 @@ describe("data loading", () => {
       await page.goForward();
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
-      expect(dataResponses.length).toEqual(2);
+      expect(dataResponses.length).toEqual(1);
       expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });

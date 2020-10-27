@@ -35,7 +35,7 @@ export default function PageOne() {
             \\"pages/one\\": { file: \\"pages/one.js\\" },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -93,7 +93,7 @@ export default function PageOne() {
             \\"pages/one\\": { file: \\"pages/one.js\\" },
           },
           routes: { \\"pages/one\\": { id: \\"pages/one\\", path: \\"/page/one\\" } },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -116,7 +116,7 @@ export default function PageOne() {
 "
 `;
 
-exports[`data loading transitioning back after a reload loads data for the previous route: page 1`] = `
+exports[`data loading transitioning back after a reload loads data for only the changed route: page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -179,7 +179,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -237,7 +237,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
 "
 `;
 
-exports[`data loading transitioning back after a reload loads data for the previous route: page 2`] = `
+exports[`data loading transitioning back after a reload loads data for only the changed route: page 2`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -300,7 +300,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -358,7 +358,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
 "
 `;
 
-exports[`data loading transitioning back after a reload loads data for the previous route: page 3`] = `
+exports[`data loading transitioning back after a reload loads data for only the changed route: page 3`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -421,7 +421,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -479,7 +479,7 @@ exports[`data loading transitioning back after a reload loads data for the previ
 "
 `;
 
-exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 1`] = `
+exports[`data loading transitioning forward to a page we have already seen loads data for only the changed route: page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -542,7 +542,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -600,7 +600,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
 "
 `;
 
-exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 2`] = `
+exports[`data loading transitioning forward to a page we have already seen loads data for only the changed route: page 2`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -663,7 +663,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -721,7 +721,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
 "
 `;
 
-exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 3`] = `
+exports[`data loading transitioning forward to a page we have already seen loads data for only the changed route: page 3`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -784,7 +784,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -842,7 +842,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
 "
 `;
 
-exports[`data loading transitioning forward to a page we have already seen does not fetch any data for that page: page 4`] = `
+exports[`data loading transitioning forward to a page we have already seen loads data for only the changed route: page 4`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -905,7 +905,7 @@ exports[`data loading transitioning forward to a page we have already seen does 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -1009,7 +1009,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
             \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {
@@ -1081,7 +1081,7 @@ exports[`data loading transitioning to a new route loads data for all routes on 
             \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"b34abdc9\\",
+          version: \\"936cdcaa\\",
         },
         matches: [
           {

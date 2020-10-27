@@ -94,8 +94,13 @@ export function RemixEntry({
       let nextMatches = matchClientRoutes(routes, nextLocation);
 
       let dataPromise = Promise.all(
-        nextMatches.map(match =>
-          loadRouteData(manifest, location, match.params, match.route.id)
+        nextMatches.map((match, index) =>
+          location.search === nextLocation.search &&
+          matches[index] &&
+          matches[index].pathname === match.pathname
+            ? // Re-use data we already have for routes already on the page.
+              routeData[match.route.id]
+            : loadRouteData(manifest, location, match.params, match.route.id)
         )
       );
 
@@ -134,7 +139,7 @@ export function RemixEntry({
     return () => {
       isCurrent = false;
     };
-  }, [nextAction, nextLocation, location, matches, publicPath]);
+  }, [nextAction, nextLocation, location, matches, publicPath, routeData]);
 
   let context: RemixEntryContextType = {
     globalData,
