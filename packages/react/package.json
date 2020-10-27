@@ -2,7 +2,7 @@
   "name": "@remix-run/react",
   "description": "React DOM bindings for Remix",
   "version": "0.5.1",
-  "repository": "https://github.com/remix-run/packages",
+  "repository": "https://github.com/remix-run/remix",
   "peerDependencies": {
     "history": ">=5",
     "react": "16",

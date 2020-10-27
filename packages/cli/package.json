@@ -2,7 +2,7 @@
   "name": "@remix-run/cli",
   "description": "The Remix CLI interface",
   "version": "0.5.1",
-  "repository": "https://github.com/remix-run/packages",
+  "repository": "https://github.com/remix-run/remix",
   "bin": {
     "remix": "index.js"
   },

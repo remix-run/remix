@@ -2,7 +2,7 @@
   "name": "@remix-run/express",
   "description": "Express server request handler for Remix",
   "version": "0.5.1",
-  "repository": "https://github.com/remix-run/packages",
+  "repository": "https://github.com/remix-run/remix",
   "dependencies": {
     "@remix-run/core": "0.5.1"
   },
