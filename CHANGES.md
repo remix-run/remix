@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Add more strict return type to `createRequestHandler` in `@remix-run/express`
+- Add `GetLoadContext` interface to `@remix-run/express`
+
 ## 0.5.2 - Tue Oct 27 2020
 
 ### Improvements

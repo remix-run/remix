@@ -8,6 +8,17 @@ import {
 } from "@remix-run/core";
 
 /**
+ * A function that returns the `context` object for data loaders.
+ */
+export interface GetLoadContext {
+  (req: express.Request, res: express.Response): AppLoadContext;
+}
+
+interface RequestHandler {
+  (req: express.Request, res: express.Response): Promise<void>;
+}
+
+/**
  * Creates a request handler for Express that generates the response using
  * Remix routing and data loading.
  */
@@ -15,12 +26,9 @@ export function createRequestHandler({
   getLoadContext,
   root: remixRoot
 }: {
-  getLoadContext?: (
-    req: express.Request,
-    res: express.Response
-  ) => AppLoadContext;
+  getLoadContext?: GetLoadContext;
   root?: string;
-} = {}): express.RequestHandler {
+} = {}): RequestHandler {
   let handleRequest = createRemixRequestHandler(remixRoot);
 
   return async (req: express.Request, res: express.Response) => {
