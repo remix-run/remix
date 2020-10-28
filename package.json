@@ -14,8 +14,10 @@
   },
   "workspaces": [
     "fixtures/gists-app",
+    "packages/cli",
     "packages/core",
     "packages/express",
+    "packages/loader",
     "packages/react"
   ],
   "dependencies": {
@@ -45,6 +47,7 @@
     "eslint-plugin-jsx-a11y": "6.x",
     "eslint-plugin-react": "7.x",
     "eslint-plugin-react-hooks": "2.x",
+    "express": "^4.17.1",
     "history": "^5.0.0",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",
