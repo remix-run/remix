@@ -12,6 +12,7 @@ import * as rollup from "rollup";
 import alias from "@rollup/plugin-alias";
 import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
+import { terser } from "rollup-plugin-terser";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 
@@ -253,7 +254,14 @@ function getBuildPlugins(
     commonjs(),
     replace({
       "process.env.NODE_ENV": JSON.stringify(mode)
-    }),
+    })
+  );
+
+  if (mode === BuildMode.Production) {
+    plugins.push(terser());
+  }
+
+  plugins.push(
     manifest({
       outputDir: manifestDir,
       fileName:
