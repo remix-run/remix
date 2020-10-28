@@ -24,6 +24,7 @@ import {
 } from "./entry";
 import type { Request } from "./fetch";
 import { Headers, Response } from "./fetch";
+import { setupGlobalFetch } from "./globalFetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import { purgeRequireCache } from "./requireCache";
@@ -34,6 +35,13 @@ import { oneYear } from "./seconds";
 const PROD = process.env.NODE_ENV === "production";
 const TEST = process.env.NODE_ENV === "test";
 const DEV = !(PROD || TEST);
+
+function getConfig(remixRoot?: string): Promise<RemixConfig> {
+  return readConfig(remixRoot).then(config => {
+    setupGlobalFetch(config.rootDirectory);
+    return config;
+  });
+}
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -54,13 +62,13 @@ export interface RequestHandler {
  * Creates a HTTP request handler.
  */
 export function createRequestHandler(remixRoot?: string): RequestHandler {
-  let configPromise = readConfig(remixRoot);
+  let configPromise = getConfig(remixRoot);
 
   return async (req, loadContext = {}) => {
     if (DEV) {
       let config = await configPromise;
       purgeRequireCache(config.rootDirectory);
-      configPromise = readConfig(remixRoot);
+      configPromise = getConfig(remixRoot);
     }
 
     let config = await configPromise;

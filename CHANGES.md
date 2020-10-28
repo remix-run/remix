@@ -6,6 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Add caching and `{ compress: false }` to `global.fetch` in node
 - Add more strict return type to `createRequestHandler` in `@remix-run/express`
 - Add `GetLoadContext` interface to `@remix-run/express`
 
