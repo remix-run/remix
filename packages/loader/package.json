@@ -1,9 +1,9 @@
 {
   "name": "@remix-run/loader",
   "description": "Classes and helpers for Remix data loaders",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
-    "@remix-run/core": "0.5.2"
+    "@remix-run/core": "0.6.0"
   }
 }
