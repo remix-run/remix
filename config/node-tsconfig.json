@@ -1,8 +1,6 @@
 {
-  "extends": "./tsconfig-base.json",
+  "extends": "./base-tsconfig.json",
   "compilerOptions": {
-    "jsx": "react",
-    "lib": ["dom"],
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "es2019"

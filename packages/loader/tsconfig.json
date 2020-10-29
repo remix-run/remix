@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig-node.json",
+  "extends": "../../config/node-tsconfig.json",
   "compilerOptions": {
     "outDir": "../../build/node_modules/@remix-run/loader",
     "rootDir": "."

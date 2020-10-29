@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig-browser.json",
+  "extends": "../../config/browser-tsconfig.json",
   "compilerOptions": {
     "outDir": "../../build/node_modules/@remix-run/react",
     "rootDir": "."
