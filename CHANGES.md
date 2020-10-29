@@ -6,6 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Bug Fixes
 
+- Fix the build on Windows machines to not externalize local modules
 - Temporarily disable caching fetches in node for now. It seems like there are
   bugs there...
 

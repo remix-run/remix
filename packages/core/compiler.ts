@@ -184,10 +184,22 @@ export async function writeDevServerBuild(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+function isLocalModuleId(id: string): boolean {
+  return (
+    // This is a relative id that hasn't been resolved yet, e.g. "./App"
+    id.startsWith(".") ||
+    // This is an absolute filesystem path that has already been resolved, e.g.
+    // "/path/to/node_modules/react/index.js"
+    (process.platform === "win32" ? /^[A-Z]:\//.test(id) : id.startsWith("/"))
+  );
+}
+
 function getExternalOption(target: BuildTarget): ExternalOption | undefined {
   return target === BuildTarget.Server
-    ? // Ignore node_modules, bare identifiers, etc.
-      (id: string) => !(id.startsWith("/") || id.startsWith("."))
+    ? // Exclude non-local module identifiers from the server bundles.
+      // This includes identifiers like "react" which will be resolved
+      // dynamically at runtime using require().
+      (id: string) => !isLocalModuleId(id)
     : undefined;
 }
 
