@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Temporarily disable caching fetches in node for now. It seems like there are
+  bugs there...
+
 ## 0.6.0 - Wed Oct 28 2020
 
 ### Improvements
