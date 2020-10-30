@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## 0.6.2 - Fri Oct 30 2020
+
+### Bug Fixes
+
+- Second attempt at fixing the build on Windows machines
+
 ## 0.6.1 - Thu Oct 29 2020
 
 ### Bug Fixes
