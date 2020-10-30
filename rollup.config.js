@@ -4,7 +4,7 @@ import copy from "rollup-plugin-copy";
 import nodeResolve from "@rollup/plugin-node-resolve";
 
 function isLocalModuleId(id) {
-  return id.startsWith(".") || id.startsWith("/");
+  return id.startsWith(".") || path.isAbsolute(id);
 }
 
 /** @type {import('rollup').RollupOptions} */

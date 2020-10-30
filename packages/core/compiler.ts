@@ -190,7 +190,7 @@ function isLocalModuleId(id: string): boolean {
     id.startsWith(".") ||
     // This is an absolute filesystem path that has already been resolved, e.g.
     // "/path/to/node_modules/react/index.js"
-    (process.platform === "win32" ? /^[A-Z]:\//.test(id) : id.startsWith("/"))
+    path.isAbsolute(id)
   );
 }
 
