@@ -3,19 +3,19 @@ const { notFound } = require("@remix-run/loader");
 module.exports = function ({ params }) {
   let { username } = params;
 
+  if (username === "mjijackson") {
+    return Response.redirect("/gists/mjackson");
+  }
+
+  if (username === "_why") {
+    return notFound();
+  }
+
+  if (username === "DANGER") {
+    throw new Error("RUN FOR IT");
+  }
+
   if (process.env.NODE_ENV === "test") {
-    if (username === "mjijackson") {
-      return Response.redirect("/gists/mjackson");
-    }
-
-    if (username === "_why") {
-      return notFound();
-    }
-
-    if (username === "DANGER") {
-      throw new Error("RUN FOR IT");
-    }
-
     return fakeGists;
   }
 

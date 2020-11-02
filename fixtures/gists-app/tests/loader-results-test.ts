@@ -1,7 +1,7 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
-import { prettyHtml } from "./utils";
+import { getHtml } from "./utils";
 
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
@@ -30,7 +30,7 @@ describe("loader results", () => {
     it("sends a not found page", async () => {
       let res = await page.goto(`${testServer}/gists/_why`);
       expect(res.status()).toEqual(404);
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
+      expect(await getHtml(page)).toMatchSnapshot();
     });
   });
 
@@ -38,7 +38,7 @@ describe("loader results", () => {
     it("sends a server error page", async () => {
       let res = await page.goto(`${testServer}/gists/DANGER`);
       expect(res.status()).toEqual(500);
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
+      expect(await getHtml(page)).toMatchSnapshot();
     });
   });
 });

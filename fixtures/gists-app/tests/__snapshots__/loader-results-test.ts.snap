@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`loader results when a loader returns not found sends a not found page: page 1`] = `
+exports[`loader results when a loader returns not found sends a not found page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -63,7 +63,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"cf5a281e\\",
+          version: \\"5b8df186\\",
         },
         matches: [
           {
@@ -108,7 +108,7 @@ exports[`loader results when a loader returns not found sends a not found page: 
 "
 `;
 
-exports[`loader results when the loader has an error sends a server error page: page 1`] = `
+exports[`loader results when the loader has an error sends a server error page 1`] = `
 "<!DOCTYPE html>
 "
 `;

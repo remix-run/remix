@@ -110,7 +110,7 @@ export function extractData(loadResult: AppLoadResult): Promise<AppData> {
     return loadResult.json();
   }
 
-  // TODO: Should we handle binary data types here? People gonna be returning
+  // Should we handle binary data types here? People gonna be returning
   // video/images from their data loaders someday?
 
   return loadResult.text();

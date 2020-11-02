@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`mdx component works 1`] = `
+"<button data-test-id=\\"counter-button\\">Clicked 0</button>
+"
+`;
+
+exports[`mdx component works 2`] = `
+"<button data-test-id=\\"counter-button\\">Clicked 1</button>
+"
+`;

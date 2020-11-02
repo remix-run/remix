@@ -132,7 +132,7 @@ describe("building", () => {
           "routes/gists.mine-9c786e2b.js",
           "routes/gists/$username-ebf86aaf.js",
           "routes/gists/index-c6bcfd56.js",
-          "routes/index-933c0125.js",
+          "routes/index-d1c358fc.js",
           "routes/page/four-c9ce2fc6.js",
           "routes/page/three-cbc19f53.js",
           "server-manifest.json",
@@ -174,7 +174,7 @@ describe("building", () => {
               "file": "routes/gists/index-c6bcfd56.js",
             },
             "routes/index": Object {
-              "file": "routes/index-933c0125.js",
+              "file": "routes/index-d1c358fc.js",
             },
             "routes/page/four": Object {
               "file": "routes/page/four-c9ce2fc6.js",
@@ -203,7 +203,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-0e8f3297.js",
-          "_shared/node_modules/@remix-run/react-f96f3e70.js",
+          "_shared/node_modules/@remix-run/react-c2b5d8da.js",
           "_shared/node_modules/history-45437576.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-a68204f7.js",
@@ -301,7 +301,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-fa2b156c.js",
-          "_shared/node_modules/@remix-run/react-1de3474a.js",
+          "_shared/node_modules/@remix-run/react-9b277f7a.js",
           "_shared/node_modules/history-8b818913.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-d4c4f9f2.js",
@@ -312,18 +312,18 @@ describe("building", () => {
           "_shared/node_modules/react-router-fa8780cf.js",
           "_shared/node_modules/scheduler-99859fcd.js",
           "asset-manifest.json",
-          "entry-browser-a91106f9.js",
+          "entry-browser-f45ca484.js",
           "global-ec887178.css",
           "pages/one-33b3e281.js",
           "pages/two-6e39a2d3.js",
           "routes/404-81cdf991.js",
           "routes/500-0c9b194f.js",
-          "routes/gists-8269b586.js",
+          "routes/gists-437d2ffa.js",
           "routes/gists-a6d2a823.css",
           "routes/gists.mine-f12f3533.js",
-          "routes/gists/$username-75321a18.js",
-          "routes/gists/index-3c5c0fa4.js",
-          "routes/index-990e13ed.js",
+          "routes/gists/$username-ab749ca5.js",
+          "routes/gists/index-07d26803.js",
+          "routes/index-ca6ee761.js",
           "routes/page/four-7c11fa85.js",
           "routes/page/three-5de4b3e5.js",
         ]
@@ -337,7 +337,7 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-a91106f9.js",
+              "file": "entry-browser-f45ca484.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
@@ -355,7 +355,7 @@ describe("building", () => {
               "file": "routes/500-0c9b194f.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-8269b586.js",
+              "file": "routes/gists-437d2ffa.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-a6d2a823.css",
@@ -364,13 +364,13 @@ describe("building", () => {
               "file": "routes/gists.mine-f12f3533.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-75321a18.js",
+              "file": "routes/gists/$username-ab749ca5.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-3c5c0fa4.js",
+              "file": "routes/gists/index-07d26803.js",
             },
             "routes/index": Object {
-              "file": "routes/index-990e13ed.js",
+              "file": "routes/index-ca6ee761.js",
             },
             "routes/page/four": Object {
               "file": "routes/page/four-7c11fa85.js",

@@ -1,6 +1,6 @@
-import type { Action, Location } from "history";
 import type { ReactNode } from "react";
 import React from "react";
+import type { Action, Location } from "history";
 import type { Navigator } from "react-router";
 import { Router, Link, useLocation, useRoutes } from "react-router-dom";
 import type { EntryContext } from "@remix-run/core";
@@ -84,7 +84,6 @@ export function RemixEntry({
     if (location === nextLocation) return;
 
     let isCurrent = true;
-
     setState(state => ({ ...state, pending: true }));
 
     (async () => {
@@ -93,6 +92,17 @@ export function RemixEntry({
       let routes = createClientRoutes(manifest.routes, RemixRoute);
       let nextMatches = matchClientRoutes(routes, nextLocation);
 
+      let didRedirect = false;
+      function handleDataRedirect(url: URL) {
+        didRedirect = true;
+        if (url.origin !== window.location.origin) {
+          window.location.replace(url.href);
+        } else {
+          // TODO: navigator.replace() should just handle different origins
+          navigator.replace(url.pathname + url.search);
+        }
+      }
+
       let dataPromise = Promise.all(
         nextMatches.map((match, index) =>
           location.search === nextLocation.search &&
@@ -100,7 +110,13 @@ export function RemixEntry({
           matches[index].pathname === match.pathname
             ? // Re-use data we already have for routes already on the page.
               routeData[match.route.id]
-            : loadRouteData(manifest, location, match.params, match.route.id)
+            : loadRouteData(
+                manifest,
+                location,
+                match.params,
+                match.route.id,
+                handleDataRedirect
+              )
         )
       );
 
@@ -120,7 +136,7 @@ export function RemixEntry({
       await styleSheetsPromise;
       await modulesPromise;
 
-      if (isCurrent) {
+      if (isCurrent && !didRedirect) {
         let nextRouteData = nextMatches.reduce((routeData, match, index) => {
           routeData[match.route.id] = dataResults[index];
           return routeData;
@@ -139,7 +155,15 @@ export function RemixEntry({
     return () => {
       isCurrent = false;
     };
-  }, [nextAction, nextLocation, location, matches, publicPath, routeData]);
+  }, [
+    nextAction,
+    nextLocation,
+    location,
+    matches,
+    publicPath,
+    routeData,
+    navigator
+  ]);
 
   let context: RemixEntryContextType = {
     globalData,
@@ -159,9 +183,7 @@ export function RemixEntry({
       navigator={navigator}
       static={staticProp}
     >
-      <RemixEntryContext.Provider value={context}>
-        {children}
-      </RemixEntryContext.Provider>
+      <RemixEntryContext.Provider value={context} children={children} />
     </Router>
   );
 }

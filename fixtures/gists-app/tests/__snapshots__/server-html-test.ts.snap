@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`the server HTML is correct: page 1`] = `
+exports[`the server HTML for the root URL is correct 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
   <head>
@@ -25,8 +25,13 @@ exports[`the server HTML is correct: page 1`] = `
             <a class=\\"text-blue-700 underline\\" href=\\"/gists\\">View Some gists</a>
           </li>
           <li>
+            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjijackson\\"
+              >Loader Redirect</a
+            >
+          </li>
+          <li>
             <a class=\\"text-blue-700 underline\\" href=\\"/user-gists/ryanflorence\\"
-              >Server Redirect</a
+              >Express Redirect</a
             >
           </li>
           <li>
@@ -46,7 +51,7 @@ exports[`the server HTML is correct: page 1`] = `
             \\"routes/index\\": { file: \\"routes/index.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"cf5a281e\\",
+          version: \\"5b8df186\\",
         },
         matches: [
           {

@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Treat data loader redirects the same in client-side transitions as we do in
+  HTML requests.
+
 ## 0.6.2 - Fri Oct 30 2020
 
 ### Bug Fixes

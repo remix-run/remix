@@ -1,7 +1,7 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
-import { prettyHtml, reactIsHydrated, collectResponses } from "./utils";
+import { reactIsHydrated, collectResponses } from "./utils";
 
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
@@ -21,8 +21,6 @@ describe("data loading", () => {
       await page.goto(`${testServer}/`);
       await reactIsHydrated(page);
 
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
-
       let dataResponses = collectResponses(
         page,
         url => url.pathname === "/_remix/data"
@@ -32,7 +30,18 @@ describe("data loading", () => {
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
       expect(dataResponses.length).toEqual(2);
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
+    });
+  });
+
+  describe("transitioning to a new route with a data loader that redirects", () => {
+    it("redirects to the new page", async () => {
+      await page.goto(`${testServer}/`);
+      await reactIsHydrated(page);
+
+      await page.click('a[href="/gists/mjijackson"]');
+      await page.waitForSelector('[data-test-id="/gists/$username"]');
+
+      expect(page.url()).toMatch(/\/gists\/mjackson$/);
     });
   });
 
@@ -41,12 +50,8 @@ describe("data loading", () => {
       await page.goto(`${testServer}/gists`);
       await reactIsHydrated(page);
 
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
-
       await page.click('a[href="/gists/mjackson"]');
       await page.waitForSelector('[data-test-id="/gists/$username"]');
-
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
 
       await page.reload();
       await reactIsHydrated(page);
@@ -60,7 +65,6 @@ describe("data loading", () => {
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
       expect(dataResponses.length).toEqual(1);
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
 
@@ -69,17 +73,11 @@ describe("data loading", () => {
       await page.goto(`${testServer}/gists`);
       await reactIsHydrated(page);
 
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
-
       await page.click('a[href="/gists/mjackson"]');
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
-
       await page.goBack();
       await page.waitForSelector('[data-test-id="/gists/index"]');
-
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
 
       let dataResponses = collectResponses(
         page,
@@ -90,20 +88,6 @@ describe("data loading", () => {
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
       expect(dataResponses.length).toEqual(1);
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
-    });
-  });
-
-  describe("mdx", () => {
-    it("works", async () => {
-      await page.goto(`${testServer}/page/one`);
-      await reactIsHydrated(page);
-
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
-
-      await page.click('[data-test-id="counter-button"]');
-
-      expect(prettyHtml(await page.content())).toMatchSnapshot("page");
     });
   });
 });

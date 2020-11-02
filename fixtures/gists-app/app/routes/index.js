@@ -24,11 +24,16 @@ export default function Index() {
             </Link>
           </li>
           <li>
+            <Link to="/gists/mjijackson" className="text-blue-700 underline">
+              Loader Redirect
+            </Link>
+          </li>
+          <li>
             <Link
               to="/user-gists/ryanflorence"
               className="text-blue-700 underline"
             >
-              Server Redirect
+              Express Redirect
             </Link>
           </li>
           <li>
