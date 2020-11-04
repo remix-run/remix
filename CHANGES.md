@@ -8,6 +8,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 - Treat data loader redirects the same in client-side transitions as we do in
   HTML requests.
+- Added ability to pass a function into `remix.config.mdx = (attrs, filename) => {}`
 
 ### Bug Fixes
 
