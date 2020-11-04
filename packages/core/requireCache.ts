@@ -1,3 +1,5 @@
+const path = require("path");
+
 /**
  * Purges all entries that begin with the given prefix from node's internal
  * require cache. In Remix, the following files are loaded via CommonJS require:
@@ -10,8 +12,9 @@
  * dev mode.
  */
 export function purgeRequireCache(prefix: string): void {
+  let nodeModules = path.join(prefix, "node_modules");
   for (let key of Object.keys(require.cache)) {
-    if (key.startsWith(prefix)) {
+    if (key.startsWith(prefix) && !key.startsWith(nodeModules)) {
       delete require.cache[key];
     }
   }
