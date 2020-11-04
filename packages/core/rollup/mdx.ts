@@ -14,7 +14,17 @@ interface RemixFrontMatter {
   headers?: { [header: string]: string };
 }
 
-export default function mdxTransform(mdxOptions: any): Plugin {
+// They don't have types, so we could go figure it all out and add it as an
+// interface here
+export type MdxOptions = any;
+export type MdxFunctionOption = (
+  attributes: { [key: string]: any },
+  filename: string
+) => MdxOptions;
+
+export type MdxConfig = MdxFunctionOption | MdxOptions;
+
+export default function mdxTransform(mdxConfig?: MdxConfig): Plugin {
   return {
     name: "mdx",
     async transform(content, filename) {
@@ -43,6 +53,11 @@ export default function mdxTransform(mdxOptions: any): Plugin {
           attributes.headers
         )}}`;
       }
+
+      let mdxOptions =
+        typeof mdxConfig === "function"
+          ? mdxConfig(attributes, filename)
+          : mdxConfig;
 
       let source = await mdx(body, mdxOptions);
       let code = [imports, headers, meta, source].filter(Boolean).join("\n");
