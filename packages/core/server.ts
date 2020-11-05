@@ -19,8 +19,7 @@ import {
   createRouteManifest,
   createServerHandoffString
 } from "./entry";
-import type { Request } from "./fetch";
-import { Headers, Response, fetch } from "./fetch";
+import { Headers, Request, Response, fetch } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
@@ -85,6 +84,7 @@ async function handleDataRequest(
   request: Request,
   loadContext: AppLoadContext
 ): Promise<Response> {
+  let isAction = isActionRequest(request);
   let searchParams = new URL(request.url).searchParams;
   let urlParam = searchParams.get("url");
   let routeId = searchParams.get("id");
@@ -98,16 +98,27 @@ async function handleDataRequest(
   }
 
   let url = new URL(urlParam);
+  let loaderRequest = createLoaderRequest(url.href, request);
   let loadResult = await loadRouteData(
     remixConfig.loadersDirectory,
     remixConfig.routeManifest[routeId],
     params,
     loadContext,
-    url
+    loaderRequest,
+    isAction
   );
 
   if (!loadResult) {
     return json(null);
+  }
+
+  if (isRedirect(loadResult)) {
+    return new Response("", {
+      status: 204,
+      headers: {
+        "x-remix-redirect": loadResult.headers.get("location")!
+      }
+    });
   }
 
   return loadResult;
@@ -173,6 +184,7 @@ async function handleHtmlRequest(
   loadContext: AppLoadContext,
   serverMode: string
 ): Promise<Response> {
+  let isAction = isActionRequest(request);
   let url = new URL(request.url);
 
   let statusCode = 200;
@@ -212,11 +224,24 @@ async function handleHtmlRequest(
     ];
   }
 
+  if (isAction) {
+    let leafMatch = matches[matches.length - 1];
+    let result = await loadRouteData(
+      remixConfig.loadersDirectory,
+      remixConfig.routeManifest[leafMatch.route.id],
+      leafMatch.params,
+      loadContext,
+      request,
+      isAction
+    );
+    return result!;
+  }
+
   // Run all data loaders in parallel and await them individually below.
   let globalLoadResultPromise = loadGlobalData(
     remixConfig.loadersDirectory,
     loadContext,
-    url
+    request
   );
   let routeLoadResultPromises = matches.map(match =>
     loadRouteData(
@@ -224,7 +249,8 @@ async function handleHtmlRequest(
       remixConfig.routeManifest[match.route.id],
       match.params,
       loadContext,
-      url
+      request,
+      isAction
     )
   );
 
@@ -253,9 +279,7 @@ async function handleHtmlRequest(
 
   // Check for redirect. A redirect in a loader takes precedence over all
   // other responses and is immediately returned.
-  let redirectResult = allResults.find(
-    result => result && (result.status === 301 || result.status === 302)
-  );
+  let redirectResult = allResults.find(result => result && isRedirect(result));
 
   if (redirectResult) {
     return redirectResult;
@@ -435,4 +459,24 @@ function getPartialEntries<T = any>(
     if (key in entries) memo[key] = entries[key];
     return memo;
   }, {} as { [key: string]: T });
+}
+
+function isRedirect(response: Response) {
+  return (
+    response.status === 301 ||
+    response.status === 302 ||
+    response.status === 303
+  );
+}
+
+function createLoaderRequest(url: string, request: Request) {
+  return new Request(url, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body
+  });
+}
+
+function isActionRequest(request: Request) {
+  return request.method.toLowerCase() !== "get";
 }

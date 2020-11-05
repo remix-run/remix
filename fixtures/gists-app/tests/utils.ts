@@ -1,5 +1,5 @@
 import prettier from "prettier";
-import type { Page, Response } from "puppeteer";
+import type { Page, Response, Request } from "puppeteer";
 import cheerio from "cheerio";
 
 export async function getHtml(page: Page, selector?: string): Promise<string> {
@@ -39,4 +39,12 @@ export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
   });
 
   return responses;
+}
+
+export async function disableJavaScript(page: Page) {
+  await page.setRequestInterception(true);
+  page.on("request", (request: Request) => {
+    if (request.resourceType() === "script") request.abort();
+    else request.continue();
+  });
 }

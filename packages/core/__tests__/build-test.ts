@@ -55,6 +55,7 @@ describe("building", () => {
           "routes/gists/$username.js",
           "routes/gists/index.js",
           "routes/index.js",
+          "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
           "server-manifest.json",
@@ -98,6 +99,9 @@ describe("building", () => {
             "routes/index": Object {
               "file": "routes/index.js",
             },
+            "routes/methods": Object {
+              "file": "routes/methods.js",
+            },
             "routes/page/four": Object {
               "file": "routes/page/four.js",
             },
@@ -128,11 +132,12 @@ describe("building", () => {
           "pages/two-c45d0835.js",
           "routes/404-660aace6.js",
           "routes/500-3568401c.js",
-          "routes/gists-30e67783.js",
+          "routes/gists-18c0bb36.js",
           "routes/gists.mine-9c786e2b.js",
           "routes/gists/$username-ebf86aaf.js",
           "routes/gists/index-c6bcfd56.js",
           "routes/index-d1c358fc.js",
+          "routes/methods-7b965f7c.js",
           "routes/page/four-c9ce2fc6.js",
           "routes/page/three-cbc19f53.js",
           "server-manifest.json",
@@ -162,7 +167,7 @@ describe("building", () => {
               "file": "routes/500-3568401c.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-30e67783.js",
+              "file": "routes/gists-18c0bb36.js",
             },
             "routes/gists.mine": Object {
               "file": "routes/gists.mine-9c786e2b.js",
@@ -175,6 +180,9 @@ describe("building", () => {
             },
             "routes/index": Object {
               "file": "routes/index-d1c358fc.js",
+            },
+            "routes/methods": Object {
+              "file": "routes/methods-7b965f7c.js",
             },
             "routes/page/four": Object {
               "file": "routes/page/four-c9ce2fc6.js",
@@ -203,7 +211,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-0e8f3297.js",
-          "_shared/node_modules/@remix-run/react-c2b5d8da.js",
+          "_shared/node_modules/@remix-run/react-167fdc6f.js",
           "_shared/node_modules/history-45437576.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-a68204f7.js",
@@ -226,6 +234,8 @@ describe("building", () => {
           "routes/gists/$username.js",
           "routes/gists/index.js",
           "routes/index.js",
+          "routes/methods.css",
+          "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
         ]
@@ -274,6 +284,12 @@ describe("building", () => {
             "routes/index": Object {
               "file": "routes/index.js",
             },
+            "routes/methods": Object {
+              "file": "routes/methods.js",
+            },
+            "routes/methods.css": Object {
+              "file": "routes/methods.css",
+            },
             "routes/page/four": Object {
               "file": "routes/page/four.js",
             },
@@ -301,7 +317,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-fa2b156c.js",
-          "_shared/node_modules/@remix-run/react-9b277f7a.js",
+          "_shared/node_modules/@remix-run/react-4e36f746.js",
           "_shared/node_modules/history-8b818913.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-d4c4f9f2.js",
@@ -312,18 +328,20 @@ describe("building", () => {
           "_shared/node_modules/react-router-fa8780cf.js",
           "_shared/node_modules/scheduler-99859fcd.js",
           "asset-manifest.json",
-          "entry-browser-f45ca484.js",
+          "entry-browser-5581ef3b.js",
           "global-ec887178.css",
           "pages/one-33b3e281.js",
           "pages/two-6e39a2d3.js",
           "routes/404-81cdf991.js",
           "routes/500-0c9b194f.js",
-          "routes/gists-437d2ffa.js",
-          "routes/gists-a6d2a823.css",
+          "routes/gists-6db1f83b.css",
+          "routes/gists-72e8cc88.js",
           "routes/gists.mine-f12f3533.js",
-          "routes/gists/$username-ab749ca5.js",
-          "routes/gists/index-07d26803.js",
-          "routes/index-ca6ee761.js",
+          "routes/gists/$username-c142c578.js",
+          "routes/gists/index-8530a5c4.js",
+          "routes/index-9e9c9a2e.js",
+          "routes/methods-cf5730cf.js",
+          "routes/methods-e15212f5.css",
           "routes/page/four-7c11fa85.js",
           "routes/page/three-5de4b3e5.js",
         ]
@@ -337,7 +355,7 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-f45ca484.js",
+              "file": "entry-browser-5581ef3b.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
@@ -355,22 +373,28 @@ describe("building", () => {
               "file": "routes/500-0c9b194f.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-437d2ffa.js",
+              "file": "routes/gists-72e8cc88.js",
             },
             "routes/gists.css": Object {
-              "file": "routes/gists-a6d2a823.css",
+              "file": "routes/gists-6db1f83b.css",
             },
             "routes/gists.mine": Object {
               "file": "routes/gists.mine-f12f3533.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-ab749ca5.js",
+              "file": "routes/gists/$username-c142c578.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-07d26803.js",
+              "file": "routes/gists/index-8530a5c4.js",
             },
             "routes/index": Object {
-              "file": "routes/index-ca6ee761.js",
+              "file": "routes/index-9e9c9a2e.js",
+            },
+            "routes/methods": Object {
+              "file": "routes/methods-cf5730cf.js",
+            },
+            "routes/methods.css": Object {
+              "file": "routes/methods-e15212f5.css",
             },
             "routes/page/four": Object {
               "file": "routes/page/four-7c11fa85.js",

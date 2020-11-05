@@ -3,6 +3,7 @@ import type { Params } from "react-router";
 import type { AppData, RouteData } from "@remix-run/core";
 
 import type { Manifest } from "./manifest";
+import type { FormSubmit } from "./components";
 import invariant from "./invariant";
 
 export type { AppData, RouteData };
@@ -19,7 +20,8 @@ export function loadRouteData(
   location: Location,
   routeParams: Params,
   routeId: string,
-  handleRedirect: DataRedirectHandler
+  handleRedirect: DataRedirectHandler,
+  formSubmit?: FormSubmit
 ): Promise<AppData> {
   let route = manifest.routes[routeId];
 
@@ -29,26 +31,36 @@ export function loadRouteData(
     return Promise.resolve(null);
   }
 
-  return fetchData(location, routeParams, routeId, handleRedirect);
+  return fetchData(location, routeParams, routeId, handleRedirect, formSubmit);
 }
 
 async function fetchData(
   location: Location,
   routeParams: Params,
   routeId: string,
-  handleRedirect: DataRedirectHandler
+  handleRedirect: DataRedirectHandler,
+  formSubmit?: FormSubmit
 ): Promise<AppData> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
   let params = new URLSearchParams({
-    url: url.toString(),
     params: JSON.stringify(routeParams),
+    url: url.toString(),
     id: routeId
   });
-  let res = await fetch(`/_remix/data?${params.toString()}`);
 
-  if (res.redirected) {
-    handleRedirect(new URL(res.url));
+  let init = formSubmit ? getFormSubmitInit(formSubmit) : undefined;
+  let res = await fetch(`/_remix/data?${params.toString()}`, init);
+
+  let redirectUrl = res.headers.get("x-remix-redirect");
+  if (redirectUrl) {
+    handleRedirect(
+      new URL(
+        redirectUrl.startsWith("/")
+          ? window.location.origin + redirectUrl
+          : redirectUrl
+      )
+    );
   }
 
   // We discussed possibly reloading here to get the right status code from the
@@ -69,4 +81,19 @@ function extractData(res: Response): AppData {
   }
 
   return res.text();
+}
+
+function getFormSubmitInit(formSubmit: FormSubmit): RequestInit {
+  let body =
+    formSubmit.encType === "application/x-www-form-urlencoded"
+      ? new URLSearchParams(formSubmit.data as URLSearchParams)
+      : formSubmit.data;
+
+  return {
+    method: formSubmit.method,
+    body,
+    headers: {
+      "content-type": formSubmit.encType
+    }
+  };
 }

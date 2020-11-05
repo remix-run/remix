@@ -24,7 +24,9 @@ export type {
   AppData,
   AppLoadContext,
   AppLoadResult,
-  DataLoader
+  DataLoader,
+  Action,
+  Loader
 } from "./data";
 
 export type {
@@ -48,7 +50,8 @@ export {
   isRequestLike,
   Response,
   isResponseLike,
-  fetch
+  fetch,
+  FetchStream
 } from "./fetch";
 
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";

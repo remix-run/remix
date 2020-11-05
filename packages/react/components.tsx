@@ -2,7 +2,14 @@ import type { ReactNode } from "react";
 import React from "react";
 import type { Action, Location } from "history";
 import type { Navigator } from "react-router";
-import { Router, Link, useLocation, useRoutes } from "react-router-dom";
+import {
+  Router,
+  Link,
+  useLocation,
+  useRoutes,
+  useNavigate,
+  useResolvedPath
+} from "react-router-dom";
 import type { EntryContext } from "@remix-run/core";
 
 import type { AppData, RouteData } from "./data";
@@ -29,8 +36,8 @@ interface RemixEntryContextType {
   globalData: AppData;
   manifest: Manifest;
   matches: ClientRouteMatch[];
-  pending: boolean;
   publicPath: string;
+  nextLocation: Location | undefined;
   routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
@@ -44,6 +51,21 @@ function useRemixEntryContext(): RemixEntryContextType {
   let context = React.useContext(RemixEntryContext);
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
+}
+
+enum FormStates {
+  idle = "idle",
+
+  // non get submits
+  // - idle -> pending -> redirected -> idle
+  // - reload data from all routes on the redirect
+  pending = "pending",
+  redirected = "redirected",
+
+  // get submits
+  // - idle -> pendingGet -> idle
+  // - just normal navigation except store the FormSubmit for usePendingFormSubmit
+  pendingGet = "pendingGet"
 }
 
 export function RemixEntry({
@@ -75,16 +97,14 @@ export function RemixEntry({
     action: nextAction,
     location: nextLocation,
     matches: createClientMatches(entryMatches, RemixRoute),
-    pending: false,
     routeData: entryRouteData
   });
-  let { action, location, matches, pending, routeData } = state;
+  let { action, location, matches, routeData } = state;
 
   React.useEffect(() => {
     if (location === nextLocation) return;
 
     let isCurrent = true;
-    setState(state => ({ ...state, pending: true }));
 
     (async () => {
       await loadManifest(manifest, nextLocation.pathname);
@@ -93,8 +113,12 @@ export function RemixEntry({
       let nextMatches = matchClientRoutes(routes, nextLocation);
 
       let didRedirect = false;
+
       function handleDataRedirect(url: URL) {
         didRedirect = true;
+        if (formState === FormStates.pending) {
+          setFormRedirected();
+        }
         if (url.origin !== window.location.origin) {
           window.location.replace(url.href);
         } else {
@@ -103,8 +127,29 @@ export function RemixEntry({
         }
       }
 
+      let isAction = formState === FormStates.pending;
+
+      if (isAction) {
+        let leafMatch = nextMatches[nextMatches.length - 1];
+
+        await loadRouteData(
+          manifest,
+          location,
+          leafMatch.params,
+          leafMatch.route.id,
+          handleDataRedirect,
+          pendingFormSubmit
+        );
+
+        // Expecting handleDataRedirect to be called, so we don't need to worry
+        // about doing anything else in here.
+        return;
+      }
+
       let dataPromise = Promise.all(
         nextMatches.map((match, index) =>
+          // reload all routes after a <Form> submit
+          formState !== FormStates.redirected &&
           location.search === nextLocation.search &&
           matches[index] &&
           matches[index].pathname === match.pathname
@@ -142,11 +187,17 @@ export function RemixEntry({
           return routeData;
         }, {} as RouteData);
 
+        if (
+          formState === FormStates.redirected ||
+          formState === FormStates.pendingGet
+        ) {
+          setFormIdle();
+        }
+
         setState({
           action: nextAction,
           location: nextLocation,
           matches: nextMatches,
-          pending: false,
           routeData: nextRouteData
         });
       }
@@ -162,18 +213,20 @@ export function RemixEntry({
     matches,
     publicPath,
     routeData,
-    navigator
+    navigator,
+    manifest,
+    routeModules
   ]);
 
   let context: RemixEntryContextType = {
     globalData,
     manifest,
     matches,
-    pending,
     publicPath,
     routeData,
     routeModules,
-    serverHandoffString
+    serverHandoffString,
+    nextLocation: nextLocation !== location ? nextLocation : undefined
   };
 
   return (
@@ -325,7 +378,7 @@ export function Scripts() {
         <script src={publicPath + entryBrowser.file} type="module" />
       </>
     ),
-    []
+    [] // eslint-disable-line
   );
 }
 
@@ -380,13 +433,13 @@ export function useRouteData<T = AppData>(): T {
 }
 
 /**
- * Returns `true` if a location change is pending. This is useful for showing
- * a "loading..." indicator during route transitions.
+ * Returns the next location if a location change is pending. This is useful
+ * for showing a "loading..." indicator during route transitions.
  *
  * TODO: Move this hook back into RR v6 beta (out of experimental)
  */
-export function useLocationPending(): boolean {
-  return useRemixEntryContext().pending;
+export function usePendingLocation() {
+  return useRemixEntryContext().nextLocation;
 }
 
 /**
@@ -406,4 +459,130 @@ export function useBeforeUnload(callback: () => any): void {
       window.removeEventListener("beforeunload", callback);
     };
   }, [callback]);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// <Form>
+type MethodType = "get" | "post" | "put" | "patch" | "delete";
+type FormEncType = "application/x-www-form-urlencoded" | "multipart/form-data";
+
+export interface FormSubmit {
+  method: MethodType;
+  data: FormData;
+  encType: FormEncType;
+}
+
+let pendingFormSubmit: FormSubmit | undefined = undefined;
+let formState = FormStates.idle;
+
+// 1. When a form is submit, we go into a pending state
+function setFormPending(
+  method: MethodType,
+  data: FormData,
+  encType: FormEncType
+): void {
+  pendingFormSubmit = { method, data, encType };
+  formState = method === "get" ? FormStates.pendingGet : FormStates.pending;
+}
+
+// 2. When the loader action redirects
+function setFormRedirected() {
+  formState = FormStates.redirected;
+}
+
+// 3. After Remix finishes the transition, we go back to idle
+function setFormIdle() {
+  pendingFormSubmit = undefined;
+  formState = FormStates.idle;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+export interface FormProps extends Omit<HTMLFormElement, "method"> {
+  /**
+   * Forces a full document navigation instead of a fetch.
+   */
+  forceRefresh?: boolean;
+
+  /**
+   * The HTTP verb to use when the form is submit. If JavaScript is disabled,
+   * you'll need to implement your own "method override". Supports "get",
+   * "post", "put", "delete", "patch".
+   */
+  method?: MethodType;
+
+  /**
+   * Replaces the current entry in the browser history stack when the form
+   * navigates. Use this if you don't want the user to be able to click "back"
+   * to the page with the form on it.
+   */
+  replace?: boolean;
+
+  /**
+   * Normal form "action" but allows for React Router's relative paths.
+   */
+  action?: string;
+
+  /**
+   * Normal form encType, Remix only supports
+   * `application/x-www-form-urlencoded` right now but will soon support
+   * `multipart/form-data` as well.
+   */
+  encType?: "application/x-www-form-urlencoded" | "multipart/form-data";
+
+  /**
+   * A function to call when the form is submit. If you call
+   * `event.preventDefault()` then this form will not do anything.
+   */
+  onSubmit?: React.FormEventHandler;
+}
+
+/**
+ * A Remix aware `<form>`. It behaves like a normal form except that the
+ * interaction with the server is with `fetch` instead of new document
+ * requests, allowing components to add nicer UX to the page as the form is
+ * submit and returns with data.
+ */
+export let Form: React.FunctionComponent<FormProps> = ({
+  forceRefresh = false,
+  replace = false,
+  action = ".",
+  method = "get",
+  encType = "application/x-www-form-urlencoded",
+  onSubmit,
+  ...props
+}) => {
+  let navigate = useNavigate();
+  let path = useResolvedPath(action);
+  let formMethod = method.toLowerCase() === "get" ? "get" : "post";
+
+  let handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    onSubmit && onSubmit(event);
+    if (event.defaultPrevented) return;
+
+    event.preventDefault();
+    let formData = new FormData(event.currentTarget);
+
+    setFormPending(method, formData, encType);
+
+    if (method === "get") {
+      let formSearch = new URLSearchParams(formData as any);
+      path.search = "?" + formSearch.toString();
+    }
+
+    navigate(path, { replace });
+  };
+
+  return (
+    <form
+      method={formMethod}
+      action={path.pathname}
+      encType={encType}
+      onSubmit={forceRefresh ? undefined : handleSubmit}
+      {...props}
+    />
+  );
+};
+
+export function usePendingFormSubmit() {
+  return pendingFormSubmit ? pendingFormSubmit : undefined;
 }

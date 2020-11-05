@@ -46,12 +46,12 @@ exports[`the server HTML for the root URL is correct 1`] = `
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": { file: \\"entry-browser-284a45d2.js\\" },
+            \\"entry-browser\\": { file: \\"entry-browser-db706363.js\\" },
             \\"global.css\\": { file: \\"global-ec887178.css\\" },
-            \\"routes/index\\": { file: \\"routes/index-9b7758c8.js\\" },
+            \\"routes/index\\": { file: \\"routes/index-eda66ec0.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"73c7418a\\",
+          version: \\"a516d32f\\",
         },
         matches: [
           {
@@ -65,10 +65,10 @@ exports[`the server HTML for the root URL is correct 1`] = `
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-9b7758c8.js\\";
+      import * as route0 from \\"/build/routes/index-eda66ec0.js\\";
       window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-284a45d2.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-db706363.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

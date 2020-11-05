@@ -5,13 +5,14 @@
     "prebuild": "cp -r ../../build/node_modules/* node_modules",
     "build": "node node_modules/@remix-run/cli build",
     "predev": "cp -r ../../build/node_modules/* node_modules",
-    "dev": "concurrently \"node node_modules/@remix-run/cli run\" \"cross-env NODE_ENV=development nodemon server.js\"",
+    "dev": "concurrently \"node node_modules/@remix-run/cli run\" \"cross-env NODE_ENV=development nodemon -w app -w loaders -e js,ts,tsx server.js\"",
     "prestart": "cp -r ../../build/node_modules/* node_modules",
     "start": "node server.js"
   },
   "dependencies": {
     "@mdx-js/react": "^1.6.18",
     "express": "^4.17.1",
+    "express-session": "^1.17.1",
     "morgan": "^1.10.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",

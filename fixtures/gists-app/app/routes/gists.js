@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import { Link, useRouteData, useLocationPending } from "@remix-run/react";
+import { Link, useRouteData, usePendingLocation } from "@remix-run/react";
 
 import Shared from "../components/Shared";
 
@@ -11,7 +11,7 @@ export function headers() {
 }
 
 export default function Gists() {
-  let locationPending = useLocationPending();
+  let locationPending = usePendingLocation();
   let { users } = useRouteData();
 
   return (

@@ -1,5 +1,5 @@
-module.exports = ({ url }) => {
+exports.loader = ({ request }) => {
   return {
-    enableScripts: url.searchParams.get("disableJs") == null
+    enableScripts: new URL(request.url).searchParams.get("disableJs") == null
   };
 };

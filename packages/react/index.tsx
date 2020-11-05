@@ -4,8 +4,12 @@ export {
   Styles,
   Link,
   Routes,
+  Form,
   useGlobalData,
+  usePendingFormSubmit,
   useRouteData,
-  useLocationPending,
+  usePendingLocation,
   useBeforeUnload
 } from "./components";
+
+export type { FormProps } from "./components";

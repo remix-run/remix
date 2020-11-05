@@ -1,8 +1,10 @@
-import type { ResponseInit } from "@remix-run/core";
+import type { ResponseInit, Action, Loader } from "@remix-run/core";
 import { Headers, Request, Response } from "@remix-run/core";
 
 // These are already global, but just re-export them here for convenience.
 export { Headers, Request, Response };
+
+export type { Action, Loader };
 
 /**
  * A JSON response. This helper takes care of converting the `data` to JSON
@@ -26,7 +28,7 @@ export function notFound() {
 }
 
 /**
- * A redirect response. Defaults to a temporary redirect (302).
+ * A redirect response. Defaults to "302 Found".
  */
 export function redirect(url: string, status = 302) {
   return new Response("", {
@@ -35,4 +37,30 @@ export function redirect(url: string, status = 302) {
       Location: url
     }
   });
+}
+
+let bodyMethods = new Set(["put", "post", "patch", "delete"]);
+
+/**
+ * Parse the FormData body of a Request into an object
+ */
+export async function parseFormBody(req: Request) {
+  if (!bodyMethods.has(req.method.toLowerCase())) {
+    throw new Error(
+      `parseFormBody only supports POST, PUT, and PATCH, DELETE but not ${req.method}`
+    );
+  }
+
+  let enctype = req.headers.get("content-type");
+  if (enctype === "application/x-www-form-urlencoded") {
+    let bodyText = await req.text();
+    return Object.fromEntries(new URLSearchParams(bodyText));
+  } else if (enctype === "multipart/form-data") {
+    throw new Error("parseFormBody multipart/form-data is not yet supported");
+    // Should be able to do this:
+    // let body = await req.formData();
+    // return Object.fromEntries(body);
+  } else {
+    throw new Error(`Unknown form enctype: ${enctype}`);
+  }
 }

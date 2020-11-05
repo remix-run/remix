@@ -2,7 +2,7 @@ import path from "path";
 import type { Params } from "react-router";
 
 import type { ConfigRouteObject } from "./routes";
-import { Response, isResponseLike } from "./fetch";
+import { Request, Response, isResponseLike } from "./fetch";
 
 /**
  * Some data that was returned from a data loader.
@@ -23,8 +23,21 @@ export type AppLoadResult = Response | null;
 /**
  * A function that loads data for a route or the global data loader.
  */
+export type Loader = (args: {
+  context: AppLoadContext;
+  params: Params;
+  request: Request;
+}) => Promise<AppData> | AppData;
+
+export type Action = (args: {
+  context: AppLoadContext;
+  params: Params;
+  request: Request;
+}) => Promise<Response> | Response;
+
 export interface DataLoader {
-  (args: { context: AppLoadContext; params: Params; url: URL }): AppData;
+  loader?: Loader;
+  action?: Action;
 }
 
 function requireLoader(
@@ -36,16 +49,49 @@ function requireLoader(
 }
 
 async function executeLoader(
-  loader: DataLoader,
+  loaderModule: DataLoader,
   loadContext: AppLoadContext,
-  url: URL,
-  routeParams: Params = {}
+  request: Request,
+  routeParams: Params = {},
+  isAction: boolean = false
 ): Promise<Response> {
-  let value = await loader({
+  let method = isAction ? loaderModule.action : loaderModule.loader;
+
+  if (!method) {
+    let methodName = isAction ? "action" : "loader";
+    throw new Error(
+      `You made a ${request.method} request to ${request.url} but did not export an \`${methodName}\` function.`
+    );
+  }
+
+  let value = await method({
     context: loadContext,
     params: routeParams,
-    url
+    request: request
   });
+
+  if (isAction) {
+    let location = value?.headers?.get("location");
+
+    if (!isResponseLike(value) || !location) {
+      throw new Error(
+        `You made a ${request.method} to ${request.url} but did not return a \`redirect\`. Please \`return redirect(newUrl)\` from your loader to avoid reposts when users click the back button.`
+      );
+    }
+
+    if (value.status !== 302 && value.status !== 303) {
+      console.warn(
+        `Loader actions shouldn't return a ${value.status}. Remix changed it to 303.`
+      );
+    }
+
+    return value.status === 303
+      ? value
+      : new Response("", {
+          status: 303,
+          headers: { location }
+        });
+  }
 
   if (isResponseLike(value)) {
     return value;
@@ -64,7 +110,7 @@ async function executeLoader(
 export function loadGlobalData(
   loadersDirectory: string,
   loadContext: AppLoadContext,
-  url: URL
+  request: Request
 ): Promise<AppLoadResult> {
   let loader;
   try {
@@ -75,7 +121,7 @@ export function loadGlobalData(
     return Promise.resolve(null);
   }
 
-  return executeLoader(loader, loadContext, url);
+  return executeLoader(loader, loadContext, request);
 }
 
 /**
@@ -86,14 +132,15 @@ export function loadRouteData(
   route: ConfigRouteObject,
   routeParams: Params,
   loadContext: AppLoadContext,
-  url: URL
+  request: Request,
+  isAction: boolean
 ): Promise<AppLoadResult> {
   if (!route.loaderFile) {
     return Promise.resolve(null);
   }
 
   let loader = requireLoader(loadersDirectory, route.loaderFile);
-  return executeLoader(loader, loadContext, url, routeParams);
+  return executeLoader(loader, loadContext, request, routeParams, isAction);
 }
 
 /**

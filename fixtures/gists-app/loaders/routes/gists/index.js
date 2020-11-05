@@ -1,4 +1,4 @@
-module.exports = function () {
+exports.loader = () => {
   if (process.env.NODE_ENV === "test") {
     return Promise.resolve(fakeGists);
   } else {

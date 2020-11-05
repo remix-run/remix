@@ -81,6 +81,13 @@ describe("readConfig", () => {
             "id": "routes/index",
             "path": "/",
           },
+          "routes/methods": Object {
+            "componentFile": "routes/methods.tsx",
+            "id": "routes/methods",
+            "loaderFile": "routes/methods.js",
+            "path": "methods",
+            "stylesFile": "routes/methods.css",
+          },
           "routes/page/four": Object {
             "componentFile": "routes/page/four.mdx",
             "id": "routes/page/four",
@@ -135,6 +142,13 @@ describe("readConfig", () => {
             "componentFile": "routes/index.js",
             "id": "routes/index",
             "path": "/",
+          },
+          Object {
+            "componentFile": "routes/methods.tsx",
+            "id": "routes/methods",
+            "loaderFile": "routes/methods.js",
+            "path": "methods",
+            "stylesFile": "routes/methods.css",
           },
           Object {
             "componentFile": "routes/page/four.mdx",

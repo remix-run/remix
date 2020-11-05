@@ -11,8 +11,11 @@ import {
   Response as MinipassFetchResponse,
   isRedirect
 } from "minipass-fetch";
+import Minipass from "minipass";
 
 export type { HeadersInit, RequestInfo, RequestInit, ResponseInit };
+
+export { Minipass as FetchStream };
 
 /**
  * The headers in a Request or Response.

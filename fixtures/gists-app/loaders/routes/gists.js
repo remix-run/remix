@@ -1,6 +1,6 @@
 const { json } = require("@remix-run/loader");
 
-module.exports = () => {
+exports.loader = () => {
   let data = {
     users: [
       { id: "ryanflorence", name: "Ryan Florence" },

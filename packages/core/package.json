@@ -22,6 +22,7 @@
     "jsesc": "^3.0.1",
     "make-fetch-happen": "^8.0.10",
     "mime-types": "^2.1.27",
+    "minipass": "^3.1.0",
     "minipass-fetch": "^1.3.2",
     "morgan": "^1.10.0",
     "react": "^16.13.1",
@@ -34,6 +35,7 @@
     "tmp": "^0.2.1"
   },
   "devDependencies": {
+    "@types/minipass": "^2.2.0",
     "@types/cors": "^2.8.7",
     "@types/jsesc": "^2.5.1",
     "@types/mime-types": "^2.1.0",
