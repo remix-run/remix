@@ -1,11 +1,20 @@
 import { URL } from "url";
 import type * as express from "express";
-import type { AppLoadContext, RequestInit, Response } from "@remix-run/core";
+import type {
+  AppLoadContext,
+  RemixConfig,
+  RequestHandler as RemixRequestHandler,
+  RequestInit,
+  Response
+} from "@remix-run/core";
 import {
   Headers,
   Request,
-  createRequestHandler as createRemixRequestHandler
+  createRequestHandler as createRemixRequestHandler,
+  readConfig as readRemixConfig
 } from "@remix-run/core";
+
+import "./fetchGlobals";
 
 /**
  * A function that returns the `context` object for data loaders.
@@ -16,6 +25,14 @@ export interface GetLoadContext {
 
 interface RequestHandler {
   (req: express.Request, res: express.Response): Promise<void>;
+}
+
+const nodeEnv = process.env.NODE_ENV || "development";
+
+function handleConfigError(error: Error) {
+  console.error(`There was an error reading the Remix config`);
+  console.error(error);
+  process.exit(1);
 }
 
 /**
@@ -29,9 +46,25 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContext;
   root?: string;
 } = {}): RequestHandler {
-  let handleRequest = createRemixRequestHandler(remixRoot);
+  let handleRequest: RemixRequestHandler;
+  let remixConfig: RemixConfig;
+  let remixConfigPromise = readRemixConfig(remixRoot);
+
+  // If there is a config error, catch it early and exit. But keep this function
+  // sync in case they don't have top-level await (unflagged in node v14.8.0).
+  remixConfigPromise.catch(handleConfigError);
 
   return async (req: express.Request, res: express.Response) => {
+    if (!remixConfig) {
+      try {
+        remixConfig = await remixConfigPromise;
+      } catch (error) {
+        handleConfigError(error);
+      }
+
+      handleRequest = createRemixRequestHandler(remixConfig, nodeEnv);
+    }
+
     let loadContext: AppLoadContext;
     if (getLoadContext) {
       try {

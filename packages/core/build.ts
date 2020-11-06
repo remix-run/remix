@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import type { Location } from "history";
 import type { ComponentType } from "react";
@@ -72,19 +73,25 @@ export interface MetaFunction {
   }): { [name: string]: string };
 }
 
+function readJson(file: string) {
+  return JSON.parse(fs.readFileSync(file, "utf-8"));
+}
+
 /**
  * Reads the browser manifest from the build on the filesystem.
  */
 export function getAssetManifest(dir: string): AssetManifest {
-  let file = path.resolve(dir, AssetManifestFilename);
-  return require(file);
+  return readJson(path.resolve(dir, AssetManifestFilename));
 }
 
 /**
  * Reads the server manifest from the build on the filesystem.
  */
 export function getServerManifest(dir: string): ServerManifest {
-  let file = path.resolve(dir, ServerManifestFilename);
+  return readJson(path.resolve(dir, ServerManifestFilename));
+}
+
+function loadModule(file: string) {
   return require(file);
 }
 
@@ -92,24 +99,26 @@ export function getServerManifest(dir: string): ServerManifest {
  * Gets the serve entry module from the build on the filesystem.
  */
 export function getServerEntryModule(
-  dir: string,
+  buildDir: string,
   manifest: ServerManifest
 ): ServerEntryModule {
-  let file = path.resolve(dir, manifest.entries["entry-server"].file);
-  return require(file);
+  return loadModule(
+    path.resolve(buildDir, manifest.entries["entry-server"].file)
+  );
 }
 
 /**
  * Gets all route modules from the build on the filesystem.
  */
 export function getRouteModules(
-  dir: string,
+  buildDir: string,
   routeManifest: RemixConfig["routeManifest"],
   manifest: ServerManifest
 ): RouteModules {
   return Object.keys(routeManifest).reduce((routeModules, routeId) => {
-    let file = path.join(dir, manifest.entries[routeId].file);
-    routeModules[routeId] = require(file);
+    routeModules[routeId] = loadModule(
+      path.join(buildDir, manifest.entries[routeId].file)
+    );
     return routeModules;
   }, {} as RouteModules);
 }

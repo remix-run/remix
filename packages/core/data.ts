@@ -1,5 +1,4 @@
 import path from "path";
-import { URL } from "url";
 import type { Params } from "react-router";
 
 import type { RemixConfig } from "./config";

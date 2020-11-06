@@ -1,20 +1,24 @@
-const path = require("path");
-
 /**
  * Purges all entries that begin with the given prefix from node's internal
  * require cache. In Remix, the following files are loaded via CommonJS require:
  *
- * - /app/remix.config.js
- * - /app/src/routes/*
- * - /app/loaders/*
+ * - /remix.config.js
+ * - <serverBuildDirectory>/entry-server.js
+ * - <serverBuildDirectory>/routes/*
+ * - <loadersDirectory>/*
  *
- * This function is useful for clearing all of these from the require cache in
- * dev mode.
+ * This function is useful for clearing all of these from the require cache when
+ * running the build in watch mode.
  */
-export function purgeRequireCache(prefix: string): void {
-  let nodeModules = path.join(prefix, "node_modules");
+export function purgeRequireCache(
+  prefix: string,
+  includeNodeModules = false
+): void {
   for (let key of Object.keys(require.cache)) {
-    if (key.startsWith(prefix) && !key.startsWith(nodeModules)) {
+    if (
+      key.startsWith(prefix) &&
+      (includeNodeModules || !/\bnode_modules\b/.test(key))
+    ) {
       delete require.cache[key];
     }
   }

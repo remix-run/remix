@@ -1,5 +1,3 @@
-import "./globals";
-
 export type {
   AssetManifest,
   HeadersFunction,
@@ -56,4 +54,4 @@ export {
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
-export { createRequestHandler } from "./server";
+export { ServerMode, createRequestHandler } from "./server";

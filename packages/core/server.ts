@@ -1,5 +1,3 @@
-import { URL } from "url";
-
 import type { AssetManifest } from "./build";
 import {
   getAssetManifest,
@@ -11,7 +9,6 @@ import {
 import { getCacheDir } from "./cache";
 import { writeDevServerBuild } from "./compiler";
 import type { RemixConfig } from "./config";
-import { readConfig } from "./config";
 import type { AppLoadContext, AppLoadResult } from "./data";
 import { loadGlobalData, loadRouteData } from "./data";
 import type { EntryManifest, ServerHandoff } from "./entry";
@@ -24,74 +21,63 @@ import {
 } from "./entry";
 import type { Request } from "./fetch";
 import { Headers, Response } from "./fetch";
-import { setupGlobalFetch } from "./globalFetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
-import { purgeRequireCache } from "./requireCache";
 import { json, jsonError } from "./responseHelpers";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
 
-const PROD = process.env.NODE_ENV === "production";
-const TEST = process.env.NODE_ENV === "test";
-const DEV = !(PROD || TEST);
-
-function getConfig(remixRoot?: string): Promise<RemixConfig> {
-  return readConfig(remixRoot).then(config => {
-    setupGlobalFetch(config.rootDirectory);
-    return config;
-  });
+/**
+ * The mode to use when running the server.
+ */
+export enum ServerMode {
+  Development = "development",
+  Production = "production",
+  Test = "test"
 }
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
  * of a cloud provider's server (e.g. Express on Firebase) or locally via their
  * dev tools.
- *
- * The server picks `development` or `production` mode based on the value of
- * `process.env.NODE_ENV`. In production, the server reads the build from disk.
- * In development, it re-evaluates the config and all app modules on every
- * request and dynamically generates the build for only the modules needed to
- * serve it.
  */
 export interface RequestHandler {
   (request: Request, loadContext?: AppLoadContext): Promise<Response>;
 }
 
 /**
- * Creates a HTTP request handler.
+ * Creates a handler (aka "server") that serves HTTP requests from the app in the
+ * given `remixRoot`.
+ *
+ * In production mode, the server reads the build from disk. In development, it
+ * dynamically generates the build at request time for only the modules needed
+ * to serve that request.
  */
-export function createRequestHandler(remixRoot?: string): RequestHandler {
-  let configPromise = getConfig(remixRoot);
-
-  return async (req, loadContext = {}) => {
-    if (DEV) {
-      let config = await configPromise;
-      purgeRequireCache(config.rootDirectory);
-      configPromise = getConfig(remixRoot);
-    }
-
-    let config = await configPromise;
-    let url = new URL(req.url);
+export function createRequestHandler(
+  remixConfig: RemixConfig,
+  serverMode: string = ServerMode.Development
+): RequestHandler {
+  return async (request, loadContext = {}) => {
+    let url = new URL(request.url);
 
     if (url.pathname.startsWith("/_remix/data")) {
-      return handleDataRequest(config, req, loadContext);
+      return handleDataRequest(remixConfig, request, loadContext);
     }
 
     if (url.pathname.startsWith("/_remix/manifest")) {
-      return handleManifestRequest(config, req);
+      return handleManifestRequest(remixConfig, request, serverMode);
     }
 
-    return handleHtmlRequest(config, req, loadContext);
+    return handleHtmlRequest(remixConfig, request, loadContext, serverMode);
   };
 }
 
 async function handleDataRequest(
-  config: RemixConfig,
-  req: Request,
+  remixConfig: RemixConfig,
+  request: Request,
   loadContext: AppLoadContext
 ): Promise<Response> {
-  let searchParams = new URL(req.url).searchParams;
+  let searchParams = new URL(request.url).searchParams;
   let urlParam = searchParams.get("url");
   let routeId = searchParams.get("id");
   let params = JSON.parse(searchParams.get("params") || "{}");
@@ -105,7 +91,7 @@ async function handleDataRequest(
 
   let url = new URL(urlParam);
   let loadResult = await loadRouteData(
-    config,
+    remixConfig,
     routeId,
     params,
     loadContext,
@@ -119,8 +105,12 @@ async function handleDataRequest(
   return loadResult;
 }
 
-async function handleManifestRequest(config: RemixConfig, req: Request) {
-  let searchParams = new URL(req.url).searchParams;
+async function handleManifestRequest(
+  remixConfig: RemixConfig,
+  request: Request,
+  serverMode: string
+) {
+  let searchParams = new URL(request.url).searchParams;
   let urlParam = searchParams.get("url");
 
   if (!urlParam) {
@@ -128,18 +118,18 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
   }
 
   let url = new URL(urlParam);
-  let matches = matchRoutes(config.routes, url.pathname);
+  let matches = matchRoutes(remixConfig.routes, url.pathname);
 
   if (!matches) {
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
   let assetManifest: AssetManifest;
-  if (DEV) {
-    adjustDevConfig(config, matches);
+  if (serverMode === ServerMode.Development) {
+    adjustDevConfig(remixConfig, matches);
 
     try {
-      assetManifest = await getDevAssetManifest(config.publicPath);
+      assetManifest = await getDevAssetManifest(remixConfig.publicPath);
     } catch (error) {
       console.error(error);
       console.error(
@@ -149,7 +139,7 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
       return jsonError(`Unable to fetch asset manifest`, 500);
     }
   } else {
-    assetManifest = getAssetManifest(config.serverBuildDirectory);
+    assetManifest = getAssetManifest(remixConfig.serverBuildDirectory);
   }
 
   // Get the manifest for only the matched routes.
@@ -174,17 +164,18 @@ async function handleManifestRequest(config: RemixConfig, req: Request) {
 }
 
 async function handleHtmlRequest(
-  config: RemixConfig,
-  req: Request,
-  loadContext: AppLoadContext
+  remixConfig: RemixConfig,
+  request: Request,
+  loadContext: AppLoadContext,
+  serverMode: string
 ): Promise<Response> {
-  let url = new URL(req.url);
+  let url = new URL(request.url);
 
   let statusCode = 200;
-  let matches = matchRoutes(config.routes, url.pathname);
+  let matches = matchRoutes(remixConfig.routes, url.pathname);
 
   function handleDataLoadError(error: any) {
-    if (!TEST) {
+    if (serverMode !== ServerMode.Test) {
       console.error(error);
     }
 
@@ -218,9 +209,9 @@ async function handleHtmlRequest(
   }
 
   // Run all data loaders in parallel and await them individually below.
-  let globalLoadResultPromise = loadGlobalData(config, loadContext, url);
+  let globalLoadResultPromise = loadGlobalData(remixConfig, loadContext, url);
   let routeLoadResultPromises = matches.map(match =>
-    loadRouteData(config, match.route.id, match.params, loadContext, url)
+    loadRouteData(remixConfig, match.route.id, match.params, loadContext, url)
   );
 
   let globalLoadResult: AppLoadResult = null;
@@ -266,22 +257,22 @@ async function handleHtmlRequest(
 
   let serverBuildDirectory: string;
   let assetManifest: AssetManifest;
-  if (DEV) {
-    adjustDevConfig(config, matches);
+  if (serverMode === ServerMode.Development) {
+    adjustDevConfig(remixConfig, matches);
 
-    serverBuildDirectory = getCacheDir(config.rootDirectory, "build");
+    serverBuildDirectory = getCacheDir(remixConfig.rootDirectory, "build");
 
-    await writeDevServerBuild(config, serverBuildDirectory);
+    await writeDevServerBuild(remixConfig, serverBuildDirectory);
 
     try {
-      assetManifest = await getDevAssetManifest(config.publicPath);
+      assetManifest = await getDevAssetManifest(remixConfig.publicPath);
     } catch (error) {
       // The dev server is not running.
       // TODO: Show a nice error page.
       throw error;
     }
   } else {
-    serverBuildDirectory = config.serverBuildDirectory;
+    serverBuildDirectory = remixConfig.serverBuildDirectory;
     assetManifest = getAssetManifest(serverBuildDirectory);
   }
 
@@ -292,7 +283,7 @@ async function handleHtmlRequest(
   );
   let routeModules = getRouteModules(
     serverBuildDirectory,
-    config.routeManifest,
+    remixConfig.routeManifest,
     serverManifest
   );
 
@@ -319,7 +310,7 @@ async function handleHtmlRequest(
     globalData,
     manifest: entryManifest,
     matches: entryMatches,
-    publicPath: config.publicPath,
+    publicPath: remixConfig.publicPath,
     routeData
   };
   let serverEntryContext = {
@@ -359,7 +350,7 @@ async function handleHtmlRequest(
   }, new Headers());
 
   return serverEntryModule.default(
-    req,
+    request,
     statusCode,
     headers,
     serverEntryContext

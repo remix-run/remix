@@ -6,6 +6,12 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Stop re-evaluating `remix.config.js` and purging the require cache in the dev
+  server. Instead, rely on something like nodemon to reload the entire process.
+- Stop relying on `process.env.NODE_ENV` to determine the current server mode.
+  Instead, pass it in as an explicit arg.
+- Define `fetch` globals in `@remix-run/express` instead of `@remix-run/core`.
+  `core` should be able to assume they are present, just like app code.
 - Treat data loader redirects the same in client-side transitions as we do in
   HTML requests.
 - Added ability to pass a function into `remix.config.mdx = (attrs, filename) => {}`
