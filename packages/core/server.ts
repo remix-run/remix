@@ -109,7 +109,7 @@ async function handleManifestRequest(
   remixConfig: RemixConfig,
   request: Request,
   serverMode: string
-) {
+): Promise<Response> {
   let searchParams = new URL(request.url).searchParams;
   let urlParam = searchParams.get("url");
 
@@ -126,8 +126,6 @@ async function handleManifestRequest(
 
   let assetManifest: AssetManifest;
   if (serverMode === ServerMode.Development) {
-    adjustDevConfig(remixConfig, matches);
-
     try {
       assetManifest = await getDevAssetManifest(remixConfig.publicPath);
     } catch (error) {
@@ -154,10 +152,9 @@ async function handleManifestRequest(
     version: assetManifest.version
   };
 
-  return new Response(JSON.stringify(entryManifest), {
+  return json(entryManifest, {
     headers: {
       "Cache-Control": `public, max-age=${oneYear}`,
-      "Content-Type": "application/json; charset=utf-8",
       ETag: entryManifest.version
     }
   });
