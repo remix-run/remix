@@ -22,7 +22,7 @@ describe("style loading", () => {
       await reactIsHydrated(page);
 
       let cssResponses = collectResponses(page, url =>
-        url.pathname.endsWith("routes/gists.css")
+        url.pathname.endsWith(".css")
       );
 
       await page.click('a[href="/gists"]');

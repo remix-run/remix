@@ -14,7 +14,7 @@ exports[`the server HTML for the root URL is correct 1`] = `
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/\\">
@@ -46,12 +46,12 @@ exports[`the server HTML for the root URL is correct 1`] = `
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
-            \\"global.css\\": { file: \\"global.css\\" },
-            \\"routes/index\\": { file: \\"routes/index.js\\" },
+            \\"entry-browser\\": { file: \\"entry-browser-284a45d2.js\\" },
+            \\"global.css\\": { file: \\"global-ec887178.css\\" },
+            \\"routes/index\\": { file: \\"routes/index-9b7758c8.js\\" },
           },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"5b8df186\\",
+          version: \\"73c7418a\\",
         },
         matches: [
           {
@@ -65,10 +65,10 @@ exports[`the server HTML for the root URL is correct 1`] = `
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index.js\\";
+      import * as route0 from \\"/build/routes/index-9b7758c8.js\\";
       window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-284a45d2.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

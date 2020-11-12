@@ -11,8 +11,8 @@ exports[`loader results when a loader returns not found sends a not found page 1
       rel=\\"stylesheet\\"
       href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
     />
-    <link rel=\\"stylesheet\\" href=\\"/build/global.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
+    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-a6d2a823.css\\" />
   </head>
   <body class=\\"m-4\\">
     <div data-test-id=\\"/gists\\">
@@ -44,11 +44,13 @@ exports[`loader results when a loader returns not found sends a not found page 1
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": { file: \\"entry-browser.js\\" },
-            \\"global.css\\": { file: \\"global.css\\" },
-            \\"routes/gists\\": { file: \\"routes/gists.js\\" },
-            \\"routes/gists/$username\\": { file: \\"routes/gists/$username.js\\" },
-            \\"routes/gists.css\\": { file: \\"routes/gists.css\\" },
+            \\"entry-browser\\": { file: \\"entry-browser-284a45d2.js\\" },
+            \\"global.css\\": { file: \\"global-ec887178.css\\" },
+            \\"routes/gists\\": { file: \\"routes/gists-46a1683e.js\\" },
+            \\"routes/gists/$username\\": {
+              file: \\"routes/gists/$username-2db4e8d4.js\\",
+            },
+            \\"routes/gists.css\\": { file: \\"routes/gists-a6d2a823.css\\" },
           },
           routes: {
             \\"routes/gists\\": {
@@ -63,7 +65,7 @@ exports[`loader results when a loader returns not found sends a not found page 1
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"5b8df186\\",
+          version: \\"73c7418a\\",
         },
         matches: [
           {
@@ -95,14 +97,14 @@ exports[`loader results when a loader returns not found sends a not found page 1
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists.js\\";
-      import * as route1 from \\"/build/routes/gists/$username.js\\";
+      import * as route0 from \\"/build/routes/gists-46a1683e.js\\";
+      import * as route1 from \\"/build/routes/gists/$username-2db4e8d4.js\\";
       window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-284a45d2.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

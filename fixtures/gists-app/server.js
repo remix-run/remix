@@ -2,7 +2,9 @@ const express = require("express");
 const morgan = require("morgan");
 const { createRequestHandler } = require("@remix-run/express");
 
-const app = express();
+const port = process.env.PORT || 3000;
+
+let app = express();
 
 if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
@@ -24,4 +26,6 @@ app.get(
   })
 );
 
-module.exports = app;
+app.listen(port, () => {
+  console.log(`Gists app running on port ${port}`);
+});
