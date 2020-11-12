@@ -4,11 +4,11 @@ import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router";
 
-import type { RemixConfig } from "./config";
 import type { EntryContext, RouteData } from "./entry";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
 import { fetch } from "./fetch";
 import type { BuildManifest } from "./rollup/manifest";
+import invariant from "./invariant";
 
 /**
  * A manifest of all assets (JavaScript, CSS, etc.) in the browser build.
@@ -96,29 +96,40 @@ function loadModule(file: string) {
 }
 
 /**
- * Gets the serve entry module from the build on the filesystem.
+ * Gets the server entry module from the build on the filesystem.
  */
 export function getServerEntryModule(
   buildDir: string,
   manifest: ServerManifest
 ): ServerEntryModule {
+  invariant(
+    manifest.entries["entry-server"],
+    `Missing entry for "entry-server" in the server manifest`
+  );
+
   return loadModule(
     path.resolve(buildDir, manifest.entries["entry-server"].file)
   );
 }
 
 /**
- * Gets all route modules from the build on the filesystem.
+ * Gets route modules from the build on the filesystem.
  */
 export function getRouteModules(
   buildDir: string,
-  routeManifest: RemixConfig["routeManifest"],
-  manifest: ServerManifest
+  manifest: ServerManifest,
+  routeIds: string[]
 ): RouteModules {
-  return Object.keys(routeManifest).reduce((routeModules, routeId) => {
+  return routeIds.reduce((routeModules, routeId) => {
+    invariant(
+      manifest.entries[routeId],
+      `Missing entry for route "${routeId}" in the server manifest`
+    );
+
     routeModules[routeId] = loadModule(
       path.join(buildDir, manifest.entries[routeId].file)
     );
+
     return routeModules;
   }, {} as RouteModules);
 }

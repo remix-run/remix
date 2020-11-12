@@ -290,8 +290,8 @@ async function handleHtmlRequest(
   );
   let routeModules = getRouteModules(
     serverBuildDirectory,
-    remixConfig.routeManifest,
-    serverManifest
+    serverManifest,
+    matches.map(match => match.route.id)
   );
 
   let entryMatches = createEntryMatches(matches);
