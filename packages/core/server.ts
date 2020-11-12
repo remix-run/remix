@@ -91,8 +91,8 @@ async function handleDataRequest(
 
   let url = new URL(urlParam);
   let loadResult = await loadRouteData(
-    remixConfig,
-    routeId,
+    remixConfig.loadersDirectory,
+    remixConfig.routeManifest[routeId],
     params,
     loadContext,
     url
@@ -206,9 +206,19 @@ async function handleHtmlRequest(
   }
 
   // Run all data loaders in parallel and await them individually below.
-  let globalLoadResultPromise = loadGlobalData(remixConfig, loadContext, url);
+  let globalLoadResultPromise = loadGlobalData(
+    remixConfig.loadersDirectory,
+    loadContext,
+    url
+  );
   let routeLoadResultPromises = matches.map(match =>
-    loadRouteData(remixConfig, match.route.id, match.params, loadContext, url)
+    loadRouteData(
+      remixConfig.loadersDirectory,
+      remixConfig.routeManifest[match.route.id],
+      match.params,
+      loadContext,
+      url
+    )
   );
 
   let globalLoadResult: AppLoadResult = null;

@@ -1,7 +1,7 @@
 import path from "path";
 import type { Params } from "react-router";
 
-import type { RemixConfig } from "./config";
+import type { ConfigRouteObject } from "./routes";
 import { Response, isResponseLike } from "./fetch";
 
 /**
@@ -27,8 +27,11 @@ export interface DataLoader {
   (args: { context: AppLoadContext; params: Params; url: URL }): AppData;
 }
 
-function requireLoader(config: RemixConfig, loaderFile: string): DataLoader {
-  let requirePath = path.resolve(config.loadersDirectory, loaderFile);
+function requireLoader(
+  loadersDirectory: string,
+  loaderFile: string
+): DataLoader {
+  let requirePath = path.resolve(loadersDirectory, loaderFile);
   return require(requirePath);
 }
 
@@ -59,13 +62,13 @@ async function executeLoader(
  * Loads data using the global data loader at `data/global.js`.
  */
 export function loadGlobalData(
-  config: RemixConfig,
+  loadersDirectory: string,
   loadContext: AppLoadContext,
   url: URL
 ): Promise<AppLoadResult> {
   let loader;
   try {
-    loader = requireLoader(config, "global");
+    loader = requireLoader(loadersDirectory, "global");
   } catch (error) {
     // No problem if the global loader is missing. It just
     // means there isn't any global data.
@@ -79,19 +82,17 @@ export function loadGlobalData(
  * Loads data for a given route id.
  */
 export function loadRouteData(
-  config: RemixConfig,
-  routeId: string,
+  loadersDirectory: string,
+  route: ConfigRouteObject,
   routeParams: Params,
   loadContext: AppLoadContext,
   url: URL
 ): Promise<AppLoadResult> {
-  let route = config.routeManifest[routeId];
-
   if (!route.loaderFile) {
     return Promise.resolve(null);
   }
 
-  let loader = requireLoader(config, route.loaderFile);
+  let loader = requireLoader(loadersDirectory, route.loaderFile);
   return executeLoader(loader, loadContext, url, routeParams);
 }
 
