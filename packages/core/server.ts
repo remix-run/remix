@@ -55,8 +55,16 @@ export interface RequestHandler {
  */
 export function createRequestHandler(
   remixConfig: RemixConfig,
-  serverMode: string = ServerMode.Development
+  serverMode: string = ServerMode.Production
 ): RequestHandler {
+  if (
+    serverMode !== ServerMode.Development &&
+    serverMode !== ServerMode.Production &&
+    serverMode !== ServerMode.Test
+  ) {
+    serverMode = ServerMode.Production;
+  }
+
   return async (request, loadContext = {}) => {
     let url = new URL(request.url);
 

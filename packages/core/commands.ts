@@ -7,16 +7,23 @@ import { startAssetServer } from "./assetServer";
  */
 async function buildCommand(
   remixRoot: string,
-  mode: BuildMode = BuildMode.Production
+  buildMode: string = BuildMode.Production
 ) {
-  console.log(`Building Remix app for ${mode}...`);
+  if (
+    buildMode !== BuildMode.Development &&
+    buildMode !== BuildMode.Production
+  ) {
+    buildMode = BuildMode.Production;
+  }
+
+  console.log(`Building Remix app for ${buildMode}...`);
 
   let config = await readConfig(remixRoot);
 
   await Promise.all([
     write(
       await build(config, {
-        mode,
+        mode: buildMode as BuildMode,
         target: BuildTarget.Server,
         manifestDir: config.serverBuildDirectory
       }),
@@ -24,7 +31,7 @@ async function buildCommand(
     ),
     write(
       await build(config, {
-        mode,
+        mode: buildMode as BuildMode,
         target: BuildTarget.Browser,
         manifestDir: config.serverBuildDirectory
       }),

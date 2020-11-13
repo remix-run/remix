@@ -1,6 +1,6 @@
 import type { AnyFlags } from "meow";
 import meow from "meow";
-import { BuildMode, commands } from "@remix-run/core";
+import { commands } from "@remix-run/core";
 
 const helpText = `
 Usage
@@ -36,12 +36,7 @@ if (cli.flags.version) {
 
 switch (cli.input[0]) {
   case "build":
-    commands.build(
-      cli.input[1],
-      process.env.NODE_ENV === BuildMode.Production
-        ? BuildMode.Production
-        : BuildMode.Development
-    );
+    commands.build(cli.input[1], process.env.NODE_ENV);
     break;
   case "run":
     commands.run(cli.input[1]);

@@ -27,8 +27,6 @@ interface RequestHandler {
   (req: express.Request, res: express.Response): Promise<void>;
 }
 
-const nodeEnv = process.env.NODE_ENV || "development";
-
 function handleConfigError(error: Error) {
   console.error(`There was an error reading the Remix config`);
   console.error(error);
@@ -62,7 +60,10 @@ export function createRequestHandler({
         handleConfigError(error);
       }
 
-      handleRequest = createRemixRequestHandler(remixConfig, nodeEnv);
+      handleRequest = createRemixRequestHandler(
+        remixConfig,
+        process.env.NODE_ENV
+      );
     }
 
     let loadContext: AppLoadContext;
