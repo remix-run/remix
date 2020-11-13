@@ -1,10 +1,10 @@
 import type { AssetManifest } from "./build";
 import {
+  AssetManifestFilename,
   getAssetManifest,
   getServerManifest,
   getServerEntryModule,
-  getRouteModules,
-  getDevAssetManifest
+  getRouteModules
 } from "./build";
 import { getCacheDir } from "./cache";
 import { writeDevServerBuild } from "./compiler";
@@ -20,7 +20,7 @@ import {
   createServerHandoffString
 } from "./entry";
 import type { Request } from "./fetch";
-import { Headers, Response } from "./fetch";
+import { Headers, Response, fetch } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import { matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
@@ -126,14 +126,13 @@ async function handleManifestRequest(
 
   let assetManifest: AssetManifest;
   if (serverMode === ServerMode.Development) {
-    try {
-      assetManifest = await getDevAssetManifest(remixConfig.publicPath);
-    } catch (error) {
-      console.error(error);
-      console.error(
-        `Unable to fetch the asset manifest. Are you running \`remix run\`?`
-      );
+    let devAssetManifestPromise = getDevAssetManifest(
+      getDevPublicPath(remixConfig)
+    );
 
+    try {
+      assetManifest = await devAssetManifestPromise;
+    } catch (error) {
       return jsonError(`Unable to fetch asset manifest`, 500);
     }
   } else {
@@ -262,23 +261,29 @@ async function handleHtmlRequest(
     statusCode = notOkResult.status;
   }
 
+  let publicPath: string;
   let serverBuildDirectory: string;
   let assetManifest: AssetManifest;
   if (serverMode === ServerMode.Development) {
-    adjustDevConfig(remixConfig, matches);
-
+    publicPath = getDevPublicPath(remixConfig);
     serverBuildDirectory = getCacheDir(remixConfig.rootDirectory, "build");
 
-    await writeDevServerBuild(remixConfig, serverBuildDirectory);
+    let devAssetManifestPromise = getDevAssetManifest(publicPath);
+    let devServerBuildPromise = writeDevServerBuild(
+      getDevConfigForMatches(remixConfig, matches),
+      serverBuildDirectory
+    );
 
     try {
-      assetManifest = await getDevAssetManifest(remixConfig.publicPath);
+      assetManifest = await devAssetManifestPromise;
     } catch (error) {
-      // The dev server is not running.
       // TODO: Show a nice error page.
       throw error;
     }
+
+    await devServerBuildPromise;
   } else {
+    publicPath = remixConfig.publicPath;
     serverBuildDirectory = remixConfig.serverBuildDirectory;
     assetManifest = getAssetManifest(serverBuildDirectory);
   }
@@ -317,7 +322,7 @@ async function handleHtmlRequest(
     globalData,
     manifest: entryManifest,
     matches: entryMatches,
-    publicPath: remixConfig.publicPath,
+    publicPath: publicPath,
     routeData
   };
   let serverEntryContext = {
@@ -364,24 +369,54 @@ async function handleHtmlRequest(
   );
 }
 
-function adjustDevConfig(config: RemixConfig, matches: ConfigRouteMatch[]) {
-  // Modify routes and routeManifest so they contain only the matched routes.
-  // This speeds up the build considerably.
-  config.routes = matches.reduceRight((children, match) => {
-    let route = { ...match.route };
-    if (children.length) route.children = children;
-    return [route];
-  }, [] as ConfigRouteObject[]);
+function getDevConfigForMatches(
+  remixConfig: RemixConfig,
+  matches: ConfigRouteMatch[]
+): RemixConfig {
+  return {
+    ...remixConfig,
 
-  config.routeManifest = matches.reduce((routeManifest, match) => {
-    let { children, ...route } = match.route;
-    routeManifest[route.id] = route;
-    return routeManifest;
-  }, {} as RouteManifest);
+    // Modify routes and routeManifest so they contain only the matched routes.
+    // This speeds up the build considerably.
+    routes: matches.reduceRight((children, match) => {
+      let route = { ...match.route };
+      if (children.length) route.children = children;
+      return [route];
+    }, [] as ConfigRouteObject[]),
 
-  // Modify publicPath to point to the dev server.
-  config.publicPath =
-    process.env.REMIX_RUN_ORIGIN || `http://localhost:${config.devServerPort}/`;
+    routeManifest: matches.reduce((routeManifest, match) => {
+      let { children, ...route } = match.route;
+      routeManifest[route.id] = route;
+      return routeManifest;
+    }, {} as RouteManifest)
+  };
+}
+
+function getDevPublicPath(remixConfig: RemixConfig): string {
+  return addTrailingSlash(
+    process.env.REMIX_RUN_ORIGIN ||
+      `http://localhost:${remixConfig.devServerPort}/`
+  );
+}
+
+function addTrailingSlash(path: string): string {
+  return path.endsWith("/") ? path : path + "/";
+}
+
+export async function getDevAssetManifest(
+  remixRunOrigin: string
+): Promise<AssetManifest> {
+  try {
+    let res = await fetch(remixRunOrigin + AssetManifestFilename);
+    return res.json();
+  } catch (error) {
+    console.error(error);
+    console.error(
+      `Unable to fetch the asset manifest. Are you running \`remix run\`?`
+    );
+
+    throw error;
+  }
 }
 
 function getPartialEntries<T = any>(

@@ -6,7 +6,6 @@ import type { Params } from "react-router";
 
 import type { EntryContext, RouteData } from "./entry";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
-import { fetch } from "./fetch";
 import type { BuildManifest } from "./rollup/manifest";
 import invariant from "./invariant";
 
@@ -132,14 +131,4 @@ export function getRouteModules(
 
     return routeModules;
   }, {} as RouteModules);
-}
-
-/**
- * Fetches the asset manifest from the asset server.
- */
-export async function getDevAssetManifest(
-  remixRunOrigin: string
-): Promise<AssetManifest> {
-  let res = await fetch(remixRunOrigin + AssetManifestFilename);
-  return res.json();
 }
