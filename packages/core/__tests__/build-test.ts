@@ -31,7 +31,7 @@ describe("building", () => {
   });
 
   beforeEach(() => {
-    jest.setTimeout(10000);
+    jest.setTimeout(20000);
   });
 
   describe("the development server build", () => {
@@ -211,7 +211,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-0e8f3297.js",
-          "_shared/node_modules/@remix-run/react-167fdc6f.js",
+          "_shared/node_modules/@remix-run/react-d051d12a.js",
           "_shared/node_modules/history-45437576.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-a68204f7.js",
@@ -317,7 +317,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-fa2b156c.js",
-          "_shared/node_modules/@remix-run/react-4e36f746.js",
+          "_shared/node_modules/@remix-run/react-cfcf87d8.js",
           "_shared/node_modules/history-8b818913.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-d4c4f9f2.js",
@@ -328,19 +328,19 @@ describe("building", () => {
           "_shared/node_modules/react-router-fa8780cf.js",
           "_shared/node_modules/scheduler-99859fcd.js",
           "asset-manifest.json",
-          "entry-browser-5581ef3b.js",
+          "entry-browser-695c253c.js",
           "global-ec887178.css",
           "pages/one-33b3e281.js",
           "pages/two-6e39a2d3.js",
           "routes/404-81cdf991.js",
           "routes/500-0c9b194f.js",
           "routes/gists-6db1f83b.css",
-          "routes/gists-72e8cc88.js",
+          "routes/gists-de1db79f.js",
           "routes/gists.mine-f12f3533.js",
-          "routes/gists/$username-c142c578.js",
-          "routes/gists/index-8530a5c4.js",
-          "routes/index-9e9c9a2e.js",
-          "routes/methods-cf5730cf.js",
+          "routes/gists/$username-9f2eb5ea.js",
+          "routes/gists/index-23b57630.js",
+          "routes/index-77548efd.js",
+          "routes/methods-b2333579.js",
           "routes/methods-e15212f5.css",
           "routes/page/four-7c11fa85.js",
           "routes/page/three-5de4b3e5.js",
@@ -355,7 +355,7 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-5581ef3b.js",
+              "file": "entry-browser-695c253c.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
@@ -373,7 +373,7 @@ describe("building", () => {
               "file": "routes/500-0c9b194f.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-72e8cc88.js",
+              "file": "routes/gists-de1db79f.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-6db1f83b.css",
@@ -382,16 +382,16 @@ describe("building", () => {
               "file": "routes/gists.mine-f12f3533.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-c142c578.js",
+              "file": "routes/gists/$username-9f2eb5ea.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-8530a5c4.js",
+              "file": "routes/gists/index-23b57630.js",
             },
             "routes/index": Object {
-              "file": "routes/index-9e9c9a2e.js",
+              "file": "routes/index-77548efd.js",
             },
             "routes/methods": Object {
-              "file": "routes/methods-cf5730cf.js",
+              "file": "routes/methods-b2333579.js",
             },
             "routes/methods.css": Object {
               "file": "routes/methods-e15212f5.css",

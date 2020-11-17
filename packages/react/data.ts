@@ -4,7 +4,6 @@ import type { AppData, RouteData } from "@remix-run/core";
 
 import type { Manifest } from "./manifest";
 import type { FormSubmit } from "./components";
-import invariant from "./invariant";
 
 export type { AppData, RouteData };
 
@@ -23,18 +22,24 @@ export function loadRouteData(
   handleRedirect: DataRedirectHandler,
   formSubmit?: FormSubmit
 ): Promise<AppData> {
-  let route = manifest.routes[routeId];
+  let loaderUrl = manifest.loaders[routeId];
 
-  invariant(route, `Route "${routeId}" isn't in the route manifest`);
-
-  if (!route.hasLoader) {
+  if (!loaderUrl) {
     return Promise.resolve(null);
   }
 
-  return fetchData(location, routeParams, routeId, handleRedirect, formSubmit);
+  return fetchData(
+    loaderUrl,
+    location,
+    routeParams,
+    routeId,
+    handleRedirect,
+    formSubmit
+  );
 }
 
 async function fetchData(
+  loaderUrl: string,
   location: Location,
   routeParams: Params,
   routeId: string,
@@ -50,7 +55,7 @@ async function fetchData(
   });
 
   let init = formSubmit ? getFormSubmitInit(formSubmit) : undefined;
-  let res = await fetch(`/_remix/data?${params.toString()}`, init);
+  let res = await fetch(`${loaderUrl}?${params.toString()}`, init);
 
   let redirectUrl = res.headers.get("x-remix-redirect");
   if (redirectUrl) {

@@ -10,7 +10,6 @@ export type { RouteModules, RouteModule };
  */
 export async function loadRouteModule(
   manifest: Manifest,
-  publicPath: string,
   routeId: string,
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
@@ -18,11 +17,10 @@ export async function loadRouteModule(
     return routeModulesCache[routeId];
   }
 
-  let asset = manifest.assets[routeId];
+  let url = manifest.modules[routeId];
 
-  invariant(asset, `Route "${routeId}" isn't in the asset manifest`);
+  invariant(url, `Route "${routeId}" isn't in the asset manifest`);
 
-  let url = publicPath + asset.file;
   let routeModule = await import(url);
 
   routeModulesCache[routeId] = routeModule;

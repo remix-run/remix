@@ -45,13 +45,14 @@ exports[`the server HTML for the root URL is correct 1`] = `
       window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
-          assets: {
-            \\"entry-browser\\": { file: \\"entry-browser-db706363.js\\" },
-            \\"global.css\\": { file: \\"global-ec887178.css\\" },
-            \\"routes/index\\": { file: \\"routes/index-eda66ec0.js\\" },
-          },
           routes: { \\"routes/index\\": { id: \\"routes/index\\", path: \\"/\\" } },
-          version: \\"a516d32f\\",
+          modules: {
+            \\"entry-browser\\": \\"/build/entry-browser-2003ccca.js\\",
+            \\"routes/index\\": \\"/build/routes/index-f42eb889.js\\",
+          },
+          loaders: {},
+          styles: { \\"global.css\\": \\"/build/global-ec887178.css\\" },
+          version: \\"4cc5f5a1\\",
         },
         matches: [
           {
@@ -60,15 +61,14 @@ exports[`the server HTML for the root URL is correct 1`] = `
             route: { id: \\"routes/index\\", path: \\"/\\" },
           },
         ],
-        publicPath: \\"/build/\\",
         routeData: { \\"routes/index\\": null },
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-eda66ec0.js\\";
+      import * as route0 from \\"/build/routes/index-f42eb889.js\\";
       window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-db706363.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-2003ccca.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

@@ -11,7 +11,6 @@ export interface ServerHandoff {
   globalData: AppData;
   manifest: EntryManifest;
   matches: EntryRouteMatch[];
-  publicPath: string;
   routeData: RouteData;
 }
 
@@ -21,14 +20,17 @@ export interface EntryContext extends ServerHandoff {
 }
 
 export interface EntryManifest {
-  assets: AssetManifest["entries"];
+  // assets: AssetManifest["entries"];
   routes: RouteManifest<EntryRouteObject>;
+  modules: { [routeId: string]: string }; // URL for an import()
+  loaders: { [routeId: string]: string }; // URL for calling the data endpoint
+  // actions: { [routeId: string]: string }; // URL for calling the action
+  styles: { [routeId: string]: string }; // URL for the CSS
   version: AssetManifest["version"];
 }
 
 export interface EntryRouteObject {
   caseSensitive?: boolean;
-  hasLoader?: boolean;
   id: string;
   parentId?: string;
   path: string;
@@ -44,9 +46,6 @@ export function createEntryRoute(
 
   if (typeof configRoute.caseSensitive !== "undefined") {
     route.caseSensitive = configRoute.caseSensitive;
-  }
-  if (configRoute.loaderFile) {
-    route.hasLoader = true;
   }
   if (configRoute.parentId) {
     route.parentId = configRoute.parentId;

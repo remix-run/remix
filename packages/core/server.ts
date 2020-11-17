@@ -26,6 +26,35 @@ import { json, jsonError } from "./responseHelpers";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
 
+// TODO: Put this in entry.ts
+function createEntryLookup(
+  publicPath: string,
+  manifestEntries: AssetManifest["entries"],
+  manifestKeys: string[]
+): EntryManifest["modules"] {
+  return manifestKeys.reduce((memo, key) => {
+    let entry = manifestEntries[key];
+
+    if (entry) {
+      memo[key] = publicPath + entry.file;
+    }
+
+    return memo;
+  }, {} as { [key: string]: string });
+}
+
+function createEntryLoaders(matches: ConfigRouteMatch[]) {
+  return matches.reduce((memo, match) => {
+    let routeId = match.route.id;
+
+    if (match.route.loaderFile) {
+      memo[routeId] = `/_remix/data`;
+    }
+
+    return memo;
+  }, {} as EntryManifest["loaders"]);
+}
+
 /**
  * The mode to use when running the server.
  */
@@ -75,7 +104,7 @@ export function createRequestHandler(
       return handleManifestRequest(remixConfig, request, serverMode);
     }
 
-    return handleHtmlRequest(remixConfig, request, loadContext, serverMode);
+    return handleDocumentRequest(remixConfig, request, loadContext, serverMode);
   };
 }
 
@@ -143,11 +172,11 @@ async function handleManifestRequest(
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
+  let publicPath: string;
   let assetManifest: AssetManifest;
   if (serverMode === ServerMode.Development) {
-    let devAssetManifestPromise = getDevAssetManifest(
-      getDevPublicPath(remixConfig)
-    );
+    publicPath = getDevPublicPath(remixConfig);
+    let devAssetManifestPromise = getDevAssetManifest(publicPath);
 
     try {
       assetManifest = await devAssetManifestPromise;
@@ -155,18 +184,23 @@ async function handleManifestRequest(
       return jsonError(`Unable to fetch asset manifest`, 500);
     }
   } else {
+    publicPath = remixConfig.publicPath;
     assetManifest = getAssetManifest(remixConfig.serverBuildDirectory);
   }
 
-  // Get the manifest for only the matched routes.
-  let matchedAssetKeys = [
-    ...matches.map(match => match.route.id),
-    ...matches.map(match => `${match.route.id}.css`)
-  ];
-
   let entryManifest: EntryManifest = {
-    assets: getPartialEntries(assetManifest.entries, matchedAssetKeys),
     routes: createRouteManifest(matches),
+    modules: createEntryLookup(
+      publicPath,
+      assetManifest.entries,
+      matches.map(match => match.route.id)
+    ),
+    loaders: createEntryLoaders(matches),
+    styles: createEntryLookup(
+      publicPath,
+      assetManifest.entries,
+      matches.map(match => `${match.route.id}.css`)
+    ),
     version: assetManifest.version
   };
 
@@ -178,7 +212,7 @@ async function handleManifestRequest(
   });
 }
 
-async function handleHtmlRequest(
+async function handleDocumentRequest(
   remixConfig: RemixConfig,
   request: Request,
   loadContext: AppLoadContext,
@@ -335,26 +369,25 @@ async function handleHtmlRequest(
   let globalData = await createGlobalData(globalLoadResult);
   let routeData = await createRouteData(routeLoadResults, matches);
 
-  // Get the asset manifest for only the browser entry point + the matched
-  // routes. The client will fill in the rest by making requests to the manifest
-  // endpoint as needed.
-  let matchedAssetKeys = [
-    "entry-browser",
-    "global.css",
-    ...matches.map(match => match.route.id),
-    ...matches.map(match => `${match.route.id}.css`)
-  ];
-
   let entryManifest: EntryManifest = {
-    assets: getPartialEntries(assetManifest.entries, matchedAssetKeys),
     routes: createRouteManifest(matches),
+    modules: createEntryLookup(
+      publicPath,
+      assetManifest.entries,
+      ["entry-browser"].concat(matches.map(match => match.route.id))
+    ),
+    loaders: createEntryLoaders(matches),
+    styles: createEntryLookup(
+      publicPath,
+      assetManifest.entries,
+      ["global.css"].concat(matches.map(match => `${match.route.id}.css`))
+    ),
     version: assetManifest.version
   };
   let serverHandoff: ServerHandoff = {
     globalData,
     manifest: entryManifest,
     matches: entryMatches,
-    publicPath: publicPath,
     routeData
   };
   let serverEntryContext = {
@@ -449,16 +482,6 @@ export async function getDevAssetManifest(
 
     throw error;
   }
-}
-
-function getPartialEntries<T = any>(
-  entries: { [key: string]: T },
-  keys: string[]
-): { [key: string]: T } {
-  return keys.reduce((memo, key) => {
-    if (key in entries) memo[key] = entries[key];
-    return memo;
-  }, {} as { [key: string]: T });
 }
 
 function isRedirect(response: Response) {

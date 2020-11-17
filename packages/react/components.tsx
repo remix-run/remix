@@ -36,7 +36,6 @@ interface RemixEntryContextType {
   globalData: AppData;
   manifest: Manifest;
   matches: ClientRouteMatch[];
-  publicPath: string;
   nextLocation: Location | undefined;
   routeData: RouteData;
   routeModules: RouteModules;
@@ -87,7 +86,6 @@ export function RemixEntry({
     globalData,
     manifest,
     matches: entryMatches,
-    publicPath,
     routeData: entryRouteData,
     routeModules,
     serverHandoffString
@@ -166,14 +164,12 @@ export function RemixEntry({
       );
 
       let styleSheetsPromise = Promise.all(
-        nextMatches.map(match =>
-          loadRouteStyleSheet(manifest, publicPath, match.route.id)
-        )
+        nextMatches.map(match => loadRouteStyleSheet(manifest, match.route.id))
       );
 
       let modulesPromise = Promise.all(
         nextMatches.map(match =>
-          loadRouteModule(manifest, publicPath, match.route.id, routeModules)
+          loadRouteModule(manifest, match.route.id, routeModules)
         )
       );
 
@@ -211,7 +207,6 @@ export function RemixEntry({
     nextLocation,
     location,
     matches,
-    publicPath,
     routeData,
     navigator,
     manifest,
@@ -222,7 +217,6 @@ export function RemixEntry({
     globalData,
     manifest,
     matches,
-    publicPath,
     routeData,
     routeModules,
     serverHandoffString,
@@ -337,7 +331,7 @@ export function Meta() {
  * Bundles for additional routes are loaded later as needed.
  */
 export function Scripts() {
-  let { manifest, publicPath, serverHandoffString } = useRemixEntryContext();
+  let { manifest, serverHandoffString } = useRemixEntryContext();
 
   let browserIsHydrating = false;
   if (!serverHandoffString) {
@@ -348,13 +342,13 @@ export function Scripts() {
   let contextScript = `window.__remixContext = ${serverHandoffString};`;
 
   let routeIds = Object.keys(manifest.routes).filter(
-    routeId => routeId in manifest.assets
+    routeId => routeId in manifest.modules
   );
   let contextRouteModulesScript = `${routeIds
     .map(
       (routeId, index) =>
         `import * as route${index} from ${JSON.stringify(
-          publicPath + manifest.assets[routeId].file
+          manifest.modules[routeId]
         )};`
     )
     .join("\n")}
@@ -362,7 +356,7 @@ export function Scripts() {
       .map((routeId, index) => `${JSON.stringify(routeId)}:route${index}`)
       .join(",")}};`;
 
-  let entryBrowser = manifest.assets["entry-browser"];
+  let entryBrowser = manifest.modules["entry-browser"];
 
   return React.useMemo(
     () => (
@@ -375,7 +369,7 @@ export function Scripts() {
           dangerouslySetInnerHTML={createHtml(contextRouteModulesScript)}
           type="module"
         />
-        <script src={publicPath + entryBrowser.file} type="module" />
+        <script src={entryBrowser} type="module" />
       </>
     ),
     [] // eslint-disable-line
@@ -386,21 +380,21 @@ export function Scripts() {
  * Renders the <link> tags for the stylesheets of the current routes.
  */
 export function Styles() {
-  let { manifest, matches, publicPath } = useRemixEntryContext();
+  let { manifest, matches } = useRemixEntryContext();
 
-  let styleFiles = [manifest.assets["global.css"].file];
+  let styleFiles = [manifest.styles["global.css"]];
 
   for (let match of matches) {
     let key = `${match.route.id}.css`;
-    if (manifest.assets[key]) {
-      styleFiles.push(manifest.assets[key].file);
+    if (manifest.styles[key]) {
+      styleFiles.push(manifest.styles[key]);
     }
   }
 
   return (
     <>
       {styleFiles.map(file => (
-        <link key={file} rel="stylesheet" href={publicPath + file} />
+        <link key={file} rel="stylesheet" href={file} />
       ))}
     </>
   );

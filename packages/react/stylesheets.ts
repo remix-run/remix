@@ -21,16 +21,13 @@ import type { Manifest } from "./manifest";
  */
 export function loadRouteStyleSheet(
   manifest: Manifest,
-  publicPath: string,
   routeId: string
 ): Promise<void> {
-  let asset = manifest.assets[`${routeId}.css`];
+  let href = manifest.styles[routeId];
 
-  if (!asset) {
+  if (!href) {
     return Promise.resolve();
   }
-
-  let href = publicPath + asset.file;
 
   return loadStyleSheet(href);
 }
