@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/core",
   "description": "The core classes and functions of Remix",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
     "@babel/core": "^7.11.6",
@@ -12,6 +12,7 @@
     "@rollup/plugin-alias": "^3.1.1",
     "@rollup/plugin-babel": "^5.2.1",
     "@rollup/plugin-commonjs": "^15.0.0",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
     "@rollup/plugin-replace": "^2.3.3",
     "chokidar": "^3.4.2",

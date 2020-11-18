@@ -12,9 +12,10 @@ import * as rollup from "rollup";
 import alias from "@rollup/plugin-alias";
 import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
-import { terser } from "rollup-plugin-terser";
+import json from "@rollup/plugin-json";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
+import { terser } from "rollup-plugin-terser";
 
 import { AssetManifestFilename, ServerManifestFilename } from "./build";
 import type { RemixConfig } from "./config";
@@ -243,6 +244,7 @@ function getBuildPlugins(
 
   plugins.push(
     mdxTransform(config.mdx),
+    json(),
     babel({
       babelHelpers: "bundled",
       configFile: false,
@@ -261,7 +263,9 @@ function getBuildPlugins(
       ]
     }),
     nodeResolve({
-      extensions: [".js", ".json", ".ts", ".tsx"]
+      browser: target === BuildTarget.Browser,
+      extensions: [".js", ".json", ".ts", ".tsx"],
+      preferBuiltins: target !== BuildTarget.Browser
     }),
     commonjs(),
     replace({
