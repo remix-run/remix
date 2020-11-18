@@ -1,13 +1,21 @@
 import path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
-import { ServerMode } from "./server";
 import type { ConfigRouteObject, RouteManifest, DefineRoutes } from "./routes";
 import {
   createRouteManifest,
   defineRoutes as _defineRoutes,
   getConventionalRoutes
 } from "./routes";
+
+/**
+ * The mode to use when running the server.
+ */
+export enum ServerMode {
+  Development = "development",
+  Production = "production",
+  Test = "test"
+}
 
 /**
  * The user-provided config in remix.config.js.

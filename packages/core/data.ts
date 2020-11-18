@@ -3,6 +3,7 @@ import type { Params } from "react-router";
 
 import type { ConfigRouteObject } from "./routes";
 import { Request, Response, isResponseLike } from "./fetch";
+import { json, redirect } from "./responseHelpers";
 
 /**
  * Some data that was returned from a data loader.
@@ -71,37 +72,22 @@ async function executeLoader(
   });
 
   if (isAction) {
-    let location = value?.headers?.get("location");
+    let redirectUrl = isResponseLike(value) && value.headers.get("Location");
 
-    if (!isResponseLike(value) || !location) {
+    if (!redirectUrl) {
       throw new Error(
-        `You made a ${request.method} to ${request.url} but did not return a \`redirect\`. Please \`return redirect(newUrl)\` from your loader to avoid reposts when users click the back button.`
+        `You made a ${request.method} to ${request.url} but did not return a \`redirect\`. Please \`return redirect(newUrl)\` from your action to avoid reposts when users click the back button.`
       );
     }
 
-    if (value.status !== 302 && value.status !== 303) {
-      console.warn(
-        `Loader actions shouldn't return a ${value.status}. Remix changed it to 303.`
-      );
-    }
-
-    return value.status === 303
-      ? value
-      : new Response("", {
-          status: 303,
-          headers: { location }
-        });
+    return redirect(redirectUrl, 303);
   }
 
   if (isResponseLike(value)) {
     return value;
   }
 
-  return new Response(JSON.stringify(value), {
-    headers: {
-      "Content-Type": "application/json; charset=utf-8"
-    }
-  });
+  return json(value);
 }
 
 /**

@@ -18,7 +18,7 @@ export {
 } from "./compiler";
 
 export type { RemixConfig } from "./config";
-export { readConfig } from "./config";
+export { ServerMode, readConfig } from "./config";
 
 export type {
   AppData,
@@ -57,4 +57,4 @@ export {
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
-export { ServerMode, createRequestHandler } from "./server";
+export { createRequestHandler } from "./server";

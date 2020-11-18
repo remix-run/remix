@@ -10,7 +10,7 @@ export type { Action, Loader };
  * A JSON response. This helper takes care of converting the `data` to JSON
  * (using `JSON.stringify(data)`) and setting the `Content-Type` header.
  */
-export function json(data: any, init: ResponseInit = {}) {
+export function json(data: any, init: ResponseInit = {}): Response {
   let headers = new Headers(init.headers);
 
   if (!headers.has("Content-Type")) {
@@ -23,14 +23,14 @@ export function json(data: any, init: ResponseInit = {}) {
 /**
  * A "Not Found" response (404).
  */
-export function notFound() {
+export function notFound(): Response {
   return new Response("", { status: 404 });
 }
 
 /**
  * A redirect response. Defaults to "302 Found".
  */
-export function redirect(url: string, status = 302) {
+export function redirect(url: string, status = 302): Response {
   return new Response("", {
     status,
     headers: {

@@ -8,6 +8,7 @@ import {
 } from "./build";
 import { getCacheDir } from "./cache";
 import { writeDevServerBuild } from "./compiler";
+import { ServerMode } from "./config";
 import type { RemixConfig } from "./config";
 import type { AppLoadContext, AppLoadResult } from "./data";
 import { loadGlobalData, loadRouteData } from "./data";
@@ -25,15 +26,6 @@ import { matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
-
-/**
- * The mode to use when running the server.
- */
-export enum ServerMode {
-  Development = "development",
-  Production = "production",
-  Test = "test"
-}
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -105,7 +97,7 @@ async function handleDataRequest(
     return new Response("", {
       status: 204,
       headers: {
-        "x-remix-redirect": loadResult.headers.get("location")!
+        "x-remix-redirect": loadResult.headers.get("Location")!
       }
     });
   }
