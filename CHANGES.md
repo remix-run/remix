@@ -6,6 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Adds support for importing `.json` files.
 - Ignore node built-ins when building browser bundles. Use `browser` field in
   package.json for packages that publish browser-ready shims.
 
