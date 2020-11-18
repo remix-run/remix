@@ -27,11 +27,11 @@ export interface EntryManifest {
 }
 
 export interface EntryRouteObject {
+  path: string;
   caseSensitive?: boolean;
   hasLoader?: boolean;
   id: string;
   parentId?: string;
-  path: string;
 }
 
 export function createEntryRoute(

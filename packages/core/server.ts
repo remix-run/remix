@@ -189,9 +189,9 @@ async function handleHtmlRequest(
         params: { error },
         pathname: url.pathname,
         route: {
-          id: "routes/500",
           path: url.pathname,
-          componentFile: "routes/500.js"
+          id: "routes/500",
+          componentFile: "routes/500"
         }
       }
     ];
@@ -204,9 +204,9 @@ async function handleHtmlRequest(
         params: {},
         pathname: url.pathname,
         route: {
-          id: "routes/404",
           path: url.pathname,
-          componentFile: "routes/404.js"
+          id: "routes/404",
+          componentFile: "routes/404"
         }
       }
     ];
