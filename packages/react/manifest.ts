@@ -14,9 +14,6 @@ export async function loadManifest(
 
   if (patch) {
     Object.assign(manifest.routes, patch.routes);
-    Object.assign(manifest.modules, patch.modules);
-    Object.assign(manifest.loaders, patch.loaders);
-    Object.assign(manifest.styles, patch.styles);
   } else if (autoReload) {
     // Wait indefinitely for the reload.
     return new Promise(() => {

@@ -26,35 +26,6 @@ import { json, jsonError } from "./responseHelpers";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
 
-// TODO: Put this in entry.ts
-function createEntryLookup(
-  publicPath: string,
-  manifestEntries: AssetManifest["entries"],
-  manifestKeys: string[]
-): EntryManifest["modules"] {
-  return manifestKeys.reduce((memo, key) => {
-    let entry = manifestEntries[key];
-
-    if (entry) {
-      memo[key] = publicPath + entry.file;
-    }
-
-    return memo;
-  }, {} as { [key: string]: string });
-}
-
-function createEntryLoaders(matches: ConfigRouteMatch[]) {
-  return matches.reduce((memo, match) => {
-    let routeId = match.route.id;
-
-    if (match.route.loaderFile) {
-      memo[routeId] = `/_remix/data`;
-    }
-
-    return memo;
-  }, {} as EntryManifest["loaders"]);
-}
-
 /**
  * The mode to use when running the server.
  */
@@ -189,19 +160,8 @@ async function handleManifestRequest(
   }
 
   let entryManifest: EntryManifest = {
-    routes: createRouteManifest(matches),
-    modules: createEntryLookup(
-      publicPath,
-      assetManifest.entries,
-      matches.map(match => match.route.id)
-    ),
-    loaders: createEntryLoaders(matches),
-    styles: createEntryLookup(
-      publicPath,
-      assetManifest.entries,
-      matches.map(match => `${match.route.id}.css`)
-    ),
-    version: assetManifest.version
+    version: assetManifest.version,
+    routes: createRouteManifest(matches, assetManifest.entries, publicPath)
   };
 
   return json(entryManifest, {
@@ -365,25 +325,19 @@ async function handleDocumentRequest(
     matches.map(match => match.route.id)
   );
 
-  let entryMatches = createEntryMatches(matches);
+  let entryManifest: EntryManifest = {
+    version: assetManifest.version,
+    routes: createRouteManifest(matches, assetManifest.entries, publicPath),
+    entryModuleUrl: publicPath + assetManifest.entries["entry-browser"].file,
+    globalStylesUrl:
+      "global.css" in assetManifest.entries
+        ? publicPath + assetManifest.entries["global.css"].file
+        : undefined
+  };
+  let entryMatches = createEntryMatches(entryManifest.routes, matches);
   let globalData = await createGlobalData(globalLoadResult);
   let routeData = await createRouteData(routeLoadResults, matches);
 
-  let entryManifest: EntryManifest = {
-    routes: createRouteManifest(matches),
-    modules: createEntryLookup(
-      publicPath,
-      assetManifest.entries,
-      ["entry-browser"].concat(matches.map(match => match.route.id))
-    ),
-    loaders: createEntryLoaders(matches),
-    styles: createEntryLookup(
-      publicPath,
-      assetManifest.entries,
-      ["global.css"].concat(matches.map(match => `${match.route.id}.css`))
-    ),
-    version: assetManifest.version
-  };
   let serverHandoff: ServerHandoff = {
     globalData,
     manifest: entryManifest,

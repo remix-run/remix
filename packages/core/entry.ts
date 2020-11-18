@@ -20,28 +20,30 @@ export interface EntryContext extends ServerHandoff {
 }
 
 export interface EntryManifest {
-  // assets: AssetManifest["entries"];
-  routes: RouteManifest<EntryRouteObject>;
-  modules: { [routeId: string]: string }; // URL for an import()
-  loaders: { [routeId: string]: string }; // URL for calling the data endpoint
-  // actions: { [routeId: string]: string }; // URL for calling the action
-  styles: { [routeId: string]: string }; // URL for the CSS
   version: AssetManifest["version"];
+  routes: RouteManifest<EntryRouteObject>;
+  entryModuleUrl?: string;
+  globalStylesUrl?: string;
 }
 
 export interface EntryRouteObject {
+  path: string;
   caseSensitive?: boolean;
   id: string;
   parentId?: string;
-  path: string;
+  moduleUrl?: string; // URL of the route module (for `import`)
+  stylesUrl?: string; // URL for loading the CSS
+  loaderUrl?: string; // URL for calling the loader
 }
 
 export function createEntryRoute(
-  configRoute: ConfigRouteObject
+  configRoute: ConfigRouteObject,
+  assets: AssetManifest["entries"],
+  publicPath = "/"
 ): EntryRouteObject {
   let route: EntryRouteObject = {
-    id: configRoute.id,
-    path: configRoute.path
+    path: configRoute.path,
+    id: configRoute.id
   };
 
   if (typeof configRoute.caseSensitive !== "undefined") {
@@ -49,6 +51,15 @@ export function createEntryRoute(
   }
   if (configRoute.parentId) {
     route.parentId = configRoute.parentId;
+  }
+  if (assets[route.id]) {
+    route.moduleUrl = publicPath + assets[route.id].file;
+  }
+  if (assets[`${route.id}.css`]) {
+    route.stylesUrl = publicPath + assets[`${route.id}.css`].file;
+  }
+  if (configRoute.loaderFile) {
+    route.loaderUrl = "/_remix/data";
   }
 
   return route;
@@ -61,12 +72,13 @@ export interface EntryRouteMatch {
 }
 
 export function createEntryMatches(
+  entryRoutes: RouteManifest<EntryRouteObject>,
   matches: ConfigRouteMatch[]
 ): EntryRouteMatch[] {
   return matches.map(match => ({
     params: match.params,
     pathname: match.pathname,
-    route: createEntryRoute(match.route)
+    route: entryRoutes[match.route.id]
   }));
 }
 
@@ -90,10 +102,12 @@ export async function createRouteData(
 }
 
 export function createRouteManifest(
-  matches: ConfigRouteMatch[]
+  matches: ConfigRouteMatch[],
+  assets: AssetManifest["entries"],
+  publicPath = "/"
 ): RouteManifest<EntryRouteObject> {
   return matches.reduce((memo, match) => {
-    memo[match.route.id] = createEntryRoute(match.route);
+    memo[match.route.id] = createEntryRoute(match.route, assets, publicPath);
     return memo;
   }, {} as RouteManifest<EntryRouteObject>);
 }

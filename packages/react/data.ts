@@ -1,8 +1,7 @@
 import type { Location } from "history";
 import type { Params } from "react-router";
-import type { AppData, RouteData } from "@remix-run/core";
+import type { AppData, RouteData, EntryRouteObject } from "@remix-run/core";
 
-import type { Manifest } from "./manifest";
 import type { FormSubmit } from "./components";
 
 export type { AppData, RouteData };
@@ -15,24 +14,21 @@ export interface DataRedirectHandler {
  * Dynamically loads some data for a route from the server.
  */
 export function loadRouteData(
-  manifest: Manifest,
+  route: EntryRouteObject,
   location: Location,
   routeParams: Params,
-  routeId: string,
   handleRedirect: DataRedirectHandler,
   formSubmit?: FormSubmit
 ): Promise<AppData> {
-  let loaderUrl = manifest.loaders[routeId];
-
-  if (!loaderUrl) {
+  if (!route.loaderUrl) {
     return Promise.resolve(null);
   }
 
   return fetchData(
-    loaderUrl,
+    route.loaderUrl,
     location,
     routeParams,
-    routeId,
+    route.id,
     handleRedirect,
     formSubmit
   );

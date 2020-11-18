@@ -1,4 +1,4 @@
-import type { Manifest } from "./manifest";
+import type { EntryRouteObject } from "@remix-run/core";
 
 // Without this we have a flash of unstyled content when the css takes longer to
 // load than the rest of the transition (manifest, data, modules). While our
@@ -19,17 +19,12 @@ import type { Manifest } from "./manifest";
 /**
  * Dynamically loads the stylesheet for a route from the server.
  */
-export function loadRouteStyleSheet(
-  manifest: Manifest,
-  routeId: string
-): Promise<void> {
-  let href = manifest.styles[routeId];
-
-  if (!href) {
+export function loadRouteStyleSheet(route: EntryRouteObject): Promise<void> {
+  if (!route.stylesUrl) {
     return Promise.resolve();
   }
 
-  return loadStyleSheet(href);
+  return loadStyleSheet(route.stylesUrl);
 }
 
 let preloads: { [href: string]: Promise<void> } = {};

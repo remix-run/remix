@@ -131,10 +131,9 @@ export function RemixEntry({
         let leafMatch = nextMatches[nextMatches.length - 1];
 
         await loadRouteData(
-          manifest,
+          manifest.routes[leafMatch.route.id],
           location,
           leafMatch.params,
-          leafMatch.route.id,
           handleDataRedirect,
           pendingFormSubmit
         );
@@ -154,22 +153,23 @@ export function RemixEntry({
             ? // Re-use data we already have for routes already on the page.
               routeData[match.route.id]
             : loadRouteData(
-                manifest,
+                manifest.routes[match.route.id],
                 location,
                 match.params,
-                match.route.id,
                 handleDataRedirect
               )
         )
       );
 
       let styleSheetsPromise = Promise.all(
-        nextMatches.map(match => loadRouteStyleSheet(manifest, match.route.id))
+        nextMatches.map(match =>
+          loadRouteStyleSheet(manifest.routes[match.route.id])
+        )
       );
 
       let modulesPromise = Promise.all(
         nextMatches.map(match =>
-          loadRouteModule(manifest, match.route.id, routeModules)
+          loadRouteModule(manifest.routes[match.route.id], routeModules)
         )
       );
 
@@ -342,21 +342,19 @@ export function Scripts() {
   let contextScript = `window.__remixContext = ${serverHandoffString};`;
 
   let routeIds = Object.keys(manifest.routes).filter(
-    routeId => routeId in manifest.modules
+    routeId => manifest.routes[routeId].moduleUrl != null
   );
   let contextRouteModulesScript = `${routeIds
     .map(
       (routeId, index) =>
         `import * as route${index} from ${JSON.stringify(
-          manifest.modules[routeId]
+          manifest.routes[routeId].moduleUrl
         )};`
     )
     .join("\n")}
     window.__remixContext.routeModules = {${routeIds
       .map((routeId, index) => `${JSON.stringify(routeId)}:route${index}`)
       .join(",")}};`;
-
-  let entryBrowser = manifest.modules["entry-browser"];
 
   return React.useMemo(
     () => (
@@ -369,7 +367,7 @@ export function Scripts() {
           dangerouslySetInnerHTML={createHtml(contextRouteModulesScript)}
           type="module"
         />
-        <script src={entryBrowser} type="module" />
+        <script src={manifest.entryModuleUrl} type="module" />
       </>
     ),
     [] // eslint-disable-line
@@ -382,19 +380,23 @@ export function Scripts() {
 export function Styles() {
   let { manifest, matches } = useRemixEntryContext();
 
-  let styleFiles = [manifest.styles["global.css"]];
+  let stylesUrls = [];
+
+  if (manifest.globalStylesUrl) {
+    stylesUrls.push(manifest.globalStylesUrl);
+  }
 
   for (let match of matches) {
-    let key = `${match.route.id}.css`;
-    if (manifest.styles[key]) {
-      styleFiles.push(manifest.styles[key]);
+    let route = manifest.routes[match.route.id];
+    if (route.stylesUrl) {
+      stylesUrls.push(route.stylesUrl);
     }
   }
 
   return (
     <>
-      {styleFiles.map(file => (
-        <link key={file} rel="stylesheet" href={file} />
+      {stylesUrls.map(href => (
+        <link key={href} rel="stylesheet" href={href} />
       ))}
     </>
   );

@@ -43,43 +43,47 @@ exports[`loader results when a loader returns not found sends a not found page 1
       window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
+          version: \\"cb046993\\",
           routes: {
-            \\"routes/gists\\": { id: \\"routes/gists\\", path: \\"gists\\" },
+            \\"routes/gists\\": {
+              path: \\"gists\\",
+              id: \\"routes/gists\\",
+              moduleUrl: \\"/build/routes/gists-2ea79f8a.js\\",
+              stylesUrl: \\"/build/routes/gists-6db1f83b.css\\",
+              loaderUrl: \\"/_remix/data\\",
+            },
             \\"routes/gists/$username\\": {
-              id: \\"routes/gists/$username\\",
               path: \\":username\\",
+              id: \\"routes/gists/$username\\",
               parentId: \\"routes/gists\\",
+              moduleUrl: \\"/build/routes/gists/$username-a5c5a25a.js\\",
+              loaderUrl: \\"/_remix/data\\",
             },
           },
-          modules: {
-            \\"entry-browser\\": \\"/build/entry-browser-2003ccca.js\\",
-            \\"routes/gists\\": \\"/build/routes/gists-648e2329.js\\",
-            \\"routes/gists/$username\\":
-              \\"/build/routes/gists/$username-dc286d7d.js\\",
-          },
-          loaders: {
-            \\"routes/gists\\": \\"/_remix/data\\",
-            \\"routes/gists/$username\\": \\"/_remix/data\\",
-          },
-          styles: {
-            \\"global.css\\": \\"/build/global-ec887178.css\\",
-            \\"routes/gists.css\\": \\"/build/routes/gists-6db1f83b.css\\",
-          },
-          version: \\"4cc5f5a1\\",
+          entryModuleUrl: \\"/build/entry-browser-1bb7962f.js\\",
+          globalStylesUrl: \\"/build/global-ec887178.css\\",
         },
         matches: [
           {
             params: {},
             pathname: \\"/gists\\",
-            route: { id: \\"routes/gists\\", path: \\"gists\\" },
+            route: {
+              path: \\"gists\\",
+              id: \\"routes/gists\\",
+              moduleUrl: \\"/build/routes/gists-2ea79f8a.js\\",
+              stylesUrl: \\"/build/routes/gists-6db1f83b.css\\",
+              loaderUrl: \\"/_remix/data\\",
+            },
           },
           {
             params: { username: \\"_why\\" },
             pathname: \\"/gists/_why\\",
             route: {
-              id: \\"routes/gists/$username\\",
               path: \\":username\\",
+              id: \\"routes/gists/$username\\",
               parentId: \\"routes/gists\\",
+              moduleUrl: \\"/build/routes/gists/$username-a5c5a25a.js\\",
+              loaderUrl: \\"/_remix/data\\",
             },
           },
         ],
@@ -95,14 +99,14 @@ exports[`loader results when a loader returns not found sends a not found page 1
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-648e2329.js\\";
-      import * as route1 from \\"/build/routes/gists/$username-dc286d7d.js\\";
+      import * as route0 from \\"/build/routes/gists-2ea79f8a.js\\";
+      import * as route1 from \\"/build/routes/gists/$username-a5c5a25a.js\\";
       window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-2003ccca.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-1bb7962f.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
