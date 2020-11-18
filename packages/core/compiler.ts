@@ -261,7 +261,9 @@ function getBuildPlugins(
       ]
     }),
     nodeResolve({
-      extensions: [".js", ".json", ".ts", ".tsx"]
+      browser: target === BuildTarget.Browser,
+      extensions: [".js", ".json", ".ts", ".tsx"],
+      preferBuiltins: target !== BuildTarget.Browser
     }),
     commonjs(),
     replace({

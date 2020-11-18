@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Ignore node built-ins when building browser bundles. Use `browser` field in
+  package.json for packages that publish browser-ready shims.
+
 ## 0.7.0 - Fri Nov 13 2020
 
 ### Improvements
