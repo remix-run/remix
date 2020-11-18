@@ -52,18 +52,7 @@ export interface RequestHandler {
  * dynamically generates the build at request time for only the modules needed
  * to serve that request.
  */
-export function createRequestHandler(
-  remixConfig: RemixConfig,
-  serverMode: string = ServerMode.Production
-): RequestHandler {
-  if (
-    serverMode !== ServerMode.Development &&
-    serverMode !== ServerMode.Production &&
-    serverMode !== ServerMode.Test
-  ) {
-    serverMode = ServerMode.Production;
-  }
-
+export function createRequestHandler(remixConfig: RemixConfig): RequestHandler {
   return async (request, loadContext = {}) => {
     let url = new URL(request.url);
 
@@ -72,10 +61,10 @@ export function createRequestHandler(
     }
 
     if (url.pathname.startsWith("/_remix/manifest")) {
-      return handleManifestRequest(remixConfig, request, serverMode);
+      return handleManifestRequest(remixConfig, request);
     }
 
-    return handleDocumentRequest(remixConfig, request, loadContext, serverMode);
+    return handleDocumentRequest(remixConfig, request, loadContext);
   };
 }
 
@@ -126,8 +115,7 @@ async function handleDataRequest(
 
 async function handleManifestRequest(
   remixConfig: RemixConfig,
-  request: Request,
-  serverMode: string
+  request: Request
 ): Promise<Response> {
   let searchParams = new URL(request.url).searchParams;
   let urlParam = searchParams.get("url");
@@ -143,11 +131,9 @@ async function handleManifestRequest(
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
-  let publicPath: string;
   let assetManifest: AssetManifest;
-  if (serverMode === ServerMode.Development) {
-    publicPath = getDevPublicPath(remixConfig);
-    let devAssetManifestPromise = getDevAssetManifest(publicPath);
+  if (remixConfig.serverMode === ServerMode.Development) {
+    let devAssetManifestPromise = getDevAssetManifest(remixConfig.publicPath);
 
     try {
       assetManifest = await devAssetManifestPromise;
@@ -155,13 +141,16 @@ async function handleManifestRequest(
       return jsonError(`Unable to fetch asset manifest`, 500);
     }
   } else {
-    publicPath = remixConfig.publicPath;
     assetManifest = getAssetManifest(remixConfig.serverBuildDirectory);
   }
 
   let entryManifest: EntryManifest = {
     version: assetManifest.version,
-    routes: createRouteManifest(matches, assetManifest.entries, publicPath)
+    routes: createRouteManifest(
+      matches,
+      assetManifest.entries,
+      remixConfig.publicPath
+    )
   };
 
   return json(entryManifest, {
@@ -175,8 +164,7 @@ async function handleManifestRequest(
 async function handleDocumentRequest(
   remixConfig: RemixConfig,
   request: Request,
-  loadContext: AppLoadContext,
-  serverMode: string
+  loadContext: AppLoadContext
 ): Promise<Response> {
   let isAction = isActionRequest(request);
   let url = new URL(request.url);
@@ -185,7 +173,7 @@ async function handleDocumentRequest(
   let matches = matchRoutes(remixConfig.routes, url.pathname);
 
   function handleDataLoadError(error: any) {
-    if (serverMode !== ServerMode.Test) {
+    if (remixConfig.serverMode !== ServerMode.Test) {
       console.error(error);
     }
 
@@ -287,14 +275,12 @@ async function handleDocumentRequest(
     statusCode = notOkResult.status;
   }
 
-  let publicPath: string;
   let serverBuildDirectory: string;
   let assetManifest: AssetManifest;
-  if (serverMode === ServerMode.Development) {
-    publicPath = getDevPublicPath(remixConfig);
+  if (remixConfig.serverMode === ServerMode.Development) {
     serverBuildDirectory = getCacheDir(remixConfig.rootDirectory, "build");
 
-    let devAssetManifestPromise = getDevAssetManifest(publicPath);
+    let devAssetManifestPromise = getDevAssetManifest(remixConfig.publicPath);
     let devServerBuildPromise = writeDevServerBuild(
       getDevConfigForMatches(remixConfig, matches),
       serverBuildDirectory
@@ -309,7 +295,6 @@ async function handleDocumentRequest(
 
     await devServerBuildPromise;
   } else {
-    publicPath = remixConfig.publicPath;
     serverBuildDirectory = remixConfig.serverBuildDirectory;
     assetManifest = getAssetManifest(serverBuildDirectory);
   }
@@ -327,11 +312,16 @@ async function handleDocumentRequest(
 
   let entryManifest: EntryManifest = {
     version: assetManifest.version,
-    routes: createRouteManifest(matches, assetManifest.entries, publicPath),
-    entryModuleUrl: publicPath + assetManifest.entries["entry-browser"].file,
+    routes: createRouteManifest(
+      matches,
+      assetManifest.entries,
+      remixConfig.publicPath
+    ),
+    entryModuleUrl:
+      remixConfig.publicPath + assetManifest.entries["entry-browser"].file,
     globalStylesUrl:
       "global.css" in assetManifest.entries
-        ? publicPath + assetManifest.entries["global.css"].file
+        ? remixConfig.publicPath + assetManifest.entries["global.css"].file
         : undefined
   };
   let entryMatches = createEntryMatches(entryManifest.routes, matches);
@@ -409,17 +399,6 @@ function getDevConfigForMatches(
       return routeManifest;
     }, {} as RouteManifest)
   };
-}
-
-function getDevPublicPath(remixConfig: RemixConfig): string {
-  return addTrailingSlash(
-    process.env.REMIX_RUN_ORIGIN ||
-      `http://localhost:${remixConfig.devServerPort}/`
-  );
-}
-
-function addTrailingSlash(path: string): string {
-  return path.endsWith("/") ? path : path + "/";
 }
 
 export async function getDevAssetManifest(

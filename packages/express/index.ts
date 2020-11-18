@@ -47,7 +47,7 @@ export function createRequestHandler({
 } = {}): RequestHandler {
   let handleRequest: RemixRequestHandler;
   let remixConfig: RemixConfig;
-  let remixConfigPromise = readRemixConfig(remixRoot);
+  let remixConfigPromise = readRemixConfig(remixRoot, process.env.NODE_ENV);
 
   // If there is a config error, catch it early and exit. But keep this function
   // sync in case they don't have top-level await (unflagged in node v14.8.0).
@@ -61,10 +61,7 @@ export function createRequestHandler({
         handleConfigError(error);
       }
 
-      handleRequest = createRemixRequestHandler(
-        remixConfig,
-        process.env.NODE_ENV
-      );
+      handleRequest = createRemixRequestHandler(remixConfig);
     }
 
     let loadContext: AppLoadContext;

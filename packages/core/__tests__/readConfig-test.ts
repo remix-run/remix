@@ -172,6 +172,7 @@ describe("readConfig", () => {
           },
         ],
         "serverBuildDirectory": Any<String>,
+        "serverMode": "production",
       }
     `
     );

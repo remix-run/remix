@@ -1,6 +1,7 @@
 import path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
+import { ServerMode } from "./server";
 import type { ConfigRouteObject, RouteManifest, DefineRoutes } from "./routes";
 import {
   createRouteManifest,
@@ -104,7 +105,12 @@ export interface RemixConfig {
   serverBuildDirectory: string;
 
   /**
-   * The port number to use for the dev server.
+   * The mode to use to run the server.
+   */
+  serverMode: ServerMode;
+
+  /**
+   * The port number to use for the dev (asset) server.
    */
   devServerPort: number;
 
@@ -118,9 +124,16 @@ export interface RemixConfig {
  * Returns a fully resolved config object from the remix.config.js in the given
  * root directory.
  */
-export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
+export async function readConfig(
+  remixRoot?: string,
+  serverMode: string = ServerMode.Production
+): Promise<RemixConfig> {
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
+  }
+
+  if (!isValidServerMode(serverMode)) {
+    throw new Error(`Invalid server mode "${serverMode}"`);
   }
 
   let rootDirectory = path.resolve(remixRoot);
@@ -150,10 +163,11 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
 
   let devServerPort = appConfig.devServerPort || 8002;
 
-  let publicPath = appConfig.publicPath || "/build/";
-  if (!publicPath.endsWith("/")) {
-    publicPath += "/";
-  }
+  let publicPath = addTrailingSlash(
+    serverMode === ServerMode.Development
+      ? process.env.REMIX_RUN_ORIGIN || `http://localhost:${devServerPort}/`
+      : appConfig.publicPath || "/build/"
+  );
 
   let routes = getConventionalRoutes(appDirectory, loadersDirectory);
   if (appConfig.routes) {
@@ -180,8 +194,21 @@ export async function readConfig(remixRoot?: string): Promise<RemixConfig> {
     rootDirectory,
     routes,
     routeManifest,
-    serverBuildDirectory
+    serverBuildDirectory,
+    serverMode
   };
 
   return remixConfig;
+}
+
+function isValidServerMode(serverMode: string): serverMode is ServerMode {
+  return (
+    serverMode === ServerMode.Development ||
+    serverMode === ServerMode.Production ||
+    serverMode === ServerMode.Test
+  );
+}
+
+function addTrailingSlash(path: string): string {
+  return path.endsWith("/") ? path : path + "/";
 }
