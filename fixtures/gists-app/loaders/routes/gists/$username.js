@@ -1,4 +1,4 @@
-const { notFound } = require("@remix-run/loader");
+const { json } = require("@remix-run/loader");
 
 module.exports = function ({ params }) {
   let { username } = params;
@@ -8,7 +8,7 @@ module.exports = function ({ params }) {
   }
 
   if (username === "_why") {
-    return notFound();
+    return json(null, { status: 404 });
   }
 
   if (username === "DANGER") {

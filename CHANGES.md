@@ -16,6 +16,12 @@ This is a history of changes to [Remix](https://remix.run).
 - Fixed error when rendering 500 pages
 - Removed unused `rollup-plugin-postcss`
 
+## Breaking Changes
+
+- Removed `notFound` helper from `@remix-run/loader` because it was confusing.
+  Use `json(null, { status: 404 })` (or something other than `null`, depending
+  on what you want for data) instead.
+
 ## 0.7.0 - Fri Nov 13 2020
 
 ### Improvements
