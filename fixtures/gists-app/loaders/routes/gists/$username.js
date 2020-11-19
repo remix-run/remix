@@ -1,4 +1,4 @@
-const { redirect, notFound } = require("@remix-run/loader");
+const { json, redirect } = require("@remix-run/loader");
 
 exports.loader = ({ params }) => {
   let { username } = params;
@@ -8,7 +8,7 @@ exports.loader = ({ params }) => {
   }
 
   if (username === "_why") {
-    return notFound();
+    return json(null, { status: 404 });
   }
 
   if (username === "DANGER") {

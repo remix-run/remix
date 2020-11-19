@@ -94,7 +94,7 @@ exports[`loader results when a loader returns not found sends a not found page 1
               { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
             ],
           },
-          \\"routes/gists/$username\\": \\"\\",
+          \\"routes/gists/$username\\": null,
         },
       };
     </script>

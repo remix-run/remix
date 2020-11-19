@@ -21,13 +21,6 @@ export function json(data: any, init: ResponseInit = {}): Response {
 }
 
 /**
- * A "Not Found" response (404).
- */
-export function notFound(): Response {
-  return new Response("", { status: 404 });
-}
-
-/**
  * A redirect response. Defaults to "302 Found".
  */
 export function redirect(url: string, status = 302): Response {
