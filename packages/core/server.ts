@@ -164,7 +164,7 @@ async function handleDocumentRequest(
   let statusCode = 200;
   let matches = matchRoutes(remixConfig.routes, url.pathname);
 
-  function handleDataLoadError(error: any) {
+  function handleDataLoadError(error: Error) {
     if (remixConfig.serverMode !== ServerMode.Test) {
       console.error(error);
     }
@@ -172,12 +172,12 @@ async function handleDocumentRequest(
     statusCode = 500;
     matches = [
       {
-        params: { error },
+        params: {},
         pathname: url.pathname,
         route: {
-          id: "routes/500",
           path: url.pathname,
-          componentFile: "routes/500.js"
+          id: "routes/500",
+          componentFile: "routes/500"
         }
       }
     ];
@@ -190,9 +190,9 @@ async function handleDocumentRequest(
         params: {},
         pathname: url.pathname,
         route: {
-          id: "routes/404",
           path: url.pathname,
-          componentFile: "routes/404.js"
+          id: "routes/404",
+          componentFile: "routes/404"
         }
       }
     ];

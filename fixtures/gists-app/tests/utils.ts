@@ -1,5 +1,5 @@
 import prettier from "prettier";
-import type { Page, Response, Request } from "puppeteer";
+import type { Page, Request, Response } from "puppeteer";
 import cheerio from "cheerio";
 
 export async function getHtml(page: Page, selector?: string): Promise<string> {
@@ -21,10 +21,6 @@ export function prettyHtml(source: string): string {
   return prettier.format(source, { parser: "html" });
 }
 
-export function reactIsHydrated(page: Page) {
-  return page.waitForFunction("window.reactIsHydrated === true");
-}
-
 interface UrlFilter {
   (url: URL): boolean;
 }
@@ -39,6 +35,10 @@ export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
   });
 
   return responses;
+}
+
+export function reactIsHydrated(page: Page) {
+  return page.waitForFunction("window.reactIsHydrated === true");
 }
 
 export async function disableJavaScript(page: Page) {
