@@ -203,7 +203,7 @@ describe("building", () => {
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
           "_shared/node_modules/@mdx-js/react-0e8f3297.js",
-          "_shared/node_modules/@remix-run/react-c2b5d8da.js",
+          "_shared/node_modules/@remix-run/react-a5a29849.js",
           "_shared/node_modules/history-45437576.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
           "_shared/node_modules/prop-types-a68204f7.js",
@@ -297,35 +297,35 @@ describe("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-2223a4e1.js",
+          "_shared/Shared-e68cc127.js",
           "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
           "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
-          "_shared/node_modules/@mdx-js/react-fa2b156c.js",
-          "_shared/node_modules/@remix-run/react-9b277f7a.js",
+          "_shared/node_modules/@mdx-js/react-fb101854.js",
+          "_shared/node_modules/@remix-run/react-652a2f36.js",
           "_shared/node_modules/history-8b818913.js",
           "_shared/node_modules/object-assign-c47a16a6.js",
-          "_shared/node_modules/prop-types-d4c4f9f2.js",
-          "_shared/node_modules/react-dom-5925df33.js",
-          "_shared/node_modules/react-e32d0f6a.js",
-          "_shared/node_modules/react-is-f87125b7.js",
-          "_shared/node_modules/react-router-dom-2942caf0.js",
-          "_shared/node_modules/react-router-fa8780cf.js",
-          "_shared/node_modules/scheduler-99859fcd.js",
+          "_shared/node_modules/prop-types-2da5c27c.js",
+          "_shared/node_modules/react-a4b46b21.js",
+          "_shared/node_modules/react-dom-a76f634e.js",
+          "_shared/node_modules/react-is-e5a1098e.js",
+          "_shared/node_modules/react-router-4554f04a.js",
+          "_shared/node_modules/react-router-dom-8eef1ea8.js",
+          "_shared/node_modules/scheduler-1e79c25e.js",
           "asset-manifest.json",
-          "entry-browser-f45ca484.js",
+          "entry-browser-d28fb4be.js",
           "global-ec887178.css",
-          "pages/one-33b3e281.js",
-          "pages/two-6e39a2d3.js",
-          "routes/404-81cdf991.js",
-          "routes/500-0c9b194f.js",
-          "routes/gists-437d2ffa.js",
+          "pages/one-fe81928a.js",
+          "pages/two-6269afe3.js",
+          "routes/404-e3184d94.js",
+          "routes/500-0aca0711.js",
+          "routes/gists-1d35b1ce.js",
           "routes/gists-a6d2a823.css",
-          "routes/gists.mine-f12f3533.js",
-          "routes/gists/$username-ab749ca5.js",
-          "routes/gists/index-07d26803.js",
-          "routes/index-ca6ee761.js",
-          "routes/page/four-7c11fa85.js",
-          "routes/page/three-5de4b3e5.js",
+          "routes/gists.mine-7f72d711.js",
+          "routes/gists/$username-416f519b.js",
+          "routes/gists/index-3e6506fa.js",
+          "routes/index-b983db94.js",
+          "routes/page/four-07205f4f.js",
+          "routes/page/three-f161e3e5.js",
         ]
       `);
 
@@ -337,46 +337,46 @@ describe("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-f45ca484.js",
+              "file": "entry-browser-d28fb4be.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
             },
             "pages/one": Object {
-              "file": "pages/one-33b3e281.js",
+              "file": "pages/one-fe81928a.js",
             },
             "pages/two": Object {
-              "file": "pages/two-6e39a2d3.js",
+              "file": "pages/two-6269afe3.js",
             },
             "routes/404": Object {
-              "file": "routes/404-81cdf991.js",
+              "file": "routes/404-e3184d94.js",
             },
             "routes/500": Object {
-              "file": "routes/500-0c9b194f.js",
+              "file": "routes/500-0aca0711.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-437d2ffa.js",
+              "file": "routes/gists-1d35b1ce.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-a6d2a823.css",
             },
             "routes/gists.mine": Object {
-              "file": "routes/gists.mine-f12f3533.js",
+              "file": "routes/gists.mine-7f72d711.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-ab749ca5.js",
+              "file": "routes/gists/$username-416f519b.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-07d26803.js",
+              "file": "routes/gists/index-3e6506fa.js",
             },
             "routes/index": Object {
-              "file": "routes/index-ca6ee761.js",
+              "file": "routes/index-b983db94.js",
             },
             "routes/page/four": Object {
-              "file": "routes/page/four-7c11fa85.js",
+              "file": "routes/page/four-07205f4f.js",
             },
             "routes/page/three": Object {
-              "file": "routes/page/three-5de4b3e5.js",
+              "file": "routes/page/three-f161e3e5.js",
             },
           },
           "version": Any<String>,

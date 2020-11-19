@@ -112,7 +112,7 @@ export function RemixEntry({
               routeData[match.route.id]
             : loadRouteData(
                 manifest,
-                location,
+                nextLocation,
                 match.params,
                 match.route.id,
                 handleDataRedirect

@@ -44,11 +44,11 @@ exports[`loader results when a loader returns not found sends a not found page 1
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": { file: \\"entry-browser-284a45d2.js\\" },
+            \\"entry-browser\\": { file: \\"entry-browser-ec82c6b0.js\\" },
             \\"global.css\\": { file: \\"global-ec887178.css\\" },
-            \\"routes/gists\\": { file: \\"routes/gists-46a1683e.js\\" },
+            \\"routes/gists\\": { file: \\"routes/gists-543702a1.js\\" },
             \\"routes/gists/$username\\": {
-              file: \\"routes/gists/$username-2db4e8d4.js\\",
+              file: \\"routes/gists/$username-bc318c1c.js\\",
             },
             \\"routes/gists.css\\": { file: \\"routes/gists-a6d2a823.css\\" },
           },
@@ -65,7 +65,7 @@ exports[`loader results when a loader returns not found sends a not found page 1
               parentId: \\"routes/gists\\",
             },
           },
-          version: \\"73c7418a\\",
+          version: \\"0189bd3e\\",
         },
         matches: [
           {
@@ -97,14 +97,14 @@ exports[`loader results when a loader returns not found sends a not found page 1
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-46a1683e.js\\";
-      import * as route1 from \\"/build/routes/gists/$username-2db4e8d4.js\\";
+      import * as route0 from \\"/build/routes/gists-543702a1.js\\";
+      import * as route1 from \\"/build/routes/gists/$username-bc318c1c.js\\";
       window.__remixContext.routeModules = {
         \\"routes/gists\\": route0,
         \\"routes/gists/$username\\": route1,
       };
     </script>
-    <script src=\\"/build/entry-browser-284a45d2.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-ec82c6b0.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
@@ -129,12 +129,12 @@ exports[`loader results when the loader has an error sends a server error page 1
         globalData: { enableScripts: true },
         manifest: {
           assets: {
-            \\"entry-browser\\": { file: \\"entry-browser-284a45d2.js\\" },
+            \\"entry-browser\\": { file: \\"entry-browser-ec82c6b0.js\\" },
             \\"global.css\\": { file: \\"global-ec887178.css\\" },
             \\"routes/500\\": { file: \\"routes/500-a7234038.js\\" },
           },
           routes: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"/gists/DANGER\\" } },
-          version: \\"73c7418a\\",
+          version: \\"0189bd3e\\",
         },
         matches: [
           {
@@ -158,7 +158,7 @@ exports[`loader results when the loader has an error sends a server error page 1
       import * as route0 from \\"/build/routes/500-a7234038.js\\";
       window.__remixContext.routeModules = { \\"routes/500\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-284a45d2.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-ec82c6b0.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "
