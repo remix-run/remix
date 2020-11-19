@@ -14,6 +14,7 @@ This is a history of changes to [Remix](https://remix.run).
 ## Bug Fixes
 
 - Fixed error when rendering 500 pages
+- Removed unused `rollup-plugin-postcss`
 
 ## 0.7.0 - Fri Nov 13 2020
 
