@@ -21,10 +21,6 @@ export function prettyHtml(source: string): string {
   return prettier.format(source, { parser: "html" });
 }
 
-export function reactIsHydrated(page: Page) {
-  return page.waitForFunction("window.reactIsHydrated === true");
-}
-
 interface UrlFilter {
   (url: URL): boolean;
 }
@@ -39,4 +35,8 @@ export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
   });
 
   return responses;
+}
+
+export function reactIsHydrated(page: Page) {
+  return page.waitForFunction("window.reactIsHydrated === true");
 }

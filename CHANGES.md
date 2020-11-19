@@ -11,6 +11,10 @@ This is a history of changes to [Remix](https://remix.run).
   package.json for packages that publish browser-ready shims.
 - Adds support for `.ts` and `.tsx` extensions on `routes/404` and `routes/500`
 
+## Bug Fixes
+
+- Fixed error when rendering 500 pages
+
 ## 0.7.0 - Fri Nov 13 2020
 
 ### Improvements

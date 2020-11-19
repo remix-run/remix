@@ -112,5 +112,54 @@ exports[`loader results when a loader returns not found sends a not found page 1
 
 exports[`loader results when the loader has an error sends a server error page 1`] = `
 "<!DOCTYPE html>
+<html lang=\\"en\\">
+  <head>
+    <meta charset=\\"utf-8\\" />
+    <title>Error</title>
+    <link
+      rel=\\"stylesheet\\"
+      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
+    />
+    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
+  </head>
+  <body class=\\"m-4\\">
+    <div data-test-id=\\"errors/500\\"><h1>500</h1></div>
+    <script>
+      window.__remixContext = {
+        globalData: { enableScripts: true },
+        manifest: {
+          assets: {
+            \\"entry-browser\\": { file: \\"entry-browser-284a45d2.js\\" },
+            \\"global.css\\": { file: \\"global-ec887178.css\\" },
+            \\"routes/500\\": { file: \\"routes/500-a7234038.js\\" },
+          },
+          routes: { \\"routes/500\\": { id: \\"routes/500\\", path: \\"/gists/DANGER\\" } },
+          version: \\"73c7418a\\",
+        },
+        matches: [
+          {
+            params: {},
+            pathname: \\"/gists/DANGER\\",
+            route: { id: \\"routes/500\\", path: \\"/gists/DANGER\\" },
+          },
+        ],
+        publicPath: \\"/build/\\",
+        routeData: {
+          \\"routes/500\\": {
+            users: [
+              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
+              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
+            ],
+          },
+        },
+      };
+    </script>
+    <script type=\\"module\\">
+      import * as route0 from \\"/build/routes/500-a7234038.js\\";
+      window.__remixContext.routeModules = { \\"routes/500\\": route0 };
+    </script>
+    <script src=\\"/build/entry-browser-284a45d2.js\\" type=\\"module\\"></script>
+  </body>
+</html>
 "
 `;

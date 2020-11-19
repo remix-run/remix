@@ -178,7 +178,7 @@ async function handleHtmlRequest(
   let statusCode = 200;
   let matches = matchRoutes(remixConfig.routes, url.pathname);
 
-  function handleDataLoadError(error: any) {
+  function handleDataLoadError(error: Error) {
     if (serverMode !== ServerMode.Test) {
       console.error(error);
     }
@@ -186,7 +186,7 @@ async function handleHtmlRequest(
     statusCode = 500;
     matches = [
       {
-        params: { error },
+        params: {},
         pathname: url.pathname,
         route: {
           path: url.pathname,
