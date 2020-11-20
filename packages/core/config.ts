@@ -2,11 +2,8 @@ import path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
 import type { ConfigRouteObject, RouteManifest, DefineRoutes } from "./routes";
-import {
-  createRouteManifest,
-  defineRoutes as _defineRoutes,
-  getConventionalRoutes
-} from "./routes";
+import { createRouteManifest, defineRoutes } from "./routes";
+import { defineConventionalRoutes } from "./routesConvention";
 
 /**
  * The mode to use when running the server.
@@ -177,9 +174,9 @@ export async function readConfig(
       : appConfig.publicPath || "/build/"
   );
 
-  let routes = getConventionalRoutes(appDirectory, loadersDirectory);
+  let routes = defineConventionalRoutes(appDirectory, loadersDirectory);
   if (appConfig.routes) {
-    let manualRoutes = await appConfig.routes(_defineRoutes);
+    let manualRoutes = await appConfig.routes(defineRoutes);
     routes.push(...manualRoutes);
   }
 

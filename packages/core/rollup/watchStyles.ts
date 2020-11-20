@@ -4,7 +4,7 @@ import type { Plugin } from "rollup";
 import chokidar from "chokidar";
 import tmp from "tmp";
 
-import { isStylesFilename } from "../routes";
+import { isStylesFile } from "../routesConvention";
 import { loadStyles } from "./styles";
 
 function relname(file: string): string {
@@ -12,7 +12,7 @@ function relname(file: string): string {
 }
 
 function filter(file: string): boolean {
-  return isStylesFilename(path.basename(file));
+  return isStylesFile(path.basename(file));
 }
 
 /**

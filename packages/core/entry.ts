@@ -31,7 +31,8 @@ export interface EntryRouteObject {
   caseSensitive?: boolean;
   id: string;
   parentId?: string;
-  moduleUrl?: string; // URL of the route module (for `import`)
+  moduleUrl?: string; // URL of the route module for `import`
+  // nomoduleUrl?: string; // URL of the route module for `SystemJS.import`
   stylesUrl?: string; // URL for loading the CSS
   loaderUrl?: string; // URL for calling the loader
 }

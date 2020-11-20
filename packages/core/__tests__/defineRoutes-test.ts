@@ -3,11 +3,15 @@ import { defineRoutes } from "../routes";
 describe("defineRoutes", () => {
   it("returns an array of routes", () => {
     let routes = defineRoutes(route => {
-      route("/", "routes/home.js", { loader: "home.js" });
-      route("inbox", "routes/messages.js", () => {
-        route("/", "routes/message-index.js");
-        route(":message", "routes/message.js", { loader: "message.js" });
-        route("archive", "routes/archive.js", { loader: "archive.js" });
+      route("/", "routes/home.js", { loader: "routes/home.js" });
+      route("inbox", "routes/inbox.js", () => {
+        route("/", "routes/inbox/index.js");
+        route(":messageId", "routes/inbox/$messageId.js", {
+          loader: "routes/inbox/$messageId.js"
+        });
+        route("archive", "routes/inbox/archive.js", {
+          loader: "routes/inbox/archive.js"
+        });
       });
     });
 
@@ -16,34 +20,34 @@ describe("defineRoutes", () => {
         Object {
           "componentFile": "routes/home.js",
           "id": "routes/home",
-          "loaderFile": "home.js",
+          "loaderFile": "routes/home.js",
           "path": "/",
         },
         Object {
           "children": Array [
             Object {
-              "componentFile": "routes/message-index.js",
-              "id": "routes/message-index",
-              "parentId": "routes/messages",
+              "componentFile": "routes/inbox/index.js",
+              "id": "routes/inbox/index",
+              "parentId": "routes/inbox",
               "path": "/",
             },
             Object {
-              "componentFile": "routes/message.js",
-              "id": "routes/message",
-              "loaderFile": "message.js",
-              "parentId": "routes/messages",
-              "path": ":message",
+              "componentFile": "routes/inbox/$messageId.js",
+              "id": "routes/inbox/$messageId",
+              "loaderFile": "routes/inbox/$messageId.js",
+              "parentId": "routes/inbox",
+              "path": ":messageId",
             },
             Object {
-              "componentFile": "routes/archive.js",
-              "id": "routes/archive",
-              "loaderFile": "archive.js",
-              "parentId": "routes/messages",
+              "componentFile": "routes/inbox/archive.js",
+              "id": "routes/inbox/archive",
+              "loaderFile": "routes/inbox/archive.js",
+              "parentId": "routes/inbox",
               "path": "archive",
             },
           ],
-          "componentFile": "routes/messages.js",
-          "id": "routes/messages",
+          "componentFile": "routes/inbox.js",
+          "id": "routes/inbox",
           "path": "inbox",
         },
       ]

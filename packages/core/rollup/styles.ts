@@ -2,7 +2,7 @@ import { promises as fsp } from "fs";
 import path from "path";
 import type { Plugin } from "rollup";
 
-import { isStylesFilename } from "../routes";
+import { isStylesFile } from "../routesConvention";
 
 export function loadStyles(file: string): Promise<string> {
   // TODO: Transform using PostCSS based on file extension.
@@ -21,7 +21,7 @@ export default function styles({ sourceDir }: { sourceDir: string }): Plugin {
     async buildStart() {
       let sourceFiles = await readdir(sourceDir, { recursive: true });
       for (let file of sourceFiles) {
-        if (isStylesFilename(path.basename(file))) {
+        if (isStylesFile(path.basename(file))) {
           files.push(file);
         }
       }

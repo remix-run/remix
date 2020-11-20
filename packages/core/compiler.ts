@@ -215,7 +215,9 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
 
   for (let key in config.routeManifest) {
     let route = config.routeManifest[key];
-    input[route.id] = path.resolve(config.appDirectory, route.componentFile);
+    if (route.componentFile) {
+      input[route.id] = path.resolve(config.appDirectory, route.componentFile);
+    }
   }
 
   return input;
