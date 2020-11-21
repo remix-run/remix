@@ -84,14 +84,14 @@ async function handleDataRequest(
 
   let result = isAction
     ? await callRouteAction(
-        remixConfig.loadersDirectory,
+        remixConfig.dataDirectory,
         remixConfig.routeManifest[routeId],
         loadContext,
         loaderRequest,
         params
       )
     : await loadRouteData(
-        remixConfig.loadersDirectory,
+        remixConfig.dataDirectory,
         remixConfig.routeManifest[routeId],
         loadContext,
         loaderRequest,
@@ -210,7 +210,7 @@ async function handleDocumentRequest(
   if (isAction) {
     let leafMatch = matches[matches.length - 1];
     let result = await callRouteAction(
-      remixConfig.loadersDirectory,
+      remixConfig.dataDirectory,
       remixConfig.routeManifest[leafMatch.route.id],
       loadContext,
       request,
@@ -222,13 +222,13 @@ async function handleDocumentRequest(
 
   // Run all data loaders in parallel and await them individually below.
   let globalLoadResultPromise = loadGlobalData(
-    remixConfig.loadersDirectory,
+    remixConfig.dataDirectory,
     loadContext,
     request
   );
   let routeLoadResultPromises = matches.map(match =>
     loadRouteData(
-      remixConfig.loadersDirectory,
+      remixConfig.dataDirectory,
       remixConfig.routeManifest[match.route.id],
       loadContext,
       request,

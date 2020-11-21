@@ -8,6 +8,37 @@ function isLocalModuleId(id) {
 }
 
 /** @type {import('rollup').RollupOptions} */
+let cli = {
+  external(id) {
+    return !isLocalModuleId(id);
+  },
+  input: path.resolve(__dirname, "packages/cli/index.ts"),
+  output: {
+    banner: "#!/usr/bin/env node",
+    dir: "build/node_modules/@remix-run/cli",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    }),
+    nodeResolve({
+      extensions: [".ts"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/cli/package.json"),
+          dest: "build/node_modules/@remix-run/cli"
+        }
+      ]
+    })
+  ]
+};
+
+/** @type {import('rollup').RollupOptions} */
 let core = {
   external(id) {
     return !isLocalModuleId(id);
@@ -40,30 +71,30 @@ let core = {
 };
 
 /** @type {import('rollup').RollupOptions} */
-let cli = {
+let data = {
   external(id) {
     return !isLocalModuleId(id);
   },
-  input: path.resolve(__dirname, "packages/cli/index.ts"),
+  input: path.resolve(__dirname, "packages/data/index.ts"),
   output: {
-    banner: "#!/usr/bin/env node",
-    dir: "build/node_modules/@remix-run/cli",
-    format: "cjs"
+    dir: "build/node_modules/@remix-run/data",
+    format: "cjs",
+    preserveModules: true
   },
   plugins: [
     babel({
       babelHelpers: "bundled",
       exclude: /node_modules/,
-      extensions: [".ts"]
+      extensions: [".ts", ".tsx"]
     }),
     nodeResolve({
-      extensions: [".ts"]
+      extensions: [".ts", ".tsx"]
     }),
     copy({
       targets: [
         {
-          src: path.resolve(__dirname, "packages/cli/package.json"),
-          dest: "build/node_modules/@remix-run/cli"
+          src: path.resolve(__dirname, "packages/data/package.json"),
+          dest: "build/node_modules/@remix-run/data"
         }
       ]
     })
@@ -95,37 +126,6 @@ let express = {
         {
           src: path.resolve(__dirname, "packages/express/package.json"),
           dest: "build/node_modules/@remix-run/express"
-        }
-      ]
-    })
-  ]
-};
-
-/** @type {import('rollup').RollupOptions} */
-let loader = {
-  external(id) {
-    return !isLocalModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/loader/index.ts"),
-  output: {
-    dir: "build/node_modules/@remix-run/loader",
-    format: "cjs",
-    preserveModules: true
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/loader/package.json"),
-          dest: "build/node_modules/@remix-run/loader"
         }
       ]
     })
@@ -207,4 +207,4 @@ let react = [
   }
 ];
 
-export default [core, cli, express, loader, ...react];
+export default [cli, core, data, express, ...react];

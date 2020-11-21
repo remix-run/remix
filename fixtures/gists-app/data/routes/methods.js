@@ -1,4 +1,4 @@
-const { json, redirect, parseFormBody } = require("@remix-run/loader");
+const { json, redirect, parseFormBody } = require("@remix-run/data");
 
 exports.action = async ({ request, context: { session } }) => {
   let body = await parseFormBody(request);

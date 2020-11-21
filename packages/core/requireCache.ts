@@ -5,7 +5,7 @@
  * - /remix.config.js
  * - <serverBuildDirectory>/entry-server.js
  * - <serverBuildDirectory>/routes/*
- * - <loadersDirectory>/*
+ * - <dataDirectory>/*
  *
  * This function is useful for clearing all of these from the require cache when
  * running the build in watch mode.

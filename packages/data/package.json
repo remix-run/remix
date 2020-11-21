@@ -1,6 +1,6 @@
 {
-  "name": "@remix-run/loader",
-  "description": "Classes and helpers for Remix data loaders",
+  "name": "@remix-run/data",
+  "description": "Classes and functions for Remix data loaders and actions",
   "version": "0.7.0",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {

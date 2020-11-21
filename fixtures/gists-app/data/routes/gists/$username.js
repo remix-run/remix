@@ -1,4 +1,4 @@
-const { json, redirect } = require("@remix-run/loader");
+const { json, redirect } = require("@remix-run/data");
 
 exports.loader = ({ params }) => {
   let { username } = params;

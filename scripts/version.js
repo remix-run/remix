@@ -117,13 +117,13 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/cli to version ${nextVersion}`)
   );
 
-  // - Update @remix-run/loader version + @remix-run/core dep
-  await updatePackageConfig("loader", config => {
+  // - Update @remix-run/data version + @remix-run/core dep
+  await updatePackageConfig("data", config => {
     config.version = nextVersion;
     config.dependencies["@remix-run/core"] = nextVersion;
   });
   console.log(
-    chalk.green(`  Updated @remix-run/loader to version ${nextVersion}`)
+    chalk.green(`  Updated @remix-run/data to version ${nextVersion}`)
   );
 
   // - Update @remix-run/react version

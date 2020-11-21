@@ -49,7 +49,7 @@ export interface ConfigRouteObject {
 
   /**
    * The path to the file that exports the data loader for this route as its
-   * default export, relative to `config.loadersDirectory`. So the loader file
+   * default export, relative to `config.dataDirectory`. So the loader file
    * for `routes/gists/$username.js` will be `routes/gists/$username.js`.
    */
   loaderFile?: string;
@@ -84,8 +84,8 @@ export interface DefineRouteOptions {
   caseSensitive?: boolean;
 
   /**
-   * The path to the file that exports the data loader for this route as its
-   * default export, relative to `config.loadersDirectory`.
+   * The path to the file that exports the data loader and/or action for this
+   * route, relative to `config.dataDirectory`.
    */
   loader?: string;
 

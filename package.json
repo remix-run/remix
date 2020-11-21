@@ -16,8 +16,8 @@
     "fixtures/gists-app",
     "packages/cli",
     "packages/core",
+    "packages/data",
     "packages/express",
-    "packages/loader",
     "packages/react"
   ],
   "dependencies": {

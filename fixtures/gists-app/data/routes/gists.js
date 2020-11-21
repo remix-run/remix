@@ -1,4 +1,4 @@
-const { json } = require("@remix-run/loader");
+const { json } = require("@remix-run/data");
 
 exports.loader = () => {
   let data = {

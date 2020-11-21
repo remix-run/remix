@@ -3,8 +3,8 @@
   "references": [
     { "path": "packages/cli" },
     { "path": "packages/core" },
+    { "path": "packages/data" },
     { "path": "packages/express" },
-    { "path": "packages/loader" },
     { "path": "packages/react" }
   ]
 }

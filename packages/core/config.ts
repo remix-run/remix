@@ -34,7 +34,7 @@ export interface AppConfig {
    * The path to the `loaders` directory, relative to remix.config.js. Defaults to
    * "loaders".
    */
-  loadersDirectory?: string;
+  dataDirectory?: string;
 
   /**
    * The path to the browser build, relative to remix.config.js. Defaults to
@@ -92,7 +92,7 @@ export interface RemixConfig {
   /**
    * The absolute path to the `loaders` directory.
    */
-  loadersDirectory: string;
+  dataDirectory: string;
 
   /**
    * The absolute path to the browser build.
@@ -161,9 +161,9 @@ export async function readConfig(
     appConfig.browserBuildDirectory || path.join("public", "build")
   );
 
-  let loadersDirectory = path.resolve(
+  let dataDirectory = path.resolve(
     rootDirectory,
-    appConfig.loadersDirectory || "loaders"
+    appConfig.dataDirectory || "data"
   );
 
   let devServerPort = appConfig.devServerPort || 8002;
@@ -174,7 +174,7 @@ export async function readConfig(
       : appConfig.publicPath || "/build/"
   );
 
-  let routes = defineConventionalRoutes(appDirectory, loadersDirectory);
+  let routes = defineConventionalRoutes(appDirectory, dataDirectory);
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(defineRoutes);
     routes.push(...manualRoutes);
@@ -192,8 +192,8 @@ export async function readConfig(
   let remixConfig: RemixConfig = {
     appDirectory,
     browserBuildDirectory,
+    dataDirectory,
     devServerPort,
-    loadersDirectory,
     mdx: appConfig.mdx,
     publicPath,
     rootDirectory,
