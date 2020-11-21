@@ -44,7 +44,7 @@ export async function parseFormBody(
 ): Promise<URLSearchParams | FormData> {
   if (!bodyMethods.has(request.method.toLowerCase())) {
     throw new Error(
-      `parseFormBody only supports POST, PUT, and PATCH, and DELETE request (not ${request.method})`
+      `parseFormBody only supports POST, PUT, and PATCH, and DELETE requests (not ${request.method})`
     );
   }
 
@@ -56,7 +56,7 @@ export async function parseFormBody(
 
   if (contentType === "multipart/form-data") {
     // Should be able to just do this:
-    // return await req.formData();
+    // return request.formData();
     throw new Error("parseFormBody does not yet support multipart/form-data");
   }
 
