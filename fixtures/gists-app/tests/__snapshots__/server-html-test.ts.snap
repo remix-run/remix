@@ -45,15 +45,15 @@ exports[`the server HTML for the root URL is correct 1`] = `
       window.__remixContext = {
         globalData: { enableScripts: true },
         manifest: {
-          version: \\"cb046993\\",
+          version: \\"cb65258d\\",
           routes: {
             \\"routes/index\\": {
               path: \\"/\\",
               id: \\"routes/index\\",
-              moduleUrl: \\"/build/routes/index-94324d79.js\\",
+              moduleUrl: \\"/build/routes/index-a16d2b48.js\\",
             },
           },
-          entryModuleUrl: \\"/build/entry-browser-1bb7962f.js\\",
+          entryModuleUrl: \\"/build/entry-browser-88ba3765.js\\",
           globalStylesUrl: \\"/build/global-ec887178.css\\",
         },
         matches: [
@@ -63,7 +63,7 @@ exports[`the server HTML for the root URL is correct 1`] = `
             route: {
               path: \\"/\\",
               id: \\"routes/index\\",
-              moduleUrl: \\"/build/routes/index-94324d79.js\\",
+              moduleUrl: \\"/build/routes/index-a16d2b48.js\\",
             },
           },
         ],
@@ -71,10 +71,10 @@ exports[`the server HTML for the root URL is correct 1`] = `
       };
     </script>
     <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-94324d79.js\\";
+      import * as route0 from \\"/build/routes/index-a16d2b48.js\\";
       window.__remixContext.routeModules = { \\"routes/index\\": route0 };
     </script>
-    <script src=\\"/build/entry-browser-1bb7962f.js\\" type=\\"module\\"></script>
+    <script src=\\"/build/entry-browser-88ba3765.js\\" type=\\"module\\"></script>
   </body>
 </html>
 "

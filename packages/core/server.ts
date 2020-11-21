@@ -11,7 +11,7 @@ import { writeDevServerBuild } from "./compiler";
 import { ServerMode } from "./config";
 import type { RemixConfig } from "./config";
 import type { AppLoadContext, AppLoadResult } from "./data";
-import { loadGlobalData, loadRouteData } from "./data";
+import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
 import type { EntryManifest, ServerHandoff } from "./entry";
 import {
   createEntryMatches,
@@ -78,31 +78,40 @@ async function handleDataRequest(
     return jsonError(`Missing ?id`, 403);
   }
 
-  let url = new URL(urlParam);
-  let loaderRequest = createLoaderRequest(url.href, request);
-  let loadResult = await loadRouteData(
-    remixConfig.loadersDirectory,
-    remixConfig.routeManifest[routeId],
-    params,
-    loadContext,
-    loaderRequest,
-    isAction
-  );
+  // TODO: Revisit this type when we use our own fetch types again
+  // @ts-ignore
+  let loaderRequest = createLoaderRequest(new URL(urlParam), request);
 
-  if (!loadResult) {
+  let result = isAction
+    ? await callRouteAction(
+        remixConfig.loadersDirectory,
+        remixConfig.routeManifest[routeId],
+        loadContext,
+        loaderRequest,
+        params
+      )
+    : await loadRouteData(
+        remixConfig.loadersDirectory,
+        remixConfig.routeManifest[routeId],
+        loadContext,
+        loaderRequest,
+        params
+      );
+
+  if (!result) {
     return json(null);
   }
 
-  if (isRedirect(loadResult)) {
+  if (isRedirectResponse(result)) {
     return new Response("", {
       status: 204,
       headers: {
-        "x-remix-redirect": loadResult.headers.get("Location")!
+        "X-Remix-Redirect": result.headers.get("Location")!
       }
     });
   }
 
-  return loadResult;
+  return result;
 }
 
 async function handleManifestRequest(
@@ -200,15 +209,15 @@ async function handleDocumentRequest(
 
   if (isAction) {
     let leafMatch = matches[matches.length - 1];
-    let result = await loadRouteData(
+    let result = await callRouteAction(
       remixConfig.loadersDirectory,
       remixConfig.routeManifest[leafMatch.route.id],
-      leafMatch.params,
       loadContext,
       request,
-      isAction
+      leafMatch.params
     );
-    return result!;
+
+    return result;
   }
 
   // Run all data loaders in parallel and await them individually below.
@@ -221,10 +230,9 @@ async function handleDocumentRequest(
     loadRouteData(
       remixConfig.loadersDirectory,
       remixConfig.routeManifest[match.route.id],
-      match.params,
       loadContext,
       request,
-      isAction
+      match.params
     )
   );
 
@@ -253,8 +261,9 @@ async function handleDocumentRequest(
 
   // Check for redirect. A redirect in a loader takes precedence over all
   // other responses and is immediately returned.
-  let redirectResult = allResults.find(result => result && isRedirect(result));
-
+  let redirectResult = allResults.find(
+    result => result && isRedirectResponse(result)
+  );
   if (redirectResult) {
     return redirectResult;
   }
@@ -262,7 +271,6 @@ async function handleDocumentRequest(
   // Check for a result with a non-200 status code. The first loader with a
   // non-200 status code determines the status code for the whole response.
   let notOkResult = allResults.find(result => result && result.status !== 200);
-
   if (notOkResult) {
     statusCode = notOkResult.status;
   }
@@ -409,15 +417,13 @@ export async function getDevAssetManifest(
   }
 }
 
-function isRedirect(response: Response) {
-  return (
-    response.status === 301 ||
-    response.status === 302 ||
-    response.status === 303
-  );
+const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
+
+function isRedirectResponse(response: Response): boolean {
+  return redirectStatusCodes.has(response.status);
 }
 
-function createLoaderRequest(url: string, request: Request) {
+function createLoaderRequest(url: string, request: Request): Request {
   return new Request(url, {
     method: request.method,
     headers: request.headers,
@@ -425,6 +431,6 @@ function createLoaderRequest(url: string, request: Request) {
   });
 }
 
-function isActionRequest(request: Request) {
+function isActionRequest(request: Request): boolean {
   return request.method.toLowerCase() !== "get";
 }

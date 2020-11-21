@@ -14,10 +14,26 @@ if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
 app.use(express.static("public"));
 app.use(session({ secret: "remix", resave: false, saveUninitialized: false }));
 
-// serverside redirect
+// server-side redirect
 app.get("/user-gists/:username", (req, res) => {
   res.redirect(301, `/gists/${req.params.username}`);
 });
+
+app.all(
+  "*",
+  createRequestHandler({
+    getLoadContext(req) {
+      let session = createExpressRemixSession(req);
+      return { userId: 4, session };
+    }
+  })
+);
+
+app.listen(port, () => {
+  console.log(`Gists app running on port ${port}`);
+});
+
+////////////////////////////////////////////////////////////////////////////////
 
 function createExpressRemixSession(req) {
   function set(name, value) {
@@ -40,17 +56,3 @@ function createExpressRemixSession(req) {
 
   return { set, get, delete: destroy, consume };
 }
-
-app.all(
-  "*",
-  createRequestHandler({
-    getLoadContext(req, res) {
-      let session = createExpressRemixSession(req);
-      return { userId: 4, session };
-    }
-  })
-);
-
-app.listen(port, () => {
-  console.log(`Gists app running on port ${port}`);
-});

@@ -24,9 +24,9 @@ export type {
   AppData,
   AppLoadContext,
   AppLoadResult,
+  DataAction,
   DataLoader,
-  Action,
-  Loader
+  DataModule
 } from "./data";
 
 export type {

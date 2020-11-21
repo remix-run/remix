@@ -1,10 +1,10 @@
-import type { ResponseInit, Action, Loader } from "@remix-run/core";
+import type { ResponseInit, DataAction, DataLoader } from "@remix-run/core";
 import { Headers, Request, Response } from "@remix-run/core";
 
 // These are already global, but just re-export them here for convenience.
 export { Headers, Request, Response };
 
-export type { Action, Loader };
+export type { DataAction as Action, DataLoader as Loader };
 
 /**
  * A JSON response. This helper takes care of converting the `data` to JSON
@@ -32,28 +32,33 @@ export function redirect(url: string, status = 302): Response {
   });
 }
 
-let bodyMethods = new Set(["put", "post", "patch", "delete"]);
+let bodyMethods = new Set(["post", "put", "patch", "delete"]);
 
 /**
- * Parse the FormData body of a Request into an object
+ * Parse the body of a `<Form>` request into an object. For
+ * `application/x-www-form-urlencoded` forms, this will be a URLSearchParams
+ * object. For `multipart/form-data` forms, it will be a FormData.
  */
-export async function parseFormBody(req: Request) {
-  if (!bodyMethods.has(req.method.toLowerCase())) {
+export async function parseFormBody(
+  request: Request
+): Promise<URLSearchParams | FormData> {
+  if (!bodyMethods.has(request.method.toLowerCase())) {
     throw new Error(
-      `parseFormBody only supports POST, PUT, and PATCH, DELETE but not ${req.method}`
+      `parseFormBody only supports POST, PUT, and PATCH, and DELETE request (not ${request.method})`
     );
   }
 
-  let enctype = req.headers.get("content-type");
-  if (enctype === "application/x-www-form-urlencoded") {
-    let bodyText = await req.text();
-    return Object.fromEntries(new URLSearchParams(bodyText));
-  } else if (enctype === "multipart/form-data") {
-    throw new Error("parseFormBody multipart/form-data is not yet supported");
-    // Should be able to do this:
-    // let body = await req.formData();
-    // return Object.fromEntries(body);
-  } else {
-    throw new Error(`Unknown form enctype: ${enctype}`);
+  let contentType = request.headers.get("Content-Type");
+
+  if (contentType === "application/x-www-form-urlencoded") {
+    return new URLSearchParams(await request.text());
   }
+
+  if (contentType === "multipart/form-data") {
+    // Should be able to just do this:
+    // return await req.formData();
+    throw new Error("parseFormBody does not yet support multipart/form-data");
+  }
+
+  throw new Error(`Unknown form encoding: ${contentType}`);
 }

@@ -1,5 +1,6 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
+
 import { disableJavaScript, getHtml, reactIsHydrated } from "./utils";
 
 const testPort = 3000;
@@ -18,6 +19,7 @@ describe("form", () => {
   it("posts to a loader without JavaScript", async () => {
     await disableJavaScript(page);
     await page.goto(`${testServer}/methods`);
+
     expect(await getHtml(page, "#results")).toMatchInlineSnapshot(`
       "<div
         id=\\"results\\"
