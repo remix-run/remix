@@ -22,9 +22,8 @@ app.get("/user-gists/:username", (req, res) => {
 app.all(
   "*",
   createRequestHandler({
-    getLoadContext(req) {
-      let session = createExpressRemixSession(req);
-      return { userId: 4, session };
+    getLoadContext() {
+      return { userId: 4 };
     }
   })
 );
@@ -32,27 +31,3 @@ app.all(
 app.listen(port, () => {
   console.log(`Gists app running on port ${port}`);
 });
-
-////////////////////////////////////////////////////////////////////////////////
-
-function createExpressRemixSession(req) {
-  function set(name, value) {
-    req.session[name] = value;
-  }
-
-  function get(name) {
-    return req.session[name];
-  }
-
-  function destroy(name) {
-    delete req.session[name];
-  }
-
-  function consume(name) {
-    let value = get(name);
-    destroy(name);
-    return value;
-  }
-
-  return { set, get, delete: destroy, consume };
-}

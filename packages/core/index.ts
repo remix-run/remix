@@ -58,3 +58,6 @@ export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";
+
+export type { Session } from "./sessions";
+export { createSessionStub } from "./sessions";

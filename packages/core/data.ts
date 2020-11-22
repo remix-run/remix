@@ -1,9 +1,10 @@
 import path from "path";
 import type { Params } from "react-router";
 
-import type { ConfigRouteObject } from "./routes";
 import { Request, Response, isResponseLike } from "./fetch";
+import type { ConfigRouteObject } from "./routes";
 import { json, redirect } from "./responseHelpers";
+import type { Session } from "./sessions";
 import invariant from "./invariant";
 
 /**
@@ -26,18 +27,24 @@ export type AppLoadResult = Response | null;
  * A function that handles data mutations for a route.
  */
 export interface DataAction {
-  (arg: { context: AppLoadContext; request: Request; params: Params }):
-    | Promise<Response>
-    | Response;
+  (arg: {
+    request: Request;
+    session: Session;
+    context: AppLoadContext;
+    params: Params;
+  }): Promise<Response> | Response;
 }
 
 /**
  * A function that loads data for a route or the global data loader.
  */
 export interface DataLoader {
-  (arg: { context: AppLoadContext; request: Request; params: Params }):
-    | Promise<AppData>
-    | AppData;
+  (arg: {
+    request: Request;
+    session: Session;
+    context: AppLoadContext;
+    params: Params;
+  }): Promise<AppData> | AppData;
 }
 
 /**
@@ -54,11 +61,12 @@ function loadDataModule(dataDirectory: string, filename: string): DataModule {
 
 async function executeLoader(
   loader: DataLoader,
-  context: AppLoadContext,
   request: Request,
+  session: Session,
+  context: AppLoadContext,
   params: Params = {}
 ): Promise<Response> {
-  let result = await loader({ context, request, params });
+  let result = await loader({ request, session, context, params });
   return isResponseLike(result) ? result : json(result);
 }
 
@@ -67,8 +75,9 @@ async function executeLoader(
  */
 export function loadGlobalData(
   dataDirectory: string,
-  context: AppLoadContext,
-  request: Request
+  request: Request,
+  session: Session,
+  context: AppLoadContext
 ): Promise<AppLoadResult> {
   let dataModule;
   try {
@@ -83,7 +92,7 @@ export function loadGlobalData(
     return Promise.resolve(null);
   }
 
-  return executeLoader(dataModule.loader, context, request);
+  return executeLoader(dataModule.loader, request, session, context);
 }
 
 /**
@@ -92,9 +101,10 @@ export function loadGlobalData(
 export function loadRouteData(
   dataDirectory: string,
   route: ConfigRouteObject,
-  context: AppLoadContext,
   request: Request,
-  routeParams: Params
+  session: Session,
+  context: AppLoadContext,
+  params: Params
 ): Promise<AppLoadResult> {
   if (!route.loaderFile) {
     return Promise.resolve(null);
@@ -106,16 +116,17 @@ export function loadRouteData(
     return Promise.resolve(null);
   }
 
-  return executeLoader(dataModule.loader, context, request, routeParams);
+  return executeLoader(dataModule.loader, request, session, context, params);
 }
 
 async function executeAction(
   action: DataAction,
-  context: AppLoadContext,
   request: Request,
+  session: Session,
+  context: AppLoadContext,
   params: Params = {}
 ): Promise<Response> {
-  let result = await action({ context, request, params });
+  let result = await action({ request, session, context, params });
   let location = isResponseLike(result) && result.headers.get("Location");
 
   invariant(
@@ -134,8 +145,9 @@ async function executeAction(
 export function callRouteAction(
   dataDirectory: string,
   route: ConfigRouteObject,
-  context: AppLoadContext,
   request: Request,
+  session: Session,
+  context: AppLoadContext,
   params: Params
 ): Promise<Response> {
   invariant(
@@ -153,7 +165,7 @@ export function callRouteAction(
       `an \`action\` function in the data module for route "${route.id}".`
   );
 
-  return executeAction(dataModule.action, context, request, params);
+  return executeAction(dataModule.action, request, session, context, params);
 }
 
 /**

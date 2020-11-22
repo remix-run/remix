@@ -26,6 +26,7 @@ import { matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
 import type { RouteManifest } from "./routes";
 import { oneYear } from "./seconds";
+import type { Session } from "./sessions";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -33,7 +34,9 @@ import { oneYear } from "./seconds";
  * dev tools.
  */
 export interface RequestHandler {
-  (request: Request, loadContext?: AppLoadContext): Promise<Response>;
+  (request: Request, session: Session, loadContext?: AppLoadContext): Promise<
+    Response
+  >;
 }
 
 /**
@@ -45,24 +48,25 @@ export interface RequestHandler {
  * to serve that request.
  */
 export function createRequestHandler(remixConfig: RemixConfig): RequestHandler {
-  return async (request, loadContext = {}) => {
+  return async (request, session, loadContext = {}) => {
     let url = new URL(request.url);
 
     if (url.pathname.startsWith("/_remix/data")) {
-      return handleDataRequest(remixConfig, request, loadContext);
+      return handleDataRequest(remixConfig, request, session, loadContext);
     }
 
     if (url.pathname.startsWith("/_remix/manifest")) {
       return handleManifestRequest(remixConfig, request);
     }
 
-    return handleDocumentRequest(remixConfig, request, loadContext);
+    return handleDocumentRequest(remixConfig, request, session, loadContext);
   };
 }
 
 async function handleDataRequest(
   remixConfig: RemixConfig,
   request: Request,
+  session: Session,
   loadContext: AppLoadContext
 ): Promise<Response> {
   let isAction = isActionRequest(request);
@@ -86,15 +90,17 @@ async function handleDataRequest(
     ? await callRouteAction(
         remixConfig.dataDirectory,
         remixConfig.routeManifest[routeId],
-        loadContext,
         loaderRequest,
+        session,
+        loadContext,
         params
       )
     : await loadRouteData(
         remixConfig.dataDirectory,
         remixConfig.routeManifest[routeId],
-        loadContext,
         loaderRequest,
+        session,
+        loadContext,
         params
       );
 
@@ -165,7 +171,8 @@ async function handleManifestRequest(
 async function handleDocumentRequest(
   remixConfig: RemixConfig,
   request: Request,
-  loadContext: AppLoadContext
+  session: Session,
+  loadContext: AppLoadContext = {}
 ): Promise<Response> {
   let isAction = isActionRequest(request);
   let url = new URL(request.url);
@@ -212,8 +219,9 @@ async function handleDocumentRequest(
     let result = await callRouteAction(
       remixConfig.dataDirectory,
       remixConfig.routeManifest[leafMatch.route.id],
-      loadContext,
       request,
+      session,
+      loadContext,
       leafMatch.params
     );
 
@@ -223,15 +231,17 @@ async function handleDocumentRequest(
   // Run all data loaders in parallel and await them individually below.
   let globalLoadResultPromise = loadGlobalData(
     remixConfig.dataDirectory,
-    loadContext,
-    request
+    request,
+    session,
+    loadContext
   );
   let routeLoadResultPromises = matches.map(match =>
     loadRouteData(
       remixConfig.dataDirectory,
       remixConfig.routeManifest[match.route.id],
-      loadContext,
       request,
+      session,
+      loadContext,
       match.params
     )
   );

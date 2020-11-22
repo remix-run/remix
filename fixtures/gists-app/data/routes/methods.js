@@ -1,9 +1,9 @@
 const { json, redirect, parseFormBody } = require("@remix-run/data");
 
-exports.action = async ({ request, context: { session } }) => {
-  let body = await parseFormBody(request);
+exports.action = async ({ request, session }) => {
+  let body = Object.fromEntries(await parseFormBody(request));
 
-  session.set("body", Object.fromEntries(body));
+  session.flash("body", JSON.stringify(body));
 
   if (body.slow === "on") {
     await new Promise(res => setTimeout(res, 2000));
@@ -12,7 +12,8 @@ exports.action = async ({ request, context: { session } }) => {
   return redirect("/methods");
 };
 
-exports.loader = ({ context: { session } }) => {
-  let body = session.consume("body");
-  return json({ body });
+exports.loader = ({ session }) => {
+  return json({
+    body: JSON.parse(session.get("body") || null)
+  });
 };

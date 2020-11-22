@@ -5,17 +5,26 @@ import type {
   RemixConfig,
   RequestHandler as RemixRequestHandler,
   RequestInit,
-  Response
+  Response,
+  Session
 } from "@remix-run/core";
 import {
   FetchStream,
   Headers,
   Request,
   createRequestHandler as createRemixRequestHandler,
+  createSessionStub,
   readConfig as readRemixConfig
 } from "@remix-run/core";
 
 import "./fetchGlobals";
+import invariant from "./invariant";
+
+declare module "express" {
+  interface Request {
+    session?: { [key: string]: string } | null;
+  }
+}
 
 /**
  * A function that returns the `context` object for data loaders.
@@ -64,6 +73,17 @@ export function createRequestHandler({
       handleRequest = createRemixRequestHandler(remixConfig);
     }
 
+    let remixReq = createRemixRequest(req);
+
+    let session = req.session
+      ? createRemixSession(req)
+      : createSessionStub(
+          `You are trying to use sessions but you did not use a session middleware ` +
+            `in your Express app, so this functionality is not available. Please use ` +
+            `a session middleware such as \`express-session\` or \`cookie-session\` ` +
+            `to enable sessions.`
+        );
+
     let loadContext: AppLoadContext;
     if (getLoadContext) {
       try {
@@ -75,11 +95,9 @@ export function createRequestHandler({
       }
     }
 
-    let remixReq = createRemixRequest(req);
-
     let remixRes: Response;
     try {
-      remixRes = await handleRequest(remixReq, loadContext);
+      remixRes = await handleRequest(remixReq, session, loadContext);
     } catch (error) {
       // This is probably an error in one of the loaders.
       console.error(error);
@@ -134,4 +152,61 @@ function createRemixHeaders(
       return memo;
     }, {} as { [headerName: string]: string })
   );
+}
+
+interface ExpressSessionDestroy {
+  (callback: (error?: Error) => void): void;
+}
+
+function createRemixSession(request: express.Request): Session {
+  let flashPrefix = "__flash__:";
+  let flash: { [name: string]: string } = {};
+
+  invariant(
+    request.session,
+    `Cannot create a Remix session without a request session`
+  );
+
+  for (let key of Object.keys(request.session)) {
+    if (key.startsWith(flashPrefix)) {
+      flash[key.slice(flashPrefix.length)] = request.session[key];
+      delete request.session[key];
+    }
+  }
+
+  let expressSession = request.session;
+  let session: Session = {
+    set(name, value) {
+      expressSession[name] = value;
+    },
+    flash(name, value) {
+      expressSession[flashPrefix + name] = value;
+    },
+    unset(name) {
+      delete expressSession[name];
+    },
+    get(name) {
+      return expressSession[name] || flash[name];
+    },
+    destroy() {
+      return new Promise((accept, reject) => {
+        if (typeof expressSession.destroy === "function") {
+          // express-session has a `destroy()` method
+          (expressSession.destroy as ExpressSessionDestroy)(error => {
+            if (error) {
+              reject(error);
+            } else {
+              accept();
+            }
+          });
+        } else {
+          // cookie-session destroys by setting `request.session = null`
+          request.session = null;
+          accept();
+        }
+      });
+    }
+  };
+
+  return session;
 }

@@ -110,7 +110,8 @@ let express = {
   output: {
     dir: "build/node_modules/@remix-run/express",
     format: "cjs",
-    preserveModules: true
+    preserveModules: true,
+    exports: "auto"
   },
   plugins: [
     babel({
