@@ -6,6 +6,12 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Adds a `<Form>` component and `usePendingFormSubmit()` hook to
+  `@remix-run/react` for data mutations
+- Adds support for form actions in loaders. Loaders now have two possible
+  exports: `loader` and `action`. `loader` is used on `GET` requests. `action`
+  is called on `POST`, `PUT`, `PATCH`, and `DELETE` mutations.
+- Adds `{ session }` property to data loaders and actions
 - Adds support for importing `.json` files.
 - Ignore node built-ins when building browser bundles. Use `browser` field in
   package.json for packages that publish browser-ready shims.
@@ -18,6 +24,10 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Breaking Changes
 
+- Renamed the `loaders` directory to `data`. Also, `loadersDirectory` is now
+  `dataDirectory` in `remix.config.js`.
+- Removed support for default exports in data loaders. They should all export
+  `loader` and/or `action` functions now.
 - Removed `notFound` helper from `@remix-run/loader` because it was confusing.
   Use `json(null, { status: 404 })` (or something other than `null`, depending
   on what you want for data) instead.
