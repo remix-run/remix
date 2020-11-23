@@ -59,5 +59,5 @@ export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";
 
-export type { Session } from "./sessions";
-export { createSessionStub } from "./sessions";
+export type { Session, SessionMutableData, SessionOnDestroy } from "./sessions";
+export { createSession, createSessionFacade } from "./sessions";
