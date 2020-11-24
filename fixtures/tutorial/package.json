@@ -1,0 +1,35 @@
+{
+  "name": "remix-starter-express",
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "tsc -b",
+    "prebuild": "cp -r ../../build/node_modules/* node_modules",
+    "build": "node node_modules/@remix-run/cli build && tsc -b",
+    "predev": "cp -r ../../build/node_modules/* node_modules",
+    "dev": "concurrently \"remix run\" \"tsc -b -w --preserveWatchOutput\" \"cross-env NODE_ENV=development nodemon -w app -w build -e js,ts,tsx,md,mdx server.js\"",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@remix-run/cli": "^0.7.0",
+    "@remix-run/express": "^0.7.0",
+    "@remix-run/loader": "^0.7.0",
+    "@remix-run/react": "^0.7.0",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
+    "react-router": "^6.0.0-beta.0",
+    "react-router-dom": "^6.0.0-beta.0"
+  },
+  "devDependencies": {
+    "@types/react": "^16.9.53",
+    "@types/react-dom": "^16.9.8",
+    "concurrently": "^5.3.0",
+    "cross-env": "^7.0.2",
+    "nodemon": "^2.0.5",
+    "typescript": "^4.0.3"
+  },
+  "engines": {
+    "node": "12"
+  }
+}

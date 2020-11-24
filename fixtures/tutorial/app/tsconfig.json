@@ -1,0 +1,8 @@
+{
+  "extends": "../config/shared-tsconfig.json",
+  "compilerOptions": {
+    // The Remix compiler takes care of compiling everything in the `app`
+    // directory, so we don't need to emit anything with `tsc`.
+    "noEmit": true
+  }
+}

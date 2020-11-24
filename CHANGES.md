@@ -11,6 +11,10 @@ This is a history of changes to [Remix](https://remix.run).
 - Adds support for form actions in loaders. Loaders now have two possible
   exports: `loader` and `action`. `loader` is used on `GET` requests. `action`
   is called on `POST`, `PUT`, `PATCH`, and `DELETE` mutations.
+- Adds `usePendingLocation`
+- Adds `usePendingFormSubmit`
+- Adds `parseFormBody(request)`
+- Adds `request` property passed to loaders and actions
 - Adds `{ session }` property to data loaders and actions
 - Adds support for importing `.json` files.
 - Ignore node built-ins when building browser bundles. Use `browser` field in
@@ -22,9 +26,12 @@ This is a history of changes to [Remix](https://remix.run).
 - Fixed error when rendering 500 pages
 - Removed unused `rollup-plugin-postcss`
 - Fixed browser transitions not sending search params to the loader
+- redirects don't follow the redirects in the browser anymore, avoiding extra requests
 
 ## Breaking Changes
 
+- removes `useLocationPending` removed in favor of `usePendingLocation`
+- loader `url` property removed in favor of `request`
 - Renamed the `loaders` directory to `data`. Also, `loadersDirectory` is now
   `dataDirectory` in `remix.config.js`.
 - Removed support for default exports in data loaders. They should all export
