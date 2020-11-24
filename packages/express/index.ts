@@ -19,6 +19,7 @@ import {
 } from "@remix-run/core";
 
 import "./fetchGlobals";
+import { warnOnce } from "./warnings";
 
 declare module "express" {
   interface Request {
@@ -49,10 +50,12 @@ function handleConfigError(error: Error) {
  */
 export function createRequestHandler({
   getLoadContext,
-  root: remixRoot
+  root: remixRoot,
+  enableSessions = true
 }: {
   getLoadContext?: GetLoadContext;
   root?: string;
+  enableSessions?: boolean;
 } = {}): RequestHandler {
   let handleRequest: RemixRequestHandler;
   let remixConfig: RemixConfig;
@@ -72,6 +75,15 @@ export function createRequestHandler({
 
       handleRequest = createRemixRequestHandler(remixConfig);
     }
+
+    warnOnce(
+      !enableSessions || !!req.session,
+      "Your Express app does not include a session middleware (or `req.session` " +
+        "is falsy) so you won't be able to use sessions in your Remix data " +
+        "loaders and actions. To enable sessions, please use a session middleware " +
+        "such as `express-session` or `cookie-session`. Otherwise, use " +
+        "`createRequestHandler({ enableSessions: false })` to silence this warning."
+    );
 
     let remixReq = createRemixRequest(req);
     let session = createRemixSession(req);
@@ -153,10 +165,10 @@ interface ExpressSessionDestroy {
 function createRemixSession(req: express.Request): Session {
   if (!req.session) {
     return createSessionFacade(
-      `You are trying to use sessions but you did not use a session middleware ` +
-        `in your Express app, so this functionality is not available. Please use ` +
-        `a session middleware such as \`express-session\` or \`cookie-session\` ` +
-        `to enable sessions.`
+      "You are trying to use sessions but you did not use a session middleware " +
+        "in your Express app, so this functionality is not available. Please use " +
+        "a session middleware such as `express-session` or `cookie-session` " +
+        "to enable sessions."
     );
   }
 
