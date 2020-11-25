@@ -23,7 +23,6 @@ export { ServerMode, readConfig } from "./config";
 export type {
   AppData,
   AppLoadContext,
-  AppLoadResult,
   DataAction,
   DataLoader,
   DataModule

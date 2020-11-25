@@ -9,11 +9,6 @@ export interface Session {
   set(name: string, value: string): void;
 
   /**
-   * Sets a temporary value in the session, only valid on the next request.
-   */
-  flash(name: string, value: string): void;
-
-  /**
    * Removes a value from the session.
    */
   unset(name: string): void;
@@ -24,6 +19,11 @@ export interface Session {
   get(name: string): string;
 
   /**
+   * Returns the value for the given `name` in this session and removes it.
+   */
+  consume(name: string): string;
+
+  /**
    * Destroys this session.
    */
   destroy(): Promise<void>;
@@ -31,7 +31,7 @@ export interface Session {
 
 /**
  * An object of key/value pairs of data to be used in the session. This object
- * is mutated directly in `set`, `flash`, and `unset` operations.
+ * is mutated directly in `set`, `unset`, and `consume` operations.
  */
 export interface SessionMutableData {
   [name: string]: string;
@@ -54,28 +54,20 @@ export function createSession(
   mutableData: SessionMutableData,
   onDestroy?: SessionOnDestroy
 ): Session {
-  let flashPrefix = "__flash__:";
-  let flash: { [name: string]: string } = {};
-
-  for (let key of Object.keys(mutableData)) {
-    if (key.startsWith(flashPrefix)) {
-      flash[key.slice(flashPrefix.length)] = mutableData[key];
-      delete mutableData[key];
-    }
-  }
-
   return {
     set(name, value) {
       mutableData[name] = value;
-    },
-    flash(name, value) {
-      mutableData[flashPrefix + name] = value;
     },
     unset(name) {
       delete mutableData[name];
     },
     get(name) {
-      return mutableData[name] || flash[name];
+      return mutableData[name];
+    },
+    consume(name) {
+      let value = mutableData[name];
+      delete mutableData[name];
+      return value;
     },
     destroy() {
       return onDestroy ? onDestroy() : Promise.resolve();
@@ -96,13 +88,13 @@ export function createSessionFacade(errorMessage: string): Session {
     set() {
       throw new Error(errorMessage);
     },
-    flash() {
-      throw new Error(errorMessage);
-    },
     unset() {
       throw new Error(errorMessage);
     },
     get() {
+      throw new Error(errorMessage);
+    },
+    consume() {
       throw new Error(errorMessage);
     },
     destroy() {

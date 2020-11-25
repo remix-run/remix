@@ -12,14 +12,15 @@ import {
 } from "react-router-dom";
 import type { EntryContext } from "@remix-run/core";
 
-import type {
+import {
   AppData,
   RouteData,
   FormEncType,
   FormMethod,
-  FormSubmit
+  FormSubmit,
+  loadGlobalData,
+  loadRouteData
 } from "./data";
-import { loadRouteData } from "./data";
 import defaultRouteModule from "./defaultRouteModule";
 import invariant from "./invariant";
 import type { Manifest } from "./manifest";
@@ -119,9 +120,9 @@ export function RemixEntry({
   static?: boolean;
 }) {
   let {
-    globalData,
     manifest,
     matches: entryMatches,
+    globalData: entryGlobalData,
     routeData: entryRouteData,
     routeModules,
     serverHandoffString
@@ -131,9 +132,10 @@ export function RemixEntry({
     action: nextAction,
     location: nextLocation,
     matches: createClientMatches(entryMatches, RemixRoute),
+    globalData: entryGlobalData,
     routeData: entryRouteData
   });
-  let { action, location, matches, routeData } = state;
+  let { action, location, matches, globalData, routeData } = state;
 
   React.useEffect(() => {
     if (location === nextLocation) return;
@@ -162,9 +164,7 @@ export function RemixEntry({
         }
       }
 
-      let isAction = formState === FormState.Pending;
-
-      if (isAction) {
+      if (formState === FormState.Pending) {
         let leafMatch = nextMatches[nextMatches.length - 1];
 
         await loadRouteData(
@@ -180,22 +180,41 @@ export function RemixEntry({
         return;
       }
 
-      let dataPromise = Promise.all(
-        nextMatches.map((match, index) =>
-          // reload all routes after a <Form> submit
-          formState !== FormState.Redirected &&
-          location.search === nextLocation.search &&
-          matches[index] &&
-          matches[index].pathname === match.pathname
-            ? // Re-use data we already have for routes already on the page.
-              routeData[match.route.id]
-            : loadRouteData(
+      // Reload global data after a <Form> submit.
+      let globalDataPromise =
+        formState === FormState.Redirected
+          ? loadGlobalData(
+              manifest.globalLoaderUrl,
+              location,
+              handleDataRedirect
+            )
+          : Promise.resolve(globalData);
+
+      let routeDataPromise = Promise.all(
+        // Reload all route data after a <Form> submit.
+        formState === FormState.Redirected
+          ? nextMatches.map(match =>
+              loadRouteData(
                 manifest.routes[match.route.id],
                 location,
                 match.params,
                 handleDataRedirect
               )
-        )
+            )
+          : nextMatches.map((match, index) =>
+              location.search === nextLocation.search &&
+              matches[index] &&
+              matches[index].pathname === match.pathname
+                ? // Re-use data we already have for routes already on the page
+                  // if the URL hasn't changed for that route.
+                  routeData[match.route.id]
+                : loadRouteData(
+                    manifest.routes[match.route.id],
+                    location,
+                    match.params,
+                    handleDataRedirect
+                  )
+            )
       );
 
       let styleSheetsPromise = Promise.all(
@@ -210,11 +229,13 @@ export function RemixEntry({
         )
       );
 
-      let dataResults = await dataPromise;
+      let globalDataResult = await globalDataPromise;
+      let dataResults = await routeDataPromise;
       await styleSheetsPromise;
       await modulesPromise;
 
       if (isCurrent && !didRedirect) {
+        let nextGlobalData = globalDataResult;
         let nextRouteData = nextMatches.reduce((routeData, match, index) => {
           routeData[match.route.id] = dataResults[index];
           return routeData;
@@ -231,6 +252,7 @@ export function RemixEntry({
           action: nextAction,
           location: nextLocation,
           matches: nextMatches,
+          globalData: nextGlobalData,
           routeData: nextRouteData
         });
       }
@@ -244,6 +266,7 @@ export function RemixEntry({
     nextLocation,
     location,
     matches,
+    globalData,
     routeData,
     navigator,
     manifest,
@@ -251,9 +274,9 @@ export function RemixEntry({
   ]);
 
   let context: RemixEntryContextType = {
-    globalData,
     manifest,
     matches,
+    globalData,
     routeData,
     routeModules,
     serverHandoffString,

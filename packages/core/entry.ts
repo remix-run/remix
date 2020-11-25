@@ -2,8 +2,9 @@ import jsesc from "jsesc";
 import type { Params } from "react-router";
 
 import type { AssetManifest, RouteModules } from "./build";
-import type { AppLoadResult, AppData } from "./data";
+import type { AppData } from "./data";
 import { extractData } from "./data";
+import type { Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import type { RouteManifest } from "./routes";
 
@@ -23,6 +24,7 @@ export interface EntryManifest {
   version: AssetManifest["version"];
   routes: RouteManifest<EntryRouteObject>;
   entryModuleUrl?: string;
+  globalLoaderUrl?: string;
   globalStylesUrl?: string;
 }
 
@@ -83,7 +85,7 @@ export function createEntryMatches(
   }));
 }
 
-export function createGlobalData(loadResult: AppLoadResult): Promise<AppData> {
+export function createGlobalData(loadResult: Response): Promise<AppData> {
   return extractData(loadResult);
 }
 
@@ -92,7 +94,7 @@ export interface RouteData {
 }
 
 export async function createRouteData(
-  loadResults: AppLoadResult[],
+  loadResults: Response[],
   matches: ConfigRouteMatch[]
 ): Promise<RouteData> {
   let data = await Promise.all(loadResults.map(extractData));

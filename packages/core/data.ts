@@ -8,20 +8,15 @@ import type { Session } from "./sessions";
 import invariant from "./invariant";
 
 /**
- * Some data that was returned from a data loader.
- */
-export type AppData = any;
-
-/**
  * An object of data returned from the server's `getLoadContext` function. This
  * will be passed to the data loaders.
  */
 export type AppLoadContext = any;
 
 /**
- * The result from executing a data loader.
+ * Some data that was returned from a data loader.
  */
-export type AppLoadResult = Response | null;
+export type AppData = any;
 
 /**
  * A function that handles data mutations for a route.
@@ -78,18 +73,18 @@ export function loadGlobalData(
   request: Request,
   session: Session,
   context: AppLoadContext
-): Promise<AppLoadResult> {
+): Promise<Response> {
   let dataModule;
   try {
     dataModule = loadDataModule(dataDirectory, "global");
   } catch (error) {
     // No problem if the global loader is missing. It just
     // means there isn't any global data.
-    return Promise.resolve(null);
+    return Promise.resolve(json(null));
   }
 
   if (!dataModule.loader) {
-    return Promise.resolve(null);
+    return Promise.resolve(json(null));
   }
 
   return executeLoader(dataModule.loader, request, session, context);
@@ -105,15 +100,15 @@ export function loadRouteData(
   session: Session,
   context: AppLoadContext,
   params: Params
-): Promise<AppLoadResult> {
+): Promise<Response> {
   if (!route.loaderFile) {
-    return Promise.resolve(null);
+    return Promise.resolve(json(null));
   }
 
   let dataModule = loadDataModule(dataDirectory, route.loaderFile);
 
   if (!dataModule.loader) {
-    return Promise.resolve(null);
+    return Promise.resolve(json(null));
   }
 
   return executeLoader(dataModule.loader, request, session, context, params);
@@ -171,19 +166,18 @@ export function callRouteAction(
 /**
  * Extracts the actual data from a data loader result.
  */
-export function extractData(result: AppLoadResult): Promise<AppData> {
-  if (!result) {
-    return Promise.resolve(null);
-  }
-
-  let contentType = result.headers.get("Content-Type");
+export function extractData(response: Response): Promise<AppData> {
+  let contentType = response.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return result.json();
+    return response.json();
   }
 
-  // Should we handle binary data types here? People gonna be returning
-  // video/images from their data loaders someday?
+  // What other data types do we need to handle here? What other kinds of
+  // responses are people going to be returning from their loaders?
+  // - application/x-www-form-urlencoded ?
+  // - multipart/form-data ?
+  // - binary (audio/video) ?
 
-  return result.text();
+  return response.text();
 }

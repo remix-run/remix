@@ -10,7 +10,7 @@ import { getCacheDir } from "./cache";
 import { writeDevServerBuild } from "./compiler";
 import { ServerMode } from "./config";
 import type { RemixConfig } from "./config";
-import type { AppLoadContext, AppLoadResult } from "./data";
+import type { AppLoadContext } from "./data";
 import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
 import type { EntryManifest, ServerHandoff } from "./entry";
 import {
@@ -72,52 +72,61 @@ async function handleDataRequest(
   let isAction = isActionRequest(request);
   let searchParams = new URL(request.url).searchParams;
   let urlParam = searchParams.get("url");
-  let routeId = searchParams.get("id");
+  let loaderId = searchParams.get("id");
   let params = JSON.parse(searchParams.get("params") || "{}");
 
   if (!urlParam) {
     return jsonError(`Missing ?url`, 403);
   }
-  if (!routeId) {
+  if (!loaderId) {
     return jsonError(`Missing ?id`, 403);
   }
 
-  // TODO: Revisit this type when we use our own fetch types again
-  // @ts-ignore
-  let loaderRequest = createLoaderRequest(new URL(urlParam), request);
+  let loaderRequest = new Request(urlParam, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body
+  });
 
-  let result = isAction
-    ? await callRouteAction(
-        remixConfig.dataDirectory,
-        remixConfig.routeManifest[routeId],
-        loaderRequest,
-        session,
-        loadContext,
-        params
-      )
-    : await loadRouteData(
-        remixConfig.dataDirectory,
-        remixConfig.routeManifest[routeId],
-        loaderRequest,
-        session,
-        loadContext,
-        params
-      );
+  let response =
+    loaderId === "_global"
+      ? await loadGlobalData(
+          remixConfig.dataDirectory,
+          loaderRequest,
+          session,
+          loadContext
+        )
+      : isAction
+      ? await callRouteAction(
+          remixConfig.dataDirectory,
+          remixConfig.routeManifest[loaderId],
+          loaderRequest,
+          session,
+          loadContext,
+          params
+        )
+      : await loadRouteData(
+          remixConfig.dataDirectory,
+          remixConfig.routeManifest[loaderId],
+          loaderRequest,
+          session,
+          loadContext,
+          params
+        );
 
-  if (!result) {
-    return json(null);
-  }
-
-  if (isRedirectResponse(result)) {
+  if (isRedirectResponse(response)) {
+    // This request is a fetch, so we don't have any way to prevent it from
+    // following redirects. So we use the `X-Remix-Redirect` header to indicate
+    // the next URL, and then "follow" the redirect manually on the client.
     return new Response("", {
       status: 204,
       headers: {
-        "X-Remix-Redirect": result.headers.get("Location")!
+        "X-Remix-Redirect": response.headers.get("Location")!
       }
     });
   }
 
-  return result;
+  return response;
 }
 
 async function handleManifestRequest(
@@ -180,7 +189,7 @@ async function handleDocumentRequest(
   let statusCode = 200;
   let matches = matchRoutes(remixConfig.routes, url.pathname);
 
-  function handleDataLoadError(error: Error) {
+  function handleDataLoaderError(error: Error) {
     if (remixConfig.serverMode !== ServerMode.Test) {
       console.error(error);
     }
@@ -216,7 +225,7 @@ async function handleDocumentRequest(
 
   if (isAction) {
     let leafMatch = matches[matches.length - 1];
-    let result = await callRouteAction(
+    let response = await callRouteAction(
       remixConfig.dataDirectory,
       remixConfig.routeManifest[leafMatch.route.id],
       request,
@@ -225,64 +234,66 @@ async function handleDocumentRequest(
       leafMatch.params
     );
 
-    return result;
+    return response;
   }
 
   // Run all data loaders in parallel and await them individually below.
-  let globalLoadResultPromise = loadGlobalData(
+  let globalLoaderPromise = loadGlobalData(
     remixConfig.dataDirectory,
-    request,
+    request.clone(),
     session,
     loadContext
   );
-  let routeLoadResultPromises = matches.map(match =>
+  let routeLoaderPromises = matches.map(match =>
     loadRouteData(
       remixConfig.dataDirectory,
       remixConfig.routeManifest[match.route.id],
-      request,
+      request.clone(),
       session,
       loadContext,
       match.params
     )
   );
 
-  let globalLoadResult: AppLoadResult = null;
+  let globalLoaderResponse: Response;
   try {
-    globalLoadResult = await globalLoadResultPromise;
+    globalLoaderResponse = await globalLoaderPromise;
   } catch (error) {
+    globalLoaderResponse = json(null);
+
     console.error(`There was an error running the global data loader`);
+    handleDataLoaderError(error);
   }
 
-  let routeLoadResults: AppLoadResult[] = [];
-  for (let promise of routeLoadResultPromises) {
+  let routeLoaderResponses: Response[] = [];
+  for (let promise of routeLoaderPromises) {
     try {
-      routeLoadResults.push(await promise);
+      routeLoaderResponses.push(await promise);
     } catch (error) {
-      let match = matches[routeLoadResults.length];
+      routeLoaderResponses.push(json(null));
+
+      let route = matches[routeLoaderResponses.length - 1].route;
       console.error(
-        `There was an error running the data loader for route ${match.route.id}`
+        `There was an error running the data loader for route ${route.id}`
       );
-      routeLoadResults.push(null);
-      handleDataLoadError(error);
+      handleDataLoaderError(error);
     }
   }
 
-  let allResults = [globalLoadResult, ...routeLoadResults];
+  let allResponses = [globalLoaderResponse, ...routeLoaderResponses];
 
   // Check for redirect. A redirect in a loader takes precedence over all
   // other responses and is immediately returned.
-  let redirectResult = allResults.find(
-    result => result && isRedirectResponse(result)
-  );
-  if (redirectResult) {
-    return redirectResult;
+  let redirectResponse = allResponses.find(isRedirectResponse);
+  if (redirectResponse) {
+    return redirectResponse;
   }
 
-  // Check for a result with a non-200 status code. The first loader with a
+  // Check for a response with a non-200 status code. The first loader with a
   // non-200 status code determines the status code for the whole response.
-  let notOkResult = allResults.find(result => result && result.status !== 200);
-  if (notOkResult) {
-    statusCode = notOkResult.status;
+  let notOkResponse = allResponses.find(response => response.status !== 200);
+  if (notOkResponse) {
+    statusCode = notOkResponse.status;
   }
 
   let serverBuildDirectory: string;
@@ -329,14 +340,18 @@ async function handleDocumentRequest(
     ),
     entryModuleUrl:
       remixConfig.publicPath + assetManifest.entries["entry-browser"].file,
+    // TODO: When we start compiling loaders, check to see if there is a global
+    // data loader. If not, this should be undefined just like routes w/out a
+    // `loaderFile` property.
+    globalLoaderUrl: "/_remix/data",
     globalStylesUrl:
       "global.css" in assetManifest.entries
         ? remixConfig.publicPath + assetManifest.entries["global.css"].file
         : undefined
   };
   let entryMatches = createEntryMatches(entryManifest.routes, matches);
-  let globalData = await createGlobalData(globalLoadResult);
-  let routeData = await createRouteData(routeLoadResults, matches);
+  let globalData = await createGlobalData(globalLoaderResponse);
+  let routeData = await createRouteData(routeLoaderResponses, matches);
 
   let serverHandoff: ServerHandoff = {
     globalData,
@@ -357,10 +372,9 @@ async function handleDocumentRequest(
 
     if (typeof routeModule.headers === "function") {
       try {
-        let loadResult = routeLoadResults[index];
-        let loaderHeaders = loadResult ? loadResult.headers : new Headers();
+        let response = routeLoaderResponses[index];
         let routeHeaders = routeModule.headers({
-          loaderHeaders,
+          loaderHeaders: response.headers,
           parentsHeaders
         });
 
@@ -431,14 +445,6 @@ const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
 
 function isRedirectResponse(response: Response): boolean {
   return redirectStatusCodes.has(response.status);
-}
-
-function createLoaderRequest(url: string, request: Request): Request {
-  return new Request(url, {
-    method: request.method,
-    headers: request.headers,
-    body: request.body
-  });
 }
 
 function isActionRequest(request: Request): boolean {

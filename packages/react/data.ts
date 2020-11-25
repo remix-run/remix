@@ -21,7 +21,18 @@ export interface DataRedirectHandler {
 }
 
 /**
- * Dynamically loads some data for a route from the server.
+ * Loads the global data from the server.
+ */
+export function loadGlobalData(
+  loaderUrl: string | undefined,
+  location: Location,
+  handleRedirect: DataRedirectHandler
+) {
+  return fetchData(loaderUrl, location, "_global", {}, handleRedirect);
+}
+
+/**
+ * Loads some data for a route from the server.
  */
 export function loadRouteData(
   route: EntryRouteObject,
@@ -30,28 +41,26 @@ export function loadRouteData(
   handleRedirect: DataRedirectHandler,
   formSubmit?: FormSubmit
 ): Promise<AppData> {
-  if (!route.loaderUrl) {
-    return Promise.resolve(null);
-  }
-
   return fetchData(
     route.loaderUrl,
     location,
-    routeParams,
     route.id,
+    routeParams,
     handleRedirect,
     formSubmit
   );
 }
 
 async function fetchData(
-  loaderUrl: string,
+  loaderUrl: string | undefined,
   location: Location,
-  routeParams: Params,
   routeId: string,
+  routeParams: Params,
   handleRedirect: DataRedirectHandler,
   formSubmit?: FormSubmit
 ): Promise<AppData> {
+  if (!loaderUrl) return undefined;
+
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
   let params = new URLSearchParams({
@@ -61,9 +70,9 @@ async function fetchData(
   });
 
   let init = formSubmit ? getFormSubmitInit(formSubmit) : undefined;
-  let res = await fetch(`${loaderUrl}?${params.toString()}`, init);
+  let response = await fetch(`${loaderUrl}?${params.toString()}`, init);
 
-  let redirectUrl = res.headers.get("X-Remix-Redirect");
+  let redirectUrl = response.headers.get("X-Remix-Redirect");
   if (redirectUrl) {
     handleRedirect(new URL(redirectUrl, window.location.origin));
   }
@@ -73,19 +82,19 @@ async function fetchData(
   // concluded it's probably better to just not have any JavaScript on the page
   // when search bots come around to index things.
 
-  return extractData(res);
+  return extractData(response);
 }
 
-function extractData(res: Response): AppData {
+function extractData(response: Response): Promise<AppData> {
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
-  let contentType = res.headers.get("Content-Type");
+  let contentType = response.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return res.json();
+    return response.json();
   }
 
-  return res.text();
+  return response.text();
 }
 
 function getFormSubmitInit(formSubmit: FormSubmit): RequestInit {
