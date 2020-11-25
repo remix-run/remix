@@ -21,6 +21,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 - Fixed error when rendering 500 pages
 - Removed unused `rollup-plugin-postcss`
+- Fixed browser transitions not sending search params to the loader
 
 ## Breaking Changes
 

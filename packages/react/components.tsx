@@ -169,7 +169,7 @@ export function RemixEntry({
 
         await loadRouteData(
           manifest.routes[leafMatch.route.id],
-          location,
+          nextLocation,
           leafMatch.params,
           handleDataRedirect,
           pendingFormSubmit
@@ -185,7 +185,7 @@ export function RemixEntry({
         formState === FormState.Redirected
           ? loadGlobalData(
               manifest.globalLoaderUrl,
-              location,
+              nextLocation,
               handleDataRedirect
             )
           : Promise.resolve(globalData);
@@ -196,7 +196,7 @@ export function RemixEntry({
           ? nextMatches.map(match =>
               loadRouteData(
                 manifest.routes[match.route.id],
-                location,
+                nextLocation,
                 match.params,
                 handleDataRedirect
               )
@@ -210,7 +210,7 @@ export function RemixEntry({
                   routeData[match.route.id]
                 : loadRouteData(
                     manifest.routes[match.route.id],
-                    location,
+                    nextLocation,
                     match.params,
                     handleDataRedirect
                   )
