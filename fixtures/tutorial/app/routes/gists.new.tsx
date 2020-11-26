@@ -1,4 +1,3 @@
-import React from "react";
 import { Form, usePendingFormSubmit } from "@remix-run/react";
 
 export default function NewGist() {

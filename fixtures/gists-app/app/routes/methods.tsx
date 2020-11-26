@@ -1,4 +1,4 @@
-import React from "react";
+import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
 

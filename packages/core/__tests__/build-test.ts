@@ -44,8 +44,7 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-4f69c99e.js",
-          "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
+          "_shared/Shared-b97a0af4.js",
           "entry-server.js",
           "pages/one.js",
           "pages/two.js",
@@ -126,21 +125,20 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-4f69c99e.js",
-          "_shared/_rollupPluginBabelHelpers-8a275fd9.js",
-          "entry-server-8861fcaf.js",
-          "pages/one-84a0981a.js",
-          "pages/two-c45d0835.js",
-          "routes/404-660aace6.js",
-          "routes/500-3568401c.js",
-          "routes/gists-18c0bb36.js",
-          "routes/gists.mine-9c786e2b.js",
-          "routes/gists/$username-ebf86aaf.js",
-          "routes/gists/index-c6bcfd56.js",
-          "routes/index-d1c358fc.js",
-          "routes/methods-7b965f7c.js",
-          "routes/page/four-c9ce2fc6.js",
-          "routes/page/three-cbc19f53.js",
+          "_shared/Shared-b97a0af4.js",
+          "entry-server-4bebe6c1.js",
+          "pages/one-53b19748.js",
+          "pages/two-2f475173.js",
+          "routes/404-d16cca2b.js",
+          "routes/500-e47be9b7.js",
+          "routes/gists-3129f28e.js",
+          "routes/gists.mine-f34b0db7.js",
+          "routes/gists/$username-79d26e83.js",
+          "routes/gists/index-fec260b4.js",
+          "routes/index-50d745c3.js",
+          "routes/methods-a4281924.js",
+          "routes/page/four-11933b23.js",
+          "routes/page/three-fd4284d2.js",
           "server-manifest.json",
         ]
       `);
@@ -153,43 +151,43 @@ describe.skip("building", () => {
         Object {
           "entries": Object {
             "entry-server": Object {
-              "file": "entry-server-8861fcaf.js",
+              "file": "entry-server-4bebe6c1.js",
             },
             "pages/one": Object {
-              "file": "pages/one-84a0981a.js",
+              "file": "pages/one-53b19748.js",
             },
             "pages/two": Object {
-              "file": "pages/two-c45d0835.js",
+              "file": "pages/two-2f475173.js",
             },
             "routes/404": Object {
-              "file": "routes/404-660aace6.js",
+              "file": "routes/404-d16cca2b.js",
             },
             "routes/500": Object {
-              "file": "routes/500-3568401c.js",
+              "file": "routes/500-e47be9b7.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-18c0bb36.js",
+              "file": "routes/gists-3129f28e.js",
             },
             "routes/gists.mine": Object {
-              "file": "routes/gists.mine-9c786e2b.js",
+              "file": "routes/gists.mine-f34b0db7.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-ebf86aaf.js",
+              "file": "routes/gists/$username-79d26e83.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-c6bcfd56.js",
+              "file": "routes/gists/index-fec260b4.js",
             },
             "routes/index": Object {
-              "file": "routes/index-d1c358fc.js",
+              "file": "routes/index-50d745c3.js",
             },
             "routes/methods": Object {
-              "file": "routes/methods-7b965f7c.js",
+              "file": "routes/methods-a4281924.js",
             },
             "routes/page/four": Object {
-              "file": "routes/page/four-c9ce2fc6.js",
+              "file": "routes/page/four-11933b23.js",
             },
             "routes/page/three": Object {
-              "file": "routes/page/three-cbc19f53.js",
+              "file": "routes/page/three-fd4284d2.js",
             },
           },
           "version": Any<String>,
@@ -208,20 +206,19 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/@babel/runtime-4ffe6868.js",
-          "_shared/@mdx-js/react-f3c08f98.js",
-          "_shared/@remix-run/react-471f5842.js",
-          "_shared/Shared-737ae555.js",
-          "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
-          "_shared/history-579b5dca.js",
-          "_shared/object-assign-510802f4.js",
-          "_shared/prop-types-b8d5f836.js",
-          "_shared/react-16e984aa.js",
-          "_shared/react-dom-170dd97b.js",
-          "_shared/react-is-0f58df40.js",
-          "_shared/react-router-dom-6c12787b.js",
-          "_shared/react-router-eacaf940.js",
-          "_shared/scheduler-71df0177.js",
+          "_shared/Shared-f413059e.js",
+          "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
+          "_shared/node_modules/@mdx-js/react-273b70e4.js",
+          "_shared/node_modules/@remix-run/react-20d518de.js",
+          "_shared/node_modules/history-45437576.js",
+          "_shared/node_modules/object-assign-c47a16a6.js",
+          "_shared/node_modules/prop-types-10e9577e.js",
+          "_shared/node_modules/react-5eb30eef.js",
+          "_shared/node_modules/react-dom-a40050cb.js",
+          "_shared/node_modules/react-is-16d950a1.js",
+          "_shared/node_modules/react-router-953744b1.js",
+          "_shared/node_modules/react-router-dom-774c78bd.js",
+          "_shared/node_modules/scheduler-0ec08ff9.js",
           "asset-manifest.json",
           "entry-browser.js",
           "global.css",
@@ -314,37 +311,36 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/@babel/runtime-4ffe6868.js",
-          "_shared/@mdx-js/react-87a33684.js",
-          "_shared/@remix-run/react-7f1f1c44.js",
-          "_shared/Shared-528fb759.js",
-          "_shared/_rollupPluginBabelHelpers-bfa6c712.js",
-          "_shared/history-9011ea48.js",
-          "_shared/object-assign-510802f4.js",
-          "_shared/prop-types-1f3fb7f3.js",
-          "_shared/react-749813df.js",
-          "_shared/react-dom-b91f308e.js",
-          "_shared/react-is-24198c9a.js",
-          "_shared/react-router-44dcf4cc.js",
-          "_shared/react-router-dom-c82b116a.js",
-          "_shared/scheduler-34f5a05f.js",
+          "_shared/Shared-d3b72835.js",
+          "_shared/node_modules/@babel/runtime-f4ff0cc0.js",
+          "_shared/node_modules/@mdx-js/react-a6870c6c.js",
+          "_shared/node_modules/@remix-run/react-872ba3a3.js",
+          "_shared/node_modules/history-8b818913.js",
+          "_shared/node_modules/object-assign-c47a16a6.js",
+          "_shared/node_modules/prop-types-d62d43a5.js",
+          "_shared/node_modules/react-2ea82506.js",
+          "_shared/node_modules/react-dom-f1b98511.js",
+          "_shared/node_modules/react-is-08ef681b.js",
+          "_shared/node_modules/react-router-21790491.js",
+          "_shared/node_modules/react-router-dom-3dd78536.js",
+          "_shared/node_modules/scheduler-db377390.js",
           "asset-manifest.json",
-          "entry-browser-7d37ad4c.js",
+          "entry-browser-79f83a1b.js",
           "global-ec887178.css",
-          "pages/one-dbdf3864.js",
-          "pages/two-0edab43e.js",
-          "routes/404-e1f9d6df.js",
-          "routes/500-5b7951eb.js",
+          "pages/one-5e26c998.js",
+          "pages/two-ecffc1f5.js",
+          "routes/404-05f74ff9.js",
+          "routes/500-83189ced.js",
           "routes/gists-6db1f83b.css",
-          "routes/gists-c8b9d7fa.js",
-          "routes/gists.mine-3d220efc.js",
-          "routes/gists/$username-03229302.js",
-          "routes/gists/index-9fab3574.js",
-          "routes/index-59e82e2c.js",
-          "routes/methods-2ae92c5a.js",
+          "routes/gists-d4dac369.js",
+          "routes/gists.mine-65276ff1.js",
+          "routes/gists/$username-5d38ef92.js",
+          "routes/gists/index-6be545ac.js",
+          "routes/index-23df3a5b.js",
+          "routes/methods-b79e3f8c.js",
           "routes/methods-e15212f5.css",
-          "routes/page/four-7f717111.js",
-          "routes/page/three-3e2483cf.js",
+          "routes/page/four-e83669e5.js",
+          "routes/page/three-e439ecde.js",
         ]
       `);
 
@@ -356,52 +352,52 @@ describe.skip("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-7d37ad4c.js",
+              "file": "entry-browser-79f83a1b.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
             },
             "pages/one": Object {
-              "file": "pages/one-dbdf3864.js",
+              "file": "pages/one-5e26c998.js",
             },
             "pages/two": Object {
-              "file": "pages/two-0edab43e.js",
+              "file": "pages/two-ecffc1f5.js",
             },
             "routes/404": Object {
-              "file": "routes/404-e1f9d6df.js",
+              "file": "routes/404-05f74ff9.js",
             },
             "routes/500": Object {
-              "file": "routes/500-5b7951eb.js",
+              "file": "routes/500-83189ced.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-c8b9d7fa.js",
+              "file": "routes/gists-d4dac369.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-6db1f83b.css",
             },
             "routes/gists.mine": Object {
-              "file": "routes/gists.mine-3d220efc.js",
+              "file": "routes/gists.mine-65276ff1.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-03229302.js",
+              "file": "routes/gists/$username-5d38ef92.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-9fab3574.js",
+              "file": "routes/gists/index-6be545ac.js",
             },
             "routes/index": Object {
-              "file": "routes/index-59e82e2c.js",
+              "file": "routes/index-23df3a5b.js",
             },
             "routes/methods": Object {
-              "file": "routes/methods-2ae92c5a.js",
+              "file": "routes/methods-b79e3f8c.js",
             },
             "routes/methods.css": Object {
               "file": "routes/methods-e15212f5.css",
             },
             "routes/page/four": Object {
-              "file": "routes/page/four-7f717111.js",
+              "file": "routes/page/four-e83669e5.js",
             },
             "routes/page/three": Object {
-              "file": "routes/page/three-3e2483cf.js",
+              "file": "routes/page/three-e439ecde.js",
             },
           },
           "version": Any<String>,

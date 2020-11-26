@@ -1,4 +1,3 @@
-import React from "react";
 import { Meta, Scripts, Styles, Routes, useGlobalData } from "@remix-run/react";
 import { Link } from "react-router-dom";
 

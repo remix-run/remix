@@ -10,7 +10,7 @@ export async function bufferStream(stream: Readable): Promise<Buffer> {
   });
 }
 
-export function drainStream(stream: Readable) {
+export function drainStream(stream: Readable): Promise<void> {
   return new Promise(accept => {
     stream
       .on("data", () => {})

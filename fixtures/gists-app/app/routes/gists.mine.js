@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Gists() {
   return (
     <div data-test-id="/gists/mine">

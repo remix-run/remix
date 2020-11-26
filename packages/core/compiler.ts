@@ -253,7 +253,7 @@ function getBuildPlugins(
       exclude: /node_modules/,
       extensions: [".js", ".ts", ".tsx", ".md", ".mdx"],
       presets: [
-        "@babel/preset-react",
+        ["@babel/preset-react", { runtime: "automatic" }],
         ["@babel/preset-env", { targets: { node: "12" } }],
         [
           "@babel/preset-typescript",

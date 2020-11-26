@@ -10,24 +10,19 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@remix-run/cli": "^0.7.0",
-    "@remix-run/express": "^0.7.0",
-    "@remix-run/loader": "^0.7.0",
-    "@remix-run/react": "^0.7.0",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
-    "react": "^16.14.0",
-    "react-dom": "^16.14.0",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
     "react-router": "^6.0.0-beta.0",
     "react-router-dom": "^6.0.0-beta.0"
   },
   "devDependencies": {
-    "@types/react": "^16.9.53",
-    "@types/react-dom": "^16.9.8",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
     "concurrently": "^5.3.0",
     "cross-env": "^7.0.2",
-    "nodemon": "^2.0.5",
-    "typescript": "^4.0.3"
+    "nodemon": "^2.0.5"
   },
   "engines": {
     "node": "12"

@@ -1,10 +1,10 @@
-import React from "react";
+import { useEffect } from "react";
 import { Meta, Scripts, Styles, Routes, useGlobalData } from "@remix-run/react";
 
 export default function App() {
   let data = useGlobalData();
 
-  React.useEffect(() => {
+  useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
   });
