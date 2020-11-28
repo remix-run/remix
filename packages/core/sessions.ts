@@ -32,7 +32,7 @@ export interface Session {
 
 /**
  * An object of key/value pairs of data to be used in the session. This object
- * is mutated directly in `set`, `unset`, and `consume` operations.
+ * is mutated directly in `set`, `flash`, and `unset` operations.
  */
 export interface SessionMutableData {
   [name: string]: string;
