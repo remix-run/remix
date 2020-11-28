@@ -63,20 +63,17 @@ function setFormPending(
   data: FormData,
   encType: FormEncType
 ): void {
-  console.log("setFormPending");
   pendingFormSubmit = { method, data, encType };
   formState = method === "get" ? FormState.PendingGet : FormState.Pending;
 }
 
 // 2. When the loader action redirects
 function setFormRedirected() {
-  console.log("setFormRedirected");
   formState = FormState.Redirected;
 }
 
 // 3. After Remix finishes the transition, we go back to idle
 function setFormIdle() {
-  console.log("setFormIdle");
   pendingFormSubmit = undefined;
   formState = FormState.Idle;
 }
@@ -519,48 +516,56 @@ export interface FormProps extends Omit<HTMLFormElement, "method"> {
  * requests, allowing components to add nicer UX to the page as the form is
  * submitted and returns with data.
  */
-export function Form({
-  forceRefresh = false,
-  replace = false,
-  action = ".",
-  method = "get",
-  encType = "application/x-www-form-urlencoded",
-  onSubmit,
-  ...props
-}: FormProps) {
-  let navigate = useNavigate();
-  let path = useResolvedPath(action);
-  let formMethod = method.toLowerCase() === "get" ? "get" : "post";
+let Form = React.forwardRef<HTMLFormElement, FormProps>(
+  (
+    {
+      forceRefresh = false,
+      replace = false,
+      action = ".",
+      method = "get",
+      encType = "application/x-www-form-urlencoded",
+      onSubmit,
+      ...props
+    },
+    forwardedRef
+  ) => {
+    let navigate = useNavigate();
+    let path = useResolvedPath(action);
+    let formMethod = method.toLowerCase() === "get" ? "get" : "post";
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    onSubmit && onSubmit(event);
-    if (event.defaultPrevented) return;
+    function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+      onSubmit && onSubmit(event);
+      if (event.defaultPrevented) return;
 
-    event.preventDefault();
-    let data = new FormData(event.currentTarget);
+      event.preventDefault();
+      let data = new FormData(event.currentTarget);
 
-    setFormPending(method, data, encType);
+      setFormPending(method, data, encType);
 
-    if (method.toLowerCase() === "get") {
-      // TODO: Patch the URLSearchParams constructor type to accept FormData
-      // @ts-ignore
-      let searchParams = new URLSearchParams(data);
-      path.search = "?" + searchParams.toString();
+      if (method.toLowerCase() === "get") {
+        // TODO: Patch the URLSearchParams constructor type to accept FormData
+        // @ts-ignore
+        let searchParams = new URLSearchParams(data);
+        path.search = "?" + searchParams.toString();
+      }
+
+      navigate(path, { replace });
     }
 
-    navigate(path, { replace });
+    return (
+      <form
+        ref={forwardedRef}
+        method={formMethod}
+        action={path.pathname}
+        encType={encType}
+        onSubmit={forceRefresh ? undefined : handleSubmit}
+        {...props}
+      />
+    );
   }
+);
 
-  return (
-    <form
-      method={formMethod}
-      action={path.pathname}
-      encType={encType}
-      onSubmit={forceRefresh ? undefined : handleSubmit}
-      {...props}
-    />
-  );
-}
+export { Form };
 
 /**
  * Setup a callback to be fired on the window's `beforeunload` event. This is
