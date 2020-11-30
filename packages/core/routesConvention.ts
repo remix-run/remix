@@ -7,7 +7,7 @@ import { defineRoutes, createRouteId } from "./routes";
 /**
  * Defines routes using the filesystem convention.
  *
- * Routes are stored in two locations: `app/routes` and `loaders/routes`.
+ * Routes are stored in two locations: `app/routes` and `data/routes`.
  * Subdirectories are used for nested routes.
  *
  * Route paths are derived from the file path. A `.` in the filename indicates
@@ -19,7 +19,7 @@ import { defineRoutes, createRouteId } from "./routes";
  */
 export function defineConventionalRoutes(
   appDir: string,
-  loadersDir: string
+  dataDir: string
 ): ConfigRouteObject[] {
   let routeFiles: {
     [routeId: string]: {
@@ -29,7 +29,7 @@ export function defineConventionalRoutes(
     };
   } = {};
 
-  function findOrCreateRoute(file: string): typeof routeFiles[string] {
+  function findOrCreateFiles(file: string): typeof routeFiles[string] {
     let id = createRouteId(file);
     return routeFiles[id] || (routeFiles[id] = {});
   }
@@ -44,36 +44,25 @@ export function defineConventionalRoutes(
     );
 
     for (let routeId of childRouteIds) {
-      let files = routeFiles[routeId];
-
-      let routePath = routeId
-        .slice((parentRouteId || "routes").length + 1)
-        .replace(/\$/g, ":")
-        .replace(/\./g, "/");
-
-      if (/\b\/?index$/.test(routePath)) {
-        routePath = routePath.replace(/\/?index$/, "");
-      }
-
-      defineRoute(
-        routePath,
-        files.component,
-        { loader: files.loader, styles: files.styles },
-        () => {
-          defineNestedRoutes(defineRoute, routeId);
-        }
+      let routePath = createRoutePath(
+        routeId.slice((parentRouteId || "routes").length + 1)
       );
+      let { component, loader, styles } = routeFiles[routeId];
+
+      defineRoute(routePath, component, { loader, styles }, () => {
+        defineNestedRoutes(defineRoute, routeId);
+      });
     }
   }
 
   // First, find all routes/styles defined in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
-    let route = findOrCreateRoute(path.join("routes", file));
+    let files = findOrCreateFiles(path.join("routes", file));
 
     if (isComponentFile(file)) {
-      route.component = path.join("routes", file);
+      files.component = path.join("routes", file);
     } else if (isStylesFile(file)) {
-      route.styles = path.join("routes", file);
+      files.styles = path.join("routes", file);
     } else {
       throw new Error(
         `Invalid route component file: ${path.join(appDir, "routes", file)}`
@@ -81,21 +70,26 @@ export function defineConventionalRoutes(
     }
   });
 
-  // Then find all routes defined in loaders/routes
-  visitFiles(path.join(loadersDir, "routes"), file => {
-    let route = findOrCreateRoute(path.join("routes", file));
+  // Then find all routes defined in data/routes
+  visitFiles(path.join(dataDir, "routes"), file => {
+    let files = findOrCreateFiles(path.join("routes", file));
 
     if (isLoaderFile(file)) {
-      route.loader = path.join("routes", file);
+      files.loader = path.join("routes", file);
     } else {
       throw new Error(
-        `Invalid route loader file: ${path.join(loadersDir, "routes", file)}`
+        `Invalid route loader file: ${path.join(dataDir, "routes", file)}`
       );
     }
   });
 
   // Finally, recurse through the manifest and define them all
   return defineRoutes(defineNestedRoutes);
+}
+
+function createRoutePath(routeId: string): string {
+  let path = routeId.replace(/\$/g, ":").replace(/\./g, "/");
+  return /\b\/?index$/.test(path) ? path.replace(/\/?index$/, "") : path;
 }
 
 function findParentRouteId(
