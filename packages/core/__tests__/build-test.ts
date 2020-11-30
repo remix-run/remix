@@ -24,7 +24,7 @@ function getManifest(output: RollupOutput, name: string) {
 
 const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
 
-describe("building", () => {
+describe.skip("building", () => {
   let config: RemixConfig;
   beforeAll(async () => {
     config = await readConfig(remixRoot);
