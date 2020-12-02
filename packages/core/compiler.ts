@@ -316,7 +316,7 @@ function getCommonOutputOptions(build: RemixBuild): OutputOptions {
           packageName += "/" + pieces[index + 2];
         }
 
-        return "node_modules/" + packageName;
+        return packageName;
       }
 
       return undefined;
