@@ -1,7 +1,7 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
-import { getHtml } from "./utils";
+import { disableJavaScript, getHtml } from "./utils";
 
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
@@ -19,11 +19,8 @@ describe("the server HTML", () => {
   describe("for the root URL", () => {
     it("is correct", async () => {
       await page.goto(`${testServer}/`);
-
-      // Important: Do NOT wait for React to hydrate
-      // because we want to test the server HTML output.
-
-      expect(await getHtml(page)).toMatchSnapshot();
+      await disableJavaScript(page);
+      expect(await getHtml(page, "[data-test-id=content]")).toMatchSnapshot();
     });
   });
 });

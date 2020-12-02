@@ -1,82 +1,29 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`the server HTML for the root URL is correct 1`] = `
-"<!DOCTYPE html>
-<html lang=\\"en\\">
-  <head>
-    <meta charset=\\"utf-8\\" />
-    <title>Gists Fixture App</title>
-    <meta
-      name=\\"description\\"
-      content=\\"We're just tryin' to make sure stuff works, ya know?!\\"
-    />
-    <link
-      rel=\\"stylesheet\\"
-      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
-    />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-  </head>
-  <body class=\\"m-4\\">
-    <div data-test-id=\\"/\\">
-      <header><h1>Cool Gists App</h1></header>
-      <nav>
-        <ul>
-          <li>
-            <a class=\\"text-blue-700 underline\\" href=\\"/gists\\">View Some gists</a>
-          </li>
-          <li>
-            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjijackson\\"
-              >Loader Redirect</a
-            >
-          </li>
-          <li>
-            <a class=\\"text-blue-700 underline\\" href=\\"/user-gists/ryanflorence\\"
-              >Express Redirect</a
-            >
-          </li>
-          <li>
-            <a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a>
-          </li>
-        </ul>
-      </nav>
-      <div>I am shared</div>
-    </div>
-    <script>
-      window.__remixContext = {
-        globalData: { enableScripts: true },
-        manifest: {
-          version: \\"d9b99cab\\",
-          routes: {
-            \\"routes/index\\": {
-              path: \\"/\\",
-              id: \\"routes/index\\",
-              moduleUrl: \\"/build/routes/index-cd587267.js\\",
-            },
-          },
-          entryModuleUrl: \\"/build/entry-browser-718f511e.js\\",
-          globalLoaderUrl: \\"/_remix/data\\",
-          globalStylesUrl: \\"/build/global-ec887178.css\\",
-        },
-        matches: [
-          {
-            params: {},
-            pathname: \\"/\\",
-            route: {
-              path: \\"/\\",
-              id: \\"routes/index\\",
-              moduleUrl: \\"/build/routes/index-cd587267.js\\",
-            },
-          },
-        ],
-        routeData: { \\"routes/index\\": null },
-      };
-    </script>
-    <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/index-cd587267.js\\";
-      window.__remixContext.routeModules = { \\"routes/index\\": route0 };
-    </script>
-    <script src=\\"/build/entry-browser-718f511e.js\\" type=\\"module\\"></script>
-  </body>
-</html>
+"<div data-test-id=\\"content\\">
+  <div data-test-id=\\"/\\">
+    <header><h1>Cool Gists App</h1></header>
+    <nav>
+      <ul>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists\\">View Some gists</a>
+        </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjijackson\\"
+            >Loader Redirect</a
+          >
+        </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/user-gists/ryanflorence\\"
+            >Express Redirect</a
+          >
+        </li>
+        <li><a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a></li>
+      </ul>
+    </nav>
+    <div>I am shared</div>
+  </div>
+</div>
 "
 `;

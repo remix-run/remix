@@ -21,7 +21,9 @@ export default function App() {
         <Styles />
       </head>
       <body className="m-4">
-        <Routes />
+        <div data-test-id="content">
+          <Routes />
+        </div>
         {data.enableScripts && <Scripts />}
       </body>
     </html>

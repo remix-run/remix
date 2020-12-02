@@ -1,175 +1,38 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`loader results when a loader returns not found sends a not found page 1`] = `
-"<!DOCTYPE html>
-<html lang=\\"en\\">
-  <head>
-    <meta charset=\\"utf-8\\" />
-    <title>User _why not found</title>
-    <meta name=\\"description\\" content=\\"View all of the gists from _why\\" />
-    <link
-      rel=\\"stylesheet\\"
-      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
-    />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-    <link rel=\\"stylesheet\\" href=\\"/build/routes/gists-6db1f83b.css\\" />
-  </head>
-  <body class=\\"m-4\\">
-    <div data-test-id=\\"/gists\\">
-      <header>
-        <h1>Gists</h1>
-        <ul>
-          <li>
-            <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
-              >Ryan Florence<!-- -->
-            </a>
-          </li>
-          <li>
-            <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
-              >Michael Jackson<!-- -->
-            </a>
-          </li>
-        </ul>
-      </header>
-      <div data-test-id=\\"/gists/$username\\">
-        <h2>
-          No gists for
-          <!-- -->_why
-        </h2>
-      </div>
-      <div>I am shared</div>
+"<div data-test-id=\\"content\\">
+  <div data-test-id=\\"/gists\\">
+    <header>
+      <h1>Gists</h1>
+      <ul>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+            >Ryan Florence<!-- -->
+          </a>
+        </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+            >Michael Jackson<!-- -->
+          </a>
+        </li>
+      </ul>
+    </header>
+    <div data-test-id=\\"/gists/$username\\">
+      <h2>
+        No gists for
+        <!-- -->_why
+      </h2>
     </div>
-    <script>
-      window.__remixContext = {
-        globalData: { enableScripts: true },
-        manifest: {
-          version: \\"d9b99cab\\",
-          routes: {
-            \\"routes/gists\\": {
-              path: \\"gists\\",
-              id: \\"routes/gists\\",
-              moduleUrl: \\"/build/routes/gists-b6fb5fa2.js\\",
-              stylesUrl: \\"/build/routes/gists-6db1f83b.css\\",
-              loaderUrl: \\"/_remix/data\\",
-            },
-            \\"routes/gists/$username\\": {
-              path: \\":username\\",
-              id: \\"routes/gists/$username\\",
-              parentId: \\"routes/gists\\",
-              moduleUrl: \\"/build/routes/gists/$username-d30734cd.js\\",
-              loaderUrl: \\"/_remix/data\\",
-            },
-          },
-          entryModuleUrl: \\"/build/entry-browser-718f511e.js\\",
-          globalLoaderUrl: \\"/_remix/data\\",
-          globalStylesUrl: \\"/build/global-ec887178.css\\",
-        },
-        matches: [
-          {
-            params: {},
-            pathname: \\"/gists\\",
-            route: {
-              path: \\"gists\\",
-              id: \\"routes/gists\\",
-              moduleUrl: \\"/build/routes/gists-b6fb5fa2.js\\",
-              stylesUrl: \\"/build/routes/gists-6db1f83b.css\\",
-              loaderUrl: \\"/_remix/data\\",
-            },
-          },
-          {
-            params: { username: \\"_why\\" },
-            pathname: \\"/gists/_why\\",
-            route: {
-              path: \\":username\\",
-              id: \\"routes/gists/$username\\",
-              parentId: \\"routes/gists\\",
-              moduleUrl: \\"/build/routes/gists/$username-d30734cd.js\\",
-              loaderUrl: \\"/_remix/data\\",
-            },
-          },
-        ],
-        routeData: {
-          \\"routes/gists\\": {
-            users: [
-              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
-              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
-            ],
-          },
-          \\"routes/gists/$username\\": null,
-        },
-      };
-    </script>
-    <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/gists-b6fb5fa2.js\\";
-      import * as route1 from \\"/build/routes/gists/$username-d30734cd.js\\";
-      window.__remixContext.routeModules = {
-        \\"routes/gists\\": route0,
-        \\"routes/gists/$username\\": route1,
-      };
-    </script>
-    <script src=\\"/build/entry-browser-718f511e.js\\" type=\\"module\\"></script>
-  </body>
-</html>
+    <div>I am shared</div>
+  </div>
+</div>
 "
 `;
 
 exports[`loader results when the loader has an error sends a server error page 1`] = `
-"<!DOCTYPE html>
-<html lang=\\"en\\">
-  <head>
-    <meta charset=\\"utf-8\\" />
-    <title>Error</title>
-    <link
-      rel=\\"stylesheet\\"
-      href=\\"//unpkg.com/@exampledev/new.css@1.1.3/new.css\\"
-    />
-    <link rel=\\"stylesheet\\" href=\\"/build/global-ec887178.css\\" />
-  </head>
-  <body class=\\"m-4\\">
-    <div data-test-id=\\"errors/500\\"><h1>500</h1></div>
-    <script>
-      window.__remixContext = {
-        globalData: { enableScripts: true },
-        manifest: {
-          version: \\"d9b99cab\\",
-          routes: {
-            \\"routes/500\\": {
-              path: \\"/gists/DANGER\\",
-              id: \\"routes/500\\",
-              moduleUrl: \\"/build/routes/500-62f403b6.js\\",
-            },
-          },
-          entryModuleUrl: \\"/build/entry-browser-718f511e.js\\",
-          globalLoaderUrl: \\"/_remix/data\\",
-          globalStylesUrl: \\"/build/global-ec887178.css\\",
-        },
-        matches: [
-          {
-            params: {},
-            pathname: \\"/gists/DANGER\\",
-            route: {
-              path: \\"/gists/DANGER\\",
-              id: \\"routes/500\\",
-              moduleUrl: \\"/build/routes/500-62f403b6.js\\",
-            },
-          },
-        ],
-        routeData: {
-          \\"routes/500\\": {
-            users: [
-              { id: \\"ryanflorence\\", name: \\"Ryan Florence\\" },
-              { id: \\"mjackson\\", name: \\"Michael Jackson\\" },
-            ],
-          },
-        },
-      };
-    </script>
-    <script type=\\"module\\">
-      import * as route0 from \\"/build/routes/500-62f403b6.js\\";
-      window.__remixContext.routeModules = { \\"routes/500\\": route0 };
-    </script>
-    <script src=\\"/build/entry-browser-718f511e.js\\" type=\\"module\\"></script>
-  </body>
-</html>
+"<div data-test-id=\\"content\\">
+  <div data-test-id=\\"errors/500\\"><h1>500</h1></div>
+</div>
 "
 `;
