@@ -9,7 +9,6 @@ import type {
   Session
 } from "@remix-run/core";
 import {
-  FetchStream,
   Headers,
   Request,
   createRequestHandler as createRemixRequestHandler,
@@ -133,8 +132,7 @@ function createRemixRequest(req: express.Request): Request {
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    let body = req.pipe(new FetchStream());
-    init.body = (body as unknown) as NodeJS.ReadableStream;
+    init.body = req;
   }
 
   return new Request(url.toString(), init);

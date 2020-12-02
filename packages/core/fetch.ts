@@ -3,33 +3,11 @@ import type {
   RequestInfo,
   RequestInit,
   ResponseInit
-} from "make-fetch-happen";
-import makeFetchHappen from "make-fetch-happen";
-import {
-  Headers as MinipassFetchHeaders,
-  Request as MinipassFetchRequest,
-  Response as MinipassFetchResponse,
-  isRedirect
-} from "minipass-fetch";
-import Minipass from "minipass";
+} from "node-fetch";
+import fetch, { Headers, Request, Response } from "node-fetch";
 
 export type { HeadersInit, RequestInfo, RequestInit, ResponseInit };
-
-export { Minipass as FetchStream };
-
-/**
- * The headers in a Request or Response.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Headers
- */
-export class Headers extends MinipassFetchHeaders {}
-
-/**
- * A HTTP request.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Request
- */
-export class Request extends MinipassFetchRequest {}
+export { Request, Response, Headers, fetch };
 
 export function isRequestLike(object: any): object is Request {
   return (
@@ -42,31 +20,6 @@ export function isRequestLike(object: any): object is Request {
   );
 }
 
-/**
- * A HTTP response.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Response
- */
-export class Response extends MinipassFetchResponse {
-  /**
-   * Returns a redirect response.
-   *
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/Response/redirect
-   */
-  static redirect(url: string, status = 302): Response {
-    if (!isRedirect(status)) {
-      throw new RangeError(`Invalid HTTP redirect status code: ${status}`);
-    }
-
-    return new Response("", {
-      status,
-      headers: {
-        location: url
-      }
-    });
-  }
-}
-
 export function isResponseLike(object: any): object is Response {
   return (
     object &&
@@ -76,10 +29,3 @@ export function isResponseLike(object: any): object is Response {
     typeof object.bodyUsed === "boolean"
   );
 }
-
-/**
- * A `fetch` function for node.js.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
- */
-export const fetch = makeFetchHappen;

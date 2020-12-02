@@ -49,8 +49,7 @@ export {
   isRequestLike,
   Response,
   isResponseLike,
-  fetch,
-  FetchStream
+  fetch
 } from "./fetch";
 
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
