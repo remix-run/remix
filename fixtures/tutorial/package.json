@@ -2,11 +2,11 @@
   "name": "remix-starter-express",
   "version": "1.0.0",
   "scripts": {
-    "postinstall": "tsc -b",
+    "postinstall": "../../node_modules/.bin/tsc -b",
     "prebuild": "cp -r ../../build/node_modules/* node_modules",
-    "build": "node node_modules/@remix-run/cli build && tsc -b",
+    "build": "node node_modules/@remix-run/cli build && ../../node_modules/.bin/tsc -b",
     "predev": "cp -r ../../build/node_modules/* node_modules",
-    "dev": "concurrently \"remix run\" \"tsc -b -w --preserveWatchOutput\" \"cross-env NODE_ENV=development nodemon -w app -w build -e js,ts,tsx,md,mdx server.js\"",
+    "dev": "concurrently \"node node_modules/@remix-run/cli run\" \"../../node_modules/.bin/tsc -b -w --preserveWatchOutput\" \"cross-env NODE_ENV=development nodemon -w app -w build -e js,ts,tsx,md,mdx server.js\"",
     "start": "node server.js"
   },
   "dependencies": {
