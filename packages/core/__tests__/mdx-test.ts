@@ -114,10 +114,10 @@ function getPlugins() {
       babelHelpers: "bundled",
       configFile: false,
       exclude: /node_modules/,
-      extensions: [".js", ".ts", ".tsx", ".md", ".mdx"],
+      extensions: [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"],
       presets: [
-        ["@babel/preset-react", { runtime: "react-jsx" }],
-        ["@babel/preset-env", { targets: { node: "12" } }],
+        ["@babel/preset-react", { runtime: "automatic" }],
+        ["@babel/preset-env", { targets: { node: true } }],
         [
           "@babel/preset-typescript",
           {
