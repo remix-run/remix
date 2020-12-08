@@ -1,4 +1,5 @@
 import { URL } from "url";
+import { PassThrough } from "stream";
 import type * as express from "express";
 import type {
   AppLoadContext,
@@ -27,7 +28,7 @@ declare module "express" {
 }
 
 /**
- * A function that returns the `context` object for data loaders.
+ * A function that returns the `context` object for data loaders and actions.
  */
 export interface GetLoadContext {
   (req: express.Request, res: express.Response): AppLoadContext;
@@ -50,11 +51,27 @@ function handleConfigError(error: Error) {
 export function createRequestHandler({
   getLoadContext,
   root: remixRoot,
-  enableSessions = true
+  enableSessions = true,
+  maxBufferSize = 16384
 }: {
   getLoadContext?: GetLoadContext;
+
+  /**
+   * The root directory of the Remix app.
+   */
   root?: string;
+
+  /**
+   * Set this `false` to silence the warning about session support not being
+   * enabled when not using an Express session middleware. Defaults to `true`.
+   */
   enableSessions?: boolean;
+
+  /**
+   * The maximum number of bytes to store in the internal buffer before ceasing
+   * to read from the request body stream. Defaults to 16,384 (16kb).
+   */
+  maxBufferSize?: number;
 } = {}): RequestHandler {
   let handleRequest: RemixRequestHandler;
   let remixConfig: RemixConfig;
@@ -84,7 +101,7 @@ export function createRequestHandler({
         "`createRequestHandler({ enableSessions: false })` to silence this warning."
     );
 
-    let remixReq = createRemixRequest(req);
+    let remixReq = createRemixRequest(req, maxBufferSize);
     let session = createRemixSession(req);
 
     let loadContext: AppLoadContext;
@@ -122,7 +139,10 @@ export function createRequestHandler({
   };
 }
 
-function createRemixRequest(req: express.Request): Request {
+function createRemixRequest(
+  req: express.Request,
+  highWaterMark: number
+): Request {
   let origin = `${req.protocol}://${req.headers.host}`;
   let url = new URL(req.url, origin);
 
@@ -132,7 +152,7 @@ function createRemixRequest(req: express.Request): Request {
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req;
+    init.body = req.pipe(new PassThrough({ highWaterMark }));
   }
 
   return new Request(url.toString(), init);
