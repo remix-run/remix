@@ -14,6 +14,7 @@
   },
   "workspaces": [
     "fixtures/gists-app",
+    "packages/architect",
     "packages/cli",
     "packages/core",
     "packages/data",

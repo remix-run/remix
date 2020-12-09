@@ -28,6 +28,8 @@ export interface Session {
    * Destroys this session.
    */
   destroy(): Promise<void>;
+
+  mutableData: SessionMutableData;
 }
 
 /**
@@ -42,7 +44,7 @@ export interface SessionMutableData {
  * A function that is used to destroy a session.
  */
 export interface SessionOnDestroy {
-  (): Promise<void>;
+  (): void | Promise<void>;
 }
 
 /**
@@ -58,6 +60,7 @@ export function createSession(
   let flashPrefix = "__flash__:";
 
   return {
+    mutableData: data,
     set(name, value) {
       data[name] = value;
     },
@@ -81,8 +84,8 @@ export function createSession(
 
       return undefined;
     },
-    destroy() {
-      return onDestroy ? onDestroy() : Promise.resolve();
+    async destroy() {
+      return onDestroy ? await onDestroy() : Promise.resolve();
     }
   };
 }
@@ -111,6 +114,7 @@ export function createSessionFacade(errorMessage: string): Session {
     },
     destroy() {
       throw new Error(errorMessage);
-    }
+    },
+    mutableData: {}
   };
 }

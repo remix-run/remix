@@ -1,0 +1,8 @@
+{
+  "extends": "../../config/node-tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../build/node_modules/@remix-run/architect",
+    "rootDir": "."
+  },
+  "include": ["../../types/**/*", "**/*"]
+}

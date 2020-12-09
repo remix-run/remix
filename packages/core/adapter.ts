@@ -8,9 +8,10 @@ import type { AppLoadContext } from "./data";
 
 interface Adapter {
   createRemixRequest: (...platformArgs: any[]) => Request;
-  createRemixSession: (...platformArgs: any[]) => Session;
+  createRemixSession: (...platformArgs: any[]) => Session | Promise<Session>;
   sendPlatformResponse: (
     remixResponse: Response,
+    session: Session,
     ...platformArgs: any[]
   ) => any;
 }
@@ -45,7 +46,7 @@ export function createAdapter({
       let handleRequest = createRemixRequestHandler(remixConfig);
 
       let remixReq = createRemixRequest(...platformArgs);
-      let session = createRemixSession(enableSessions, ...platformArgs);
+      let session = await createRemixSession(enableSessions, ...platformArgs);
 
       let loadContext: AppLoadContext;
       if (getLoadContext) {
@@ -54,7 +55,7 @@ export function createAdapter({
 
       let remixRes = await handleRequest(remixReq, session, loadContext);
 
-      return sendPlatformResponse(remixRes, ...platformArgs);
+      return sendPlatformResponse(remixRes, session, ...platformArgs);
     };
   };
 }

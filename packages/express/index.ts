@@ -24,7 +24,7 @@ interface ExpressSessionDestroy {
 
 export let createRequestHandler = createAdapter({
   createRemixRequest(req: express.Request) {
-    let origin = `${req.protocol}://${req.headers.host}`;
+    let origin = `${req.protocol}://${req.headers.hostname}`;
     let url = new URL(req.url, origin);
 
     let init: RequestInit = {
@@ -39,7 +39,7 @@ export let createRequestHandler = createAdapter({
     return new Request(url.toString(), init);
   },
 
-  sendPlatformResponse(remixResponse, _, res: express.Response) {
+  sendPlatformResponse(remixResponse, _session, _req, res: express.Response) {
     res.status(remixResponse.status);
 
     for (let [key, value] of remixResponse.headers.entries()) {

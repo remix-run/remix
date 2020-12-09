@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "packages/architect" },
     { "path": "packages/cli" },
     { "path": "packages/core" },
     { "path": "packages/data" },

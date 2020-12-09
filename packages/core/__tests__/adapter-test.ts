@@ -42,7 +42,12 @@ describe("createAdapter", () => {
 
     // patterned this one off of Azure since it's probably the weirdest with the
     // context mutation
-    async sendPlatformResponse(remixResponse, _, fakePlatFormContext) {
+    async sendPlatformResponse(
+      remixResponse,
+      _session,
+      _req,
+      fakePlatFormContext
+    ) {
       Object.assign(fakePlatFormContext, {
         status: remixResponse.status,
         body: await remixResponse.text()

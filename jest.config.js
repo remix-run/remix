@@ -1,6 +1,11 @@
 module.exports = {
   projects: [
     {
+      displayName: "architect",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/architect/**/*-test.[jt]s?(x)"]
+    },
+    {
       displayName: "cli",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/cli/**/*-test.[jt]s?(x)"]
