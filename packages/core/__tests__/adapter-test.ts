@@ -2,16 +2,15 @@ import type { RemixConfig } from "../config";
 import { Request, Response } from "../fetch";
 import { createAdapter } from "../adapter";
 import { createSession, createSessionFacade } from "../sessions";
-import { ServerMode } from "../config";
 
 import { readConfig } from "../config";
-import { createRequestHandler } from "../server";
+import { createRemixRequestHandler } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetter tests do), we just want to test createAdapter
 jest.mock("../server");
-let mockedCreateRequestHandler = createRequestHandler as jest.MockedFunction<
-  typeof createRequestHandler
+let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
+  typeof createRemixRequestHandler
 >;
 
 // Since adapters call `readConfig` we just erase it for these tests, we aren't
@@ -24,6 +23,10 @@ let mockedReadConfig = readConfig as jest.MockedFunction<typeof readConfig>;
 mockedReadConfig.mockResolvedValue(({} as unknown) as RemixConfig);
 
 describe("createAdapter", () => {
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   // Our test adapter. This illustrates the three methods that a deployment
   // adapter needs to implement to run a remix app
   let adapter = createAdapter({

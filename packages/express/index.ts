@@ -39,11 +39,7 @@ export let createRequestHandler = createAdapter({
     return new Request(url.toString(), init);
   },
 
-  sendPlatformResponse(
-    remixResponse,
-    _: express.Request,
-    res: express.Response
-  ): void {
+  sendPlatformResponse(remixResponse, _, res: express.Response) {
     res.status(remixResponse.status);
 
     for (let [key, value] of remixResponse.headers.entries()) {

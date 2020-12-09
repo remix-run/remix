@@ -1,11 +1,10 @@
 import { readConfig } from "./config";
 import { Request, Response } from "./fetch";
-import { createRequestHandler } from "./server";
+import { createRemixRequestHandler } from "./server";
 import { Session } from "./sessions";
 
 import type { RemixConfig } from "./config";
 import type { AppLoadContext } from "./data";
-import type { RequestHandler } from "./server";
 
 interface Adapter {
   createRemixRequest: (...platformArgs: any[]) => Request;
@@ -43,7 +42,7 @@ export function createAdapter({
           handleConfigError(error);
         }
       }
-      let handleRequest = createRequestHandler(remixConfig);
+      let handleRequest = createRemixRequestHandler(remixConfig);
 
       let remixReq = createRemixRequest(...platformArgs);
       let session = createRemixSession(enableSessions, ...platformArgs);
