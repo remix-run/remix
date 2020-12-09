@@ -32,24 +32,18 @@ export function createAdapter({
     root,
     enableSessions = true
   }: PlatformRequestHandlerOptions = {}) {
-    let handleRequest: RequestHandler;
+    // only need to read the config once, so we keep it outside of the request
     let remixConfig: RemixConfig;
-    let remixConfigPromise = readConfig(root, process.env.NODE_ENV);
-
-    // If there is a config error, catch it early and exit. But keep this function
-    // sync in case they don't have top-level await (unflagged in node v14.8.0).
-    remixConfigPromise.catch(handleConfigError);
 
     return async (...platformArgs: any[]) => {
       if (!remixConfig) {
         try {
-          remixConfig = await remixConfigPromise;
+          remixConfig = await readConfig(root, process.env.NODE_ENV);
         } catch (error) {
           handleConfigError(error);
         }
-
-        handleRequest = createRequestHandler(remixConfig);
       }
+      let handleRequest = createRequestHandler(remixConfig);
 
       let remixReq = createRemixRequest(...platformArgs);
       let session = createRemixSession(enableSessions, ...platformArgs);
