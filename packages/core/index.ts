@@ -59,3 +59,7 @@ export { createRequestHandler } from "./server";
 
 export type { Session, SessionMutableData, SessionOnDestroy } from "./sessions";
 export { createSession, createSessionFacade } from "./sessions";
+
+export { warnOnce } from "./warnings";
+
+export { createAdapter } from "./adapter";

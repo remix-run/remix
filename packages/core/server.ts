@@ -34,9 +34,11 @@ import type { Session } from "./sessions";
  * dev tools.
  */
 export interface RequestHandler {
-  (request: Request, session: Session, loadContext?: AppLoadContext): Promise<
-    Response
-  >;
+  (
+    request: Request,
+    session: Session,
+    loadContext?: AppLoadContext
+  ): Promise<Response>;
 }
 
 /**
