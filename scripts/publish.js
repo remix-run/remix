@@ -40,7 +40,8 @@ async function run() {
   basePackageNames.sort(a => (a === "core" ? -1 : 0));
 
   for (let name of basePackageNames) {
-    await npm(["publish", path.join(npmModulesDir, name)], {
+    let tag = figureOutTag();
+    await npm(["publish", "--tag", tag, path.join(npmModulesDir, name)], {
       stdio: "inherit"
     });
   }

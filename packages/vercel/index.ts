@@ -37,6 +37,7 @@ export let createRequestHandler = createAdapter({
 
   async sendPlatformResponse(
     remixResponse,
+    _remixSession,
     _req,
     res: NowResponse
   ): Promise<void> {
@@ -52,7 +53,12 @@ export let createRequestHandler = createAdapter({
         arrays.set(key, [value]);
       }
     }
-    res.send(await remixResponse.text());
+
+    if (Buffer.isBuffer(remixResponse.body)) {
+      res.end(remixResponse.body);
+    } else {
+      remixResponse.body.pipe(res);
+    }
   },
 
   createRemixSession() {

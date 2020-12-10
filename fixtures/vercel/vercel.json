@@ -1,0 +1,35 @@
+{
+  "builds": [
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "remix.config.js",
+          "data/**/*",
+          "app/**/*",
+          "build/**/*",
+          "node_modules/prismjs/components/*"
+        ]
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/favicon.ico",
+      "destination": "/public/favicon.ico"
+    },
+    {
+      "source": "/build/(.*)",
+      "destination": "/public/build/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}
