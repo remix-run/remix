@@ -1,3 +1,4 @@
+import { PassThrough } from "stream";
 import { URL } from "url";
 import type * as express from "express";
 import type { RequestInit } from "@remix-run/core";
@@ -33,7 +34,7 @@ export let createRequestHandler = createAdapter({
     };
 
     if (req.method !== "GET" && req.method !== "HEAD") {
-      init.body = req;
+      init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
     }
 
     return new Request(url.toString(), init);
