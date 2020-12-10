@@ -29,25 +29,26 @@ jest.mock("@remix-run/core/config");
 let mockedReadConfig = readConfig as jest.MockedFunction<typeof readConfig>;
 
 describe("express createRequestHandler", () => {
-  beforeEach(() => {
-    // @ts-ignore it doesn't, we mock the request handler and never use the config
-    mockedReadConfig.mockResolvedValue({});
-  });
-
-  afterEach(() => {
-    mockedCreateRequestHandler.mockReset();
-    mockedReadConfig.mockReset();
-  });
-
-  afterAll(() => {
-    jest.restoreAllMocks();
-  });
-
   describe("basic requests", () => {
     // set up the express app
-    let app = express();
-    app.all("*", adapter({ enableSessions: false }));
-    let request = supertest(app);
+    let request: any;
+
+    beforeEach(() => {
+      // @ts-ignore it doesn't, we mock the request handler and never use the config
+      mockedReadConfig.mockResolvedValue({});
+      let app = express();
+      app.all("*", adapter({ enableSessions: false }));
+      request = supertest(app);
+    });
+
+    afterEach(() => {
+      mockedCreateRequestHandler.mockReset();
+      mockedReadConfig.mockReset();
+    });
+
+    afterAll(() => {
+      jest.restoreAllMocks();
+    });
 
     it("handles requests", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async req => {
