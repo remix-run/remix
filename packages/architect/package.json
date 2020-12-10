@@ -9,9 +9,5 @@
   "peerDependencies": {
     "@architect/architect": "^8.3.7",
     "@architect/functions": "^3.13.3"
-  },
-  "devDependencies": {
-    "@architect/architect": "^8.3.7",
-    "@architect/functions": "^3.13.3"
   }
 }

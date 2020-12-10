@@ -133,6 +133,38 @@ let express = {
   ]
 };
 
+/** @type {import('rollup').RollupOptions} */
+let architect = {
+  external(id) {
+    return !isLocalModuleId(id);
+  },
+  input: path.resolve(__dirname, "packages/architect/index.ts"),
+  output: {
+    dir: "build/node_modules/@remix-run/architect",
+    format: "cjs",
+    preserveModules: true,
+    exports: "auto"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    nodeResolve({
+      extensions: [".ts", ".tsx"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/architect/package.json"),
+          dest: "build/node_modules/@remix-run/architect"
+        }
+      ]
+    })
+  ]
+};
+
 /** @type {import('rollup').RollupOptions[]} */
 let react = [
   // We need 2 builds for @remix-run/react. Here's why:
@@ -208,4 +240,4 @@ let react = [
   }
 ];
 
-export default [cli, core, data, express, ...react];
+export default [architect, cli, core, data, express, ...react];

@@ -38,7 +38,10 @@ export function createAdapter({
     return async (...platformArgs: any[]) => {
       if (!remixConfig) {
         try {
-          remixConfig = await readConfig(root, process.env.NODE_ENV);
+          remixConfig = await readConfig(
+            root,
+            process.env.REMIX_ENV || process.env.NODE_ENV
+          );
         } catch (error) {
           handleConfigError(error);
         }

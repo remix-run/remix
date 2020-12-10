@@ -16,7 +16,8 @@ import type {
 export let createRequestHandler = createAdapter({
   createRemixRequest(req: ArcRequest) {
     let host = req.headers["x-forwarded-host"] || req.headers.host;
-    let url = new URL(req.rawPath + req.rawQueryString, `https://${host}`);
+    let search = req.rawQueryString.length ? "?" + req.rawQueryString : "";
+    let url = new URL(req.rawPath + search, `https://${host}`);
 
     return new Request(url.toString(), {
       method: req.requestContext.method,
