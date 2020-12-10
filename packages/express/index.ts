@@ -24,7 +24,7 @@ interface ExpressSessionDestroy {
 
 export let createRequestHandler = createAdapter({
   createRemixRequest(req: express.Request) {
-    let origin = `${req.protocol}://${req.headers.hostname}`;
+    let origin = `${req.protocol}://${req.hostname}`;
     let url = new URL(req.url, origin);
 
     let init: RequestInit = {
