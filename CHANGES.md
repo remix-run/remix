@@ -2,6 +2,20 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Added @remix-run/vercel adapter to deploy to Vercel
+- Added @remix-run/architect adapter to deploy to AWS with Architect
+- Added React 17 and new JSX transform support
+
+## Bug Fixes
+
+- Can pass `ref` to `<Form/>`
+- Browser bundles no longer ignored by deployment platforms (no longer write to `public/_shared/node_modules`)
+- Fixed `Loader` and `Action` types for data modules
+
 ## 0.8.0 - Wed Nov 25 2020
 
 ### Improvements
