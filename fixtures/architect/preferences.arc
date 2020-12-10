@@ -3,8 +3,10 @@
 testing
   REMIX_ENV development
 
-# staging
+staging
   # Add staging env vars with: arc env staging NAME value
+  REMIX_ENV production
 
-# production
+production
   # Add production env vars with: arc env production NAME value
+  REMIX_ENV production
