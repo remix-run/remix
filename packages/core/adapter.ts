@@ -1,6 +1,7 @@
 import { readConfig } from "./config";
 import { Request, Response } from "./fetch";
 import { createRemixRequestHandler } from "./server";
+import type { RequestHandler } from "./server";
 import { Session } from "./sessions";
 
 import type { RemixConfig } from "./config";
@@ -33,11 +34,14 @@ export function createAdapter({
     enableSessions = true
   }: PlatformRequestHandlerOptions = {}) {
     // only need to read the config once, so we keep it outside of the request
+    let handleRequest: RequestHandler;
     let remixConfig: RemixConfig;
 
     return async (...platformArgs: any[]) => {
       if (!remixConfig) {
         try {
+          // TODO: see why we were getting unhandled exceptions when this was up
+          // one scope so that they get the error before they make a request
           remixConfig = await readConfig(
             root,
             process.env.REMIX_ENV || process.env.NODE_ENV
@@ -45,8 +49,9 @@ export function createAdapter({
         } catch (error) {
           handleConfigError(error);
         }
+
+        handleRequest = createRemixRequestHandler(remixConfig);
       }
-      let handleRequest = createRemixRequestHandler(remixConfig);
 
       let remixReq = createRemixRequest(...platformArgs);
       let session = await createRemixSession(enableSessions, ...platformArgs);
