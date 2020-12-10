@@ -6,6 +6,7 @@
     { "path": "packages/core" },
     { "path": "packages/data" },
     { "path": "packages/express" },
-    { "path": "packages/react" }
+    { "path": "packages/react" },
+    { "path": "packages/vercel" }
   ]
 }

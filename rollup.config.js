@@ -101,70 +101,6 @@ let data = {
   ]
 };
 
-/** @type {import('rollup').RollupOptions} */
-let express = {
-  external(id) {
-    return !isLocalModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/express/index.ts"),
-  output: {
-    dir: "build/node_modules/@remix-run/express",
-    format: "cjs",
-    preserveModules: true,
-    exports: "auto"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/express/package.json"),
-          dest: "build/node_modules/@remix-run/express"
-        }
-      ]
-    })
-  ]
-};
-
-/** @type {import('rollup').RollupOptions} */
-let architect = {
-  external(id) {
-    return !isLocalModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/architect/index.ts"),
-  output: {
-    dir: "build/node_modules/@remix-run/architect",
-    format: "cjs",
-    preserveModules: true,
-    exports: "auto"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/architect/package.json"),
-          dest: "build/node_modules/@remix-run/architect"
-        }
-      ]
-    })
-  ]
-};
-
 /** @type {import('rollup').RollupOptions[]} */
 let react = [
   // We need 2 builds for @remix-run/react. Here's why:
@@ -240,4 +176,43 @@ let react = [
   }
 ];
 
-export default [architect, cli, core, data, express, ...react];
+let architect = getPlatformConfig("architect");
+let express = getPlatformConfig("express");
+let vercel = getPlatformConfig("vercel");
+
+function getPlatformConfig(name) {
+  /** @type {import('rollup').RollupOptions} */
+  return {
+    external(id) {
+      return !isLocalModuleId(id);
+    },
+    input: path.resolve(__dirname, `packages/${name}/index.ts`),
+    output: {
+      dir: `build/node_modules/@remix-run/${name}`,
+      format: "cjs",
+      preserveModules: true,
+      exports: "auto"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts", ".tsx"]
+      }),
+      nodeResolve({
+        extensions: [".ts", ".tsx"]
+      }),
+      copy({
+        targets: [
+          {
+            src: path.resolve(__dirname, `packages/${name}/package.json`),
+            dest: `build/node_modules/@remix-run/${name}`
+          }
+        ]
+      })
+    ]
+  };
+}
+
+let builds = [architect, cli, core, data, express, vercel, ...react];
+export default builds;

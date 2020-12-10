@@ -21,6 +21,11 @@ module.exports = {
       testMatch: ["<rootDir>/packages/express/**/*-test.[jt]s?(x)"]
     },
     {
+      displayName: "vercel",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/vercel/**/*-test.[jt]s?(x)"]
+    },
+    {
       displayName: "gists-app",
       testEnvironment: "node",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],

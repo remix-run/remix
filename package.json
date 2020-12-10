@@ -19,7 +19,8 @@
     "packages/core",
     "packages/data",
     "packages/express",
-    "packages/react"
+    "packages/react",
+    "packages/vercel"
   ],
   "dependencies": {
     "@babel/core": "^7.10.4",
