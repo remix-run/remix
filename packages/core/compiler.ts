@@ -313,7 +313,9 @@ function getCommonOutputOptions(build: RemixBuild): OutputOptions {
         let packageName = pieces[index + 1];
 
         if (packageName.startsWith("@") && pieces.length > index + 2) {
-          packageName += "/" + pieces[index + 2];
+          packageName =
+            // S3 hates @folder, so we switch it to __
+            packageName.replace("@", "__") + "/" + pieces[index + 2];
         }
 
         return packageName;
