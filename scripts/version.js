@@ -75,7 +75,7 @@ async function updateChanges(version, date = new Date()) {
   let file = path.resolve(__dirname, "../CHANGES.md");
   let contents = await fsp.readFile(file, "utf-8");
   let updated = contents.replace(
-    /## Unreleased/,
+    /(## Unreleased)|(## \d+\.\d+\.\d+-\w+\.\d+)/,
     `## ${version} - ${date.toDateString()}`
   );
   await fsp.writeFile(file, updated);
