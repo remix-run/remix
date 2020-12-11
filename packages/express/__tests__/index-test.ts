@@ -34,8 +34,7 @@ describe("express createRequestHandler", () => {
     let request: any;
 
     beforeEach(() => {
-      // @ts-ignore it doesn't, we mock the request handler and never use the config
-      mockedReadConfig.mockResolvedValue({});
+      mockedReadConfig.mockResolvedValue({} as ReturnType<typeof readConfig>);
       let app = express();
       app.all("*", adapter({ enableSessions: false }));
       request = supertest(app);
@@ -84,18 +83,7 @@ describe("express createRequestHandler", () => {
 
   describe("sessions", () => {
     it("sets and gets values from a cookie session", async () => {
-      let cookie = "";
-      let app = express();
-      app.use(
-        session({
-          secret: "remix",
-          resave: false,
-          saveUninitialized: false
-        })
-      );
-      app.all("*", adapter());
-      let request = supertest(app);
-
+      mockedReadConfig.mockResolvedValue({} as ReturnType<typeof readConfig>);
       mockedCreateRequestHandler.mockImplementation(
         () => async (req, session) => {
           if (req.url.endsWith("/set")) {
@@ -111,6 +99,18 @@ describe("express createRequestHandler", () => {
           }
         }
       );
+
+      let cookie = "";
+      let app = express();
+      app.use(
+        session({
+          secret: "remix",
+          resave: false,
+          saveUninitialized: false
+        })
+      );
+      app.all("*", adapter());
+      let request = supertest(app);
 
       let setRes = await request.get("/set");
       expect(setRes.headers["set-cookie"]).toBeDefined();

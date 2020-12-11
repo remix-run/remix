@@ -33,23 +33,16 @@ export function createAdapter({
     root,
     enableSessions = true
   }: PlatformRequestHandlerOptions = {}) {
-    // only need to read the config once, so we keep it outside of the request
     let handleRequest: RequestHandler;
     let remixConfig: RemixConfig;
 
+    let env = process.env.REMIX_ENV || process.env.NODE_ENV;
+    let remixConfigPromise = readConfig(root, env);
+    remixConfigPromise.catch(handleConfigError);
+
     return async (...platformArgs: any[]) => {
       if (!remixConfig) {
-        try {
-          // TODO: see why we were getting unhandled exceptions when this was up
-          // one scope so that they get the error before they make a request
-          remixConfig = await readConfig(
-            root,
-            process.env.REMIX_ENV || process.env.NODE_ENV
-          );
-        } catch (error) {
-          handleConfigError(error);
-        }
-
+        remixConfig = await remixConfigPromise;
         handleRequest = createRemixRequestHandler(remixConfig);
       }
 

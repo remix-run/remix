@@ -165,17 +165,16 @@ describe("createAdapter", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
-    let handler = adapter();
+    // just calling the adapter should trigger the error
+    adapter();
 
-    // call the handler to trigger the error
-    await handler({ url: "" }, {});
+    // give readConfig a chance to throw by moving to the next tick
+    await Promise.resolve();
 
     // got the messages in the console
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
-    // exited with `1`
     expect(mockExit).toHaveBeenCalledWith(1);
 
-    // don't screw up other tests
     mockExit.mockRestore();
     mockConsoleError.mockRestore();
   });
