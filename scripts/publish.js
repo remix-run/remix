@@ -2,6 +2,7 @@ const path = require("path");
 const fsp = require("fs").promises;
 const { exec, spawn } = require("child_process");
 const { promisify } = require("util");
+const semver = require("semver");
 
 const npmModulesDir = path.resolve(
   __dirname,
@@ -23,8 +24,8 @@ function npm(args, options) {
 }
 
 async function getTaggedVersion() {
-  let output = (await x("git tag --list --points-at HEAD")).toString().trim();
-  return output.replace(/^v/g, "");
+  let { stdout } = await x("git tag --list --points-at HEAD");
+  return stdout.trim().replace(/^v/g, "");
 }
 
 async function run() {
@@ -35,12 +36,14 @@ async function run() {
     `Missing release version. Run the version script first.`
   );
 
+  let prerelease = semver.prerelease(taggedVersion);
+  let tag = prerelease ? prerelease[0] : "latest";
+
   // - Publish all packages, starting with core
   let basePackageNames = await fsp.readdir(npmModulesDir);
   basePackageNames.sort(a => (a === "core" ? -1 : 0));
 
   for (let name of basePackageNames) {
-    let tag = figureOutTag();
     await npm(["publish", "--tag", tag, path.join(npmModulesDir, name)], {
       stdio: "inherit"
     });

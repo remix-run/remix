@@ -135,7 +135,7 @@ async function run(args) {
   );
 
   // - Update platform versions + @remix-run/core dep
-  for (let platform of ["express"]) {
+  for (let platform of ["architect", "express", "vercel"]) {
     await updatePackageConfig(platform, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/core"] = nextVersion;
