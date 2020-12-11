@@ -13,8 +13,9 @@ This is a history of changes to [Remix](https://remix.run).
 ## Bug Fixes
 
 - Can pass `ref` to `<Form/>`
-- Browser bundles no longer ignored by deployment platforms (no longer write to `public/_shared/node_modules`)
+- Browser module names no longer cause problems for hosts (no longer write to `public/_shared/node_modules`)
 - Fixed `Loader` and `Action` types for data modules
+- Fixed dependency declarations so apps can use different React versions (16.8+, 17.x+)
 
 ## 0.8.0 - Wed Nov 25 2020
 
