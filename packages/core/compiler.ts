@@ -304,7 +304,9 @@ function getCommonOutputOptions(build: RemixBuild): OutputOptions {
         : "[name][extname]",
     chunkFileNames: "_shared/[name]-[hash].js",
     entryFileNames:
-      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js",
+      mode === BuildMode.Production && target === BuildTarget.Browser
+        ? "[name]-[hash].js"
+        : "[name].js",
     manualChunks(id: string) {
       let pieces = id.split(path.sep);
       let index = pieces.lastIndexOf("node_modules");

@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## 0.8.2 - Fri Dec 12 2020
+
+### Bug fixes
+
+- Stopped hashing server bundle files so deployments work on Vercel
+
 ## 0.8.1 - Fri Dec 11 2020
 
 ### Improvements
@@ -10,7 +16,7 @@ This is a history of changes to [Remix](https://remix.run).
 - Added @remix-run/architect adapter to deploy to AWS with Architect
 - Added React 17 and new JSX transform support
 
-## Bug Fixes
+### Bug Fixes
 
 - Can pass `ref` to `<Form/>`
 - Browser module names no longer cause problems for hosts (no longer write to `public/_shared/node_modules`)
