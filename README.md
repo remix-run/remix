@@ -4,7 +4,7 @@ Remix is a framework for shipping better websites.
 
 ## Development
 
-```
+```bash
 # install everything
 yarn install
 
