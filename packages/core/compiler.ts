@@ -254,7 +254,7 @@ function getBuildPlugins(
       extensions: [".js", ".ts", ".tsx", ".md", ".mdx"],
       presets: [
         ["@babel/preset-react", { runtime: "automatic" }],
-        ["@babel/preset-env", { targets: { node: "12" } }],
+        ["@babel/preset-env", { bugfixes: true, targets: { node: "12" } }],
         [
           "@babel/preset-typescript",
           {
@@ -276,7 +276,11 @@ function getBuildPlugins(
   );
 
   if (mode === BuildMode.Production) {
-    plugins.push(terser());
+    plugins.push(
+      terser({
+        ecma: 2017
+      })
+    );
   }
 
   plugins.push(
