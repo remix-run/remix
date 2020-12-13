@@ -5,6 +5,7 @@ import {
   createSessionFacade,
   Headers
 } from "@remix-run/core";
+import type { RequestInit } from "@remix-run/core";
 
 import "./fetchGlobals";
 
@@ -28,11 +29,16 @@ export let createRequestHandler = createAdapter({
       }
     }
 
-    return new Request(url.toString(), {
+    let init: RequestInit = {
       method: req.method,
-      headers: headers,
-      body: req.body
-    });
+      headers: headers
+    };
+
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      init.body = req;
+    }
+
+    return new Request(url.toString(), init);
   },
 
   async sendPlatformResponse(

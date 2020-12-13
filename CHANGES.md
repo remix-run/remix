@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug fixes
+
+- fixed `<Form>` on Vercel
+
 ## 0.8.2 - Fri Dec 12 2020
 
 ### Bug fixes
