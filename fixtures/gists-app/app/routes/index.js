@@ -41,8 +41,13 @@ export default function Index() {
             </Link>
           </li>
           <li>
-            <Link to="/render-error" className="text-blue-700 underline">
-              Error during render
+            <Link to="/exceptions?throw" className="text-blue-700 underline">
+              Root Exception
+            </Link>
+          </li>
+          <li>
+            <Link to="/exceptions/nested" className="text-blue-700 underline">
+              Nested Exception
             </Link>
           </li>
         </ul>

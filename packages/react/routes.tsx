@@ -10,6 +10,10 @@ import type {
 } from "@remix-run/core";
 
 import invariant from "./invariant";
+import {
+  RemixDefaultUncaughtException,
+  RemixErrorBoundary
+} from "./exceptions";
 
 export interface ClientRouteObject {
   caseSensitive?: boolean;
@@ -25,13 +29,16 @@ export function createClientRoute(
   entryRoute: EntryRouteObject,
   elementType: RouteComponentType
 ): ClientRouteObject {
+  let Comp = elementType;
   return {
     caseSensitive: !!entryRoute.caseSensitive,
     id: entryRoute.id,
     path: entryRoute.path,
-    element: React.createElement(elementType, {
-      id: entryRoute.id
-    })
+    element: (
+      <RemixErrorBoundary component={RemixDefaultUncaughtException}>
+        <Comp id={entryRoute.id} />
+      </RemixErrorBoundary>
+    )
   };
 }
 
