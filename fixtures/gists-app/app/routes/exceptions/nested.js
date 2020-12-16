@@ -2,7 +2,7 @@ export default function ExceptionsIndex() {
   throw new Error("GAHHHH!!! KABOOM! 🧨");
 }
 
-export function UncaughtException({ error }) {
+export function ErrorBoundary({ error }) {
   return (
     <div>
       <h2>OH NOES!</h2>

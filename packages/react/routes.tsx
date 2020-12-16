@@ -10,10 +10,6 @@ import type {
 } from "@remix-run/core";
 
 import invariant from "./invariant";
-import {
-  RemixDefaultUncaughtException,
-  RemixErrorBoundary
-} from "./exceptions";
 
 export interface ClientRouteObject {
   caseSensitive?: boolean;

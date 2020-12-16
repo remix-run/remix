@@ -1,7 +1,7 @@
 import ReactDOMServer from "react-dom/server";
 import Remix from "@remix-run/react/server";
 
-import App, { UncaughtException } from "./App";
+import App, { ErrorBoundary } from "./App";
 
 export default function handleRequest(
   request,
@@ -13,7 +13,7 @@ export default function handleRequest(
     <Remix
       context={remixContext}
       url={request.url}
-      UncaughtException={UncaughtException}
+      ErrorBoundary={ErrorBoundary}
     >
       <App />
     </Remix>

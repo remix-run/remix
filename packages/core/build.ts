@@ -38,7 +38,7 @@ export interface RouteModules {
   [routeId: string]: RouteModule;
 }
 
-export type UncaughtExceptionComponent = ComponentType<{ error: Error }>;
+export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
 
 /**
  * A module that contains info about a route including headers, meta tags, and
@@ -48,7 +48,7 @@ export interface RouteModule {
   default: ComponentType;
   headers?: HeadersFunction;
   meta?: MetaFunction;
-  UncaughtException?: UncaughtExceptionComponent;
+  ErrorBoundary?: ErrorBoundaryComponent;
 }
 
 /**

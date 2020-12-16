@@ -36,10 +36,10 @@ import {
 import { loadRouteStyleSheet } from "./stylesheets";
 import {
   RemixErrorBoundaryImpl,
-  RemixRootDefaultUncaughtError,
+  RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
-} from "./exceptions";
-import type { UncaughtExceptionComponent } from "@remix-run/core";
+} from "./errorBoundaries";
+import type { ErrorBoundaryComponent } from "@remix-run/core";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
@@ -113,7 +113,7 @@ export function RemixEntry({
   location: nextLocation,
   navigator,
   static: staticProp = false,
-  UncaughtException = RemixRootDefaultUncaughtError
+  ErrorBoundary = RemixRootDefaultErrorBoundary
 }: {
   children: ReactNode;
   context: EntryContext;
@@ -121,7 +121,7 @@ export function RemixEntry({
   location: Location;
   navigator: Navigator;
   static?: boolean;
-  UncaughtException?: UncaughtExceptionComponent;
+  ErrorBoundary?: ErrorBoundaryComponent;
 }) {
   let {
     manifest,
@@ -288,7 +288,7 @@ export function RemixEntry({
   };
 
   return (
-    <RemixErrorBoundaryImpl location={location} component={UncaughtException}>
+    <RemixErrorBoundaryImpl location={location} component={ErrorBoundary}>
       <Router
         action={action}
         location={location}
@@ -336,20 +336,20 @@ export function RemixRoute({ id: routeId }: { id: string }) {
     </RemixRouteContext.Provider>
   );
 
-  if (routeModule.UncaughtException) {
+  if (routeModule.ErrorBoundary) {
     // Only wrap in error boundary if the route defined one, otherwise let the
     // error bubble to the parent boundary. We could default to using error
     // boundaries around every route, but now if the app doesn't want users
-    // seeing the default Remix UncaughtException component, they *must* define
+    // seeing the default Remix ErrorBoundary component, they *must* define
     // an error boundary for *every* route and that would be annoying. Might as
     // well make it required at that point.
     //
     // By conditionally wrapping like this, we allow apps to define a top level
-    // UncaughtException component and be done with it. Then, if they want to,
-    // they can add more specific boundaries by exporting UncaughtException
+    // ErrorBoundary component and be done with it. Then, if they want to,
+    // they can add more specific boundaries by exporting ErrorBoundary
     // components for whichever routes they please.
     return (
-      <RemixErrorBoundary component={routeModule.UncaughtException}>
+      <RemixErrorBoundary component={routeModule.ErrorBoundary}>
         {element}
       </RemixErrorBoundary>
     );

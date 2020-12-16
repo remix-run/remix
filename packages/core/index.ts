@@ -4,7 +4,7 @@ export type {
   MetaFunction,
   RouteModules,
   RouteModule,
-  UncaughtExceptionComponent
+  ErrorBoundaryComponent
 } from "./build";
 
 export * as commands from "./commands";

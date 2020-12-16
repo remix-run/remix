@@ -1,10 +1,10 @@
 import React from "react";
 import type { Location } from "history";
 import { useLocation } from "react-router-dom";
-import type { UncaughtExceptionComponent } from "@remix-run/core/build";
+import type { ErrorBoundaryComponent } from "@remix-run/core/build";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
-  component?: UncaughtExceptionComponent;
+  component: ErrorBoundaryComponent;
 }>;
 
 // Because our error boundary needs to reset on new locations, and classes can't
@@ -20,7 +20,7 @@ export function RemixErrorBoundary(props: RemixErrorBoundaryProps) {
 
 type RemixErrorBoundaryImplProps = React.PropsWithChildren<{
   location: Location;
-  component: UncaughtExceptionComponent;
+  component: ErrorBoundaryComponent;
 }>;
 
 type RemixErrorBoundaryImplState = {
@@ -33,10 +33,6 @@ export class RemixErrorBoundaryImpl extends React.Component<
   RemixErrorBoundaryImplState
 > {
   state = { error: null, location: this.props.location };
-
-  static defaultProps = {
-    component: RemixDefaultUncaughtException
-  };
 
   static getDerivedStateFromError(error: Error) {
     return { error };
@@ -71,14 +67,14 @@ export class RemixErrorBoundaryImpl extends React.Component<
 }
 
 /**
- * When app routes don't provide an `UncaughtException` component, we default to this.
+ * When app routes don't provide an `ErrorBoundary` component, we default to this.
  */
-export function RemixDefaultUncaughtException({ error }: { error: Error }) {
+export function RemixDefaultErrorBoundary({ error }: { error: Error }) {
   return (
     <main
       // For our tests, if we really care to remove this attribute in production
       // there's a babel transform that does it.
-      data-test-id="remix-uncaught-exception"
+      data-test-id="remix-error-boundary"
       style={{
         border: "solid 2px hsl(10, 50%, 50%)",
         padding: "2rem"
@@ -125,9 +121,9 @@ export function RemixDefaultUncaughtException({ error }: { error: Error }) {
 }
 
 /**
- * When app's don't provide a root level uncaught component, we default to this.
+ * When app's don't provide a root level ErrorBoundary, we default to this.
  */
-export function RemixRootDefaultUncaughtError({ error }: { error: Error }) {
+export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   return (
     <html lang="en">
       <head>
@@ -135,7 +131,7 @@ export function RemixRootDefaultUncaughtError({ error }: { error: Error }) {
         <title>Uncaught Exception!</title>
       </head>
       <body>
-        <RemixDefaultUncaughtException error={error} />
+        <RemixDefaultErrorBoundary error={error} />
       </body>
     </html>
   );

@@ -30,7 +30,7 @@ export default function App() {
   );
 }
 
-export function UncaughtException({ error }) {
+export function ErrorBoundary({ error }) {
   return (
     <html lang="en">
       <head>
