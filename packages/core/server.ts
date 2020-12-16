@@ -363,9 +363,14 @@ async function handleDocumentRequest(
     matches: entryMatches,
     routeData
   };
+
   let serverEntryContext = {
     ...serverHandoff,
     routeModules,
+    componentDidCatchEmulator: {
+      error: undefined,
+      routeId: null
+    },
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
@@ -398,12 +403,39 @@ async function handleDocumentRequest(
     return parentsHeaders;
   }, new Headers());
 
-  return serverEntryModule.default(
-    request,
-    statusCode,
-    headers,
-    serverEntryContext
-  );
+  try {
+    return serverEntryModule.default(
+      request,
+      statusCode,
+      headers,
+      serverEntryContext
+    );
+  } catch (error) {
+    // Go again, this time with the componentDidCatch emulation. Remember, the
+    // routes `componentDidCatch.routeId` because we can't know that here. (Well
+    // ... maybe we could, we could search the error.stack lines for the first
+    // file matching the id of a route from the route manifest, but that would
+    // require us to have source maps installed so the filenames don't get
+    // changed when we bundle, and just feels a little too shakey for me right
+    // now. I'm okay with tracking our position in the route tree while
+    // rendering, that's pretty much how hooks work 😂)
+    serverEntryContext.componentDidCatchEmulator.error = error;
+    try {
+      return serverEntryModule.default(
+        request,
+        statusCode,
+        headers,
+        serverEntryContext
+      );
+    } catch (error) {
+      // Good grief folks, get your act together 😂!
+      // TODO: Something is wrong in serverEntryModule, use the default root error handler
+      return new Response(`Unexpected Server Error\n\n${error.message}`, {
+        status: 500,
+        headers: { "content-type": "text/plain" }
+      });
+    }
+  }
 }
 
 function getDevConfigForMatches(

@@ -90,6 +90,10 @@ interface RemixEntryContextType {
   globalData: AppData;
   manifest: Manifest;
   matches: ClientRouteMatch[];
+  componentDidCatchEmulator?: {
+    routeId: null | string;
+    error?: Error;
+  };
   nextLocation: Location | undefined;
   routeData: RouteData;
   routeModules: RouteModules;
@@ -129,7 +133,8 @@ export function RemixEntry({
     globalData: entryGlobalData,
     routeData: entryRouteData,
     routeModules,
-    serverHandoffString
+    serverHandoffString,
+    componentDidCatchEmulator
   } = entryContext;
 
   let [state, setState] = React.useState({
@@ -281,14 +286,29 @@ export function RemixEntry({
     manifest,
     matches,
     globalData,
+    componentDidCatchEmulator,
     routeData,
     routeModules,
     serverHandoffString,
     nextLocation: nextLocation !== location ? nextLocation : undefined
   };
 
+  // If we tried to render and failed, and the app threw before rendering any
+  // routes, get the error and pass it to the ErrorBoundary to emulate
+  // `componentDidCatch`
+  let maybeServerRenderError =
+    componentDidCatchEmulator &&
+    componentDidCatchEmulator.error &&
+    componentDidCatchEmulator.routeId === null
+      ? componentDidCatchEmulator.error
+      : undefined;
+
   return (
-    <RemixErrorBoundaryImpl location={location} component={ErrorBoundary}>
+    <RemixErrorBoundaryImpl
+      location={location}
+      component={ErrorBoundary}
+      error={maybeServerRenderError}
+    >
       <Router
         action={action}
         location={location}
@@ -320,7 +340,11 @@ function useRemixRouteContext(): RemixRouteContextType {
 }
 
 export function RemixRoute({ id: routeId }: { id: string }) {
-  let { routeData, routeModules } = useRemixEntryContext();
+  let {
+    routeData,
+    routeModules,
+    componentDidCatchEmulator
+  } = useRemixEntryContext();
 
   let data = routeData[routeId];
   let routeModule = routeModules[routeId];
@@ -348,8 +372,28 @@ export function RemixRoute({ id: routeId }: { id: string }) {
     // ErrorBoundary component and be done with it. Then, if they want to,
     // they can add more specific boundaries by exporting ErrorBoundary
     // components for whichever routes they please.
+
+    // Emulate componentDidCatch for server rendering, we only add this if the
+    // route defines it's own error boundary, this emulates the "bubbling" that
+    // happens in the client render.
+    if (componentDidCatchEmulator) {
+      componentDidCatchEmulator.routeId = routeId;
+    }
+
+    // If we tried to render and failed, and this route threw the error, find it
+    // and pass it to the ErrorBoundary to emulate `componentDidCatch`
+    let maybeServerRenderError =
+      componentDidCatchEmulator &&
+      componentDidCatchEmulator.error &&
+      componentDidCatchEmulator.routeId === routeId
+        ? componentDidCatchEmulator.error
+        : undefined;
+
     return (
-      <RemixErrorBoundary component={routeModule.ErrorBoundary}>
+      <RemixErrorBoundary
+        component={routeModule.ErrorBoundary}
+        error={maybeServerRenderError}
+      >
         {element}
       </RemixErrorBoundary>
     );

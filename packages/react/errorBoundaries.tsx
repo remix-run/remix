@@ -5,6 +5,7 @@ import type { ErrorBoundaryComponent } from "@remix-run/core/build";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   component: ErrorBoundaryComponent;
+  error?: Error;
 }>;
 
 // Because our error boundary needs to reset on new locations, and classes can't
@@ -21,6 +22,7 @@ export function RemixErrorBoundary(props: RemixErrorBoundaryProps) {
 type RemixErrorBoundaryImplProps = React.PropsWithChildren<{
   location: Location;
   component: ErrorBoundaryComponent;
+  error?: Error;
 }>;
 
 type RemixErrorBoundaryImplState = {
@@ -32,7 +34,7 @@ export class RemixErrorBoundaryImpl extends React.Component<
   RemixErrorBoundaryImplProps,
   RemixErrorBoundaryImplState
 > {
-  state = { error: null, location: this.props.location };
+  state = { error: this.props.error || null, location: this.props.location };
 
   static getDerivedStateFromError(error: Error) {
     return { error };
@@ -59,65 +61,11 @@ export class RemixErrorBoundaryImpl extends React.Component<
 
   render() {
     if (this.state.error) {
-      return <this.props.component error={this.state.error!} />;
+      return <this.props.component error={this.state.error} />;
     } else {
       return this.props.children;
     }
   }
-}
-
-/**
- * When app routes don't provide an `ErrorBoundary` component, we default to this.
- */
-export function RemixDefaultErrorBoundary({ error }: { error: Error }) {
-  return (
-    <main
-      // For our tests, if we really care to remove this attribute in production
-      // there's a babel transform that does it.
-      data-test-id="remix-error-boundary"
-      style={{
-        border: "solid 2px hsl(10, 50%, 50%)",
-        padding: "2rem"
-      }}
-    >
-      <div>
-        <h1>Uncaught Exception!</h1>
-        <p>
-          If you are not the developer, please click back in your browser and
-          try again.
-        </p>
-        <div
-          style={{
-            fontFamily: `"SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace`,
-            padding: "1rem",
-            margin: "1rem 0",
-            border: "solid 4px"
-          }}
-        >
-          {error.message}
-        </div>
-        <p>
-          There was an uncaught exception in your application. Check the browser
-          console and/or server console to inspect the error.
-        </p>
-        <p>
-          If you are the developer, consider adding your own error boundary so
-          users don't see this page when unexpected errors happen in production!
-        </p>
-        <p>
-          Read more about{" "}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href="https://remix.run/dashboard/docs/errors"
-          >
-            Error Handling in Remix
-          </a>
-          .
-        </p>
-      </div>
-    </main>
-  );
 }
 
 /**
@@ -131,7 +79,53 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
         <title>Uncaught Exception!</title>
       </head>
       <body>
-        <RemixDefaultErrorBoundary error={error} />
+        <main
+          // For our tests, if we really care to remove this attribute in production
+          // there's a babel transform that does it.
+          data-test-id="remix-error-boundary"
+          style={{
+            border: "solid 2px hsl(10, 50%, 50%)",
+            padding: "2rem"
+          }}
+        >
+          <div>
+            <h1>Uncaught Exception!</h1>
+            <p>
+              If you are not the developer, please click back in your browser
+              and try again.
+            </p>
+            <div
+              style={{
+                fontFamily: `"SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace`,
+                padding: "1rem",
+                margin: "1rem 0",
+                border: "solid 4px"
+              }}
+            >
+              {error.message}
+            </div>
+            <p>
+              There was an uncaught exception in your application. Check the
+              browser console and/or server console to inspect the error.
+            </p>
+            <p>
+              If you are the developer, consider adding your own error boundary
+              so users don't see this page when unexpected errors happen in
+              production!
+            </p>
+            <p>
+              Read more about{" "}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href="https://remix.run/dashboard/docs/errors"
+              >
+                Error Handling in Remix
+              </a>
+              .
+            </p>
+          </div>
+        </main>
       </body>
     </html>
   );

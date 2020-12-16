@@ -18,6 +18,20 @@ export interface ServerHandoff {
 export interface EntryContext extends ServerHandoff {
   routeModules: RouteModules;
   serverHandoffString?: string;
+
+  // Because componentDidCatch is stateful it doesn't participate in server
+  // rendering, we emulate it with this value. Each RemixRoute mutates the value
+  // so we know which route was the last to attempt to render. We hen use it to
+  // render a second time along with the caught error and emulate
+  // `componentDidCatch` on the server render 🎉. Optional because it only
+  // exists in the server render, we don't hand this off to the browser because
+  // componentDidCatch already works there
+  componentDidCatchEmulator?: {
+    error?: Error;
+
+    // `null` means the app layout threw before any routes rendered
+    routeId: null;
+  };
 }
 
 export interface EntryManifest {
