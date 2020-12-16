@@ -38,6 +38,8 @@ export interface RouteModules {
   [routeId: string]: RouteModule;
 }
 
+export type UncaughtExceptionComponent = ComponentType<{ error: Error }>;
+
 /**
  * A module that contains info about a route including headers, meta tags, and
  * the route component for rendering HTML markup.
@@ -46,6 +48,7 @@ export interface RouteModule {
   default: ComponentType;
   headers?: HeadersFunction;
   meta?: MetaFunction;
+  UncaughtException?: UncaughtExceptionComponent;
 }
 
 /**

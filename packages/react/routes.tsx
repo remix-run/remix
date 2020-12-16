@@ -34,11 +34,7 @@ export function createClientRoute(
     caseSensitive: !!entryRoute.caseSensitive,
     id: entryRoute.id,
     path: entryRoute.path,
-    element: (
-      <RemixErrorBoundary component={RemixDefaultUncaughtException}>
-        <Comp id={entryRoute.id} />
-      </RemixErrorBoundary>
-    )
+    element: <Comp id={entryRoute.id} />
   };
 }
 

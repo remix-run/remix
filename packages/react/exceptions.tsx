@@ -1,13 +1,10 @@
 import React from "react";
 import type { Location } from "history";
 import { useLocation } from "react-router-dom";
-
-type UncaughtExceptionProps = { error: Error };
+import type { UncaughtExceptionComponent } from "@remix-run/core/build";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
-  component:
-    | React.FunctionComponent<UncaughtExceptionProps>
-    | React.ComponentClass<UncaughtExceptionProps>;
+  component?: UncaughtExceptionComponent;
 }>;
 
 // Because our error boundary needs to reset on new locations, and classes can't
@@ -23,9 +20,7 @@ export function RemixErrorBoundary(props: RemixErrorBoundaryProps) {
 
 type RemixErrorBoundaryImplProps = React.PropsWithChildren<{
   location: Location;
-  component:
-    | React.FunctionComponent<UncaughtExceptionProps>
-    | React.ComponentClass<UncaughtExceptionProps>;
+  component: UncaughtExceptionComponent;
 }>;
 
 type RemixErrorBoundaryImplState = {

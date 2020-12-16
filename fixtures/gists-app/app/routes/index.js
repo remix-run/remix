@@ -42,12 +42,12 @@ export default function Index() {
           </li>
           <li>
             <Link to="/exceptions?throw" className="text-blue-700 underline">
-              Root Exception
+              Route without UncaughtException
             </Link>
           </li>
           <li>
             <Link to="/exceptions/nested" className="text-blue-700 underline">
-              Nested Exception
+              Nested route with UncaughtException
             </Link>
           </li>
         </ul>

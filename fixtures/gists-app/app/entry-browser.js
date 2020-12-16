@@ -1,10 +1,10 @@
 import ReactDOM from "react-dom";
 import Remix from "@remix-run/react/browser";
 
-import App from "./App";
+import App, { UncaughtException } from "./App";
 
 ReactDOM.hydrate(
-  <Remix>
+  <Remix UncaughtException={UncaughtException}>
     <App />
   </Remix>,
   document

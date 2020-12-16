@@ -3,6 +3,7 @@ import { Action, createPath } from "history";
 import type { ReactElement, ReactNode } from "react";
 import React from "react";
 import type { EntryContext } from "@remix-run/core";
+import type { UncaughtExceptionComponent } from "@remix-run/core";
 
 import { RemixEntry } from "./components";
 
@@ -10,6 +11,7 @@ export interface RemixServerProps {
   children: ReactNode;
   context: EntryContext;
   url: string | URL;
+  UncaughtException?: UncaughtExceptionComponent;
 }
 
 /**
@@ -20,7 +22,8 @@ export interface RemixServerProps {
 export default function RemixServer({
   children,
   context,
-  url
+  url,
+  UncaughtException
 }: RemixServerProps): ReactElement {
   if (typeof url === "string") {
     url = new URL(url);
@@ -88,6 +91,7 @@ export default function RemixServer({
       location={location}
       navigator={staticNavigator}
       static={true}
+      UncaughtException={UncaughtException}
     />
   );
 }

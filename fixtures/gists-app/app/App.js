@@ -29,3 +29,22 @@ export default function App() {
     </html>
   );
 }
+
+export function UncaughtException({ error }) {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <title>Oops!</title>
+        <link
+          rel="stylesheet"
+          href="//unpkg.com/@exampledev/new.css@1.1.3/new.css"
+        />
+      </head>
+      <body>
+        <h1>Oh snizzy, there was an error</h1>
+        <pre>{error.message}</pre>
+      </body>
+    </html>
+  );
+}

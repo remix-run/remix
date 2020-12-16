@@ -9,7 +9,10 @@ export default function RenderError() {
   return (
     <>
       <h1>Exceptions</h1>
-      <p>This exception is thrown inside a nested route.</p>
+      <p>
+        This is the parent route, it rendered just fine. Any errors in the
+        children will be handled there, but this layout renders normally.
+      </p>
       <Outlet />
     </>
   );

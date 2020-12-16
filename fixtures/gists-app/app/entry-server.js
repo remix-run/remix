@@ -1,7 +1,7 @@
 import ReactDOMServer from "react-dom/server";
 import Remix from "@remix-run/react/server";
 
-import App from "./App";
+import App, { UncaughtException } from "./App";
 
 export default function handleRequest(
   request,
@@ -10,7 +10,11 @@ export default function handleRequest(
   remixContext
 ) {
   let markup = ReactDOMServer.renderToString(
-    <Remix context={remixContext} url={request.url}>
+    <Remix
+      context={remixContext}
+      url={request.url}
+      UncaughtException={UncaughtException}
+    >
       <App />
     </Remix>
   );

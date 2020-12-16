@@ -3,7 +3,8 @@ export type {
   HeadersFunction,
   MetaFunction,
   RouteModules,
-  RouteModule
+  RouteModule,
+  UncaughtExceptionComponent
 } from "./build";
 
 export * as commands from "./commands";

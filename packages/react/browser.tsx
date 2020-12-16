@@ -3,6 +3,7 @@ import React from "react";
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
 import type { EntryContext } from "@remix-run/core";
+import type { UncaughtExceptionComponent } from "@remix-run/core";
 
 import { RemixEntry } from "./components";
 
@@ -18,6 +19,7 @@ const entryContext = window.__remixContext;
 
 export interface RemixBrowserProps {
   children: ReactNode;
+  UncaughtException?: UncaughtExceptionComponent;
 }
 
 /**
@@ -26,7 +28,8 @@ export interface RemixBrowserProps {
  * that was received from the server.
  */
 export default function RemixBrowser({
-  children
+  children,
+  UncaughtException
 }: RemixBrowserProps): ReactElement {
   let historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
@@ -51,6 +54,7 @@ export default function RemixBrowser({
       action={state.action}
       location={state.location}
       navigator={history}
+      UncaughtException={UncaughtException}
     />
   );
 }
