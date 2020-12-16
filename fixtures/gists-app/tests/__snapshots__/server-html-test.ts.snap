@@ -20,6 +20,11 @@ exports[`the server HTML for the root URL is correct 1`] = `
           >
         </li>
         <li><a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a></li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/render-error\\"
+            >Error during render</a
+          >
+        </li>
       </ul>
     </nav>
     <div>I am shared</div>

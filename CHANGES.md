@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Added root error boundary so render errors on browser transitions are handled
+
 ## 0.8.3 - Sun Dec 13 2020
 
 ### Bug fixes

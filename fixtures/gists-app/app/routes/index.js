@@ -40,6 +40,11 @@ export default function Index() {
               Broken link
             </Link>
           </li>
+          <li>
+            <Link to="/render-error" className="text-blue-700 underline">
+              Error during render
+            </Link>
+          </li>
         </ul>
       </nav>
       <Shared />

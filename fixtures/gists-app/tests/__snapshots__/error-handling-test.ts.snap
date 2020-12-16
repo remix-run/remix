@@ -1,0 +1,32 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`uncaught exceptions render errors renders the uncaught exception page on fetch requests 1`] = `
+"<main id=\\"remix-uncaught-error\\">
+  <div>
+    <h1><span>Uncaught Exception!</span></h1>
+    <p class=\\"info\\">
+      If you are not the developer, please click back in your browser and try
+      again.
+    </p>
+    <div class=\\"error\\">(void 0) is not a function</div>
+    <p>
+      There was an uncaught exception in your application. Check the browser
+      console and/or server console to inspect the error.
+    </p>
+    <p>
+      If you are the developer, consider adding your own error boundary so users
+      don&apos;t see this page when unexpected errors happen in production!
+    </p>
+    <p>
+      Read more about
+      <a
+        target=\\"_blank\\"
+        rel=\\"noreferrer\\"
+        href=\\"https://remix.run/dashboard/docs/errors\\"
+        >Error Handling in Remix</a
+      >.
+    </p>
+  </div>
+</main>
+"
+`;

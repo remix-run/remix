@@ -281,14 +281,16 @@ export function RemixEntry({
   };
 
   return (
-    <Router
-      action={action}
-      location={location}
-      navigator={navigator}
-      static={staticProp}
-    >
-      <RemixEntryContext.Provider value={context} children={children} />
-    </Router>
+    <RemixErrorBoundary location={location}>
+      <Router
+        action={action}
+        location={location}
+        navigator={navigator}
+        static={staticProp}
+      >
+        <RemixEntryContext.Provider value={context} children={children} />
+      </Router>
+    </RemixErrorBoundary>
   );
 }
 
@@ -566,6 +568,140 @@ let Form = React.forwardRef<HTMLFormElement, FormProps>(
 );
 
 export { Form };
+
+function RemixUncaughtException({ error }: { error: Error }) {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <title>Uncaught Exception!</title>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              html, body {
+                height: 100%;
+              }
+              body {
+                margin: 0;
+                font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+                background: #0827F5;
+                color: white;
+                line-height: 1.4;
+              }
+              main {
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: justify;
+              }
+              h1 {
+                text-align: center;
+              }
+              h1 span {
+                background: white;
+                color: #0827F5;
+              }
+              main {
+                max-width: 600px;
+                margin: auto;
+              }
+              main > div {
+                padding-bottom: 20vh;
+              }
+              .error {
+                border: solid 4px;
+                padding: 1rem;
+              }
+              .info {
+                font-size: 120%;
+              }
+              a {
+                color: inherit;
+                text-decoration: underline;
+              }
+          `
+          }}
+        />
+      </head>
+      <body>
+        <main id="remix-uncaught-error">
+          <div>
+            <h1>
+              <span>Uncaught Exception!</span>
+            </h1>
+            <p className="info">
+              If you are not the developer, please click back in your browser
+              and try again.
+            </p>
+            <div className="error">{error.message}</div>
+            <p>
+              There was an uncaught exception in your application. Check the
+              browser console and/or server console to inspect the error.
+            </p>
+            <p>
+              If you are the developer, consider adding your own error boundary
+              so users don't see this page when unexpected errors happen in
+              production!
+            </p>
+            <p>
+              Read more about{" "}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href="https://remix.run/dashboard/docs/errors"
+              >
+                Error Handling in Remix
+              </a>
+              .
+            </p>
+          </div>
+        </main>
+      </body>
+    </html>
+  );
+}
+
+type RemixErrorBoundaryProps = { location: Location };
+type RemixErrorBoundaryState = { error: Error | null; location: Location };
+
+export class RemixErrorBoundary extends React.Component<
+  React.PropsWithChildren<RemixErrorBoundaryProps>,
+  RemixErrorBoundaryState
+> {
+  state = { error: null, location: this.props.location };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  static getDerivedStateFromProps(
+    props: RemixErrorBoundaryProps,
+    state: RemixErrorBoundaryState
+  ) {
+    // When we get into an error state, the user will likely click "back" to the
+    // previous page that didn't have an error. Because this wraps the entire
+    // application (even the HTML!) that will have no effect--the error page
+    // continues to display. This gives us a mechanism to recover from the error
+    // when the location changes.
+    //
+    // Whether we're in an error state or not, we update the location in state
+    // so that when we are in an error state, it gets reset when a new location
+    // comes in and the user recovers from the error.
+    if (state.location !== props.location) {
+      return { error: null, location: props.location };
+    }
+    return state;
+  }
+
+  render() {
+    if (this.state.error) {
+      return <RemixUncaughtException error={this.state.error!} />;
+    } else {
+      return this.props.children;
+    }
+  }
+}
 
 /**
  * Setup a callback to be fired on the window's `beforeunload` event. This is

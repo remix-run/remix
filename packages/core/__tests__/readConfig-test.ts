@@ -98,6 +98,11 @@ describe("readConfig", () => {
             "id": "routes/page/three",
             "path": "page/three",
           },
+          "routes/render-error": Object {
+            "componentFile": "routes/render-error.js",
+            "id": "routes/render-error",
+            "path": "render-error",
+          },
         },
         "routes": Array [
           Object {
@@ -159,6 +164,11 @@ describe("readConfig", () => {
             "componentFile": "routes/page/three.md",
             "id": "routes/page/three",
             "path": "page/three",
+          },
+          Object {
+            "componentFile": "routes/render-error.js",
+            "id": "routes/render-error",
+            "path": "render-error",
           },
           Object {
             "componentFile": "pages/one.mdx",
