@@ -1,11 +1,11 @@
 import { readConfig } from "./config";
 import { Request, Response } from "./fetch";
-import { createRemixRequestHandler } from "./server";
+import { createRequestHandler as createRemixRequestHandler } from "./server";
 import type { RequestHandler } from "./server";
 import { Session } from "./sessions";
 
+import type { AppLoadContext } from "./buildModules";
 import type { RemixConfig } from "./config";
-import type { AppLoadContext } from "./data";
 
 interface Adapter {
   createRemixRequest: (...platformArgs: any[]) => Request;

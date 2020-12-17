@@ -38,9 +38,7 @@ export interface RequestHandler {
  * dynamically generates the build at request time for only the modules needed
  * to serve that request.
  */
-export function createRemixRequestHandler(
-  remixConfig: RemixConfig
-): RequestHandler {
+export function createRequestHandler(remixConfig: RemixConfig): RequestHandler {
   return async (request, session, loadContext = {}) => {
     let url = new URL(request.url);
 
