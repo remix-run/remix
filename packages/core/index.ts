@@ -46,7 +46,11 @@ export {
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
-export { createRequestHandler } from "./server";
+export { createRemixRequestHandler } from "./server";
 
 export type { Session, SessionMutableData, SessionOnDestroy } from "./sessions";
 export { createSession, createSessionFacade } from "./sessions";
+
+export { warnOnce } from "./warnings";
+
+export { createAdapter } from "./adapter";

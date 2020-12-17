@@ -274,7 +274,7 @@ function getBuildPlugins(
       extensions: [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"],
       presets: [
         ["@babel/preset-react", { runtime: "automatic" }],
-        ["@babel/preset-env", { targets: { node: "12" } }],
+        ["@babel/preset-env", { bugfixes: true, targets: { node: "12" } }],
         [
           "@babel/preset-typescript",
           {
@@ -296,7 +296,11 @@ function getBuildPlugins(
   );
 
   if (mode === BuildMode.Production) {
-    plugins.push(terser());
+    plugins.push(
+      terser({
+        ecma: 2017
+      })
+    );
   }
 
   plugins.push(
@@ -336,8 +340,10 @@ function getCommonOutputOptions(build: RemixBuild): OutputOptions {
         : "[name][extname]",
     chunkFileNames: "_shared/[name]-[hash].js",
     entryFileNames:
-      mode === BuildMode.Production ? "[name]-[hash].js" : "[name].js",
-    manualChunks(id: string) {
+      mode === BuildMode.Production && target === BuildTarget.Browser
+        ? "[name]-[hash].js"
+        : "[name].js",
+    manualChunks(id) {
       return getNpmPackageName(id);
     }
   };
@@ -351,7 +357,9 @@ function getNpmPackageName(id: string): string | undefined {
     let packageName = pieces[index + 1];
 
     if (packageName.startsWith("@") && pieces.length > index + 2) {
-      packageName += "/" + pieces[index + 2];
+      packageName =
+        // S3 hates @folder, so we switch it to __
+        packageName.replace("@", "__") + "/" + pieces[index + 2];
     }
 
     return packageName;

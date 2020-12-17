@@ -4,7 +4,7 @@ Remix is a framework for shipping better websites.
 
 ## Development
 
-```
+```bash
 # install everything
 yarn install
 
@@ -23,6 +23,16 @@ yarn run version major|minor|patch|prerelease [prereleaseId]
 yarn run publish
 # or, to automatically publish from GitHub Actions
 git push origin --follow-tags
+
+# cut a prerelease
+# make a branch to hold your commits
+git checkout -b release/0.8.0
+
+# add the pre release tag
+yarn run version prerelease pre
+
+# push as usual
+git push origin release/0.8.0 --follow-tags
 ```
 
 ## Roadmap

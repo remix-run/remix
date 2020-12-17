@@ -75,7 +75,7 @@ async function updateChanges(version, date = new Date()) {
   let file = path.resolve(__dirname, "../CHANGES.md");
   let contents = await fsp.readFile(file, "utf-8");
   let updated = contents.replace(
-    /## Unreleased/,
+    /(## Unreleased)|(## \d+\.\d+\.\d+-\w+\.\d+)/,
     `## ${version} - ${date.toDateString()}`
   );
   await fsp.writeFile(file, updated);
@@ -135,7 +135,7 @@ async function run(args) {
   );
 
   // - Update platform versions + @remix-run/core dep
-  for (let platform of ["express"]) {
+  for (let platform of ["architect", "express", "vercel"]) {
     await updatePackageConfig(platform, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/core"] = nextVersion;

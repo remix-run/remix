@@ -14,11 +14,13 @@
   },
   "workspaces": [
     "fixtures/gists-app",
+    "packages/architect",
     "packages/cli",
     "packages/core",
     "packages/data",
     "packages/express",
-    "packages/react"
+    "packages/react",
+    "packages/vercel"
   ],
   "dependencies": {
     "@babel/core": "^7.10.4",
@@ -37,6 +39,7 @@
     "@types/react-test-renderer": "^17.0.0",
     "@types/retry": "^0.12.0",
     "@types/ssri": "^7.1.0",
+    "@types/semver": "^7.3.4",
     "@typescript-eslint/eslint-plugin": "^4.8.2",
     "@typescript-eslint/parser": "^4.8.2",
     "babel-eslint": "10.x",
@@ -62,7 +65,7 @@
     "react-router-dom": "^6.0.0-beta.0",
     "rollup": "^2.26.11",
     "rollup-plugin-copy": "^3.3.0",
-    "semver": "^7.3.2",
+    "semver": "^7.3.4",
     "typescript": "^4.1.2",
     "unified": "^9.2.0"
   },

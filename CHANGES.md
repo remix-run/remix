@@ -11,7 +11,34 @@ This is a history of changes to [Remix](https://remix.run).
 ### Breaking Changes
 
 - Removes `data` directory (and `dataDirectory` from `remix.config.js`)
-- `data/global.js` is now `app/global-data.js`
+- Renames `data/global.js` to `app/global-data.js`
+
+## 0.8.3 - Sun Dec 13 2020
+
+### Bug fixes
+
+- fixed `<Form>` on Vercel
+
+## 0.8.2 - Fri Dec 12 2020
+
+### Bug fixes
+
+- Stopped hashing server bundle files so deployments work on Vercel
+
+## 0.8.1 - Fri Dec 11 2020
+
+### Improvements
+
+- Added @remix-run/vercel adapter to deploy to Vercel
+- Added @remix-run/architect adapter to deploy to AWS with Architect
+- Added React 17 and new JSX transform support
+
+### Bug Fixes
+
+- Can pass `ref` to `<Form/>`
+- Browser module names no longer cause problems for hosts (no longer write to `public/_shared/node_modules`)
+- Fixed `Loader` and `Action` types for data modules
+- Fixed dependency declarations so apps can use different React versions (16.8+, 17.x+)
 
 ## 0.8.0 - Wed Nov 25 2020
 

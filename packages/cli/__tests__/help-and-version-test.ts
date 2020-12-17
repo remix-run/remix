@@ -2,6 +2,7 @@ import childProcess from "child_process";
 import fs from "fs";
 import path from "path";
 import util from "util";
+import semver from "semver";
 
 const execFile = util.promisify(childProcess.execFile);
 
@@ -42,14 +43,14 @@ describe("remix cli", () => {
   describe("the --version flag", () => {
     it("prints the current version", async () => {
       let { stdout } = await execFile("node", [remix, "--version"]);
-      expect(stdout.trim()).toEqual(expect.stringMatching(/^\d+\.\d+\.\d+$/));
+      expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
 
   describe("the -v flag", () => {
     it("prints the current version", async () => {
       let { stdout } = await execFile("node", [remix, "-v"]);
-      expect(stdout.trim()).toEqual(expect.stringMatching(/^\d+\.\d+\.\d+$/));
+      expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
 });

@@ -1,25 +1,17 @@
-import { URL } from "url";
 import { PassThrough } from "stream";
+import { URL } from "url";
 import type * as express from "express";
-import type {
-  AppLoadContext,
-  RemixConfig,
-  RequestHandler as RemixRequestHandler,
-  RequestInit,
-  Response,
-  Session
-} from "@remix-run/core";
+import type { RequestInit } from "@remix-run/core";
 import {
+  createAdapter,
   Headers,
   Request,
-  createRequestHandler as createRemixRequestHandler,
   createSession,
   createSessionFacade,
-  readConfig as readRemixConfig
+  warnOnce
 } from "@remix-run/core";
 
 import "./fetchGlobals";
-import { warnOnce } from "./warnings";
 
 declare module "express" {
   interface Request {
@@ -27,71 +19,42 @@ declare module "express" {
   }
 }
 
-/**
- * A function that returns the `context` object for data loaders and actions.
- */
-export interface GetLoadContext {
-  (req: express.Request, res: express.Response): AppLoadContext;
+interface ExpressSessionDestroy {
+  (callback: (error?: Error) => void): void;
 }
 
-interface RequestHandler {
-  (req: express.Request, res: express.Response): Promise<void>;
-}
+export let createRequestHandler = createAdapter({
+  createRemixRequest(req: express.Request) {
+    let origin = `${req.protocol}://${req.hostname}`;
+    let url = new URL(req.url, origin);
 
-function handleConfigError(error: Error) {
-  console.error(`There was an error reading the Remix config`);
-  console.error(error);
-  process.exit(1);
-}
+    let init: RequestInit = {
+      method: req.method,
+      headers: createRemixHeaders(req.headers)
+    };
 
-/**
- * Creates a request handler for Express that generates the response using
- * Remix routing and data loading.
- */
-export function createRequestHandler({
-  getLoadContext,
-  root: remixRoot,
-  enableSessions = true,
-  maxBufferSize = 16384
-}: {
-  getLoadContext?: GetLoadContext;
-
-  /**
-   * The root directory of the Remix app.
-   */
-  root?: string;
-
-  /**
-   * Set this `false` to silence the warning about session support not being
-   * enabled when not using an Express session middleware. Defaults to `true`.
-   */
-  enableSessions?: boolean;
-
-  /**
-   * The maximum number of bytes to store in the internal buffer before ceasing
-   * to read from the request body stream. Defaults to 16,384 (16kb).
-   */
-  maxBufferSize?: number;
-} = {}): RequestHandler {
-  let handleRequest: RemixRequestHandler;
-  let remixConfig: RemixConfig;
-  let remixConfigPromise = readRemixConfig(remixRoot, process.env.NODE_ENV);
-
-  // If there is a config error, catch it early and exit. But keep this function
-  // sync in case they don't have top-level await (unflagged in node v14.8.0).
-  remixConfigPromise.catch(handleConfigError);
-
-  return async (req: express.Request, res: express.Response) => {
-    if (!remixConfig) {
-      try {
-        remixConfig = await remixConfigPromise;
-      } catch (error) {
-        handleConfigError(error);
-      }
-
-      handleRequest = createRemixRequestHandler(remixConfig);
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
     }
 
+    return new Request(url.toString(), init);
+  },
+
+  sendPlatformResponse(remixResponse, _session, _req, res: express.Response) {
+    res.status(remixResponse.status);
+
+    for (let [key, value] of remixResponse.headers.entries()) {
+      res.set(key, value);
+    }
+
+    if (Buffer.isBuffer(remixResponse.body)) {
+      res.end(remixResponse.body);
+    } else {
+      remixResponse.body.pipe(res);
+    }
+  },
+
+  createRemixSession(enableSessions: boolean, req: express.Request) {
     warnOnce(
       !enableSessions || !!req.session,
       "Your Express app does not include a session middleware (or `req.session` " +
@@ -101,62 +64,37 @@ export function createRequestHandler({
         "`createRequestHandler({ enableSessions: false })` to silence this warning."
     );
 
-    let remixReq = createRemixRequest(req, maxBufferSize);
-    let session = createRemixSession(req);
-
-    let loadContext: AppLoadContext;
-    if (getLoadContext) {
-      try {
-        loadContext = await getLoadContext(req, res);
-      } catch (error) {
-        console.error(error);
-        res.status(500).send();
-        return;
-      }
+    if (!req.session) {
+      return createSessionFacade(
+        "You are trying to use sessions but you did not use a session middleware " +
+          "in your Express app, so this functionality is not available. Please use " +
+          "a session middleware such as `express-session` or `cookie-session` " +
+          "to enable sessions."
+      );
     }
 
-    let remixRes: Response;
-    try {
-      remixRes = await handleRequest(remixReq, session, loadContext);
-    } catch (error) {
-      // This is probably an error in one of the loaders.
-      console.error(error);
-      res.status(500).send();
-      return;
-    }
-
-    res.status(remixRes.status);
-
-    for (let [key, value] of remixRes.headers.entries()) {
-      res.set(key, value);
-    }
-
-    if (Buffer.isBuffer(remixRes.body)) {
-      res.end(remixRes.body);
-    } else {
-      remixRes.body.pipe(res);
-    }
-  };
-}
-
-function createRemixRequest(
-  req: express.Request,
-  highWaterMark: number
-): Request {
-  let origin = `${req.protocol}://${req.headers.host}`;
-  let url = new URL(req.url, origin);
-
-  let init: RequestInit = {
-    method: req.method,
-    headers: createRemixHeaders(req.headers)
-  };
-
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req.pipe(new PassThrough({ highWaterMark }));
+    return createSession(req.session, () => {
+      return new Promise((accept, reject) => {
+        if (req.session) {
+          if (typeof req.session.destroy === "function") {
+            (req.session.destroy as ExpressSessionDestroy)(error => {
+              if (error) {
+                reject(error);
+              } else {
+                accept();
+              }
+            });
+          } else {
+            req.session = null;
+            accept();
+          }
+        } else {
+          accept();
+        }
+      });
+    });
   }
-
-  return new Request(url.toString(), init);
-}
+});
 
 function createRemixHeaders(
   requestHeaders: express.Request["headers"]
@@ -174,40 +112,4 @@ function createRemixHeaders(
       return memo;
     }, {} as { [headerName: string]: string })
   );
-}
-
-interface ExpressSessionDestroy {
-  (callback: (error?: Error) => void): void;
-}
-
-function createRemixSession(req: express.Request): Session {
-  if (!req.session) {
-    return createSessionFacade(
-      "You are trying to use sessions but you did not use a session middleware " +
-        "in your Express app, so this functionality is not available. Please use " +
-        "a session middleware such as `express-session` or `cookie-session` " +
-        "to enable sessions."
-    );
-  }
-
-  return createSession(req.session, () => {
-    return new Promise((accept, reject) => {
-      if (req.session) {
-        if (typeof req.session.destroy === "function") {
-          (req.session.destroy as ExpressSessionDestroy)(error => {
-            if (error) {
-              reject(error);
-            } else {
-              accept();
-            }
-          });
-        } else {
-          req.session = null;
-          accept();
-        }
-      } else {
-        accept();
-      }
-    });
-  });
 }

@@ -1,0 +1,26 @@
+{
+  "name": "remix-starter-architect",
+  "version": "1.0.0",
+  "scripts": {
+    "prebuild": "cp -r ../../../../../build/node_modules/* node_modules",
+    "build": "node node_modules/@remix-run/cli build",
+    "predev": "cp -r ../../../../../build/node_modules/* node_modules",
+    "dev": "node node_modules/@remix-run/cli run"
+  },
+  "dependencies": {
+    "@architect/architect": "^8.2.1",
+    "@architect/functions": "^3.13.8",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-router": "^6.0.0-beta.0",
+    "react-router-dom": "^6.0.0-beta.0"
+  },
+  "devDependencies": {
+    "concurrently": "^5.3.0",
+    "cross-env": "^7.0.2",
+    "nodemon": "^2.0.5"
+  },
+  "engines": {
+    "node": "12"
+  }
+}
