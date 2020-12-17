@@ -2,6 +2,7 @@ import path from "path";
 import type {
   ExternalOption,
   InputOption,
+  InputOptions,
   OutputOptions,
   Plugin,
   RollupError,
@@ -63,6 +64,7 @@ export async function build(
     external: getExternalOption(target),
     input: getInputOption(config, target),
     treeshake: getTreeshakeOption(target),
+    onwarn: getOnWarnOption(target),
     plugins
   });
 
@@ -100,6 +102,7 @@ export function watch(
   let watcher = rollup.watch({
     external: getExternalOption(target),
     treeshake: getTreeshakeOption(target),
+    onwarn: getOnWarnOption(target),
     plugins: [
       watchInput({
         sourceDir: config.rootDirectory,
@@ -221,17 +224,39 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
 function getTreeshakeOption(
   target: BuildTarget
 ): TreeshakingOptions | undefined {
-  return target === BuildTarget.Browser
-    ? // When building for the browser, we need to be very aggressive with
-      // code removal so we can be sure all imports of server-only code are
-      // removed.
-      {
-        // Assume modules do not have side-effects.
-        moduleSideEffects: false,
-        // Assume reading a property of an object never has side-effects.
-        propertyReadSideEffects: false
+  if (target === BuildTarget.Browser) {
+    // When building for the browser, we need to be very aggressive with
+    // code removal so we can be sure all imports of server-only code are
+    // removed.
+    return {
+      // Assume modules do not have side-effects.
+      moduleSideEffects: false,
+      // Assume reading a property of an object never has side-effects.
+      propertyReadSideEffects: false
+    };
+  }
+
+  return undefined;
+}
+
+function getOnWarnOption(
+  target: BuildTarget
+): InputOptions["onwarn"] | undefined {
+  if (target === BuildTarget.Browser) {
+    return (warning, warn) => {
+      if (warning.code === "EMPTY_BUNDLE") {
+        // Ignore "Generated an empty chunk: blah" warnings when building for
+        // the browser. There may be quite a few of them because we are
+        // aggressively removing server-only packages from the build.
+        // TODO: Can we get Rollup to avoid generating these chunks entirely?
+        return;
       }
-    : undefined;
+
+      warn(warning);
+    };
+  }
+
+  return undefined;
 }
 
 function getBuildPlugins(
