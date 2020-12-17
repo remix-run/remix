@@ -1,6 +1,25 @@
 import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
+import { json, parseFormBody, redirect } from "@remix-run/data";
+
+export function loader({ session }) {
+  return json({
+    body: JSON.parse(session.get("body") || null)
+  });
+}
+
+export async function action({ request, session }) {
+  let body = Object.fromEntries(await parseFormBody(request));
+
+  session.flash("body", JSON.stringify(body));
+
+  if (body.slow === "on") {
+    await new Promise(res => setTimeout(res, 2000));
+  }
+
+  return redirect("/methods");
+}
 
 export default function Methods() {
   let data = useRouteData<{ method: string; body: any }>();

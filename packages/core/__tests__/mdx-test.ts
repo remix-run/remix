@@ -88,7 +88,7 @@ async function bundleMdxFile(
   let filepath = path.resolve(__dirname, "fixtures", filename);
   let bundle = await rollup({
     input: filepath,
-    plugins: [mdxPlugin(mdxConfig), ...getPlugins()],
+    plugins: [mdxPlugin({ mdxConfig }), ...getPlugins()],
     external: ["@mdx-js/react"]
   });
   let code = await getBundleOutput(bundle);

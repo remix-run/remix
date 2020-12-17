@@ -1,5 +1,6 @@
+import { BuildMode, BuildTarget } from "./build";
 import { readConfig } from "./config";
-import { BuildMode, BuildTarget, build, write } from "./compiler";
+import { build, write } from "./compiler";
 import { startAssetServer } from "./assetServer";
 
 /**

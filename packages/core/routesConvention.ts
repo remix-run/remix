@@ -3,28 +3,23 @@ import path from "path";
 
 import type { ConfigRouteObject, DefineRoute } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
+import invariant from "./invariant";
 
 /**
- * Defines routes using the filesystem convention.
+ * Defines routes using the filesystem convention in `app/routes`. The rules are:
  *
- * Routes are stored in two locations: `app/routes` and `data/routes`.
- * Subdirectories are used for nested routes.
- *
- * Route paths are derived from the file path. A `.` in the filename indicates
- * a `/` in the URL (a "nested" URL) but no route nesting. A `$` in the
- * filename may be used for dynamic URL segments.
+ * - Route paths are derived from the file path. A `.` in the filename indicates
+ *   a `/` in the URL (a "nested" URL, but no route nesting). A `$` in the
+ *   filename indicates a dynamic URL segment.
+ * - Subdirectories are used for nested routes.
  *
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(
-  appDir: string,
-  dataDir: string
-): ConfigRouteObject[] {
+export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
   let routeFiles: {
     [routeId: string]: {
-      component?: string;
-      loader?: string;
+      module?: string;
       styles?: string;
     };
   } = {};
@@ -47,20 +42,22 @@ export function defineConventionalRoutes(
       let routePath = createRoutePath(
         routeId.slice((parentRouteId || "routes").length + 1)
       );
-      let { component, loader, styles } = routeFiles[routeId];
+      let { module, styles } = routeFiles[routeId];
 
-      defineRoute(routePath, component, { loader, styles }, () => {
+      invariant(module, `Missing module for route id "${routeId}"`);
+
+      defineRoute(routePath, module, { styles }, () => {
         defineNestedRoutes(defineRoute, routeId);
       });
     }
   }
 
-  // First, find all routes/styles defined in app/routes
+  // First, find all route modules & styles in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
     let files = findOrCreateFiles(path.join("routes", file));
 
-    if (isComponentFile(file)) {
-      files.component = path.join("routes", file);
+    if (isModuleFile(file)) {
+      files.module = path.join("routes", file);
     } else if (isStylesFile(file)) {
       files.styles = path.join("routes", file);
     } else {
@@ -70,20 +67,7 @@ export function defineConventionalRoutes(
     }
   });
 
-  // Then find all routes defined in data/routes
-  visitFiles(path.join(dataDir, "routes"), file => {
-    let files = findOrCreateFiles(path.join("routes", file));
-
-    if (isLoaderFile(file)) {
-      files.loader = path.join("routes", file);
-    } else {
-      throw new Error(
-        `Invalid route loader file: ${path.join(dataDir, "routes", file)}`
-      );
-    }
-  });
-
-  // Finally, recurse through the manifest and define them all
+  // Then define them all
   return defineRoutes(defineNestedRoutes);
 }
 
@@ -106,16 +90,10 @@ function byLongestFirst(a: string, b: string): number {
   return b.length - a.length;
 }
 
-const componentExts = [".cjs", ".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
+const moduleExts = [".cjs", ".js", ".jsx", ".md", ".mdx", ".ts", ".tsx"];
 
-export function isComponentFile(filename: string): boolean {
-  return componentExts.includes(path.extname(filename));
-}
-
-const loaderExts = [".cjs", ".js", ".jsx", ".ts", ".tsx"];
-
-export function isLoaderFile(filename: string): boolean {
-  return loaderExts.includes(path.extname(filename));
+export function isModuleFile(filename: string): boolean {
+  return moduleExts.includes(path.extname(filename));
 }
 
 const stylesExts = [".css"];

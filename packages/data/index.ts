@@ -1,10 +1,14 @@
-import type { ResponseInit, DataAction, DataLoader } from "@remix-run/core";
+import type {
+  ResponseInit,
+  ActionFunction,
+  LoaderFunction
+} from "@remix-run/core";
 import { Headers, Request, Response } from "@remix-run/core";
 
 // These are already global, but just re-export them here for convenience.
 export { Headers, Request, Response };
 
-export type { DataAction as Action, DataLoader as Loader };
+export type { ActionFunction as Action, LoaderFunction as Loader };
 
 /**
  * A JSON response. This helper takes care of converting the `data` to JSON

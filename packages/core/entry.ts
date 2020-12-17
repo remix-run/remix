@@ -1,8 +1,8 @@
 import jsesc from "jsesc";
 import type { Params } from "react-router";
 
-import type { AssetManifest, RouteModules } from "./build";
-import type { AppData } from "./data";
+import type { AssetManifest } from "./buildManifest";
+import type { AppData, RouteModule, RouteModules } from "./buildModules";
 import { extractData } from "./data";
 import type { Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
@@ -41,6 +41,7 @@ export interface EntryRouteObject {
 
 export function createEntryRoute(
   configRoute: ConfigRouteObject,
+  routeModule: RouteModule,
   assets: AssetManifest["entries"],
   publicPath = "/"
 ): EntryRouteObject {
@@ -61,7 +62,7 @@ export function createEntryRoute(
   if (assets[`${route.id}.css`]) {
     route.stylesUrl = publicPath + assets[`${route.id}.css`].file;
   }
-  if (configRoute.loaderFile) {
+  if (typeof routeModule.loader !== "undefined") {
     route.loaderUrl = "/_remix/data";
   }
 
@@ -106,11 +107,14 @@ export async function createRouteData(
 
 export function createRouteManifest(
   matches: ConfigRouteMatch[],
+  routeModules: RouteModules,
   assets: AssetManifest["entries"],
   publicPath = "/"
 ): RouteManifest<EntryRouteObject> {
   return matches.reduce((memo, match) => {
-    memo[match.route.id] = createEntryRoute(match.route, assets, publicPath);
+    let route = match.route;
+    let routeModule = routeModules[route.id];
+    memo[route.id] = createEntryRoute(route, routeModule, assets, publicPath);
     return memo;
   }, {} as RouteManifest<EntryRouteObject>);
 }

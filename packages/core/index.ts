@@ -1,32 +1,23 @@
-export type {
-  AssetManifest,
-  HeadersFunction,
-  MetaFunction,
-  RouteModules,
-  RouteModule
-} from "./build";
+export { BuildMode, BuildTarget } from "./build";
 
-export * as commands from "./commands";
-
-export {
-  BuildMode,
-  BuildTarget,
-  build,
-  watch,
-  generate,
-  write
-} from "./compiler";
-
-export type { RemixConfig } from "./config";
-export { ServerMode, readConfig } from "./config";
-
+export type { AssetManifest } from "./buildManifest";
 export type {
   AppData,
   AppLoadContext,
-  DataAction,
-  DataLoader,
-  DataModule
-} from "./data";
+  HeadersFunction,
+  MetaFunction,
+  LoaderFunction,
+  ActionFunction,
+  RouteModules,
+  RouteModule
+} from "./buildModules";
+
+export * as commands from "./commands";
+
+export { build, watch, generate, write } from "./compiler";
+
+export type { RemixConfig } from "./config";
+export { ServerMode, readConfig } from "./config";
 
 export type {
   ServerHandoff,
