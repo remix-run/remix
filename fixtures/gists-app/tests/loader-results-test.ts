@@ -34,7 +34,7 @@ describe("loader results", () => {
     });
   });
 
-  describe.skip("when the loader has an error", () => {
+  describe("when the loader has an error", () => {
     it("sends a server error page", async () => {
       let res = await page.goto(`${testServer}/gists/DANGER`);
       expect(res.status()).toEqual(500);

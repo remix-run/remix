@@ -1,4 +1,6 @@
+.vscode
 /build/
 node_modules/
-.vscode
 yarn-error.log
+
+/scratch.md

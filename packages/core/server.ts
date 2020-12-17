@@ -194,25 +194,6 @@ async function handleDocumentRequest(
   let matches = matchRoutes(remixConfig.routes, url.pathname);
   let statusCode = 200;
 
-  async function handleDataLoaderError(error: Error) {
-    if (remixConfig.serverMode !== ServerMode.Test) {
-      console.error(error);
-    }
-
-    matches = [
-      {
-        params: {},
-        pathname: url.pathname,
-        route: {
-          id: "routes/500",
-          path: url.pathname,
-          moduleFile: "routes/500"
-        }
-      }
-    ];
-    statusCode = 500;
-  }
-
   if (!matches) {
     matches = [
       {
@@ -276,6 +257,29 @@ async function handleDocumentRequest(
     )
   );
 
+  async function handleDataLoaderError(error: Error) {
+    if (remixConfig.serverMode !== ServerMode.Test) {
+      console.error(error);
+    }
+
+    matches = [
+      {
+        params: {},
+        pathname: url.pathname,
+        route: {
+          id: "routes/500",
+          path: url.pathname,
+          moduleFile: "routes/500"
+        }
+      }
+    ];
+    statusCode = 500;
+
+    // Need to reload the route modules so we can generate the entry manifest...
+    routeModules = (await loadServerBuild(remixConfig, ["routes/500"]))
+      .routeModules;
+  }
+
   let globalLoaderResponse: Response;
   try {
     globalLoaderResponse = await globalLoaderPromise;
@@ -283,7 +287,8 @@ async function handleDocumentRequest(
     globalLoaderResponse = json(null);
 
     console.error(`There was an error running the global data loader`);
-    handleDataLoaderError(error);
+
+    await handleDataLoaderError(error);
   }
 
   let routeLoaderResponses: Response[] = [];
@@ -297,7 +302,8 @@ async function handleDocumentRequest(
       console.error(
         `There was an error running the data loader for route ${route.id}`
       );
-      handleDataLoaderError(error);
+
+      await handleDataLoaderError(error);
     }
   }
 
