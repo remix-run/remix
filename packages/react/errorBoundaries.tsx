@@ -80,9 +80,6 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
       </head>
       <body>
         <main
-          // For our tests, if we really care to remove this attribute in production
-          // there's a babel transform that does it.
-          data-test-id="remix-error-boundary"
           style={{
             border: "solid 2px hsl(10, 50%, 50%)",
             padding: "2rem"

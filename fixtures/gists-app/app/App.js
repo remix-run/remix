@@ -42,8 +42,10 @@ export function ErrorBoundary({ error }) {
         />
       </head>
       <body>
-        <h1>Oh snizzy, there was an error</h1>
-        <pre>{error.message}</pre>
+        <div data-test-id="error-page">
+          <h1>Oh snizzy, there was an error</h1>
+          <pre>{error.message}</pre>
+        </div>
       </body>
     </html>
   );

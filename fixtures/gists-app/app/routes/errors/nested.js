@@ -4,7 +4,7 @@ export default function ExceptionsIndex() {
 
 export function ErrorBoundary({ error }) {
   return (
-    <div>
+    <div data-test-id="/errors/nested">
       <h2>OH NOES!</h2>
       <p>
         There was an error at this specific route. The parent still renders
