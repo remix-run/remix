@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import { isModuleFile, isStylesFile } from "./compiler";
 import type { ConfigRouteObject, DefineRoute } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
 import invariant from "./invariant";
@@ -88,18 +89,6 @@ function findParentRouteId(
 
 function byLongestFirst(a: string, b: string): number {
   return b.length - a.length;
-}
-
-const moduleExts = [".cjs", ".js", ".jsx", ".md", ".mdx", ".ts", ".tsx"];
-
-export function isModuleFile(filename: string): boolean {
-  return moduleExts.includes(path.extname(filename));
-}
-
-const stylesExts = [".css"];
-
-export function isStylesFile(filename: string): boolean {
-  return stylesExts.includes(path.extname(filename));
 }
 
 function visitFiles(

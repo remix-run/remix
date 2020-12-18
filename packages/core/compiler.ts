@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import type {
   ExternalOption,
@@ -32,6 +33,33 @@ import watchStyles from "./rollup/watchStyles";
 import mdx from "./rollup/mdx";
 import routeModules from "./rollup/routeModules";
 import styles from "./rollup/styles";
+
+/**
+ * All file extensions we support for entry files.
+ */
+export const entryExts = [".js", ".jsx", ".ts", ".tsx"];
+
+export function isEntryFile(filename: string): boolean {
+  return entryExts.includes(path.extname(filename));
+}
+
+/**
+ * All file extensions we support for route modules.
+ */
+export const moduleExts = [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
+
+export function isModuleFile(filename: string): boolean {
+  return moduleExts.includes(path.extname(filename));
+}
+
+/**
+ * All file extensions we support for styles.
+ */
+export const stylesExts = [".css"];
+
+export function isStylesFile(filename: string): boolean {
+  return stylesExts.includes(path.extname(filename));
+}
 
 /**
  * Runs the build.
@@ -210,15 +238,48 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
-    input["entry-browser"] = path.resolve(config.appDirectory, "entry-browser");
+    let entryBrowserFile = findFile(
+      config.appDirectory,
+      "entry-browser",
+      entryExts
+    );
+    if (entryBrowserFile) {
+      input["entry-browser"] = entryBrowserFile;
+    } else {
+      throw new Error(`Missing "entry-browser" file in ${config.appDirectory}`);
+    }
   } else if (target === BuildTarget.Server) {
-    input["entry-server"] = path.resolve(config.appDirectory, "entry-server");
+    let entryServerFile = findFile(
+      config.appDirectory,
+      "entry-server",
+      entryExts
+    );
+    if (entryServerFile) {
+      input["entry-server"] = entryServerFile;
+    } else {
+      throw new Error(`Missing "entry-server" file in ${config.appDirectory}`);
+    }
   }
 
-  // TODO: Make this optional if there is no global-data.js file
-  input["global-data"] = path.resolve(config.appDirectory, "global-data");
+  let globalDataFile = findFile(config.appDirectory, "global-data", entryExts);
+  if (globalDataFile) {
+    input["global-data"] = globalDataFile;
+  }
 
   return input;
+}
+
+function findFile(
+  dir: string,
+  basename: string,
+  possibleExts: string[]
+): string | undefined {
+  for (let ext of possibleExts) {
+    let file = path.resolve(dir, basename + ext);
+    if (fs.existsSync(file)) return file;
+  }
+
+  return undefined;
 }
 
 function getTreeshakeOption(
@@ -296,9 +357,10 @@ function getBuildPlugins(
       babelHelpers: "bundled",
       configFile: false,
       exclude: /node_modules/,
-      extensions: [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"],
+      extensions: [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"],
       presets: [
         ["@babel/preset-react", { runtime: "automatic" }],
+        // TODO: Different targets for browsers vs. node.
         ["@babel/preset-env", { bugfixes: true, targets: { node: "12" } }],
         [
           "@babel/preset-typescript",
@@ -311,7 +373,7 @@ function getBuildPlugins(
     }),
     nodeResolve({
       browser: target === BuildTarget.Browser,
-      extensions: [".js", ".json", ".ts", ".tsx"],
+      extensions: [".js", ".json", ".jsx", ".ts", ".tsx"],
       preferBuiltins: target !== BuildTarget.Browser
     }),
     commonjs(),
