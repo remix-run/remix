@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
 
-import { isModuleFile, isStylesFile } from "./compiler";
 import type { ConfigRouteObject, DefineRoute } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
+import { isModuleFile } from "./rollup/routeModules";
+import { isStylesFile } from "./rollup/styles";
 import invariant from "./invariant";
 
 /**

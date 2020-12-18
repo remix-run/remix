@@ -39,28 +39,6 @@ import styles from "./rollup/styles";
  */
 export const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 
-export function isEntryFile(filename: string): boolean {
-  return entryExts.includes(path.extname(filename));
-}
-
-/**
- * All file extensions we support for route modules.
- */
-export const moduleExts = [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
-
-export function isModuleFile(filename: string): boolean {
-  return moduleExts.includes(path.extname(filename));
-}
-
-/**
- * All file extensions we support for styles.
- */
-export const stylesExts = [".css"];
-
-export function isStylesFile(filename: string): boolean {
-  return stylesExts.includes(path.extname(filename));
-}
-
 /**
  * Runs the build.
  */
