@@ -26,18 +26,11 @@ function ensureCleanWorkingDirectory() {
   );
 }
 
-function getNextVersion(currentVersion, givenVersion, prereleaseId) {
+function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
   invariant(
     givenVersion != null,
     `Missing next version. Usage: node version.js [nextVersion]`
   );
-
-  if (/^pre/.test(givenVersion)) {
-    invariant(
-      prereleaseId != null,
-      `Missing prerelease id. Usage: node version.js ${givenVersion} [prereleaseId]`
-    );
-  }
 
   let nextVersion;
   if (givenVersion === "experimental") {
