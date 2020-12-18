@@ -62,9 +62,9 @@ export default function routeModules({
 
         // Create a proxy module that exports only the methods we want to be
         // available in the browser. All the rest will be tree-shaken out so we
-        // don't end up with loader/action code (and their dependencies) in the
+        // don't end up with server-only code (and its dependencies) in the
         // browser bundles.
-        return `export { default, headers, meta } from ${JSON.stringify(file)}`;
+        return `export { default, meta } from ${JSON.stringify(file)}`;
       }
 
       return null;
