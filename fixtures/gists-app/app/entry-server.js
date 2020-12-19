@@ -1,7 +1,7 @@
 import ReactDOMServer from "react-dom/server";
 import Remix from "@remix-run/react/server";
 
-import App from "./components/App";
+import App from "./App";
 
 export default function handleRequest(
   request,
