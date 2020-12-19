@@ -51,7 +51,6 @@ export default function manifestPlugin({
   outputDir = "."
 }: {
   fileName?: string;
-  forceWrite?: boolean;
   outputDir?: string;
 }): Plugin {
   return {

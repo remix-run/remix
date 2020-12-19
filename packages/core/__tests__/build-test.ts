@@ -1,8 +1,8 @@
 import path from "path";
 import type { OutputAsset, RollupOutput } from "rollup";
 
-import type { BuildOptions } from "../build";
 import { BuildMode, BuildTarget } from "../build";
+import type { BuildOptions } from "../compiler";
 import { build, generate } from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";

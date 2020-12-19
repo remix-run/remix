@@ -6,6 +6,7 @@ import type {
   InputOptions,
   OutputOptions,
   Plugin,
+  RollupBuild,
   RollupError,
   RollupOutput,
   TreeshakingOptions
@@ -19,9 +20,8 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import { terser } from "rollup-plugin-terser";
 
+import { BuildMode, BuildTarget } from "./build";
 import { ignorePackages } from "./browserIgnore";
-import type { BuildOptions, RemixBuild } from "./build";
-import { BuildMode, BuildTarget, createBuild } from "./build";
 import { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
@@ -39,6 +39,30 @@ import styles from "./rollup/styles";
  */
 export const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 
+export interface RouteInputs {
+  [routeId: string]: string;
+}
+
+export interface RemixBuild extends RollupBuild {
+  options: BuildOptions;
+}
+
+export function createBuild(
+  rollupBuild: RollupBuild,
+  options: BuildOptions
+): RemixBuild {
+  let build = (rollupBuild as unknown) as RemixBuild;
+  build.options = options;
+  return build;
+}
+
+export interface BuildOptions {
+  mode: BuildMode;
+  target: BuildTarget;
+  manifestDir: string;
+  routeInputs: RouteInputs;
+}
+
 /**
  * Runs the build.
  */
@@ -47,15 +71,15 @@ export async function build(
   {
     mode = BuildMode.Production,
     target = BuildTarget.Server,
-    manifestDir,
-    routeModuleFiles
+    manifestDir = ".",
+    routeInputs = getRouteInputs(config)
   }: Partial<BuildOptions> = {}
 ): Promise<RemixBuild> {
-  let buildOptions = {
+  let buildOptions: BuildOptions = {
     mode,
     target,
     manifestDir,
-    routeModuleFiles
+    routeInputs
   };
 
   let plugins: Plugin[] = [];
@@ -68,7 +92,7 @@ export async function build(
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
-    input: getInputOption(config, target),
+    input: getInputOption(config, target, routeInputs),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins
@@ -91,18 +115,18 @@ export function watch(
   {
     mode = BuildMode.Development,
     target = BuildTarget.Browser,
-    manifestDir,
-    routeModuleFiles,
+    manifestDir = ".",
+    routeInputs = getRouteInputs(config),
     onBuildStart,
     onBuildEnd,
     onError
   }: Partial<WatchOptions> = {}
 ): () => void {
-  let buildOptions = {
+  let buildOptions: BuildOptions = {
     mode,
     target,
     manifestDir,
-    routeModuleFiles
+    routeInputs
   };
 
   let watcher = rollup.watch({
@@ -115,7 +139,7 @@ export function watch(
         async getInput() {
           purgeRequireCache(config.rootDirectory);
           config = await readConfig(config.rootDirectory);
-          return getInputOption(config, target);
+          return getInputOption(config, target, routeInputs);
         }
       }),
       watchStyles({
@@ -174,20 +198,33 @@ export function write(build: RemixBuild, dir: string): Promise<RollupOutput> {
 export async function writeDevServerBuild(
   config: RemixConfig,
   outputDir: string,
-  routeModuleFiles?: BuildOptions["routeModuleFiles"]
+  routeInputs?: RouteInputs
 ): Promise<RollupOutput> {
   return write(
     await build(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Server,
       manifestDir: outputDir,
-      routeModuleFiles
+      routeInputs
     }),
     outputDir
   );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+function getRouteInputs(config: RemixConfig): RouteInputs {
+  let routeManifest = config.routeManifest;
+  let routeIds = Object.keys(routeManifest);
+
+  return routeIds.reduce((memo, routeId) => {
+    let route = routeManifest[routeId];
+    if (route.moduleFile) {
+      memo[route.id] = path.resolve(config.appDirectory, route.moduleFile);
+    }
+    return memo;
+  }, {} as RouteInputs);
+}
 
 function isLocalModuleId(id: string): boolean {
   return (
@@ -212,7 +249,11 @@ function getExternalOption(target: BuildTarget): ExternalOption | undefined {
       ignorePackages;
 }
 
-function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
+function getInputOption(
+  config: RemixConfig,
+  target: BuildTarget,
+  routeInputs: RouteInputs
+): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
@@ -243,6 +284,8 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   if (globalDataFile) {
     input["global-data"] = globalDataFile;
   }
+
+  Object.assign(input, routeInputs);
 
   return input;
 }
@@ -300,12 +343,7 @@ function getOnWarnOption(
 
 function getBuildPlugins(
   config: RemixConfig,
-  {
-    mode,
-    target,
-    manifestDir,
-    routeModuleFiles = getRouteModuleFiles(config)
-  }: BuildOptions
+  { mode, target, manifestDir, routeInputs }: BuildOptions
 ): Plugin[] {
   let plugins: Plugin[] = [];
 
@@ -327,7 +365,7 @@ function getBuildPlugins(
       mdxConfig: config.mdx
     }),
     routeModules({
-      routeModuleFiles,
+      routeIds: Object.keys(routeInputs),
       target
     }),
     json(),
@@ -379,18 +417,6 @@ function getBuildPlugins(
   );
 
   return plugins;
-}
-
-function getRouteModuleFiles(config: RemixConfig) {
-  let routeManifest = config.routeManifest;
-  let routeIds = Object.keys(routeManifest);
-
-  return routeIds.reduce((memo, routeId) => {
-    let route = routeManifest[routeId];
-    if (route.moduleFile)
-      memo[route.id] = path.resolve(config.appDirectory, route.moduleFile);
-    return memo;
-  }, {} as { [routeId: string]: string });
 }
 
 function getCommonOutputOptions(build: RemixBuild): OutputOptions {

@@ -1,11 +1,8 @@
+import fs from "fs";
 import path from "path";
 import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../build";
-
-interface RollupObjectInput {
-  [inputAlias: string]: string;
-}
 
 /**
  * All file extensions we support for route modules.
@@ -16,65 +13,83 @@ export function isModuleFile(filename: string): boolean {
   return moduleExts.includes(path.extname(filename));
 }
 
-export interface RouteModuleFiles {
-  [routeId: string]: string;
-}
-
 /**
- * Adds entry modules for all routes in the route manifest.
+ * A resolver/loader for route modules that does a few things:
+ *
+ * - when building for the browser, it excludes server-only code from the build
+ * - when new route files are created in development (watch) mode, it creates
+ *   an empty shim for the module so Rollup doesn't complain and the build
+ *   doesn't break
  */
 export default function routeModules({
-  routeModuleFiles,
+  routeIds,
   target
 }: {
-  routeModuleFiles: RouteModuleFiles;
+  routeIds: string[];
   target: BuildTarget;
 }): Plugin {
-  let browserProxy = "?route-module-browser-proxy";
+  let magicProxy = "?route-module-proxy";
 
   return {
     name: "route-modules",
     options(options) {
-      if (!options.input) {
-        options.input = {};
-      } else if (typeof options.input !== "object") {
-        throw new Error(`routeModules plugin needs an object for input`);
-      }
+      let input = options.input;
 
-      let input = options.input as RollupObjectInput;
-
-      for (let routeId in routeModuleFiles) {
-        let file = routeModuleFiles[routeId];
-        input[routeId] =
-          file + (target === BuildTarget.Browser ? browserProxy : "");
+      if (input && typeof input === "object" && !Array.isArray(input)) {
+        for (let alias in input) {
+          if (routeIds.includes(alias)) {
+            input[alias] = input[alias] + magicProxy;
+          }
+        }
       }
 
       return options;
     },
     resolveId(id, importer) {
-      if (
-        importer?.endsWith(browserProxy) &&
-        importer.slice(0, -browserProxy.length) === id
-      ) {
-        // Use synthetic named exports on route modules when they are imported
-        // from the browser proxy module. Since `default` (the component) is the
-        // only required export, all others default to `undefined`.
-        return { id, syntheticNamedExports: true };
+      if (id.endsWith(magicProxy)) {
+        return id;
       }
 
-      if (id.endsWith(browserProxy)) return id;
+      if (
+        importer?.endsWith(magicProxy) &&
+        importer.slice(0, -magicProxy.length) === id &&
+        target === BuildTarget.Browser
+      ) {
+        // Use synthetic named exports on route modules when they are imported
+        // from the browser proxy module. Since it explicitly names the exports
+        // it wants, this prevents Rollup from complaining when they're not
+        // there. `default` (the component) is the only required export, all
+        // others default to `undefined`.
+        return { id, syntheticNamedExports: true };
+      }
 
       return null;
     },
     load(id) {
-      if (id.endsWith(browserProxy)) {
-        let file = id.slice(0, -browserProxy.length);
+      if (id.endsWith(magicProxy)) {
+        let source = id.slice(0, -magicProxy.length);
 
-        // Create a proxy module that exports only the methods we want to be
-        // available in the browser. All the rest will be tree-shaken out so we
-        // don't end up with server-only code (and its dependencies) in the
-        // browser bundles.
-        return `export { default, meta } from ${JSON.stringify(file)}`;
+        if (fs.existsSync(source) && fs.statSync(source).size === 0) {
+          // If the source module is an empty file (probably because the file
+          // was just created) default to an empty component. This prevents
+          // errors in development (watch) mode when creating new route files.
+          return `export default function () { return null }`;
+        }
+
+        if (target === BuildTarget.Browser) {
+          // Create a proxy module that exports only the methods we want to be
+          // available in the browser. All the rest will be tree-shaken out so
+          // we don't end up with server-only code (and its dependencies) in the
+          // browser bundles.
+          return `export { default, meta } from ${JSON.stringify(source)};`;
+        }
+
+        // Create a proxy module that transparently re-exports everything from
+        // the original module.
+        return (
+          `export { default } from ${JSON.stringify(source)};\n` +
+          `export * from ${JSON.stringify(source)};`
+        );
       }
 
       return null;
