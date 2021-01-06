@@ -28,14 +28,23 @@ export async function startDevServer(
 }
 
 function createRequestHandler(config: RemixConfig) {
+  let serverBuildStart: number = 0;
+  let browserBuildStart: number = 0;
+
   signalExit(
     watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Server,
       manifestDir: config.serverBuildDirectory,
+      onBuildStart() {
+        serverBuildStart = Date.now();
+      },
       async onBuildEnd(build) {
         await write(build, config.serverBuildDirectory);
-        console.log(`Wrote server build to ${config.serverBuildDirectory}`);
+        let time = Date.now() - serverBuildStart;
+        console.log(
+          `Wrote server build to ${config.serverBuildDirectory} in ${time}ms`
+        );
       },
       onError(error) {
         console.error(error);
@@ -48,9 +57,15 @@ function createRequestHandler(config: RemixConfig) {
       mode: BuildMode.Development,
       target: BuildTarget.Browser,
       manifestDir: config.serverBuildDirectory,
+      onBuildStart() {
+        browserBuildStart = Date.now();
+      },
       async onBuildEnd(build) {
         await write(build, config.browserBuildDirectory);
-        console.log(`Wrote browser build to ${config.browserBuildDirectory}`);
+        let time = Date.now() - browserBuildStart;
+        console.log(
+          `Wrote browser build to ${config.browserBuildDirectory} in ${time}ms`
+        );
       },
       onError(error) {
         console.error(error);
