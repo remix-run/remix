@@ -152,11 +152,7 @@ export async function readConfig(
 
   let devServerPort = appConfig.devServerPort || 8002;
 
-  let publicPath = addTrailingSlash(
-    serverMode === ServerMode.Development
-      ? process.env.REMIX_RUN_ORIGIN || `http://localhost:${devServerPort}/`
-      : appConfig.publicPath || "/build/"
-  );
+  let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
   let routes = defineConventionalRoutes(appDirectory);
   if (appConfig.routes) {

@@ -1,7 +1,7 @@
 import { BuildMode, BuildTarget } from "./build";
 import { readConfig } from "./config";
 import { build, write } from "./compiler";
-import { startAssetServer } from "./assetServer";
+import { startDevServer } from "./devServer";
 
 /**
  * Runs the build for a Remix app.
@@ -51,17 +51,11 @@ export { buildCommand as build };
 export async function run(remixRoot: string) {
   let config = await readConfig(remixRoot);
 
-  startAssetServer(config, {
+  startDevServer(config, {
     onListen() {
       console.log(
-        `Remix asset server running on port ${config.devServerPort}...`
+        `Remix dev server running on port ${config.devServerPort}...`
       );
-    },
-    onReady() {
-      console.log(`Remix asset server ready for requests!`);
-    },
-    onRebuild() {
-      console.log(`Restarting the build...`);
     }
   });
 }

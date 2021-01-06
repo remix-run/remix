@@ -39,10 +39,6 @@ import styles from "./rollup/styles";
  */
 export const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 
-export interface RouteInputs {
-  [routeId: string]: string;
-}
-
 export interface RemixBuild extends RollupBuild {
   options: BuildOptions;
 }
@@ -59,8 +55,7 @@ export function createBuild(
 export interface BuildOptions {
   mode: BuildMode;
   target: BuildTarget;
-  manifestDir: string;
-  routeInputs: RouteInputs;
+  manifestDir?: string;
 }
 
 /**
@@ -71,15 +66,13 @@ export async function build(
   {
     mode = BuildMode.Production,
     target = BuildTarget.Server,
-    manifestDir = ".",
-    routeInputs = getRouteInputs(config)
+    manifestDir = "."
   }: Partial<BuildOptions> = {}
 ): Promise<RemixBuild> {
   let buildOptions: BuildOptions = {
     mode,
     target,
-    manifestDir,
-    routeInputs
+    manifestDir
   };
 
   let plugins: Plugin[] = [];
@@ -92,7 +85,7 @@ export async function build(
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
-    input: getInputOption(config, target, routeInputs),
+    input: getInputOption(config, target),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins
@@ -116,7 +109,6 @@ export function watch(
     mode = BuildMode.Development,
     target = BuildTarget.Browser,
     manifestDir = ".",
-    routeInputs = getRouteInputs(config),
     onBuildStart,
     onBuildEnd,
     onError
@@ -125,8 +117,7 @@ export function watch(
   let buildOptions: BuildOptions = {
     mode,
     target,
-    manifestDir,
-    routeInputs
+    manifestDir
   };
 
   let watcher = rollup.watch({
@@ -139,7 +130,7 @@ export function watch(
         async getInput() {
           purgeRequireCache(config.rootDirectory);
           config = await readConfig(config.rootDirectory);
-          return getInputOption(config, target, routeInputs);
+          return getInputOption(config, target);
         }
       }),
       watchStyles({
@@ -192,39 +183,7 @@ export function write(build: RemixBuild, dir: string): Promise<RollupOutput> {
   return build.write({ ...getCommonOutputOptions(build), dir });
 }
 
-/**
- * Runs the server build in dev as requests come in.
- */
-export async function writeDevServerBuild(
-  config: RemixConfig,
-  outputDir: string,
-  routeInputs?: RouteInputs
-): Promise<RollupOutput> {
-  return write(
-    await build(config, {
-      mode: BuildMode.Development,
-      target: BuildTarget.Server,
-      manifestDir: outputDir,
-      routeInputs
-    }),
-    outputDir
-  );
-}
-
 ////////////////////////////////////////////////////////////////////////////////
-
-function getRouteInputs(config: RemixConfig): RouteInputs {
-  let routeManifest = config.routeManifest;
-  let routeIds = Object.keys(routeManifest);
-
-  return routeIds.reduce((memo, routeId) => {
-    let route = routeManifest[routeId];
-    if (route.moduleFile) {
-      memo[route.id] = path.resolve(config.appDirectory, route.moduleFile);
-    }
-    return memo;
-  }, {} as RouteInputs);
-}
 
 function isLocalModuleId(id: string): boolean {
   return (
@@ -249,11 +208,7 @@ function getExternalOption(target: BuildTarget): ExternalOption | undefined {
       ignorePackages;
 }
 
-function getInputOption(
-  config: RemixConfig,
-  target: BuildTarget,
-  routeInputs: RouteInputs
-): InputOption {
+function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
@@ -285,7 +240,7 @@ function getInputOption(
     input["global-data"] = globalDataFile;
   }
 
-  Object.assign(input, routeInputs);
+  Object.assign(input, getRouteInputs(config));
 
   return input;
 }
@@ -301,6 +256,23 @@ function findFile(
   }
 
   return undefined;
+}
+
+interface RouteInputs {
+  [routeId: string]: string;
+}
+
+function getRouteInputs(config: RemixConfig): RouteInputs {
+  let routeManifest = config.routeManifest;
+  let routeIds = Object.keys(routeManifest);
+
+  return routeIds.reduce((memo, routeId) => {
+    let route = routeManifest[routeId];
+    if (route.moduleFile) {
+      memo[route.id] = path.resolve(config.appDirectory, route.moduleFile);
+    }
+    return memo;
+  }, {} as RouteInputs);
 }
 
 function getTreeshakeOption(
@@ -343,7 +315,7 @@ function getOnWarnOption(
 
 function getBuildPlugins(
   config: RemixConfig,
-  { mode, target, manifestDir, routeInputs }: BuildOptions
+  { mode, target, manifestDir }: BuildOptions
 ): Plugin[] {
   let plugins: Plugin[] = [];
 
@@ -365,7 +337,7 @@ function getBuildPlugins(
       mdxConfig: config.mdx
     }),
     routeModules({
-      routeIds: Object.keys(routeInputs),
+      routeIds: Object.keys(config.routeManifest),
       target
     }),
     json(),

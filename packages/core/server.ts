@@ -1,5 +1,4 @@
-import type { AssetManifest } from "./buildManifest";
-import { AppLoadContext } from "./buildModules";
+import type { AppLoadContext } from "./buildModules";
 import { ServerMode } from "./config";
 import type { RemixConfig } from "./config";
 import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
@@ -14,7 +13,7 @@ import {
 import { Headers, Request, Response } from "./fetch";
 import { matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
-import { loadServerBuild, loadServerAssetManifest } from "./serverHelpers";
+import { loadServerBuild } from "./serverHelpers";
 import type { Session } from "./sessions";
 import { oneYear } from "./seconds";
 
@@ -72,23 +71,10 @@ async function handleManifestRequest(
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
-  let { routeModules } = await loadServerBuild(
+  let { assetManifest, routeModules } = await loadServerBuild(
     remixConfig,
     matches.map(match => match.route.id)
   );
-
-  let assetManifest: AssetManifest;
-  try {
-    assetManifest = await loadServerAssetManifest(remixConfig);
-  } catch (error) {
-    if (remixConfig.serverMode === ServerMode.Development) {
-      console.error(
-        `Unable to fetch the manifest from the asset server. Are you running \`remix run\`?`
-      );
-    }
-
-    return jsonError(`Unable to fetch asset manifest`, 500);
-  }
 
   let entryManifest: EntryManifest = {
     version: assetManifest.version,
@@ -211,6 +197,7 @@ async function handleDocumentRequest(
 
   // Load the server build.
   let {
+    assetManifest,
     serverEntryModule,
     globalDataModule,
     routeModules
@@ -232,15 +219,6 @@ async function handleDocumentRequest(
     );
 
     return response;
-  }
-
-  // Load the asset manifest.
-  let assetManifest: AssetManifest;
-  try {
-    assetManifest = await loadServerAssetManifest(remixConfig);
-  } catch (error) {
-    // TODO: Show a nice error page.
-    throw error;
   }
 
   // Run all data loaders in parallel. Await them in series below.
