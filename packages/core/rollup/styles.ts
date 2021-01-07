@@ -2,7 +2,14 @@ import { promises as fsp } from "fs";
 import path from "path";
 import type { Plugin } from "rollup";
 
-import { isStylesFile } from "../routesConvention";
+/**
+ * All file extensions we support for styles.
+ */
+export const stylesExts = [".css"];
+
+export function isStylesFile(filename: string): boolean {
+  return stylesExts.includes(path.extname(filename));
+}
 
 export function loadStyles(file: string): Promise<string> {
   // TODO: Transform using PostCSS based on file extension.

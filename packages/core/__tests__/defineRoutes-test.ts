@@ -3,51 +3,44 @@ import { defineRoutes } from "../routes";
 describe("defineRoutes", () => {
   it("returns an array of routes", () => {
     let routes = defineRoutes(route => {
-      route("/", "routes/home.js", { loader: "routes/home.js" });
+      route("/", "routes/home.js");
       route("inbox", "routes/inbox.js", () => {
         route("/", "routes/inbox/index.js");
-        route(":messageId", "routes/inbox/$messageId.js", {
-          loader: "routes/inbox/$messageId.js"
-        });
-        route("archive", "routes/inbox/archive.js", {
-          loader: "routes/inbox/archive.js"
-        });
+        route(":messageId", "routes/inbox/$messageId.js");
+        route("archive", "routes/inbox/archive.js");
       });
     });
 
     expect(routes).toMatchInlineSnapshot(`
       Array [
         Object {
-          "componentFile": "routes/home.js",
           "id": "routes/home",
-          "loaderFile": "routes/home.js",
+          "moduleFile": "routes/home.js",
           "path": "/",
         },
         Object {
           "children": Array [
             Object {
-              "componentFile": "routes/inbox/index.js",
               "id": "routes/inbox/index",
+              "moduleFile": "routes/inbox/index.js",
               "parentId": "routes/inbox",
               "path": "/",
             },
             Object {
-              "componentFile": "routes/inbox/$messageId.js",
               "id": "routes/inbox/$messageId",
-              "loaderFile": "routes/inbox/$messageId.js",
+              "moduleFile": "routes/inbox/$messageId.js",
               "parentId": "routes/inbox",
               "path": ":messageId",
             },
             Object {
-              "componentFile": "routes/inbox/archive.js",
               "id": "routes/inbox/archive",
-              "loaderFile": "routes/inbox/archive.js",
+              "moduleFile": "routes/inbox/archive.js",
               "parentId": "routes/inbox",
               "path": "archive",
             },
           ],
-          "componentFile": "routes/inbox.js",
           "id": "routes/inbox",
+          "moduleFile": "routes/inbox.js",
           "path": "inbox",
         },
       ]
@@ -66,13 +59,13 @@ describe("defineRoutes", () => {
     expect(routes).toMatchInlineSnapshot(`
       Array [
         Object {
-          "componentFile": "one.md",
           "id": "one",
+          "moduleFile": "one.md",
           "path": "one",
         },
         Object {
-          "componentFile": "two.md",
           "id": "two",
+          "moduleFile": "two.md",
           "path": "two",
         },
       ]

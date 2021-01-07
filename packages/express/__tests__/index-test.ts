@@ -9,11 +9,11 @@ import supertest from "supertest";
 // not install @types/express-session so it doesn't do weird things to `app.get`.
 import session from "express-session";
 
-import { createRequestHandler as adapter } from "../index";
+import { createRequestHandler } from "../index";
 
 import { Response } from "@remix-run/core/fetch";
 import { readConfig } from "@remix-run/core/config";
-import { createRemixRequestHandler } from "@remix-run/core/server";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/core/server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the express adapter
@@ -36,7 +36,7 @@ describe("express createRequestHandler", () => {
     beforeEach(() => {
       mockedReadConfig.mockResolvedValue({} as ReturnType<typeof readConfig>);
       let app = express();
-      app.all("*", adapter({ enableSessions: false }));
+      app.all("*", createRequestHandler({ enableSessions: false }));
       request = supertest(app);
     });
 
@@ -109,7 +109,7 @@ describe("express createRequestHandler", () => {
           saveUninitialized: false
         })
       );
-      app.all("*", adapter());
+      app.all("*", createRequestHandler());
       let request = supertest(app);
 
       let setRes = await request.get("/set");

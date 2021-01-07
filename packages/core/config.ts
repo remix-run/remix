@@ -31,12 +31,6 @@ export interface AppConfig {
   routes?: (defineRoutes: DefineRoutes) => Promise<ReturnType<DefineRoutes>>;
 
   /**
-   * The path to the `loaders` directory, relative to remix.config.js. Defaults to
-   * "loaders".
-   */
-  dataDirectory?: string;
-
-  /**
    * The path to the browser build, relative to remix.config.js. Defaults to
    * "public/build".
    */
@@ -85,14 +79,9 @@ export interface RemixConfig {
   routes: ConfigRouteObject[];
 
   /**
-   * A route lookup table for the data loaders.
+   * An object of all available routes, keyed by id.
    */
   routeManifest: RouteManifest;
-
-  /**
-   * The absolute path to the `loaders` directory.
-   */
-  dataDirectory: string;
 
   /**
    * The absolute path to the browser build.
@@ -161,20 +150,11 @@ export async function readConfig(
     appConfig.browserBuildDirectory || path.join("public", "build")
   );
 
-  let dataDirectory = path.resolve(
-    rootDirectory,
-    appConfig.dataDirectory || "data"
-  );
-
   let devServerPort = appConfig.devServerPort || 8002;
 
-  let publicPath = addTrailingSlash(
-    serverMode === ServerMode.Development
-      ? process.env.REMIX_RUN_ORIGIN || `http://localhost:${devServerPort}/`
-      : appConfig.publicPath || "/build/"
-  );
+  let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
-  let routes = defineConventionalRoutes(appDirectory, dataDirectory);
+  let routes = defineConventionalRoutes(appDirectory);
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(defineRoutes);
     routes.push(...manualRoutes);
@@ -192,7 +172,6 @@ export async function readConfig(
   let remixConfig: RemixConfig = {
     appDirectory,
     browserBuildDirectory,
-    dataDirectory,
     devServerPort,
     mdx: appConfig.mdx,
     publicPath,

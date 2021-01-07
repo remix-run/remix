@@ -1,6 +1,8 @@
+import { promises as fsp } from "fs";
+
+import type { Plugin } from "rollup";
 import parseFrontMatter from "front-matter";
 import mdx from "@mdx-js/mdx";
-import type { Plugin } from "rollup";
 
 const imports = `
 import { mdx } from "@mdx-js/react";
@@ -23,14 +25,23 @@ export type MdxFunctionOption = (
 
 export type MdxConfig = MdxFunctionOption | MdxOptions;
 
-export default function mdxTransform(mdxConfig?: MdxConfig): Plugin {
+/**
+ * Loads .mdx files as JavaScript modules with support for Remix's `headers`
+ * and `meta` route module functions as static object declarations in the
+ * frontmatter.
+ */
+export default function mdxPlugin({
+  mdxConfig
+}: {
+  mdxConfig?: MdxConfig;
+}): Plugin {
   return {
     name: "mdx",
-    async transform(content, filename) {
-      if (!regex.test(filename)) {
-        return null;
-      }
+    async load(id) {
+      if (id.startsWith("\0") || !regex.test(id)) return null;
 
+      let filename = id;
+      let content = await fsp.readFile(filename, "utf-8");
       let {
         body,
         attributes
@@ -61,7 +72,7 @@ export default function mdxTransform(mdxConfig?: MdxConfig): Plugin {
       let source = await mdx(body, mdxOptions);
       let code = [imports, headers, meta, source].filter(Boolean).join("\n");
 
-      return { code, map: null };
+      return code;
     }
   };
 }

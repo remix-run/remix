@@ -1,4 +1,3 @@
-/.cache
+/.build-cache
 /build
 /public/build
-

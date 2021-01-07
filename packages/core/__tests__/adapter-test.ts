@@ -4,7 +4,7 @@ import { createAdapter } from "../adapter";
 import { createSession, createSessionFacade } from "../sessions";
 
 import { readConfig } from "../config";
-import { createRemixRequestHandler } from "../server";
+import { createRequestHandler as createRemixRequestHandler } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetter tests do), we just want to test createAdapter

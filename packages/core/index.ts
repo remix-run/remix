@@ -1,33 +1,25 @@
-export type {
-  AssetManifest,
-  HeadersFunction,
-  MetaFunction,
-  RouteModules,
-  RouteModule,
-  ErrorBoundaryComponent
-} from "./build";
+export { BuildMode, BuildTarget } from "./build";
 
-export * as commands from "./commands";
-
-export {
-  BuildMode,
-  BuildTarget,
-  build,
-  watch,
-  generate,
-  write
-} from "./compiler";
-
-export type { RemixConfig } from "./config";
-export { ServerMode, readConfig } from "./config";
-
+export type { AssetManifest } from "./buildManifest";
 export type {
   AppData,
   AppLoadContext,
-  DataAction,
-  DataLoader,
-  DataModule
-} from "./data";
+  HeadersFunction,
+  MetaFunction,
+  LoaderFunction,
+  ActionFunction,
+  RouteModules,
+  RouteModule,
+  RouteComponent,
+  ErrorBoundaryComponent
+} from "./buildModules";
+
+export * as commands from "./commands";
+
+export { build, watch, generate, write } from "./compiler";
+
+export type { RemixConfig } from "./config";
+export { ServerMode, readConfig } from "./config";
 
 export type {
   ServerHandoff,
@@ -56,7 +48,7 @@ export {
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
-export { createRemixRequestHandler } from "./server";
+export { createRequestHandler } from "./server";
 
 export type { Session, SessionMutableData, SessionOnDestroy } from "./sessions";
 export { createSession, createSessionFacade } from "./sessions";

@@ -1,0 +1,4 @@
+---
+title: Azure
+disabled: true
+---

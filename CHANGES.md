@@ -8,6 +8,17 @@ This is a history of changes to [Remix](https://remix.run).
 
 - Added root error boundary so render errors on browser transitions are handled
 
+## 0.9.0-pre.2 - Wed Jan 06 2021
+
+### Improvements
+
+- Adds `loader` and `action` exports to route modules
+
+### Breaking Changes
+
+- Removes `data` directory (and `dataDirectory` from `remix.config.js`)
+- Renames `data/global.js` to `app/global-data.js`
+
 ## 0.8.3 - Sun Dec 13 2020
 
 ### Bug fixes
@@ -54,14 +65,14 @@ This is a history of changes to [Remix](https://remix.run).
   package.json for packages that publish browser-ready shims.
 - Adds support for `.ts` and `.tsx` extensions on `routes/404` and `routes/500`
 
-## Bug Fixes
+### Bug Fixes
 
 - Fixed error when rendering 500 pages
 - Removed unused `rollup-plugin-postcss`
 - Fixed browser transitions not sending search params to the loader
 - redirects don't follow the redirects in the browser anymore, avoiding extra requests
 
-## Breaking Changes
+### Breaking Changes
 
 - removes `useLocationPending` removed in favor of `usePendingLocation`
 - loader `url` property removed in favor of `request`

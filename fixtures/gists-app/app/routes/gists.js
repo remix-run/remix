@@ -1,7 +1,23 @@
 import { Outlet } from "react-router-dom";
 import { Link, useRouteData, usePendingLocation } from "@remix-run/react";
+import { json } from "@remix-run/data";
 
 import Shared from "../components/Shared";
+
+export function loader() {
+  let data = {
+    users: [
+      { id: "ryanflorence", name: "Ryan Florence" },
+      { id: "mjackson", name: "Michael Jackson" }
+    ]
+  };
+
+  return json(data, {
+    headers: {
+      "Cache-Control": "public, max-age=60"
+    }
+  });
+}
 
 export function headers() {
   return {

@@ -21,7 +21,7 @@ export interface ConfigRouteObject {
   children?: ConfigRouteObject[];
 
   /**
-   * The unique id for this route, named like the `componentFile` but without
+   * The unique id for this route, named like the `moduleFile` but without
    * the file extension. So `routes/gists/$username.js` will have an `id` of
    * `routes/gists/$username`.
    */
@@ -35,10 +35,10 @@ export interface ConfigRouteObject {
   /**
    * The path to the file that exports the React component rendered by this
    * route as its default export, relative to the `config.appDirectory`. So the
-   * component file for route id `routes/gists/$username` will be
+   * module file for route id `routes/gists/$username` will be
    * `routes/gists/$username.js`.
    */
-  componentFile?: string;
+  moduleFile: string;
 
   /**
    * The path to the file that contains styles for this route, relative to
@@ -46,13 +46,6 @@ export interface ConfigRouteObject {
    * `routes/gists/$username.js` will be `routes/gists/$username.css`.
    */
   stylesFile?: string;
-
-  /**
-   * The path to the file that exports the data loader for this route as its
-   * default export, relative to `config.dataDirectory`. So the loader file
-   * for `routes/gists/$username.js` will be `routes/gists/$username.js`.
-   */
-  loaderFile?: string;
 }
 
 export type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
@@ -84,12 +77,6 @@ export interface DefineRouteOptions {
   caseSensitive?: boolean;
 
   /**
-   * The path to the file that exports the data loader and/or action for this
-   * route, relative to `config.dataDirectory`.
-   */
-  loader?: string;
-
-  /**
    * The path to the file that defines CSS styles for this route, relative to
    * `config.appDirectory`.
    */
@@ -117,8 +104,10 @@ export interface DefineRoute {
     /**
      * The path to the file that exports the React component rendered by this
      * route as its default export, relative to `config.appDirectory`.
+     * Additional exports may include `headers`, `meta`, `loader`, and
+     * `action`.
      */
-    component?: string,
+    moduleFile: string,
 
     optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
     children?: DefineRouteChildren
@@ -140,7 +129,7 @@ export function defineRoutes(
 
   function defineRoute(
     path: string,
-    component?: string | null,
+    moduleFile?: string | null,
     optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
     children?: DefineRouteChildren
   ): void {
@@ -162,27 +151,20 @@ export function defineRoutes(
       options = optionsOrChildren || {};
     }
 
-    let componentOrLoaderFile = component || options.loader;
-
     invariant(
-      componentOrLoaderFile,
+      moduleFile,
       "A route must have either a component file or a loader, but none was " +
         `provided for path "${path}"`
     );
 
     let route: ConfigRouteObject = {
+      id: createRouteId(moduleFile),
       path: path || "/",
-      id: createRouteId(componentOrLoaderFile)
+      moduleFile
     };
 
     if (typeof options.caseSensitive !== "undefined") {
       route.caseSensitive = !!options.caseSensitive;
-    }
-    if (component) {
-      route.componentFile = component;
-    }
-    if (options.loader) {
-      route.loaderFile = options.loader;
     }
     if (options.styles) {
       route.stylesFile = options.styles;
