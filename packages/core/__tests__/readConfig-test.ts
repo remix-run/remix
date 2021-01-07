@@ -43,10 +43,16 @@ describe("readConfig", () => {
             "moduleFile": "routes/404.js",
             "path": "404",
           },
-          "routes/500": Object {
-            "id": "routes/500",
-            "moduleFile": "routes/500.js",
-            "path": "500",
+          "routes/errors": Object {
+            "id": "routes/errors",
+            "moduleFile": "routes/errors.js",
+            "path": "errors",
+          },
+          "routes/errors/nested": Object {
+            "id": "routes/errors/nested",
+            "moduleFile": "routes/errors/nested.js",
+            "parentId": "routes/errors",
+            "path": "nested",
           },
           "routes/gists": Object {
             "id": "routes/gists",
@@ -92,11 +98,6 @@ describe("readConfig", () => {
             "moduleFile": "routes/page/three.md",
             "path": "page/three",
           },
-          "routes/render-error": Object {
-            "componentFile": "routes/render-error.js",
-            "id": "routes/render-error",
-            "path": "render-error",
-          },
         },
         "routes": Array [
           Object {
@@ -105,9 +106,17 @@ describe("readConfig", () => {
             "path": "404",
           },
           Object {
-            "id": "routes/500",
-            "moduleFile": "routes/500.js",
-            "path": "500",
+            "children": Array [
+              Object {
+                "id": "routes/errors/nested",
+                "moduleFile": "routes/errors/nested.js",
+                "parentId": "routes/errors",
+                "path": "nested",
+              },
+            ],
+            "id": "routes/errors",
+            "moduleFile": "routes/errors.js",
+            "path": "errors",
           },
           Object {
             "children": Array [
@@ -156,15 +165,6 @@ describe("readConfig", () => {
             "path": "page/three",
           },
           Object {
-<<<<<<< HEAD
-            "componentFile": "routes/render-error.js",
-            "id": "routes/render-error",
-            "path": "render-error",
-          },
-          Object {
-            "componentFile": "pages/one.mdx",
-=======
->>>>>>> master
             "id": "pages/one",
             "moduleFile": "pages/one.mdx",
             "path": "/page/one",
