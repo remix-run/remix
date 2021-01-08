@@ -9,7 +9,7 @@ import type {
   RouteModule
 } from "./buildModules";
 import { Request, Response, isResponseLike } from "./fetch";
-import { json, redirect } from "./responseHelpers";
+import { json } from "./responseHelpers";
 import type { Session } from "./sessions";
 import invariant from "./invariant";
 
@@ -60,18 +60,17 @@ async function executeAction(
 ): Promise<Response> {
   let result = await action({ request, session, context, params });
 
-  let location = isResponseLike(result)
-    ? result.headers.get("Location")
-    : undefined;
-
-  invariant<string>(
-    location,
+  invariant(
+    isResponseLike(result) && result.headers.get("Location") != null,
     `You made a ${request.method} request to ${request.url} but did not return ` +
       `a redirect. Please \`return redirect(newUrl)\` from your \`action\` ` +
       `to avoid reposts when users click the back button.`
   );
 
-  return redirect(location, 303);
+  return new Response("", {
+    status: 303,
+    headers: result.headers
+  });
 }
 
 export function callRouteAction(

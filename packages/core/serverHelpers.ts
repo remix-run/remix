@@ -20,10 +20,10 @@ export interface ServerBuild {
 }
 
 export async function loadServerBuild(
-  config: RemixConfig,
-  routeIds: string[] = []
+  config: RemixConfig
 ): Promise<ServerBuild> {
   let buildDir = config.serverBuildDirectory;
+  let routeIds = Object.keys(config.routeManifest);
   let manifest = loadServerManifest(buildDir);
 
   return {

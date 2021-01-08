@@ -19,7 +19,10 @@ import {
   FormMethod,
   FormSubmit,
   loadGlobalData,
-  loadRouteData
+  loadRouteData,
+  callRouteAction,
+  extractData,
+  isRedirectResponse
 } from "./data";
 import invariant from "./invariant";
 import type { Manifest } from "./manifest";
@@ -158,7 +161,12 @@ export function RemixEntry({
       let nextMatches = matchClientRoutes(routes, nextLocation);
 
       let didRedirect = false;
-      function handleDataRedirect(url: URL) {
+      function handleDataRedirect(response: Response) {
+        let url = new URL(
+          response.headers.get("X-Remix-Redirect")!,
+          window.location.origin
+        );
+
         didRedirect = true;
 
         if (formState === FormState.Pending) {
@@ -175,56 +183,36 @@ export function RemixEntry({
 
       if (formState === FormState.Pending) {
         let leafMatch = nextMatches[nextMatches.length - 1];
+        let route = manifest.routes[leafMatch.route.id];
 
-        await loadRouteData(
-          manifest.routes[leafMatch.route.id],
+        if (!route.actionUrl) {
+          throw new Error(
+            `Route "${route.id}" does not have an action handler, but you are trying ` +
+              `to submit to it. To fix this, please add an \`action\` function to your ` +
+              `route module.`
+          );
+        }
+
+        let response = await callRouteAction(
+          route,
           nextLocation,
           leafMatch.params,
-          handleDataRedirect,
-          pendingFormSubmit
+          pendingFormSubmit!
         );
+
+        // TODO: Handle error responses here...
+        handleDataRedirect(response as Response);
 
         // Expecting handleDataRedirect to be called, so we don't need to worry
         // about doing anything else in here.
         return;
       }
 
-      // Reload global data after a <Form> submit.
-      let globalDataPromise =
-        formState === FormState.Redirected
-          ? loadGlobalData(
-              manifest.globalLoaderUrl,
-              nextLocation,
-              handleDataRedirect
-            )
-          : Promise.resolve(globalData);
-
-      let routeDataPromise = Promise.all(
-        // Reload all route data after a <Form> submit.
-        formState === FormState.Redirected
-          ? nextMatches.map(match =>
-              loadRouteData(
-                manifest.routes[match.route.id],
-                nextLocation,
-                match.params,
-                handleDataRedirect
-              )
-            )
-          : nextMatches.map((match, index) =>
-              location.search === nextLocation.search &&
-              matches[index] &&
-              matches[index].pathname === match.pathname
-                ? // Re-use data we already have for routes already on the page
-                  // if the URL hasn't changed for that route.
-                  routeData[match.route.id]
-                : loadRouteData(
-                    manifest.routes[match.route.id],
-                    nextLocation,
-                    match.params,
-                    handleDataRedirect
-                  )
-            )
-      );
+      function maybeHandleDataRedirect(response: any) {
+        if (!didRedirect && isRedirectResponse(response)) {
+          handleDataRedirect(response);
+        }
+      }
 
       let styleSheetsPromise = Promise.all(
         nextMatches.map(match =>
@@ -238,18 +226,88 @@ export function RemixEntry({
         )
       );
 
-      let globalDataResult = await globalDataPromise;
-      let dataResults = await routeDataPromise;
+      let nextGlobalData: AppData;
+      let nextRouteData: RouteData;
+
+      if (formState === FormState.Redirected) {
+        // Reload all data after a <Form> submit.
+        let globalDataPromise = loadGlobalData(
+          manifest.globalLoaderUrl,
+          nextLocation
+        );
+        let routeDataPromises = nextMatches.map(match =>
+          loadRouteData(
+            manifest.routes[match.route.id],
+            nextLocation,
+            match.params
+          )
+        );
+
+        let globalDataResponse = await globalDataPromise;
+        maybeHandleDataRedirect(globalDataResponse);
+
+        let routeDataResponses = await Promise.all(routeDataPromises);
+        for (let response of routeDataResponses) {
+          maybeHandleDataRedirect(response);
+        }
+
+        nextGlobalData =
+          globalDataResponse && (await extractData(globalDataResponse));
+        nextRouteData = (
+          await Promise.all(
+            routeDataResponses.map(
+              response => response && extractData(response)
+            )
+          )
+        ).reduce((memo, data, index) => {
+          let match = nextMatches[index];
+          memo[match.route.id] = data;
+          return memo;
+        }, {} as RouteData);
+      } else {
+        let routeDataPromise = Promise.all(
+          nextMatches.map((match, index) =>
+            location.search === nextLocation.search &&
+            matches[index] &&
+            matches[index].pathname === match.pathname
+              ? // Re-use data we already have for routes already on the page
+                // if the URL hasn't changed for that route.
+                routeData[match.route.id]
+              : loadRouteData(
+                  manifest.routes[match.route.id],
+                  nextLocation,
+                  match.params
+                )
+          )
+        );
+
+        let routeDataResults = await routeDataPromise;
+        for (let result of routeDataResults) {
+          maybeHandleDataRedirect(result);
+        }
+
+        nextGlobalData = globalData;
+        nextRouteData = (
+          await Promise.all(
+            routeDataResults.map(
+              result =>
+                result &&
+                (result instanceof Response || result instanceof Error
+                  ? extractData(result)
+                  : result)
+            )
+          )
+        ).reduce((memo, data, index) => {
+          let match = nextMatches[index];
+          memo[match.route.id] = data;
+          return memo;
+        }, {} as RouteData);
+      }
+
       await styleSheetsPromise;
       await modulesPromise;
 
       if (isCurrent && !didRedirect) {
-        let nextGlobalData = globalDataResult;
-        let nextRouteData = nextMatches.reduce((routeData, match, index) => {
-          routeData[match.route.id] = dataResults[index];
-          return routeData;
-        }, {} as RouteData);
-
         if (
           formState === FormState.Redirected ||
           formState === FormState.PendingGet
@@ -651,14 +709,18 @@ export function useBeforeUnload(callback: () => any): void {
  * Returns the data from `data/global.js`.
  */
 export function useGlobalData<T = AppData>(): T {
-  return useRemixEntryContext().globalData;
+  let data = useRemixEntryContext().globalData;
+  if (data instanceof Error) throw data;
+  return data;
 }
 
 /**
  * Returns the data for the current route from `data/routes/*`.
  */
 export function useRouteData<T = AppData>(): T {
-  return useRemixRouteContext().data;
+  let data = useRemixRouteContext().data;
+  if (data instanceof Error) throw data;
+  return data;
 }
 
 /**

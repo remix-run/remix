@@ -1,8 +1,11 @@
 import type { AppLoadContext } from "./buildModules";
-import { ServerMode } from "./config";
 import type { RemixConfig } from "./config";
 import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
-import type { EntryManifest, ServerHandoff } from "./entry";
+import type {
+  ComponentDidCatchEmulator,
+  EntryManifest,
+  ServerHandoff
+} from "./entry";
 import {
   createEntryMatches,
   createGlobalData,
@@ -71,10 +74,7 @@ async function handleManifestRequest(
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
-  let { assetManifest, routeModules } = await loadServerBuild(
-    remixConfig,
-    matches.map(match => match.route.id)
-  );
+  let { assetManifest, routeModules } = await loadServerBuild(remixConfig);
 
   let entryManifest: EntryManifest = {
     version: assetManifest.version,
@@ -119,40 +119,52 @@ async function handleDataRequest(
     body: request.body
   });
 
-  let loaderPromise: Promise<Response>;
-  if (loaderId === "_global") {
-    let { globalDataModule } = await loadServerBuild(remixConfig);
-
-    loaderPromise = globalDataModule
-      ? loadGlobalData(globalDataModule, loaderRequest, session, loadContext)
-      : Promise.resolve(json(null));
-  } else {
-    let { routeModules } = await loadServerBuild(remixConfig, [loaderId]);
-
-    loaderPromise = isActionRequest(loaderRequest)
-      ? callRouteAction(
-          loaderId,
-          routeModules[loaderId],
-          loaderRequest,
-          session,
-          loadContext,
-          params
-        )
-      : loadRouteData(
-          routeModules[loaderId],
-          loaderRequest,
-          session,
-          loadContext,
-          params
-        );
-  }
+  let { globalDataModule, routeModules } = await loadServerBuild(remixConfig);
 
   let response: Response;
   try {
-    response = await loaderPromise;
+    if (loaderId === "_global") {
+      response = globalDataModule
+        ? await loadGlobalData(
+            globalDataModule,
+            loaderRequest,
+            session,
+            loadContext
+          )
+        : json(null);
+    } else if (isActionRequest(loaderRequest)) {
+      response = await callRouteAction(
+        loaderId,
+        routeModules[loaderId],
+        loaderRequest,
+        session,
+        loadContext,
+        params
+      );
+    } else {
+      response = await loadRouteData(
+        routeModules[loaderId],
+        loaderRequest,
+        session,
+        loadContext,
+        params
+      );
+    }
   } catch (error) {
-    // TODO: Send an error response.
-    throw error;
+    let payload = {
+      message: error.message,
+      stack: error.stack.replace(
+        /\((.+?)\)/g,
+        (_match: string, file: string) => `(file://${file})`
+      )
+    };
+
+    return json(payload, {
+      status: 500,
+      headers: {
+        "X-Remix-Error": "unfortunately, yes"
+      }
+    });
   }
 
   if (isRedirectResponse(response)) {
@@ -201,98 +213,94 @@ async function handleDocumentRequest(
     serverEntryModule,
     globalDataModule,
     routeModules
-  } = await loadServerBuild(
-    remixConfig,
-    matches.map(match => match.route.id)
-  );
+  } = await loadServerBuild(remixConfig);
 
   // Handle action requests.
   if (isActionRequest(request)) {
     let leafMatch = matches[matches.length - 1];
+    let route = leafMatch.route;
+
     let response = await callRouteAction(
-      leafMatch.route.id,
-      routeModules[leafMatch.route.id],
+      route.id,
+      routeModules[route.id],
       request,
       session,
       loadContext,
       leafMatch.params
     );
 
+    // TODO: How do we handle errors here?
+
     return response;
   }
 
+  let componentDidCatchEmulator: ComponentDidCatchEmulator = {
+    error: undefined,
+    routeId: null
+  };
+
   // Run all data loaders in parallel. Await them in series below.
-  let globalLoaderPromise = globalDataModule
-    ? loadGlobalData(globalDataModule, request.clone(), session, loadContext)
+  // Note: This code is a little weird due to the way unhandled promise
+  // rejections are handled in node. We use a .catch() handler on each
+  // promise to avoid the warning, then handle errors manually afterwards.
+  let globalLoaderPromise: Promise<Response | Error> = globalDataModule
+    ? loadGlobalData(
+        globalDataModule,
+        request.clone(),
+        session,
+        loadContext
+      ).catch(error => error)
     : Promise.resolve(json(null));
-  let routeLoaderPromises = matches.map(match =>
+
+  let routeLoaderPromises: Promise<Response | Error>[] = matches.map(match =>
     loadRouteData(
       routeModules[match.route.id],
       request.clone(),
       session,
       loadContext,
       match.params
-    )
+    ).catch(error => error)
   );
 
-  async function handleDataLoaderError(error: Error) {
-    if (remixConfig.serverMode !== ServerMode.Test) {
-      console.error(error);
+  let globalLoaderResult = await globalLoaderPromise;
+  if (globalLoaderResult instanceof Error) {
+    console.error(`There was an error running the global data loader`);
+    componentDidCatchEmulator.error = globalLoaderResult;
+    globalLoaderResult = json(null, { status: 500 });
+  } else if (isRedirectResponse(globalLoaderResult)) {
+    return globalLoaderResult;
+  }
+
+  let routeLoaderResults = await Promise.all(routeLoaderPromises);
+  for (let [index, response] of routeLoaderResults.entries()) {
+    if (componentDidCatchEmulator.error) {
+      routeLoaderResults[index] = json(null, { status: 500 });
+      continue;
     }
 
-    matches = [
-      {
-        params: {},
-        pathname: url.pathname,
-        route: {
-          id: "routes/500",
-          path: url.pathname,
-          moduleFile: "routes/500"
-        }
-      }
-    ];
-    statusCode = 500;
+    let route = matches[index].route;
+    let routeModule = routeModules[route.id];
 
-    // Need to reload the route modules so we can generate the entry manifest...
-    routeModules = (await loadServerBuild(remixConfig, ["routes/500"]))
-      .routeModules;
-  }
+    if (routeModule.ErrorBoundary) {
+      componentDidCatchEmulator.routeId = route.id;
+    }
 
-  let globalLoaderResponse: Response;
-  try {
-    globalLoaderResponse = await globalLoaderPromise;
-  } catch (error) {
-    globalLoaderResponse = json(null);
-
-    console.error(`There was an error running the global data loader`);
-
-    await handleDataLoaderError(error);
-  }
-
-  let routeLoaderResponses: Response[] = [];
-  for (let promise of routeLoaderPromises) {
-    try {
-      routeLoaderResponses.push(await promise);
-    } catch (error) {
-      routeLoaderResponses.push(json(null));
-
-      let route = matches[routeLoaderResponses.length - 1].route;
+    if (response instanceof Error) {
       console.error(
         `There was an error running the data loader for route ${route.id}`
       );
-
-      await handleDataLoaderError(error);
+      componentDidCatchEmulator.error = response;
+      routeLoaderResults[index] = json(null, { status: 500 });
+    } else if (isRedirectResponse(response)) {
+      return response;
     }
   }
 
-  let allResponses = [globalLoaderResponse, ...routeLoaderResponses];
+  let globalLoaderResponse = globalLoaderResult;
+  // We already filtered out all Errors, so these are all Responses.
+  let routeLoaderResponses: Response[] = routeLoaderResults as Response[];
 
-  // Handle redirects. A redirect in a loader takes precedence over all
-  // other responses and is immediately returned.
-  let redirectResponse = allResponses.find(isRedirectResponse);
-  if (redirectResponse) {
-    return redirectResponse;
-  }
+  let allResponses = [globalLoaderResponse, ...routeLoaderResponses];
 
   // Handle responses with a non-200 status code. The first loader with a
   // non-200 status code determines the status code for the whole response.
@@ -335,10 +343,7 @@ async function handleDocumentRequest(
   let serverEntryContext = {
     ...serverHandoff,
     routeModules,
-    componentDidCatchEmulator: {
-      error: undefined,
-      routeId: null
-    },
+    componentDidCatchEmulator,
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 

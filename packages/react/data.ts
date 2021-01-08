@@ -23,31 +23,49 @@ export interface DataRedirectHandler {
 /**
  * Loads the global data from the server.
  */
-export function loadGlobalData(
+export async function loadGlobalData(
   loaderUrl: string | undefined,
-  location: Location,
-  handleRedirect: DataRedirectHandler
-) {
-  return fetchData(loaderUrl, location, "_global", {}, handleRedirect);
+  location: Location
+): Promise<Response | Error | undefined> {
+  if (!loaderUrl) return undefined;
+  return fetchData(loaderUrl, location, "_global", {});
 }
 
 /**
  * Loads some data for a route from the server.
  */
-export function loadRouteData(
+export async function loadRouteData(
   route: EntryRouteObject,
   location: Location,
-  routeParams: Params,
-  handleRedirect: DataRedirectHandler,
-  formSubmit?: FormSubmit
-): Promise<AppData> {
-  return fetchData(
-    route.loaderUrl,
-    location,
-    route.id,
-    routeParams,
-    handleRedirect,
-    formSubmit
+  params: Params
+): Promise<Response | Error | undefined> {
+  if (!route.loaderUrl) return undefined;
+  return fetchData(route.loaderUrl, location, route.id, params);
+}
+
+/**
+ * Calls the action for a route with the data from the form that was submitted.
+ */
+export function callRouteAction(
+  route: EntryRouteObject,
+  location: Location,
+  params: Params,
+  formSubmit: FormSubmit
+): Promise<Response | Error> {
+  return fetchData(route.actionUrl, location, route.id, params, formSubmit);
+}
+
+export function isErrorResponse(response: any): boolean {
+  return (
+    response instanceof Response &&
+    response.headers.get("X-Remix-Error") != null
+  );
+}
+
+export function isRedirectResponse(response: any): boolean {
+  return (
+    response instanceof Response &&
+    response.headers.get("X-Remix-Redirect") != null
   );
 }
 
@@ -56,11 +74,8 @@ async function fetchData(
   location: Location,
   routeId: string,
   routeParams: Params,
-  handleRedirect: DataRedirectHandler,
   formSubmit?: FormSubmit
-): Promise<AppData> {
-  if (!loaderUrl) return undefined;
-
+): Promise<Response | Error> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
   let params = new URLSearchParams({
@@ -72,9 +87,14 @@ async function fetchData(
   let init = formSubmit ? getFormSubmitInit(formSubmit) : undefined;
   let response = await fetch(`${loaderUrl}?${params.toString()}`, init);
 
-  let redirectUrl = response.headers.get("X-Remix-Redirect");
-  if (redirectUrl) {
-    handleRedirect(new URL(redirectUrl, window.location.origin));
+  if (isErrorResponse(response)) {
+    // We discussed putting an error in the console here but decided to pass on
+    // it for now since they will already see 1) a 500 in the Network tab and
+    // 2) an error in the console when the ErrorBoundary shows up.
+    let data = await response.json();
+    let error = new Error(data.message);
+    error.stack = data.stack;
+    return error;
   }
 
   // We discussed possibly reloading here to get the right status code from the
@@ -82,10 +102,14 @@ async function fetchData(
   // concluded it's probably better to just not have any JavaScript on the page
   // when search bots come around to index things.
 
-  return extractData(response);
+  return response;
 }
 
-function extractData(response: Response): Promise<AppData> {
+export async function extractData(
+  response: Response | Error
+): Promise<AppData> {
+  if (response instanceof Error) return response;
+
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");

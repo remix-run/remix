@@ -41,6 +41,11 @@ export default function Index() {
             </Link>
           </li>
           <li>
+            <Link to="/gists/DANGER" className="text-blue-700 underline">
+              Link to Error in loader with no ErrorBoundary
+            </Link>
+          </li>
+          <li>
             <Link to="/errors?throw" className="text-blue-700 underline">
               Route without ErrorBoundary
             </Link>

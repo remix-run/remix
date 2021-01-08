@@ -15,23 +15,25 @@ export interface ServerHandoff {
   routeData: RouteData;
 }
 
+/**
+ * Because componentDidCatch is stateful it doesn't participate in server
+ * rendering, we emulate it with this value. Each RemixRoute mutates the value
+ * so we know which route was the last to attempt to render. We then use it to
+ * render a second time along with the caught error and emulate
+ * `componentDidCatch` on the server render 🎉. Optional because it only exists
+ * in the server render, we don't hand this off to the browser because
+ * componentDidCatch already works there
+ */
+export interface ComponentDidCatchEmulator {
+  error?: Error;
+  // `null` means the app layout threw before any routes rendered
+  routeId: string | null;
+}
+
 export interface EntryContext extends ServerHandoff {
   routeModules: RouteModules;
   serverHandoffString?: string;
-
-  // Because componentDidCatch is stateful it doesn't participate in server
-  // rendering, we emulate it with this value. Each RemixRoute mutates the value
-  // so we know which route was the last to attempt to render. We hen use it to
-  // render a second time along with the caught error and emulate
-  // `componentDidCatch` on the server render 🎉. Optional because it only
-  // exists in the server render, we don't hand this off to the browser because
-  // componentDidCatch already works there
-  componentDidCatchEmulator?: {
-    error?: Error;
-
-    // `null` means the app layout threw before any routes rendered
-    routeId: null;
-  };
+  componentDidCatchEmulator?: ComponentDidCatchEmulator;
 }
 
 export interface EntryManifest {
@@ -50,6 +52,7 @@ export interface EntryRouteObject {
   moduleUrl?: string; // URL of the route module for `import`
   // nomoduleUrl?: string; // URL of the route module for `SystemJS.import`
   stylesUrl?: string; // URL for loading the CSS
+  actionUrl?: string; // URL for calling the action
   loaderUrl?: string; // URL for calling the loader
 }
 
@@ -75,6 +78,9 @@ export function createEntryRoute(
   }
   if (assets[`${route.id}.css`]) {
     route.stylesUrl = publicPath + assets[`${route.id}.css`].file;
+  }
+  if (typeof routeModule.action !== "undefined") {
+    route.actionUrl = "/_remix/data";
   }
   if (typeof routeModule.loader !== "undefined") {
     route.loaderUrl = "/_remix/data";
