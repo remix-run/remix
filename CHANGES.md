@@ -6,12 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
-- Added root error boundary so render errors on browser transitions are handled
-
-## 0.9.0-pre.2 - Wed Jan 06 2021
-
-### Improvements
-
+- Added error handling for both render and loader errors
 - Adds `loader` and `action` exports to route modules
 
 ### Breaking Changes
