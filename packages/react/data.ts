@@ -108,7 +108,7 @@ async function fetchData(
 export async function extractData(
   response: Response | Error
 ): Promise<AppData> {
-  if (response instanceof Error) return response;
+  if (response instanceof Error) return null;
 
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.

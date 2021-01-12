@@ -3,28 +3,14 @@ import type { Params } from "react-router";
 import type {
   AppLoadContext,
   AppData,
-  LoaderFunction,
-  ActionFunction,
   GlobalDataModule,
   RouteModule
 } from "./buildModules";
 import { Request, Response, isResponseLike } from "./fetch";
 import { json } from "./responseHelpers";
 import type { Session } from "./sessions";
-import invariant from "./invariant";
 
-async function executeLoader(
-  loader: LoaderFunction,
-  request: Request,
-  session: Session,
-  context: AppLoadContext,
-  params: Params = {}
-): Promise<Response> {
-  let result = await loader({ request, session, context, params });
-  return isResponseLike(result) ? result : json(result);
-}
-
-export function loadGlobalData(
+export async function loadGlobalData(
   dataModule: GlobalDataModule,
   request: Request,
   session: Session,
@@ -34,10 +20,25 @@ export function loadGlobalData(
     return Promise.resolve(json(null));
   }
 
-  return executeLoader(dataModule.loader, request, session, context);
+  let result = await dataModule.loader({
+    request,
+    session,
+    context,
+    params: {}
+  });
+
+  if (result === undefined) {
+    throw new Error(
+      `You defined a global data loader but didn't return anything ` +
+        `from your \`loader\` function. We can't do everything for you! 😅`
+    );
+  }
+
+  return isResponseLike(result) ? result : json(result);
 }
 
-export function loadRouteData(
+export async function loadRouteData(
+  routeId: string,
   routeModule: RouteModule,
   request: Request,
   session: Session,
@@ -48,32 +49,19 @@ export function loadRouteData(
     return Promise.resolve(json(null));
   }
 
-  return executeLoader(routeModule.loader, request, session, context, params);
+  let result = await routeModule.loader({ request, session, context, params });
+
+  if (result === undefined) {
+    throw new Error(
+      `You defined a loader for route "${routeId}" but didn't return ` +
+        `anything from your \`loader\` function. We can't do everything for you! 😅`
+    );
+  }
+
+  return isResponseLike(result) ? result : json(result);
 }
 
-async function executeAction(
-  action: ActionFunction,
-  request: Request,
-  session: Session,
-  context: AppLoadContext,
-  params: Params = {}
-): Promise<Response> {
-  let result = await action({ request, session, context, params });
-
-  invariant(
-    isResponseLike(result) && result.headers.get("Location") != null,
-    `You made a ${request.method} request to ${request.url} but did not return ` +
-      `a redirect. Please \`return redirect(newUrl)\` from your \`action\` ` +
-      `to avoid reposts when users click the back button.`
-  );
-
-  return new Response("", {
-    status: 303,
-    headers: result.headers
-  });
-}
-
-export function callRouteAction(
+export async function callRouteAction(
   routeId: string,
   routeModule: RouteModule,
   request: Request,
@@ -81,14 +69,28 @@ export function callRouteAction(
   context: AppLoadContext,
   params: Params
 ): Promise<Response> {
-  invariant(
-    routeModule.action,
-    `You made a ${request.method} request to ${request.url} but did not provide ` +
-      `an \`action\` for route "${routeId}", so there is no way to handle the ` +
-      `request.`
-  );
+  if (!routeModule.action) {
+    throw new Error(
+      `You made a ${request.method} request to ${request.url} but did not provide ` +
+        `an \`action\` for route "${routeId}", so there is no way to handle the ` +
+        `request.`
+    );
+  }
 
-  return executeAction(routeModule.action, request, session, context, params);
+  let result = await routeModule.action({ request, session, context, params });
+
+  if (!isResponseLike(result) || result.headers.get("Location") == null) {
+    throw new Error(
+      `You made a ${request.method} request to ${request.url} but did not return ` +
+        `a redirect. Please \`return redirect(newUrl)\` from your \`action\` ` +
+        `function to avoid reposts when users click the back button.`
+    );
+  }
+
+  return new Response("", {
+    status: 303,
+    headers: result.headers
+  });
 }
 
 /**

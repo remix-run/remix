@@ -1,11 +1,11 @@
-export default function ExceptionsIndex() {
+export default function RenderErrorsNested() {
   throw new Error("GAHHHH!!! KABOOM! 🧨");
 }
 
 export function ErrorBoundary({ error }) {
   return (
-    <div data-test-id="/errors/nested">
-      <h2>OH NOES!</h2>
+    <div data-test-id="/render-errors/nested">
+      <h2>Nested Error Boundary</h2>
       <p>
         There was an error at this specific route. The parent still renders
         cause it was fine, but this one blew up.

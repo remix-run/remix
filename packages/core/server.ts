@@ -4,14 +4,15 @@ import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
 import type {
   ComponentDidCatchEmulator,
   EntryManifest,
-  ServerHandoff
+  EntryContext
 } from "./entry";
 import {
   createEntryMatches,
   createGlobalData,
   createRouteData,
   createRouteManifest,
-  createServerHandoffString
+  createServerHandoffString,
+  serializeError
 } from "./entry";
 import { Headers, Request, Response } from "./fetch";
 import { matchRoutes } from "./match";
@@ -143,6 +144,7 @@ async function handleDataRequest(
       );
     } else {
       response = await loadRouteData(
+        loaderId,
         routeModules[loaderId],
         loaderRequest,
         session,
@@ -151,15 +153,7 @@ async function handleDataRequest(
       );
     }
   } catch (error) {
-    let payload = {
-      message: error.message,
-      stack: error.stack.replace(
-        /\((.+?)\)/g,
-        (_match: string, file: string) => `(file://${file})`
-      )
-    };
-
-    return json(payload, {
+    return json(serializeError(error), {
       status: 500,
       headers: {
         "X-Remix-Error": "unfortunately, yes"
@@ -235,8 +229,9 @@ async function handleDocumentRequest(
   }
 
   let componentDidCatchEmulator: ComponentDidCatchEmulator = {
-    error: undefined,
-    routeId: null
+    trackBoundaries: true,
+    boundaryRouteId: null,
+    error: undefined
   };
 
   // Run all data loaders in parallel. Await them in series below.
@@ -251,9 +246,9 @@ async function handleDocumentRequest(
         loadContext
       ).catch(error => error)
     : Promise.resolve(json(null));
-
   let routeLoaderPromises: Promise<Response | Error>[] = matches.map(match =>
     loadRouteData(
+      match.route.id,
       routeModules[match.route.id],
       request.clone(),
       session,
@@ -265,7 +260,7 @@ async function handleDocumentRequest(
   let globalLoaderResult = await globalLoaderPromise;
   if (globalLoaderResult instanceof Error) {
     console.error(`There was an error running the global data loader`);
-    componentDidCatchEmulator.error = globalLoaderResult;
+    componentDidCatchEmulator.error = serializeError(globalLoaderResult);
     globalLoaderResult = json(null, { status: 500 });
   } else if (isRedirectResponse(globalLoaderResult)) {
     return globalLoaderResult;
@@ -274,7 +269,6 @@ async function handleDocumentRequest(
   let routeLoaderResults = await Promise.all(routeLoaderPromises);
   for (let [index, response] of routeLoaderResults.entries()) {
     if (componentDidCatchEmulator.error) {
-      routeLoaderResults[index] = json(null, { status: 500 });
       continue;
     }
 
@@ -282,14 +276,14 @@ async function handleDocumentRequest(
     let routeModule = routeModules[route.id];
 
     if (routeModule.ErrorBoundary) {
-      componentDidCatchEmulator.routeId = route.id;
+      componentDidCatchEmulator.boundaryRouteId = route.id;
     }
 
     if (response instanceof Error) {
       console.error(
         `There was an error running the data loader for route ${route.id}`
       );
-      componentDidCatchEmulator.error = response;
+      componentDidCatchEmulator.error = serializeError(response);
       routeLoaderResults[index] = json(null, { status: 500 });
     } else if (isRedirectResponse(response)) {
       return response;
@@ -333,17 +327,17 @@ async function handleDocumentRequest(
   let globalData = await createGlobalData(globalLoaderResponse);
   let routeData = await createRouteData(routeLoaderResponses, matches);
 
-  let serverHandoff: ServerHandoff = {
-    globalData,
+  let serverHandoff = {
     manifest: entryManifest,
     matches: entryMatches,
+    componentDidCatchEmulator,
+    globalData,
     routeData
   };
 
-  let serverEntryContext = {
+  let serverEntryContext: EntryContext = {
     ...serverHandoff,
     routeModules,
-    componentDidCatchEmulator,
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
@@ -376,6 +370,10 @@ async function handleDocumentRequest(
     return parentsHeaders;
   }, new Headers());
 
+  // TODO:
+  // Add componentDidCatchEmulator to the server handoff string so we
+  // can use it to hydrate...
+
   let response: Promise<Response> | Response;
   try {
     response = serverEntryModule.default(
@@ -385,6 +383,8 @@ async function handleDocumentRequest(
       serverEntryContext
     );
   } catch (error) {
+    statusCode = 500;
+
     // Go again, this time with the componentDidCatch emulation. Remember, the
     // routes `componentDidCatch.routeId` because we can't know that here. (Well
     // ... maybe we could, we could search the error.stack lines for the first
@@ -393,7 +393,11 @@ async function handleDocumentRequest(
     // changed when we bundle, and just feels a little too shakey for me right
     // now. I'm okay with tracking our position in the route tree while
     // rendering, that's pretty much how hooks work 😂)
-    serverEntryContext.componentDidCatchEmulator.error = error;
+    componentDidCatchEmulator.trackBoundaries = false;
+    componentDidCatchEmulator.error = serializeError(error);
+    serverEntryContext.serverHandoffString = createServerHandoffString(
+      serverHandoff
+    );
 
     try {
       response = serverEntryModule.default(

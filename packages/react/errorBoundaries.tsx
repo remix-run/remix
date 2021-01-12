@@ -1,38 +1,21 @@
 import React from "react";
 import type { Location } from "history";
-import { useLocation } from "react-router-dom";
 import type { ErrorBoundaryComponent } from "@remix-run/core";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
-  component: ErrorBoundaryComponent;
-  error?: Error;
-}>;
-
-// Because our error boundary needs to reset on new locations, and classes can't
-// use hooks, and `contextType` (to access location from context) doesn't work
-// with `getDerivedStateFromProps` (where we diff location and reset error
-// state), we make a quick wrapper to send the location to the error boundary
-// implementation. Another option is to plumb `location` all the way from the
-// top of RemixEntry down to `createClientRoute`. This feels less intrusive than
-// that.
-export function RemixErrorBoundary(props: RemixErrorBoundaryProps) {
-  return <RemixErrorBoundaryImpl {...props} location={useLocation()} />;
-}
-
-type RemixErrorBoundaryImplProps = React.PropsWithChildren<{
   location: Location;
   component: ErrorBoundaryComponent;
   error?: Error;
 }>;
 
-type RemixErrorBoundaryImplState = {
+type RemixErrorBoundaryState = {
   error: null | Error;
   location: Location;
 };
 
-export class RemixErrorBoundaryImpl extends React.Component<
-  RemixErrorBoundaryImplProps,
-  RemixErrorBoundaryImplState
+export class RemixErrorBoundary extends React.Component<
+  RemixErrorBoundaryProps,
+  RemixErrorBoundaryState
 > {
   state = { error: this.props.error || null, location: this.props.location };
 
@@ -41,8 +24,8 @@ export class RemixErrorBoundaryImpl extends React.Component<
   }
 
   static getDerivedStateFromProps(
-    props: RemixErrorBoundaryImplProps,
-    state: RemixErrorBoundaryImplState
+    props: RemixErrorBoundaryProps,
+    state: RemixErrorBoundaryState
   ) {
     // When we get into an error state, the user will likely click "back" to the
     // previous page that didn't have an error. Because this wraps the entire
@@ -54,7 +37,7 @@ export class RemixErrorBoundaryImpl extends React.Component<
     // so that when we are in an error state, it gets reset when a new location
     // comes in and the user recovers from the error.
     if (state.location !== props.location) {
-      return { error: null, location: props.location };
+      return { error: props.error || null, location: props.location };
     }
     return state;
   }

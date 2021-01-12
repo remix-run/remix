@@ -22,12 +22,12 @@ export type { RemixConfig } from "./config";
 export { ServerMode, readConfig } from "./config";
 
 export type {
-  ServerHandoff,
   EntryContext,
   EntryManifest,
   EntryRouteObject,
   EntryRouteMatch,
-  RouteData
+  RouteData,
+  SerializedError
 } from "./entry";
 
 export type {

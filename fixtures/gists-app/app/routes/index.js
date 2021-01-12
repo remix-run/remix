@@ -40,19 +40,32 @@ export default function Index() {
               Broken link
             </Link>
           </li>
+
           <li>
-            <Link to="/gists/DANGER" className="text-blue-700 underline">
-              Link to Error in loader with no ErrorBoundary
+            <Link to="/loader-errors?throw" className="text-blue-700 underline">
+              Loader error with no ErrorBoundary
             </Link>
           </li>
           <li>
-            <Link to="/errors?throw" className="text-blue-700 underline">
-              Route without ErrorBoundary
+            <Link
+              to="/loader-errors/nested"
+              className="text-blue-700 underline"
+            >
+              Loader error in nested route with ErrorBoundary
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/render-errors?throw" className="text-blue-700 underline">
+              Render error with no ErrorBoundary
             </Link>
           </li>
           <li>
-            <Link to="/errors/nested" className="text-blue-700 underline">
-              Nested route with ErrorBoundary
+            <Link
+              to="/render-errors/nested"
+              className="text-blue-700 underline"
+            >
+              Render error in nested route with ErrorBoundary
             </Link>
           </li>
         </ul>

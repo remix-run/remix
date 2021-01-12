@@ -8,11 +8,23 @@ import type { Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import type { RouteManifest } from "./routes";
 
-export interface ServerHandoff {
-  globalData: AppData;
-  manifest: EntryManifest;
-  matches: EntryRouteMatch[];
-  routeData: RouteData;
+// We always serialize errors because we have to hydrate. Note: This is only
+// for real errors that the developer didn't anticipate.
+export interface SerializedError {
+  message: string;
+  stack?: string;
+}
+
+export function serializeError(error: Error): SerializedError {
+  return {
+    message: error.message,
+    stack:
+      error.stack &&
+      error.stack.replace(
+        /\((.+?)\)/g,
+        (_match: string, file: string) => `(file://${file})`
+      )
+  };
 }
 
 /**
@@ -25,15 +37,20 @@ export interface ServerHandoff {
  * componentDidCatch already works there
  */
 export interface ComponentDidCatchEmulator {
-  error?: Error;
+  trackBoundaries: boolean;
   // `null` means the app layout threw before any routes rendered
-  routeId: string | null;
+  boundaryRouteId: string | null;
+  error?: SerializedError;
 }
 
-export interface EntryContext extends ServerHandoff {
+export interface EntryContext {
+  manifest: EntryManifest;
+  matches: EntryRouteMatch[];
+  componentDidCatchEmulator: ComponentDidCatchEmulator;
+  globalData: AppData;
+  routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
-  componentDidCatchEmulator?: ComponentDidCatchEmulator;
 }
 
 export interface EntryManifest {
@@ -139,9 +156,7 @@ export function createRouteManifest(
   }, {} as RouteManifest<EntryRouteObject>);
 }
 
-export function createServerHandoffString(
-  serverHandoff: ServerHandoff
-): string {
+export function createServerHandoffString(serverHandoff: any): string {
   // Use jsesc to escape data returned from the loaders. This string is
   // inserted directly into the HTML in the `<Scripts>` element.
   return jsesc(serverHandoff, { isScriptContext: true });

@@ -1,10 +1,10 @@
 import type {
   EntryRouteObject,
-  RouteModules,
-  RouteModule
+  RouteModule,
+  RouteModules
 } from "@remix-run/core";
 
-export type { RouteModules, RouteModule };
+export type { RouteModule, RouteModules };
 
 /**
  * Dynamically loads a route module from a bundle on the server.

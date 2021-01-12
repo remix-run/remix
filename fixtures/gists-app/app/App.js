@@ -42,10 +42,11 @@ export function ErrorBoundary({ error }) {
         />
       </head>
       <body>
-        <div data-test-id="error-page">
-          <h1>Oh snizzy, there was an error</h1>
+        <div data-test-id="app-error-boundary">
+          <h1>App Error Boundary</h1>
           <pre>{error.message}</pre>
         </div>
+        <Scripts />
       </body>
     </html>
   );

@@ -10,7 +10,7 @@ import {
   useNavigate,
   useResolvedPath
 } from "react-router-dom";
-import type { EntryContext } from "@remix-run/core";
+import type { EntryContext, SerializedError } from "@remix-run/core";
 
 import {
   AppData,
@@ -38,11 +38,11 @@ import {
 } from "./routes";
 import { loadRouteStyleSheet } from "./stylesheets";
 import {
-  RemixErrorBoundaryImpl,
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
 } from "./errorBoundaries";
 import type { ErrorBoundaryComponent } from "@remix-run/core";
+import { ComponentDidCatchEmulator } from "@remix-run/core/entry";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
@@ -90,17 +90,14 @@ function setFormIdle() {
 // RemixEntry
 
 interface RemixEntryContextType {
-  globalData: AppData;
   manifest: Manifest;
   matches: ClientRouteMatch[];
-  componentDidCatchEmulator?: {
-    routeId: null | string;
-    error?: Error;
-  };
-  nextLocation: Location | undefined;
+  componentDidCatchEmulator: EntryContext["componentDidCatchEmulator"];
+  globalData: AppData;
   routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
+  pendingLocation: Location | undefined;
 }
 
 const RemixEntryContext = React.createContext<
@@ -137,7 +134,7 @@ export function RemixEntry({
     routeData: entryRouteData,
     routeModules,
     serverHandoffString,
-    componentDidCatchEmulator
+    componentDidCatchEmulator: entryComponentDidCatchEmulator
   } = entryContext;
 
   let [state, setState] = React.useState({
@@ -145,9 +142,18 @@ export function RemixEntry({
     location: nextLocation,
     matches: createClientMatches(entryMatches, RemixRoute),
     globalData: entryGlobalData,
-    routeData: entryRouteData
+    routeData: entryRouteData,
+    componentDidCatchEmulator: entryComponentDidCatchEmulator
   });
-  let { action, location, matches, globalData, routeData } = state;
+
+  let {
+    action,
+    location,
+    matches,
+    globalData,
+    routeData,
+    componentDidCatchEmulator
+  } = state;
 
   React.useEffect(() => {
     if (location === nextLocation) return;
@@ -209,9 +215,7 @@ export function RemixEntry({
       }
 
       function maybeHandleDataRedirect(response: any) {
-        if (!didRedirect && isRedirectResponse(response)) {
-          handleDataRedirect(response);
-        }
+        if (!didRedirect) handleDataRedirect(response);
       }
 
       let styleSheetsPromise = Promise.all(
@@ -228,6 +232,11 @@ export function RemixEntry({
 
       let nextGlobalData: AppData;
       let nextRouteData: RouteData;
+      let componentDidCatchEmulator: ComponentDidCatchEmulator = {
+        trackBoundaries: false,
+        boundaryRouteId: null,
+        error: undefined
+      };
 
       if (formState === FormState.Redirected) {
         // Reload all data after a <Form> submit.
@@ -243,12 +252,34 @@ export function RemixEntry({
           )
         );
 
+        await styleSheetsPromise;
+        await modulesPromise;
+
         let globalDataResponse = await globalDataPromise;
-        maybeHandleDataRedirect(globalDataResponse);
+        if (globalDataResponse instanceof Error) {
+          componentDidCatchEmulator.error = globalDataResponse;
+        } else if (isRedirectResponse(globalDataResponse)) {
+          maybeHandleDataRedirect(globalDataResponse);
+        }
 
         let routeDataResponses = await Promise.all(routeDataPromises);
-        for (let response of routeDataResponses) {
-          maybeHandleDataRedirect(response);
+        for (let [index, response] of routeDataResponses.entries()) {
+          if (componentDidCatchEmulator.error) {
+            continue;
+          }
+
+          let route = nextMatches[index].route;
+          let routeModule = routeModules[route.id];
+
+          if (routeModule.ErrorBoundary) {
+            componentDidCatchEmulator.boundaryRouteId = route.id;
+          }
+
+          if (response instanceof Error) {
+            componentDidCatchEmulator.error = response;
+          } else if (isRedirectResponse(response)) {
+            maybeHandleDataRedirect(response);
+          }
         }
 
         nextGlobalData =
@@ -281,9 +312,31 @@ export function RemixEntry({
           )
         );
 
+        await styleSheetsPromise;
+        await modulesPromise;
+
         let routeDataResults = await routeDataPromise;
-        for (let result of routeDataResults) {
-          maybeHandleDataRedirect(result);
+        for (let [index, result] of routeDataResults.entries()) {
+          if (!(result instanceof Response || result instanceof Error)) {
+            continue;
+          }
+
+          if (componentDidCatchEmulator.error) {
+            continue;
+          }
+
+          let route = nextMatches[index].route;
+          let routeModule = routeModules[route.id];
+
+          if (routeModule.ErrorBoundary) {
+            componentDidCatchEmulator.boundaryRouteId = route.id;
+          }
+
+          if (result instanceof Error) {
+            componentDidCatchEmulator.error = result;
+          } else if (isRedirectResponse(result)) {
+            maybeHandleDataRedirect(result);
+          }
         }
 
         nextGlobalData = globalData;
@@ -304,9 +357,6 @@ export function RemixEntry({
         }, {} as RouteData);
       }
 
-      await styleSheetsPromise;
-      await modulesPromise;
-
       if (isCurrent && !didRedirect) {
         if (
           formState === FormState.Redirected ||
@@ -320,7 +370,8 @@ export function RemixEntry({
           location: nextLocation,
           matches: nextMatches,
           globalData: nextGlobalData,
-          routeData: nextRouteData
+          routeData: nextRouteData,
+          componentDidCatchEmulator
         });
       }
     })();
@@ -343,40 +394,46 @@ export function RemixEntry({
   let context: RemixEntryContextType = {
     manifest,
     matches,
-    globalData,
     componentDidCatchEmulator,
+    globalData,
     routeData,
     routeModules,
     serverHandoffString,
-    nextLocation: nextLocation !== location ? nextLocation : undefined
+    pendingLocation: nextLocation !== location ? nextLocation : undefined
   };
 
   // If we tried to render and failed, and the app threw before rendering any
   // routes, get the error and pass it to the ErrorBoundary to emulate
   // `componentDidCatch`
   let maybeServerRenderError =
-    componentDidCatchEmulator &&
     componentDidCatchEmulator.error &&
-    componentDidCatchEmulator.routeId === null
-      ? componentDidCatchEmulator.error
+    componentDidCatchEmulator.boundaryRouteId === null
+      ? deserializeError(componentDidCatchEmulator.error)
       : undefined;
 
   return (
-    <RemixErrorBoundaryImpl
-      location={location}
-      component={ErrorBoundary}
-      error={maybeServerRenderError}
-    >
-      <Router
-        action={action}
+    <RemixEntryContext.Provider value={context}>
+      <RemixErrorBoundary
         location={location}
-        navigator={navigator}
-        static={staticProp}
+        component={ErrorBoundary}
+        error={maybeServerRenderError}
       >
-        <RemixEntryContext.Provider value={context} children={children} />
-      </Router>
-    </RemixErrorBoundaryImpl>
+        <Router
+          action={action}
+          location={location}
+          navigator={navigator}
+          static={staticProp}
+          children={children}
+        />
+      </RemixErrorBoundary>
+    </RemixEntryContext.Provider>
   );
+}
+
+function deserializeError(data: SerializedError): Error {
+  let error = new Error(data.message);
+  error.stack = data.stack;
+  return error;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -398,6 +455,7 @@ function useRemixRouteContext(): RemixRouteContextType {
 }
 
 export function RemixRoute({ id: routeId }: { id: string }) {
+  let location = useLocation();
   let {
     routeData,
     routeModules,
@@ -431,24 +489,21 @@ export function RemixRoute({ id: routeId }: { id: string }) {
     // they can add more specific boundaries by exporting ErrorBoundary
     // components for whichever routes they please.
 
-    // Emulate componentDidCatch for server rendering, we only add this if the
-    // route defines it's own error boundary, this emulates the "bubbling" that
-    // happens in the client render.
-    if (componentDidCatchEmulator) {
-      componentDidCatchEmulator.routeId = routeId;
+    if (componentDidCatchEmulator.trackBoundaries) {
+      componentDidCatchEmulator.boundaryRouteId = routeId;
     }
 
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerRenderError =
-      componentDidCatchEmulator &&
       componentDidCatchEmulator.error &&
-      componentDidCatchEmulator.routeId === routeId
-        ? componentDidCatchEmulator.error
+      componentDidCatchEmulator.boundaryRouteId === routeId
+        ? deserializeError(componentDidCatchEmulator.error)
         : undefined;
 
     return (
       <RemixErrorBoundary
+        location={location}
         component={routeModule.ErrorBoundary}
         error={maybeServerRenderError}
       >
@@ -529,7 +584,7 @@ export function Scripts() {
         )};`
     )
     .join("\n")}
-    window.__remixContext.routeModules = {${routeIds
+    window.__remixRouteModules = {${routeIds
       .map((routeId, index) => `${JSON.stringify(routeId)}:route${index}`)
       .join(",")}};`;
 
@@ -709,18 +764,14 @@ export function useBeforeUnload(callback: () => any): void {
  * Returns the data from `data/global.js`.
  */
 export function useGlobalData<T = AppData>(): T {
-  let data = useRemixEntryContext().globalData;
-  if (data instanceof Error) throw data;
-  return data;
+  return useRemixEntryContext().globalData;
 }
 
 /**
  * Returns the data for the current route from `data/routes/*`.
  */
 export function useRouteData<T = AppData>(): T {
-  let data = useRemixRouteContext().data;
-  if (data instanceof Error) throw data;
-  return data;
+  return useRemixRouteContext().data;
 }
 
 /**
@@ -737,5 +788,5 @@ export function usePendingFormSubmit(): FormSubmit | undefined {
  * for showing loading indicators during route transitions from `<Link>` clicks.
  */
 export function usePendingLocation(): Location | undefined {
-  return useRemixEntryContext().nextLocation;
+  return useRemixEntryContext().pendingLocation;
 }

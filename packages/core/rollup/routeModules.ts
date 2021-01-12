@@ -81,7 +81,9 @@ export default function routeModules({
           // available in the browser. All the rest will be tree-shaken out so
           // we don't end up with server-only code (and its dependencies) in the
           // browser bundles.
-          return `export { default, meta } from ${JSON.stringify(source)};`;
+          return `export { default, meta, ErrorBoundary } from ${JSON.stringify(
+            source
+          )};`;
         }
 
         // Create a proxy module that transparently re-exports everything from

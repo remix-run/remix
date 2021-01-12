@@ -6,9 +6,11 @@ import type { EntryContext } from "@remix-run/core";
 import type { ErrorBoundaryComponent } from "@remix-run/core";
 
 import { RemixEntry } from "./components";
+import type { RouteModules } from "./routeModules";
 
 declare global {
   var __remixContext: EntryContext;
+  var __remixRouteModules: RouteModules;
 }
 
 // if ("scrollRestoration" in window.history) {
@@ -16,6 +18,12 @@ declare global {
 // }
 
 const entryContext = window.__remixContext;
+entryContext.routeModules = window.__remixRouteModules;
+
+// In the browser, we don't need this because a) in the case of loader
+// errors we already know the order and b) in the case of render errors
+// React knows the order and handles error boundaries normally.
+entryContext.componentDidCatchEmulator.trackBoundaries = false;
 
 export interface RemixBrowserProps {
   children: ReactNode;
