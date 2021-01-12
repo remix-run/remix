@@ -21,6 +21,7 @@ app.use(express.static("public"));
 app.all(
   "*",
   createRequestHandler({
+    enableSessions: false,
     getLoadContext() {
       // Whatever you return here will be passed as `context` to your loaders.
     }

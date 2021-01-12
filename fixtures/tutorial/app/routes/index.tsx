@@ -1,4 +1,9 @@
 import { useRouteData } from "@remix-run/react";
+import type { Loader } from "@remix-run/data";
+
+export let loader: Loader = async () => {
+  return { message: "this is awesome 😎" };
+};
 
 export function meta() {
   return {

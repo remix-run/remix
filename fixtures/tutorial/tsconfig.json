@@ -1,4 +1,13 @@
 {
-  "files": [],
-  "references": [{ "path": "app" }, { "path": "data" }]
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "target": "es2019",
+    "strict": true,
+    "skipLibCheck": true,
+
+    // Remix takes care of building everything in `remix build`.
+    "noEmit": true
+  }
 }
