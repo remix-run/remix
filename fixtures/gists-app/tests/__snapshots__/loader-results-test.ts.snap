@@ -29,10 +29,3 @@ exports[`loader results when a loader returns not found sends a not found page 1
 </div>
 "
 `;
-
-exports[`loader results when the loader has an error sends a server error page 1`] = `
-"<div data-test-id=\\"content\\">
-  <div data-test-id=\\"errors/500\\"><h1>500</h1></div>
-</div>
-"
-`;

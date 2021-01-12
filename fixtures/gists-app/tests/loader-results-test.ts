@@ -33,12 +33,4 @@ describe("loader results", () => {
       expect(await getHtml(page, "[data-test-id=content]")).toMatchSnapshot();
     });
   });
-
-  describe("when the loader has an error", () => {
-    it("sends a server error page", async () => {
-      let res = await page.goto(`${testServer}/gists/DANGER`);
-      expect(res.status()).toEqual(500);
-      expect(await getHtml(page, "[data-test-id=content]")).toMatchSnapshot();
-    });
-  });
 });

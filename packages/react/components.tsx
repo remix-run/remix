@@ -576,7 +576,7 @@ export function Scripts() {
   let routeIds = Object.keys(manifest.routes).filter(
     routeId => manifest.routes[routeId].moduleUrl != null
   );
-  let contextRouteModulesScript = `${routeIds
+  let routeModulesScript = `${routeIds
     .map(
       (routeId, index) =>
         `import * as route${index} from ${JSON.stringify(
@@ -596,7 +596,7 @@ export function Scripts() {
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
         <script
-          dangerouslySetInnerHTML={createHtml(contextRouteModulesScript)}
+          dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
         <script src={manifest.entryModuleUrl} type="module" />

@@ -1,5 +1,5 @@
 export function loader() {
-  throw new Error("GAHHHH!!! KABOOM! 🧨");
+  throw new Error("I am a loader error!");
 }
 
 export default function LoaderErrorsNested() {

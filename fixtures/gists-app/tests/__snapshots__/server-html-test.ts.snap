@@ -21,13 +21,23 @@ exports[`the server HTML for the root URL is correct 1`] = `
         </li>
         <li><a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a></li>
         <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/errors?throw\\"
-            >Route without ErrorBoundary</a
+          <a class=\\"text-blue-700 underline\\" href=\\"/loader-errors?throw\\"
+            >Loader error with no ErrorBoundary</a
           >
         </li>
         <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/errors/nested\\"
-            >Nested route with ErrorBoundary</a
+          <a class=\\"text-blue-700 underline\\" href=\\"/loader-errors/nested\\"
+            >Loader error in nested route with ErrorBoundary</a
+          >
+        </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/render-errors?throw\\"
+            >Render error with no ErrorBoundary</a
+          >
+        </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/render-errors/nested\\"
+            >Render error in nested route with ErrorBoundary</a
           >
         </li>
       </ul>

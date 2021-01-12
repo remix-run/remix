@@ -2,12 +2,12 @@ import { useEffect } from "react";
 import { Meta, Scripts, Styles, Routes, useGlobalData } from "@remix-run/react";
 
 export default function App() {
-  let data = useGlobalData();
-
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
   });
+
+  let data = useGlobalData();
 
   return (
     <html lang="en">
@@ -31,6 +31,11 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }) {
+  useEffect(() => {
+    // We use this in the tests to wait for React to hydrate the page.
+    window.reactIsHydrated = true;
+  });
+
   return (
     <html lang="en">
       <head>

@@ -1,5 +1,5 @@
 export default function RenderErrorsNested() {
-  throw new Error("GAHHHH!!! KABOOM! 🧨");
+  throw new Error("I am a render error!");
 }
 
 export function ErrorBoundary({ error }) {

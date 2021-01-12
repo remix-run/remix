@@ -17,14 +17,6 @@ declare global {
 //   window.history.scrollRestoration = "manual";
 // }
 
-const entryContext = window.__remixContext;
-entryContext.routeModules = window.__remixRouteModules;
-
-// In the browser, we don't need this because a) in the case of loader
-// errors we already know the order and b) in the case of render errors
-// React knows the order and handles error boundaries normally.
-entryContext.componentDidCatchEmulator.trackBoundaries = false;
-
 export interface RemixBrowserProps {
   children: ReactNode;
   ErrorBoundary?: ErrorBoundaryComponent;
@@ -54,6 +46,13 @@ export default function RemixBrowser({
   );
 
   React.useLayoutEffect(() => history.listen(dispatch), [history]);
+
+  let entryContext = window.__remixContext;
+  entryContext.routeModules = window.__remixRouteModules;
+  // In the browser, we don't need this because a) in the case of loader
+  // errors we already know the order and b) in the case of render errors
+  // React knows the order and handles error boundaries normally.
+  entryContext.componentDidCatchEmulator.trackBoundaries = false;
 
   return (
     <RemixEntry

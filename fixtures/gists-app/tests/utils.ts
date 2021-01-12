@@ -37,6 +37,15 @@ export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
   return responses;
 }
 
+export function collectDataResponses(page: Page, routeId?: string) {
+  return collectResponses(
+    page,
+    url =>
+      url.pathname.startsWith("/_remix/data") &&
+      (routeId === undefined || url.searchParams.get("id") === routeId)
+  );
+}
+
 export function reactIsHydrated(page: Page) {
   return page.waitForFunction("window.reactIsHydrated === true");
 }

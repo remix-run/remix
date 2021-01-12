@@ -30,10 +30,6 @@ export function loader({ params }) {
     return json(null, { status: 404 });
   }
 
-  if (username === "DANGER") {
-    throw new Error("RUN FOR IT");
-  }
-
   if (process.env.NODE_ENV === "test") {
     return fakeGists;
   }
