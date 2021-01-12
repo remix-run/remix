@@ -21,18 +21,6 @@ export type AppLoadContext = any;
 export type AppData = any;
 
 /**
- * A module that renders the HTML on the server.
- */
-export interface ServerEntryModule {
-  default(
-    request: Request,
-    responseStatusCode: number,
-    responseHeaders: Headers,
-    context: EntryContext
-  ): Promise<Response>;
-}
-
-/**
  * A module that is used to load global data for the app.
  */
 export interface GlobalDataModule {
@@ -87,7 +75,7 @@ export interface MetaFunction {
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
-  (arg: {
+  (args: {
     request: Request;
     session: Session;
     context: AppLoadContext;
@@ -99,12 +87,25 @@ export interface LoaderFunction {
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (arg: {
+  (args: {
     request: Request;
     session: Session;
     context: AppLoadContext;
     params: Params;
   }): Promise<Response> | Response;
+}
+
+/**
+ * A module that serves as the entry point for a Remix app during server
+ * rendering.
+ */
+export interface ServerEntryModule {
+  default(
+    request: Request,
+    responseStatusCode: number,
+    responseHeaders: Headers,
+    context: EntryContext
+  ): Promise<Response>;
 }
 
 /**
