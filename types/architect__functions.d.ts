@@ -64,7 +64,13 @@ declare module "@architect/functions" {
      * Request metadata, including http object containing method and path (should
      * you not want to parse the routeKey)
      */
-    requestContext: { [key: string]: string };
+    requestContext: {
+      http: {
+        method: string;
+        path: string;
+        routeKey: string;
+      };
+    };
 
     /**
      * Contains unparsed, base64-encoded request body

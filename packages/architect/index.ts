@@ -20,9 +20,12 @@ export let createRequestHandler = createAdapter({
     let url = new URL(req.rawPath + search, `https://${host}`);
 
     return new Request(url.toString(), {
-      method: req.requestContext.method,
+      method: req.requestContext.http.method,
       headers: req.headers,
-      body: req.body
+      body:
+        req.body && req.isBase64Encoded
+          ? Buffer.from(req.body, "base64").toString()
+          : req.body
     });
   },
 
