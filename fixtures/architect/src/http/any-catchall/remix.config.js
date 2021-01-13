@@ -1,8 +1,7 @@
 module.exports = {
   appDirectory: "app",
-  dataDirectory: "data",
   browserBuildDirectory: "../../../public/remix",
-  publicPath: "/remix/",
+  publicPath: "/_static/remix/",
   serverBuildDirectory: "build",
   devServerPort: 8002
 };

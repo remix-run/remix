@@ -40,7 +40,11 @@ export default function Index() {
               Broken link
             </Link>
           </li>
-
+          <li>
+            <Link to="/methods" className="text-blue-700 underline">
+              Forms
+            </Link>
+          </li>
           <li>
             <Link to="/loader-errors?throw" className="text-blue-700 underline">
               Loader error with no ErrorBoundary

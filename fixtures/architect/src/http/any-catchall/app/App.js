@@ -12,7 +12,14 @@ export default function App() {
         <Styles />
       </head>
       <body>
-        <Link to="/gists">Gists</Link>
+        <ul>
+          <li>
+            <Link to="/gists">Gists</Link>
+          </li>
+          <li>
+            <Link to="/form">Form</Link>
+          </li>
+        </ul>
         <Routes />
         <Scripts />
         <footer>
