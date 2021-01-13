@@ -1,6 +1,24 @@
 import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
+import { json, redirect, parseFormBody } from "@remix-run/data";
+
+export let action = async ({ request }) => {
+  // TODO: have parseFormBody take a generic for the return value
+  let body: any = await parseFormBody(request);
+
+  if (body.slow === "on") {
+    await new Promise(res => setTimeout(res, 2000));
+  }
+
+  return redirect(`/form?${body.toString()}`);
+};
+
+exports.loader = ({ request }) => {
+  let url = new URL(request.url);
+  let body = Object.fromEntries(url.searchParams);
+  return json({ body: body });
+};
 
 export default function Methods() {
   let data = useRouteData<{ method: string; body: any }>();

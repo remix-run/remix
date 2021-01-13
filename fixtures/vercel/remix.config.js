@@ -1,6 +1,5 @@
 module.exports = {
   appDirectory: "app",
-  dataDirectory: "data",
   browserBuildDirectory: "./public/build",
   publicPath: "/build/",
   serverBuildDirectory: "build",

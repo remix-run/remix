@@ -1,5 +1,11 @@
 import { useRouteData } from "@remix-run/react";
 
+export let loader = async () => {
+  return {
+    message: "this is awesome 😎"
+  };
+};
+
 export function meta() {
   return {
     title: "Remix Starter",
