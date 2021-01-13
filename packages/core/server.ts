@@ -383,6 +383,7 @@ async function handleDocumentRequest(
       serverEntryContext
     );
   } catch (error) {
+    console.error(error);
     statusCode = 500;
 
     // Go again, this time with the componentDidCatch emulation. Remember, the
@@ -407,6 +408,7 @@ async function handleDocumentRequest(
         serverEntryContext
       );
     } catch (error) {
+      console.error(error);
       // Good grief folks, get your act together 😂!
       // TODO: Something is wrong in serverEntryModule, use the default root error handler
       response = new Response(`Unexpected Server Error\n\n${error.message}`, {
