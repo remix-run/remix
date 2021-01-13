@@ -84,7 +84,7 @@ async function fetchData(
     id: routeId
   });
 
-  let init = formSubmit ? getFormSubmitInit(formSubmit) : undefined;
+  let init = getFetchInit(formSubmit);
   let response = await fetch(`${loaderUrl}?${params.toString()}`, init);
 
   if (isErrorResponse(response)) {
@@ -121,7 +121,11 @@ export async function extractData(
   return response.text();
 }
 
-function getFormSubmitInit(formSubmit: FormSubmit): RequestInit {
+function getFetchInit(formSubmit?: FormSubmit): RequestInit {
+  if (!formSubmit) {
+    return { credentials: "same-origin" };
+  }
+
   let body =
     formSubmit.encType === "application/x-www-form-urlencoded"
       ? // TODO: Patch the URLSearchParams constructor type to accept FormData
@@ -132,6 +136,7 @@ function getFormSubmitInit(formSubmit: FormSubmit): RequestInit {
   return {
     method: formSubmit.method,
     body,
+    credentials: "same-origin",
     headers: {
       "Content-Type": formSubmit.encType
     }
