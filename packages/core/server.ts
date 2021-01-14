@@ -42,24 +42,24 @@ export interface RequestHandler {
  * dynamically generates the build at request time for only the modules needed
  * to serve that request.
  */
-export function createRequestHandler(remixConfig: RemixConfig): RequestHandler {
+export function createRequestHandler(config: RemixConfig): RequestHandler {
   return async (request, session, loadContext = {}) => {
     let url = new URL(request.url);
 
     if (url.pathname.startsWith("/_remix/manifest")) {
-      return handleManifestRequest(remixConfig, request);
+      return handleManifestRequest(config, request);
     }
 
     if (url.pathname.startsWith("/_remix/data")) {
-      return handleDataRequest(remixConfig, request, session, loadContext);
+      return handleDataRequest(config, request, session, loadContext);
     }
 
-    return handleDocumentRequest(remixConfig, request, session, loadContext);
+    return handleDocumentRequest(config, request, session, loadContext);
   };
 }
 
 async function handleManifestRequest(
-  remixConfig: RemixConfig,
+  config: RemixConfig,
   request: Request
 ): Promise<Response> {
   let searchParams = new URL(request.url).searchParams;
@@ -70,13 +70,13 @@ async function handleManifestRequest(
   }
 
   let url = new URL(urlParam);
-  let matches = matchRoutes(remixConfig.routes, url.pathname);
+  let matches = matchRoutes(config.routes, url.pathname);
 
   if (!matches) {
     return jsonError(`No routes matched path "${url.pathname}"`, 404);
   }
 
-  let { assetManifest, routeModules } = await loadServerBuild(remixConfig);
+  let { assetManifest, routeModules } = await loadServerBuild(config);
 
   let entryManifest: EntryManifest = {
     version: assetManifest.version,
@@ -84,7 +84,7 @@ async function handleManifestRequest(
       matches,
       routeModules,
       assetManifest.entries,
-      remixConfig.publicPath
+      config.publicPath
     )
   };
 
@@ -97,7 +97,7 @@ async function handleManifestRequest(
 }
 
 async function handleDataRequest(
-  remixConfig: RemixConfig,
+  config: RemixConfig,
   request: Request,
   session: Session,
   loadContext: AppLoadContext
@@ -121,7 +121,7 @@ async function handleDataRequest(
     body: request.body
   });
 
-  let { globalDataModule, routeModules } = await loadServerBuild(remixConfig);
+  let { globalDataModule, routeModules } = await loadServerBuild(config);
 
   let response: Response;
   try {
@@ -178,13 +178,13 @@ async function handleDataRequest(
 }
 
 async function handleDocumentRequest(
-  remixConfig: RemixConfig,
+  config: RemixConfig,
   request: Request,
   session: Session,
   loadContext: AppLoadContext = {}
 ): Promise<Response> {
   let url = new URL(request.url);
-  let matches = matchRoutes(remixConfig.routes, url.pathname);
+  let matches = matchRoutes(config.routes, url.pathname);
   let statusCode = 200;
 
   if (!matches) {
@@ -208,7 +208,7 @@ async function handleDocumentRequest(
     serverEntryModule,
     globalDataModule,
     routeModules
-  } = await loadServerBuild(remixConfig);
+  } = await loadServerBuild(config);
 
   // Handle action requests.
   if (isActionRequest(request)) {
@@ -260,7 +260,7 @@ async function handleDocumentRequest(
 
   let globalLoaderResult = await globalLoaderPromise;
   if (globalLoaderResult instanceof Error) {
-    if (remixConfig.serverMode !== ServerMode.Test) {
+    if (config.serverMode !== ServerMode.Test) {
       console.error(`There was an error running the global data loader`);
     }
     componentDidCatchEmulator.error = serializeError(globalLoaderResult);
@@ -283,7 +283,7 @@ async function handleDocumentRequest(
     }
 
     if (response instanceof Error) {
-      if (remixConfig.serverMode !== ServerMode.Test) {
+      if (config.serverMode !== ServerMode.Test) {
         console.error(
           `There was an error running the data loader for route ${route.id}`
         );
@@ -315,17 +315,17 @@ async function handleDocumentRequest(
       matches,
       routeModules,
       assetManifest.entries,
-      remixConfig.publicPath
+      config.publicPath
     ),
     entryModuleUrl:
-      remixConfig.publicPath + assetManifest.entries["entry-browser"].file,
+      config.publicPath + assetManifest.entries["entry-browser"].file,
     globalLoaderUrl:
       globalDataModule && typeof globalDataModule.loader !== "undefined"
         ? "/_remix/data"
         : undefined,
     globalStylesUrl:
       "global.css" in assetManifest.entries
-        ? remixConfig.publicPath + assetManifest.entries["global.css"].file
+        ? config.publicPath + assetManifest.entries["global.css"].file
         : undefined
   };
   let entryMatches = createEntryMatches(entryManifest.routes, matches);
@@ -365,7 +365,7 @@ async function handleDocumentRequest(
           }
         }
       } catch (error) {
-        if (remixConfig.serverMode !== ServerMode.Test) {
+        if (config.serverMode !== ServerMode.Test) {
           console.error(
             `There was an error getting headers for route ${routeId}`
           );
@@ -386,7 +386,7 @@ async function handleDocumentRequest(
       serverEntryContext
     );
   } catch (error) {
-    if (remixConfig.serverMode !== ServerMode.Test) {
+    if (config.serverMode !== ServerMode.Test) {
       console.error(error);
     }
 
