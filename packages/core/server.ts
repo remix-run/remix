@@ -414,7 +414,10 @@ async function handleDocumentRequest(
         serverEntryContext
       );
     } catch (error) {
-      console.error(error);
+      if (config.serverMode !== ServerMode.Test) {
+        console.error(error);
+      }
+
       // Good grief folks, get your act together 😂!
       // TODO: Something is wrong in serverEntryModule, use the default root error handler
       response = new Response(`Unexpected Server Error\n\n${error.message}`, {

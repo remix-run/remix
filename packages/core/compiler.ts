@@ -26,7 +26,9 @@ import { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
 import type { RemixConfig } from "./config";
 
 import manifest from "./rollup/manifest";
-import watchInput from "./rollup/watchInput";
+import remixConfig from "./rollup/remixConfig";
+import remixInputs from "./rollup/remixInputs";
+import watchDirectory from "./rollup/watchDirectory";
 import watchStyles from "./rollup/watchStyles";
 import mdx from "./rollup/mdx";
 import routeModules from "./rollup/routeModules";
@@ -73,17 +75,17 @@ export async function build(
     manifestDir
   };
 
-  let plugins: Plugin[] = [];
+  let plugins: Plugin[] = [remixConfig({ rootDir: config.rootDirectory })];
 
   if (target === BuildTarget.Browser) {
     plugins.push(styles({ sourceDir: config.appDirectory }));
   }
 
-  plugins.push(...getBuildPlugins(config, buildOptions));
+  plugins.push(...getBuildPlugins(buildOptions));
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
-    input: getInputOption(config, target),
+    // input: getInputOption(config, target),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins
@@ -123,16 +125,14 @@ export function watch(
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins: [
-      watchInput({
-        sourceDir: config.appDirectory,
-        async getInput() {
-          return getInputOption(config, target);
-        }
+      remixConfig({ rootDir: config.rootDirectory }),
+      watchDirectory({
+        sourceDir: config.appDirectory
       }),
       watchStyles({
         sourceDir: config.appDirectory
       }),
-      ...getBuildPlugins(config, buildOptions)
+      ...getBuildPlugins(buildOptions)
     ],
     watch: {
       // Skip the write here and do it in a callback instead. This gives us
@@ -309,11 +309,18 @@ function getOnWarnOption(
   return undefined;
 }
 
-function getBuildPlugins(
-  config: RemixConfig,
-  { mode, target, manifestDir }: BuildOptions
-): Plugin[] {
-  let plugins: Plugin[] = [];
+function getBuildPlugins({
+  mode,
+  target,
+  manifestDir
+}: BuildOptions): Plugin[] {
+  let plugins: Plugin[] = [
+    remixInputs({
+      getInput(config) {
+        return getInputOption(config, target);
+      }
+    })
+  ];
 
   if (target === BuildTarget.Browser) {
     plugins.push(
@@ -329,13 +336,8 @@ function getBuildPlugins(
   }
 
   plugins.push(
-    mdx({
-      mdxConfig: config.mdx
-    }),
-    routeModules({
-      routeIds: Object.keys(config.routeManifest),
-      target
-    }),
+    mdx(),
+    routeModules({ target }),
     json(),
     babel({
       babelHelpers: "bundled",

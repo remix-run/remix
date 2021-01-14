@@ -1,8 +1,9 @@
 import { promises as fsp } from "fs";
-
 import type { Plugin } from "rollup";
 import parseFrontMatter from "front-matter";
 import mdx from "@mdx-js/mdx";
+
+import { getRemixConfig } from "./remixConfig";
 
 const imports = `
 import { mdx } from "@mdx-js/react";
@@ -30,13 +31,14 @@ export type MdxConfig = MdxFunctionOption | MdxOptions;
  * and `meta` route module functions as static object declarations in the
  * frontmatter.
  */
-export default function mdxPlugin({
-  mdxConfig
-}: {
-  mdxConfig?: MdxConfig;
-}): Plugin {
+export default function mdxPlugin(): Plugin {
+  let mdxConfig: MdxConfig | undefined;
+
   return {
     name: "mdx",
+    async buildStart({ plugins }) {
+      mdxConfig = (await getRemixConfig(plugins)).mdx;
+    },
     async load(id) {
       if (id.startsWith("\0") || !regex.test(id)) return null;
 

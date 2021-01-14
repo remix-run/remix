@@ -3,6 +3,7 @@ import path from "path";
 import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../build";
+import { getRemixConfig } from "./remixConfig";
 
 /**
  * All file extensions we support for route modules.
@@ -22,17 +23,18 @@ export function isModuleFile(filename: string): boolean {
  *   doesn't break
  */
 export default function routeModules({
-  routeIds,
   target
 }: {
-  routeIds: string[];
   target: BuildTarget;
 }): Plugin {
   let magicProxy = "?route-module-proxy";
 
   return {
     name: "route-modules",
-    options(options) {
+    async options(options) {
+      let config = await getRemixConfig(options.plugins || []);
+      let routeIds = Object.keys(config.routeManifest);
+
       let input = options.input;
 
       if (input && typeof input === "object" && !Array.isArray(input)) {
@@ -70,10 +72,11 @@ export default function routeModules({
         let source = id.slice(0, -magicProxy.length);
 
         if (fs.existsSync(source) && fs.statSync(source).size === 0) {
+          this.addWatchFile(source);
           // If the source module is an empty file (probably because the file
           // was just created) default to an empty component. This prevents
           // errors in development (watch) mode when creating new route files.
-          return `export default function () { return null }`;
+          return `export default function () { throw new Error('Route "${source}" is empty, put a default export in there') }`;
         }
 
         if (target === BuildTarget.Browser) {

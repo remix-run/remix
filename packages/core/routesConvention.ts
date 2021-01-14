@@ -5,7 +5,6 @@ import type { ConfigRouteObject, DefineRoute } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
 import { isModuleFile } from "./rollup/routeModules";
 import { isStylesFile } from "./rollup/styles";
-import invariant from "./invariant";
 
 /**
  * Defines routes using the filesystem convention in `app/routes`. The rules are:
@@ -46,11 +45,15 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
       );
       let { module, styles } = routeFiles[routeId];
 
-      invariant(module, `Missing module for route id "${routeId}"`);
-
-      defineRoute(routePath, module, { styles }, () => {
-        defineNestedRoutes(defineRoute, routeId);
-      });
+      if (module) {
+        defineRoute(routePath, module, { styles }, () => {
+          defineNestedRoutes(defineRoute, routeId);
+        });
+      } else {
+        throw new Error(
+          `There is a styles file for route "${routeId}", but no module`
+        );
+      }
     }
   }
 
