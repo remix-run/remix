@@ -44,17 +44,24 @@ export interface RequestHandler {
  */
 export function createRequestHandler(config: RemixConfig): RequestHandler {
   return async (request, session, loadContext = {}) => {
-    let url = new URL(request.url);
+    // Make sure to `await` any async functions returned here so that uncaught
+    // exceptions don't sneak through!
+    try {
+      let url = new URL(request.url);
 
-    if (url.pathname.startsWith("/_remix/manifest")) {
-      return handleManifestRequest(config, request);
+      if (url.pathname.startsWith("/_remix/manifest")) {
+        return await handleManifestRequest(config, request);
+      }
+
+      if (url.pathname.startsWith("/_remix/data")) {
+        return await handleDataRequest(config, request, session, loadContext);
+      }
+
+      return await handleDocumentRequest(config, request, session, loadContext);
+    } catch (error) {
+      console.error(error);
+      return new Response(error.message, { status: 500 });
     }
-
-    if (url.pathname.startsWith("/_remix/data")) {
-      return handleDataRequest(config, request, session, loadContext);
-    }
-
-    return handleDocumentRequest(config, request, session, loadContext);
   };
 }
 

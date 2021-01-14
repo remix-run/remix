@@ -8,6 +8,9 @@ export default function invariant<T>(
 ): asserts value is T;
 export default function invariant(value: any, message?: string) {
   if (value === false || value === null || typeof value === "undefined") {
+    console.error(
+      "The following error is a bug in Remix, please file an issue! https://remix.run/dashbaord/support"
+    );
     throw new Error(message);
   }
 }
