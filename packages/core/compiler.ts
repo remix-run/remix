@@ -24,8 +24,6 @@ import { BuildMode, BuildTarget } from "./build";
 import { ignorePackages } from "./browserIgnore";
 import { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
 import type { RemixConfig } from "./config";
-import { readConfig } from "./config";
-import { purgeRequireCache } from "./requireCache";
 
 import manifest from "./rollup/manifest";
 import watchInput from "./rollup/watchInput";
@@ -126,10 +124,8 @@ export function watch(
     onwarn: getOnWarnOption(target),
     plugins: [
       watchInput({
-        sourceDir: config.rootDirectory,
+        sourceDir: config.appDirectory,
         async getInput() {
-          purgeRequireCache(config.rootDirectory);
-          config = await readConfig(config.rootDirectory);
           return getInputOption(config, target);
         }
       }),

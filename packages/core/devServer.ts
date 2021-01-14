@@ -1,4 +1,5 @@
 import http from "http";
+import path from "path";
 import type { Request, Response } from "express";
 import express from "express";
 import morgan from "morgan";
@@ -41,10 +42,9 @@ function createRequestHandler(config: RemixConfig) {
       },
       async onBuildEnd(build) {
         await write(build, config.serverBuildDirectory);
+        let dir = path.relative(process.cwd(), config.serverBuildDirectory);
         let time = Date.now() - serverBuildStart;
-        console.log(
-          `Wrote server build to ${config.serverBuildDirectory} in ${time}ms`
-        );
+        console.log(`Wrote server build to ./${dir} in ${time}ms`);
       },
       onError(error) {
         console.error(error);
@@ -62,10 +62,9 @@ function createRequestHandler(config: RemixConfig) {
       },
       async onBuildEnd(build) {
         await write(build, config.browserBuildDirectory);
+        let dir = path.relative(process.cwd(), config.browserBuildDirectory);
         let time = Date.now() - browserBuildStart;
-        console.log(
-          `Wrote browser build to ${config.browserBuildDirectory} in ${time}ms`
-        );
+        console.log(`Wrote browser build to ./${dir} in ${time}ms`);
       },
       onError(error) {
         console.error(error);
