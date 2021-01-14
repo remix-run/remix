@@ -20,6 +20,7 @@ exports[`the server HTML for the root URL is correct 1`] = `
           >
         </li>
         <li><a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a></li>
+        <li><a class=\\"text-blue-700 underline\\" href=\\"/methods\\">Forms</a></li>
         <li>
           <a class=\\"text-blue-700 underline\\" href=\\"/loader-errors?throw\\"
             >Loader error with no ErrorBoundary</a
