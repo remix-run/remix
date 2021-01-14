@@ -1,5 +1,6 @@
 import type { AppLoadContext } from "./buildModules";
 import type { RemixConfig } from "./config";
+import { ServerMode } from "./config";
 import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
 import type {
   ComponentDidCatchEmulator,
@@ -259,7 +260,9 @@ async function handleDocumentRequest(
 
   let globalLoaderResult = await globalLoaderPromise;
   if (globalLoaderResult instanceof Error) {
-    console.error(`There was an error running the global data loader`);
+    if (remixConfig.serverMode !== ServerMode.Test) {
+      console.error(`There was an error running the global data loader`);
+    }
     componentDidCatchEmulator.error = serializeError(globalLoaderResult);
     globalLoaderResult = json(null, { status: 500 });
   } else if (isRedirectResponse(globalLoaderResult)) {
@@ -280,9 +283,11 @@ async function handleDocumentRequest(
     }
 
     if (response instanceof Error) {
-      console.error(
-        `There was an error running the data loader for route ${route.id}`
-      );
+      if (remixConfig.serverMode !== ServerMode.Test) {
+        console.error(
+          `There was an error running the data loader for route ${route.id}`
+        );
+      }
       componentDidCatchEmulator.error = serializeError(response);
       routeLoaderResults[index] = json(null, { status: 500 });
     } else if (isRedirectResponse(response)) {
@@ -360,19 +365,17 @@ async function handleDocumentRequest(
           }
         }
       } catch (error) {
-        console.error(
-          `There was an error getting headers for route ${routeId}`
-        );
+        if (remixConfig.serverMode !== ServerMode.Test) {
+          console.error(
+            `There was an error getting headers for route ${routeId}`
+          );
+        }
         console.error(error);
       }
     }
 
     return parentsHeaders;
   }, new Headers());
-
-  // TODO:
-  // Add componentDidCatchEmulator to the server handoff string so we
-  // can use it to hydrate...
 
   let response: Promise<Response> | Response;
   try {
@@ -383,7 +386,10 @@ async function handleDocumentRequest(
       serverEntryContext
     );
   } catch (error) {
-    console.error(error);
+    if (remixConfig.serverMode !== ServerMode.Test) {
+      console.error(error);
+    }
+
     statusCode = 500;
 
     // Go again, this time with the componentDidCatch emulation. Remember, the
