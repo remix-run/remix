@@ -7,11 +7,12 @@ const port = process.env.PORT || 3000;
 
 let app = express();
 
+app.use(express.static("public"));
+
 if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
 
-app.use(express.static("public"));
 app.use(session({ secret: "remix", resave: false, saveUninitialized: false }));
 
 // server-side redirect
