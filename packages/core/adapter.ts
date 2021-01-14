@@ -54,9 +54,18 @@ export function createAdapter({
         loadContext = await getLoadContext(...platformArgs);
       }
 
-      let remixRes = await handleRequest(remixReq, session, loadContext);
-
-      return sendPlatformResponse(remixRes, session, ...platformArgs);
+      // Catch any errors in Remix itself.
+      try {
+        let remixRes = await handleRequest(remixReq, session, loadContext);
+        return sendPlatformResponse(remixRes, session, ...platformArgs);
+      } catch (error) {
+        console.error(error);
+        return sendPlatformResponse(
+          new Response(error.message, { status: 500 }),
+          session,
+          ...platformArgs
+        );
+      }
     };
   };
 }
