@@ -2,12 +2,14 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
-## 0.9.0-pre.3 - Tue Jan 12 2021
+## 0.9.0 - Thu Jan 14 2021
 
 ### Improvements
 
 - Added error handling for both render and loader errors
 - Adds `loader` and `action` exports to route modules
+- Assets are now served from the app server in development, instead of a
+  separate asset server
 
 ### Breaking Changes
 
