@@ -31,13 +31,15 @@ export type MdxConfig = MdxFunctionOption | MdxOptions;
  * and `meta` route module functions as static object declarations in the
  * frontmatter.
  */
-export default function mdxPlugin(fixedMdxConfig?: MdxConfig): Plugin {
-  let mdxConfig = fixedMdxConfig;
-
+export default function mdxPlugin({
+  mdxConfig
+}: {
+  mdxConfig?: MdxConfig;
+} = {}): Plugin {
   return {
     name: "mdx",
     async buildStart({ plugins }) {
-      mdxConfig = fixedMdxConfig || (await getRemixConfig(plugins)).mdx;
+      if (!mdxConfig) mdxConfig = (await getRemixConfig(plugins)).mdx;
     },
     async load(id) {
       if (id.startsWith("\0") || !regex.test(id)) return null;

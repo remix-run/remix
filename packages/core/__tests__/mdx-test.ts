@@ -83,7 +83,7 @@ function renderMdxModule(mod: MdxTestModule) {
 
 async function bundleMdxFile(
   filename: string,
-  mdxConfig?: MdxConfig
+  mdxConfig: MdxConfig = {}
 ): Promise<MdxTestModule> {
   let filepath = path.resolve(__dirname, "fixtures", filename);
   let bundle = await rollup({
