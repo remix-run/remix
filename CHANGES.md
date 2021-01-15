@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## 0.9.1 - Fri Jan 15 2021
+
+### Bug Fixes
+
+- Added a fix for deleting/renaming routes in dev mode
+
 ## 0.9.0 - Thu Jan 14 2021
 
 ### Improvements

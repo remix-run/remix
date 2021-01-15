@@ -30,7 +30,8 @@ module.exports = {
       testEnvironment: "node",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/fixtures/gists-app/jest/global-setup.js",
-      globalTeardown: "<rootDir>/fixtures/gists-app/jest/global-teardown.js"
+      globalTeardown: "<rootDir>/fixtures/gists-app/jest/global-teardown.js",
+      setupFilesAfterEnv: ["<rootDir>/fixtures/gists-app/jest/setup.js"]
     }
   ]
 };

@@ -1,4 +1,3 @@
-import { response } from "express";
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
