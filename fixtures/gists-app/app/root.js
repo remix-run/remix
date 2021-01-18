@@ -1,13 +1,20 @@
 import { useEffect } from "react";
-import { Meta, Scripts, Styles, Routes, useGlobalData } from "@remix-run/react";
+import { Meta, Scripts, Styles, useRouteData } from "@remix-run/react";
+import { Outlet } from "react-router-dom";
 
-export default function App() {
+export function loader({ request }) {
+  return {
+    enableScripts: new URL(request.url).searchParams.get("disableJs") == null
+  };
+}
+
+export default function Root() {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
   });
 
-  let data = useGlobalData();
+  let data = useRouteData();
 
   return (
     <html lang="en">
@@ -22,7 +29,7 @@ export default function App() {
       </head>
       <body className="m-4">
         <div data-test-id="content">
-          <Routes />
+          <Outlet />
         </div>
         {data.enableScripts && <Scripts />}
       </body>

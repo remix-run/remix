@@ -231,11 +231,6 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
     }
   }
 
-  let globalDataFile = findFile(config.appDirectory, "global-data", entryExts);
-  if (globalDataFile) {
-    input["global-data"] = globalDataFile;
-  }
-
   Object.assign(input, getRouteInputs(config));
 
   return input;

@@ -47,7 +47,6 @@ export interface EntryContext {
   manifest: EntryManifest;
   matches: EntryRouteMatch[];
   componentDidCatchEmulator: ComponentDidCatchEmulator;
-  globalData: AppData;
   routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
@@ -57,7 +56,6 @@ export interface EntryManifest {
   version: AssetManifest["version"];
   routes: RouteManifest<EntryRouteObject>;
   entryModuleUrl?: string;
-  globalLoaderUrl?: string;
   globalStylesUrl?: string;
 }
 
@@ -121,10 +119,6 @@ export function createEntryMatches(
     pathname: match.pathname,
     route: entryRoutes[match.route.id]
   }));
-}
-
-export function createGlobalData(loadResult: Response): Promise<AppData> {
-  return extractData(loadResult);
 }
 
 export interface RouteData {

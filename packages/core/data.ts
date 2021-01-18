@@ -1,41 +1,9 @@
 import type { Params } from "react-router";
 
-import type {
-  AppLoadContext,
-  AppData,
-  GlobalDataModule,
-  RouteModule
-} from "./buildModules";
+import type { AppLoadContext, AppData, RouteModule } from "./buildModules";
 import { Request, Response, isResponseLike } from "./fetch";
 import { json } from "./responseHelpers";
 import type { Session } from "./sessions";
-
-export async function loadGlobalData(
-  dataModule: GlobalDataModule,
-  request: Request,
-  session: Session,
-  context: AppLoadContext
-): Promise<Response> {
-  if (!dataModule.loader) {
-    return Promise.resolve(json(null));
-  }
-
-  let result = await dataModule.loader({
-    request,
-    session,
-    context,
-    params: {}
-  });
-
-  if (result === undefined) {
-    throw new Error(
-      `You defined a global data loader but didn't return anything ` +
-        `from your \`loader\` function. We can't do everything for you! 😅`
-    );
-  }
-
-  return isResponseLike(result) ? result : json(result);
-}
 
 export async function loadRouteData(
   routeId: string,

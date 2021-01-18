@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import React from "react";
 import type { Action, Location } from "history";
 import type { Navigator } from "react-router";
@@ -18,7 +17,6 @@ import {
   FormEncType,
   FormMethod,
   FormSubmit,
-  loadGlobalData,
   loadRouteData,
   callRouteAction,
   extractData,
@@ -41,7 +39,6 @@ import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
 } from "./errorBoundaries";
-import type { ErrorBoundaryComponent } from "@remix-run/core";
 import { ComponentDidCatchEmulator } from "@remix-run/core/entry";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -93,7 +90,6 @@ interface RemixEntryContextType {
   manifest: Manifest;
   matches: ClientRouteMatch[];
   componentDidCatchEmulator: EntryContext["componentDidCatchEmulator"];
-  globalData: AppData;
   routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
@@ -111,26 +107,21 @@ function useRemixEntryContext(): RemixEntryContextType {
 }
 
 export function RemixEntry({
-  children,
   context: entryContext,
   action: nextAction,
   location: nextLocation,
   navigator,
-  static: staticProp = false,
-  ErrorBoundary = RemixRootDefaultErrorBoundary
+  static: staticProp = false
 }: {
-  children: ReactNode;
   context: EntryContext;
   action: Action;
   location: Location;
   navigator: Navigator;
   static?: boolean;
-  ErrorBoundary?: ErrorBoundaryComponent;
 }) {
   let {
     manifest,
     matches: entryMatches,
-    globalData: entryGlobalData,
     routeData: entryRouteData,
     routeModules,
     serverHandoffString,
@@ -141,7 +132,6 @@ export function RemixEntry({
     action: nextAction,
     location: nextLocation,
     matches: createClientMatches(entryMatches, RemixRoute),
-    globalData: entryGlobalData,
     routeData: entryRouteData,
     componentDidCatchEmulator: entryComponentDidCatchEmulator
   });
@@ -150,7 +140,6 @@ export function RemixEntry({
     action,
     location,
     matches,
-    globalData,
     routeData,
     componentDidCatchEmulator
   } = state;
@@ -230,7 +219,6 @@ export function RemixEntry({
         )
       );
 
-      let nextGlobalData: AppData;
       let nextRouteData: RouteData;
       let componentDidCatchEmulator: ComponentDidCatchEmulator = {
         trackBoundaries: false,
@@ -240,10 +228,6 @@ export function RemixEntry({
 
       if (formState === FormState.Redirected) {
         // Reload all data after a <Form> submit.
-        let globalDataPromise = loadGlobalData(
-          manifest.globalLoaderUrl,
-          nextLocation
-        );
         let routeDataPromises = nextMatches.map(match =>
           loadRouteData(
             manifest.routes[match.route.id],
@@ -254,13 +238,6 @@ export function RemixEntry({
 
         await styleSheetsPromise;
         await modulesPromise;
-
-        let globalDataResponse = await globalDataPromise;
-        if (globalDataResponse instanceof Error) {
-          componentDidCatchEmulator.error = globalDataResponse;
-        } else if (isRedirectResponse(globalDataResponse)) {
-          maybeHandleDataRedirect(globalDataResponse);
-        }
 
         let routeDataResponses = await Promise.all(routeDataPromises);
         for (let [index, response] of routeDataResponses.entries()) {
@@ -282,8 +259,6 @@ export function RemixEntry({
           }
         }
 
-        nextGlobalData =
-          globalDataResponse && (await extractData(globalDataResponse));
         nextRouteData = (
           await Promise.all(
             routeDataResponses.map(
@@ -339,7 +314,6 @@ export function RemixEntry({
           }
         }
 
-        nextGlobalData = globalData;
         nextRouteData = (
           await Promise.all(
             routeDataResults.map(
@@ -369,7 +343,6 @@ export function RemixEntry({
           action: nextAction,
           location: nextLocation,
           matches: nextMatches,
-          globalData: nextGlobalData,
           routeData: nextRouteData,
           componentDidCatchEmulator
         });
@@ -384,7 +357,6 @@ export function RemixEntry({
     nextLocation,
     location,
     matches,
-    globalData,
     routeData,
     navigator,
     manifest,
@@ -395,7 +367,6 @@ export function RemixEntry({
     manifest,
     matches,
     componentDidCatchEmulator,
-    globalData,
     routeData,
     routeModules,
     serverHandoffString,
@@ -415,7 +386,7 @@ export function RemixEntry({
     <RemixEntryContext.Provider value={context}>
       <RemixErrorBoundary
         location={location}
-        component={ErrorBoundary}
+        component={RemixRootDefaultErrorBoundary}
         error={maybeServerRenderError}
       >
         <Router
@@ -423,8 +394,9 @@ export function RemixEntry({
           location={location}
           navigator={navigator}
           static={staticProp}
-          children={children}
-        />
+        >
+          <Routes />
+        </Router>
       </RemixErrorBoundary>
     </RemixEntryContext.Provider>
   );
@@ -638,12 +610,13 @@ export function Styles() {
  * Renders the routes for this page. Suspends if we don't yet have the manifest
  * or routes for this page and need to get them from the server.
  */
-export function Routes() {
-  // TODO: Add `renderMatches` function to RR that we
-  // can use here with the matches we get from context.
+function Routes() {
+  // TODO: Add `renderMatches` function to RR that we can use and then we don't need this component,
+  // we can just `renderMatches` from RemixEntry
   let { manifest } = useRemixEntryContext();
   let routes = createClientRoutes(manifest.routes, RemixRoute);
-  return useRoutes(routes);
+  let element = useRoutes(routes);
+  return element;
 }
 
 export interface FormProps extends Omit<HTMLFormElement, "method"> {
@@ -758,13 +731,6 @@ export function useBeforeUnload(callback: () => any): void {
       window.removeEventListener("beforeunload", callback);
     };
   }, [callback]);
-}
-
-/**
- * Returns the data from `data/global.js`.
- */
-export function useGlobalData<T = AppData>(): T {
-  return useRemixEntryContext().globalData;
 }
 
 /**

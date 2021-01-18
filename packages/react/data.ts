@@ -21,17 +21,6 @@ export interface DataRedirectHandler {
 }
 
 /**
- * Loads the global data from the server.
- */
-export async function loadGlobalData(
-  loaderUrl: string | undefined,
-  location: Location
-): Promise<Response | Error | undefined> {
-  if (!loaderUrl) return undefined;
-  return fetchData(loaderUrl, location, "_global", {});
-}
-
-/**
  * Loads some data for a route from the server.
  */
 export async function loadRouteData(

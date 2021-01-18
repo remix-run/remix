@@ -2,6 +2,24 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Consolidated multiple layout APIs into one: `root.ts`
+
+### Bug Fixes
+
+- Fixed nested loader errors server rendering in a parent error boundary instead of it's own
+
+### Breaking Changes
+
+- Removed `global-loader`, changed to a normal `export function loader(){}` on `root.ts` route.
+- Removed `<Remix ErrorBoundary>`, changed to a normal `export function ErrorBoundary(){}` on `root.ts` route.
+- Removed `<Remix children={<App/>}>`, rename `App.ts` to `app/root.ts`
+- Removed `useGlobalData` hook, use `useRouteData` in `root.ts`.
+- Removed `<Routes />`, use React Router `<Outlet/>` in `root.ts`
+
 ## 0.9.1 - Fri Jan 15 2021
 
 ### Bug Fixes

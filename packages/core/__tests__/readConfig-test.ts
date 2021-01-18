@@ -28,30 +28,40 @@ describe("readConfig", () => {
         "publicPath": "/build/",
         "rootDirectory": Any<String>,
         "routeManifest": Object {
+          "layout:root": Object {
+            "id": "layout:root",
+            "moduleFile": "root.js",
+            "path": "/",
+          },
           "pages/one": Object {
             "id": "pages/one",
             "moduleFile": "pages/one.mdx",
+            "parentId": "layout:root",
             "path": "/page/one",
           },
           "pages/two": Object {
             "id": "pages/two",
             "moduleFile": "pages/two.mdx",
+            "parentId": "layout:root",
             "path": "/page/two",
           },
           "routes/404": Object {
             "id": "routes/404",
             "moduleFile": "routes/404.js",
+            "parentId": "layout:root",
             "path": "404",
           },
           "routes/gists": Object {
             "id": "routes/gists",
             "moduleFile": "routes/gists.js",
+            "parentId": "layout:root",
             "path": "gists",
             "stylesFile": "routes/gists.css",
           },
           "routes/gists.mine": Object {
             "id": "routes/gists.mine",
             "moduleFile": "routes/gists.mine.js",
+            "parentId": "layout:root",
             "path": "gists/mine",
           },
           "routes/gists/$username": Object {
@@ -69,11 +79,13 @@ describe("readConfig", () => {
           "routes/index": Object {
             "id": "routes/index",
             "moduleFile": "routes/index.js",
+            "parentId": "layout:root",
             "path": "/",
           },
           "routes/loader-errors": Object {
             "id": "routes/loader-errors",
             "moduleFile": "routes/loader-errors.js",
+            "parentId": "layout:root",
             "path": "loader-errors",
           },
           "routes/loader-errors/nested": Object {
@@ -85,22 +97,26 @@ describe("readConfig", () => {
           "routes/methods": Object {
             "id": "routes/methods",
             "moduleFile": "routes/methods.tsx",
+            "parentId": "layout:root",
             "path": "methods",
             "stylesFile": "routes/methods.css",
           },
           "routes/page/four": Object {
             "id": "routes/page/four",
             "moduleFile": "routes/page/four.mdx",
+            "parentId": "layout:root",
             "path": "page/four",
           },
           "routes/page/three": Object {
             "id": "routes/page/three",
             "moduleFile": "routes/page/three.md",
+            "parentId": "layout:root",
             "path": "page/three",
           },
           "routes/render-errors": Object {
             "id": "routes/render-errors",
             "moduleFile": "routes/render-errors.js",
+            "parentId": "layout:root",
             "path": "render-errors",
           },
           "routes/render-errors/nested": Object {
@@ -112,91 +128,109 @@ describe("readConfig", () => {
         },
         "routes": Array [
           Object {
-            "id": "routes/404",
-            "moduleFile": "routes/404.js",
-            "path": "404",
-          },
-          Object {
             "children": Array [
               Object {
-                "id": "routes/gists/$username",
-                "moduleFile": "routes/gists/$username.js",
-                "parentId": "routes/gists",
-                "path": ":username",
+                "id": "routes/404",
+                "moduleFile": "routes/404.js",
+                "parentId": "layout:root",
+                "path": "404",
               },
               Object {
-                "id": "routes/gists/index",
-                "moduleFile": "routes/gists/index.js",
-                "parentId": "routes/gists",
+                "children": Array [
+                  Object {
+                    "id": "routes/gists/$username",
+                    "moduleFile": "routes/gists/$username.js",
+                    "parentId": "routes/gists",
+                    "path": ":username",
+                  },
+                  Object {
+                    "id": "routes/gists/index",
+                    "moduleFile": "routes/gists/index.js",
+                    "parentId": "routes/gists",
+                    "path": "/",
+                  },
+                ],
+                "id": "routes/gists",
+                "moduleFile": "routes/gists.js",
+                "parentId": "layout:root",
+                "path": "gists",
+                "stylesFile": "routes/gists.css",
+              },
+              Object {
+                "id": "routes/gists.mine",
+                "moduleFile": "routes/gists.mine.js",
+                "parentId": "layout:root",
+                "path": "gists/mine",
+              },
+              Object {
+                "id": "routes/index",
+                "moduleFile": "routes/index.js",
+                "parentId": "layout:root",
                 "path": "/",
               },
+              Object {
+                "children": Array [
+                  Object {
+                    "id": "routes/loader-errors/nested",
+                    "moduleFile": "routes/loader-errors/nested.js",
+                    "parentId": "routes/loader-errors",
+                    "path": "nested",
+                  },
+                ],
+                "id": "routes/loader-errors",
+                "moduleFile": "routes/loader-errors.js",
+                "parentId": "layout:root",
+                "path": "loader-errors",
+              },
+              Object {
+                "id": "routes/methods",
+                "moduleFile": "routes/methods.tsx",
+                "parentId": "layout:root",
+                "path": "methods",
+                "stylesFile": "routes/methods.css",
+              },
+              Object {
+                "id": "routes/page/four",
+                "moduleFile": "routes/page/four.mdx",
+                "parentId": "layout:root",
+                "path": "page/four",
+              },
+              Object {
+                "id": "routes/page/three",
+                "moduleFile": "routes/page/three.md",
+                "parentId": "layout:root",
+                "path": "page/three",
+              },
+              Object {
+                "children": Array [
+                  Object {
+                    "id": "routes/render-errors/nested",
+                    "moduleFile": "routes/render-errors/nested.js",
+                    "parentId": "routes/render-errors",
+                    "path": "nested",
+                  },
+                ],
+                "id": "routes/render-errors",
+                "moduleFile": "routes/render-errors.js",
+                "parentId": "layout:root",
+                "path": "render-errors",
+              },
+              Object {
+                "id": "pages/one",
+                "moduleFile": "pages/one.mdx",
+                "parentId": "layout:root",
+                "path": "/page/one",
+              },
+              Object {
+                "id": "pages/two",
+                "moduleFile": "pages/two.mdx",
+                "parentId": "layout:root",
+                "path": "/page/two",
+              },
             ],
-            "id": "routes/gists",
-            "moduleFile": "routes/gists.js",
-            "path": "gists",
-            "stylesFile": "routes/gists.css",
-          },
-          Object {
-            "id": "routes/gists.mine",
-            "moduleFile": "routes/gists.mine.js",
-            "path": "gists/mine",
-          },
-          Object {
-            "id": "routes/index",
-            "moduleFile": "routes/index.js",
+            "id": "layout:root",
+            "moduleFile": "root.js",
             "path": "/",
-          },
-          Object {
-            "children": Array [
-              Object {
-                "id": "routes/loader-errors/nested",
-                "moduleFile": "routes/loader-errors/nested.js",
-                "parentId": "routes/loader-errors",
-                "path": "nested",
-              },
-            ],
-            "id": "routes/loader-errors",
-            "moduleFile": "routes/loader-errors.js",
-            "path": "loader-errors",
-          },
-          Object {
-            "id": "routes/methods",
-            "moduleFile": "routes/methods.tsx",
-            "path": "methods",
-            "stylesFile": "routes/methods.css",
-          },
-          Object {
-            "id": "routes/page/four",
-            "moduleFile": "routes/page/four.mdx",
-            "path": "page/four",
-          },
-          Object {
-            "id": "routes/page/three",
-            "moduleFile": "routes/page/three.md",
-            "path": "page/three",
-          },
-          Object {
-            "children": Array [
-              Object {
-                "id": "routes/render-errors/nested",
-                "moduleFile": "routes/render-errors/nested.js",
-                "parentId": "routes/render-errors",
-                "path": "nested",
-              },
-            ],
-            "id": "routes/render-errors",
-            "moduleFile": "routes/render-errors.js",
-            "path": "render-errors",
-          },
-          Object {
-            "id": "pages/one",
-            "moduleFile": "pages/one.mdx",
-            "path": "/page/one",
-          },
-          Object {
-            "id": "pages/two",
-            "moduleFile": "pages/two.mdx",
-            "path": "/page/two",
           },
         ],
         "serverBuildDirectory": Any<String>,

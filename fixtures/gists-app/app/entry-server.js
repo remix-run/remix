@@ -1,8 +1,6 @@
 import ReactDOMServer from "react-dom/server";
 import Remix from "@remix-run/react/server";
 
-import App, { ErrorBoundary } from "./App";
-
 export default function handleRequest(
   request,
   responseStatusCode,
@@ -10,13 +8,7 @@ export default function handleRequest(
   remixContext
 ) {
   let markup = ReactDOMServer.renderToString(
-    <Remix
-      context={remixContext}
-      url={request.url}
-      ErrorBoundary={ErrorBoundary}
-    >
-      <App />
-    </Remix>
+    <Remix context={remixContext} url={request.url} />
   );
 
   return new Response("<!DOCTYPE html>" + markup, {

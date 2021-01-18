@@ -47,18 +47,22 @@ describe.skip("building", () => {
         Array [
           "_shared/Shared-b97a0af4.js",
           "entry-server.js",
+          "layout:root.js",
           "pages/one.js",
           "pages/two.js",
           "routes/404.js",
-          "routes/500.js",
           "routes/gists.js",
           "routes/gists.mine.js",
           "routes/gists/$username.js",
           "routes/gists/index.js",
           "routes/index.js",
+          "routes/loader-errors.js",
+          "routes/loader-errors/nested.js",
           "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
+          "routes/render-errors.js",
+          "routes/render-errors/nested.js",
           "server-manifest.json",
         ]
       `);
@@ -73,6 +77,9 @@ describe.skip("building", () => {
             "entry-server": Object {
               "file": "entry-server.js",
             },
+            "layout:root": Object {
+              "file": "layout:root.js",
+            },
             "pages/one": Object {
               "file": "pages/one.js",
             },
@@ -81,9 +88,6 @@ describe.skip("building", () => {
             },
             "routes/404": Object {
               "file": "routes/404.js",
-            },
-            "routes/500": Object {
-              "file": "routes/500.js",
             },
             "routes/gists": Object {
               "file": "routes/gists.js",
@@ -100,6 +104,12 @@ describe.skip("building", () => {
             "routes/index": Object {
               "file": "routes/index.js",
             },
+            "routes/loader-errors": Object {
+              "file": "routes/loader-errors.js",
+            },
+            "routes/loader-errors/nested": Object {
+              "file": "routes/loader-errors/nested.js",
+            },
             "routes/methods": Object {
               "file": "routes/methods.js",
             },
@@ -108,6 +118,12 @@ describe.skip("building", () => {
             },
             "routes/page/three": Object {
               "file": "routes/page/three.js",
+            },
+            "routes/render-errors": Object {
+              "file": "routes/render-errors.js",
+            },
+            "routes/render-errors/nested": Object {
+              "file": "routes/render-errors/nested.js",
             },
           },
           "version": Any<String>,
@@ -128,18 +144,22 @@ describe.skip("building", () => {
         Array [
           "_shared/Shared-b97a0af4.js",
           "entry-server.js",
+          "layout:root.js",
           "pages/one.js",
           "pages/two.js",
           "routes/404.js",
-          "routes/500.js",
           "routes/gists.js",
           "routes/gists.mine.js",
           "routes/gists/$username.js",
           "routes/gists/index.js",
           "routes/index.js",
+          "routes/loader-errors.js",
+          "routes/loader-errors/nested.js",
           "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
+          "routes/render-errors.js",
+          "routes/render-errors/nested.js",
           "server-manifest.json",
         ]
       `);
@@ -154,6 +174,9 @@ describe.skip("building", () => {
             "entry-server": Object {
               "file": "entry-server.js",
             },
+            "layout:root": Object {
+              "file": "layout:root.js",
+            },
             "pages/one": Object {
               "file": "pages/one.js",
             },
@@ -162,9 +185,6 @@ describe.skip("building", () => {
             },
             "routes/404": Object {
               "file": "routes/404.js",
-            },
-            "routes/500": Object {
-              "file": "routes/500.js",
             },
             "routes/gists": Object {
               "file": "routes/gists.js",
@@ -181,6 +201,12 @@ describe.skip("building", () => {
             "routes/index": Object {
               "file": "routes/index.js",
             },
+            "routes/loader-errors": Object {
+              "file": "routes/loader-errors.js",
+            },
+            "routes/loader-errors/nested": Object {
+              "file": "routes/loader-errors/nested.js",
+            },
             "routes/methods": Object {
               "file": "routes/methods.js",
             },
@@ -189,6 +215,12 @@ describe.skip("building", () => {
             },
             "routes/page/three": Object {
               "file": "routes/page/three.js",
+            },
+            "routes/render-errors": Object {
+              "file": "routes/render-errors.js",
+            },
+            "routes/render-errors/nested": Object {
+              "file": "routes/render-errors/nested.js",
             },
           },
           "version": Any<String>,
@@ -207,36 +239,40 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-96366458.js",
+          "_shared/Shared-eccda928.js",
           "_shared/__babel/runtime-88c72f87.js",
-          "_shared/__mdx-js/react-95913140.js",
-          "_shared/__remix-run/react-cde80f5e.js",
-          "_shared/history-4d09a8ec.js",
+          "_shared/__mdx-js/react-4850335b.js",
+          "_shared/__remix-run/react-d405e3fc.js",
+          "_shared/history-7c196d23.js",
           "_shared/object-assign-510802f4.js",
-          "_shared/prop-types-dba85e17.js",
-          "_shared/react-25ab190f.js",
-          "_shared/react-dom-366265b2.js",
-          "_shared/react-is-d37fbdde.js",
-          "_shared/react-router-d1437d00.js",
-          "_shared/react-router-dom-a453ee32.js",
-          "_shared/scheduler-2e024e35.js",
+          "_shared/prop-types-97465a95.js",
+          "_shared/react-583fa859.js",
+          "_shared/react-dom-07e69dc3.js",
+          "_shared/react-is-61089b68.js",
+          "_shared/react-router-8c7dde05.js",
+          "_shared/react-router-dom-38d82f2d.js",
+          "_shared/scheduler-a3345876.js",
           "asset-manifest.json",
           "entry-browser.js",
           "global.css",
+          "layout:root.js",
           "pages/one.js",
           "pages/two.js",
           "routes/404.js",
-          "routes/500.js",
           "routes/gists.css",
           "routes/gists.js",
           "routes/gists.mine.js",
           "routes/gists/$username.js",
           "routes/gists/index.js",
           "routes/index.js",
+          "routes/loader-errors.js",
+          "routes/loader-errors/nested.js",
           "routes/methods.css",
           "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
+          "routes/render-errors.js",
+          "routes/render-errors/nested.js",
         ]
       `);
 
@@ -253,6 +289,9 @@ describe.skip("building", () => {
             "global.css": Object {
               "file": "global.css",
             },
+            "layout:root": Object {
+              "file": "layout:root.js",
+            },
             "pages/one": Object {
               "file": "pages/one.js",
             },
@@ -261,9 +300,6 @@ describe.skip("building", () => {
             },
             "routes/404": Object {
               "file": "routes/404.js",
-            },
-            "routes/500": Object {
-              "file": "routes/500.js",
             },
             "routes/gists": Object {
               "file": "routes/gists.js",
@@ -283,6 +319,12 @@ describe.skip("building", () => {
             "routes/index": Object {
               "file": "routes/index.js",
             },
+            "routes/loader-errors": Object {
+              "file": "routes/loader-errors.js",
+            },
+            "routes/loader-errors/nested": Object {
+              "file": "routes/loader-errors/nested.js",
+            },
             "routes/methods": Object {
               "file": "routes/methods.js",
             },
@@ -294,6 +336,12 @@ describe.skip("building", () => {
             },
             "routes/page/three": Object {
               "file": "routes/page/three.js",
+            },
+            "routes/render-errors": Object {
+              "file": "routes/render-errors.js",
+            },
+            "routes/render-errors/nested": Object {
+              "file": "routes/render-errors/nested.js",
             },
           },
           "version": Any<String>,
@@ -312,36 +360,40 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-901c4c50.js",
+          "_shared/Shared-9eec0d99.js",
           "_shared/__babel/runtime-88c72f87.js",
-          "_shared/__mdx-js/react-7d23cc18.js",
-          "_shared/__remix-run/react-5a424f9a.js",
+          "_shared/__mdx-js/react-d4d6fcba.js",
+          "_shared/__remix-run/react-7e4ead70.js",
           "_shared/history-e6417d88.js",
           "_shared/object-assign-510802f4.js",
-          "_shared/prop-types-dbe6eedb.js",
-          "_shared/react-c26b1730.js",
-          "_shared/react-dom-2b0040a5.js",
-          "_shared/react-is-8eac45b9.js",
-          "_shared/react-router-10d3b386.js",
-          "_shared/react-router-dom-f0b00c95.js",
-          "_shared/scheduler-240bd53d.js",
+          "_shared/prop-types-6a72a2b3.js",
+          "_shared/react-b1327803.js",
+          "_shared/react-dom-8c4c319e.js",
+          "_shared/react-is-5210daad.js",
+          "_shared/react-router-050e1eaa.js",
+          "_shared/react-router-dom-1a8b67c3.js",
+          "_shared/scheduler-f50f12dc.js",
           "asset-manifest.json",
-          "entry-browser-5aae29b7.js",
+          "entry-browser-51df2af1.js",
           "global-ec887178.css",
-          "pages/one-6e4f5f3a.js",
-          "pages/two-b6fe9a86.js",
-          "routes/404-28c42fa3.js",
-          "routes/500-53a4a2d5.js",
-          "routes/gists-3ab00298.js",
+          "layout:root-d52df80a.js",
+          "pages/one-7135adbb.js",
+          "pages/two-133d6f23.js",
+          "routes/404-e700f1a9.js",
+          "routes/gists-39f8d09f.js",
           "routes/gists-6db1f83b.css",
-          "routes/gists.mine-793a5f58.js",
-          "routes/gists/$username-c4ddecda.js",
-          "routes/gists/index-7ea1cb78.js",
-          "routes/index-812a1332.js",
-          "routes/methods-72ab071f.js",
+          "routes/gists.mine-8daefef7.js",
+          "routes/gists/$username-35fe93f1.js",
+          "routes/gists/index-957176ca.js",
+          "routes/index-dafde173.js",
+          "routes/loader-errors-bba41ff8.js",
+          "routes/loader-errors/nested-41482585.js",
+          "routes/methods-5f625924.js",
           "routes/methods-e15212f5.css",
-          "routes/page/four-f90c3608.js",
-          "routes/page/three-97073d4a.js",
+          "routes/page/four-529b45e0.js",
+          "routes/page/three-5f9a0655.js",
+          "routes/render-errors-32c56232.js",
+          "routes/render-errors/nested-e3b0a86b.js",
         ]
       `);
 
@@ -353,52 +405,64 @@ describe.skip("building", () => {
         Object {
           "entries": Object {
             "entry-browser": Object {
-              "file": "entry-browser-5aae29b7.js",
+              "file": "entry-browser-51df2af1.js",
             },
             "global.css": Object {
               "file": "global-ec887178.css",
             },
+            "layout:root": Object {
+              "file": "layout:root-d52df80a.js",
+            },
             "pages/one": Object {
-              "file": "pages/one-6e4f5f3a.js",
+              "file": "pages/one-7135adbb.js",
             },
             "pages/two": Object {
-              "file": "pages/two-b6fe9a86.js",
+              "file": "pages/two-133d6f23.js",
             },
             "routes/404": Object {
-              "file": "routes/404-28c42fa3.js",
-            },
-            "routes/500": Object {
-              "file": "routes/500-53a4a2d5.js",
+              "file": "routes/404-e700f1a9.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-3ab00298.js",
+              "file": "routes/gists-39f8d09f.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-6db1f83b.css",
             },
             "routes/gists.mine": Object {
-              "file": "routes/gists.mine-793a5f58.js",
+              "file": "routes/gists.mine-8daefef7.js",
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-c4ddecda.js",
+              "file": "routes/gists/$username-35fe93f1.js",
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-7ea1cb78.js",
+              "file": "routes/gists/index-957176ca.js",
             },
             "routes/index": Object {
-              "file": "routes/index-812a1332.js",
+              "file": "routes/index-dafde173.js",
+            },
+            "routes/loader-errors": Object {
+              "file": "routes/loader-errors-bba41ff8.js",
+            },
+            "routes/loader-errors/nested": Object {
+              "file": "routes/loader-errors/nested-41482585.js",
             },
             "routes/methods": Object {
-              "file": "routes/methods-72ab071f.js",
+              "file": "routes/methods-5f625924.js",
             },
             "routes/methods.css": Object {
               "file": "routes/methods-e15212f5.css",
             },
             "routes/page/four": Object {
-              "file": "routes/page/four-f90c3608.js",
+              "file": "routes/page/four-529b45e0.js",
             },
             "routes/page/three": Object {
-              "file": "routes/page/three-97073d4a.js",
+              "file": "routes/page/three-5f9a0655.js",
+            },
+            "routes/render-errors": Object {
+              "file": "routes/render-errors-32c56232.js",
+            },
+            "routes/render-errors/nested": Object {
+              "file": "routes/render-errors/nested-e3b0a86b.js",
             },
           },
           "version": Any<String>,

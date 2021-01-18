@@ -1,8 +1,8 @@
-import { Meta, Scripts, Styles, Routes, useGlobalData } from "@remix-run/react";
-import { Link } from "react-router-dom";
+import { Meta, Scripts, Styles, useRouteData } from "@remix-run/react";
+import { Link, Outlet } from "react-router-dom";
 
 export default function App() {
-  let data = useGlobalData();
+  let data = useRouteData();
 
   return (
     <html lang="en">
@@ -13,7 +13,7 @@ export default function App() {
       </head>
       <body>
         <Link to="/gists">Gists</Link>
-        <Routes />
+        <Outlet />
         <Scripts />
         <footer>
           <p>This page was rendered at {data.date.toLocaleString()}</p>

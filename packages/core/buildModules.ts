@@ -16,16 +16,9 @@ import invariant from "./invariant";
 export type AppLoadContext = any;
 
 /**
- * Some data that was returned from a route (or global) data loader.
+ * Some data that was returned from a route data loader.
  */
 export type AppData = any;
-
-/**
- * A module that is used to load global data for the app.
- */
-export interface GlobalDataModule {
-  loader?: LoaderFunction;
-}
 
 export type RouteComponent = ComponentType;
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
@@ -122,22 +115,6 @@ export function loadServerEntryModule(
 
   return loadModule(
     path.resolve(buildDir, manifest.entries["entry-server"].file)
-  );
-}
-
-/**
- * Gets the global data module from the build on the filesystem.
- */
-export function loadGlobalDataModule(
-  buildDir: string,
-  manifest: ServerManifest
-): GlobalDataModule | null {
-  if (!manifest.entries["global-data"]) {
-    return null;
-  }
-
-  return loadModule(
-    path.resolve(buildDir, manifest.entries["global-data"].file)
   );
 }
 

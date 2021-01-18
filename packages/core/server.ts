@@ -1,7 +1,7 @@
 import type { AppLoadContext } from "./buildModules";
 import type { RemixConfig } from "./config";
 import { ServerMode } from "./config";
-import { loadGlobalData, loadRouteData, callRouteAction } from "./data";
+import { loadRouteData, callRouteAction } from "./data";
 import type {
   ComponentDidCatchEmulator,
   EntryManifest,
@@ -9,7 +9,6 @@ import type {
 } from "./entry";
 import {
   createEntryMatches,
-  createGlobalData,
   createRouteData,
   createRouteManifest,
   createServerHandoffString,
@@ -121,20 +120,11 @@ async function handleDataRequest(
     body: request.body
   });
 
-  let { globalDataModule, routeModules } = await loadServerBuild(config);
+  let { routeModules } = await loadServerBuild(config);
 
   let response: Response;
   try {
-    if (loaderId === "_global") {
-      response = globalDataModule
-        ? await loadGlobalData(
-            globalDataModule,
-            loaderRequest,
-            session,
-            loadContext
-          )
-        : json(null);
-    } else if (isActionRequest(loaderRequest)) {
+    if (isActionRequest(loaderRequest)) {
       response = await callRouteAction(
         loaderId,
         routeModules[loaderId],
@@ -206,7 +196,6 @@ async function handleDocumentRequest(
   let {
     assetManifest,
     serverEntryModule,
-    globalDataModule,
     routeModules
   } = await loadServerBuild(config);
 
@@ -239,14 +228,6 @@ async function handleDocumentRequest(
   // Note: This code is a little weird due to the way unhandled promise
   // rejections are handled in node. We use a .catch() handler on each
   // promise to avoid the warning, then handle errors manually afterwards.
-  let globalLoaderPromise: Promise<Response | Error> = globalDataModule
-    ? loadGlobalData(
-        globalDataModule,
-        request.clone(),
-        session,
-        loadContext
-      ).catch(error => error)
-    : Promise.resolve(json(null));
   let routeLoaderPromises: Promise<Response | Error>[] = matches.map(match =>
     loadRouteData(
       match.route.id,
@@ -257,17 +238,6 @@ async function handleDocumentRequest(
       match.params
     ).catch(error => error)
   );
-
-  let globalLoaderResult = await globalLoaderPromise;
-  if (globalLoaderResult instanceof Error) {
-    if (config.serverMode !== ServerMode.Test) {
-      console.error(`There was an error running the global data loader`);
-    }
-    componentDidCatchEmulator.error = serializeError(globalLoaderResult);
-    globalLoaderResult = json(null, { status: 500 });
-  } else if (isRedirectResponse(globalLoaderResult)) {
-    return globalLoaderResult;
-  }
 
   let routeLoaderResults = await Promise.all(routeLoaderPromises);
   for (let [index, response] of routeLoaderResults.entries()) {
@@ -295,15 +265,14 @@ async function handleDocumentRequest(
     }
   }
 
-  let globalLoaderResponse = globalLoaderResult;
   // We already filtered out all Errors, so these are all Responses.
   let routeLoaderResponses: Response[] = routeLoaderResults as Response[];
 
-  let allResponses = [globalLoaderResponse, ...routeLoaderResponses];
-
   // Handle responses with a non-200 status code. The first loader with a
   // non-200 status code determines the status code for the whole response.
-  let notOkResponse = allResponses.find(response => response.status !== 200);
+  let notOkResponse = routeLoaderResponses.find(
+    response => response.status !== 200
+  );
   if (notOkResponse) {
     statusCode = notOkResponse.status;
   }
@@ -319,24 +288,18 @@ async function handleDocumentRequest(
     ),
     entryModuleUrl:
       config.publicPath + assetManifest.entries["entry-browser"].file,
-    globalLoaderUrl:
-      globalDataModule && typeof globalDataModule.loader !== "undefined"
-        ? "/_remix/data"
-        : undefined,
     globalStylesUrl:
       "global.css" in assetManifest.entries
         ? config.publicPath + assetManifest.entries["global.css"].file
         : undefined
   };
   let entryMatches = createEntryMatches(entryManifest.routes, matches);
-  let globalData = await createGlobalData(globalLoaderResponse);
   let routeData = await createRouteData(routeLoaderResponses, matches);
 
   let serverHandoff = {
     manifest: entryManifest,
     matches: entryMatches,
     componentDidCatchEmulator,
-    globalData,
     routeData
   };
 

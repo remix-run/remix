@@ -1,17 +1,14 @@
 import type { Location, To } from "history";
 import { Action, createPath } from "history";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import React from "react";
 import type { EntryContext } from "@remix-run/core";
-import type { ErrorBoundaryComponent } from "@remix-run/core";
 
 import { RemixEntry } from "./components";
 
 export interface RemixServerProps {
-  children: ReactNode;
   context: EntryContext;
   url: string | URL;
-  ErrorBoundary?: ErrorBoundaryComponent;
 }
 
 /**
@@ -20,10 +17,8 @@ export interface RemixServerProps {
  * response from the server.
  */
 export default function RemixServer({
-  children,
   context,
-  url,
-  ErrorBoundary
+  url
 }: RemixServerProps): ReactElement {
   if (typeof url === "string") {
     url = new URL(url);
@@ -85,13 +80,11 @@ export default function RemixServer({
 
   return (
     <RemixEntry
-      children={children}
       context={context}
       action={Action.Pop}
       location={location}
       navigator={staticNavigator}
       static={true}
-      ErrorBoundary={ErrorBoundary}
     />
   );
 }

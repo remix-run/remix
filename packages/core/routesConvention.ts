@@ -72,8 +72,42 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
     }
   });
 
-  // Then define them all
-  return defineRoutes(defineNestedRoutes);
+  function defineLayoutRoutes(rootRouteName: string) {
+    let id = `layout:${rootRouteName}`;
+    let routes = defineRoutes(defineNestedRoutes);
+
+    // Add the root route id to the first level routes
+    for (let shallowRoute of routes) {
+      shallowRoute.parentId = id;
+    }
+
+    return [
+      {
+        id,
+        path: "/",
+        moduleFile: findRootRouteModule(appDir, rootRouteName),
+        // TODO: could use this instead of special casing global.css
+        // stylesFile: path.join(appDir, "global.css"),
+        children: routes
+      }
+    ];
+  }
+
+  return defineLayoutRoutes("root");
+}
+
+function findRootRouteModule(appDir: string, name: string) {
+  let potentialNames = ["js", "jsx", "tsx"].map(ext => `${name}.${ext}`);
+
+  for (let name of potentialNames) {
+    let rootPath = path.join(appDir, name);
+    if (fs.existsSync(rootPath)) {
+      return name;
+    }
+  }
+  throw new Error(
+    "No root route module found. Please create a file at `<appDir>/root.{js,jsx,tsx}`"
+  );
 }
 
 function createRoutePath(routeId: string): string {
@@ -85,10 +119,16 @@ function findParentRouteId(
   routeIds: string[],
   childRouteId: string
 ): string | undefined {
-  return routeIds
-    .slice(0)
-    .sort(byLongestFirst)
-    .find(id => childRouteId.startsWith(`${id}/`));
+  return (
+    routeIds
+      .slice(0)
+      .sort(byLongestFirst)
+      // FIXME: this will probably break with two routes like foo/ and foo-bar/,
+      // we use `startsWith` with we also need to factor in the segment `/`
+      // boundaries. There are bugs in React Router NavLink with this too.
+      // Probably need to ditch all uses of `startsWith` in route matching.
+      .find(id => childRouteId.startsWith(`${id}/`))
+  );
 }
 
 function byLongestFirst(a: string, b: string): number {
