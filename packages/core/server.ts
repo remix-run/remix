@@ -183,9 +183,19 @@ async function handleDocumentRequest(
         params: {},
         pathname: url.pathname,
         route: {
+          id: "layout:root",
+          path: "/",
+          moduleFile: "root"
+        }
+      },
+      {
+        params: {},
+        pathname: url.pathname,
+        route: {
           id: "routes/404",
           path: url.pathname,
-          moduleFile: "routes/404"
+          moduleFile: "routes/404",
+          parentId: "layout:root"
         }
       }
     ];
