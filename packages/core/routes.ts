@@ -91,6 +91,16 @@ interface DefineRouteChildren {
 /**
  * A function for defining a route that is passed as the argument to the
  * `defineRoutes` callback.
+ *
+ * Calls to this function are designed to be nested, using the `children`
+ * callback argument.
+ *
+ *   defineRoutes(route => {
+ *     route('/', 'pages/layout', () => {
+ *       route('react-router', 'pages/react-router');
+ *       route('reach-ui', 'pages/reach-ui');
+ *     });
+ *   });
  */
 export interface DefineRoute {
   (
