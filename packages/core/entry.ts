@@ -39,7 +39,8 @@ export function serializeError(error: Error): SerializedError {
 export interface ComponentDidCatchEmulator {
   trackBoundaries: boolean;
   // `null` means the app layout threw before any routes rendered
-  boundaryRouteId: string | null;
+  renderBoundaryRouteId: string | null;
+  loaderBoundaryRouteId: string | null;
   error?: SerializedError;
 }
 

@@ -39,7 +39,7 @@ import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
 } from "./errorBoundaries";
-import { ComponentDidCatchEmulator } from "@remix-run/core/entry";
+import type { ComponentDidCatchEmulator } from "@remix-run/core/entry";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
@@ -89,7 +89,7 @@ function setFormIdle() {
 interface RemixEntryContextType {
   manifest: Manifest;
   matches: ClientRouteMatch[];
-  componentDidCatchEmulator: EntryContext["componentDidCatchEmulator"];
+  componentDidCatchEmulator: ComponentDidCatchEmulator;
   routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
@@ -222,7 +222,8 @@ export function RemixEntry({
       let nextRouteData: RouteData;
       let componentDidCatchEmulator: ComponentDidCatchEmulator = {
         trackBoundaries: false,
-        boundaryRouteId: null,
+        renderBoundaryRouteId: null,
+        loaderBoundaryRouteId: null,
         error: undefined
       };
 
@@ -249,7 +250,7 @@ export function RemixEntry({
           let routeModule = routeModules[route.id];
 
           if (routeModule.ErrorBoundary) {
-            componentDidCatchEmulator.boundaryRouteId = route.id;
+            componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
           }
 
           if (response instanceof Error) {
@@ -304,7 +305,7 @@ export function RemixEntry({
           let routeModule = routeModules[route.id];
 
           if (routeModule.ErrorBoundary) {
-            componentDidCatchEmulator.boundaryRouteId = route.id;
+            componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
           }
 
           if (result instanceof Error) {
@@ -378,7 +379,8 @@ export function RemixEntry({
   // `componentDidCatch`
   let maybeServerRenderError =
     componentDidCatchEmulator.error &&
-    componentDidCatchEmulator.boundaryRouteId === null
+    componentDidCatchEmulator.renderBoundaryRouteId === null &&
+    componentDidCatchEmulator.loaderBoundaryRouteId === null
       ? deserializeError(componentDidCatchEmulator.error)
       : undefined;
 
@@ -461,17 +463,21 @@ export function RemixRoute({ id: routeId }: { id: string }) {
     // they can add more specific boundaries by exporting ErrorBoundary
     // components for whichever routes they please.
 
-    if (componentDidCatchEmulator.trackBoundaries) {
-      componentDidCatchEmulator.boundaryRouteId = routeId;
-    }
-
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerRenderError =
       componentDidCatchEmulator.error &&
-      componentDidCatchEmulator.boundaryRouteId === routeId
+      (componentDidCatchEmulator.renderBoundaryRouteId === routeId ||
+        componentDidCatchEmulator.loaderBoundaryRouteId === routeId)
         ? deserializeError(componentDidCatchEmulator.error)
         : undefined;
+
+    // This needs to run after we check for the error from a previous render,
+    // otherwise we will incorrectly render this boundary for a loader error
+    // deeper in the tree.
+    if (componentDidCatchEmulator.trackBoundaries) {
+      componentDidCatchEmulator.renderBoundaryRouteId = routeId;
+    }
 
     return (
       <RemixErrorBoundary

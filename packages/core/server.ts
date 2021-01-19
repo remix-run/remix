@@ -220,7 +220,8 @@ async function handleDocumentRequest(
 
   let componentDidCatchEmulator: ComponentDidCatchEmulator = {
     trackBoundaries: true,
-    boundaryRouteId: null,
+    renderBoundaryRouteId: null,
+    loaderBoundaryRouteId: null,
     error: undefined
   };
 
@@ -249,7 +250,7 @@ async function handleDocumentRequest(
     let routeModule = routeModules[route.id];
 
     if (routeModule.ErrorBoundary) {
-      componentDidCatchEmulator.boundaryRouteId = route.id;
+      componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
     }
 
     if (response instanceof Error) {
