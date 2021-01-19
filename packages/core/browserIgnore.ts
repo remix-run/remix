@@ -1,4 +1,6 @@
-export let ignorePackages = [
+import builtins from "builtin-modules";
+
+export let ignorePackages = builtins.concat([
   "@databases/mysql",
   "@databases/pg",
   "@databases/sqlite",
@@ -22,4 +24,4 @@ export let ignorePackages = [
   "sqlite",
   "sqlite3",
   "tedious"
-];
+]);
