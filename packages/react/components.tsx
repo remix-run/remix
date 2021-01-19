@@ -454,14 +454,14 @@ export function RemixRoute({ id: routeId }: { id: string }) {
     // Only wrap in error boundary if the route defined one, otherwise let the
     // error bubble to the parent boundary. We could default to using error
     // boundaries around every route, but now if the app doesn't want users
-    // seeing the default Remix ErrorBoundary component, they *must* define
-    // an error boundary for *every* route and that would be annoying. Might as
+    // seeing the default Remix ErrorBoundary component, they *must* define an
+    // error boundary for *every* route and that would be annoying. Might as
     // well make it required at that point.
     //
     // By conditionally wrapping like this, we allow apps to define a top level
-    // ErrorBoundary component and be done with it. Then, if they want to,
-    // they can add more specific boundaries by exporting ErrorBoundary
-    // components for whichever routes they please.
+    // ErrorBoundary component and be done with it. Then, if they want to, they
+    // can add more specific boundaries by exporting ErrorBoundary components
+    // for whichever routes they please.
 
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
