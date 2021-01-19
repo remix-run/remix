@@ -1,5 +1,3 @@
-import invariant from "./invariant";
-
 /**
  * A route that was created using `defineRoutes` or created conventionally from
  * looking at the files on the filesystem.
@@ -9,11 +7,6 @@ export interface ConfigRouteObject {
    * The path this route uses to match on the URL pathname.
    */
   path: string;
-
-  /**
-   * Should be `true` if the `path` is case-sensitive.
-   */
-  caseSensitive?: boolean;
 
   /**
    * This route's child routes.
@@ -46,6 +39,11 @@ export interface ConfigRouteObject {
    * `routes/gists/$username.js` will be `routes/gists/$username.css`.
    */
   stylesFile?: string;
+
+  /**
+   * Should be `true` if the `path` is case-sensitive.
+   */
+  caseSensitive?: boolean;
 }
 
 export type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
@@ -104,8 +102,8 @@ export interface DefineRoute {
     /**
      * The path to the file that exports the React component rendered by this
      * route as its default export, relative to `config.appDirectory`.
-     * Additional exports may include `headers`, `meta`, `loader`, and
-     * `action`.
+     * Additional exports may include `headers`, `meta`, `loader`, `action`,
+     * and `ErrorBoundary`.
      */
     moduleFile: string,
 
@@ -129,33 +127,28 @@ export function defineRoutes(
 
   function defineRoute(
     path: string,
-    moduleFile?: string | null,
+    moduleFile: string,
     optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
     children?: DefineRouteChildren
   ): void {
-    invariant(
-      !alreadyReturned,
-      "You tried to define routes asynchronously but started defining " +
-        "routes before the async work was done. Please await all async " +
-        "data before calling `defineRoutes()`"
-    );
+    if (alreadyReturned) {
+      throw new Error(
+        "You tried to define routes asynchronously but started defining " +
+          "routes before the async work was done. Please await all async " +
+          "data before calling `defineRoutes()`"
+      );
+    }
 
     let options: DefineRouteOptions;
     if (typeof optionsOrChildren === "function") {
-      // route(path, component, children)
+      // route(path, moduleFile, children)
       options = {};
       children = optionsOrChildren;
     } else {
-      // route(path, component, options, children)
-      // route(path, component, options)
+      // route(path, moduleFile, options, children)
+      // route(path, moduleFile, options)
       options = optionsOrChildren || {};
     }
-
-    invariant(
-      moduleFile,
-      "A route must have either a component file or a loader, but none was " +
-        `provided for path "${path}"`
-    );
 
     let route: ConfigRouteObject = {
       id: createRouteId(moduleFile),
