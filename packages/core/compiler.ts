@@ -33,6 +33,7 @@ import watchStyles from "./rollup/watchStyles";
 import mdx from "./rollup/mdx";
 import routeModules from "./rollup/routeModules";
 import styles from "./rollup/styles";
+import url from "./rollup/url";
 
 /**
  * All file extensions we support for entry files.
@@ -334,6 +335,7 @@ function getBuildPlugins({
     mdx(),
     routeModules({ target }),
     json(),
+    url({ target }),
     babel({
       babelHelpers: "bundled",
       configFile: false,
