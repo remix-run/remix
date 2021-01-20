@@ -43,7 +43,36 @@ exports[`the server HTML for the root URL is correct 1`] = `
         </li>
       </ul>
     </nav>
-    <div>I am shared</div>
+    <div><p>Shared</p></div>
+    <hr />
+    <div>
+      <h2>Images</h2>
+      <p>Fixed Image</p>
+      <img
+        alt=\\"Guitar\\"
+        src=\\"/build/components/guitar__e758e70ba61da1ffe299418d263fcc9fc8a23f4c.avif\\"
+        style=\\"
+          background-image: url(data:image/jpeg;base64,/9j/2wBDACAWGBwYFCAcGhwkIiAmMFA0MCwsMGJGSjpQdGZ6eHJmcG6AkLicgIiuim5woNqirr7EztDOfJri8uDI8LjKzsb/2wBDASIkJDAqMF40NF7GhHCExsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsb/wAARCAAhADIDASIAAhEBAxEB/8QAGQAAAwEBAQAAAAAAAAAAAAAAAAIDBAEF/8QAKBAAAgIBAwIFBQEAAAAAAAAAAAECEQMSITEEQRMiUWGRFDJEcYGC/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAH/xAAXEQEBAQEAAAAAAAAAAAAAAAAAAREh/9oADAMBAAIRAxEAPwDxoLhl4RtpEsdVRpx9mSrCyjXySyJvK0/4Xa4/ZOSUsrriL3YhY2Tg10Ebi6UU3aMEpW6rY3yj1f0dy1PDo9qrsYOVXdO0WJS0A3wACY3sWxvzWZoseMvMQi7m4wlJcpbCRahjS7sTUt74ZzU7339yyG9bX1OTwFj05XHTw5bV8GR8K9rXNHfEyafulpqvYS/T0KldsBbAImMuQAKOx1cMAEKr+N/omACI4AAUf//Z);
+          background-size: cover;
+        \\"
+        width=\\"250\\"
+        height=\\"166.5\\"
+      />
+      <p>Responsive</p>
+      <img
+        alt=\\"Guitar\\"
+        src=\\"/build/components/guitar__f44d8138cf1fef0b5e46ceae6eb95684ae40f0a9.jpeg\\"
+        srcset=\\"
+          /build/components/guitar__85a98ae7a2a65623f990baea3155a1a7dca547be.jpeg  720w,
+          /build/components/guitar__21e803ae63922b294e502ea4a6f7c64a2fbfb7cb.jpeg 1080w,
+          /build/components/guitar__f44d8138cf1fef0b5e46ceae6eb95684ae40f0a9.jpeg 2048w
+        \\"
+        style=\\"
+          background-image: url(data:image/jpeg;base64,/9j/2wBDACAWGBwYFCAcGhwkIiAmMFA0MCwsMGJGSjpQdGZ6eHJmcG6AkLicgIiuim5woNqirr7EztDOfJri8uDI8LjKzsb/2wBDASIkJDAqMF40NF7GhHCExsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsb/wAARCAAhADIDASIAAhEBAxEB/8QAGQAAAwEBAQAAAAAAAAAAAAAAAAIDBAEF/8QAKBAAAgIBAwIFBQEAAAAAAAAAAAECEQMSITEEQRMiUWGRFDJEcYGC/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAH/xAAXEQEBAQEAAAAAAAAAAAAAAAAAAREh/9oADAMBAAIRAxEAPwDxoLhl4RtpEsdVRpx9mSrCyjXySyJvK0/4Xa4/ZOSUsrriL3YhY2Tg10Ebi6UU3aMEpW6rY3yj1f0dy1PDo9qrsYOVXdO0WJS0A3wACY3sWxvzWZoseMvMQi7m4wlJcpbCRahjS7sTUt74ZzU7339yyG9bX1OTwFj05XHTw5bV8GR8K9rXNHfEyafulpqvYS/T0KldsBbAImMuQAKOx1cMAEKr+N/omACI4AAUf//Z);
+          background-size: cover;
+        \\"
+      />
+    </div>
   </div>
 </div>
 "

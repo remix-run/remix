@@ -24,7 +24,7 @@ exports[`loader results when a loader returns not found sends a not found page 1
         <!-- -->_why
       </h2>
     </div>
-    <div>I am shared</div>
+    <div><p>Shared</p></div>
   </div>
 </div>
 "

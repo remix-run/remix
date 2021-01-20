@@ -40,6 +40,11 @@ function createEntries(bundle: OutputBundle): BuildManifest["entries"] {
       typeof assetOrChunk.name !== "undefined"
     ) {
       entries[assetOrChunk.name] = { file: assetOrChunk.fileName };
+    } else if (
+      assetOrChunk.type === "asset" &&
+      typeof assetOrChunk.fileName !== "undefined"
+    ) {
+      entries[assetOrChunk.fileName] = { file: assetOrChunk.fileName };
     }
   }
 

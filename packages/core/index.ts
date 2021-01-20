@@ -1,3 +1,5 @@
+import "./imageTypes";
+
 export { BuildMode, BuildTarget } from "./build";
 
 export type { AssetManifest } from "./buildManifest";

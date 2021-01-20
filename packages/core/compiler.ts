@@ -34,6 +34,7 @@ import mdx from "./rollup/mdx";
 import routeModules from "./rollup/routeModules";
 import styles from "./rollup/styles";
 import url from "./rollup/url";
+import img from "./rollup/img";
 
 /**
  * All file extensions we support for entry files.
@@ -188,7 +189,10 @@ function isLocalModuleId(id: string): boolean {
     id.startsWith(".") ||
     // This is an absolute filesystem path that has already been resolved, e.g.
     // "/path/to/node_modules/react/index.js"
-    path.isAbsolute(id)
+    path.isAbsolute(id) ||
+    // is an import assertion
+    id.startsWith("img:") ||
+    id.startsWith("url:")
   );
 }
 
@@ -335,6 +339,7 @@ function getBuildPlugins({
     mdx(),
     routeModules({ target }),
     json(),
+    img({ target }),
     url({ target }),
     babel({
       babelHelpers: "bundled",
