@@ -7,6 +7,8 @@ This is a history of changes to [Remix](https://remix.run).
 ### Improvements
 
 - Consolidated multiple layout APIs into one: `root.ts`
+- Added response init support to `redirect()` helper
+- Added easier status support to `json()` helper
 
 ### Bug Fixes
 
