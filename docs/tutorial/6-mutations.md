@@ -57,8 +57,8 @@ Open up your data module at `data/gists.ts` and add an action:
 // add the Action type
 import type { Loader, Action } from "@remix-run/data";
 
-// add a couple new imports here
-import { parseFormBody, redirect } from "@remix-run/data";
+// add a new import here
+import { redirect } from "@remix-run/data";
 
 // Very important or else it won't work :)
 let token = "insert your github token here";
@@ -70,9 +70,9 @@ let loader: Loader = () => {
 
 // The new stuff!
 let action: Action = async ({ request }) => {
-  // When the form request posts here, this helper turns it into a FormData or
+  // When the form request posts here, this helper turns it into a
   // URLSearchParams
-  let body = await parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
 
   // pull off what we need from the form, note they are named the same thing
   // as the `<input/>` in the form.

@@ -35,34 +35,3 @@ export function redirect(url: string, status = 302): Response {
     }
   });
 }
-
-let bodyMethods = new Set(["post", "put", "patch", "delete"]);
-
-/**
- * Parse the body of a `<Form>` request into an object. For
- * `application/x-www-form-urlencoded` forms, this will be a URLSearchParams
- * object. For `multipart/form-data` forms, it will be a FormData.
- */
-export async function parseFormBody(
-  request: Request
-): Promise<URLSearchParams | FormData> {
-  if (!bodyMethods.has(request.method.toLowerCase())) {
-    throw new Error(
-      `parseFormBody only supports POST, PUT, and PATCH, and DELETE requests (not ${request.method})`
-    );
-  }
-
-  let contentType = request.headers.get("Content-Type");
-
-  if (contentType === "application/x-www-form-urlencoded") {
-    return new URLSearchParams(await request.text());
-  }
-
-  if (contentType === "multipart/form-data") {
-    // Should be able to just do this:
-    // return request.formData();
-    throw new Error("parseFormBody does not yet support multipart/form-data");
-  }
-
-  throw new Error(`Unknown form encoding: ${contentType}`);
-}

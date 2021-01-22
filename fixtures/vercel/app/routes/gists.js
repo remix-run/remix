@@ -1,12 +1,12 @@
 import { useRouteData } from "@remix-run/react";
-import { parseFormBody, redirect } from "@remix-run/data";
+import { redirect } from "@remix-run/data";
 
 export let loader = () => {
   return fetch("https://api.github.com/gists");
 };
 
 export let action = async ({ request }) => {
-  let body = await parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
 
   let fileName = body.get("fileName");
   let content = body.get("content");

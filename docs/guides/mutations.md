@@ -108,13 +108,12 @@ Now make a data module that will handle the action somewhere like `data/routes/p
 
 ```js
 import type { Action } from "@remix-run/data";
-import { parseFormBody, redirect } from "@remix-run/data";
+import { redirect } from "@remix-run/data";
 
 // Note the "action" export name, this will handle our form POST
 let action: Action = async ({ request }) => {
-  // this helper will parse the form body on the server
-  let newProject = parseFormBody(request);
-  let project = await createProject(newProject);
+  let newProject = new URLSearchParams(await request.text());
+  let project = await createProject(Object.fromEntries(newProject));
   return redirect(`/projects/${project.id}`);
 };
 
@@ -153,11 +152,13 @@ If there are validation errors, we want to go back to the form and display them.
 
 ```js
 import type { Action, loader } from "@remix-run/data";
-import { parseFormBody, redirect } from "@remix-run/data";
+import { redirect } from "@remix-run/data";
 
 let action: Action = async ({ request, session }) => {
-  let newProject = await parseFormBody(request);
-  let [errors, project] = await createProject(newProject);
+  let newProject = new URLSearchParams(await request.text());
+  let [errors, project] = await createProject(
+    Object.fromEntries(newProject)
+  );
 
   if (errors) {
     // session.flash puts a value in the session that can only be read on the
@@ -500,7 +501,7 @@ And the data module:
 
 ```ts
 import type { Action, Loader } from "@remix-run/data";
-import { json, parseFormBody, redirect } from "@remix-run/data";
+import { json, redirect } from "@remix-run/data";
 import { readTodos, createTodo, deleteTodo } from "../models/todo";
 
 let loader: Loader = = async ({ request, session }) => {
@@ -510,17 +511,18 @@ let loader: Loader = = async ({ request, session }) => {
 };
 
 let action: Action = async ({ request }) => {
-  let body = await parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
+
   switch (request.method) {
     case "post": {
-      let [_, error] = await createTodo(body.name);
+      let [_, error] = await createTodo(body.get("name"));
       if (error) {
         session.flash("error", error);
       }
       return redirect("/todos");
     }
     case "delete": {
-      await deleteTodo(body.id);
+      await deleteTodo(body.get("id"));
       return redirect("/todos");
     }
     default: {
@@ -546,7 +548,6 @@ From your components perspective, all that happend was the `usePendingFormSubmit
 
 - [Form](/dashboard/docs/react#form)
 - [usePendingLocation](/dashboard/docs/react#usependinglocation)
-- [parseFormBody](/dashboard/docs/data#parseformbody)
 - [Sessions](/dashboard/docs/sessions)
 - [Actions](/dashboard/docs/actions)
 - [Loaders](/dashboard/docs/loaders)

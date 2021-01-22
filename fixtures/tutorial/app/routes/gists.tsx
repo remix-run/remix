@@ -1,5 +1,5 @@
 import { useRouteData } from "@remix-run/react";
-import { parseFormBody, redirect } from "@remix-run/data";
+import { redirect } from "@remix-run/data";
 import type { Loader, Action } from "@remix-run/data";
 
 export let loader: Loader = () => {
@@ -7,7 +7,7 @@ export let loader: Loader = () => {
 };
 
 export let action: Action = async ({ request }) => {
-  let body = await parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
 
   let fileName = body.get("fileName") as string;
   let content = body.get("content");

@@ -19,6 +19,7 @@ This is a history of changes to [Remix](https://remix.run).
 - Removed `<Remix children={<App/>}>`, rename `App.ts` to `app/root.ts`
 - Removed `useGlobalData` hook, use `useRouteData` in `root.ts`.
 - Removed `<Routes />`, use React Router `<Outlet/>` in `root.ts`
+- Removed `parseFormBody` helper. Use `new URLSearchParams(await request.text())` or (future) `await request.formData()` instead.
 
 ## 0.9.1 - Fri Jan 15 2021
 

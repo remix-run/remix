@@ -1,11 +1,11 @@
-const { parseFormBody, redirect } = require("@remix-run/data");
+const { redirect } = require("@remix-run/data");
 
 exports.loader = () => {
   return fetch("https://api.github.com/gists");
 };
 
 exports.action = async ({ request }) => {
-  let body = await parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
 
   let fileName = body.get("fileName");
   let content = body.get("content");

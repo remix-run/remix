@@ -257,66 +257,8 @@ import type { Action } from "@remix-run/data";
 import { redirect, request } from "@remix-run/data";
 
 let action: Action = async ({ params, request, session, context }) => {
-  let body = parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
   let newThing = await saveStuff(body);
   return redirect(`/stuff/${newThing.id}`);
-};
-```
-
-## `parseFormBody`
-
-Reads the form data from a form post, put, patch, or delete request. Returns a [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) for `application/x-www-urlencoded` requests and [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) for `multipart/form-data` requests.
-
-Currently we only support `application/x-www-urlencoded` requests, but in the future we'll also support `multipart/form-data`.
-
-```jsx
-// some form
-<Form method="post">
-  <input name="title" value="hello" />
-  <input name="description" value="some description" />
-</Form>
-```
-
-```js
-// some loader
-const { parseFormBody } = require("@remix-run/loader");
-
-exports.action = ({ request }) => {
-  let body = parseFormBody(request);
-  body.get("title"); // "hello"
-  body.get("description"); // "some description"
-
-  let obj = Object.fromEntries(body);
-  obj.title; // "hello"
-  obj.description; // "some description"
-};
-```
-
-If you are using checkboxes with the same name or `<select multiple>` (that's pretty old school!), be careful with `Object.fromEntries` because it'll only take the last value:
-
-```jsx
-<Form>
-  <input type="checkbox" name="ingredients" value="flour" checked />
-  <input type="checkbox" name="ingredients" value="water" checked />
-  <input type="checkbox" name="ingredients" value="egg" checked />
-</Form>
-```
-
-```js
-let action: Action = async ({ request }) => {
-  let body = parseFormBody(request);
-
-  // 🚫 oops!
-  let obj = Object.fromEntries(body);
-  obj.ingredients; // "flour"
-
-  // ✅ iterate to get all of them
-  let ingredients = [];
-  for (let [key, value] of body) {
-    if (key === "ingredients") {
-      ingredients.push(value);
-    }
-  }
-  ingredients; // ["flour", "water", "egg"]
 };
 ```

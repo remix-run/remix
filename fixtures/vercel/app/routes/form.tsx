@@ -1,13 +1,12 @@
 import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
-import { json, redirect, parseFormBody } from "@remix-run/data";
+import { json, redirect } from "@remix-run/data";
 
 export let action = async ({ request }) => {
-  // TODO: have parseFormBody take a generic for the return value
-  let body: any = await parseFormBody(request);
+  let body = new URLSearchParams(await request.text());
 
-  if (body.slow === "on") {
+  if (body.get("slow") === "on") {
     await new Promise(res => setTimeout(res, 2000));
   }
 

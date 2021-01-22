@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
-import { json, parseFormBody, redirect } from "@remix-run/data";
+import { json, redirect } from "@remix-run/data";
 
 export function loader({ session }) {
   return json({
@@ -10,7 +10,13 @@ export function loader({ session }) {
 }
 
 export async function action({ request, session }) {
-  let body = Object.fromEntries(await parseFormBody(request));
+  let contentType = request.headers.get("Content-Type");
+  if (contentType !== "application/x-www-form-urlencoded") {
+    throw new Error(`${contentType} is not yet supported`);
+  }
+
+  let bodyParams = new URLSearchParams(await request.text());
+  let body = Object.fromEntries(bodyParams);
 
   session.flash("body", JSON.stringify(body));
 
