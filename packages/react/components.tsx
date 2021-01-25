@@ -227,110 +227,70 @@ export function RemixEntry({
         error: undefined
       };
 
-      if (formState === FormState.Redirected) {
-        // Reload all data after a <Form> submit.
-        let routeDataPromises = nextMatches.map(match =>
-          loadRouteData(
-            manifest.routes[match.route.id],
-            nextLocation,
-            match.params
-          )
-        );
-
-        await styleSheetsPromise;
-        await modulesPromise;
-
-        let routeDataResponses = await Promise.all(routeDataPromises);
-        for (let [index, response] of routeDataResponses.entries()) {
-          if (componentDidCatchEmulator.error) {
-            continue;
-          }
-
-          let route = nextMatches[index].route;
-          let routeModule = routeModules[route.id];
-
-          if (routeModule.ErrorBoundary) {
-            componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
-          }
-
-          if (response instanceof Error) {
-            componentDidCatchEmulator.error = response;
-          } else if (isRedirectResponse(response)) {
-            maybeHandleDataRedirect(response);
-          }
-        }
-
-        nextRouteData = (
-          await Promise.all(
-            routeDataResponses.map(
-              response => response && extractData(response)
-            )
-          )
-        ).reduce((memo, data, index) => {
-          let match = nextMatches[index];
-          memo[match.route.id] = data;
-          return memo;
-        }, {} as RouteData);
-      } else {
-        let routeDataPromise = Promise.all(
-          nextMatches.map((match, index) =>
+      let routeDataPromise = Promise.all(
+        nextMatches.map((match, index) => {
+          // Re-use data we already have for routes already on the page
+          let routeIsUnchanged =
+            // after form submit, reload all routes
+            formState !== FormState.Redirected &&
+            // different search across all routes could change results
             location.search === nextLocation.search &&
+            // pathname captures param changes on a route
             matches[index] &&
-            matches[index].pathname === match.pathname
-              ? // Re-use data we already have for routes already on the page
-                // if the URL hasn't changed for that route.
-                routeData[match.route.id]
-              : loadRouteData(
-                  manifest.routes[match.route.id],
-                  nextLocation,
-                  match.params
-                )
-          )
-        );
+            matches[index].pathname === match.pathname;
 
-        await styleSheetsPromise;
-        await modulesPromise;
+          return routeIsUnchanged
+            ? routeData[match.route.id]
+            : loadRouteData(
+                manifest.routes[match.route.id],
+                nextLocation,
+                match.params
+              );
+        })
+      );
 
-        let routeDataResults = await routeDataPromise;
-        for (let [index, result] of routeDataResults.entries()) {
-          if (!(result instanceof Response || result instanceof Error)) {
-            continue;
-          }
+      await styleSheetsPromise;
+      await modulesPromise;
 
-          if (componentDidCatchEmulator.error) {
-            continue;
-          }
-
-          let route = nextMatches[index].route;
-          let routeModule = routeModules[route.id];
-
-          if (routeModule.ErrorBoundary) {
-            componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
-          }
-
-          if (result instanceof Error) {
-            componentDidCatchEmulator.error = result;
-          } else if (isRedirectResponse(result)) {
-            maybeHandleDataRedirect(result);
-          }
+      let routeDataResults = await routeDataPromise;
+      for (let [index, result] of routeDataResults.entries()) {
+        if (!(result instanceof Response || result instanceof Error)) {
+          continue;
         }
 
-        nextRouteData = (
-          await Promise.all(
-            routeDataResults.map(
-              result =>
-                result &&
-                (result instanceof Response || result instanceof Error
-                  ? extractData(result)
-                  : result)
-            )
-          )
-        ).reduce((memo, data, index) => {
-          let match = nextMatches[index];
-          memo[match.route.id] = data;
-          return memo;
-        }, {} as RouteData);
+        if (componentDidCatchEmulator.error) {
+          continue;
+        }
+
+        let route = nextMatches[index].route;
+        let routeModule = routeModules[route.id];
+
+        if (routeModule.ErrorBoundary) {
+          componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
+        }
+
+        if (result instanceof Error) {
+          componentDidCatchEmulator.error = result;
+        } else if (isRedirectResponse(result)) {
+          maybeHandleDataRedirect(result);
+        }
       }
+
+      nextRouteData = (
+        await Promise.all(
+          routeDataResults.map(
+            result =>
+              result &&
+              (result instanceof Response || result instanceof Error
+                ? extractData(result)
+                : result)
+          )
+        )
+      ).reduce((memo, data, index) => {
+        let match = nextMatches[index];
+        memo[match.route.id] = data;
+        return memo;
+      }, {} as RouteData);
 
       if (isCurrent && !didRedirect) {
         if (
