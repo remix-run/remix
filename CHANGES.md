@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Fixed srcset return string
+
 ## 0.10.1 - Wed Jan 27 2021
 
 ### Bug Fixes

@@ -133,7 +133,7 @@ export async function getImageAssetModule(
         `
       )}
     ]
-    let srcset = images.map(image => image.src + " " + image.width+"w");
+    let srcset = images.map(image => image.src + " " + image.width+"w").join(",");
     let placeholder = ${JSON.stringify(buildImage.placeholder)}
     let primaryImage = images[images.length - 1];
     let mod = { ...primaryImage, srcset, placeholder };
