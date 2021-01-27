@@ -154,11 +154,14 @@ export async function readConfig(
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
-  let routes = defineConventionalRoutes(appDirectory);
+  let rootLayoutId = "root";
+  let routes = defineConventionalRoutes(rootLayoutId, appDirectory);
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(defineRoutes);
     for (let shallowRoute of manualRoutes) {
-      shallowRoute.parentId = "layout:root";
+      // TODO: adding the "__" here feels gross, have to know what
+      // routesConvention.ts is doing, too
+      shallowRoute.parentId = "__" + rootLayoutId;
     }
     let root = routes[0];
     (root.children || (root.children = [])).push(...manualRoutes);

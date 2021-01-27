@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Fixed layout file names on windows
+
 ## 0.10.0 - Wed Jan 27 2021
 
 ### Improvements

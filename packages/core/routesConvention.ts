@@ -17,7 +17,10 @@ import { isStylesFile } from "./rollup/styles";
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
+export function defineConventionalRoutes(
+  layoutRouteId: string, // filename, no extension
+  appDir: string
+): ConfigRouteObject[] {
   let routeFiles: {
     [routeId: string]: {
       module?: string;
@@ -72,8 +75,10 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
     }
   });
 
-  function defineLayoutRoutes(rootRouteName: string) {
-    let id = `layout:${rootRouteName}`;
+  function defineLayoutRoutes(layoutRouteName: string) {
+    // "__" to get our Object.keys(routeManifest).sort() in components.tsx to
+    // put layouts first 😟
+    let id = "__" + layoutRouteName;
     let routes = defineRoutes(defineNestedRoutes);
 
     // Add the root route id to the first level routes
@@ -85,7 +90,7 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
       {
         id,
         path: "/",
-        moduleFile: findRootRouteModule(appDir, rootRouteName),
+        moduleFile: findRootRouteModule(appDir, layoutRouteName),
         // TODO: could use this instead of special casing global.css
         // stylesFile: path.join(appDir, "global.css"),
         children: routes
@@ -93,7 +98,7 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
     ];
   }
 
-  return defineLayoutRoutes("root");
+  return defineLayoutRoutes(layoutRouteId);
 }
 
 function findRootRouteModule(appDir: string, name: string) {
