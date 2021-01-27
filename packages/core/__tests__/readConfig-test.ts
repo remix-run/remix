@@ -56,7 +56,6 @@ describe("readConfig", () => {
             "moduleFile": "routes/gists.js",
             "parentId": "root",
             "path": "gists",
-            "stylesFile": "routes/gists.css",
           },
           "routes/gists.mine": Object {
             "id": "routes/gists.mine",
@@ -82,6 +81,12 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "/",
           },
+          "routes/links": Object {
+            "id": "routes/links",
+            "moduleFile": "routes/links.tsx",
+            "parentId": "root",
+            "path": "links",
+          },
           "routes/loader-errors": Object {
             "id": "routes/loader-errors",
             "moduleFile": "routes/loader-errors.js",
@@ -99,7 +104,6 @@ describe("readConfig", () => {
             "moduleFile": "routes/methods.tsx",
             "parentId": "root",
             "path": "methods",
-            "stylesFile": "routes/methods.css",
           },
           "routes/page/four": Object {
             "id": "routes/page/four",
@@ -160,7 +164,6 @@ describe("readConfig", () => {
                 "moduleFile": "routes/gists.js",
                 "parentId": "root",
                 "path": "gists",
-                "stylesFile": "routes/gists.css",
               },
               Object {
                 "id": "routes/gists.mine",
@@ -173,6 +176,12 @@ describe("readConfig", () => {
                 "moduleFile": "routes/index.js",
                 "parentId": "root",
                 "path": "/",
+              },
+              Object {
+                "id": "routes/links",
+                "moduleFile": "routes/links.tsx",
+                "parentId": "root",
+                "path": "links",
               },
               Object {
                 "children": Array [
@@ -193,7 +202,6 @@ describe("readConfig", () => {
                 "moduleFile": "routes/methods.tsx",
                 "parentId": "root",
                 "path": "methods",
-                "stylesFile": "routes/methods.css",
               },
               Object {
                 "id": "routes/page/four",

@@ -1,16 +1,23 @@
 const express = require("express");
 const morgan = require("morgan");
 const { createRequestHandler } = require("@remix-run/express");
+const compression = require("compression");
 
 const port = process.env.PORT || 3000;
 
 let app = express();
 
-app.use(express.static("public"));
-
 if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
+
+app.use(compression());
+
+app.use(
+  express.static("public", {
+    maxAge: process.env.NODE_ENV === "production" ? "1y" : undefined
+  })
+);
 
 // server-side redirect
 app.get("/user-gists/:username", (req, res) => {

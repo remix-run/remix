@@ -6,6 +6,14 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Added `url:` import assertion to import, hash, and emit static files to the browser build directory.
+- Added route module `links` export and `<Links>`component to add `<link>` elements to the the document for specific routes
+- Added @remix-run/react `block` to block asset links on script transitions
+- Added `{ page: pathname }` links to prefetch assets to other pages the user might visit
+- Added automatic stylesheet link blocking on script transitions to follow normal browser behavior on document transitions
+- JavaScript modules no longer cause waterfall of import requests, all scripts are fetched in parallel with `modulepreload`
+- Stylesheet links are automatically added as "preload" to give higher priority to speed up initial render while JavaScript modules continue to download
+- Removed manifest request on every transition
 - Added `useSubmit` and `useFormAction` hooks
 - Added support for `<button formAction>` and `<input formAction>` as well
   as `formMethod` and `formEnctype`
@@ -17,6 +25,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 - Leaf route determines headers on document requests instead of aggregating
   headers from all routes
+- Removed conventional route css files and global.css in lieu of `links` API
 
 ## 0.11.1 - Fri Feb 05 2021
 

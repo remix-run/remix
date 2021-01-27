@@ -19,57 +19,44 @@ export default function Index() {
       <nav>
         <ul>
           <li>
-            <Link to="/gists" className="text-blue-700 underline">
-              View Some gists
-            </Link>
+            <Link to="/links">Link preloads and stuff</Link>
           </li>
           <li>
-            <Link to="/gists/mjijackson" className="text-blue-700 underline">
-              Loader Redirect
-            </Link>
+            <Link to="/gists">View Some gists</Link>
           </li>
           <li>
-            <Link
-              to="/user-gists/ryanflorence"
-              className="text-blue-700 underline"
-            >
-              Express Redirect
-            </Link>
+            <Link to="/gists/mjackson">View Michael's gists</Link>
           </li>
           <li>
-            <Link to="/fart" className="text-blue-700 underline">
-              Broken link
-            </Link>
+            <Link to="/gists/mjijackson">Loader Redirect</Link>
           </li>
           <li>
-            <Link to="/methods" className="text-blue-700 underline">
-              Forms
-            </Link>
+            <Link to="/user-gists/ryanflorence">Express Redirect</Link>
           </li>
           <li>
-            <Link to="/loader-errors?throw" className="text-blue-700 underline">
+            <Link to="/fart">Broken link</Link>
+          </li>
+          <li>
+            <Link to="/methods">Forms</Link>
+          </li>
+          <li>
+            <Link to="/loader-errors?throw">
               Loader error with no ErrorBoundary
             </Link>
           </li>
           <li>
-            <Link
-              to="/loader-errors/nested"
-              className="text-blue-700 underline"
-            >
+            <Link to="/loader-errors/nested">
               Loader error in nested route with ErrorBoundary
             </Link>
           </li>
 
           <li>
-            <Link to="/render-errors?throw" className="text-blue-700 underline">
+            <Link to="/render-errors?throw">
               Render error with no ErrorBoundary
             </Link>
           </li>
           <li>
-            <Link
-              to="/render-errors/nested"
-              className="text-blue-700 underline"
-            >
+            <Link to="/render-errors/nested">
               Render error in nested route with ErrorBoundary
             </Link>
           </li>

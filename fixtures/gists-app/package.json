@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mdx-js/react": "^1.6.22",
+    "compression": "^1.7.4",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
     "react": "^17.0.1",

@@ -1,5 +1,4 @@
 import type { AppLoadContext } from "./buildModules";
-import { loadAssetManifest } from "./buildManifest";
 import {
   loadRouteModule,
   loadRouteModules,
@@ -8,15 +7,10 @@ import {
 import type { RemixConfig } from "./config";
 import { ServerMode } from "./config";
 import { loadRouteData, callRouteAction } from "./data";
-import type {
-  ComponentDidCatchEmulator,
-  EntryManifest,
-  EntryContext
-} from "./entry";
+import { ComponentDidCatchEmulator, EntryContext, getManifest } from "./entry";
 import {
   createEntryMatches,
   createRouteData,
-  createRouteManifest,
   createServerHandoffString,
   serializeError
 } from "./entry";
@@ -24,7 +18,6 @@ import { Request, Response } from "./fetch";
 import { getDocumentHeaders } from "./headers";
 import { ConfigRouteMatch, matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
-import { oneMinute } from "./seconds";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -42,8 +35,8 @@ export function createRequestHandler(config: RemixConfig): RequestHandler {
   return async (request, loadContext = {}) => {
     let url = new URL(request.url);
 
-    if (url.searchParams.has("_manifest")) {
-      return handleManifestRequest(config, request);
+    if (url.pathname.match(/remix-manifest-(.+)\.js$/)) {
+      return handleManifestRequest(config);
     }
 
     if (url.searchParams.has("_data")) {
@@ -54,40 +47,40 @@ export function createRequestHandler(config: RemixConfig): RequestHandler {
   };
 }
 
-async function handleManifestRequest(
-  config: RemixConfig,
-  request: Request
-): Promise<Response> {
-  let url = new URL(request.url);
-
-  let matches = matchRoutes(config.routes, url.pathname);
-  if (!matches) {
-    return jsonError(`No route matches URL "${url.pathname}"`, 404);
-  }
-
-  let assetManifest = loadAssetManifest(config.serverBuildDirectory);
-  let routeModules = loadRouteModules(
-    config.serverBuildDirectory,
-    matches.map(match => match.route.id)
-  );
-
-  let entryManifest: EntryManifest = {
-    version: assetManifest.version,
-    routes: createRouteManifest(
-      matches,
-      routeModules,
-      assetManifest.entries,
-      config.publicPath
-    )
-  };
-
-  return json(entryManifest, {
+function handleManifestRequest(config: RemixConfig) {
+  let manifest = getManifest(config);
+  return new Response(`window.__remixManifest = ${JSON.stringify(manifest)}`, {
     headers: {
-      // FIXME: This is a problem for anyone who is caching static assets
-      // for less than 5 minutes. Long-term plan is to generate static
-      // manifest files alongside the build and get rid of this endpoint.
-      "Cache-Control": `public, max-age=${5 * oneMinute}`,
-      ETag: entryManifest.version
+      "Content-Type": "text/javascript",
+
+      // Assumptions about this cache control:
+      //
+      // - When people deploy, they will purge the documents and the manifest
+      //   requests together
+      // - This automatically happens on Firebase, Vercel, Netlify, (Architect maybe?)
+      // - Even without a purged cdn cache, people will set a smaller s-maxage
+      //   on their document headers than this (max-age doesn't matter since
+      //   browsers always go for the 304 on document requests)
+      // - Even if they don't, they will likely expire together since 1y is the
+      //   maximum age pretty much everywhere.
+      //
+      // Only time this is a problem is if:
+      //
+      // - CDN has purged the manifest request
+      // - CDN has *not* purged the document request asking for a manifest
+      //
+      // Seems like an unlikely situation, and easily fixed by purging the
+      // documents. The developer was likely manually goofing around with
+      // purges, and that's their own issue to deal with.
+      //
+      // It's important to cache this long so that subsequent document
+      // navigations aren't slowed down by a request to the origin server for
+      // the manifest (which grows as more routes are added to the overall app).
+      // It will (most likely) expire with the documents on deploy, or the
+      // documents will expire sooner and stop asking for this particular
+      // manifest.
+      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+      Etag: manifest.version
     }
   });
 }
@@ -209,7 +202,6 @@ async function handleDocumentRequest(
   }
 
   // Load the server build.
-  let assetManifest = loadAssetManifest(config.serverBuildDirectory);
   let routeModules = loadRouteModules(
     config.serverBuildDirectory,
     matches.map(match => match.route.id)
@@ -293,27 +285,12 @@ async function handleDocumentRequest(
     statusCode = notOkResponse.status;
   }
 
-  // Prepare variables to be used in the client.
-  let entryManifest: EntryManifest = {
-    version: assetManifest.version,
-    routes: createRouteManifest(
-      matches,
-      routeModules,
-      assetManifest.entries,
-      config.publicPath
-    ),
-    entryModuleUrl:
-      config.publicPath + assetManifest.entries["entry-browser"].file,
-    globalStylesUrl:
-      "global.css" in assetManifest.entries
-        ? config.publicPath + assetManifest.entries["global.css"].file
-        : undefined
-  };
-  let entryMatches = createEntryMatches(entryManifest.routes, matches);
+  let manifest = getManifest(config);
+
+  let entryMatches = createEntryMatches(manifest.routes, matches);
   let routeData = await createRouteData(routeLoaderResponses, matches);
 
   let serverHandoff = {
-    manifest: entryManifest,
     matches: entryMatches,
     componentDidCatchEmulator,
     routeData
@@ -321,6 +298,7 @@ async function handleDocumentRequest(
 
   let serverEntryContext: EntryContext = {
     ...serverHandoff,
+    manifest,
     routeModules,
     serverHandoffString: createServerHandoffString(serverHandoff)
   };

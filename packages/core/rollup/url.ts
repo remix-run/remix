@@ -37,9 +37,9 @@ export default function url({ target }: { target: BuildTarget }): Plugin {
       return resolved;
     },
 
-    resolveFileUrl({ chunkId, fileName, relativePath }) {
+    resolveFileUrl({ chunkId, relativePath, fileName }) {
       if (target === BuildTarget.Browser) {
-        return `new URL('${relativePath}', import.meta.url).href`;
+        return `new URL('${relativePath}', import.meta.url).pathname`;
       } else {
         return generateServerUrl(chunkId, fileName, config);
       }
@@ -61,15 +61,15 @@ export default function url({ target }: { target: BuildTarget }): Plugin {
           name: name,
           source: await fs.readFile(id)
         });
-        this.addWatchFile(id);
       } else {
         fileId = this.emitFile({
           type: "asset",
           name: name,
-          source: ""
+          source: JSON.stringify(name)
         });
       }
 
+      this.addWatchFile(id);
       return `export default import.meta.ROLLUP_FILE_URL_${fileId}`;
     }
   };
@@ -85,5 +85,5 @@ function generateServerUrl(chunkId: string, name: string, config: RemixConfig) {
   );
   let manifestImportPath = path.relative(importerDir, manifestPath);
 
-  return `"${config.publicPath}"+require("${manifestImportPath}").entries["${name}"].file`;
+  return `"${config.publicPath}"+require("./${manifestImportPath}").entries["${name}"].file`;
 }

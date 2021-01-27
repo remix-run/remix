@@ -1,8 +1,14 @@
 import jsesc from "jsesc";
 import type { Params } from "react-router";
 
-import type { AssetManifest } from "./buildManifest";
-import type { AppData, RouteModule, RouteModules } from "./buildModules";
+import { AssetManifest, loadAssetManifest } from "./buildManifest";
+import {
+  AppData,
+  loadRouteModules,
+  RouteModule,
+  RouteModules
+} from "./buildModules";
+import { RemixConfig } from "./config";
 import { extractData } from "./data";
 import type { Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
@@ -56,8 +62,9 @@ export interface EntryContext {
 export interface EntryManifest {
   version: AssetManifest["version"];
   routes: RouteManifest<EntryRouteObject>;
-  entryModuleUrl?: string;
-  globalStylesUrl?: string;
+  entryModuleUrl: string;
+  entryModuleImports: string[];
+  manifestUrl: string;
 }
 
 export interface EntryRouteObject {
@@ -67,9 +74,11 @@ export interface EntryRouteObject {
   parentId?: string;
   hasAction?: boolean;
   hasLoader?: boolean;
+  // TODO: can this really be undefined? How?
   moduleUrl?: string; // URL of the route module for `import`
   // nomoduleUrl?: string; // URL of the route module for `SystemJS.import`
   stylesUrl?: string; // URL for loading the CSS
+  imports?: string[]; // URLs of modules that need to be imported with this one
 }
 
 export function createEntryRoute(
@@ -89,8 +98,10 @@ export function createEntryRoute(
   if (configRoute.parentId) {
     route.parentId = configRoute.parentId;
   }
+  // TODO: isn't this always true?
   if (assets[route.id]) {
     route.moduleUrl = publicPath + assets[route.id].file;
+    route.imports = assets[route.id].imports?.map(path => publicPath + path);
   }
   if (assets[`${route.id}.css`]) {
     route.stylesUrl = publicPath + assets[`${route.id}.css`].file;
@@ -155,4 +166,97 @@ export function createServerHandoffString(serverHandoff: any): string {
   // Use jsesc to escape data returned from the loaders. This string is
   // inserted directly into the HTML in the `<Scripts>` element.
   return jsesc(serverHandoff, { isScriptContext: true });
+}
+
+/**
+ * Gets the whole manifest in preparation for moving this stuff to rollup and
+ * building a static manifest for each deployment
+ */
+export function getManifest(config: RemixConfig): EntryManifest {
+  let assetManifest = loadAssetManifest(config.serverBuildDirectory);
+
+  let routeModules = loadRouteModules(
+    config.serverBuildDirectory,
+    Object.keys(config.routeManifest)
+  );
+
+  let routes = Object.keys(config.routeManifest).reduce((memo, routeId) => {
+    let route = config.routeManifest[routeId];
+    let routeModule = routeModules[routeId];
+    memo[routeId] = createEntryRoute(
+      route,
+      routeModule,
+      assetManifest.entries,
+      config.publicPath
+    );
+    return memo;
+  }, {} as RouteManifest<EntryRouteObject>);
+
+  let entryImports = assetManifest.entries["entry-browser"].imports!.map(
+    path => config.publicPath + path
+  );
+
+  for (let routeId in routes) {
+    removeParentImports(routeId, routes, entryImports);
+  }
+
+  let entryModuleImports = (
+    assetManifest.entries["entry-browser"].imports || []
+  ).map(filePath => config.publicPath + filePath);
+
+  return {
+    version: assetManifest.version,
+    routes,
+    entryModuleUrl:
+      config.publicPath + assetManifest.entries["entry-browser"].file,
+    entryModuleImports,
+    manifestUrl:
+      config.publicPath + `remix-manifest-${assetManifest.version}.js`
+  };
+}
+
+// Each entry has a list of imports with lots of duplicates between routes. We
+// know that a child route is never rendered without its parent route, so we can
+// remove any imports that we know will already be declared in the parent route,
+// greatly reduce file size of manifest, also makes it easy to add
+// modulepreloads w/o having to dedupe each time you need them.
+//
+// TODO: I'm sure // there's a WAY better way to do this, also should probably
+// be done in the rollup manifest plugin during build instead of at runtime.
+function removeParentImports(
+  routeId: string,
+  routes: RouteManifest<EntryRouteObject>,
+  entryImports: string[]
+) {
+  let route = routes[routeId];
+  if (!route.imports) return;
+
+  let parentImports = new Set(entryImports);
+
+  if (route.parentId) {
+    let parents = getParents(route, routes);
+    parents
+      .map(parent => parent.imports!)
+      .flat(1)
+      .forEach(path => parentImports.add(path));
+  }
+
+  route.imports = route.imports.filter(path => {
+    return !parentImports.has(path);
+  });
+}
+
+function getParents(
+  route: EntryRouteObject,
+  routes: RouteManifest<EntryRouteObject>,
+  parents: EntryRouteObject[] = []
+) {
+  if (route.parentId) {
+    let parent = routes[route.parentId];
+    parents.unshift(parent);
+    if (parent.parentId) {
+      getParents(parent, routes, parents);
+    }
+  }
+  return parents;
 }

@@ -23,23 +23,23 @@ import {
   isRedirectResponse
 } from "./data";
 import invariant from "./invariant";
-import type { Manifest } from "./manifest";
-import { loadManifest } from "./manifest";
+import type { EntryManifest as Manifest } from "@remix-run/core";
 import { createHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
-import type { ClientRouteMatch } from "./routes";
+import type { ClientRouteMatch, ClientRouteObject } from "./routes";
 import {
   createClientRoutes,
   createClientMatches,
   matchClientRoutes
 } from "./routes";
-import { loadRouteStyleSheet } from "./stylesheets";
 import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
 } from "./errorBoundaries";
 import type { ComponentDidCatchEmulator } from "@remix-run/core/entry";
+import { getLinks, preloadBlockingLinks } from "./links";
+import { HTMLLinkDescriptor } from "@remix-run/core/links";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
@@ -90,6 +90,8 @@ interface RemixEntryContextType {
   routeModules: RouteModules;
   serverHandoffString?: string;
   pendingLocation: Location | undefined;
+  clientRoutes: ClientRouteObject[];
+  links: HTMLLinkDescriptor[];
 }
 
 const RemixEntryContext = React.createContext<
@@ -140,16 +142,29 @@ export function RemixEntry({
     componentDidCatchEmulator
   } = state;
 
+  let clientRoutes = React.useMemo(
+    () => createClientRoutes(manifest.routes, RemixRoute),
+    [manifest]
+  );
+
+  let links = React.useMemo(() => {
+    return getLinks(
+      location,
+      matches,
+      routeData,
+      routeModules,
+      manifest,
+      clientRoutes
+    );
+  }, [location, matches, routeData, routeModules, manifest, clientRoutes]);
+
   React.useEffect(() => {
     if (location === nextLocation) return;
 
     let isCurrent = true;
 
     (async () => {
-      await loadManifest(manifest, nextLocation);
-
-      let routes = createClientRoutes(manifest.routes, RemixRoute);
-      let nextMatches = matchClientRoutes(routes, nextLocation);
+      let nextMatches = matchClientRoutes(clientRoutes, nextLocation);
 
       let didRedirect = false;
       function handleDataRedirect(response: Response) {
@@ -217,13 +232,33 @@ export function RemixEntry({
 
       let transitionResults = await Promise.all(
         newMatches.map(async match => {
-          let route = manifest.routes[match.route.id];
-          return Promise.all([
-            route.id,
+          let routeId = match.route.id;
+          let route = manifest.routes[routeId];
+
+          // get data and module in parallel
+          let [dataResult, routeModule] = await Promise.all([
             route.hasLoader ? fetchData(nextLocation, route.id) : undefined,
-            loadRouteModule(route, routeModules),
-            loadRouteStyleSheet(route)
+            loadRouteModule(route, routeModules)
           ]);
+
+          // don't waste time w/ links for routes that won't render
+          if (
+            isRedirectResponse(dataResult) ||
+            dataResult instanceof Error ||
+            routeModule == null // how?
+          ) {
+            return { routeId, dataResult, links: [] };
+          }
+
+          if (routeModule.links) {
+            await preloadBlockingLinks(
+              routeModule,
+              // clone so we don't empty the body for later code (refactor?)
+              dataResult != null ? await extractData(dataResult.clone()) : null
+            );
+          }
+
+          return { routeId, dataResult };
         })
       );
 
@@ -234,7 +269,7 @@ export function RemixEntry({
         error: undefined
       };
 
-      for (let [routeId, dataResult] of transitionResults) {
+      for (let { routeId, dataResult } of transitionResults) {
         if (
           !(dataResult instanceof Response || dataResult instanceof Error) ||
           componentDidCatchEmulator.error
@@ -257,7 +292,7 @@ export function RemixEntry({
 
       let newRouteData = (
         await Promise.all(
-          transitionResults.map(async ([routeId, dataResult]) => {
+          transitionResults.map(async ({ routeId, dataResult }) => {
             if (dataResult instanceof Response || dataResult instanceof Error) {
               return [routeId, await extractData(dataResult)];
             }
@@ -304,7 +339,8 @@ export function RemixEntry({
     routeData,
     navigator,
     manifest,
-    routeModules
+    routeModules,
+    clientRoutes
   ]);
 
   let context: RemixEntryContextType = {
@@ -314,7 +350,9 @@ export function RemixEntry({
     routeData,
     routeModules,
     serverHandoffString,
-    pendingLocation: nextLocation !== location ? nextLocation : undefined
+    pendingLocation: nextLocation !== location ? nextLocation : undefined,
+    clientRoutes,
+    links
   };
 
   // If we tried to render and failed, and the app threw before rendering any
@@ -484,75 +522,79 @@ export function Meta() {
  * Bundles for additional routes are loaded later as needed.
  */
 export function Scripts() {
-  let { manifest, serverHandoffString } = useRemixEntryContext();
+  let {
+    manifest,
+    matches,
+    pendingLocation,
+    clientRoutes,
+    serverHandoffString
+  } = useRemixEntryContext();
 
-  let browserIsHydrating = false;
-  if (!serverHandoffString) {
-    browserIsHydrating = true;
-    serverHandoffString = "{}";
-  }
+  // browser renders nothing for this, server renders script tags
+  let serverOnlyTags = null;
 
-  let contextScript = `window.__remixContext = ${serverHandoffString};`;
+  if (serverHandoffString) {
+    let contextScript = `window.__remixContext = ${serverHandoffString};`;
 
-  let routeIds = Object.keys(manifest.routes).filter(
-    routeId => manifest.routes[routeId].moduleUrl != null
-  );
-  let routeModulesScript = `${routeIds
-    .map(
-      (routeId, index) =>
-        `import * as route${index} from ${JSON.stringify(
-          manifest.routes[routeId].moduleUrl
-        )};`
-    )
-    .join("\n")}
-    window.__remixRouteModules = {${routeIds
-      .map((routeId, index) => `${JSON.stringify(routeId)}:route${index}`)
+    let matchesWithModules = matches.filter(
+      match => manifest.routes[match.route.id].moduleUrl != null
+    );
+    let routeModulesScript = `${matchesWithModules
+      .map(
+        (match, index) =>
+          `import * as route${index} from ${JSON.stringify(
+            manifest.routes[match.route.id].moduleUrl
+          )};`
+      )
+      .join("\n")}
+    window.__remixRouteModules = {${matchesWithModules
+      .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};`;
 
-  return React.useMemo(
-    () => (
+    serverOnlyTags = (
       <>
-        <script
-          suppressHydrationWarning={browserIsHydrating}
-          dangerouslySetInnerHTML={createHtml(contextScript)}
-        />
+        <script dangerouslySetInnerHTML={createHtml(contextScript)} />
         <script
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
+        <script src={manifest.manifestUrl} type="module" />
         <script src={manifest.entryModuleUrl} type="module" />
       </>
-    ),
-    [] // eslint-disable-line
+    );
+  }
+
+  // avoid waterfall when importing the next route module
+  let nextMatches = React.useMemo(
+    () =>
+      pendingLocation ? matchClientRoutes(clientRoutes, pendingLocation) : [],
+    [pendingLocation, clientRoutes]
   );
-}
 
-/**
- * Renders the <link> tags for the stylesheets of the current routes.
- */
-export function Styles() {
-  let { manifest, matches } = useRemixEntryContext();
+  let routePreloads = matches
+    .concat(nextMatches)
+    .map(match => {
+      let route = manifest.routes[match.route.id];
+      if (!route.moduleUrl || !route.imports) return null;
+      return route.imports.concat([route.moduleUrl]);
+    })
+    .filter(Boolean)
+    .flat(1);
 
-  let stylesUrls = [];
-
-  if (manifest.globalStylesUrl) {
-    stylesUrls.push(manifest.globalStylesUrl);
-  }
-
-  for (let match of matches) {
-    let route = manifest.routes[match.route.id];
-    if (route.stylesUrl) {
-      stylesUrls.push(route.stylesUrl);
-    }
-  }
+  let preloads = manifest.entryModuleImports.concat(routePreloads as string[]);
 
   return (
     <>
-      {stylesUrls.map(href => (
-        <link key={href} rel="stylesheet" href={href} />
+      {dedupe(preloads).map(path => (
+        <link key={path} rel="modulepreload" href={path} />
       ))}
+      <div suppressHydrationWarning>{serverOnlyTags}</div>
     </>
   );
+}
+
+function dedupe(array: any[]) {
+  return [...new Set(array)];
 }
 
 /**
@@ -560,11 +602,10 @@ export function Styles() {
  * or routes for this page and need to get them from the server.
  */
 function Routes() {
-  // TODO: Add `renderMatches` function to RR that we can use and then we don't need this component,
-  // we can just `renderMatches` from RemixEntry
-  let { manifest } = useRemixEntryContext();
-  let routes = createClientRoutes(manifest.routes, RemixRoute);
-  let element = useRoutes(routes);
+  // TODO: Add `renderMatches` function to RR that we can use and then we don't
+  // need this component, we can just `renderMatches` from RemixEntry
+  let { clientRoutes } = useRemixEntryContext();
+  let element = useRoutes(clientRoutes);
   return element;
 }
 
@@ -841,4 +882,9 @@ export function usePendingFormSubmit(): FormSubmit | undefined {
  */
 export function usePendingLocation(): Location | undefined {
   return useRemixEntryContext().pendingLocation;
+}
+
+export function Links() {
+  let { links } = useRemixEntryContext();
+  return links.map(link => <link key={link.rel + link.href} {...link} />);
 }

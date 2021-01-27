@@ -3,6 +3,11 @@ declare module "img:*" {
   export default asset;
 }
 
+declare module "url:*" {
+  const asset: string;
+  export default asset;
+}
+
 /**
  * Image urls and metadata for images imported into applications.
  */

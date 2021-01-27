@@ -29,10 +29,8 @@ import manifest from "./rollup/manifest";
 import remixConfig from "./rollup/remixConfig";
 import remixInputs from "./rollup/remixInputs";
 import watchDirectory from "./rollup/watchDirectory";
-import watchStyles from "./rollup/watchStyles";
 import mdx from "./rollup/mdx";
 import routeModules from "./rollup/routeModules";
-import styles from "./rollup/styles";
 import url from "./rollup/url";
 import img from "./rollup/img";
 
@@ -78,10 +76,6 @@ export async function build(
   };
 
   let plugins: Plugin[] = [remixConfig({ rootDir: config.rootDirectory })];
-
-  if (target === BuildTarget.Browser) {
-    plugins.push(styles({ sourceDir: config.appDirectory }));
-  }
 
   plugins.push(...getBuildPlugins(buildOptions));
 
@@ -129,9 +123,6 @@ export function watch(
     plugins: [
       remixConfig({ rootDir: config.rootDirectory }),
       watchDirectory({
-        sourceDir: config.appDirectory
-      }),
-      watchStyles({
         sourceDir: config.appDirectory
       }),
       ...getBuildPlugins(buildOptions)
@@ -398,7 +389,7 @@ function getCommonOutputOptions(build: RemixBuild): OutputOptions {
     format: target === BuildTarget.Server ? "cjs" : "esm",
     exports: target === BuildTarget.Server ? "named" : undefined,
     assetFileNames:
-      mode === BuildMode.Production
+      mode === BuildMode.Production && target === BuildTarget.Browser
         ? "[name]-[hash][extname]"
         : "[name][extname]",
     chunkFileNames: "_shared/[name]-[hash].js",

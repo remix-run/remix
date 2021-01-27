@@ -21,9 +21,18 @@ export async function loadRouteModule(
     return Promise.resolve(null);
   }
 
-  let routeModule = await import(route.moduleUrl);
-
-  routeModulesCache[route.id] = routeModule;
-
-  return routeModule;
+  try {
+    let routeModule = await import(route.moduleUrl);
+    routeModulesCache[route.id] = routeModule;
+    return routeModule;
+  } catch (error) {
+    // User got caught in the middle of a deploy and the CDN no longer has the
+    // asset we're trying to import! Reload from the server and the user
+    // (should) get the new manifest--unless the developer purged the static
+    // assets, the manifest path, but not the documents 😬
+    window.location.reload();
+    return new Promise(() => {
+      // check out of this hook cause the DJs never gonna resolve this
+    });
+  }
 }

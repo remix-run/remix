@@ -1,6 +1,17 @@
 import { useEffect } from "react";
-import { Meta, Scripts, Styles, useRouteData } from "@remix-run/react";
+import { Meta, Links, Scripts, useRouteData } from "@remix-run/react";
 import { Outlet } from "react-router-dom";
+import styles from "url:./styles/app.css";
+
+export function links() {
+  return [
+    {
+      rel: "stylesheet",
+      href: "https://unpkg.com/@exampledev/new.css@1.1.3/new.css"
+    },
+    { rel: "stylesheet", href: styles }
+  ];
+}
 
 export function loader({ request }) {
   return {
@@ -21,11 +32,7 @@ export default function Root() {
       <head>
         <meta charSet="utf-8" />
         <Meta />
-        <link
-          rel="stylesheet"
-          href="//unpkg.com/@exampledev/new.css@1.1.3/new.css"
-        />
-        <Styles />
+        <Links />
       </head>
       <body className="m-4">
         <div data-test-id="content">

@@ -6,7 +6,10 @@ import type { NormalizedOutputOptions, OutputBundle, Plugin } from "rollup";
 export interface BuildManifest {
   version: string;
   entries: {
-    [entryName: string]: { file: string };
+    [entryName: string]: {
+      file: string;
+      imports?: string[];
+    };
   };
 }
 
@@ -33,13 +36,18 @@ function createEntries(bundle: OutputBundle): BuildManifest["entries"] {
     let assetOrChunk = bundle[key];
     if (assetOrChunk.type === "chunk") {
       if (assetOrChunk.isEntry) {
-        entries[assetOrChunk.name] = { file: assetOrChunk.fileName };
+        entries[assetOrChunk.name] = {
+          file: assetOrChunk.fileName,
+          imports: assetOrChunk.imports
+        };
       }
     } else if (
       assetOrChunk.type === "asset" &&
       typeof assetOrChunk.name !== "undefined"
     ) {
-      entries[assetOrChunk.name] = { file: assetOrChunk.fileName };
+      entries[assetOrChunk.name] = {
+        file: assetOrChunk.fileName
+      };
     } else if (
       assetOrChunk.type === "asset" &&
       typeof assetOrChunk.fileName !== "undefined"

@@ -1,4 +1,4 @@
-import "./imageTypes";
+import "./assetImportTypes";
 
 export { createAdapter } from "./adapter";
 
@@ -72,3 +72,11 @@ export { createFileSessionStorage } from "./sessions/fileStorage";
 export { createMemorySessionStorage } from "./sessions/memoryStorage";
 
 export { warnOnce } from "./warnings";
+
+export type {
+  LinksFunction,
+  LinkDescriptor,
+  HTMLLinkDescriptor,
+  BlockLinkDescriptor,
+  PageLinkDescriptor
+} from "./links";

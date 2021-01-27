@@ -6,6 +6,7 @@ import type { Params } from "react-router";
 import type { EntryContext, RouteData } from "./entry";
 import { loadServerManifest } from "./buildManifest";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
+import type { LinksFunction } from "./links";
 import invariant from "./invariant";
 
 /**
@@ -82,6 +83,7 @@ export interface RouteModule {
   meta?: MetaFunction;
   loader?: LoaderFunction;
   action?: ActionFunction;
+  links?: LinksFunction;
 }
 
 export interface RouteModules {

@@ -1,4 +1,4 @@
-import { useRouteData } from "@remix-run/react";
+import { useRouteData, block } from "@remix-run/react";
 
 let fakeGists = [
   {
@@ -17,12 +17,13 @@ let fakeGists = [
   }
 ];
 
-export function loader() {
+export async function loader() {
   if (process.env.NODE_ENV !== "development") {
     return Promise.resolve(fakeGists);
   }
 
-  return fetch(`https://api.github.com/gists`);
+  let res = await fetch(`https://api.github.com/gists`);
+  return res.json();
 }
 
 export function meta() {
@@ -46,7 +47,12 @@ export default function GistsIndex() {
       <h2>Public Gists</h2>
       <ul>
         {data.map(gist => (
-          <li key={gist.id}>
+          <li key={gist.id} style={{ display: "flex", alignItems: "center" }}>
+            <img
+              src={gist.owner.avatar_url}
+              style={{ height: 36, margin: "0.25rem 0.5rem 0.25rem 0" }}
+              alt="avatar"
+            />
             <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
           </li>
         ))}

@@ -2,8 +2,13 @@ import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
 import { json, redirect } from "@remix-run/data";
+import styles from "url:../styles/methods.css";
 
 import { getSession, commitSession } from "../sessionStorage";
+
+export function links() {
+  return [{ rel: "stylesheet", href: styles }];
+}
 
 export async function loader({ request }) {
   let session = await getSession(request.headers.get("Cookie"));

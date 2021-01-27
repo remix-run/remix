@@ -6,38 +6,26 @@ exports[`the server HTML for the root URL is correct 1`] = `
     <header><h1>Cool Gists App</h1></header>
     <nav>
       <ul>
+        <li><a href=\\"/links\\">Link preloads and stuff</a></li>
+        <li><a href=\\"/gists\\">View Some gists</a></li>
+        <li><a href=\\"/gists/mjackson\\">View Michael&apos;s gists</a></li>
+        <li><a href=\\"/gists/mjijackson\\">Loader Redirect</a></li>
+        <li><a href=\\"/user-gists/ryanflorence\\">Express Redirect</a></li>
+        <li><a href=\\"/fart\\">Broken link</a></li>
+        <li><a href=\\"/methods\\">Forms</a></li>
         <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/gists\\">View Some gists</a>
+          <a href=\\"/loader-errors?throw\\">Loader error with no ErrorBoundary</a>
         </li>
         <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjijackson\\"
-            >Loader Redirect</a
-          >
-        </li>
-        <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/user-gists/ryanflorence\\"
-            >Express Redirect</a
-          >
-        </li>
-        <li><a class=\\"text-blue-700 underline\\" href=\\"/fart\\">Broken link</a></li>
-        <li><a class=\\"text-blue-700 underline\\" href=\\"/methods\\">Forms</a></li>
-        <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/loader-errors?throw\\"
-            >Loader error with no ErrorBoundary</a
-          >
-        </li>
-        <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/loader-errors/nested\\"
+          <a href=\\"/loader-errors/nested\\"
             >Loader error in nested route with ErrorBoundary</a
           >
         </li>
         <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/render-errors?throw\\"
-            >Render error with no ErrorBoundary</a
-          >
+          <a href=\\"/render-errors?throw\\">Render error with no ErrorBoundary</a>
         </li>
         <li>
-          <a class=\\"text-blue-700 underline\\" href=\\"/render-errors/nested\\"
+          <a href=\\"/render-errors/nested\\"
             >Render error in nested route with ErrorBoundary</a
           >
         </li>

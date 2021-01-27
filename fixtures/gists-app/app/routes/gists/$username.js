@@ -30,7 +30,7 @@ export async function loader({ params }) {
     return json(null, { status: 404 });
   }
 
-  if (process.env.NODE_ENV === "test") {
+  if (process.env.NODE_ENV !== "development") {
     return fakeGists;
   }
 

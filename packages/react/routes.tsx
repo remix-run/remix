@@ -88,7 +88,7 @@ export function createClientMatches(
 
 export function matchClientRoutes(
   routes: ClientRouteObject[],
-  location: Location
+  location: Location | string
 ): ClientRouteMatch[] {
   let matches = matchRoutes((routes as unknown) as RouteObject[], location);
 

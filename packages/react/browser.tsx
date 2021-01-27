@@ -10,6 +10,7 @@ import type { RouteModules } from "./routeModules";
 declare global {
   var __remixContext: EntryContext;
   var __remixRouteModules: RouteModules;
+  var __remixManifest: EntryContext["manifest"];
 }
 
 /**
@@ -35,6 +36,7 @@ export default function RemixBrowser(): ReactElement {
   React.useLayoutEffect(() => history.listen(dispatch), [history]);
 
   let entryContext = window.__remixContext;
+  entryContext.manifest = window.__remixManifest;
   entryContext.routeModules = window.__remixRouteModules;
   // In the browser, we don't need this because a) in the case of loader
   // errors we already know the order and b) in the case of render errors
