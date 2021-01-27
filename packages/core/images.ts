@@ -9,13 +9,12 @@
 //   - otherwise build
 
 import { createHash } from "crypto";
-import { promises as fs } from "fs";
+import { promises as fsp } from "fs";
 import path from "path";
 import sharp from "sharp";
 import prettyBytes from "pretty-bytes";
 
 import type { RemixConfig } from "./config";
-import invariant from "./invariant";
 
 // Don't use the sharp cache, we use the config.browserBuildDirectory as the
 // cache so that we don't process images even between restarts of the dev
@@ -234,13 +233,14 @@ function parseParamsForSharp(
   let format = params.get("format") || path.extname(sourceFileName).slice(1);
   if (format === "jpg") format = "jpeg";
 
-  invariant(
-    format === "jpeg" ||
-      format === "avif" ||
-      format === "webp" ||
-      format === "png",
-    `Only ${formats.join(", ")} files can be imported.`
-  );
+  if (
+    format !== "jpeg" &&
+    format !== "avif" &&
+    format !== "webp" &&
+    format !== "png"
+  ) {
+    throw new Error(`Only ${formats.join(", ")} files can be imported.`);
+  }
 
   let width = params.get("width");
   let height = params.get("height");
@@ -265,7 +265,7 @@ async function getPlaceholder(
   );
 
   try {
-    let placeholder = (await fs.readFile(placeholderFileName)).toString();
+    let placeholder = (await fsp.readFile(placeholderFileName)).toString();
     log("placeholder exists, skipping", name);
     return placeholder;
   } catch (e) {}
@@ -281,8 +281,8 @@ async function getPlaceholder(
 
   let placeholder = `data:image/jpeg;base64,${buffer.toString("base64")}`;
 
-  await fs.mkdir(path.dirname(placeholderFileName), { recursive: true });
-  await fs.writeFile(placeholderFileName, placeholder);
+  await fsp.mkdir(path.dirname(placeholderFileName), { recursive: true });
+  await fsp.writeFile(placeholderFileName, placeholder);
 
   log(`${Date.now() - start}ms: processed placeholder`, name);
   return placeholder;
@@ -290,7 +290,7 @@ async function getPlaceholder(
 
 async function assetExists(filePath: string) {
   try {
-    await fs.access(filePath);
+    await fsp.access(filePath);
     return true;
   } catch (e) {
     return false;
@@ -395,9 +395,9 @@ async function processBuildImageAsset(
 
   // ensure directory because we're doing this outside of rollup's "emitAsset"
   let filePath = path.join(config.browserBuildDirectory, buildImageAsset.name);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await image.toFile(filePath);
-  let stats = await fs.stat(filePath);
+  let stats = await fsp.stat(filePath);
 
   console.log(
     `Built image: ${Date.now() - start}ms, ${prettyBytes(stats.size)}, ${
@@ -424,7 +424,7 @@ async function cleanupEmissions() {
 
     await Promise.all(
       Array.from(oldFiles).map(async filePath => {
-        await fs.unlink(filePath);
+        await fsp.unlink(filePath);
         log("unlinked stale image", path.basename(filePath));
       })
     );
