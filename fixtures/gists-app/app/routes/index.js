@@ -1,6 +1,7 @@
 import { Link } from "@remix-run/react";
 
 import Shared from "../components/Shared";
+import Guitar from "../components/Guitar";
 
 export function meta() {
   return {
@@ -75,6 +76,8 @@ export default function Index() {
         </ul>
       </nav>
       <Shared />
+      <hr />
+      <Guitar />
     </div>
   );
 }

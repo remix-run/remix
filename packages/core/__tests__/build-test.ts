@@ -45,7 +45,7 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-b97a0af4.js",
+          "_shared/Shared-072c977d.js",
           "entry-server.js",
           "layout:root.js",
           "pages/one.js",
@@ -142,7 +142,7 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-b97a0af4.js",
+          "_shared/Shared-072c977d.js",
           "entry-server.js",
           "layout:root.js",
           "pages/one.js",
@@ -239,7 +239,7 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-eccda928.js",
+          "_shared/Shared-d9a35912.js",
           "_shared/__babel/runtime-88c72f87.js",
           "_shared/__mdx-js/react-4850335b.js",
           "_shared/__remix-run/react-d405e3fc.js",
@@ -360,7 +360,7 @@ describe.skip("building", () => {
 
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
-          "_shared/Shared-9eec0d99.js",
+          "_shared/Shared-035a27e3.js",
           "_shared/__babel/runtime-88c72f87.js",
           "_shared/__mdx-js/react-d4d6fcba.js",
           "_shared/__remix-run/react-7e4ead70.js",
@@ -380,12 +380,12 @@ describe.skip("building", () => {
           "pages/one-7135adbb.js",
           "pages/two-133d6f23.js",
           "routes/404-e700f1a9.js",
-          "routes/gists-39f8d09f.js",
           "routes/gists-6db1f83b.css",
+          "routes/gists-76d43894.js",
           "routes/gists.mine-8daefef7.js",
           "routes/gists/$username-35fe93f1.js",
           "routes/gists/index-957176ca.js",
-          "routes/index-dafde173.js",
+          "routes/index-340c73f4.js",
           "routes/loader-errors-bba41ff8.js",
           "routes/loader-errors/nested-41482585.js",
           "routes/methods-5f625924.js",
@@ -423,7 +423,7 @@ describe.skip("building", () => {
               "file": "routes/404-e700f1a9.js",
             },
             "routes/gists": Object {
-              "file": "routes/gists-39f8d09f.js",
+              "file": "routes/gists-76d43894.js",
             },
             "routes/gists.css": Object {
               "file": "routes/gists-6db1f83b.css",
@@ -438,7 +438,7 @@ describe.skip("building", () => {
               "file": "routes/gists/index-957176ca.js",
             },
             "routes/index": Object {
-              "file": "routes/index-dafde173.js",
+              "file": "routes/index-340c73f4.js",
             },
             "routes/loader-errors": Object {
               "file": "routes/loader-errors-bba41ff8.js",

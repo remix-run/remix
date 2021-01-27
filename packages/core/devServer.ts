@@ -38,6 +38,7 @@ function createRequestHandler(config: RemixConfig) {
       target: BuildTarget.Server,
       manifestDir: config.serverBuildDirectory,
       onBuildStart() {
+        console.log("Building Remix...");
         serverBuildStart = Date.now();
       },
       async onBuildEnd(build) {

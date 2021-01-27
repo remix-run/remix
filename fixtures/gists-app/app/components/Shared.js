@@ -1,3 +1,7 @@
 export default function Shared() {
-  return <div>I am shared</div>;
+  return (
+    <div>
+      <p>Shared</p>
+    </div>
+  );
 }

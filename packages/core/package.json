@@ -23,9 +23,11 @@
     "jsesc": "^3.0.1",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.1",
+    "pretty-bytes": "^5.5.0",
     "react-router-dom": "^6.0.0-beta.0",
     "rollup": "^2.36.1",
     "rollup-plugin-terser": "^7.0.2",
+    "sharp": "^0.27.0",
     "signal-exit": "^3.0.3",
     "tmp": "^0.2.1"
   },
@@ -38,6 +40,7 @@
     "@types/jsesc": "^2.5.1",
     "@types/morgan": "^1.9.1",
     "@types/node-fetch": "^2.5.7",
+    "@types/sharp": "^0.27.1",
     "@types/signal-exit": "^3.0.0",
     "@types/tmp": "^0.2.0"
   }

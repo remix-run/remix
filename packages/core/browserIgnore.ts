@@ -1,3 +1,5 @@
+// This file is an optimization so that rollup won't try to bundle any of these
+// modules, which greatly speeds up the browser tree-shaking
 import builtins from "builtin-modules";
 
 export let ignorePackages = builtins.concat([
