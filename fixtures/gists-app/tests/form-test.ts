@@ -6,7 +6,7 @@ import { disableJavaScript, getHtml, reactIsHydrated } from "./utils";
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
 
-describe.skip("form", () => {
+describe("form", () => {
   let browser: Browser;
   let page: Page;
   beforeEach(async () => {

@@ -1,14 +1,52 @@
 import type {
+  Cookie,
+  CookieOptions,
   ResponseInit,
   ActionFunction,
-  LoaderFunction
+  LoaderFunction,
+  SessionData,
+  Session,
+  SessionStorage,
+  CookieIdSessionStorageStrategy
 } from "@remix-run/core";
-import { Headers, Request, Response } from "@remix-run/core";
+import {
+  Headers,
+  Request,
+  Response,
+  createCookie,
+  isCookie,
+  createSession,
+  isSession,
+  createSessionStorage,
+  createCookieSessionStorage,
+  createFileSessionStorage,
+  createMemorySessionStorage
+} from "@remix-run/core";
+
+export type {
+  Cookie,
+  CookieOptions,
+  ActionFunction as Action,
+  LoaderFunction as Loader,
+  SessionData,
+  Session,
+  SessionStorage,
+  CookieIdSessionStorageStrategy
+};
 
 // These are already global, but just re-export them here for convenience.
 export { Headers, Request, Response };
 
-export type { ActionFunction as Action, LoaderFunction as Loader };
+export {
+  createCookie,
+  isCookie,
+  createSession,
+  isSession,
+  createSessionStorage,
+  createCookieSessionStorage,
+  createFileSessionStorage,
+  createMemorySessionStorage
+};
 
 /**
  * A JSON response. This helper takes care of converting the `data` to JSON

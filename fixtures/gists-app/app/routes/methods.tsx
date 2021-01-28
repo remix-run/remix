@@ -3,18 +3,23 @@ import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
 import { json, redirect } from "@remix-run/data";
 
-export function loader({ session }) {
+import { getSession, commitSession } from "../sessionStorage";
+
+export async function loader({ request }) {
+  let session = await getSession(request.headers.get("Cookie"));
+
   return json({
     body: JSON.parse(session.get("body") || null)
   });
 }
 
-export async function action({ request, session }) {
+export async function action({ request }) {
   let contentType = request.headers.get("Content-Type");
   if (contentType !== "application/x-www-form-urlencoded") {
     throw new Error(`${contentType} is not yet supported`);
   }
 
+  let session = await getSession(request.headers.get("Cookie"));
   let bodyParams = new URLSearchParams(await request.text());
   let body = Object.fromEntries(bodyParams);
 
@@ -24,19 +29,22 @@ export async function action({ request, session }) {
     await new Promise(res => setTimeout(res, 2000));
   }
 
-  return redirect("/methods");
+  return redirect("/methods", {
+    headers: {
+      "Set-Cookie": await commitSession(session)
+    }
+  });
 }
 
 export default function Methods() {
-  let data = useRouteData<{ method: string; body: any }>();
+  let data = useRouteData<{ body: any }>();
   let [method, setMethod] = React.useState<FormProps["method"]>("post");
   let [enctype, setEnctype] = React.useState<FormProps["encType"]>(
     "application/x-www-form-urlencoded"
   );
   let pendingFormSubmit = usePendingFormSubmit();
   let pendingForm = pendingFormSubmit
-    ? // @ts-ignore
-      Object.fromEntries(pendingFormSubmit.data)
+    ? Object.fromEntries(pendingFormSubmit.data)
     : null;
 
   return (

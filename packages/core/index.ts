@@ -57,7 +57,15 @@ export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";
 
-export type { Session, SessionMutableData, SessionOnDestroy } from "./sessions";
-export { createSession, createSessionFacade } from "./sessions";
+export type {
+  SessionData,
+  Session,
+  SessionStorage,
+  CookieIdSessionStorageStrategy
+} from "./sessions";
+export { createSession, isSession, createSessionStorage } from "./sessions";
+export { createCookieSessionStorage } from "./sessions/cookieStorage";
+export { createFileSessionStorage } from "./sessions/fileStorage";
+export { createMemorySessionStorage } from "./sessions/memoryStorage";
 
 export { warnOnce } from "./warnings";

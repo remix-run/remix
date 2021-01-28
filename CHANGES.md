@@ -6,14 +6,23 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Added `SessionStorage` interface for managing sessions at the route level instead
+  of globally using some cloud provider middleware
+- Added several built-in `SessionStorage` providers including:
+  - `createCookieSessionStorage`
+  - `createFileSessionStorage`
+  - `createMemorySessionStorage`
+- Added `createSessionStorage` for easily implementing the `SessionStorage` interface
+  using any database
 - Added `Cookie` interface and `createCookie` API for handling cookies, including
   support for signed cookies
 
 ### Breaking Changes
 
+- Removed `session.destroy()` method, use `storage.destroySession(session)` instead
 - Removed `session` arg from route `loader`s and `action`s
 - Removed `enableSessions` arg from `createRequestHandler`. Sessions are now handled
-  at the route level instead of in a global handler.
+  at the route level instead of in platform middleware.
 
 ## 0.10.4 - Wed Jan 27 2021
 
