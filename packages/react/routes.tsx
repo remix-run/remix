@@ -41,7 +41,12 @@ export function createClientRoutes(
   let routes: ClientRouteObject[] = [];
   let addedRoutes: { [routeId: string]: ClientRouteObject } = {};
 
-  let routeIds = Object.keys(routeManifest).sort();
+  let routeIds = Object.keys(routeManifest).sort(a =>
+    // need to put "root" first so it sorts first, this is a bit of hack that
+    // will need to be revisted when we support multiple root layouts
+    a === "root" ? -1 : 0
+  );
+
   for (let routeId of routeIds) {
     let entryRoute = routeManifest[routeId];
     let route = createClientRoute(entryRoute, elementType);

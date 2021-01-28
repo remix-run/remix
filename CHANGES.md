@@ -2,17 +2,15 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
-## 0.10.3 - Wed Jan 27 2021
+## Unreleased
+
+- Fixed Vercel starter deployments
 
 ## 0.10.2 - Wed Jan 27 2021
-
-### Bug Fixes
 
 - Fixed srcset return string
 
 ## 0.10.1 - Wed Jan 27 2021
-
-### Bug Fixes
 
 - Fixed layout file names on windows
 
