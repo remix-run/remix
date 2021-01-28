@@ -207,14 +207,18 @@ export function RemixEntry({
         if (!didRedirect) handleDataRedirect(response);
       }
 
-      let newMatches = nextMatches.filter((match, index) => {
-        let stillGood =
-          formState !== FormState.Redirected &&
-          location.search === nextLocation.search &&
-          matches[index] &&
-          matches[index].pathname === match.pathname;
-        return !stillGood;
-      });
+      let newMatches =
+        // reload all routes on form submits and search changes
+        formState === FormState.Redirected ||
+        location.search !== nextLocation.search
+          ? nextMatches
+          : nextMatches.filter(
+              (match, index) =>
+                // new route
+                !matches[index] ||
+                // existing route but params changed
+                matches[index].pathname !== match.pathname
+            );
 
       let transitionResults = await Promise.all(
         newMatches.map(async match => {
