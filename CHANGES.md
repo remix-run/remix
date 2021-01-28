@@ -2,7 +2,7 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
-## Unreleased
+## 0.10.4 - Wed Jan 27 2021
 
 - Fixed Vercel starter deployments
 
