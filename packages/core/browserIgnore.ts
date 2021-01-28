@@ -7,6 +7,17 @@ export let ignorePackages = builtins.concat([
   "@databases/pg",
   "@databases/sqlite",
   "@prisma/client",
+  // We SHOULD be able to treeshake this out of the build just like everything
+  // else, but Rollup complains about syntax errors in
+  // @remix-run/core/compiler.js if we don't deliberately exclude it from the
+  // browser builds. This is a bug we do not understand yet! :/ We have only
+  // ever seen this problem when the build imports the built version of itself.
+  //
+  // Fortunately, we don't actually want any code from @remix-run/core in the
+  // browser builds, so we can exclude it for now.
+  //
+  // TODO: For some adventurous soul, try to figure out why Rollup can't parse
+  // its own output...
   "@remix-run/data",
   "apollo-server",
   "better-sqlite3",
