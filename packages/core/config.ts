@@ -158,7 +158,7 @@ export async function readConfig(
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(defineRoutes);
     for (let shallowRoute of manualRoutes) {
-      shallowRoute.parentId = "layout:root";
+      shallowRoute.parentId = "__layout__root";
     }
     let root = routes[0];
     (root.children || (root.children = [])).push(...manualRoutes);

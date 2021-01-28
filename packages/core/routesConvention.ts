@@ -73,7 +73,7 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
   });
 
   function defineLayoutRoutes(rootRouteName: string) {
-    let id = `layout:${rootRouteName}`;
+    let id = `__layout__${rootRouteName}`;
     let routes = defineRoutes(defineNestedRoutes);
 
     // Add the root route id to the first level routes

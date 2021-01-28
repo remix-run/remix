@@ -47,7 +47,7 @@ describe.skip("building", () => {
         Array [
           "_shared/Shared-072c977d.js",
           "entry-server.js",
-          "layout:root.js",
+          "__layout__root.js",
           "pages/one.js",
           "pages/two.js",
           "routes/404.js",
@@ -77,8 +77,8 @@ describe.skip("building", () => {
             "entry-server": Object {
               "file": "entry-server.js",
             },
-            "layout:root": Object {
-              "file": "layout:root.js",
+            "__layout__root": Object {
+              "file": "__layout__root.js",
             },
             "pages/one": Object {
               "file": "pages/one.js",
@@ -144,7 +144,7 @@ describe.skip("building", () => {
         Array [
           "_shared/Shared-072c977d.js",
           "entry-server.js",
-          "layout:root.js",
+          "__layout__root.js",
           "pages/one.js",
           "pages/two.js",
           "routes/404.js",
@@ -174,8 +174,8 @@ describe.skip("building", () => {
             "entry-server": Object {
               "file": "entry-server.js",
             },
-            "layout:root": Object {
-              "file": "layout:root.js",
+            "__layout__root": Object {
+              "file": "__layout__root.js",
             },
             "pages/one": Object {
               "file": "pages/one.js",
@@ -255,7 +255,7 @@ describe.skip("building", () => {
           "asset-manifest.json",
           "entry-browser.js",
           "global.css",
-          "layout:root.js",
+          "__layout__root.js",
           "pages/one.js",
           "pages/two.js",
           "routes/404.js",
@@ -289,8 +289,8 @@ describe.skip("building", () => {
             "global.css": Object {
               "file": "global.css",
             },
-            "layout:root": Object {
-              "file": "layout:root.js",
+            "__layout__root": Object {
+              "file": "__layout__root.js",
             },
             "pages/one": Object {
               "file": "pages/one.js",
@@ -376,7 +376,7 @@ describe.skip("building", () => {
           "asset-manifest.json",
           "entry-browser-51df2af1.js",
           "global-ec887178.css",
-          "layout:root-d52df80a.js",
+          "__layout__root-d52df80a.js",
           "pages/one-7135adbb.js",
           "pages/two-133d6f23.js",
           "routes/404-e700f1a9.js",
@@ -410,8 +410,8 @@ describe.skip("building", () => {
             "global.css": Object {
               "file": "global-ec887178.css",
             },
-            "layout:root": Object {
-              "file": "layout:root-d52df80a.js",
+            "__layout__root": Object {
+              "file": "__layout__root-d52df80a.js",
             },
             "pages/one": Object {
               "file": "pages/one-7135adbb.js",
