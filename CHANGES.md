@@ -9,6 +9,12 @@ This is a history of changes to [Remix](https://remix.run).
 - Added `Cookie` interface and `createCookie` API for handling cookies, including
   support for signed cookies
 
+### Breaking Changes
+
+- Removed `session` arg from route `loader`s and `action`s
+- Removed `enableSessions` arg from `createRequestHandler`. Sessions are now handled
+  at the route level instead of in a global handler.
+
 ## 0.10.4 - Wed Jan 27 2021
 
 - Fixed Vercel starter deployments

@@ -18,7 +18,6 @@ import { Headers, Request, Response } from "./fetch";
 import { matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
 import { loadServerBuild } from "./serverHelpers";
-import type { Session } from "./sessions";
 import { oneYear } from "./seconds";
 
 /**
@@ -27,11 +26,7 @@ import { oneYear } from "./seconds";
  * dev tools.
  */
 export interface RequestHandler {
-  (
-    request: Request,
-    session: Session,
-    loadContext?: AppLoadContext
-  ): Promise<Response>;
+  (request: Request, loadContext?: AppLoadContext): Promise<Response>;
 }
 
 /**
@@ -42,7 +37,7 @@ export interface RequestHandler {
  * to serve that request.
  */
 export function createRequestHandler(config: RemixConfig): RequestHandler {
-  return async (request, session, loadContext = {}) => {
+  return async (request, loadContext = {}) => {
     let url = new URL(request.url);
 
     if (url.pathname.startsWith("/_remix/manifest")) {
@@ -50,10 +45,10 @@ export function createRequestHandler(config: RemixConfig): RequestHandler {
     }
 
     if (url.pathname.startsWith("/_remix/data")) {
-      return handleDataRequest(config, request, session, loadContext);
+      return handleDataRequest(config, request, loadContext);
     }
 
-    return handleDocumentRequest(config, request, session, loadContext);
+    return handleDocumentRequest(config, request, loadContext);
   };
 }
 
@@ -98,7 +93,6 @@ async function handleManifestRequest(
 async function handleDataRequest(
   config: RemixConfig,
   request: Request,
-  session: Session,
   loadContext: AppLoadContext
 ): Promise<Response> {
   let searchParams = new URL(request.url).searchParams;
@@ -129,7 +123,6 @@ async function handleDataRequest(
         loaderId,
         routeModules[loaderId],
         loaderRequest,
-        session,
         loadContext,
         params
       );
@@ -138,7 +131,6 @@ async function handleDataRequest(
         loaderId,
         routeModules[loaderId],
         loaderRequest,
-        session,
         loadContext,
         params
       );
@@ -156,10 +148,14 @@ async function handleDataRequest(
     // We don't have any way to prevent a fetch request from following
     // redirects. So we use the `X-Remix-Redirect` header to indicate the
     // next URL, and then "follow" the redirect manually on the client.
+    let locationHeader = response.headers.get("Location");
+    response.headers.delete("Location");
+
     return new Response("", {
       status: 204,
       headers: {
-        "X-Remix-Redirect": response.headers.get("Location")!
+        ...Object.fromEntries(response.headers),
+        "X-Remix-Redirect": locationHeader!
       }
     });
   }
@@ -170,7 +166,6 @@ async function handleDataRequest(
 async function handleDocumentRequest(
   config: RemixConfig,
   request: Request,
-  session: Session,
   loadContext: AppLoadContext = {}
 ): Promise<Response> {
   let url = new URL(request.url);
@@ -218,7 +213,6 @@ async function handleDocumentRequest(
       route.id,
       routeModules[route.id],
       request,
-      session,
       loadContext,
       leafMatch.params
     );
@@ -244,7 +238,6 @@ async function handleDocumentRequest(
       match.route.id,
       routeModules[match.route.id],
       request.clone(),
-      session,
       loadContext,
       match.params
     ).catch(error => error)

@@ -1,10 +1,5 @@
 import { URL } from "url";
-import {
-  createAdapter,
-  Request,
-  createSessionFacade,
-  Headers
-} from "@remix-run/core";
+import { createAdapter, Request, Headers } from "@remix-run/core";
 import type { RequestInit } from "@remix-run/core";
 
 import "./fetchGlobals";
@@ -43,7 +38,6 @@ export let createRequestHandler = createAdapter({
 
   async sendPlatformResponse(
     remixResponse,
-    _remixSession,
     _req,
     res: NowResponse
   ): Promise<void> {
@@ -65,11 +59,5 @@ export let createRequestHandler = createAdapter({
     } else {
       remixResponse.body.pipe(res);
     }
-  },
-
-  createRemixSession() {
-    return createSessionFacade(
-      "Vercel does not have a built-in session API for Remix to wrap. For now you'll need to manage your own sessions with your own set-cookie and cookie headers. We will be adding built-in sessions support in the future."
-    );
   }
 });

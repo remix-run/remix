@@ -4,10 +4,10 @@
   "version": "0.10.4",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
+    "@architect/functions": "^3.13.9",
     "@remix-run/core": "0.10.4"
   },
   "peerDependencies": {
-    "@architect/architect": "^8.3.7",
-    "@architect/functions": "^3.13.3"
+    "@architect/architect": "^8.3.7"
   }
 }

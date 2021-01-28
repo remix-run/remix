@@ -3,13 +3,11 @@ import type { Params } from "react-router";
 import type { AppLoadContext, AppData, RouteModule } from "./buildModules";
 import { Request, Response, isResponseLike } from "./fetch";
 import { json } from "./responseHelpers";
-import type { Session } from "./sessions";
 
 export async function loadRouteData(
   routeId: string,
   routeModule: RouteModule,
   request: Request,
-  session: Session,
   context: AppLoadContext,
   params: Params
 ): Promise<Response> {
@@ -17,7 +15,7 @@ export async function loadRouteData(
     return Promise.resolve(json(null));
   }
 
-  let result = await routeModule.loader({ request, session, context, params });
+  let result = await routeModule.loader({ request, context, params });
 
   if (result === undefined) {
     throw new Error(
@@ -33,7 +31,6 @@ export async function callRouteAction(
   routeId: string,
   routeModule: RouteModule,
   request: Request,
-  session: Session,
   context: AppLoadContext,
   params: Params
 ): Promise<Response> {
@@ -45,7 +42,7 @@ export async function callRouteAction(
     );
   }
 
-  let result = await routeModule.action({ request, session, context, params });
+  let result = await routeModule.action({ request, context, params });
 
   if (!isResponseLike(result) || result.headers.get("Location") == null) {
     throw new Error(

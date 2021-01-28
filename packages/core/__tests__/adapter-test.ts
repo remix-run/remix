@@ -1,7 +1,6 @@
 import type { RemixConfig } from "../config";
 import { Request, Response } from "../fetch";
 import { createAdapter } from "../adapter";
-import { createSession, createSessionFacade } from "../sessions";
 
 import { readConfig } from "../config";
 import { createRequestHandler as createRemixRequestHandler } from "../server";
@@ -34,20 +33,9 @@ describe("createAdapter", () => {
       return new Request(fakePlatformReq.url);
     },
 
-    createRemixSession(enableSessions, fakePlatformReq) {
-      return enableSessions
-        ? createSession(fakePlatformReq.session)
-        : createSessionFacade("Error when trying to use session message");
-    },
-
     // patterned this one off of Azure since it's probably the weirdest with the
     // context mutation
-    async sendPlatformResponse(
-      remixResponse,
-      _session,
-      _req,
-      fakePlatFormContext
-    ) {
+    async sendPlatformResponse(remixResponse, _req, fakePlatFormContext) {
       Object.assign(fakePlatFormContext, {
         status: remixResponse.status,
         body: await remixResponse.text()
@@ -74,7 +62,7 @@ describe("createAdapter", () => {
     let handler = adapter();
 
     // our fake platform request
-    let fakeRequest = { url: "https://example.com/foo/bar", session: {} };
+    let fakeRequest = { url: "https://example.com/foo/bar" };
 
     // our fake platform response, we expect this to get mutated if
     // createAdapter did everything we need it to.
@@ -92,31 +80,9 @@ describe("createAdapter", () => {
     expect(returnedResponse).toBe(fakeResponse);
   });
 
-  it("creates remix sessions", async () => {
-    mockedCreateRequestHandler.mockImplementation(() => async (_, session) => {
-      return new Response(`session foo:${session.get("foo")}`, {
-        status: 200
-      });
-    });
-
-    let handler = adapter();
-    let req = { url: "", session: { foo: "bar" } };
-    let res = {};
-
-    // simulate a request coming in
-    await handler(req, res);
-
-    expect(res).toMatchInlineSnapshot(`
-      Object {
-        "body": "session foo:bar",
-        "status": 200,
-      }
-    `);
-  });
-
   it("uses getLoadContext", async () => {
     mockedCreateRequestHandler.mockImplementation(
-      () => async (_, __, loadContext) => {
+      () => async (_, loadContext) => {
         // assert getLoadContext makes it way to the remix server
         return new Response(`loadContext:${loadContext}`, {
           status: 200

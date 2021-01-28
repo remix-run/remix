@@ -2,17 +2,14 @@ import { readConfig } from "./config";
 import { Request, Response } from "./fetch";
 import { createRequestHandler as createRemixRequestHandler } from "./server";
 import type { RequestHandler } from "./server";
-import { Session } from "./sessions";
 
 import type { AppLoadContext } from "./buildModules";
 import type { RemixConfig } from "./config";
 
 interface Adapter {
   createRemixRequest: (...platformArgs: any[]) => Request;
-  createRemixSession: (...platformArgs: any[]) => Session | Promise<Session>;
   sendPlatformResponse: (
     remixResponse: Response,
-    session: Session,
     ...platformArgs: any[]
   ) => any;
 }
@@ -20,18 +17,15 @@ interface Adapter {
 type PlatformRequestHandlerOptions = {
   getLoadContext?: (...platformArgs: any[]) => AppLoadContext;
   root?: string;
-  enableSessions?: boolean;
 };
 
 export function createAdapter({
   createRemixRequest,
-  createRemixSession,
   sendPlatformResponse
 }: Adapter) {
   return function createPlatformRequestHandler({
     getLoadContext,
-    root,
-    enableSessions = true
+    root
   }: PlatformRequestHandlerOptions = {}) {
     let handleRequest: RequestHandler;
     let remixConfig: RemixConfig;
@@ -47,7 +41,6 @@ export function createAdapter({
       }
 
       let remixReq = createRemixRequest(...platformArgs);
-      let session = await createRemixSession(enableSessions, ...platformArgs);
 
       let loadContext: AppLoadContext;
       if (getLoadContext) {
@@ -56,13 +49,12 @@ export function createAdapter({
 
       // Catch any errors in Remix itself.
       try {
-        let remixRes = await handleRequest(remixReq, session, loadContext);
-        return sendPlatformResponse(remixRes, session, ...platformArgs);
+        let remixRes = await handleRequest(remixReq, loadContext);
+        return sendPlatformResponse(remixRes, ...platformArgs);
       } catch (error) {
         console.error(error);
         return sendPlatformResponse(
           new Response(error.message, { status: 500 }),
-          session,
           ...platformArgs
         );
       }

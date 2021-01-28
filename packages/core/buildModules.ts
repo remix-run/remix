@@ -6,7 +6,6 @@ import type { Params } from "react-router";
 import type { EntryContext, RouteData } from "./entry";
 import type { ServerManifest } from "./buildManifest";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
-import type { Session } from "./sessions";
 import invariant from "./invariant";
 
 /**
@@ -68,24 +67,18 @@ export interface MetaFunction {
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
-  (args: {
-    request: Request;
-    session: Session;
-    context: AppLoadContext;
-    params: Params;
-  }): Promise<AppData> | AppData;
+  (args: { request: Request; context: AppLoadContext; params: Params }):
+    | Promise<AppData>
+    | AppData;
 }
 
 /**
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (args: {
-    request: Request;
-    session: Session;
-    context: AppLoadContext;
-    params: Params;
-  }): Promise<Response> | Response;
+  (args: { request: Request; context: AppLoadContext; params: Params }):
+    | Promise<Response>
+    | Response;
 }
 
 /**

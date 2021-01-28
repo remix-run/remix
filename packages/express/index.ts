@@ -2,26 +2,9 @@ import { PassThrough } from "stream";
 import { URL } from "url";
 import type * as express from "express";
 import type { RequestInit } from "@remix-run/core";
-import {
-  createAdapter,
-  Headers,
-  Request,
-  createSession,
-  createSessionFacade,
-  warnOnce
-} from "@remix-run/core";
+import { createAdapter, Headers, Request } from "@remix-run/core";
 
 import "./fetchGlobals";
-
-declare module "express" {
-  interface Request {
-    session?: { [key: string]: string } | null;
-  }
-}
-
-interface ExpressSessionDestroy {
-  (callback: (error?: Error) => void): void;
-}
 
 export let createRequestHandler = createAdapter({
   createRemixRequest(req: express.Request) {
@@ -40,7 +23,7 @@ export let createRequestHandler = createAdapter({
     return new Request(url.toString(), init);
   },
 
-  sendPlatformResponse(remixResponse, _session, _req, res: express.Response) {
+  sendPlatformResponse(remixResponse, _req, res: express.Response) {
     res.status(remixResponse.status);
 
     for (let [key, value] of remixResponse.headers.entries()) {
@@ -52,47 +35,6 @@ export let createRequestHandler = createAdapter({
     } else {
       remixResponse.body.pipe(res);
     }
-  },
-
-  createRemixSession(enableSessions: boolean, req: express.Request) {
-    warnOnce(
-      !enableSessions || !!req.session,
-      "Your Express app does not include a session middleware (or `req.session` " +
-        "is falsy) so you won't be able to use sessions in your Remix data " +
-        "loaders and actions. To enable sessions, please use a session middleware " +
-        "such as `express-session` or `cookie-session`. Otherwise, use " +
-        "`createRequestHandler({ enableSessions: false })` to silence this warning."
-    );
-
-    if (!req.session) {
-      return createSessionFacade(
-        "You are trying to use sessions but you did not use a session middleware " +
-          "in your Express app, so this functionality is not available. Please use " +
-          "a session middleware such as `express-session` or `cookie-session` " +
-          "to enable sessions."
-      );
-    }
-
-    return createSession(req.session, () => {
-      return new Promise((accept, reject) => {
-        if (req.session) {
-          if (typeof req.session.destroy === "function") {
-            (req.session.destroy as ExpressSessionDestroy)(error => {
-              if (error) {
-                reject(error);
-              } else {
-                accept();
-              }
-            });
-          } else {
-            req.session = null;
-            accept();
-          }
-        } else {
-          accept();
-        }
-      });
-    });
   }
 });
 
