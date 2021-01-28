@@ -1,5 +1,7 @@
 import "./imageTypes";
 
+export { createAdapter } from "./adapter";
+
 export { BuildMode, BuildTarget } from "./build";
 
 export type { AssetManifest } from "./buildManifest";
@@ -22,6 +24,9 @@ export { build, watch, generate, write } from "./compiler";
 
 export type { RemixConfig } from "./config";
 export { ServerMode, readConfig } from "./config";
+
+export type { Cookie, CookieOptions } from "./cookies";
+export { createCookie, isCookie } from "./cookies";
 
 export type {
   EntryContext,
@@ -56,5 +61,3 @@ export type { Session, SessionMutableData, SessionOnDestroy } from "./sessions";
 export { createSession, createSessionFacade } from "./sessions";
 
 export { warnOnce } from "./warnings";
-
-export { createAdapter } from "./adapter";

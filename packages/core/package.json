@@ -17,6 +17,8 @@
     "@rollup/plugin-replace": "^2.3.3",
     "builtin-modules": "^3.2.0",
     "chokidar": "^3.4.2",
+    "cookie": "^0.4.1",
+    "cookie-signature": "^1.1.0",
     "express": "^4.17.1",
     "front-matter": "^4.0.2",
     "history": "^5.0.0",
@@ -36,6 +38,8 @@
     "react-dom": ">=16.8"
   },
   "devDependencies": {
+    "@types/cookie": "^0.4.0",
+    "@types/cookie-signature": "^1.0.3",
     "@types/express": "^4.17.9",
     "@types/jsesc": "^2.5.1",
     "@types/morgan": "^1.9.1",
