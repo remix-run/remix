@@ -46,7 +46,7 @@ export function createFileSessionStorage({
         try {
           let file = getFile(dir, id);
           await fsp.mkdir(path.dirname(file), { recursive: true });
-          await fsp.writeFile(file, content, { flag: "wx" });
+          await fsp.writeFile(file, content, { encoding: "utf-8", flag: "wx" });
           return id;
         } catch (error) {
           if (error.code !== "EEXIST") throw error;
@@ -64,7 +64,7 @@ export function createFileSessionStorage({
     async updateData(id, data) {
       let file = getFile(dir, id);
       await fsp.mkdir(path.dirname(file), { recursive: true });
-      await fsp.writeFile(file, JSON.stringify(data));
+      await fsp.writeFile(file, JSON.stringify(data), "utf-8");
     },
     async deleteData(id) {
       try {
