@@ -17,10 +17,7 @@ import { isStylesFile } from "./rollup/styles";
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(
-  layoutRouteId: string, // filename, no extension
-  appDir: string
-): ConfigRouteObject[] {
+export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
   let routeFiles: {
     [routeId: string]: {
       module?: string;
@@ -75,10 +72,8 @@ export function defineConventionalRoutes(
     }
   });
 
-  function defineLayoutRoutes(layoutRouteName: string) {
-    // "__" to get our Object.keys(routeManifest).sort() in components.tsx to
-    // put layouts first 😟
-    let id = "__" + layoutRouteName;
+  function defineLayoutRoutes(rootRouteName: string) {
+    let id = `layout:${rootRouteName}`;
     let routes = defineRoutes(defineNestedRoutes);
 
     // Add the root route id to the first level routes
@@ -90,7 +85,7 @@ export function defineConventionalRoutes(
       {
         id,
         path: "/",
-        moduleFile: findRootRouteModule(appDir, layoutRouteName),
+        moduleFile: findRootRouteModule(appDir, rootRouteName),
         // TODO: could use this instead of special casing global.css
         // stylesFile: path.join(appDir, "global.css"),
         children: routes
@@ -98,7 +93,7 @@ export function defineConventionalRoutes(
     ];
   }
 
-  return defineLayoutRoutes(layoutRouteId);
+  return defineLayoutRoutes("root");
 }
 
 function findRootRouteModule(appDir: string, name: string) {

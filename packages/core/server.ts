@@ -183,10 +183,7 @@ async function handleDocumentRequest(
         params: {},
         pathname: url.pathname,
         route: {
-          // TODO: This shouldn't be hardcoded here, haven't put any thought
-          // into how to avoid it though. When/if we support multiple root
-          // layouts we'll probably need to do something
-          id: "__root",
+          id: "layout:root",
           path: "/",
           moduleFile: "root"
         }
@@ -198,8 +195,7 @@ async function handleDocumentRequest(
           id: "routes/404",
           path: url.pathname,
           moduleFile: "routes/404",
-          // TODO: see the TODO above ^
-          parentId: "__root"
+          parentId: "layout:root"
         }
       }
     ];
