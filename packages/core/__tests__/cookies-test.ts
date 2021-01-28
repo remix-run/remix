@@ -43,9 +43,7 @@ describe("cookies", () => {
     let cookie = createCookie("my-cookie", {
       secrets: ["secret1"]
     });
-    let setCookie = cookie.serialize({
-      hello: "mjackson"
-    });
+    let setCookie = cookie.serialize({ hello: "mjackson" });
     let value = cookie.parse(getCookieFromSetCookie(setCookie));
 
     expect(value).toMatchInlineSnapshot(`
@@ -68,6 +66,7 @@ describe("cookies", () => {
       }
     `);
 
+    // A new secret enters the rotation...
     cookie = createCookie("my-cookie", {
       secrets: ["secret2", "secret1"]
     });
