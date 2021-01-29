@@ -2,7 +2,7 @@ import path from "path";
 import { promises as fsp } from "fs";
 import os from "os";
 
-import { createSession } from "../sessions";
+import { createSession, isSession } from "../sessions";
 import { createCookieSessionStorage } from "../sessions/cookieStorage";
 import { createFileSessionStorage } from "../sessions/fileStorage";
 import { createMemorySessionStorage } from "../sessions/memoryStorage";
@@ -33,6 +33,19 @@ describe("Session", () => {
     session.unset("user");
 
     expect(session.get("user")).toBeUndefined();
+  });
+});
+
+describe("isSession", () => {
+  it("returns `true` for Session objects", () => {
+    expect(isSession(createSession())).toBe(true);
+  });
+
+  it("returns `false` for non-Session objects", () => {
+    expect(isSession({})).toBe(false);
+    expect(isSession([])).toBe(false);
+    expect(isSession("")).toBe(false);
+    expect(isSession(true)).toBe(false);
   });
 });
 

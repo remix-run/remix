@@ -1,8 +1,21 @@
-import { createCookie } from "../cookies";
+import { createCookie, isCookie } from "../cookies";
 
 function getCookieFromSetCookie(setCookie: string): string {
   return setCookie.split(/;\s*/)[0];
 }
+
+describe("isCookie", () => {
+  it("returns `true` for Cookie objects", () => {
+    expect(isCookie(createCookie("my-cookie"))).toBe(true);
+  });
+
+  it("returns `false` for non-Cookie objects", () => {
+    expect(isCookie({})).toBe(false);
+    expect(isCookie([])).toBe(false);
+    expect(isCookie("")).toBe(false);
+    expect(isCookie(true)).toBe(false);
+  });
+});
 
 describe("cookies", () => {
   it("parses/serializes empty string values", () => {

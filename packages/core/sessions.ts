@@ -98,13 +98,13 @@ export function createSession(initialData: SessionData = {}, id = ""): Session {
 
 export function isSession(object: any): object is Session {
   return (
-    object &&
+    object != null &&
     typeof object.id === "string" &&
     typeof object.data !== "undefined" &&
     typeof object.get === "function" &&
     typeof object.set === "function" &&
-    typeof object.consume === "function" &&
-    typeof object.delete === "function"
+    typeof object.flash === "function" &&
+    typeof object.unset === "function"
   );
 }
 

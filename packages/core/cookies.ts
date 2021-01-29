@@ -4,6 +4,11 @@ import { sign, unsign } from "cookie-signature";
 
 /**
  * A HTTP cookie.
+ *
+ * A Cookie is a logical container for metadata about a HTTP cookie; its name
+ * and options. But it doesn't contain a value. Instead, it has `parse()` and
+ * `serialize()` methods that allow a single instance to be reused for
+ * parsing/encoding multiple different values.
  */
 export interface Cookie {
   /**
@@ -13,6 +18,8 @@ export interface Cookie {
 
   /**
    * True if this cookie uses one or more secrets for verification.
+   *
+   * TODO: Add link to doc that talks about signing cookies...
    */
   readonly isSigned: boolean;
 
@@ -23,8 +30,8 @@ export interface Cookie {
   parse(cookieHeader?: string, options?: CookieParseOptions): any;
 
   /**
-   * Serializes the given value to a string and returns the value to be used
-   * in a `Set-Cookie` header.
+   * Serializes the given value to a string and returns the value to be used in
+   * a `Set-Cookie` header.
    */
   serialize(value: any, options?: CookieSerializeOptions): string;
 }
@@ -84,7 +91,7 @@ export function createCookie(
 
 export function isCookie(object: any): object is Cookie {
   return (
-    object &&
+    object != null &&
     typeof object.name === "string" &&
     typeof object.isSigned === "boolean" &&
     typeof object.parse === "function" &&
