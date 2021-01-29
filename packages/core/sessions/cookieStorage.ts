@@ -18,13 +18,7 @@ interface CookieSessionStorageOptions {
  * This has the advantage that no database or other backend services are
  * needed, and can help to simplify some load-balanced scenarios. However, it
  * also has the limitation that serialized session data may not exceed the
- * browser's maximum cookie size. Trade-offs! :D
- *
- * This storage supports signing session cookies using one or more `secrets`,
- * which may be rotated periodically. Incoming request cookies may be decoded
- * using any of the given secrets, but outgoing cookies (response `Set-Cookie`)
- * will always be encoded using the first secret, so new secrets should always
- * be added at the beginning of the `secrets` array.
+ * browser's maximum cookie size. Trade-offs!
  */
 export function createCookieSessionStorage({
   cookie: cookieArg
@@ -43,8 +37,7 @@ export function createCookieSessionStorage({
 
   return {
     async getSession(cookieHeader, options) {
-      let data = cookie.parse(cookieHeader, options);
-      return createSession(data || {});
+      return createSession(cookie.parse(cookieHeader, options) || {});
     },
     async commitSession(session, options) {
       return cookie.serialize(session.data, options);
