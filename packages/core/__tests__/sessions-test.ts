@@ -22,16 +22,21 @@ describe("Session", () => {
     session.set("user", "mjackson");
     session.flash("error", "boom");
 
+    expect(session.has("user")).toBe(true);
     expect(session.get("user")).toBe("mjackson");
     // Normal values should remain in the session after get()
+    expect(session.has("user")).toBe(true);
     expect(session.get("user")).toBe("mjackson");
 
+    expect(session.has("error")).toBe(true);
     expect(session.get("error")).toBe("boom");
     // Flash values disappear after the first get()
+    expect(session.has("error")).toBe(false);
     expect(session.get("error")).toBeUndefined();
 
     session.unset("user");
 
+    expect(session.has("user")).toBe(false);
     expect(session.get("user")).toBeUndefined();
   });
 });

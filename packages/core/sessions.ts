@@ -31,6 +31,12 @@ export interface Session {
   readonly data: SessionData;
 
   /**
+   * Returns `true` if the session has a value for the given `name`, `false`
+   * otherwise.
+   */
+  has(name: string): boolean;
+
+  /**
    * Returns the value for the given `name` in this session.
    */
   get(name: string): any;
@@ -71,6 +77,9 @@ export function createSession(initialData: SessionData = {}, id = ""): Session {
     },
     get data() {
       return Object.fromEntries(map);
+    },
+    has(name) {
+      return map.has(name) || map.has(flash(name));
     },
     get(name) {
       if (map.has(name)) return map.get(name);

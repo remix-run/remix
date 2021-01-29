@@ -16,6 +16,7 @@ This is a history of changes to [Remix](https://remix.run).
   using any database
 - Added `Cookie` interface and `createCookie` API for handling cookies, including
   support for signed cookies
+- Added `session.has(name)`
 
 ### Breaking Changes
 
