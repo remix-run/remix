@@ -61,7 +61,7 @@ export type {
   SessionData,
   Session,
   SessionStorage,
-  CookieIdSessionStorageStrategy
+  SessionIdStorageStrategy
 } from "./sessions";
 export { createSession, isSession, createSessionStorage } from "./sessions";
 export { createCookieSessionStorage } from "./sessions/cookieStorage";

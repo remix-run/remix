@@ -176,14 +176,14 @@ export interface SessionStorage {
 }
 
 /**
- * CookieIdSessionStorageStrategy is designed to allow anyone to easily build
- * their own SessionStorage using `createSessionStorage(strategy)`.
+ * SessionIdStorageStrategy is designed to allow anyone to easily build their
+ * own SessionStorage using `createSessionStorage(strategy)`.
  *
  * This strategy describes a common scenario where the session id is stored in a
- * HTTP cookie but the actual session data is stored elsewhere, probably in a
+ * HTTP cookie but the actual session data is stored elsewhere, usually in a
  * database or on disk.
  */
-export interface CookieIdSessionStorageStrategy {
+export interface SessionIdStorageStrategy {
   /**
    * The Cookie used to store the session id, or options used to automatically
    * create one.
@@ -193,7 +193,7 @@ export interface CookieIdSessionStorageStrategy {
   /**
    * Creates a new record with the given data and returns the session id.
    */
-  createData: (data: SessionData) => Promise<string>;
+  createData: (data: SessionData, expires?: Date) => Promise<string>;
 
   /**
    * Returns data for a given session id, or `null` if there isn't any.
@@ -203,7 +203,7 @@ export interface CookieIdSessionStorageStrategy {
   /**
    * Updates data for the given session id.
    */
-  updateData: (id: string, data: SessionData) => Promise<void>;
+  updateData: (id: string, data: SessionData, expires?: Date) => Promise<void>;
 
   /**
    * Deletes data for a given session id from the data store.
@@ -212,7 +212,7 @@ export interface CookieIdSessionStorageStrategy {
 }
 
 /**
- * Creates a SessionStorage object using a CookieIdSessionStorageStrategy.
+ * Creates a SessionStorage object using a SessionIdStorageStrategy.
  *
  * Note: This is a low-level API that should only be used if none of the
  * existing session storage options meet your requirements.
@@ -223,7 +223,7 @@ export function createSessionStorage({
   readData,
   updateData,
   deleteData
-}: CookieIdSessionStorageStrategy): SessionStorage {
+}: SessionIdStorageStrategy): SessionStorage {
   let cookie = isCookie(cookieArg)
     ? cookieArg
     : createCookie((cookieArg && cookieArg.name) || "remix:session", cookieArg);
@@ -246,9 +246,9 @@ export function createSessionStorage({
       let { id, data } = session;
 
       if (id) {
-        await updateData(id, data);
+        await updateData(id, data, cookie.expires);
       } else {
-        id = await createData(data);
+        id = await createData(data, cookie.expires);
       }
 
       return cookie.serialize(id, options);

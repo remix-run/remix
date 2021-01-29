@@ -24,6 +24,14 @@ export interface Cookie {
   readonly isSigned: boolean;
 
   /**
+   * The Date this cookie expires.
+   *
+   * Note: This is calculated at access time using `maxAge` when no `expires`
+   * option is provided to `createCookie()`.
+   */
+  readonly expires?: Date;
+
+  /**
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
@@ -66,6 +74,12 @@ export function createCookie(
     },
     get isSigned() {
       return secrets.length > 0;
+    },
+    get expires() {
+      // Max-Age takes precedence over Expires
+      return typeof options.maxAge !== "undefined"
+        ? new Date(Date.now() + options.maxAge * 1000)
+        : options.expires;
     },
     parse(cookieHeader, parseOptions) {
       if (!cookieHeader) return null;

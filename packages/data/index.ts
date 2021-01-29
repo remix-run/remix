@@ -7,7 +7,7 @@ import type {
   SessionData,
   Session,
   SessionStorage,
-  CookieIdSessionStorageStrategy
+  SessionIdStorageStrategy
 } from "@remix-run/core";
 import {
   Headers,
@@ -31,7 +31,7 @@ export type {
   SessionData,
   Session,
   SessionStorage,
-  CookieIdSessionStorageStrategy
+  SessionIdStorageStrategy
 };
 
 // These are already global, but just re-export them here for convenience.

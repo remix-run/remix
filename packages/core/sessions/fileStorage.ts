@@ -2,10 +2,7 @@ import crypto from "crypto";
 import { promises as fsp } from "fs";
 import path from "path";
 
-import type {
-  SessionStorage,
-  CookieIdSessionStorageStrategy
-} from "../sessions";
+import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
 import { createSessionStorage } from "../sessions";
 
 interface FileSessionStorageOptions {
@@ -13,7 +10,7 @@ interface FileSessionStorageOptions {
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
    */
-  cookie?: CookieIdSessionStorageStrategy["cookie"];
+  cookie?: SessionIdStorageStrategy["cookie"];
 
   /**
    * The directory to use to store session files.
@@ -33,8 +30,8 @@ export function createFileSessionStorage({
 }: FileSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
-    async createData(data) {
-      let content = JSON.stringify(data);
+    async createData(data, expires) {
+      let content = JSON.stringify({ data, expires });
 
       while (true) {
         // This storage manages an id space of 2^64 ids, which is far greater
@@ -55,16 +52,32 @@ export function createFileSessionStorage({
     },
     async readData(id) {
       try {
-        return JSON.parse(await fsp.readFile(getFile(dir, id), "utf-8"));
+        let file = getFile(dir, id);
+        let content = JSON.parse(await fsp.readFile(file, "utf-8"));
+        let data = content.data;
+        let expires =
+          typeof content.expires === "string"
+            ? new Date(content.expires)
+            : null;
+
+        if (!expires || expires > new Date()) {
+          return data;
+        }
+
+        // Remove expired session data.
+        if (expires) await fsp.unlink(file);
+
+        return null;
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
         return null;
       }
     },
-    async updateData(id, data) {
+    async updateData(id, data, expires) {
+      let content = JSON.stringify({ data, expires });
       let file = getFile(dir, id);
       await fsp.mkdir(path.dirname(file), { recursive: true });
-      await fsp.writeFile(file, JSON.stringify(data), "utf-8");
+      await fsp.writeFile(file, content, "utf-8");
     },
     async deleteData(id) {
       try {
