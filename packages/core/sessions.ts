@@ -226,7 +226,7 @@ export function createSessionStorage({
 }: SessionIdStorageStrategy): SessionStorage {
   let cookie = isCookie(cookieArg)
     ? cookieArg
-    : createCookie((cookieArg && cookieArg.name) || "remix:session", cookieArg);
+    : createCookie((cookieArg && cookieArg.name) || "__session", cookieArg);
 
   if (!cookie.isSigned) {
     // TODO: Link to doc about how to sign cookies...
