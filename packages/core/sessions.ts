@@ -110,6 +110,7 @@ export function isSession(object: any): object is Session {
     object != null &&
     typeof object.id === "string" &&
     typeof object.data !== "undefined" &&
+    typeof object.has === "function" &&
     typeof object.get === "function" &&
     typeof object.set === "function" &&
     typeof object.flash === "function" &&
@@ -179,9 +180,10 @@ export interface SessionStorage {
  * SessionIdStorageStrategy is designed to allow anyone to easily build their
  * own SessionStorage using `createSessionStorage(strategy)`.
  *
- * This strategy describes a common scenario where the session id is stored in a
- * HTTP cookie but the actual session data is stored elsewhere, usually in a
- * database or on disk.
+ * This strategy describes a common scenario where the session id is stored in
+ * a cookie but the actual session data is stored elsewhere, usually in a
+ * database or on disk. A set of create, read, update, and delete operations
+ * are provided for managing the session data.
  */
 export interface SessionIdStorageStrategy {
   /**
