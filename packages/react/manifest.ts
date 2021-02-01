@@ -27,7 +27,7 @@ async function fetchManifestPatch(
   currentVersion: string
 ): Promise<Manifest | null> {
   let params = new URLSearchParams({
-    url: new URL(pathname, window.location.origin).toString(),
+    pathname,
     // Include the version so the browser can cache the response forever.
     v: currentVersion
   });

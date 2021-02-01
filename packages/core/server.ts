@@ -57,17 +57,16 @@ async function handleManifestRequest(
   request: Request
 ): Promise<Response> {
   let searchParams = new URL(request.url).searchParams;
-  let urlParam = searchParams.get("url");
+  let pathname = searchParams.get("pathname");
 
-  if (!urlParam) {
+  if (!pathname) {
     return jsonError(`Missing ?url`, 403);
   }
 
-  let url = new URL(urlParam);
-  let matches = matchRoutes(config.routes, url.pathname);
+  let matches = matchRoutes(config.routes, pathname);
 
   if (!matches) {
-    return jsonError(`No routes matched path "${url.pathname}"`, 404);
+    return jsonError(`No routes matched path "${pathname}"`, 404);
   }
 
   let { assetManifest, routeModules } = await loadServerBuild(config);

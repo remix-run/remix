@@ -207,19 +207,35 @@ export function RemixEntry({
         if (!didRedirect) handleDataRedirect(response);
       }
 
-      let styleSheetsPromise = Promise.all(
-        nextMatches.map(match =>
-          loadRouteStyleSheet(manifest.routes[match.route.id])
-        )
+      let newMatches =
+        // reload all routes on form submits and search changes
+        formState === FormState.Redirected ||
+        location.search !== nextLocation.search
+          ? nextMatches
+          : nextMatches.filter(
+              (match, index) =>
+                // new route
+                !matches[index] ||
+                // existing route but params changed
+                matches[index].pathname !== match.pathname
+            );
+
+      let transitionResults = await Promise.all(
+        newMatches.map(async match => {
+          let route = manifest.routes[match.route.id];
+          return Promise.all([
+            match.route.id,
+            loadRouteData(
+              manifest.routes[match.route.id],
+              nextLocation,
+              match.params
+            ),
+            loadRouteModule(route, routeModules),
+            loadRouteStyleSheet(route)
+          ]);
+        })
       );
 
-      let modulesPromise = Promise.all(
-        nextMatches.map(match =>
-          loadRouteModule(manifest.routes[match.route.id], routeModules)
-        )
-      );
-
-      let nextRouteData: RouteData;
       let componentDidCatchEmulator: ComponentDidCatchEmulator = {
         trackBoundaries: false,
         renderBoundaryRouteId: null,
@@ -227,110 +243,46 @@ export function RemixEntry({
         error: undefined
       };
 
-      if (formState === FormState.Redirected) {
-        // Reload all data after a <Form> submit.
-        let routeDataPromises = nextMatches.map(match =>
-          loadRouteData(
-            manifest.routes[match.route.id],
-            nextLocation,
-            match.params
-          )
-        );
-
-        await styleSheetsPromise;
-        await modulesPromise;
-
-        let routeDataResponses = await Promise.all(routeDataPromises);
-        for (let [index, response] of routeDataResponses.entries()) {
-          if (componentDidCatchEmulator.error) {
-            continue;
-          }
-
-          let route = nextMatches[index].route;
-          let routeModule = routeModules[route.id];
-
-          if (routeModule.ErrorBoundary) {
-            componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
-          }
-
-          if (response instanceof Error) {
-            componentDidCatchEmulator.error = response;
-          } else if (isRedirectResponse(response)) {
-            maybeHandleDataRedirect(response);
-          }
+      for (let [routeId, dataResult] of transitionResults) {
+        if (
+          !(dataResult instanceof Response || dataResult instanceof Error) ||
+          componentDidCatchEmulator.error
+        ) {
+          continue;
         }
 
-        nextRouteData = (
-          await Promise.all(
-            routeDataResponses.map(
-              response => response && extractData(response)
-            )
-          )
-        ).reduce((memo, data, index) => {
-          let match = nextMatches[index];
-          memo[match.route.id] = data;
-          return memo;
-        }, {} as RouteData);
-      } else {
-        let routeDataPromise = Promise.all(
-          nextMatches.map((match, index) =>
-            location.search === nextLocation.search &&
-            matches[index] &&
-            matches[index].pathname === match.pathname
-              ? // Re-use data we already have for routes already on the page
-                // if the URL hasn't changed for that route.
-                routeData[match.route.id]
-              : loadRouteData(
-                  manifest.routes[match.route.id],
-                  nextLocation,
-                  match.params
-                )
-          )
-        );
+        let routeModule = routeModules[routeId];
 
-        await styleSheetsPromise;
-        await modulesPromise;
-
-        let routeDataResults = await routeDataPromise;
-        for (let [index, result] of routeDataResults.entries()) {
-          if (!(result instanceof Response || result instanceof Error)) {
-            continue;
-          }
-
-          if (componentDidCatchEmulator.error) {
-            continue;
-          }
-
-          let route = nextMatches[index].route;
-          let routeModule = routeModules[route.id];
-
-          if (routeModule.ErrorBoundary) {
-            componentDidCatchEmulator.loaderBoundaryRouteId = route.id;
-          }
-
-          if (result instanceof Error) {
-            componentDidCatchEmulator.error = result;
-          } else if (isRedirectResponse(result)) {
-            maybeHandleDataRedirect(result);
-          }
+        if (routeModule.ErrorBoundary) {
+          componentDidCatchEmulator.loaderBoundaryRouteId = routeId;
         }
 
-        nextRouteData = (
-          await Promise.all(
-            routeDataResults.map(
-              result =>
-                result &&
-                (result instanceof Response || result instanceof Error
-                  ? extractData(result)
-                  : result)
-            )
-          )
-        ).reduce((memo, data, index) => {
-          let match = nextMatches[index];
-          memo[match.route.id] = data;
-          return memo;
-        }, {} as RouteData);
+        if (dataResult instanceof Error) {
+          componentDidCatchEmulator.error = dataResult;
+        } else if (isRedirectResponse(dataResult)) {
+          maybeHandleDataRedirect(dataResult);
+        }
       }
+
+      let newRouteData = (
+        await Promise.all(
+          transitionResults.map(async ([routeId, dataResult]) => {
+            if (dataResult instanceof Response || dataResult instanceof Error) {
+              return [routeId, await extractData(dataResult)];
+            }
+            return [routeId, undefined];
+          })
+        )
+      ).reduce((memo, [routeId, data]) => {
+        if (data) memo[routeId] = data;
+        return memo;
+      }, {} as RouteData);
+
+      let nextRouteData = nextMatches.reduce((memo, match) => {
+        let routeId = match.route.id;
+        memo[routeId] = newRouteData[routeId] || routeData[routeId];
+        return memo;
+      }, {} as RouteData);
 
       if (isCurrent && !didRedirect) {
         if (
