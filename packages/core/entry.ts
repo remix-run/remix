@@ -61,15 +61,15 @@ export interface EntryManifest {
 }
 
 export interface EntryRouteObject {
+  id: string;
   path: string;
   caseSensitive?: boolean;
-  id: string;
   parentId?: string;
+  hasAction?: boolean;
+  hasLoader?: boolean;
   moduleUrl?: string; // URL of the route module for `import`
   // nomoduleUrl?: string; // URL of the route module for `SystemJS.import`
   stylesUrl?: string; // URL for loading the CSS
-  actionUrl?: string; // URL for calling the action
-  loaderUrl?: string; // URL for calling the loader
 }
 
 export function createEntryRoute(
@@ -79,8 +79,8 @@ export function createEntryRoute(
   publicPath = "/"
 ): EntryRouteObject {
   let route: EntryRouteObject = {
-    path: configRoute.path,
-    id: configRoute.id
+    id: configRoute.id,
+    path: configRoute.path
   };
 
   if (typeof configRoute.caseSensitive !== "undefined") {
@@ -96,10 +96,10 @@ export function createEntryRoute(
     route.stylesUrl = publicPath + assets[`${route.id}.css`].file;
   }
   if (typeof routeModule.action !== "undefined") {
-    route.actionUrl = "/_remix/data";
+    route.hasAction = true;
   }
   if (typeof routeModule.loader !== "undefined") {
-    route.loaderUrl = "/_remix/data";
+    route.hasLoader = true;
   }
 
   return route;

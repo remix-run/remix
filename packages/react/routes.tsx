@@ -12,11 +12,11 @@ import type {
 import invariant from "./invariant";
 
 export interface ClientRouteObject {
-  caseSensitive?: boolean;
-  children?: ClientRouteObject[];
-  element: ReactNode;
   id: string;
   path: string;
+  element: ReactNode;
+  caseSensitive?: boolean;
+  children?: ClientRouteObject[];
 }
 
 type RouteComponentType = ComponentType<{ id: string }>;
@@ -25,12 +25,12 @@ export function createClientRoute(
   entryRoute: EntryRouteObject,
   elementType: RouteComponentType
 ): ClientRouteObject {
-  let Comp = elementType;
+  let Component = elementType;
   return {
-    caseSensitive: !!entryRoute.caseSensitive,
     id: entryRoute.id,
     path: entryRoute.path,
-    element: <Comp id={entryRoute.id} />
+    element: <Component id={entryRoute.id} />,
+    caseSensitive: !!entryRoute.caseSensitive
   };
 }
 

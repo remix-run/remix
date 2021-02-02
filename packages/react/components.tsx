@@ -17,8 +17,7 @@ import {
   FormEncType,
   FormMethod,
   FormSubmit,
-  loadRouteData,
-  callRouteAction,
+  fetchData,
   extractData,
   isRedirectResponse
 } from "./data";
@@ -178,27 +177,26 @@ export function RemixEntry({
 
       if (formState === FormState.Pending) {
         let leafMatch = nextMatches[nextMatches.length - 1];
-        let route = manifest.routes[leafMatch.route.id];
+        let leafRoute = manifest.routes[leafMatch.route.id];
 
-        if (!route.actionUrl) {
+        if (!leafRoute.hasAction) {
           throw new Error(
-            `Route "${route.id}" does not have an action handler, but you are trying ` +
-              `to submit to it. To fix this, please add an \`action\` function to your ` +
+            `Route "${leafRoute.id}" does not have an action handler, but you are trying ` +
+              `to submit to it. To fix this, please add an \`action\` function to the ` +
               `route module.`
           );
         }
 
-        let response = await callRouteAction(
-          route,
+        let response = await fetchData(
           nextLocation,
-          leafMatch.params,
-          pendingFormSubmit!
+          leafRoute.id,
+          pendingFormSubmit
         );
 
         // TODO: Handle error responses here...
         handleDataRedirect(response as Response);
 
-        // Expecting handleDataRedirect to be called, so we don't need to worry
+        // Expecting handleDataRedirect to redirect, so we don't need to worry
         // about doing anything else in here.
         return;
       }
@@ -224,12 +222,8 @@ export function RemixEntry({
         newMatches.map(async match => {
           let route = manifest.routes[match.route.id];
           return Promise.all([
-            match.route.id,
-            loadRouteData(
-              manifest.routes[match.route.id],
-              nextLocation,
-              match.params
-            ),
+            route.id,
+            route.hasLoader ? fetchData(nextLocation, route.id) : undefined,
             loadRouteModule(route, routeModules),
             loadRouteStyleSheet(route)
           ]);
@@ -283,6 +277,8 @@ export function RemixEntry({
         memo[routeId] = newRouteData[routeId] || routeData[routeId];
         return memo;
       }, {} as RouteData);
+
+      console.log(nextRouteData);
 
       if (isCurrent && !didRedirect) {
         if (

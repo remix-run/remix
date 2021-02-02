@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import type { Params } from "react-router";
 
 import type { EntryContext, RouteData } from "./entry";
-import type { ServerManifest } from "./buildManifest";
+import { loadServerManifest } from "./buildManifest";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
 import invariant from "./invariant";
 
@@ -82,6 +82,41 @@ export interface ActionFunction {
 }
 
 /**
+ * Gets a route module from the build on the filesystem.
+ */
+export function loadRouteModule(
+  buildDir: string,
+  routeId: string
+): RouteModule {
+  let manifest = loadServerManifest(buildDir);
+
+  invariant(
+    manifest.entries[routeId],
+    `Missing entry for route "${routeId}" in the server manifest`
+  );
+
+  return loadModule(path.resolve(buildDir, manifest.entries[routeId].file));
+}
+
+/**
+ * Loads many route modules from the build and returns them in an object keyed
+ * by route id.
+ */
+export function loadRouteModules(
+  buildDir: string,
+  routeIds: string[]
+): RouteModules {
+  return routeIds.reduce((memo, id) => {
+    memo[id] = loadRouteModule(buildDir, id);
+    return memo;
+  }, {} as RouteModules);
+}
+
+function loadModule(id: string) {
+  return require(id);
+}
+
+/**
  * A module that serves as the entry point for a Remix app during server
  * rendering.
  */
@@ -97,10 +132,9 @@ export interface ServerEntryModule {
 /**
  * Gets the server entry module from the build on the filesystem.
  */
-export function loadServerEntryModule(
-  buildDir: string,
-  manifest: ServerManifest
-): ServerEntryModule {
+export function loadServerEntryModule(buildDir: string): ServerEntryModule {
+  let manifest = loadServerManifest(buildDir);
+
   invariant(
     manifest.entries["entry-server"],
     `Missing entry for "entry-server" in the server manifest`
@@ -109,24 +143,4 @@ export function loadServerEntryModule(
   return loadModule(
     path.resolve(buildDir, manifest.entries["entry-server"].file)
   );
-}
-
-/**
- * Gets a route module from the build on the filesystem.
- */
-export function loadRouteModule(
-  buildDir: string,
-  manifest: ServerManifest,
-  routeId: string
-): RouteModule {
-  invariant(
-    manifest.entries[routeId],
-    `Missing entry for route "${routeId}" in the server manifest`
-  );
-
-  return loadModule(path.resolve(buildDir, manifest.entries[routeId].file));
-}
-
-function loadModule(id: string) {
-  return require(id);
 }

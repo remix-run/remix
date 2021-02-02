@@ -41,8 +41,8 @@ export function collectDataResponses(page: Page, routeId?: string) {
   return collectResponses(
     page,
     url =>
-      url.pathname.startsWith("/_remix/data") &&
-      (routeId === undefined || url.searchParams.get("id") === routeId)
+      url.searchParams.has("_data") &&
+      (routeId === undefined || url.searchParams.get("_data") === routeId)
   );
 }
 

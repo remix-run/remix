@@ -1,6 +1,5 @@
 import type { Location } from "history";
-import type { Params } from "react-router";
-import type { AppData, RouteData, EntryRouteObject } from "@remix-run/core";
+import type { AppData, RouteData } from "@remix-run/core";
 
 export type { AppData, RouteData };
 
@@ -14,34 +13,6 @@ export interface FormSubmit {
   method: FormMethod;
   data: FormData;
   encType: FormEncType;
-}
-
-export interface DataRedirectHandler {
-  (url: URL): void;
-}
-
-/**
- * Loads some data for a route from the server.
- */
-export async function loadRouteData(
-  route: EntryRouteObject,
-  location: Location,
-  params: Params
-): Promise<Response | Error | undefined> {
-  if (!route.loaderUrl) return undefined;
-  return fetchData(route.loaderUrl, location, route.id, params);
-}
-
-/**
- * Calls the action for a route with the data from the form that was submitted.
- */
-export function callRouteAction(
-  route: EntryRouteObject,
-  location: Location,
-  params: Params,
-  formSubmit: FormSubmit
-): Promise<Response | Error> {
-  return fetchData(route.actionUrl, location, route.id, params, formSubmit);
 }
 
 export function isErrorResponse(response: any): boolean {
@@ -58,23 +29,18 @@ export function isRedirectResponse(response: any): boolean {
   );
 }
 
-async function fetchData(
-  loaderUrl: string | undefined,
+export async function fetchData(
   location: Location,
   routeId: string,
-  routeParams: Params,
   formSubmit?: FormSubmit
 ): Promise<Response | Error> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
-  let params = new URLSearchParams({
-    params: JSON.stringify(routeParams),
-    url: url.toString(),
-    id: routeId
-  });
+  url.searchParams.set("_data", routeId);
+  url.searchParams.sort(); // Improves caching
 
   let init = getFetchInit(formSubmit);
-  let response = await fetch(`${loaderUrl}?${params.toString()}`, init);
+  let response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
     // We discussed putting an error in the console here but decided to pass on

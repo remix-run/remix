@@ -21,7 +21,7 @@ export function loader() {
 
 export function headers() {
   return {
-    "cache-control": "public, max-age=60"
+    "Cache-Control": "public, max-age=60"
   };
 }
 

@@ -1,4 +1,10 @@
 import type { AppLoadContext } from "./buildModules";
+import { loadAssetManifest } from "./buildManifest";
+import {
+  loadRouteModule,
+  loadRouteModules,
+  loadServerEntryModule
+} from "./buildModules";
 import type { RemixConfig } from "./config";
 import { ServerMode } from "./config";
 import { loadRouteData, callRouteAction } from "./data";
@@ -15,9 +21,8 @@ import {
   serializeError
 } from "./entry";
 import { Headers, Request, Response } from "./fetch";
-import { matchRoutes } from "./match";
+import { ConfigRouteMatch, matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
-import { loadServerBuild } from "./serverHelpers";
 import { oneYear } from "./seconds";
 
 /**
@@ -44,7 +49,7 @@ export function createRequestHandler(config: RemixConfig): RequestHandler {
       return handleManifestRequest(config, request);
     }
 
-    if (url.pathname.startsWith("/_remix/data")) {
+    if (url.searchParams.has("_data")) {
       return handleDataRequest(config, request, loadContext);
     }
 
@@ -66,10 +71,14 @@ async function handleManifestRequest(
   let matches = matchRoutes(config.routes, pathname);
 
   if (!matches) {
-    return jsonError(`No routes matched path "${pathname}"`, 404);
+    return jsonError(`No route matches URL "${pathname}"`, 404);
   }
 
-  let { assetManifest, routeModules } = await loadServerBuild(config);
+  let assetManifest = loadAssetManifest(config.serverBuildDirectory);
+  let routeModules = loadRouteModules(
+    config.serverBuildDirectory,
+    matches.map(match => match.route.id)
+  );
 
   let entryManifest: EntryManifest = {
     version: assetManifest.version,
@@ -94,44 +103,53 @@ async function handleDataRequest(
   request: Request,
   loadContext: AppLoadContext
 ): Promise<Response> {
-  let searchParams = new URL(request.url).searchParams;
-  let urlParam = searchParams.get("url");
-  let loaderId = searchParams.get("id");
-  let params = JSON.parse(searchParams.get("params") || "{}");
+  let url = new URL(request.url);
 
-  if (!urlParam) {
-    return jsonError(`Missing ?url`, 403);
-  }
-  if (!loaderId) {
-    return jsonError(`Missing ?id`, 403);
+  let matches = matchRoutes(config.routes, url.pathname);
+  if (!matches) {
+    return jsonError(`No route matches URL "${url.pathname}"`, 404);
   }
 
-  let url = new URL(urlParam);
-  let loaderRequest = new Request(url, {
-    method: request.method,
-    headers: request.headers,
-    body: request.body
-  });
+  let match: ConfigRouteMatch;
+  if (isActionRequest(request)) {
+    match = matches[matches.length - 1];
+  } else {
+    let routeId = url.searchParams.get("_data");
+    if (!routeId) {
+      return jsonError(`Missing route id in ?_data`, 403);
+    }
 
-  let { routeModules } = await loadServerBuild(config);
+    let routeMatch = matches.find(match => match.route.id === routeId);
+    if (!routeMatch) {
+      return jsonError(
+        `Route "${routeId}" does not match URL "${url.pathname}"`,
+        403
+      );
+    }
+
+    match = routeMatch;
+  }
+
+  let route = match.route;
+  let routeModule = loadRouteModule(config.serverBuildDirectory, route.id);
 
   let response: Response;
   try {
-    if (isActionRequest(loaderRequest)) {
+    if (isActionRequest(request)) {
       response = await callRouteAction(
-        loaderId,
-        routeModules[loaderId],
-        loaderRequest,
+        route.id,
+        routeModule,
+        request,
         loadContext,
-        params
+        match.params
       );
     } else {
       response = await loadRouteData(
-        loaderId,
-        routeModules[loaderId],
-        loaderRequest,
+        route.id,
+        routeModule,
+        request,
         loadContext,
-        params
+        match.params
       );
     }
   } catch (error) {
@@ -197,20 +215,21 @@ async function handleDocumentRequest(
   }
 
   // Load the server build.
-  let {
-    assetManifest,
-    serverEntryModule,
-    routeModules
-  } = await loadServerBuild(config);
+  let assetManifest = loadAssetManifest(config.serverBuildDirectory);
+  let routeModules = loadRouteModules(
+    config.serverBuildDirectory,
+    matches.map(match => match.route.id)
+  );
+  let serverEntryModule = loadServerEntryModule(config.serverBuildDirectory);
 
   // Handle action requests.
   if (isActionRequest(request)) {
     let leafMatch = matches[matches.length - 1];
-    let route = leafMatch.route;
+    let leafRoute = leafMatch.route;
 
     let response = await callRouteAction(
-      route.id,
-      routeModules[route.id],
+      leafRoute.id,
+      routeModules[leafRoute.id],
       request,
       loadContext,
       leafMatch.params
