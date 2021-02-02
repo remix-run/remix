@@ -1,18 +1,8 @@
 import fs from "fs";
-import path from "path";
 import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../build";
 import { getRemixConfig } from "./remixConfig";
-
-/**
- * All file extensions we support for route modules.
- */
-export const moduleExts = [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
-
-export function isModuleFile(filename: string): boolean {
-  return moduleExts.includes(path.extname(filename));
-}
 
 /**
  * A resolver/loader for route modules that does a few things:

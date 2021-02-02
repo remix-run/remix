@@ -3,8 +3,24 @@ import path from "path";
 
 import type { ConfigRouteObject, DefineRoute } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
-import { isModuleFile } from "./rollup/routeModules";
-import { isStylesFile } from "./rollup/styles";
+
+/**
+ * All file extensions we support for route modules.
+ */
+export const moduleExts = [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
+
+export function isModuleFile(filename: string): boolean {
+  return moduleExts.includes(path.extname(filename));
+}
+
+/**
+ * All file extensions we support for styles.
+ */
+export const stylesExts = [".css"];
+
+export function isStylesFile(filename: string): boolean {
+  return stylesExts.includes(path.extname(filename));
+}
 
 /**
  * Defines routes using the filesystem convention in `app/routes`. The rules are:

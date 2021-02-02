@@ -4,7 +4,8 @@ import type { Plugin } from "rollup";
 import chokidar from "chokidar";
 import tmp from "tmp";
 
-import { isStylesFile, loadStyles } from "./styles";
+import { isStylesFile } from "../routesConvention";
+import { loadStyles } from "./styles";
 
 function relname(file: string): string {
   return path.relative(process.cwd(), file);
