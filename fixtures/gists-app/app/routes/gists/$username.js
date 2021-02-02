@@ -19,7 +19,7 @@ let fakeGists = [
   }
 ];
 
-export function loader({ params }) {
+export async function loader({ params }) {
   let { username } = params;
 
   if (username === "mjijackson") {
@@ -34,12 +34,18 @@ export function loader({ params }) {
     return fakeGists;
   }
 
-  return fetch(`https://api.github.com/users/${username}/gists`);
+  let response = await fetch(`https://api.github.com/users/${username}/gists`);
+
+  return json(await response.json(), {
+    headers: {
+      "Cache-Control": response.headers.get("Cache-Control")
+    }
+  });
 }
 
 export function headers() {
   return {
-    "cache-control": "public, max-age=300"
+    "Cache-Control": "public, max-age=300"
   };
 }
 

@@ -1,3 +1,4 @@
+import type { Location } from "history";
 import type { EntryManifest } from "@remix-run/core";
 
 export type Manifest = EntryManifest;
@@ -7,10 +8,10 @@ export type Manifest = EntryManifest;
  */
 export async function loadManifest(
   manifest: Manifest,
-  pathname: string,
+  location: Location,
   autoReload = true
 ): Promise<void> {
-  let patch = await fetchManifestPatch(pathname, manifest.version);
+  let patch = await fetchManifestPatch(location, manifest.version);
 
   if (patch) {
     Object.assign(manifest.routes, patch.routes);
@@ -23,16 +24,15 @@ export async function loadManifest(
 }
 
 async function fetchManifestPatch(
-  pathname: string,
+  location: Location,
   currentVersion: string
 ): Promise<Manifest | null> {
-  let params = new URLSearchParams({
-    pathname,
-    // Include the version so the browser can cache the response forever.
-    v: currentVersion
-  });
+  let origin = window.location.origin;
+  let url = new URL(location.pathname + location.search, origin);
+  url.searchParams.set("_manifest", currentVersion);
+  url.searchParams.sort(); // Improves caching
 
-  let res = await fetch(`/_remix/manifest?${params.toString()}`);
+  let res = await fetch(url.href);
 
   if (
     res.status === 200 &&

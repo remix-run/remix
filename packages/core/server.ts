@@ -36,16 +36,12 @@ export interface RequestHandler {
 
 /**
  * Creates a handler (aka "server") that serves HTTP requests.
- *
- * In production mode, the server reads the build from disk. In development, it
- * dynamically generates the build at request time for only the modules needed
- * to serve that request.
  */
 export function createRequestHandler(config: RemixConfig): RequestHandler {
   return async (request, loadContext = {}) => {
     let url = new URL(request.url);
 
-    if (url.pathname.startsWith("/_remix/manifest")) {
+    if (url.searchParams.has("_manifest")) {
       return handleManifestRequest(config, request);
     }
 
@@ -61,17 +57,11 @@ async function handleManifestRequest(
   config: RemixConfig,
   request: Request
 ): Promise<Response> {
-  let searchParams = new URL(request.url).searchParams;
-  let pathname = searchParams.get("pathname");
+  let url = new URL(request.url);
 
-  if (!pathname) {
-    return jsonError(`Missing ?url`, 403);
-  }
-
-  let matches = matchRoutes(config.routes, pathname);
-
+  let matches = matchRoutes(config.routes, url.pathname);
   if (!matches) {
-    return jsonError(`No route matches URL "${pathname}"`, 404);
+    return jsonError(`No route matches URL "${url.pathname}"`, 404);
   }
 
   let assetManifest = loadAssetManifest(config.serverBuildDirectory);

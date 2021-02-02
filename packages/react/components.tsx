@@ -149,7 +149,7 @@ export function RemixEntry({
     let isCurrent = true;
 
     (async () => {
-      await loadManifest(manifest, nextLocation.pathname);
+      await loadManifest(manifest, nextLocation);
 
       let routes = createClientRoutes(manifest.routes, RemixRoute);
       let nextMatches = matchClientRoutes(routes, nextLocation);
