@@ -23,7 +23,7 @@ import {
 import { Headers, Request, Response } from "./fetch";
 import { ConfigRouteMatch, matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
-import { oneYear } from "./seconds";
+import { oneMinute } from "./seconds";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -82,7 +82,10 @@ async function handleManifestRequest(
 
   return json(entryManifest, {
     headers: {
-      "Cache-Control": `public, max-age=${oneYear}`,
+      // FIXME: This is a problem for anyone who is caching static assets
+      // for less than 5 minutes. Long-term plan is to generate static
+      // manifest files alongside the build and get rid of this endpoint.
+      "Cache-Control": `public, max-age=${5 * oneMinute}`,
       ETag: entryManifest.version
     }
   });
