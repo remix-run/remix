@@ -4,5 +4,6 @@
     "outDir": "../../build/node_modules/@remix-run/vercel",
     "rootDir": "."
   },
-  "include": ["../../types/**/*", "**/*"]
+  "include": ["../../types/**/*", "**/*"],
+  "exclude": ["__tests__/**/*"]
 }

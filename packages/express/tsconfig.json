@@ -4,8 +4,6 @@
     "outDir": "../../build/node_modules/@remix-run/express",
     "rootDir": "."
   },
-  "include": [
-    "../../types/**/*",
-    "**/*"
-  ]
+  "include": ["../../types/**/*", "**/*"],
+  "exclude": ["__tests__/**/*"]
 }
