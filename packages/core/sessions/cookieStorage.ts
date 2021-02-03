@@ -28,10 +28,10 @@ export function createCookieSessionStorage({
     : createCookie((cookieArg && cookieArg.name) || "__session", cookieArg);
 
   if (!cookie.isSigned) {
-    // TODO: Link to doc about how to sign cookies...
     console.warn(
       `Session cookies should be signed to prevent tampering on the client ` +
-        `before they are sent back to the server.`
+        `before they are sent back to the server. See https://remix.run/dashboard/docs/cookies#signing-cookies ` +
+        `for more information.`
     );
   }
 
