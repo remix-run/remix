@@ -2,7 +2,7 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
-## Unreleased
+## 0.11.0-pre.0 - Wed Feb 03 2021
 
 ### Improvements
 
