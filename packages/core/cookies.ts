@@ -19,7 +19,7 @@ export interface Cookie {
   /**
    * True if this cookie uses one or more secrets for verification.
    *
-   * TODO: Add link to doc that talks about signing cookies...
+   * See https://remix.run/dashboard/docs/cookies#signing-cookies
    */
   readonly isSigned: boolean;
 
@@ -38,16 +38,15 @@ export interface Cookie {
   parse(cookieHeader?: string, options?: CookieParseOptions): any;
 
   /**
-   * Serializes the given value to a string and returns the value to be used in
-   * a `Set-Cookie` header.
+   * Serializes the given value to a string and returns the `Set-Cookie`
+   * header.
    */
   serialize(value: any, options?: CookieSerializeOptions): string;
 }
 
 interface CookieSignatureOptions {
   /**
-   * An array of secret strings that may be used to sign/unsign the value of a
-   * cookie.
+   * An array of secrets that may be used to sign/unsign the value of a cookie.
    *
    * The array makes it easy to rotate secrets. New secrets should be added to
    * the beginning of the array. `cookie.serialize()` will always use the first
