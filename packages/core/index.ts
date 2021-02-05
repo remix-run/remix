@@ -52,6 +52,8 @@ export {
   fetch
 } from "./fetch";
 
+export { json, redirect } from "./responseHelpers";
+
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
 export type { RequestHandler } from "./server";
