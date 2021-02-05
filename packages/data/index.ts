@@ -2,6 +2,8 @@ import type {
   Cookie,
   CookieOptions,
   ResponseInit,
+  HeadersFunction,
+  MetaFunction,
   ActionFunction,
   LoaderFunction,
   SessionData,
@@ -26,6 +28,8 @@ import {
 export type {
   Cookie,
   CookieOptions,
+  HeadersFunction,
+  MetaFunction,
   ActionFunction as Action,
   LoaderFunction as Loader,
   SessionData,
