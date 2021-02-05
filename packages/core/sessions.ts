@@ -66,8 +66,8 @@ function flash(name: string): string {
 /**
  * Creates a new Session object.
  *
- * Note: This function is usually not invoked directly by application code.
- * Instead, use a SessionStorage object's `createSession` method.
+ * Note: This function is typically not invoked directly by application code.
+ * Instead, use a `SessionStorage` object's `getSession` method.
  */
 export function createSession(initialData: SessionData = {}, id = ""): Session {
   let map = new Map<string, any>(Object.entries(initialData));
@@ -123,29 +123,8 @@ export function isSession(object: any): object is Session {
  * SessionStorage stores session data between HTTP requests and knows how to
  * parse and create cookies.
  *
- * A SessionStorage creates Session objects using a Cookie header as input.
- * Then, later it generates the Set-Cookie header to be used in the response.
- *
- * An example of usage on a protected route:
- *
- *   let cookie = request.headers.get('Cookie');
- *   let session = await storage.getSession(cookie);
- *
- *   if (!session.get('user')) {
- *     return redirect('/login', {
- *       headers: {
- *         'Set-Cookie': await storage.commitSession(session)
- *       }
- *     });
- *   }
- *
- *   // do stuff with the session...
- *
- *   return new Response(..., {
- *     headers: {
- *       'Set-Cookie': await storage.commitSession(session)
- *     }
- *   });
+ * A SessionStorage creates Session objects using a `Cookie` header as input.
+ * Then, later it generates the `Set-Cookie` header to be used in the response.
  */
 export interface SessionStorage {
   /**
