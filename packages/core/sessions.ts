@@ -2,6 +2,7 @@ import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 
 import type { Cookie, CookieOptions } from "./cookies";
 import { createCookie, isCookie } from "./cookies";
+import { warnOnce } from "./warnings";
 
 /**
  * An object of name/value pairs to be used in the session.
@@ -230,13 +231,7 @@ export function createSessionStorage({
     ? cookieArg
     : createCookie((cookieArg && cookieArg.name) || "__session", cookieArg);
 
-  if (!cookie.isSigned) {
-    console.warn(
-      `Session cookies should be signed to prevent tampering on the client ` +
-        `before they are sent back to the server. See https://remix.run/dashboard/docs/cookies#signing-cookies ` +
-        `for more information.`
-    );
-  }
+  warnOnceAboutSigningSessionCookies(cookie);
 
   return {
     async getSession(cookieHeader, options) {
@@ -263,4 +258,13 @@ export function createSessionStorage({
       });
     }
   };
+}
+
+export function warnOnceAboutSigningSessionCookies(cookie: Cookie) {
+  warnOnce(
+    cookie.isSigned,
+    `Session cookies should be signed to prevent tampering on the client ` +
+      `before they are sent back to the server. See https://remix.run/dashboard/docs/cookies#signing-cookies ` +
+      `for more information.`
+  );
 }

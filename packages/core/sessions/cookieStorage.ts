@@ -1,6 +1,6 @@
 import { createCookie, isCookie } from "../cookies";
 import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
-import { createSession } from "../sessions";
+import { warnOnceAboutSigningSessionCookies, createSession } from "../sessions";
 
 interface CookieSessionStorageOptions {
   /**
@@ -26,13 +26,7 @@ export function createCookieSessionStorage({
     ? cookieArg
     : createCookie((cookieArg && cookieArg.name) || "__session", cookieArg);
 
-  if (!cookie.isSigned) {
-    console.warn(
-      `Session cookies should be signed to prevent tampering on the client ` +
-        `before they are sent back to the server. See https://remix.run/dashboard/docs/cookies#signing-cookies ` +
-        `for more information.`
-    );
-  }
+  warnOnceAboutSigningSessionCookies(cookie);
 
   return {
     async getSession(cookieHeader, options) {
