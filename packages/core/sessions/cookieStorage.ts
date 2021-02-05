@@ -1,6 +1,5 @@
-import type { Cookie, CookieOptions } from "../cookies";
 import { createCookie, isCookie } from "../cookies";
-import type { SessionStorage } from "../sessions";
+import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
 import { createSession } from "../sessions";
 
 interface CookieSessionStorageOptions {
@@ -8,7 +7,7 @@ interface CookieSessionStorageOptions {
    * The Cookie used to store the session data on the client, or options used
    * to automatically create one.
    */
-  cookie?: Cookie | (CookieOptions & { name?: string });
+  cookie?: SessionIdStorageStrategy["cookie"];
 }
 
 /**
