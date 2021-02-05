@@ -2,7 +2,17 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
-## 0.11.0 - Wed Feb 03 2021 - Wed Feb 03 2021
+## Unreleased
+
+### Improvements
+
+- Added `HeadersFunction` and `MetaFunction` exports to `@remix-run/data` to allow typing of route `headers()` and `meta()` functions
+
+### Bug Fixes
+
+- Fixed `redirect()` default status code when headers are used as the 2nd arg
+
+## 0.11.0 - Wed Feb 03 2021
 
 ### Improvements
 

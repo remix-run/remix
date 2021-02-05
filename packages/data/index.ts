@@ -78,6 +78,8 @@ export function redirect(
 ): Response {
   if (typeof init === "number") {
     init = { status: init };
+  } else if (typeof init.status === "undefined") {
+    init.status = 302;
   }
 
   let headers = new Headers(init.headers);

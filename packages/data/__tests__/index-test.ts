@@ -42,6 +42,15 @@ describe("redirect", () => {
     expect(response.status).toEqual(302);
   });
 
+  it("sets the status to 302 when only headers are given", () => {
+    let response = redirect("/login", {
+      headers: {
+        "X-Remix": "is awesome"
+      }
+    });
+    expect(response.status).toEqual(302);
+  });
+
   it("sets the Location header", () => {
     let response = redirect("/login");
     expect(response.headers.get("Location")).toEqual("/login");
