@@ -278,8 +278,6 @@ export function RemixEntry({
         return memo;
       }, {} as RouteData);
 
-      console.log(nextRouteData);
-
       if (isCurrent && !didRedirect) {
         if (
           formState === FormState.Redirected ||
