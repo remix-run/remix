@@ -35,7 +35,7 @@ export interface Cookie {
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
-  parse(cookieHeader?: string, options?: CookieParseOptions): any;
+  parse(cookieHeader: string | null, options?: CookieParseOptions): any;
 
   /**
    * Serializes the given value to a string and returns the `Set-Cookie`

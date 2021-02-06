@@ -133,7 +133,7 @@ export interface SessionStorage {
    * return a new Session with no data.
    */
   getSession(
-    cookieHeader?: string,
+    cookieHeader?: string | null,
     options?: CookieParseOptions
   ): Promise<Session>;
 
@@ -214,7 +214,7 @@ export function createSessionStorage({
 
   return {
     async getSession(cookieHeader, options) {
-      let id = cookie.parse(cookieHeader, options);
+      let id = cookieHeader && cookie.parse(cookieHeader, options);
       let data = id && (await readData(id));
       return createSession(data || {}, id || "");
     },
