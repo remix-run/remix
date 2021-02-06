@@ -5,6 +5,8 @@ import type {
   MetaFunction,
   ActionFunction,
   LoaderFunction,
+  RouteComponent,
+  ErrorBoundaryComponent,
   SessionData,
   Session,
   SessionStorage,
@@ -31,8 +33,12 @@ export type {
   CookieOptions,
   HeadersFunction,
   MetaFunction,
-  ActionFunction as Action,
-  LoaderFunction as Loader,
+  LoaderFunction,
+  ActionFunction,
+  LoaderFunction as Loader, // shorthand
+  ActionFunction as Action, // shorthand
+  RouteComponent,
+  ErrorBoundaryComponent,
   SessionData,
   Session,
   SessionStorage,
