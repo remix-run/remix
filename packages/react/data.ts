@@ -3,16 +3,16 @@ import type { AppData, RouteData } from "@remix-run/core";
 
 export type { AppData, RouteData };
 
+export type FormMethod = "get" | "post" | "put" | "patch" | "delete";
+
 export type FormEncType =
   | "application/x-www-form-urlencoded"
   | "multipart/form-data";
 
-export type FormMethod = "get" | "post" | "put" | "patch" | "delete";
-
 export interface FormSubmit {
-  method: FormMethod;
+  method: string;
+  encType: string;
   data: FormData;
-  encType: FormEncType;
 }
 
 export function isErrorResponse(response: any): boolean {

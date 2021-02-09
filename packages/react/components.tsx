@@ -1,3 +1,4 @@
+import type { FormHTMLAttributes } from "react";
 import React from "react";
 import type { Action, Location } from "history";
 import type { Navigator } from "react-router";
@@ -62,12 +63,8 @@ let pendingFormSubmit: FormSubmit | undefined = undefined;
 let formState = FormState.Idle;
 
 // 1. When a form is submitted, we go into a pending state
-function setFormPending(
-  method: FormMethod,
-  data: FormData,
-  encType: FormEncType
-): void {
-  pendingFormSubmit = { method, data, encType };
+function setFormPending(method: string, encType: string, data: FormData): void {
+  pendingFormSubmit = { method, encType, data };
   formState = method === "get" ? FormState.PendingGet : FormState.Pending;
 }
 
@@ -571,18 +568,28 @@ function Routes() {
   return element;
 }
 
-export interface FormProps extends Omit<HTMLFormElement, "method"> {
+export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
-   * The HTTP verb to use when the form is submit. If JavaScript is disabled,
-   * you'll need to implement your own "method override". Supports "get",
-   * "post", "put", "delete", "patch".
+   * The HTTP verb to use when the form is submit. Supports "get", "post",
+   * "put", "delete", "patch".
+   *
+   * Note: If JavaScript is disabled, you'll need to implement your own "method
+   * override" to support more than just GET and POST.
    */
   method?: FormMethod;
 
   /**
-   * Normal form "action" but allows for React Router's relative paths.
+   * Normal `<form action>` but supports React Router's relative paths.
    */
   action?: string;
+
+  /**
+   * Normal `<form encType>`.
+   *
+   * Note: Remix only supports `application/x-www-form-urlencoded` right now
+   * but will soon support `multipart/form-data` as well.
+   */
+  encType?: FormEncType;
 
   /**
    * Forces a full document navigation instead of a fetch.
@@ -597,13 +604,6 @@ export interface FormProps extends Omit<HTMLFormElement, "method"> {
   replace?: boolean;
 
   /**
-   * Normal form encType, Remix only supports
-   * `application/x-www-form-urlencoded` right now but will soon support
-   * `multipart/form-data` as well.
-   */
-  encType?: FormEncType;
-
-  /**
    * A function to call when the form is submitted. If you call
    * `event.preventDefault()` then this form will not do anything.
    */
@@ -616,47 +616,35 @@ export interface FormProps extends Omit<HTMLFormElement, "method"> {
  * requests, allowing components to add nicer UX to the page as the form is
  * submitted and returns with data.
  */
-let Form = React.forwardRef<HTMLFormElement, FormProps>(
+export let Form = React.forwardRef<HTMLFormElement, FormProps>(
   (
     {
       forceRefresh = false,
       replace = false,
-      action = ".",
       method = "get",
+      action = ".",
       encType = "application/x-www-form-urlencoded",
       onSubmit,
       ...props
     },
     forwardedRef
   ) => {
-    let navigate = useNavigate();
-    let path = useResolvedPath(action);
+    let submit = useSubmit();
     let formMethod = method.toLowerCase() === "get" ? "get" : "post";
+    let formAction = useFormAction(action);
 
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       onSubmit && onSubmit(event);
       if (event.defaultPrevented) return;
-
       event.preventDefault();
-      let data = new FormData(event.currentTarget);
-
-      setFormPending(method, data, encType);
-
-      if (method.toLowerCase() === "get") {
-        // TODO: Patch the URLSearchParams constructor type to accept FormData
-        // @ts-ignore
-        let searchParams = new URLSearchParams(data);
-        path.search = "?" + searchParams.toString();
-      }
-
-      navigate(path, { replace });
+      submit(event.currentTarget, { method, replace });
     }
 
     return (
       <form
         ref={forwardedRef}
         method={formMethod}
-        action={path.pathname}
+        action={formAction}
         encType={encType}
         onSubmit={forceRefresh ? undefined : handleSubmit}
         {...props}
@@ -665,7 +653,153 @@ let Form = React.forwardRef<HTMLFormElement, FormProps>(
   }
 );
 
-export { Form };
+/**
+ * Resolves a `<form action>` path relative to the current route.
+ */
+export function useFormAction(action = "."): string {
+  let path = useResolvedPath(action);
+  return path.pathname + path.search;
+}
+
+interface SubmitOptions {
+  method?: FormMethod;
+  action?: string;
+  encType?: FormEncType;
+  replace?: boolean;
+}
+
+/**
+ * Submits a HTML `<form>` to the server without reloading the page.
+ */
+export interface SubmitFunction {
+  (
+    /**
+     * Specifies the `<form>` to be submitted to the server, a specific
+     * `<button>` or `<input type="submit">` to use to submit the form, or some
+     * arbitrary data to submit.
+     *
+     * Note: When using a `<button>` its `name` and `value` will also be
+     * included in the form data that is submitted.
+     */
+    target:
+      | HTMLFormElement
+      | HTMLButtonElement
+      | HTMLInputElement
+      | FormData
+      | URLSearchParams
+      | { [name: string]: string }
+      | null,
+
+    /**
+     * Options that override the `<form>`'s own attributes. Required when
+     * submitting arbitrary data without a backing `<form>`.
+     */
+    options?: SubmitOptions
+  ): void;
+}
+
+/**
+ * Returns a function that may be used to programmatically submit a form (or
+ * some arbitrary data) to the server.
+ */
+export function useSubmit(): SubmitFunction {
+  let navigate = useNavigate();
+
+  return (target, options = {}) => {
+    let method: string;
+    let action: string;
+    let encType: string;
+    let formData: FormData;
+
+    if (isFormElement(target)) {
+      method = options.method || target.method;
+      action = options.action || target.action;
+      encType = options.encType || target.enctype;
+      formData = new FormData(target);
+    } else if (
+      isButtonElement(target) ||
+      (isInputElement(target) &&
+        (target.type === "submit" || target.type === "image"))
+    ) {
+      let form = target.form;
+
+      if (form == null) {
+        throw new Error(`Cannot submit a <button> without a <form>`);
+      }
+
+      // <button>/<input type="submit"> may override attributes of <form>
+      method = options.method || target.formMethod || form.method;
+      action = options.action || target.formAction || form.action;
+      encType = options.encType || target.formEnctype || form.enctype;
+      formData = new FormData(form);
+
+      // Include name + value from a <button>
+      if (target.name) {
+        formData.set(target.name, target.value);
+      }
+    } else {
+      if (isHtmlElement(target)) {
+        throw new Error(
+          `Cannot submit element that is not <form>, <button>, or <input type="submit">`
+        );
+      }
+
+      method = options.method || "get";
+      action = options.action || window.location.href;
+      encType = options.encType || "application/x-www-form-urlencoded";
+
+      if (target instanceof FormData) {
+        formData = target;
+      } else if (target instanceof URLSearchParams) {
+        formData = new FormData();
+
+        for (let [name, value] of target) {
+          formData.set(name, value);
+        }
+      } else {
+        formData = new FormData();
+
+        if (target != null) {
+          for (let name of Object.keys(target)) {
+            formData.set(name, target[name]);
+          }
+        }
+      }
+    }
+
+    setFormPending(method, encType, formData);
+
+    let url = new URL(action);
+
+    if (method === "get") {
+      for (let [name, value] of formData) {
+        if (typeof value === "string") {
+          url.searchParams.set(name, value);
+        } else {
+          throw new Error(`Cannot submit binary form data using GET`);
+        }
+      }
+    }
+
+    navigate(url.pathname + url.search, { replace: options.replace });
+  };
+}
+
+function isButtonElement(object: any): object is HTMLButtonElement {
+  return object != null && object.tagName.toLowerCase() === "button";
+}
+
+function isFormElement(object: any): object is HTMLFormElement {
+  return object != null && object.tagName.toLowerCase() === "form";
+}
+
+function isHtmlElement(object: any): object is HTMLElement {
+  return object != null && typeof object.tagName === "string";
+}
+
+function isInputElement(object: any): object is HTMLInputElement {
+  return object != null && object.tagName.toLowerCase() === "input";
+}
 
 /**
  * Setup a callback to be fired on the window's `beforeunload` event. This is

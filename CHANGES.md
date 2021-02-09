@@ -6,6 +6,9 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
+- Added `useSubmit` and `useFormAction` hooks
+- Added support for `<button formAction>` and `<input formAction>` as well
+  as `formMethod` and `formEnctype`
 - Automatically pass `Set-Cookie` headers from loaders and parent routes
   through to entry on document requests
 - Accept `null` as argument to `cookie.parse()`

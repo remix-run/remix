@@ -73,6 +73,10 @@ export default function Index() {
               Render error in nested route with ErrorBoundary
             </Link>
           </li>
+
+          <li>
+            <Link to="prefs">Preferences</Link>
+          </li>
         </ul>
       </nav>
       <Shared />
