@@ -19,32 +19,22 @@ export type AppLoadContext = any;
  */
 export type AppData = any;
 
+/**
+ * A React component that is rendered for a route.
+ */
 export type RouteComponent = ComponentType;
-export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
 
 /**
- * A module that contains info about a route including headers, meta tags, and
- * the route component for rendering HTML markup.
+ * A React component that is rendered when there is an error on a route.
  */
-export interface RouteModule {
-  default: RouteComponent;
-  ErrorBoundary?: ErrorBoundaryComponent;
-  headers?: HeadersFunction;
-  meta?: MetaFunction;
-  loader?: LoaderFunction;
-  action?: ActionFunction;
-}
-
-export interface RouteModules {
-  [routeId: string]: RouteModule;
-}
+export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
 
 /**
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
 export interface HeadersFunction {
-  (args: { loaderHeaders: Headers; parentsHeaders: Headers }):
+  (args: { loaderHeaders: Headers; parentHeaders: Headers }):
     | Headers
     | HeadersInit;
 }
@@ -82,20 +72,34 @@ export interface ActionFunction {
 }
 
 /**
+ * A module that contains info about a route including headers, meta tags, and
+ * the route component for rendering HTML markup.
+ */
+export interface RouteModule {
+  default: RouteComponent;
+  ErrorBoundary?: ErrorBoundaryComponent;
+  headers?: HeadersFunction;
+  meta?: MetaFunction;
+  loader?: LoaderFunction;
+  action?: ActionFunction;
+}
+
+export interface RouteModules {
+  [routeId: string]: RouteModule;
+}
+
+/**
  * Gets a route module from the build on the filesystem.
  */
-export function loadRouteModule(
-  buildDir: string,
-  routeId: string
-): RouteModule {
-  let manifest = loadServerManifest(buildDir);
+export function loadRouteModule(dir: string, routeId: string): RouteModule {
+  let manifest = loadServerManifest(dir);
 
   invariant(
     manifest.entries[routeId],
     `Missing entry for route "${routeId}" in the server manifest`
   );
 
-  return loadModule(path.resolve(buildDir, manifest.entries[routeId].file));
+  return loadModule(path.resolve(dir, manifest.entries[routeId].file));
 }
 
 /**
@@ -103,17 +107,13 @@ export function loadRouteModule(
  * by route id.
  */
 export function loadRouteModules(
-  buildDir: string,
+  dir: string,
   routeIds: string[]
 ): RouteModules {
   return routeIds.reduce((memo, id) => {
-    memo[id] = loadRouteModule(buildDir, id);
+    memo[id] = loadRouteModule(dir, id);
     return memo;
   }, {} as RouteModules);
-}
-
-function loadModule(id: string) {
-  return require(id);
 }
 
 /**
@@ -132,15 +132,17 @@ export interface ServerEntryModule {
 /**
  * Gets the server entry module from the build on the filesystem.
  */
-export function loadServerEntryModule(buildDir: string): ServerEntryModule {
-  let manifest = loadServerManifest(buildDir);
+export function loadServerEntryModule(dir: string): ServerEntryModule {
+  let manifest = loadServerManifest(dir);
 
   invariant(
     manifest.entries["entry-server"],
     `Missing entry for "entry-server" in the server manifest`
   );
 
-  return loadModule(
-    path.resolve(buildDir, manifest.entries["entry-server"].file)
-  );
+  return loadModule(path.resolve(dir, manifest.entries["entry-server"].file));
+}
+
+function loadModule(id: string) {
+  return require(id);
 }

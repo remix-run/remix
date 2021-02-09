@@ -2,6 +2,19 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Automatically pass `Set-Cookie` headers from loaders and parent routes
+  through to entry on document requests
+- Accept `null` as argument to `cookie.parse()`
+
+### Breaking Changes
+
+- Leaf route determines headers on document requests instead of aggregating
+  headers from all routes
+
 ## 0.11.1 - Fri Feb 05 2021
 
 ### Improvements

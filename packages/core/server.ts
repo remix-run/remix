@@ -20,7 +20,8 @@ import {
   createServerHandoffString,
   serializeError
 } from "./entry";
-import { Headers, Request, Response } from "./fetch";
+import { Request, Response } from "./fetch";
+import { getDocumentHeaders } from "./headers";
 import { ConfigRouteMatch, matchRoutes } from "./match";
 import { json, jsonError } from "./responseHelpers";
 import { oneMinute } from "./seconds";
@@ -324,36 +325,7 @@ async function handleDocumentRequest(
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
-  // Calculate response headers from the matched routes.
-  let headers = matches.reduce((parentsHeaders, match, index) => {
-    let routeId = match.route.id;
-    let routeModule = routeModules[routeId];
-
-    if (typeof routeModule.headers === "function") {
-      try {
-        let response = routeLoaderResponses[index];
-        let routeHeaders = routeModule.headers({
-          loaderHeaders: response.headers,
-          parentsHeaders
-        });
-
-        if (routeHeaders) {
-          for (let [key, value] of new Headers(routeHeaders).entries()) {
-            parentsHeaders.set(key, value);
-          }
-        }
-      } catch (error) {
-        if (config.serverMode !== ServerMode.Test) {
-          console.error(
-            `There was an error getting headers for route ${routeId}`
-          );
-        }
-        console.error(error);
-      }
-    }
-
-    return parentsHeaders;
-  }, new Headers());
+  let headers = getDocumentHeaders(matches, routeModules, routeLoaderResponses);
 
   let response: Promise<Response> | Response;
   try {
