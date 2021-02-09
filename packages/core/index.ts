@@ -36,7 +36,8 @@ export type {
   EntryRouteObject,
   EntryRouteMatch,
   RouteData,
-  SerializedError
+  SerializedError,
+  ComponentDidCatchEmulator
 } from "./entry";
 
 export type {

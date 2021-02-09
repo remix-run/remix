@@ -10,7 +10,13 @@ import {
   useNavigate,
   useResolvedPath
 } from "react-router-dom";
-import type { EntryContext, SerializedError } from "@remix-run/core";
+import type {
+  EntryContext,
+  SerializedError,
+  HTMLLinkDescriptor,
+  ComponentDidCatchEmulator,
+  EntryManifest as Manifest
+} from "@remix-run/core";
 
 import {
   AppData,
@@ -23,7 +29,6 @@ import {
   isRedirectResponse
 } from "./data";
 import invariant from "./invariant";
-import type { EntryManifest as Manifest } from "@remix-run/core";
 import { createHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
@@ -37,9 +42,7 @@ import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
 } from "./errorBoundaries";
-import type { ComponentDidCatchEmulator } from "@remix-run/core/entry";
 import { getLinks, preloadBlockingLinks } from "./links";
-import { HTMLLinkDescriptor } from "@remix-run/core/links";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
