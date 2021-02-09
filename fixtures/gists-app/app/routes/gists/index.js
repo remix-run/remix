@@ -18,7 +18,7 @@ let fakeGists = [
 ];
 
 export function loader() {
-  if (process.env.NODE_ENV === "test") {
+  if (process.env.NODE_ENV !== "development") {
     return Promise.resolve(fakeGists);
   }
 
@@ -29,6 +29,12 @@ export function meta() {
   return {
     title: "Public Gists",
     description: "View the latest gists from the public"
+  };
+}
+
+export function headers() {
+  return {
+    "Cache-Control": "public, max-age=60"
   };
 }
 

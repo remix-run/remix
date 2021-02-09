@@ -72,7 +72,7 @@ export default function Methods() {
             Enctype:{" "}
             <select
               value={enctype}
-              name="enctype"
+              name="selectedEnctype"
               onChange={event =>
                 setEnctype(event.target.value as FormProps["enctype"])
               }
@@ -112,7 +112,7 @@ export default function Methods() {
             {Object.keys(pendingForm).map(key => (
               <div key={key}>
                 <dt>{key}</dt>
-                <dd>{pendingForm[key]}</dd>
+                <dd>{pendingForm![key]}</dd>
               </div>
             ))}
           </dl>

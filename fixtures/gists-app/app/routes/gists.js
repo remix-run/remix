@@ -19,9 +19,9 @@ export function loader() {
   });
 }
 
-export function headers() {
+export function headers({ loaderHeaders }) {
   return {
-    "Cache-Control": "public, max-age=60"
+    "Cache-Control": loaderHeaders.get("Cache-Control")
   };
 }
 

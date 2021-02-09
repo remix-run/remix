@@ -41,6 +41,7 @@ exports[`the server HTML for the root URL is correct 1`] = `
             >Render error in nested route with ErrorBoundary</a
           >
         </li>
+        <li><a href=\\"/prefs\\">Preferences</a></li>
       </ul>
     </nav>
     <div><p>Shared</p></div>

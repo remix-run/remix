@@ -46,7 +46,7 @@ describe("form", () => {
             <dd>post</dd>
           </div>
           <div>
-            <dt>enctype</dt>
+            <dt>selectedEnctype</dt>
             <dd>application/x-www-form-urlencoded</dd>
           </div>
           <div>
@@ -84,7 +84,7 @@ describe("form", () => {
             <dd>post</dd>
           </div>
           <div>
-            <dt>enctype</dt>
+            <dt>selectedEnctype</dt>
             <dd>application/x-www-form-urlencoded</dd>
           </div>
           <div>

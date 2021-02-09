@@ -113,6 +113,12 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "page/three",
           },
+          "routes/prefs": Object {
+            "id": "routes/prefs",
+            "moduleFile": "routes/prefs.tsx",
+            "parentId": "root",
+            "path": "prefs",
+          },
           "routes/render-errors": Object {
             "id": "routes/render-errors",
             "moduleFile": "routes/render-errors.js",
@@ -200,6 +206,12 @@ describe("readConfig", () => {
                 "moduleFile": "routes/page/three.md",
                 "parentId": "root",
                 "path": "page/three",
+              },
+              Object {
+                "id": "routes/prefs",
+                "moduleFile": "routes/prefs.tsx",
+                "parentId": "root",
+                "path": "prefs",
               },
               Object {
                 "children": Array [
