@@ -8,14 +8,15 @@ export type { AssetManifest } from "./buildManifest";
 export type {
   AppData,
   AppLoadContext,
+  RouteComponent,
+  ErrorBoundaryComponent,
   HeadersFunction,
   MetaFunction,
   LoaderFunction,
   ActionFunction,
-  RouteModules,
   RouteModule,
-  RouteComponent,
-  ErrorBoundaryComponent
+  RouteModules,
+  ServerEntryModule
 } from "./buildModules";
 
 export * as commands from "./commands";
