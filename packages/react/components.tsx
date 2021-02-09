@@ -536,10 +536,7 @@ export function Scripts() {
   if (serverHandoffString) {
     let contextScript = `window.__remixContext = ${serverHandoffString};`;
 
-    let matchesWithModules = matches.filter(
-      match => manifest.routes[match.route.id].moduleUrl != null
-    );
-    let routeModulesScript = `${matchesWithModules
+    let routeModulesScript = `${matches
       .map(
         (match, index) =>
           `import * as route${index} from ${JSON.stringify(
@@ -547,7 +544,7 @@ export function Scripts() {
           )};`
       )
       .join("\n")}
-    window.__remixRouteModules = {${matchesWithModules
+    window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};`;
 
@@ -575,13 +572,11 @@ export function Scripts() {
     .concat(nextMatches)
     .map(match => {
       let route = manifest.routes[match.route.id];
-      if (!route.moduleUrl || !route.imports) return null;
-      return route.imports.concat([route.moduleUrl]);
+      return (route.imports || []).concat([route.moduleUrl]);
     })
-    .filter(Boolean)
     .flat(1);
 
-  let preloads = manifest.entryModuleImports.concat(routePreloads as string[]);
+  let preloads = manifest.entryModuleImports.concat(routePreloads);
 
   return (
     <>

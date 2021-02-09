@@ -14,15 +14,6 @@ export function isModuleFile(filename: string): boolean {
 }
 
 /**
- * All file extensions we support for styles.
- */
-export const stylesExts = [".css"];
-
-export function isStylesFile(filename: string): boolean {
-  return stylesExts.includes(path.extname(filename));
-}
-
-/**
  * Defines routes using the filesystem convention in `app/routes`. The rules are:
  *
  * - Route paths are derived from the file path. A `.` in the filename indicates
@@ -34,23 +25,15 @@ export function isStylesFile(filename: string): boolean {
  * with a path of `gists/:username`.
  */
 export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
-  let routeFiles: {
-    [routeId: string]: {
-      module?: string;
-      styles?: string;
-    };
+  let files: {
+    [routeId: string]: string;
   } = {};
-
-  function findOrCreateFiles(file: string): typeof routeFiles[string] {
-    let id = createRouteId(file);
-    return routeFiles[id] || (routeFiles[id] = {});
-  }
 
   function defineNestedRoutes(
     defineRoute: DefineRoute,
     parentRouteId?: string
   ) {
-    let routeIds = Object.keys(routeFiles);
+    let routeIds = Object.keys(files);
     let childRouteIds = routeIds.filter(
       id => findParentRouteId(routeIds, id) === parentRouteId
     );
@@ -59,28 +42,19 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
       let routePath = createRoutePath(
         routeId.slice((parentRouteId || "routes").length + 1)
       );
-      let { module, styles } = routeFiles[routeId];
 
-      if (module) {
-        defineRoute(routePath, module, { styles }, () => {
-          defineNestedRoutes(defineRoute, routeId);
-        });
-      } else {
-        throw new Error(
-          `There is a styles file for route "${routeId}", but no module`
-        );
-      }
+      defineRoute(routePath, files[routeId], () => {
+        defineNestedRoutes(defineRoute, routeId);
+      });
     }
   }
 
-  // First, find all route modules & styles in app/routes
+  // First, find all route modules in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
-    let files = findOrCreateFiles(path.join("routes", file));
+    let routeId = createRouteId(path.join("routes", file));
 
     if (isModuleFile(file)) {
-      files.module = path.join("routes", file);
-    } else if (isStylesFile(file)) {
-      files.styles = path.join("routes", file);
+      files[routeId] = path.join("routes", file);
     } else {
       throw new Error(
         `Invalid route component file: ${path.join(appDir, "routes", file)}`
@@ -102,8 +76,6 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
         id,
         path: "/",
         moduleFile: findRootRouteModule(appDir, rootRouteName),
-        // TODO: could use this instead of special casing global.css
-        // stylesFile: path.join(appDir, "global.css"),
         children: routes
       }
     ];

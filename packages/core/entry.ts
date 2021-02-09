@@ -13,6 +13,7 @@ import { extractData } from "./data";
 import type { Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
 import type { RouteManifest } from "./routes";
+import invariant from "./invariant";
 
 // We always serialize errors because we have to hydrate. Note: This is only
 // for real errors that the developer didn't anticipate.
@@ -74,10 +75,7 @@ export interface EntryRouteObject {
   parentId?: string;
   hasAction?: boolean;
   hasLoader?: boolean;
-  // TODO: can this really be undefined? How?
-  moduleUrl?: string; // URL of the route module for `import`
-  // nomoduleUrl?: string; // URL of the route module for `SystemJS.import`
-  stylesUrl?: string; // URL for loading the CSS
+  moduleUrl: string; // URL of the route module for `import`
   imports?: string[]; // URLs of modules that need to be imported with this one
 }
 
@@ -87,9 +85,16 @@ export function createEntryRoute(
   assets: AssetManifest["entries"],
   publicPath = "/"
 ): EntryRouteObject {
+  let routeId = configRoute.id;
+
+  let asset = assets[routeId];
+  invariant(asset, `Missing route "${routeId}" in asset manifest`);
+
   let route: EntryRouteObject = {
     id: configRoute.id,
-    path: configRoute.path
+    path: configRoute.path,
+    moduleUrl: publicPath + asset.file,
+    imports: asset.imports?.map(path => publicPath + path)
   };
 
   if (typeof configRoute.caseSensitive !== "undefined") {
@@ -97,14 +102,6 @@ export function createEntryRoute(
   }
   if (configRoute.parentId) {
     route.parentId = configRoute.parentId;
-  }
-  // TODO: isn't this always true?
-  if (assets[route.id]) {
-    route.moduleUrl = publicPath + assets[route.id].file;
-    route.imports = assets[route.id].imports?.map(path => publicPath + path);
-  }
-  if (assets[`${route.id}.css`]) {
-    route.stylesUrl = publicPath + assets[`${route.id}.css`].file;
   }
   if (typeof routeModule.action !== "undefined") {
     route.hasAction = true;

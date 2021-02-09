@@ -34,13 +34,6 @@ export interface ConfigRouteObject {
   moduleFile: string;
 
   /**
-   * The path to the file that contains styles for this route, relative to
-   * `config.appDirectory`. So the styles file for the component in
-   * `routes/gists/$username.js` will be `routes/gists/$username.css`.
-   */
-  stylesFile?: string;
-
-  /**
    * Should be `true` if the `path` is case-sensitive.
    */
   caseSensitive?: boolean;
@@ -73,12 +66,6 @@ export interface DefineRouteOptions {
    * `false`.
    */
   caseSensitive?: boolean;
-
-  /**
-   * The path to the file that defines CSS styles for this route, relative to
-   * `config.appDirectory`.
-   */
-  styles?: string;
 }
 
 /**
@@ -168,9 +155,6 @@ export function defineRoutes(
 
     if (typeof options.caseSensitive !== "undefined") {
       route.caseSensitive = !!options.caseSensitive;
-    }
-    if (options.styles) {
-      route.stylesFile = options.styles;
     }
 
     let parentRoute = currentParents[currentParents.length - 1];

@@ -143,11 +143,11 @@ interface PageLinkDescriptor
     HTMLLinkDescriptor,
     | "as"
     | "href"
+    | "imagesrcset"
+    | "imagesizes"
     | "rel"
     | "type"
     | "sizes"
-    | "imagesrcset"
-    | "imagesizes"
     | "color"
     | "title"
   > {

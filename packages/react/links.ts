@@ -221,7 +221,7 @@ function getCurrentPageModulePreloadHrefs(
   return matches
     .map(match => {
       let route = manifest.routes[match.route.id];
-      let hrefs = [route.moduleUrl!];
+      let hrefs = [route.moduleUrl];
 
       if (route.imports) {
         hrefs = hrefs.concat(route.imports);
@@ -241,7 +241,7 @@ function getPageScripts(
   return matches
     .map(match => {
       let route = manifestPatch.routes[match.route.id];
-      let hrefs = [route.moduleUrl!];
+      let hrefs = [route.moduleUrl];
       if (route.imports) {
         hrefs = hrefs.concat(route.imports);
       }

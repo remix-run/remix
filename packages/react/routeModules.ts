@@ -17,10 +17,6 @@ export async function loadRouteModule(
     return routeModulesCache[route.id];
   }
 
-  if (!route.moduleUrl) {
-    return Promise.resolve(null);
-  }
-
   try {
     let routeModule = await import(route.moduleUrl);
     routeModulesCache[route.id] = routeModule;
