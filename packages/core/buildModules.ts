@@ -6,7 +6,7 @@ import type { Params } from "react-router";
 import type { EntryContext, RouteData } from "./entry";
 import { loadServerManifest } from "./buildManifest";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
-import type { LinksFunction } from "./links";
+import type { LinkDescriptor } from "./links";
 import invariant from "./invariant";
 
 /**
@@ -70,6 +70,14 @@ export interface ActionFunction {
   (args: { request: Request; context: AppLoadContext; params: Params }):
     | Promise<Response>
     | Response;
+}
+
+/**
+ * A function that defines `<link>` tags to be inserted into the `<head>` of
+ * the document on route transitions.
+ */
+export interface LinksFunction {
+  (args: { data: RouteData[string] }): LinkDescriptor[];
 }
 
 /**

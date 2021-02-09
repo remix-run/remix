@@ -14,6 +14,7 @@ export type {
   MetaFunction,
   LoaderFunction,
   ActionFunction,
+  LinksFunction,
   RouteModule,
   RouteModules,
   ServerEntryModule
@@ -53,6 +54,13 @@ export {
   fetch
 } from "./fetch";
 
+export type {
+  LinkDescriptor,
+  HTMLLinkDescriptor,
+  BlockLinkDescriptor,
+  PageLinkDescriptor
+} from "./links";
+
 export { json, redirect } from "./responseHelpers";
 
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
@@ -72,11 +80,3 @@ export { createFileSessionStorage } from "./sessions/fileStorage";
 export { createMemorySessionStorage } from "./sessions/memoryStorage";
 
 export { warnOnce } from "./warnings";
-
-export type {
-  LinksFunction,
-  LinkDescriptor,
-  HTMLLinkDescriptor,
-  BlockLinkDescriptor,
-  PageLinkDescriptor
-} from "./links";

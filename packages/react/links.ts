@@ -1,15 +1,16 @@
 import type { EntryManifest, RouteModule } from "@remix-run/core";
-import { ClientRouteObject, matchClientRoutes as matchRoutes } from "./routes";
-import type { ClientRouteMatch } from "./routes";
-import type { RouteData } from "./data";
-import { RouteModules } from "./routeModules";
-import { Location } from "history";
+import type { Location } from "history";
 import type {
   LinkDescriptor,
   HTMLLinkDescriptor,
   PageLinkDescriptor,
   BlockLinkDescriptor
-} from "@remix-run/core/links";
+} from "@remix-run/core";
+
+import type { RouteData } from "./data";
+import type { ClientRouteMatch, ClientRouteObject } from "./routes";
+import { matchClientRoutes as matchRoutes } from "./routes";
+import type { RouteModules } from "./routeModules";
 
 export function block(link: HTMLLinkDescriptor): BlockLinkDescriptor {
   return { blocker: true, link };

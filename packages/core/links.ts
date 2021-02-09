@@ -1,22 +1,9 @@
-export type {
-  LinksFunction,
-  LinkDescriptor,
-  HTMLLinkDescriptor,
-  PageLinkDescriptor,
-  BlockLinkDescriptor
-};
-
-////////////////////////////////////////////////////////////////////////////////
-interface LinksFunction {
-  (args: { data: any }): LinkDescriptor[];
-}
-
 /**
  * Remix Link descriptor, an object representation of the HTML `<link>` element.
  *
  * WHATWG Specification: https://html.spec.whatwg.org/multipage/semantics.html#the-link-element
  */
-interface HTMLLinkDescriptor {
+export interface HTMLLinkDescriptor {
   /**
    * Address of the hyperlink
    */
@@ -138,21 +125,21 @@ interface HTMLLinkDescriptor {
   title?: string;
 }
 
-interface PageLinkDescriptor
+export interface PageLinkDescriptor
   extends Omit<
     HTMLLinkDescriptor,
-    | "as"
     | "href"
-    | "imagesrcset"
-    | "imagesizes"
     | "rel"
     | "type"
     | "sizes"
+    | "imagesrcset"
+    | "imagesizes"
+    | "as"
     | "color"
     | "title"
   > {
   /**
-   * The href to the page for which to prefetch resources.
+   * The absolute path of the page to prefetch.
    */
   page: string;
 
@@ -163,12 +150,12 @@ interface PageLinkDescriptor
   data?: boolean;
 }
 
-interface BlockLinkDescriptor {
+export interface BlockLinkDescriptor {
   blocker: true;
   link: HTMLLinkDescriptor;
 }
 
-type LinkDescriptor =
+export type LinkDescriptor =
   | HTMLLinkDescriptor
   | BlockLinkDescriptor
   | PageLinkDescriptor;
