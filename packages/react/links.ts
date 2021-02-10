@@ -1,6 +1,7 @@
-import type { EntryManifest, RouteModule } from "@remix-run/core";
 import type { Location } from "history";
 import type {
+  EntryManifest,
+  RouteModule,
   LinkDescriptor,
   HTMLLinkDescriptor,
   PageLinkDescriptor,
@@ -27,63 +28,61 @@ export async function preloadBlockingLinks(
   let descriptors = routeModule.links({ data });
   if (!descriptors) return [];
 
-  let links = descriptors.reduce((transitionLinks, descriptor) => {
-    if (isPageLinkDescriptor(descriptor)) {
-      return transitionLinks;
-    } else if (isBlockDescriptor(descriptor)) {
-      transitionLinks.push(descriptor.link);
+  let blockingLinks = [];
+  for (let descriptor of descriptors) {
+    if (isPageLinkDescriptor(descriptor)) continue;
+    if (isBlockLinkDescriptor(descriptor)) {
+      blockingLinks.push(descriptor.link);
     } else if (descriptor.rel === "stylesheet") {
-      transitionLinks.push({
-        ...descriptor, // get media/crossOrigin in, etc.
-        rel: "preload",
-        as: "style",
-        href: descriptor.href
-      });
+      blockingLinks.push({ ...descriptor, rel: "preload", as: "style" });
     }
+  }
 
-    return transitionLinks;
-  }, [] as HTMLLinkDescriptor[]);
-
-  return Promise.all(
-    links.map(async descriptor => {
-      if (descriptor.rel !== "preload" || !descriptor.as || !descriptor.href) {
-        console.warn(
-          `Can only block links with the following shape: \`{ rel: "preload", as: string, href: string }\`, ignoring: ${descriptor}`
-        );
-        return;
-      }
-
-      // Don't care about errors on preloads, the real error will show up later.
-      return new Promise<void>(resolve => {
-        let link = document.createElement("link");
-        Object.assign(link, descriptor);
-
-        link.onload = async () => {
-          try {
-            // TODO: what happens when they click another link fast? will react
-            // flip out about this being in the head? Wrapped in try/catch just
-            // in case.
-            document.head.removeChild(link);
-          } catch (error) {}
-
-          if (link.as === "image") {
-            await moveImageFromDiskToMemoryCacheToAvoidLayoutShift(descriptor);
-          }
-          resolve();
-        };
-
-        document.head.appendChild(link);
-      });
-    })
-  );
+  return Promise.all(blockingLinks.map(preloadBlockingLink));
 }
 
-async function moveImageFromDiskToMemoryCacheToAvoidLayoutShift(
+async function preloadBlockingLink(
   descriptor: HTMLLinkDescriptor
-) {
-  return new Promise<void>(resolve => {
+): Promise<void> {
+  if (descriptor.rel !== "preload" || !descriptor.as || !descriptor.href) {
+    console.warn(
+      `Can only block links with the following shape: ` +
+        `\`{ rel: "preload", as: string, href: string }\`, ` +
+        `ignoring: ${JSON.stringify(descriptor)}`
+    );
+
+    return;
+  }
+
+  return new Promise(resolve => {
+    let link = document.createElement("link");
+    Object.assign(link, descriptor);
+
+    link.onload = async () => {
+      try {
+        // TODO: what happens when they click another link fast? will react
+        // flip out about this being in the head? Wrapped in try/catch just
+        // in case.
+        document.head.removeChild(link);
+      } catch (error) {}
+
+      if (link.as === "image") {
+        await moveImageFromDiskToMemoryCacheToAvoidLayoutShift(descriptor.href);
+      }
+
+      resolve();
+    };
+
+    document.head.appendChild(link);
+  });
+}
+
+function moveImageFromDiskToMemoryCacheToAvoidLayoutShift(
+  src: string
+): Promise<void> {
+  return new Promise(resolve => {
     let img = document.createElement("img");
-    img.src = descriptor.href;
+    img.src = src;
     img.style.position = "absolute";
     img.style.left = "-9999px";
     img.onload = () => {
@@ -123,7 +122,7 @@ export function getLinks(
           manifest,
           clientRoutes
         );
-      } else if (isBlockDescriptor(descriptor)) {
+      } else if (isBlockLinkDescriptor(descriptor)) {
         return [descriptor.link];
       } else if (descriptor.rel === "stylesheet") {
         // add styles as preloads so they download with higher priority than
@@ -144,16 +143,12 @@ export function getLinks(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-function isPageLinkDescriptor(link: {
-  [key: string]: any;
-}): link is PageLinkDescriptor {
-  return typeof link.page === "string";
+function isPageLinkDescriptor(object: any): object is PageLinkDescriptor {
+  return object != null && typeof object.page === "string";
 }
 
-function isBlockDescriptor(link: {
-  [key: string]: any;
-}): link is BlockLinkDescriptor {
-  return link.blocker === true;
+function isBlockLinkDescriptor(object: any): object is BlockLinkDescriptor {
+  return object != null && object.blocker === true;
 }
 
 function getPageLinkDescriptors(
@@ -202,13 +197,7 @@ function getDataLinks(
       let searchParams = new URLSearchParams(search);
       searchParams.append("_data", match.route.id);
       let href = `${pathname}?${searchParams}`;
-
-      return {
-        rel: "prefetch",
-        as: "fetch",
-        href,
-        ...rest
-      } as HTMLLinkDescriptor;
+      return { rel: "prefetch", as: "fetch", href, ...rest };
     });
 }
 
