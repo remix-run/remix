@@ -1,6 +1,6 @@
 import { createCookie, isCookie } from "../cookies";
 import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
-import { warnOnceAboutSigningSessionCookies, createSession } from "../sessions";
+import { warnOnceAboutSigningSessionCookie, createSession } from "../sessions";
 
 interface CookieSessionStorageOptions {
   /**
@@ -26,7 +26,7 @@ export function createCookieSessionStorage({
     ? cookieArg
     : createCookie((cookieArg && cookieArg.name) || "__session", cookieArg);
 
-  warnOnceAboutSigningSessionCookies(cookie);
+  warnOnceAboutSigningSessionCookie(cookie);
 
   return {
     async getSession(cookieHeader, options) {

@@ -210,7 +210,7 @@ export function createSessionStorage({
     ? cookieArg
     : createCookie((cookieArg && cookieArg.name) || "__session", cookieArg);
 
-  warnOnceAboutSigningSessionCookies(cookie);
+  warnOnceAboutSigningSessionCookie(cookie);
 
   return {
     async getSession(cookieHeader, options) {
@@ -239,11 +239,12 @@ export function createSessionStorage({
   };
 }
 
-export function warnOnceAboutSigningSessionCookies(cookie: Cookie) {
+export function warnOnceAboutSigningSessionCookie(cookie: Cookie) {
   warnOnce(
     cookie.isSigned,
-    `Session cookies should be signed to prevent tampering on the client ` +
-      `before they are sent back to the server. See https://remix.run/dashboard/docs/cookies#signing-cookies ` +
+    `The "${cookie.name}" cookie is not signed, but session cookies should be ` +
+      `signed to prevent tampering on the client before they are sent back to the ` +
+      `server. See https://remix.run/dashboard/docs/cookies#signing-cookies ` +
       `for more information.`
   );
 }
