@@ -64,11 +64,15 @@ async function updatePackageConfig(packageName, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
-async function updateChanges(version, date = new Date()) {
+function isPrereleaseVersion(version) {
+  return semver.prerelease(version) != null;
+}
+
+async function updateChangesVersion(version, date) {
   let file = path.resolve(__dirname, "../CHANGES.md");
   let contents = await fsp.readFile(file, "utf-8");
   let updated = contents.replace(
-    /(## Unreleased)|(## \d+\.\d+\.\d+-\w+\.\d+)/,
+    /## Unreleased/,
     `## ${version} - ${date.toDateString()}`
   );
   await fsp.writeFile(file, updated);
@@ -138,9 +142,13 @@ async function run(args) {
     );
   }
 
-  // - Update CHANGES.md release date
-  await updateChanges(nextVersion);
-  console.log(chalk.green(`  Updated release version and date in CHANGES.md`));
+  if (!isPrereleaseVersion(nextVersion)) {
+    // - Update CHANGES.md release date
+    await updateChangesVersion(nextVersion, new Date());
+    console.log(
+      chalk.green(`  Updated release version and date in CHANGES.md`)
+    );
+  }
 
   // - Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
