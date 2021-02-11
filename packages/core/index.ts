@@ -12,9 +12,9 @@ export type {
   ErrorBoundaryComponent,
   HeadersFunction,
   MetaFunction,
+  LinksFunction,
   LoaderFunction,
   ActionFunction,
-  LinksFunction,
   RouteModule,
   RouteModules,
   ServerEntryModule
@@ -27,7 +27,13 @@ export { build, watch, generate, write } from "./compiler";
 export type { RemixConfig } from "./config";
 export { ServerMode, readConfig } from "./config";
 
-export type { Cookie, CookieOptions } from "./cookies";
+export type {
+  CookieParseOptions,
+  CookieSerializeOptions,
+  CookieSignatureOptions,
+  CookieOptions,
+  Cookie
+} from "./cookies";
 export { createCookie, isCookie } from "./cookies";
 
 export type {

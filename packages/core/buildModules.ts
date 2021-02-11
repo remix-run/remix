@@ -55,6 +55,14 @@ export interface MetaFunction {
 }
 
 /**
+ * A function that defines `<link>` tags to be inserted into the `<head>` of
+ * the document on route transitions.
+ */
+export interface LinksFunction {
+  (args: { data: RouteData[string] }): LinkDescriptor[];
+}
+
+/**
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
@@ -70,14 +78,6 @@ export interface ActionFunction {
   (args: { request: Request; context: AppLoadContext; params: Params }):
     | Promise<Response>
     | Response;
-}
-
-/**
- * A function that defines `<link>` tags to be inserted into the `<head>` of
- * the document on route transitions.
- */
-export interface LinksFunction {
-  (args: { data: RouteData[string] }): LinkDescriptor[];
 }
 
 /**
