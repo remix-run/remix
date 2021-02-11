@@ -2,6 +2,24 @@ import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 import { sign, unsign } from "cookie-signature";
 
+export type { CookieParseOptions, CookieSerializeOptions };
+
+export interface CookieSignatureOptions {
+  /**
+   * An array of secrets that may be used to sign/unsign the value of a cookie.
+   *
+   * The array makes it easy to rotate secrets. New secrets should be added to
+   * the beginning of the array. `cookie.serialize()` will always use the first
+   * value in the array, but `cookie.parse()` may use any of them so that
+   * cookies that were signed with older secrets still work.
+   */
+  secrets?: string[];
+}
+
+export type CookieOptions = CookieParseOptions &
+  CookieSerializeOptions &
+  CookieSignatureOptions;
+
 /**
  * A HTTP cookie.
  *
@@ -43,22 +61,6 @@ export interface Cookie {
    */
   serialize(value: any, options?: CookieSerializeOptions): string;
 }
-
-interface CookieSignatureOptions {
-  /**
-   * An array of secrets that may be used to sign/unsign the value of a cookie.
-   *
-   * The array makes it easy to rotate secrets. New secrets should be added to
-   * the beginning of the array. `cookie.serialize()` will always use the first
-   * value in the array, but `cookie.parse()` may use any of them so that
-   * cookies that were signed with older secrets still work.
-   */
-  secrets?: string[];
-}
-
-export type CookieOptions = CookieParseOptions &
-  CookieSerializeOptions &
-  CookieSignatureOptions;
 
 /**
  * Creates and returns a new Cookie.
