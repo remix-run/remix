@@ -548,11 +548,10 @@ export function Scripts() {
     serverHandoffString
   } = useRemixEntryContext();
 
-  // browser renders nothing for this, server renders script tags
-  let serverOnlyTags = null;
-
-  if (serverHandoffString) {
-    let contextScript = `window.__remixContext = ${serverHandoffString};`;
+  let initialScripts = React.useMemo(() => {
+    let contextScript = serverHandoffString
+      ? `window.__remixContext = ${serverHandoffString};`
+      : "";
 
     let routeModulesScript = `${matches
       .map(
@@ -566,9 +565,12 @@ export function Scripts() {
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};`;
 
-    serverOnlyTags = (
+    return (
       <>
-        <script dangerouslySetInnerHTML={createHtml(contextScript)} />
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={createHtml(contextScript)}
+        />
         <script
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
@@ -577,7 +579,11 @@ export function Scripts() {
         <script src={manifest.entryModuleUrl} type="module" />
       </>
     );
-  }
+    // disabled deps array because we are purposefully only rendering this once
+    // for hydration, after that we want to just continue rendering the initial
+    // scripts as they were when the page first loaded
+    // eslint-disable-next-line
+  }, []);
 
   // avoid waterfall when importing the next route module
   let nextMatches = React.useMemo(
@@ -601,7 +607,7 @@ export function Scripts() {
       {dedupe(preloads).map(path => (
         <link key={path} rel="modulepreload" href={path} />
       ))}
-      <div suppressHydrationWarning>{serverOnlyTags}</div>
+      {initialScripts}
     </>
   );
 }
