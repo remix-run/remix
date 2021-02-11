@@ -1,3 +1,11 @@
+/* purgecss start ignore */
+/* @tailwind base; */
+/* @tailwind components; */
+/* purgecss end ignore */
+
+/* @tailwind utilities; */
+/* @tailwind screens; */
+
 @font-face {
   font-family: system;
   font-style: normal;

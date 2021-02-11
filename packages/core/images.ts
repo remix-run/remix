@@ -13,6 +13,7 @@ import { promises as fsp } from "fs";
 import path from "path";
 import sharp from "sharp";
 import prettyBytes from "pretty-bytes";
+import prettyMs from "pretty-ms";
 
 import type { RemixConfig } from "./config";
 
@@ -266,7 +267,7 @@ async function getPlaceholder(
 
   try {
     let placeholder = (await fsp.readFile(placeholderFileName)).toString();
-    log("placeholder exists, skipping", name);
+    log("img placeholder exists, skipping", name);
     return placeholder;
   } catch (e) {}
 
@@ -399,8 +400,9 @@ async function processBuildImageAsset(
   await image.toFile(filePath);
   let stats = await fsp.stat(filePath);
 
+  let time = Date.now() - start;
   console.log(
-    `Built image: ${Date.now() - start}ms, ${prettyBytes(stats.size)}, ${
+    `Built image: ${prettyMs(time)}, ${prettyBytes(stats.size)}, ${
       buildImageAsset.name
     }`
   );

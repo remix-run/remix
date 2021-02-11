@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Links, Scripts, useRouteData, useMatches } from "@remix-run/react";
 import { Outlet, Link } from "react-router-dom";
-import styles from "url:./styles/app.css";
+import styles from "css:./styles/app.css";
 
 export function links() {
   return [
@@ -43,8 +43,8 @@ export default function Root() {
           <ol className="breadcrumbs">
             {matches
               .filter(match => match.handle && match.handle.breadcrumb)
-              .map(match => (
-                <li>{match.handle.breadcrumb(match)}</li>
+              .map((match, index) => (
+                <li key={index}>{match.handle.breadcrumb(match)}</li>
               ))}
           </ol>
         </header>

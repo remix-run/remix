@@ -12,14 +12,25 @@
   },
   "dependencies": {
     "@mdx-js/react": "^1.6.22",
+    "autoprefixer": "^10.2.4",
     "compression": "^1.7.4",
+    "cssnano": "^4.1.10",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
+    "postcss-nested": "^5.0.3",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^6.0.0-beta.0"
   },
   "devDependencies": {
-    "pm2": "^4.5.1"
-  }
+    "autoprefixer": "^10.2.4",
+    "cssnano": "^4.1.10",
+    "pm2": "^4.5.1",
+    "postcss": "^8.2.6",
+    "postcss-cli": "^8.3.1",
+    "tailwindcss": "^2.0.3"
+  },
+  "browserslist": [
+    "last 4 version"
+  ]
 }

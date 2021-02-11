@@ -34,6 +34,7 @@ import mdx from "./rollup/mdx";
 import routeModules from "./rollup/routeModules";
 import url from "./rollup/url";
 import img from "./rollup/img";
+import css from "./rollup/css";
 
 /**
  * All file extensions we support for entry files.
@@ -185,7 +186,7 @@ function isLocalModuleId(id: string): boolean {
   );
 }
 
-const importHints = ["client:", "img:", "server:", "url:"];
+const importHints = ["client:", "css:", "img:", "server:", "url:"];
 
 function isImportHint(id: string): boolean {
   return importHints.some(hint => id.startsWith(hint));
@@ -335,6 +336,7 @@ function getBuildPlugins({
     routeModules({ target }),
     json(),
     img({ target }),
+    css({ target, mode }),
     url({ target }),
     clientServer({ target }),
     babel({
