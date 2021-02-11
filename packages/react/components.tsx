@@ -483,6 +483,21 @@ export function RemixRoute({ id: routeId }: { id: string }) {
 export { Link };
 
 /**
+ * Renders the `<link>` tags for the current routes.
+ */
+export function Links() {
+  let { links } = useRemixEntryContext();
+
+  return (
+    <>
+      {links.map(link => (
+        <link key={link.rel + link.href} {...link} />
+      ))}
+    </>
+  );
+}
+
+/**
  * Renders the `<title>` and `<meta>` tags for the current routes.
  */
 export function Meta() {
@@ -521,8 +536,8 @@ export function Meta() {
 }
 
 /**
- * Renders the <script> tags needed for the initial render of this page.
- * Bundles for additional routes are loaded later as needed.
+ * Renders the `<script>` tags needed for the initial render. Bundles for
+ * additional routes are loaded later as needed.
  */
 export function Scripts() {
   let {
@@ -700,10 +715,33 @@ export function useFormAction(action = "."): string {
   return path.pathname + path.search;
 }
 
-interface SubmitOptions {
+export interface SubmitOptions {
+  /**
+   * The HTTP method used to submit the form. Overrides `<form method>`.
+   * Defaults to "GET".
+   */
   method?: FormMethod;
+
+  /**
+   * The action URL path used to submit the form. Overrides `<form action>`.
+   * Defaults to the path of the current route.
+   *
+   * Note: It is assumed the path is already resolved. If you need to resolve a
+   * relative path, use `useFormAction`.
+   */
   action?: string;
+
+  /**
+   * The action URL used to submit the form. Overrides `<form encType>`.
+   * Defaults to "application/x-www-form-urlencoded".
+   */
   encType?: FormEncType;
+
+  /**
+   * Set `true` to replace the current entry in the browser's history stack
+   * instead of creating a new one (i.e. stay on "the same page"). Defaults
+   * to `false`.
+   */
   replace?: boolean;
 }
 
@@ -743,6 +781,7 @@ export interface SubmitFunction {
  */
 export function useSubmit(): SubmitFunction {
   let navigate = useNavigate();
+  let defaultAction = useFormAction();
 
   return (target, options = {}) => {
     let method: string;
@@ -779,12 +818,13 @@ export function useSubmit(): SubmitFunction {
     } else {
       if (isHtmlElement(target)) {
         throw new Error(
-          `Cannot submit element that is not <form>, <button>, or <input type="submit">`
+          `Cannot submit element that is not <form>, <button>, or ` +
+            `<input type="submit|image">`
         );
       }
 
-      method = options.method || "get";
-      action = options.action || window.location.href;
+      method = options.method || "GET";
+      action = options.action || defaultAction;
       encType = options.encType || "application/x-www-form-urlencoded";
 
       if (target instanceof FormData) {
@@ -880,9 +920,4 @@ export function usePendingFormSubmit(): FormSubmit | undefined {
  */
 export function usePendingLocation(): Location | undefined {
   return useRemixEntryContext().pendingLocation;
-}
-
-export function Links() {
-  let { links } = useRemixEntryContext();
-  return links.map(link => <link key={link.rel + link.href} {...link} />);
 }
