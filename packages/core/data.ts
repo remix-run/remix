@@ -2,7 +2,7 @@ import type { Params } from "react-router";
 
 import type { AppLoadContext, AppData, RouteModule } from "./buildModules";
 import { Request, Response, isResponseLike } from "./fetch";
-import { json } from "./responseHelpers";
+import { json } from "./responses";
 
 export async function loadRouteData(
   routeId: string,

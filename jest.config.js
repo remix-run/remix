@@ -1,11 +1,6 @@
 module.exports = {
   projects: [
     {
-      displayName: "architect",
-      testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/architect/**/*-test.[jt]s?(x)"]
-    },
-    {
       displayName: "cli",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/cli/**/*-test.[jt]s?(x)"]
@@ -16,19 +11,9 @@ module.exports = {
       testMatch: ["<rootDir>/packages/core/**/*-test.[jt]s?(x)"]
     },
     {
-      displayName: "data",
-      testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/data/**/*-test.[jt]s?(x)"]
-    },
-    {
       displayName: "express",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/express/**/*-test.[jt]s?(x)"]
-    },
-    {
-      displayName: "vercel",
-      testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/vercel/**/*-test.[jt]s?(x)"]
     },
     {
       displayName: "gists-app",

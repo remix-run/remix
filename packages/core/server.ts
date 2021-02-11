@@ -17,7 +17,7 @@ import {
 import { Request, Response } from "./fetch";
 import { getDocumentHeaders } from "./headers";
 import { ConfigRouteMatch, matchRoutes } from "./match";
-import { json, jsonError } from "./responseHelpers";
+import { json, jsonError } from "./responses";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context

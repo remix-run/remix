@@ -68,7 +68,7 @@ export type {
   PageLinkDescriptor
 } from "./links";
 
-export { json, redirect } from "./responseHelpers";
+export { json, redirect } from "./responses";
 
 export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
 
