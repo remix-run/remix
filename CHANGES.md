@@ -7,6 +7,9 @@ This is a history of changes to [Remix](https://remix.run).
 ### Improvements
 
 - Added support for excluding `*.client.js` files from the server bundles and `*.server.js` files from the browser bundles
+- Added `css:` imports with postcss processing
+- Added `useMatches()` hook to get access to the layout's route matches and data
+- Added Route Module `handle` export to create application layout conventions
 
 ### Bug Fixes
 

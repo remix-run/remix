@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { Meta, Links, Scripts, useRouteData } from "@remix-run/react";
-import { Outlet } from "react-router-dom";
+import { Links, Scripts, useRouteData, useMatches } from "@remix-run/react";
+import { Outlet, Link } from "react-router-dom";
 import styles from "url:./styles/app.css";
 
 export function links() {
@@ -19,6 +19,10 @@ export function loader({ request }) {
   };
 }
 
+export let handle = {
+  breadcrumb: () => <Link to="/">Home</Link>
+};
+
 export default function Root() {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
@@ -26,15 +30,24 @@ export default function Root() {
   });
 
   let data = useRouteData();
+  let matches = useMatches();
 
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <Meta />
         <Links />
       </head>
       <body className="m-4">
+        <header>
+          <ol className="breadcrumbs">
+            {matches
+              .filter(match => match.handle && match.handle.breadcrumb)
+              .map(match => (
+                <li>{match.handle.breadcrumb(match)}</li>
+              ))}
+          </ol>
+        </header>
         <div data-test-id="content">
           <Outlet />
         </div>

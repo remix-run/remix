@@ -7,10 +7,6 @@ const port = process.env.PORT || 3000;
 
 let app = express();
 
-if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
-  app.use(morgan("dev"));
-}
-
 app.use(compression());
 
 app.use(
@@ -18,6 +14,10 @@ app.use(
     maxAge: process.env.NODE_ENV === "production" ? "1y" : undefined
   })
 );
+
+if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
+  app.use(morgan("dev"));
+}
 
 // server-side redirect
 app.get("/user-gists/:username", (req, res) => {

@@ -1,10 +1,3 @@
-/* purgecss start ignore */
-@tailwind base;
-@tailwind components;
-/* purgecss end ignore */
-
-@tailwind utilities;
-
 @font-face {
   font-family: system;
   font-style: normal;
@@ -16,4 +9,22 @@
 
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+.breadcrumbs {
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumbs li:after {
+  content: " >";
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+}
+
+.breadcrumbs li:last-child:after {
+  content: "";
+  display: none;
 }

@@ -910,6 +910,19 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
+export function useMatches() {
+  let { matches, routeData, routeModules } = useRemixEntryContext();
+  return matches.map(match => {
+    let { pathname, params } = match;
+    return {
+      pathname,
+      params,
+      data: routeData[match.route.id],
+      handle: routeModules[match.route.id].handle
+    };
+  });
+}
+
 /**
  * Returns the data for the current route from `data/routes/*`.
  */

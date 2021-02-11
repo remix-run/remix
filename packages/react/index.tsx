@@ -31,7 +31,8 @@ export {
   usePendingFormSubmit,
   useRouteData,
   usePendingLocation,
-  useBeforeUnload
+  useBeforeUnload,
+  useMatches
 } from "./components";
 
 export type { FormMethod, FormEncType, FormSubmit } from "./data";

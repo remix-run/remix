@@ -92,6 +92,7 @@ export interface RouteModule {
   loader?: LoaderFunction;
   action?: ActionFunction;
   links?: LinksFunction;
+  handle?: any;
 }
 
 export interface RouteModules {

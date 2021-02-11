@@ -1,5 +1,5 @@
 import { useRouteData } from "@remix-run/react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { json, redirect } from "@remix-run/data";
 
 let fakeGists = [
@@ -58,6 +58,12 @@ export function meta({ data, params }) {
     description: `View all of the gists from ${username}`
   };
 }
+
+export let handle = {
+  breadcrumb: ({ params }) => (
+    <Link to={`gists/${params.username}`}>{params.username}</Link>
+  )
+};
 
 export default function UserGists() {
   let { username } = useParams();

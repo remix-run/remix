@@ -26,6 +26,12 @@ export async function loader() {
   return res.json();
 }
 
+export function headers() {
+  return {
+    "Cache-Control": "public, max-age=60"
+  };
+}
+
 export function meta() {
   return {
     title: "Public Gists",
@@ -33,11 +39,9 @@ export function meta() {
   };
 }
 
-export function headers() {
-  return {
-    "Cache-Control": "public, max-age=60"
-  };
-}
+export let handle = {
+  breadcrumb: () => <span>Public</span>
+};
 
 export default function GistsIndex() {
   let data = useRouteData();

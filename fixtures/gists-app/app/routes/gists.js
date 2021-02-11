@@ -30,6 +30,10 @@ export function headers({ loaderHeaders }) {
   };
 }
 
+export let handle = {
+  breadcrumb: () => <Link to="/gists">Gists</Link>
+};
+
 export default function Gists() {
   let locationPending = usePendingLocation();
   let { users } = useRouteData();

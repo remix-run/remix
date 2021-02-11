@@ -1,6 +1,7 @@
 import { useRouteData, Form, useSubmit } from "@remix-run/react";
 import type { MetaFunction, Loader, Action } from "@remix-run/data";
 import { redirect } from "@remix-run/data";
+import { Link } from "react-router-dom";
 
 import { userPrefsCookie } from "../cookies";
 
@@ -39,6 +40,10 @@ export let action: Action = async ({ request }) => {
   });
 };
 
+export let handle = {
+  breadcrumb: () => <Link to="/prefs">Preferences</Link>
+};
+
 export default function UserPrefs() {
   let userPrefs = useRouteData();
   let submit = useSubmit();
@@ -68,7 +73,7 @@ export default function UserPrefs() {
         <h1>User Preferences</h1>
       </header>
       <div>
-        <Form method="POST" replace onChange={handleChange}>
+        <Form method="post" replace onChange={handleChange}>
           <p>
             <label>
               Language:{" "}
