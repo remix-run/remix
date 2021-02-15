@@ -532,6 +532,9 @@ export function Meta() {
       {Object.keys(meta).map(name =>
         name === "title" ? (
           <title key="title">{meta[name]}</title>
+        ) : name.startsWith("og:") ? (
+          // Open Graph protocol - https://ogp.me/
+          <meta key={name} property={name} content={meta[name]} />
         ) : (
           <meta key={name} name={name} content={meta[name]} />
         )

@@ -7,6 +7,7 @@ This is a history of changes to [Remix](https://remix.run).
 ### Bug Fixes
 
 - Fixed using non-HTML elements (e.g. `FormData`, `URLSearchParams`) with `useSubmit`
+- Fixed using Open Graph tags with route `meta` function
 
 ## 0.12.0 - Thu Feb 11 2021
 
