@@ -66,8 +66,13 @@ let pendingFormSubmit: FormSubmit | undefined = undefined;
 let formState = FormState.Idle;
 
 // 1. When a form is submitted, we go into a pending state
-function setFormPending(method: string, encType: string, data: FormData): void {
-  pendingFormSubmit = { method, encType, data };
+function setFormPending(
+  method: string,
+  encType: string,
+  data: FormData,
+  action: string
+): void {
+  pendingFormSubmit = { method, encType, data, action };
   formState = method === "get" ? FormState.PendingGet : FormState.Pending;
 }
 
@@ -850,7 +855,7 @@ export function useSubmit(): SubmitFunction {
       }
     }
 
-    setFormPending(method, encType, formData);
+    setFormPending(method, encType, formData, action);
 
     let url = new URL(action);
 

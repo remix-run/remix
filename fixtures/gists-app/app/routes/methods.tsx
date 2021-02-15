@@ -2,6 +2,7 @@ import * as React from "react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
 import { json, redirect } from "@remix-run/data";
+import type { LoaderFunction, ActionFunction } from "@remix-run/data";
 import styles from "url:../styles/methods.css";
 
 import { getSession, commitSession } from "../sessionStorage";
@@ -10,15 +11,15 @@ export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 
-export async function loader({ request }) {
+export let loader: LoaderFunction = async ({ request }) => {
   let session = await getSession(request.headers.get("Cookie"));
 
   return json({
     body: JSON.parse(session.get("body") || null)
   });
-}
+};
 
-export async function action({ request }) {
+export let action: ActionFunction = async ({ request }) => {
   let contentType = request.headers.get("Content-Type");
   if (contentType !== "application/x-www-form-urlencoded") {
     throw new Error(`${contentType} is not yet supported`);
@@ -39,7 +40,7 @@ export async function action({ request }) {
       "Set-Cookie": await commitSession(session)
     }
   });
-}
+};
 
 export default function Methods() {
   let data = useRouteData<{ body: any }>();
@@ -79,7 +80,7 @@ export default function Methods() {
               value={enctype}
               name="selectedEnctype"
               onChange={event =>
-                setEnctype(event.target.value as FormProps["enctype"])
+                setEnctype(event.target.value as FormProps["encType"])
               }
             >
               <option>application/x-www-form-urlencoded</option>

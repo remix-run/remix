@@ -13,6 +13,7 @@ export interface FormSubmit {
   method: string;
   encType: string;
   data: FormData;
+  action: string;
 }
 
 export function isErrorResponse(response: any): boolean {
