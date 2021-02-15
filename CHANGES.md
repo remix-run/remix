@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Fixed using non-HTML elements (e.g. `FormData`, `URLSearchParams`) with `useSubmit`
+
 ## 0.12.0 - Thu Feb 11 2021
 
 ### Improvements

@@ -835,16 +835,14 @@ export function useSubmit(): SubmitFunction {
 
       if (target instanceof FormData) {
         formData = target;
-      } else if (target instanceof URLSearchParams) {
-        formData = new FormData();
-
-        for (let [name, value] of target) {
-          formData.set(name, value);
-        }
       } else {
         formData = new FormData();
 
-        if (target != null) {
+        if (target instanceof URLSearchParams) {
+          for (let [name, value] of target) {
+            formData.set(name, value);
+          }
+        } else if (target != null) {
           for (let name of Object.keys(target)) {
             formData.set(name, target[name]);
           }
@@ -870,20 +868,20 @@ export function useSubmit(): SubmitFunction {
   };
 }
 
-function isButtonElement(object: any): object is HTMLButtonElement {
-  return object != null && object.tagName.toLowerCase() === "button";
-}
-
-function isFormElement(object: any): object is HTMLFormElement {
-  return object != null && object.tagName.toLowerCase() === "form";
-}
-
 function isHtmlElement(object: any): object is HTMLElement {
   return object != null && typeof object.tagName === "string";
 }
 
+function isButtonElement(object: any): object is HTMLButtonElement {
+  return isHtmlElement(object) && object.tagName.toLowerCase() === "button";
+}
+
+function isFormElement(object: any): object is HTMLFormElement {
+  return isHtmlElement(object) && object.tagName.toLowerCase() === "form";
+}
+
 function isInputElement(object: any): object is HTMLInputElement {
-  return object != null && object.tagName.toLowerCase() === "input";
+  return isHtmlElement(object) && object.tagName.toLowerCase() === "input";
 }
 
 /**
