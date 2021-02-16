@@ -177,27 +177,17 @@ async function handleDocumentRequest(
   let statusCode = 200;
 
   if (!matches) {
-    matches = [
-      {
-        params: {},
-        pathname: url.pathname,
-        route: {
-          id: "root",
-          path: "/",
-          moduleFile: "root"
-        }
-      },
-      {
-        params: {},
-        pathname: url.pathname,
-        route: {
-          id: "routes/404",
-          path: url.pathname,
-          moduleFile: "routes/404",
-          parentId: "root"
-        }
-      }
-    ];
+    // TODO: Provide a default 404 page
+    throw new Error(
+      `There is no route that matches ${url.pathname}. Please add ` +
+        `a routes/404.js file`
+    );
+  }
+
+  let leafMatch = matches[matches.length - 1];
+  let leafRoute = leafMatch.route;
+
+  if (leafRoute.id === "routes/404") {
     statusCode = 404;
   }
 
@@ -210,9 +200,6 @@ async function handleDocumentRequest(
 
   // Handle action requests.
   if (isActionRequest(request)) {
-    let leafMatch = matches[matches.length - 1];
-    let leafRoute = leafMatch.route;
-
     let response = await callRouteAction(
       leafRoute.id,
       routeModules[leafRoute.id],
