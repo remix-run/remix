@@ -4,8 +4,8 @@ import { Link } from "@remix-run/react";
 import Shared from "../components/Shared";
 import Guitar from "../components/Guitar";
 
-import { message as clientMessage } from "client:../scripts/client.js";
-import { message as serverMessage } from "server:../scripts/server.js";
+import { message as clientMessage } from "../scripts/client.client.js";
+import { message as serverMessage } from "../scripts/server.server.js";
 
 export function meta() {
   return {

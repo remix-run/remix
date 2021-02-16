@@ -6,7 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Improvements
 
-- Added `client:` and `server:` import hints for client/server-specific modules
+- Added support for excluding `*.client.js` files from the server bundles and `*.server.js` files from the browser bundles
 
 ### Bug Fixes
 

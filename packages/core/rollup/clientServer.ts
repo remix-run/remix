@@ -1,58 +1,37 @@
 import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../build";
-
-const emptyId = "\0clientServerEmpty";
+import empty from "./empty";
 
 /**
- * Rollup plugin that uses an empty shim for modules imported using
- * `client:...` and/or `server:...` depending on the build target. `client:...`
- * modules are empty in the server build, and `server:...` modules are empty in
- * the browser build.
+ * All file extensions we support for JavaScript modules.
+ */
+const moduleExts = [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
+
+function isClientOnlyModuleId(id: string): boolean {
+  return moduleExts.some(ext => id.endsWith(`.client${ext}`));
+}
+
+function isServerOnlyModuleId(id: string): boolean {
+  return moduleExts.some(ext => id.endsWith(`.server${ext}`));
+}
+
+/**
+ * Rollup plugin that excludes `*.client.js` files from the server build and
+ * `*.server.js` files from the browser build.
  */
 export default function clientServerPlugin({
   target
 }: {
   target: string;
 }): Plugin {
-  console.log(`create client plugin for ${target}`);
-
-  return {
-    name: "client",
-
-    resolveId(id, importer) {
-      if (id === emptyId) return id;
-
-      if (
-        id[0] === "\0" ||
-        !(id.startsWith("client:") || id.startsWith("server:"))
-      ) {
-        return;
-      }
-
-      let hint = id.slice(0, 7);
-
-      if (
-        (hint === "client:" && target === BuildTarget.Server) ||
-        (hint === "server:" && target === BuildTarget.Browser)
-      ) {
-        return emptyId;
-      }
-
-      return this.resolve(id.slice(hint.length), importer, {
-        skipSelf: true
-      });
-    },
-
-    load(id) {
-      if (id !== emptyId) {
-        return;
-      }
-
-      return {
-        code: "export default {}",
-        syntheticNamedExports: true
-      };
+  return empty({
+    name: "clientServer",
+    isEmptyModuleId(id) {
+      return (
+        (isClientOnlyModuleId(id) && target === BuildTarget.Server) ||
+        (isServerOnlyModuleId(id) && target === BuildTarget.Browser)
+      );
     }
-  };
+  });
 }
