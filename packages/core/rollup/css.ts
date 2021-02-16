@@ -11,7 +11,7 @@ import { BuildMode, BuildTarget } from "../build";
 import { getRemixConfig } from "./remixConfig";
 import type { RemixConfig } from "../config";
 
-const IMPLICIT_URL = /\.(?:css|less|scss|sass)$/i;
+// const IMPLICIT_URL = /\.(?:css|less|scss|sass)$/i;
 
 export default function css({
   target,
@@ -39,7 +39,9 @@ export default function css({
 
       if (id.startsWith("css:")) {
         id = id.slice(4);
-      } else if (!IMPLICIT_URL.test(id)) {
+        // } else if (!IMPLICIT_URL.test(id)) {
+        //   return;
+      } else {
         return;
       }
 
