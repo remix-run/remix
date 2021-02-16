@@ -10,6 +10,7 @@ This is a history of changes to [Remix](https://remix.run).
 - Added `css:` imports with postcss processing
 - Added `useMatches()` hook to get access to the layout's route matches and data
 - Added Route Module `handle` export to create application layout conventions
+- Added `action` to `usePendingFormSubmit()`
 
 ### Bug Fixes
 
