@@ -15,7 +15,7 @@ declare global {
 
 /**
  * The entry point for a Remix app when it is rendered in the browser (in
- * `entry-browser.js`). This component is used by React to hydrate the HTML
+ * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
 export default function RemixBrowser(): ReactElement {

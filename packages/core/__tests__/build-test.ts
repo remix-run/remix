@@ -46,7 +46,7 @@ describe.skip("building", () => {
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
           "_shared/Shared-072c977d.js",
-          "entry-server.js",
+          "entry.server.js",
           "pages/one.js",
           "pages/two.js",
           "root.js",
@@ -62,11 +62,10 @@ describe.skip("building", () => {
           "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
+          "routes/prefs.js",
           "routes/render-errors.js",
           "routes/render-errors/nested.js",
           "server-manifest.json",
-          "styles/app.css",
-          "styles/gists.css",
           "styles/methods.css",
           "styles/redText.css",
         ]
@@ -79,8 +78,8 @@ describe.skip("building", () => {
         `
         Object {
           "entries": Object {
-            "entry-server": Object {
-              "file": "entry-server.js",
+            "entry.server": Object {
+              "file": "entry.server.js",
               "imports": Array [
                 "react/jsx-runtime",
                 "react-dom/server",
@@ -152,6 +151,7 @@ describe.skip("building", () => {
               "file": "routes/index.js",
               "imports": Array [
                 "react/jsx-runtime",
+                "react",
                 "@remix-run/react",
                 "_shared/Shared-072c977d.js",
               ],
@@ -197,6 +197,15 @@ describe.skip("building", () => {
                 "@mdx-js/react",
               ],
             },
+            "routes/prefs": Object {
+              "file": "routes/prefs.js",
+              "imports": Array [
+                "react/jsx-runtime",
+                "@remix-run/react",
+                "react-router-dom",
+                "@remix-run/data",
+              ],
+            },
             "routes/render-errors": Object {
               "file": "routes/render-errors.js",
               "imports": Array [
@@ -209,12 +218,6 @@ describe.skip("building", () => {
               "imports": Array [
                 "react/jsx-runtime",
               ],
-            },
-            "styles/app.css": Object {
-              "file": "styles/app.css",
-            },
-            "styles/gists.css": Object {
-              "file": "styles/gists.css",
             },
             "styles/methods.css": Object {
               "file": "styles/methods.css",
@@ -240,7 +243,7 @@ describe.skip("building", () => {
       expect(getFilenames(output)).toMatchInlineSnapshot(`
         Array [
           "_shared/Shared-072c977d.js",
-          "entry-server.js",
+          "entry.server.js",
           "pages/one.js",
           "pages/two.js",
           "root.js",
@@ -256,11 +259,10 @@ describe.skip("building", () => {
           "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
+          "routes/prefs.js",
           "routes/render-errors.js",
           "routes/render-errors/nested.js",
           "server-manifest.json",
-          "styles/app.css",
-          "styles/gists.css",
           "styles/methods.css",
           "styles/redText.css",
         ]
@@ -273,8 +275,8 @@ describe.skip("building", () => {
         `
         Object {
           "entries": Object {
-            "entry-server": Object {
-              "file": "entry-server.js",
+            "entry.server": Object {
+              "file": "entry.server.js",
               "imports": Array [
                 "react/jsx-runtime",
                 "react-dom/server",
@@ -346,6 +348,7 @@ describe.skip("building", () => {
               "file": "routes/index.js",
               "imports": Array [
                 "react/jsx-runtime",
+                "react",
                 "@remix-run/react",
                 "_shared/Shared-072c977d.js",
               ],
@@ -391,6 +394,15 @@ describe.skip("building", () => {
                 "@mdx-js/react",
               ],
             },
+            "routes/prefs": Object {
+              "file": "routes/prefs.js",
+              "imports": Array [
+                "react/jsx-runtime",
+                "@remix-run/react",
+                "react-router-dom",
+                "@remix-run/data",
+              ],
+            },
             "routes/render-errors": Object {
               "file": "routes/render-errors.js",
               "imports": Array [
@@ -403,12 +415,6 @@ describe.skip("building", () => {
               "imports": Array [
                 "react/jsx-runtime",
               ],
-            },
-            "styles/app.css": Object {
-              "file": "styles/app.css",
-            },
-            "styles/gists.css": Object {
-              "file": "styles/gists.css",
             },
             "styles/methods.css": Object {
               "file": "styles/methods.css",
@@ -436,7 +442,7 @@ describe.skip("building", () => {
           "_shared/Shared-d9a35912.js",
           "_shared/__babel/runtime-88c72f87.js",
           "_shared/__mdx-js/react-4850335b.js",
-          "_shared/__remix-run/react-aec6a826.js",
+          "_shared/__remix-run/react-ec984e27.js",
           "_shared/history-7c196d23.js",
           "_shared/object-assign-510802f4.js",
           "_shared/prop-types-97465a95.js",
@@ -447,7 +453,7 @@ describe.skip("building", () => {
           "_shared/react-router-dom-38d82f2d.js",
           "_shared/scheduler-a3345876.js",
           "asset-manifest.json",
-          "entry-browser.js",
+          "entry.client.js",
           "pages/one.js",
           "pages/two.js",
           "root.js",
@@ -463,10 +469,9 @@ describe.skip("building", () => {
           "routes/methods.js",
           "routes/page/four.js",
           "routes/page/three.js",
+          "routes/prefs.js",
           "routes/render-errors.js",
           "routes/render-errors/nested.js",
-          "styles/app.css",
-          "styles/gists.css",
           "styles/methods.css",
           "styles/redText.css",
         ]
@@ -479,8 +484,8 @@ describe.skip("building", () => {
         `
         Object {
           "entries": Object {
-            "entry-browser": Object {
-              "file": "entry-browser.js",
+            "entry.client": Object {
+              "file": "entry.client.js",
               "imports": Array [
                 "_shared/react-583fa859.js",
                 "_shared/object-assign-510802f4.js",
@@ -488,7 +493,7 @@ describe.skip("building", () => {
                 "_shared/react-dom-07e69dc3.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
@@ -517,10 +522,11 @@ describe.skip("building", () => {
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
+                "_shared/react-router-dom-38d82f2d.js",
               ],
             },
             "routes/404": Object {
@@ -537,7 +543,7 @@ describe.skip("building", () => {
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
@@ -559,10 +565,11 @@ describe.skip("building", () => {
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
+                "_shared/react-router-dom-38d82f2d.js",
               ],
             },
             "routes/gists/index": Object {
@@ -572,7 +579,7 @@ describe.skip("building", () => {
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
@@ -599,7 +606,7 @@ describe.skip("building", () => {
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
@@ -632,7 +639,7 @@ describe.skip("building", () => {
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-7c196d23.js",
-                "_shared/__remix-run/react-aec6a826.js",
+                "_shared/__remix-run/react-ec984e27.js",
                 "_shared/react-is-61089b68.js",
                 "_shared/prop-types-97465a95.js",
                 "_shared/react-router-8c7dde05.js",
@@ -654,6 +661,20 @@ describe.skip("building", () => {
                 "_shared/__mdx-js/react-4850335b.js",
               ],
             },
+            "routes/prefs": Object {
+              "file": "routes/prefs.js",
+              "imports": Array [
+                "_shared/react-583fa859.js",
+                "_shared/object-assign-510802f4.js",
+                "_shared/__babel/runtime-88c72f87.js",
+                "_shared/history-7c196d23.js",
+                "_shared/__remix-run/react-ec984e27.js",
+                "_shared/react-is-61089b68.js",
+                "_shared/prop-types-97465a95.js",
+                "_shared/react-router-8c7dde05.js",
+                "_shared/react-router-dom-38d82f2d.js",
+              ],
+            },
             "routes/render-errors": Object {
               "file": "routes/render-errors.js",
               "imports": Array [
@@ -672,12 +693,6 @@ describe.skip("building", () => {
                 "_shared/react-583fa859.js",
                 "_shared/object-assign-510802f4.js",
               ],
-            },
-            "styles/app.css": Object {
-              "file": "styles/app.css",
-            },
-            "styles/gists.css": Object {
-              "file": "styles/gists.css",
             },
             "styles/methods.css": Object {
               "file": "styles/methods.css",
@@ -705,7 +720,7 @@ describe.skip("building", () => {
           "_shared/Shared-035a27e3.js",
           "_shared/__babel/runtime-88c72f87.js",
           "_shared/__mdx-js/react-d4d6fcba.js",
-          "_shared/__remix-run/react-87d9556c.js",
+          "_shared/__remix-run/react-2149dd78.js",
           "_shared/history-e6417d88.js",
           "_shared/object-assign-510802f4.js",
           "_shared/prop-types-6a72a2b3.js",
@@ -716,26 +731,25 @@ describe.skip("building", () => {
           "_shared/react-router-dom-1a8b67c3.js",
           "_shared/scheduler-f50f12dc.js",
           "asset-manifest.json",
-          "entry-browser-2e3910d6.js",
-          "pages/one-0fd8bd3b.js",
-          "pages/two-6106cbf5.js",
-          "root-10f380cc.js",
-          "routes/404-4d24480a.js",
-          "routes/gists-8373ba50.js",
-          "routes/gists.mine-b346be55.js",
-          "routes/gists/$username-e6b5ce1f.js",
-          "routes/gists/index-0d7f7de4.js",
-          "routes/index-e4d24854.js",
-          "routes/links-f7e1ba11.js",
-          "routes/loader-errors-6a4be853.js",
-          "routes/loader-errors/nested-139ef80b.js",
-          "routes/methods-a4d8fd13.js",
-          "routes/page/four-6f3ea2c5.js",
-          "routes/page/three-6a9d7bf4.js",
-          "routes/render-errors-44a36bf5.js",
-          "routes/render-errors/nested-6a140eed.js",
-          "styles/app-2250dc4b.css",
-          "styles/gists-7bb6bc1f.css",
+          "entry.client-d9290a5c.js",
+          "pages/one-a5cda75b.js",
+          "pages/two-59f43e4b.js",
+          "root-3a6f2c16.js",
+          "routes/404-2d58ffe6.js",
+          "routes/gists-8c182da2.js",
+          "routes/gists.mine-7f496bc0.js",
+          "routes/gists/$username-f2295d96.js",
+          "routes/gists/index-f45d25a5.js",
+          "routes/index-28a55b13.js",
+          "routes/links-cb29a12e.js",
+          "routes/loader-errors-0cf20bb7.js",
+          "routes/loader-errors/nested-5fec12d3.js",
+          "routes/methods-d689bab4.js",
+          "routes/page/four-b70b700e.js",
+          "routes/page/three-19a1b743.js",
+          "routes/prefs-812bf987.js",
+          "routes/render-errors-d80e1e9b.js",
+          "routes/render-errors/nested-b93fd3ee.js",
           "styles/methods-4b89abbd.css",
           "styles/redText-1bade075.css",
         ]
@@ -748,8 +762,8 @@ describe.skip("building", () => {
         `
         Object {
           "entries": Object {
-            "entry-browser": Object {
-              "file": "entry-browser-2e3910d6.js",
+            "entry.client": Object {
+              "file": "entry.client-d9290a5c.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -757,12 +771,12 @@ describe.skip("building", () => {
                 "_shared/react-dom-8c4c319e.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
               ],
             },
             "pages/one": Object {
-              "file": "pages/one-0fd8bd3b.js",
+              "file": "pages/one-a5cda75b.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -770,7 +784,7 @@ describe.skip("building", () => {
               ],
             },
             "pages/two": Object {
-              "file": "pages/two-6106cbf5.js",
+              "file": "pages/two-59f43e4b.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -778,67 +792,69 @@ describe.skip("building", () => {
               ],
             },
             "root": Object {
-              "file": "root-10f380cc.js",
+              "file": "root-3a6f2c16.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
+                "_shared/react-router-dom-1a8b67c3.js",
               ],
             },
             "routes/404": Object {
-              "file": "routes/404-4d24480a.js",
+              "file": "routes/404-2d58ffe6.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
               ],
             },
             "routes/gists": Object {
-              "file": "routes/gists-8373ba50.js",
+              "file": "routes/gists-8c182da2.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
                 "_shared/react-router-dom-1a8b67c3.js",
                 "_shared/Shared-035a27e3.js",
               ],
             },
             "routes/gists.mine": Object {
-              "file": "routes/gists.mine-b346be55.js",
+              "file": "routes/gists.mine-7f496bc0.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
               ],
             },
             "routes/gists/$username": Object {
-              "file": "routes/gists/$username-e6b5ce1f.js",
+              "file": "routes/gists/$username-f2295d96.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
+                "_shared/react-router-dom-1a8b67c3.js",
               ],
             },
             "routes/gists/index": Object {
-              "file": "routes/gists/index-0d7f7de4.js",
+              "file": "routes/gists/index-f45d25a5.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
               ],
             },
             "routes/index": Object {
-              "file": "routes/index-e4d24854.js",
+              "file": "routes/index-28a55b13.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -850,19 +866,19 @@ describe.skip("building", () => {
               ],
             },
             "routes/links": Object {
-              "file": "routes/links-f7e1ba11.js",
+              "file": "routes/links-cb29a12e.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
                 "_shared/react-router-dom-1a8b67c3.js",
               ],
             },
             "routes/loader-errors": Object {
-              "file": "routes/loader-errors-6a4be853.js",
+              "file": "routes/loader-errors-0cf20bb7.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -872,25 +888,25 @@ describe.skip("building", () => {
               ],
             },
             "routes/loader-errors/nested": Object {
-              "file": "routes/loader-errors/nested-139ef80b.js",
+              "file": "routes/loader-errors/nested-5fec12d3.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
               ],
             },
             "routes/methods": Object {
-              "file": "routes/methods-a4d8fd13.js",
+              "file": "routes/methods-d689bab4.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__babel/runtime-88c72f87.js",
                 "_shared/history-e6417d88.js",
-                "_shared/__remix-run/react-87d9556c.js",
+                "_shared/__remix-run/react-2149dd78.js",
                 "_shared/react-router-050e1eaa.js",
               ],
             },
             "routes/page/four": Object {
-              "file": "routes/page/four-6f3ea2c5.js",
+              "file": "routes/page/four-b70b700e.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -898,15 +914,27 @@ describe.skip("building", () => {
               ],
             },
             "routes/page/three": Object {
-              "file": "routes/page/three-6a9d7bf4.js",
+              "file": "routes/page/three-19a1b743.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
                 "_shared/__mdx-js/react-d4d6fcba.js",
               ],
             },
+            "routes/prefs": Object {
+              "file": "routes/prefs-812bf987.js",
+              "imports": Array [
+                "_shared/react-b1327803.js",
+                "_shared/object-assign-510802f4.js",
+                "_shared/__babel/runtime-88c72f87.js",
+                "_shared/history-e6417d88.js",
+                "_shared/__remix-run/react-2149dd78.js",
+                "_shared/react-router-050e1eaa.js",
+                "_shared/react-router-dom-1a8b67c3.js",
+              ],
+            },
             "routes/render-errors": Object {
-              "file": "routes/render-errors-44a36bf5.js",
+              "file": "routes/render-errors-d80e1e9b.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
@@ -916,17 +944,11 @@ describe.skip("building", () => {
               ],
             },
             "routes/render-errors/nested": Object {
-              "file": "routes/render-errors/nested-6a140eed.js",
+              "file": "routes/render-errors/nested-b93fd3ee.js",
               "imports": Array [
                 "_shared/react-b1327803.js",
                 "_shared/object-assign-510802f4.js",
               ],
-            },
-            "styles/app.css": Object {
-              "file": "styles/app-2250dc4b.css",
-            },
-            "styles/gists.css": Object {
-              "file": "styles/gists-7bb6bc1f.css",
             },
             "styles/methods.css": Object {
               "file": "styles/methods-4b89abbd.css",

@@ -4,6 +4,10 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Unreleased
 
+### Breaking Changes
+
+- Renamed `entry-browser.js` to `entry.client.js` and `entry-server.js` to `entry.server.js`
+
 ### Improvements
 
 - Added support for excluding `*.client.js` files from the server bundles and `*.server.js` files from the browser bundles

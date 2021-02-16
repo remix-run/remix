@@ -211,24 +211,24 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   if (target === BuildTarget.Browser) {
     let entryBrowserFile = findFile(
       config.appDirectory,
-      "entry-browser",
+      "entry.client",
       entryExts
     );
     if (entryBrowserFile) {
-      input["entry-browser"] = entryBrowserFile;
+      input["entry.client"] = entryBrowserFile;
     } else {
-      throw new Error(`Missing "entry-browser" file in ${config.appDirectory}`);
+      throw new Error(`Missing "entry.client" file in ${config.appDirectory}`);
     }
   } else if (target === BuildTarget.Server) {
     let entryServerFile = findFile(
       config.appDirectory,
-      "entry-server",
+      "entry.server",
       entryExts
     );
     if (entryServerFile) {
-      input["entry-server"] = entryServerFile;
+      input["entry.server"] = entryServerFile;
     } else {
-      throw new Error(`Missing "entry-server" file in ${config.appDirectory}`);
+      throw new Error(`Missing "entry.server" file in ${config.appDirectory}`);
     }
   }
 

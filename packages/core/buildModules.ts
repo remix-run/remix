@@ -147,11 +147,11 @@ export function loadServerEntryModule(dir: string): ServerEntryModule {
   let manifest = loadServerManifest(dir);
 
   invariant(
-    manifest.entries["entry-server"],
-    `Missing entry for "entry-server" in the server manifest`
+    manifest.entries["entry.server"],
+    `Missing entry for "entry.server" in the server manifest`
   );
 
-  return loadModule(path.resolve(dir, manifest.entries["entry-server"].file));
+  return loadModule(path.resolve(dir, manifest.entries["entry.server"].file));
 }
 
 function loadModule(id: string) {

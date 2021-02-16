@@ -13,7 +13,7 @@ export interface RemixServerProps {
 
 /**
  * The entry point for a Remix app when it is rendered on the server (in
- * `entry-server.js`). This component is used to generate the HTML in the
+ * `app/entry.server.js`). This component is used to generate the HTML in the
  * response from the server.
  */
 export default function RemixServer({

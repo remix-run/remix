@@ -189,7 +189,7 @@ export function getManifest(config: RemixConfig): EntryManifest {
     return memo;
   }, {} as RouteManifest<EntryRouteObject>);
 
-  let entryImports = assetManifest.entries["entry-browser"].imports!.map(
+  let entryImports = assetManifest.entries["entry.client"].imports!.map(
     path => config.publicPath + path
   );
 
@@ -198,14 +198,14 @@ export function getManifest(config: RemixConfig): EntryManifest {
   }
 
   let entryModuleImports = (
-    assetManifest.entries["entry-browser"].imports || []
+    assetManifest.entries["entry.client"].imports || []
   ).map(filePath => config.publicPath + filePath);
 
   return {
     version: assetManifest.version,
     routes,
     entryModuleUrl:
-      config.publicPath + assetManifest.entries["entry-browser"].file,
+      config.publicPath + assetManifest.entries["entry.client"].file,
     entryModuleImports,
     manifestUrl:
       config.publicPath + `remix-manifest-${assetManifest.version}.js`

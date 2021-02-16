@@ -49,7 +49,7 @@ describe("readConfig", () => {
             "id": "routes/404",
             "moduleFile": "routes/404.js",
             "parentId": "root",
-            "path": "404",
+            "path": "*",
           },
           "routes/gists": Object {
             "id": "routes/gists",
@@ -143,7 +143,7 @@ describe("readConfig", () => {
                 "id": "routes/404",
                 "moduleFile": "routes/404.js",
                 "parentId": "root",
-                "path": "404",
+                "path": "*",
               },
               Object {
                 "children": Array [
