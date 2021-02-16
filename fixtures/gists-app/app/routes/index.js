@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import { Link } from "@remix-run/react";
 
 import Shared from "../components/Shared";
 import Guitar from "../components/Guitar";
+
+import { message as clientMessage } from "client:../scripts/client.js";
+import { message as serverMessage } from "server:../scripts/server.js";
 
 export function meta() {
   return {
@@ -10,7 +14,16 @@ export function meta() {
   };
 }
 
+export function loader() {
+  console.log(serverMessage);
+  return null;
+}
+
 export default function Index() {
+  useEffect(() => {
+    console.log(clientMessage);
+  }, []);
+
   return (
     <div data-test-id="/">
       <header>

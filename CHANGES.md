@@ -4,6 +4,10 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Unreleased
 
+### Improvements
+
+- Added `client:` and `server:` import hints for client/server-specific modules
+
 ### Bug Fixes
 
 - Fixed using non-HTML elements (e.g. `FormData`, `URLSearchParams`) with `useSubmit`

@@ -61,11 +61,10 @@ export default function routeModules({
       if (id.endsWith(magicProxy)) {
         let source = id.slice(0, -magicProxy.length);
 
-        if (fs.existsSync(source) && fs.statSync(source).size === 0) {
+        if (isEmptyFile(source)) {
           this.addWatchFile(source);
-          // If the source module is an empty file (probably because the file
-          // was just created) default to an empty component. This prevents
-          // errors in development (watch) mode when creating new route files.
+          // In a new file, default to an empty component. This prevents
+          // errors in dev (watch) mode when creating new routes.
           return `export default function () { throw new Error('Route "${source}" is empty, put a default export in there') }`;
         }
 
@@ -90,4 +89,8 @@ export default function routeModules({
       return null;
     }
   };
+}
+
+function isEmptyFile(file: string): boolean {
+  return fs.existsSync(file) && fs.statSync(file).size === 0;
 }

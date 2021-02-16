@@ -1,8 +1,9 @@
 import type { Plugin } from "rollup";
-import type { RemixConfig } from "../config";
-import { getRemixConfig } from "./remixConfig";
-import * as Images from "../images";
+
 import { BuildTarget } from "../build";
+import type { RemixConfig } from "../config";
+import * as Images from "../images";
+import { getRemixConfig } from "./remixConfig";
 
 export default function img({ target }: { target: BuildTarget }): Plugin {
   let config: RemixConfig;
@@ -43,13 +44,15 @@ export default function img({ target }: { target: BuildTarget }): Plugin {
      * Calls out to img.ts to generate the module source code.
      */
     async load(id) {
-      if (id.startsWith("\0img:")) {
-        id = id.slice(5);
-        this.addWatchFile(id.split("?")[0]);
-        let emit = target === BuildTarget.Browser;
-        return Images.getImageAssetModule(id, config, emit);
+      if (!id.startsWith("\0img:")) {
+        return;
       }
-      return;
+
+      id = id.slice(5);
+      this.addWatchFile(id.split("?")[0]);
+      let emit = target === BuildTarget.Browser;
+
+      return Images.getImageAssetModule(id, config, emit);
     },
 
     async buildEnd() {

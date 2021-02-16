@@ -25,6 +25,7 @@ import { ignorePackages } from "./browserIgnore";
 import { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
 import type { RemixConfig } from "./config";
 
+import clientServer from "./rollup/clientServer";
 import manifest from "./rollup/manifest";
 import remixConfig from "./rollup/remixConfig";
 import remixInputs from "./rollup/remixInputs";
@@ -180,11 +181,14 @@ function isLocalModuleId(id: string): boolean {
     id.startsWith(".") ||
     // This is an absolute filesystem path that has already been resolved, e.g.
     // "/path/to/node_modules/react/index.js"
-    path.isAbsolute(id) ||
-    // is an import assertion
-    id.startsWith("img:") ||
-    id.startsWith("url:")
+    path.isAbsolute(id)
   );
+}
+
+const importHints = ["client:", "img:", "server:", "url:"];
+
+function isImportHint(id: string): boolean {
+  return importHints.some(hint => id.startsWith(hint));
 }
 
 function getExternalOption(target: BuildTarget): ExternalOption | undefined {
@@ -192,7 +196,7 @@ function getExternalOption(target: BuildTarget): ExternalOption | undefined {
     ? // Exclude non-local module identifiers from the server bundles.
       // This includes identifiers like "react" which will be resolved
       // dynamically at runtime using require().
-      (id: string) => !isLocalModuleId(id)
+      (id: string) => !isLocalModuleId(id) && !isImportHint(id)
     : // Exclude packages we know we don't want in the browser bundles.
       // These *should* be stripped from the browser bundles anyway when
       // tree-shaking kicks in, so making them external just saves Rollup
@@ -332,6 +336,7 @@ function getBuildPlugins({
     json(),
     img({ target }),
     url({ target }),
+    clientServer({ target }),
     babel({
       babelHelpers: "bundled",
       configFile: false,
