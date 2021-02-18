@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Added `css:` import type
+
 ## 0.13.0 - Wed Feb 17 2021
 
 ### Breaking Changes

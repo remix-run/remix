@@ -1,3 +1,8 @@
+declare module "css:*" {
+  const asset: string;
+  export default asset;
+}
+
 declare module "img:*" {
   const asset: ImageAsset;
   export default asset;

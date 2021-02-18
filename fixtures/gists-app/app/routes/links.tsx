@@ -2,7 +2,7 @@ import { useRouteData, Link, block } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/react";
 import type { LoaderFunction } from "@remix-run/core";
 
-import redText from "url:../styles/redText.css";
+import redText from "css:../styles/redText.css";
 import guitar from "img:../components/guitar.jpg?width=500&height=500";
 import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
 
