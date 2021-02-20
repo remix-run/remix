@@ -7,8 +7,8 @@ import commonjs from "@rollup/plugin-commonjs";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
 
-import type { MdxConfig, MdxFunctionOption } from "../rollup/mdx";
-import mdxPlugin from "../rollup/mdx";
+import type { MdxConfig, MdxFunctionOption } from "../compiler/rollup/mdx";
+import mdxPlugin from "../compiler/rollup/mdx";
 
 describe("mdx rollup plugin", () => {
   it("renders", async () => {

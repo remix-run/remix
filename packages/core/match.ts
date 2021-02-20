@@ -2,7 +2,7 @@ import type { Location } from "history";
 import type { RouteObject, Params } from "react-router";
 import { matchRoutes } from "react-router";
 
-import type { ConfigRouteObject } from "./routes";
+import type { ConfigRouteObject } from "./config/routes";
 
 export type { ConfigRouteObject };
 

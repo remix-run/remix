@@ -3,8 +3,12 @@ import "./assetImportTypes";
 export { createAdapter } from "./adapter";
 
 export { BuildMode, BuildTarget } from "./build";
-
-export type { AssetManifest } from "./buildManifest";
+export type {
+  BuildManifest,
+  AssetManifest,
+  ServerManifest
+} from "./buildManifest";
+export { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
 export type {
   AppData,
   AppLoadContext,
@@ -19,13 +23,6 @@ export type {
   RouteModules,
   ServerEntryModule
 } from "./buildModules";
-
-export * as commands from "./commands";
-
-export { build, watch, generate, write } from "./compiler";
-
-export type { RemixConfig } from "./config";
-export { ServerMode, readConfig } from "./config";
 
 export type {
   CookieParseOptions,
@@ -70,8 +67,6 @@ export type {
 
 export { json, redirect } from "./responses";
 
-export type { RouteManifest, DefineRoute, DefineRoutes } from "./routes";
-
 export type { RequestHandler } from "./server";
 export { createRequestHandler } from "./server";
 
@@ -87,3 +82,6 @@ export { createFileSessionStorage } from "./sessions/fileStorage";
 export { createMemorySessionStorage } from "./sessions/memoryStorage";
 
 export { warnOnce } from "./warnings";
+
+// TODO: remove
+export type { RouteManifest } from "./config/routes";

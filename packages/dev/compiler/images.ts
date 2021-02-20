@@ -15,7 +15,7 @@ import sharp from "sharp";
 import prettyBytes from "pretty-bytes";
 import prettyMs from "pretty-ms";
 
-import type { RemixConfig } from "./config";
+import type { RemixConfig } from "../config";
 
 // Don't use the sharp cache, we use the config.browserBuildDirectory as the
 // cache so that we don't process images even between restarts of the dev

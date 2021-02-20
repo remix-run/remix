@@ -6,10 +6,10 @@ import prettyBytes from "pretty-bytes";
 import prettyMs from "pretty-ms";
 import type { Plugin } from "rollup";
 import type Processor from "postcss/lib/processor";
+import { BuildMode, BuildTarget } from "@remix-run/core";
 
-import { BuildMode, BuildTarget } from "../build";
+import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
-import type { RemixConfig } from "../config";
 
 // const IMPLICIT_URL = /\.(?:css|less|scss|sass)$/i;
 

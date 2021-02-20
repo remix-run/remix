@@ -1,7 +1,8 @@
-import { BuildMode, BuildTarget } from "./build";
-import { readConfig } from "./config";
-import { build, write } from "./compiler";
-import { startDevServer } from "./devServer";
+import { BuildMode, BuildTarget } from "@remix-run/core";
+
+import { readConfig } from "../config";
+import { build, write } from "../compiler";
+import { startDevServer } from "../server";
 
 /**
  * Runs the build for a Remix app.

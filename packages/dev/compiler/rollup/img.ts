@@ -1,8 +1,8 @@
 import type { Plugin } from "rollup";
+import { BuildTarget } from "@remix-run/core";
 
-import { BuildTarget } from "../build";
-import type { RemixConfig } from "../config";
 import * as Images from "../images";
+import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
 export default function img({ target }: { target: BuildTarget }): Plugin {

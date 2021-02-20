@@ -1,11 +1,10 @@
-/**
- * Code adapted from https://github.com/preactjs/wmr
- */
+// Code adapted from https://github.com/preactjs/wmr
 import path from "path";
 import { promises as fs } from "fs";
 import type { Plugin } from "rollup";
-import { BuildTarget } from "../build";
-import type { RemixConfig } from "../config";
+import { BuildTarget } from "@remix-run/core";
+
+import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
 const IMPLICIT_URL = /\.(?:svg|mp4|webm|ogg|mp3|wav|flac|aac|woff2?|eot|ttf|otf)$/i;

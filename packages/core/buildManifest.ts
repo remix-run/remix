@@ -1,7 +1,15 @@
 import fs from "fs";
 import path from "path";
 
-import type { BuildManifest } from "./rollup/manifest";
+export interface BuildManifest {
+  version: string;
+  entries: {
+    [entryName: string]: {
+      file: string;
+      imports?: string[];
+    };
+  };
+}
 
 /**
  * A manifest of all assets (JavaScript, CSS, etc.) in the browser build.

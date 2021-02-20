@@ -4,6 +4,16 @@ This is a history of changes to [Remix](https://remix.run).
 
 ## Unreleased
 
+### Improvements
+
+- Added `@remix-run/dev` package for all dev-specific functions
+
+### Breaking Changes
+
+- Removed `@remix-run/cli` package. Use `@remix-run/dev` instead
+
+## 0.13.1 - Thu Feb 18 2021
+
 ### Bug Fixes
 
 - Added `css:` import type

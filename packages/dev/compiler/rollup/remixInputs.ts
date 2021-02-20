@@ -1,6 +1,6 @@
 import type { InputOption, Plugin } from "rollup";
 
-import type { RemixConfig } from "../config";
+import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
 /**

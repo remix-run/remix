@@ -1,6 +1,7 @@
 import type { AnyFlags } from "meow";
 import meow from "meow";
-import { commands } from "@remix-run/core";
+
+import * as commands from "./cli/commands";
 
 const helpText = `
 Usage

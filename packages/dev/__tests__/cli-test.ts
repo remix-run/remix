@@ -6,12 +6,12 @@ import semver from "semver";
 
 const execFile = util.promisify(childProcess.execFile);
 
-describe("remix cli", () => {
-  let remix = path.resolve(
-    __dirname,
-    "../../../build/node_modules/@remix-run/cli"
-  );
+const remix = path.resolve(
+  __dirname,
+  "../../../build/node_modules/@remix-run/dev/cli"
+);
 
+describe("remix cli", () => {
   beforeAll(() => {
     if (!fs.existsSync(remix)) {
       throw new Error(`Cannot run Remix CLI tests w/out building Remix`);

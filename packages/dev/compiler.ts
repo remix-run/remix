@@ -20,21 +20,25 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import { terser } from "rollup-plugin-terser";
 
-import { BuildMode, BuildTarget } from "./build";
-import { ignorePackages } from "./browserIgnore";
-import { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
-import type { RemixConfig } from "./config";
+import {
+  BuildMode,
+  BuildTarget,
+  AssetManifestFilename,
+  ServerManifestFilename
+} from "@remix-run/core";
 
-import clientServer from "./rollup/clientServer";
-import manifest from "./rollup/manifest";
-import remixConfig from "./rollup/remixConfig";
-import remixInputs from "./rollup/remixInputs";
-import watchDirectory from "./rollup/watchDirectory";
-import mdx from "./rollup/mdx";
-import routeModules from "./rollup/routeModules";
-import url from "./rollup/url";
-import img from "./rollup/img";
-import css from "./rollup/css";
+import type { RemixConfig } from "./config";
+import { ignorePackages } from "./compiler/browserIgnore";
+import clientServer from "./compiler/rollup/clientServer";
+import manifest from "./compiler/rollup/manifest";
+import remixConfig from "./compiler/rollup/remixConfig";
+import remixInputs from "./compiler/rollup/remixInputs";
+import watchDirectory from "./compiler/rollup/watchDirectory";
+import mdx from "./compiler/rollup/mdx";
+import routeModules from "./compiler/rollup/routeModules";
+import url from "./compiler/rollup/url";
+import img from "./compiler/rollup/img";
+import css from "./compiler/rollup/css";
 
 /**
  * All file extensions we support for entry files.

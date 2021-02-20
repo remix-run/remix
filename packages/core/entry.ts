@@ -12,7 +12,7 @@ import { RemixConfig } from "./config";
 import { extractData } from "./data";
 import type { Response } from "./fetch";
 import type { ConfigRouteObject, ConfigRouteMatch } from "./match";
-import type { RouteManifest } from "./routes";
+import type { RouteManifest } from "./config/routes";
 import invariant from "./invariant";
 
 // We always serialize errors because we have to hydrate. Note: This is only

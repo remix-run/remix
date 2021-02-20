@@ -1,10 +1,12 @@
 import path from "path";
 import type { Plugin } from "rollup";
 
-import type { RemixConfig } from "../config";
-import { readConfig } from "../config";
+import type { RemixConfig } from "../../config";
+import { readConfig } from "../../config";
+import invariant from "../../invariant";
 import { purgeRequireCache } from "../requireCache";
-import invariant from "../invariant";
+
+export type { RemixConfig };
 
 export default function remixConfig({ rootDir }: { rootDir: string }): Plugin {
   let configPromise: Promise<RemixConfig> | null = null;

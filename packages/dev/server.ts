@@ -5,7 +5,8 @@ import express from "express";
 import morgan from "morgan";
 import signalExit from "signal-exit";
 
-import { BuildMode, BuildTarget } from "./build";
+import { BuildMode, BuildTarget } from "@remix-run/core";
+
 import { watch, write } from "./compiler";
 import type { RemixConfig } from "./config";
 

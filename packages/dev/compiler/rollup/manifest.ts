@@ -2,16 +2,7 @@ import path from "path";
 import { promises as fsp } from "fs";
 import crypto from "crypto";
 import type { NormalizedOutputOptions, OutputBundle, Plugin } from "rollup";
-
-export interface BuildManifest {
-  version: string;
-  entries: {
-    [entryName: string]: {
-      file: string;
-      imports?: string[];
-    };
-  };
-}
+import type { BuildManifest } from "@remix-run/core";
 
 function createChecksum(bundle: OutputBundle): string {
   let keys = Object.keys(bundle).sort();

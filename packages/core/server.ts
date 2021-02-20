@@ -5,7 +5,7 @@ import {
   loadServerEntryModule
 } from "./buildModules";
 import type { RemixConfig } from "./config";
-import { ServerMode } from "./config";
+import { ServerMode } from "./config/serverModes";
 import { loadRouteData, callRouteAction } from "./data";
 import { ComponentDidCatchEmulator, EntryContext, getManifest } from "./entry";
 import {

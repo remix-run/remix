@@ -4,15 +4,7 @@ import type { MdxOptions } from "@mdx-js/mdx";
 import type { ConfigRouteObject, RouteManifest, DefineRoutes } from "./routes";
 import { createRouteManifest, defineRoutes } from "./routes";
 import { defineConventionalRoutes } from "./routesConvention";
-
-/**
- * The mode to use when running the server.
- */
-export enum ServerMode {
-  Development = "development",
-  Production = "production",
-  Test = "test"
-}
+import { ServerMode, isValidServerMode } from "./serverModes";
 
 /**
  * The user-provided config in remix.config.js.
@@ -187,14 +179,6 @@ export async function readConfig(
   };
 
   return remixConfig;
-}
-
-function isValidServerMode(serverMode: string): serverMode is ServerMode {
-  return (
-    serverMode === ServerMode.Development ||
-    serverMode === ServerMode.Production ||
-    serverMode === ServerMode.Test
-  );
 }
 
 function addTrailingSlash(path: string): string {
