@@ -6,7 +6,7 @@
     "prebuild": "cp -r ../../build/node_modules/* node_modules",
     "build": "node node_modules/@remix-run/cli build",
     "predev": "cp -r ../../build/node_modules/* node_modules",
-    "dev": "concurrently \"node node_modules/@remix-run/cli run\" \"cross-env NODE_ENV=development nodemon -w app -e md,mdx,js,jsx,ts,tsx server.js\"",
+    "dev": "pm2-dev pm2.config.js",
     "prestart": "cp -r ../../build/node_modules/* node_modules",
     "start": "node server.js"
   },
@@ -21,8 +21,6 @@
   "devDependencies": {
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
-    "concurrently": "^5.3.0",
-    "cross-env": "^7.0.2",
-    "nodemon": "^2.0.5"
+    "pm2": "^4.5.1"
   }
 }
