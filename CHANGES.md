@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Fixed manual catchall (\*) routes
+
 ## 0.13.1 - Wed Feb 17 2021
 
 ### Bug Fixes

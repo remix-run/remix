@@ -225,6 +225,7 @@ export function RemixEntry({
         if (!didRedirect) handleDataRedirect(response);
       }
 
+      // NOTE: Keep in sync with `links.ts` data diff
       let newMatches =
         // reload all routes on form submits and search changes
         formState === FormState.Redirected ||
@@ -235,7 +236,9 @@ export function RemixEntry({
                 // new route
                 !matches[index] ||
                 // existing route but params changed
-                matches[index].pathname !== match.pathname
+                matches[index].pathname !== match.pathname ||
+                // catchall param changed
+                matches[index].params["*"] !== match.params["*"]
             );
 
       let transitionResults = await Promise.all(

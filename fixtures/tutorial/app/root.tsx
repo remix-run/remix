@@ -22,7 +22,20 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Link to="/gists">Gists</Link>
+        <ul>
+          <li>
+            <Link to="/gists">Public Gists</Link>
+          </li>
+          <li>
+            <Link to="/beef/and/cheese">Beef and cheese</Link>
+          </li>
+          <li>
+            <Link to="/beef/and/cheddar">Beef and cheddar</Link>
+          </li>
+          <li>
+            <Link to="/portugeuse/sausage">Portugeuse Sausage</Link>
+          </li>
+        </ul>
         <Outlet />
         <footer>
           <p>This page was rendered at {data.date.toLocaleString()}</p>
