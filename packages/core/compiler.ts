@@ -186,7 +186,7 @@ function isLocalModuleId(id: string): boolean {
   );
 }
 
-const importHints = ["client:", "css:", "img:", "server:", "url:"];
+const importHints = ["css:", "img:", "url:"];
 
 function isImportHint(id: string): boolean {
   return importHints.some(hint => id.startsWith(hint));
@@ -332,13 +332,13 @@ function getBuildPlugins({
   }
 
   plugins.push(
+    clientServer({ target }),
     mdx(),
     routeModules({ target }),
     json(),
     img({ target }),
     css({ target, mode }),
     url({ target }),
-    clientServer({ target }),
     babel({
       babelHelpers: "bundled",
       configFile: false,

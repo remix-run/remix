@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Fixed ignoring `*.client.js` and `*.server.js` files in server/browser builds (respectively) when the `.js` extension is missing from the `import`
+
 ## 0.13.2 - Tue Feb 23 2021
 
 ### Bug Fixes

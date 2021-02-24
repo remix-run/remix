@@ -26,8 +26,9 @@ export default function clientServerPlugin({
   target: string;
 }): Plugin {
   return empty({
-    name: "clientServer",
     isEmptyModuleId(id) {
+      if (/node_modules/.test(id)) return false;
+
       return (
         (isClientOnlyModuleId(id) && target === BuildTarget.Server) ||
         (isServerOnlyModuleId(id) && target === BuildTarget.Browser)
