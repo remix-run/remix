@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Links, Scripts, useRouteData, useMatches } from "@remix-run/react";
 import { Outlet, Link } from "react-router-dom";
+
 import styles from "css:./styles/app.css";
 
 export function links() {

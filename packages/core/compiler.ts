@@ -83,7 +83,6 @@ export async function build(
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
-    // input: getInputOption(config, target),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins
@@ -214,6 +213,7 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
       "entry.client",
       entryExts
     );
+
     if (entryBrowserFile) {
       input["entry.client"] = entryBrowserFile;
     } else {
@@ -225,6 +225,7 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
       "entry.server",
       entryExts
     );
+
     if (entryServerFile) {
       input["entry.server"] = entryServerFile;
     } else {
@@ -232,7 +233,14 @@ function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
     }
   }
 
-  Object.assign(input, getRouteInputs(config));
+  let routeManifest = config.routeManifest;
+  for (let key of Object.keys(routeManifest)) {
+    let route = routeManifest[key];
+
+    if (route.moduleFile) {
+      input[route.id] = path.resolve(config.appDirectory, route.moduleFile);
+    }
+  }
 
   return input;
 }
@@ -250,59 +258,39 @@ function findFile(
   return undefined;
 }
 
-interface RouteInputs {
-  [routeId: string]: string;
-}
-
-function getRouteInputs(config: RemixConfig): RouteInputs {
-  let routeManifest = config.routeManifest;
-  let routeIds = Object.keys(routeManifest);
-
-  return routeIds.reduce((memo, routeId) => {
-    let route = routeManifest[routeId];
-    if (route.moduleFile) {
-      memo[route.id] = path.resolve(config.appDirectory, route.moduleFile);
-    }
-    return memo;
-  }, {} as RouteInputs);
-}
-
 function getTreeshakeOption(
   target: BuildTarget
 ): TreeshakingOptions | undefined {
-  if (target === BuildTarget.Browser) {
-    // When building for the browser, we need to be very aggressive with
-    // code removal so we can be sure all imports of server-only code are
-    // removed.
-    return {
-      // Assume modules do not have side-effects.
-      moduleSideEffects: false,
-      // Assume reading a property of an object never has side-effects.
-      propertyReadSideEffects: false
-    };
-  }
-
-  return undefined;
+  return target === BuildTarget.Browser
+    ? // When building for the browser, we need to be very aggressive with code
+      // removal so we can be sure all imports of server-only code are removed.
+      {
+        moduleSideEffects(id) {
+          // Allow node_modules to have side effects. Everything else (all app
+          // modules) should be pure. This allows weird dependencies like
+          // "firebase/auth" to have side effects.
+          return /\bnode_modules\b/.test(id);
+        }
+      }
+    : undefined;
 }
 
 function getOnWarnOption(
   target: BuildTarget
 ): InputOptions["onwarn"] | undefined {
-  if (target === BuildTarget.Browser) {
-    return (warning, warn) => {
-      if (warning.code === "EMPTY_BUNDLE") {
-        // Ignore "Generated an empty chunk: blah" warnings when building for
-        // the browser. There may be quite a few of them because we are
-        // aggressively removing server-only packages from the build.
-        // TODO: Can we get Rollup to avoid generating these chunks entirely?
-        return;
+  return target === BuildTarget.Browser
+    ? (warning, warn) => {
+        if (warning.code === "EMPTY_BUNDLE") {
+          // Ignore "Generated an empty chunk: blah" warnings when building for
+          // the browser. There may be quite a few of them because we are
+          // aggressively removing server-only packages from the build.
+          // TODO: Can we get Rollup to avoid generating these chunks entirely?
+          return;
+        }
+
+        warn(warning);
       }
-
-      warn(warning);
-    };
-  }
-
-  return undefined;
+    : undefined;
 }
 
 function getBuildPlugins({
