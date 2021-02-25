@@ -12,18 +12,23 @@ import { getRemixConfig } from "./remixConfig";
  *   an empty shim for the module so Rollup doesn't complain and the build
  *   doesn't break
  */
-export default function routeModules({ target }: { target: string }): Plugin {
+export default function routeModulesPlugin({
+  target
+}: {
+  target: string;
+}): Plugin {
   let magicProxy = "?route-module-proxy";
 
   return {
-    name: "route-modules",
-    async options(options) {
-      let config = await getRemixConfig(options.plugins || []);
-      let routeIds = Object.keys(config.routeManifest);
+    name: "routeModules",
 
+    async options(options) {
       let input = options.input;
 
       if (input && typeof input === "object" && !Array.isArray(input)) {
+        let config = await getRemixConfig(options.plugins);
+        let routeIds = Object.keys(config.routeManifest);
+
         for (let alias in input) {
           if (routeIds.includes(alias)) {
             input[alias] = input[alias] + magicProxy;
@@ -33,6 +38,7 @@ export default function routeModules({ target }: { target: string }): Plugin {
 
       return options;
     },
+
     resolveId(id, importer) {
       if (id.endsWith(magicProxy)) {
         return id;
@@ -53,6 +59,7 @@ export default function routeModules({ target }: { target: string }): Plugin {
 
       return null;
     },
+
     load(id) {
       if (id.endsWith(magicProxy)) {
         let source = id.slice(0, -magicProxy.length);

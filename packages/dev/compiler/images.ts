@@ -16,6 +16,7 @@ import prettyBytes from "pretty-bytes";
 import prettyMs from "pretty-ms";
 
 import type { RemixConfig } from "../config";
+import { log, logInfo } from "./logging";
 
 // Don't use the sharp cache, we use the config.browserBuildDirectory as the
 // cache so that we don't process images even between restarts of the dev
@@ -212,7 +213,7 @@ export async function emitAsset(
   let filePath = path.join(config.browserBuildDirectory, buildImageAsset.name);
 
   if (await assetExists(filePath)) {
-    log("img exists, skipping", buildImageAsset.name);
+    logInfo("img exists, skipping", buildImageAsset.name);
   } else {
     await processBuildImageAsset(buildImageAsset, config);
   }
@@ -267,7 +268,7 @@ async function getPlaceholder(
 
   try {
     let placeholder = (await fsp.readFile(placeholderFileName)).toString();
-    log("img placeholder exists, skipping", name);
+    logInfo("img placeholder exists, skipping", name);
     return placeholder;
   } catch (e) {}
 
@@ -285,7 +286,8 @@ async function getPlaceholder(
   await fsp.mkdir(path.dirname(placeholderFileName), { recursive: true });
   await fsp.writeFile(placeholderFileName, placeholder);
 
-  log(`${Date.now() - start}ms: processed placeholder`, name);
+  logInfo(`%sms: processed placeholder`, Date.now() - start, name);
+
   return placeholder;
 }
 
@@ -400,11 +402,11 @@ async function processBuildImageAsset(
   await image.toFile(filePath);
   let stats = await fsp.stat(filePath);
 
-  let time = Date.now() - start;
-  console.log(
-    `Built image: ${prettyMs(time)}, ${prettyBytes(stats.size)}, ${
-      buildImageAsset.name
-    }`
+  log(
+    `Built image: %s, %s, %s`,
+    prettyMs(Date.now() - start),
+    prettyBytes(stats.size),
+    buildImageAsset.name
   );
 }
 
@@ -427,16 +429,10 @@ async function cleanupEmissions() {
     await Promise.all(
       Array.from(oldFiles).map(async filePath => {
         await fsp.unlink(filePath);
-        log("unlinked stale image", path.basename(filePath));
+        logInfo("unlinked stale image", path.basename(filePath));
       })
     );
   }
 
   previousEmissions = new Set(currentEmissions);
-}
-
-function log(...args: any[]) {
-  if (process.env.VERBOSE) {
-    console.log(...args);
-  }
 }

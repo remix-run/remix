@@ -8,18 +8,25 @@ import { purgeRequireCache } from "../requireCache";
 
 export type { RemixConfig };
 
-export default function remixConfig({ rootDir }: { rootDir: string }): Plugin {
+export default function remixConfigPlugin({
+  rootDir
+}: {
+  rootDir: string;
+}): Plugin {
   let configPromise: Promise<RemixConfig> | null = null;
 
   return {
-    name: "remix-config",
+    name: "remixConfig",
+
     options(options) {
       configPromise = null;
       return options;
     },
+
     buildStart() {
       this.addWatchFile(path.join(rootDir, "remix.config.js"));
     },
+
     api: {
       getConfig(): Promise<RemixConfig> {
         if (!configPromise) {
@@ -35,11 +42,11 @@ export default function remixConfig({ rootDir }: { rootDir: string }): Plugin {
   };
 }
 
-export function findConfigPlugin(plugins: Plugin[]): Plugin | undefined {
-  return plugins.find(plugin => plugin.name === "remix-config");
+export function findConfigPlugin(plugins: Plugin[] = []): Plugin | undefined {
+  return plugins.find(plugin => plugin.name === "remixConfig");
 }
 
-export function getRemixConfig(plugins: Plugin[]): Promise<RemixConfig> {
+export function getRemixConfig(plugins: Plugin[] = []): Promise<RemixConfig> {
   let plugin = findConfigPlugin(plugins);
   invariant(plugin, `Missing remixConfig plugin`);
   return plugin.api.getConfig();

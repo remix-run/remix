@@ -9,7 +9,7 @@ import { getRemixConfig } from "./remixConfig";
 
 const IMPLICIT_URL = /\.(?:svg|mp4|webm|ogg|mp3|wav|flac|aac|woff2?|eot|ttf|otf)$/i;
 
-export default function url({ target }: { target: string }): Plugin {
+export default function urlPlugin({ target }: { target: string }): Plugin {
   let config: RemixConfig;
 
   return {
@@ -38,7 +38,8 @@ export default function url({ target }: { target: string }): Plugin {
 
     resolveFileUrl({ chunkId, relativePath, fileName }) {
       if (target === BuildTarget.Browser) {
-        return `new URL('${relativePath}', import.meta.url).pathname`;
+        let jsonPath = JSON.stringify(relativePath);
+        return `new URL(${jsonPath}, import.meta.url).pathname`;
       } else {
         return generateServerUrl(chunkId, fileName, config);
       }
@@ -52,21 +53,14 @@ export default function url({ target }: { target: string }): Plugin {
       }
 
       let name = id.replace(config.appDirectory + "/", "");
-
-      let fileId;
-      if (target === BuildTarget.Browser) {
-        fileId = this.emitFile({
-          type: "asset",
-          name: name,
-          source: await fs.readFile(id)
-        });
-      } else {
-        fileId = this.emitFile({
-          type: "asset",
-          name: name,
-          source: JSON.stringify(name)
-        });
-      }
+      let fileId = this.emitFile({
+        type: "asset",
+        name: name,
+        source:
+          target === BuildTarget.Browser
+            ? await fs.readFile(id)
+            : JSON.stringify(name)
+      });
 
       this.addWatchFile(id);
       return `export default import.meta.ROLLUP_FILE_URL_${fileId}`;

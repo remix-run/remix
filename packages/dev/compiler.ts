@@ -74,10 +74,10 @@ export async function build(
   }: Partial<BuildOptions> = {}
 ): Promise<RemixBuild> {
   let buildOptions = { mode, target };
-
-  let plugins: Plugin[] = [remixConfig({ rootDir: config.rootDirectory })];
-
-  plugins.push(...getBuildPlugins(config.serverBuildDirectory, buildOptions));
+  let plugins = [
+    remixConfig({ rootDir: config.rootDirectory }),
+    ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
+  ];
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
@@ -109,18 +109,19 @@ export function watch(
   }: Partial<WatchOptions> = {}
 ): () => void {
   let buildOptions = { mode, target };
+  let plugins = [
+    remixConfig({ rootDir: config.rootDirectory }),
+    watchDirectory({
+      sourceDir: config.appDirectory
+    }),
+    ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
+  ];
 
   let watcher = rollup.watch({
     external: getExternalOption(target),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
-    plugins: [
-      remixConfig({ rootDir: config.rootDirectory }),
-      watchDirectory({
-        sourceDir: config.appDirectory
-      }),
-      ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
-    ],
+    plugins,
     watch: {
       // Skip the write here and do it in a callback instead. This gives us
       // a more consistent interface between `build` and `watch`. Both of them
@@ -156,14 +157,14 @@ export function watch(
  * main server in dev mode to avoid writing the builds to disk.
  */
 export function generate(build: RemixBuild): Promise<RollupOutput> {
-  return build.generate(getCommonOutputOptions(build));
+  return build.generate(getOutputOptions(build));
 }
 
 /**
  * Writes the build to disk.
  */
 export function write(build: RemixBuild, dir: string): Promise<RollupOutput> {
-  return build.write({ ...getCommonOutputOptions(build), dir });
+  return build.write({ ...getOutputOptions(build), dir });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -201,14 +202,14 @@ function getInputOption(config: RemixConfig, target: string): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
-    let entryBrowserFile = findFile(
+    let entryClientFile = findFile(
       config.appDirectory,
       "entry.client",
       entryExts
     );
 
-    if (entryBrowserFile) {
-      input["entry.client"] = entryBrowserFile;
+    if (entryClientFile) {
+      input["entry.client"] = entryClientFile;
     } else {
       throw new Error(`Missing "entry.client" file in ${config.appDirectory}`);
     }
@@ -226,9 +227,8 @@ function getInputOption(config: RemixConfig, target: string): InputOption {
     }
   }
 
-  let routeManifest = config.routeManifest;
-  for (let key of Object.keys(routeManifest)) {
-    let route = routeManifest[key];
+  for (let key of Object.keys(config.routeManifest)) {
+    let route = config.routeManifest[key];
 
     if (route.moduleFile) {
       input[route.id] = path.resolve(config.appDirectory, route.moduleFile);
@@ -365,7 +365,7 @@ function getBuildPlugins(
   return plugins;
 }
 
-function getCommonOutputOptions(build: RemixBuild): OutputOptions {
+function getOutputOptions(build: RemixBuild): OutputOptions {
   let { mode, target } = build.options;
 
   return {

@@ -5,7 +5,7 @@ import * as Images from "../images";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
-export default function img({ target }: { target: string }): Plugin {
+export default function imgPlugin({ target }: { target: string }): Plugin {
   let config: RemixConfig;
   let cleanupEmissions: ReturnType<typeof Images.trackEmissions>;
 
@@ -19,10 +19,6 @@ export default function img({ target }: { target: string }): Plugin {
       }
     },
 
-    /**
-     * Looks for imports that either start with `img:`, then normalizes to
-     * `\0img:` for the rest of the build.
-     */
     async resolveId(id, importer) {
       if (id[0] === "\0" || id[0] === "\b" || !id.startsWith("img:")) {
         return;
@@ -40,9 +36,6 @@ export default function img({ target }: { target: string }): Plugin {
       return resolved;
     },
 
-    /**
-     * Calls out to img.ts to generate the module source code.
-     */
     async load(id) {
       if (!id.startsWith("\0img:")) {
         return;

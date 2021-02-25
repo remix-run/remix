@@ -6,14 +6,15 @@ import prettyBytes from "pretty-bytes";
 import prettyMs from "pretty-ms";
 import type { Plugin } from "rollup";
 import type Processor from "postcss/lib/processor";
-import { BuildMode, BuildTarget } from "@remix-run/core";
+import { BuildTarget } from "@remix-run/core";
 
+import { log, logInfo } from "../logging";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
 // const IMPLICIT_URL = /\.(?:css|less|scss|sass)$/i;
 
-export default function css({
+export default function cssPlugin({
   target,
   mode
 }: {
@@ -93,7 +94,7 @@ async function processCssAsset(
 
   if (emit) {
     if (await assetExists(localAssetPath)) {
-      log("css exists, skipping", relativeSourcePath);
+      logInfo("css exists, skipping", relativeSourcePath);
     } else {
       let result = await processor.process(source, { from: id });
 
@@ -101,22 +102,17 @@ async function processCssAsset(
       await fsp.writeFile(localAssetPath, result.css);
 
       let stats = await fsp.stat(localAssetPath);
-      let time = Date.now() - start;
-      console.log(
-        `Built css: ${prettyMs(time)}, ${prettyBytes(
-          stats.size
-        )}, ${relativeSourcePath}`
+
+      log(
+        `Built css: %s, %s, %s`,
+        prettyMs(Date.now() - start),
+        prettyBytes(stats.size),
+        relativeSourcePath
       );
     }
   }
 
   return publicPath;
-}
-
-function log(...args: any[]) {
-  if (process.env.VERBOSE) {
-    console.log(...args);
-  }
 }
 
 async function assetExists(filePath: string) {
