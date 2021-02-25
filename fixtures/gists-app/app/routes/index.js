@@ -4,8 +4,8 @@ import { Link } from "@remix-run/react";
 import Shared from "../components/Shared";
 import Guitar from "../components/Guitar";
 
-import { message as clientMessage } from "../scripts/message.client.js";
-import { message as serverMessage } from "../scripts/message.server.js";
+import { message as clientMessage } from "../scripts/message.client";
+import { message as serverMessage } from "../scripts/message.server";
 
 export function meta() {
   return {
@@ -15,7 +15,10 @@ export function meta() {
 }
 
 export function loader() {
-  console.log(serverMessage);
+  if (process.env.NODE_ENV !== "test") {
+    console.log(serverMessage);
+  }
+
   return null;
 }
 

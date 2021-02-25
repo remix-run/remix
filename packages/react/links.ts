@@ -169,13 +169,18 @@ function getPageLinkDescriptors(
   let links = [getPageScripts(descriptor, nextMatches, manifest)];
 
   if (descriptor.data === true) {
-    // "data diffing" same as in components.tsx
+    // NOTE: keep in sync with components.tsx data diff
     let newMatches =
       location.search !== search
         ? nextMatches
         : nextMatches.filter(
             (match, index) =>
-              !matches[index] || matches[index].pathname !== match.pathname
+              // new route
+              !matches[index] ||
+              // existing route but params changed
+              matches[index].pathname !== match.pathname ||
+              // catchall param changed
+              matches[index].params["*"] !== match.params["*"]
           );
 
     links = links.concat(getDataLinks(descriptor, newMatches, manifest));
