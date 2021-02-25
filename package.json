@@ -3,7 +3,8 @@
   "name": "remix",
   "scripts": {
     "clean": "git clean -fdX .",
-    "build": "rollup -c && tsc -b",
+    "copyright": "node ./scripts/copyright.js",
+    "build": "rollup -c && tsc -b && node ./scripts/copyright.js",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
     "version": "node ./scripts/version.js",
@@ -51,6 +52,7 @@
     "eslint-plugin-react": "^7.21.5",
     "eslint-plugin-react-hooks": "^4.2.0",
     "express": "^4.17.1",
+    "glob": "^7.1.6",
     "history": "^5.0.0",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",

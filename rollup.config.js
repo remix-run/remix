@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import babel from "@rollup/plugin-babel";
 import copy from "rollup-plugin-copy";
@@ -7,7 +8,9 @@ function isLocalModuleId(id) {
   return id.startsWith(".") || path.isAbsolute(id);
 }
 
-const banner = `// Copyright ${new Date().getFullYear()} React Training, LLC.`;
+const copyrightFile = path.resolve(__dirname, "COPYRIGHT.md");
+const copyright = fs.readFileSync(copyrightFile);
+const banner = "// " + copyright.split("\n").join("\n// ");
 
 /** @type {import("rollup").RollupOptions} */
 let dev = {
