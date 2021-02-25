@@ -3,8 +3,8 @@
   "name": "remix",
   "scripts": {
     "clean": "git clean -fdX .",
-    "copyright": "node ./scripts/copyright.js",
-    "build": "rollup -c && tsc -b && node ./scripts/copyright.js",
+    "build": "rollup -c && tsc -b && node ./scripts/license.js",
+    "license": "node ./scripts/license.js",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
     "version": "node ./scripts/version.js",

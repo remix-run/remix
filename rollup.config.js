@@ -8,9 +8,9 @@ function isLocalModuleId(id) {
   return id.startsWith(".") || path.isAbsolute(id);
 }
 
-const copyrightFile = path.resolve(__dirname, "COPYRIGHT.md");
-const copyright = fs.readFileSync(copyrightFile);
-const banner = "// " + copyright.split("\n").join("\n// ");
+const licenseFile = path.resolve(__dirname, "LICENSE.md");
+const license = fs.readFileSync(licenseFile, "utf-8");
+const banner = "// " + license.split("\n").join("\n// ");
 
 /** @type {import("rollup").RollupOptions} */
 let dev = {
