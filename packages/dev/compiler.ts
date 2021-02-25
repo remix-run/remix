@@ -59,9 +59,8 @@ export function createBuild(
 }
 
 export interface BuildOptions {
-  mode: BuildMode;
-  target: BuildTarget;
-  manifestDir?: string;
+  mode: string;
+  target: string;
 }
 
 /**
@@ -71,19 +70,14 @@ export async function build(
   config: RemixConfig,
   {
     mode = BuildMode.Production,
-    target = BuildTarget.Server,
-    manifestDir = "."
+    target = BuildTarget.Server
   }: Partial<BuildOptions> = {}
 ): Promise<RemixBuild> {
-  let buildOptions: BuildOptions = {
-    mode,
-    target,
-    manifestDir
-  };
+  let buildOptions = { mode, target };
 
   let plugins: Plugin[] = [remixConfig({ rootDir: config.rootDirectory })];
 
-  plugins.push(...getBuildPlugins(buildOptions));
+  plugins.push(...getBuildPlugins(config.serverBuildDirectory, buildOptions));
 
   let rollupBuild = await rollup.rollup({
     external: getExternalOption(target),
@@ -109,17 +103,12 @@ export function watch(
   {
     mode = BuildMode.Development,
     target = BuildTarget.Browser,
-    manifestDir = ".",
     onBuildStart,
     onBuildEnd,
     onError
   }: Partial<WatchOptions> = {}
 ): () => void {
-  let buildOptions: BuildOptions = {
-    mode,
-    target,
-    manifestDir
-  };
+  let buildOptions = { mode, target };
 
   let watcher = rollup.watch({
     external: getExternalOption(target),
@@ -130,7 +119,7 @@ export function watch(
       watchDirectory({
         sourceDir: config.appDirectory
       }),
-      ...getBuildPlugins(buildOptions)
+      ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
     ],
     watch: {
       // Skip the write here and do it in a callback instead. This gives us
@@ -195,7 +184,7 @@ function isImportHint(id: string): boolean {
   return importHints.some(hint => id.startsWith(hint));
 }
 
-function getExternalOption(target: BuildTarget): ExternalOption | undefined {
+function getExternalOption(target: string): ExternalOption | undefined {
   return target === BuildTarget.Server
     ? // Exclude non-local module identifiers from the server bundles.
       // This includes identifiers like "react" which will be resolved
@@ -208,7 +197,7 @@ function getExternalOption(target: BuildTarget): ExternalOption | undefined {
       ignorePackages;
 }
 
-function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
+function getInputOption(config: RemixConfig, target: string): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
@@ -262,9 +251,7 @@ function findFile(
   return undefined;
 }
 
-function getTreeshakeOption(
-  target: BuildTarget
-): TreeshakingOptions | undefined {
+function getTreeshakeOption(target: string): TreeshakingOptions | undefined {
   return target === BuildTarget.Browser
     ? // When building for the browser, we need to be very aggressive with code
       // removal so we can be sure all imports of server-only code are removed.
@@ -279,9 +266,7 @@ function getTreeshakeOption(
     : undefined;
 }
 
-function getOnWarnOption(
-  target: BuildTarget
-): InputOptions["onwarn"] | undefined {
+function getOnWarnOption(target: string): InputOptions["onwarn"] | undefined {
   return target === BuildTarget.Browser
     ? (warning, warn) => {
         if (warning.code === "EMPTY_BUNDLE") {
@@ -297,11 +282,10 @@ function getOnWarnOption(
     : undefined;
 }
 
-function getBuildPlugins({
-  mode,
-  target,
-  manifestDir
-}: BuildOptions): Plugin[] {
+function getBuildPlugins(
+  serverBuildDir: string,
+  { mode, target }: BuildOptions
+): Plugin[] {
   let plugins: Plugin[] = [
     remixInputs({
       getInput(config) {
@@ -370,7 +354,7 @@ function getBuildPlugins({
 
   plugins.push(
     manifest({
-      outputDir: manifestDir,
+      outputDir: serverBuildDir,
       fileName:
         target === BuildTarget.Browser
           ? AssetManifestFilename

@@ -191,18 +191,15 @@ async function handleDocumentRequest(
     statusCode = 404;
   }
 
-  // Load the server build.
-  let routeModules = loadRouteModules(
-    config.serverBuildDirectory,
-    matches.map(match => match.route.id)
-  );
-  let serverEntryModule = loadServerEntryModule(config.serverBuildDirectory);
-
   // Handle action requests.
   if (isActionRequest(request)) {
+    let routeModule = loadRouteModule(
+      config.serverBuildDirectory,
+      leafRoute.id
+    );
     let response = await callRouteAction(
       leafRoute.id,
-      routeModules[leafRoute.id],
+      routeModule,
       request,
       loadContext,
       leafMatch.params
@@ -212,6 +209,13 @@ async function handleDocumentRequest(
 
     return response;
   }
+
+  // Load the server build.
+  let serverEntryModule = loadServerEntryModule(config.serverBuildDirectory);
+  let routeModules = loadRouteModules(
+    config.serverBuildDirectory,
+    matches.map(match => match.route.id)
+  );
 
   let componentDidCatchEmulator: ComponentDidCatchEmulator = {
     trackBoundaries: true,

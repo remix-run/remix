@@ -17,8 +17,8 @@ export default function css({
   target,
   mode
 }: {
-  target: BuildTarget;
-  mode: BuildMode;
+  target: string;
+  mode: string;
 }): Plugin {
   let config: RemixConfig;
   let processor: Processor;
@@ -128,7 +128,7 @@ async function assetExists(filePath: string) {
   }
 }
 
-async function getPostCssConfig(appDirectory: string, mode: BuildMode) {
+async function getPostCssConfig(appDirectory: string, mode: string) {
   let requirePath = path.resolve(appDirectory, "postcss.config.js");
   try {
     await fsp.access(requirePath);

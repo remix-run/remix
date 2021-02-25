@@ -5,7 +5,7 @@ import * as Images from "../images";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
-export default function img({ target }: { target: BuildTarget }): Plugin {
+export default function img({ target }: { target: string }): Plugin {
   let config: RemixConfig;
   let cleanupEmissions: ReturnType<typeof Images.trackEmissions>;
 

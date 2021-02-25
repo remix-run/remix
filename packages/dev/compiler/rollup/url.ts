@@ -9,7 +9,7 @@ import { getRemixConfig } from "./remixConfig";
 
 const IMPLICIT_URL = /\.(?:svg|mp4|webm|ogg|mp3|wav|flac|aac|woff2?|eot|ttf|otf)$/i;
 
-export default function url({ target }: { target: BuildTarget }): Plugin {
+export default function url({ target }: { target: string }): Plugin {
   let config: RemixConfig;
 
   return {

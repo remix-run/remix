@@ -12,11 +12,7 @@ import { getRemixConfig } from "./remixConfig";
  *   an empty shim for the module so Rollup doesn't complain and the build
  *   doesn't break
  */
-export default function routeModules({
-  target
-}: {
-  target: BuildTarget;
-}): Plugin {
+export default function routeModules({ target }: { target: string }): Plugin {
   let magicProxy = "?route-module-proxy";
 
   return {

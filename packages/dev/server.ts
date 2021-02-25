@@ -30,14 +30,13 @@ export async function startDevServer(
 }
 
 function createRequestHandler(config: RemixConfig) {
-  let serverBuildStart: number = 0;
-  let browserBuildStart: number = 0;
+  let serverBuildStart = 0;
+  let browserBuildStart = 0;
 
   signalExit(
     watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Server,
-      manifestDir: config.serverBuildDirectory,
       onBuildStart() {
         console.log("Building Remix...");
         serverBuildStart = Date.now();
@@ -58,7 +57,6 @@ function createRequestHandler(config: RemixConfig) {
     watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Browser,
-      manifestDir: config.serverBuildDirectory,
       onBuildStart() {
         browserBuildStart = Date.now();
       },
