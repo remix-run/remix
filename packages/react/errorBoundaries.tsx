@@ -55,6 +55,7 @@ export class RemixErrorBoundary extends React.Component<
  * When app's don't provide a root level ErrorBoundary, we default to this.
  */
 export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
   return (
     <html lang="en">
       <head>
