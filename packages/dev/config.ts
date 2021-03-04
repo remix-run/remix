@@ -1,13 +1,12 @@
 import path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
-import type {
-  ConfigRouteObject,
-  RouteManifest,
-  DefineRoutes
-} from "./config/routes";
-import { createRouteManifest, defineRoutes } from "./config/routes";
+import { loadModule } from "./modules";
+import type { ConfigRoute, DefineRoutesFunction } from "./config/routes";
+import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
+import type { RouteManifest } from "./config/routesManifest";
+import { createRouteManifest } from "./config/routesManifest";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 
 /**
@@ -24,11 +23,27 @@ export interface AppConfig {
    * A function for defining custom routes, in addition to those already defined
    * using the filesystem convention in `app/routes`.
    */
-  routes?: (defineRoutes: DefineRoutes) => Promise<ReturnType<DefineRoutes>>;
+  routes?: (
+    defineRoutes: DefineRoutesFunction
+  ) => Promise<ReturnType<DefineRoutesFunction>>;
+
+  /**
+   * The path to the server build, relative to remix.config.js. Defaults to
+   * "build".
+   */
+  serverBuildDirectory?: string;
 
   /**
    * The path to the browser build, relative to remix.config.js. Defaults to
    * "public/build".
+   */
+  assetsBuildDirectory?: string;
+
+  /**
+   * The path to the browser build, relative to remix.config.js. Defaults to
+   * "public/build".
+   *
+   * @deprecated Use `assetsBuildDirectory` instead
    */
   browserBuildDirectory?: string;
 
@@ -37,12 +52,6 @@ export interface AppConfig {
    * "/build/".
    */
   publicPath?: string;
-
-  /**
-   * The path to the server build, relative to remix.config.js. Defaults to
-   * "build".
-   */
-  serverBuildDirectory?: string;
 
   /**
    * The port number to use for the dev server. Defaults to 8002.
@@ -72,7 +81,7 @@ export interface RemixConfig {
   /**
    * An array of all available routes, nested according to route hierarchy.
    */
-  routes: ConfigRouteObject[];
+  routes: ConfigRoute[];
 
   /**
    * An object of all available routes, keyed by id.
@@ -80,19 +89,19 @@ export interface RemixConfig {
   routeManifest: RouteManifest;
 
   /**
-   * The absolute path to the browser build.
-   */
-  browserBuildDirectory: string;
-
-  /**
-   * The URL prefix of the browser build with a trailing slash.
-   */
-  publicPath: string;
-
-  /**
-   * The absolute path to the server build.
+   * The absolute path to the server build directory.
    */
   serverBuildDirectory: string;
+
+  /**
+   * The absolute path to the assets build directory.
+   */
+  assetsBuildDirectory: string;
+
+  /**
+   * The URL prefix of the public build with a trailing slash.
+   */
+  publicPath: string;
 
   /**
    * The mode to use to run the server.
@@ -116,7 +125,7 @@ export interface RemixConfig {
  */
 export async function readConfig(
   remixRoot?: string,
-  serverMode: string = ServerMode.Production
+  serverMode = ServerMode.Production
 ): Promise<RemixConfig> {
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
@@ -127,13 +136,14 @@ export async function readConfig(
   }
 
   let rootDirectory = path.resolve(remixRoot);
-  let configFile = path.resolve(rootDirectory, "remix.config.js");
+  let appConfigFile = path.resolve(rootDirectory, "remix.config.js");
 
   let appConfig: AppConfig;
   try {
-    appConfig = require(configFile);
+    appConfig = loadModule(appConfigFile);
   } catch (error) {
-    throw new Error(`Missing remix.config.js in ${rootDirectory}`);
+    console.error(`Error loading Remix config in ${appConfigFile}`);
+    console.error(error);
   }
 
   let appDirectory = path.resolve(
@@ -141,9 +151,16 @@ export async function readConfig(
     appConfig.appDirectory || "app"
   );
 
-  let browserBuildDirectory = path.resolve(
+  let serverBuildDirectory = path.resolve(
     rootDirectory,
-    appConfig.browserBuildDirectory || path.join("public", "build")
+    appConfig.serverBuildDirectory || "build"
+  );
+
+  let assetsBuildDirectory = path.resolve(
+    rootDirectory,
+    appConfig.assetsBuildDirectory ||
+      appConfig.browserBuildDirectory ||
+      path.join("public", "build")
   );
 
   let devServerPort = appConfig.devServerPort || 8002;
@@ -162,18 +179,13 @@ export async function readConfig(
 
   let routeManifest = createRouteManifest(routes);
 
-  let serverBuildDirectory = path.resolve(
-    rootDirectory,
-    appConfig.serverBuildDirectory || "build"
-  );
-
   // TODO: validate routes
 
   let remixConfig: RemixConfig = {
     appDirectory,
-    browserBuildDirectory,
     devServerPort,
     mdx: appConfig.mdx,
+    assetsBuildDirectory,
     publicPath,
     rootDirectory,
     routes,

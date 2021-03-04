@@ -1,13 +1,9 @@
-import path from "path";
 import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router";
 
-import type { EntryContext, RouteData } from "./entry";
-import { loadServerManifest } from "./buildManifest";
-import type { Headers, HeadersInit, Request, Response } from "./fetch";
+import type { HeadersInit, Headers, Request, Response } from "./fetch";
 import type { LinkDescriptor } from "./links";
-import invariant from "./invariant";
 
 /**
  * An object of data returned from the server's `getLoadContext` function. This
@@ -47,7 +43,7 @@ export interface HeadersFunction {
  */
 export interface MetaFunction {
   (args: {
-    data: RouteData[string];
+    data: AppData;
     parentsData: RouteData;
     params: Params;
     location: Location;
@@ -59,7 +55,7 @@ export interface MetaFunction {
  * the document on route transitions.
  */
 export interface LinksFunction {
-  (args: { data: RouteData[string] }): LinkDescriptor[];
+  (args: { data: AppData }): LinkDescriptor[];
 }
 
 /**
@@ -95,65 +91,23 @@ export interface RouteModule {
   handle?: any;
 }
 
-export interface RouteModules {
-  [routeId: string]: RouteModule;
+export interface RouteManifest<Route> {
+  [routeId: string]: Route;
 }
 
-/**
- * Gets a route module from the build on the filesystem.
- */
-export function loadRouteModule(dir: string, routeId: string): RouteModule {
-  let manifest = loadServerManifest(dir);
+export type RouteData = RouteManifest<AppData>;
+export type RouteModules = RouteManifest<RouteModule>;
 
-  invariant(
-    manifest.entries[routeId],
-    `Missing entry for route "${routeId}" in the server manifest`
-  );
-
-  return loadModule(path.resolve(dir, manifest.entries[routeId].file));
+export interface Route {
+  path: string;
+  caseSensitive?: boolean;
+  id: string;
+  parentId?: string;
 }
 
-/**
- * Loads many route modules from the build and returns them in an object keyed
- * by route id.
- */
-export function loadRouteModules(
-  dir: string,
-  routeIds: string[]
-): RouteModules {
-  return routeIds.reduce((memo, id) => {
-    memo[id] = loadRouteModule(dir, id);
-    return memo;
-  }, {} as RouteModules);
+export interface ServerRoute extends Route {
+  module: RouteModule;
+  children: ServerRoute[];
 }
 
-/**
- * A module that serves as the entry point for a Remix app during server
- * rendering.
- */
-export interface ServerEntryModule {
-  default(
-    request: Request,
-    responseStatusCode: number,
-    responseHeaders: Headers,
-    context: EntryContext
-  ): Promise<Response>;
-}
-
-/**
- * Gets the server entry module from the build on the filesystem.
- */
-export function loadServerEntryModule(dir: string): ServerEntryModule {
-  let manifest = loadServerManifest(dir);
-
-  invariant(
-    manifest.entries["entry.server"],
-    `Missing entry for "entry.server" in the server manifest`
-  );
-
-  return loadModule(path.resolve(dir, manifest.entries["entry.server"].file));
-}
-
-function loadModule(id: string) {
-  return require(id);
-}
+export type ServerRouteManifest = RouteManifest<Omit<ServerRoute, "children">>;

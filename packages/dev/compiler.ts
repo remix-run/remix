@@ -20,25 +20,21 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import { terser } from "rollup-plugin-terser";
 
-import {
-  BuildMode,
-  BuildTarget,
-  AssetManifestFilename,
-  ServerManifestFilename
-} from "@remix-run/core";
-
+import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
 import { ignorePackages } from "./compiler/browserIgnore";
+
+import assetsManifest from "./compiler/rollup/assetsManifest";
 import clientServer from "./compiler/rollup/clientServer";
-import manifest from "./compiler/rollup/manifest";
+import css from "./compiler/rollup/css";
+import img from "./compiler/rollup/img";
+import mdx from "./compiler/rollup/mdx";
 import remixConfig from "./compiler/rollup/remixConfig";
 import remixInputs from "./compiler/rollup/remixInputs";
-import watchDirectory from "./compiler/rollup/watchDirectory";
-import mdx from "./compiler/rollup/mdx";
 import routeModules from "./compiler/rollup/routeModules";
+import serverManifest from "./compiler/rollup/serverManifest";
 import url from "./compiler/rollup/url";
-import img from "./compiler/rollup/img";
-import css from "./compiler/rollup/css";
+import watchDirectory from "./compiler/rollup/watchDirectory";
 
 /**
  * All file extensions we support for entry files.
@@ -59,8 +55,8 @@ export function createBuild(
 }
 
 export interface BuildOptions {
-  mode: string;
-  target: string;
+  mode: BuildMode;
+  target: BuildTarget;
 }
 
 /**
@@ -345,22 +341,14 @@ function getBuildPlugins(
   );
 
   if (mode === BuildMode.Production) {
-    plugins.push(
-      terser({
-        ecma: 2017
-      })
-    );
+    plugins.push(terser({ ecma: 2017 }));
   }
 
-  plugins.push(
-    manifest({
-      outputDir: serverBuildDir,
-      fileName:
-        target === BuildTarget.Browser
-          ? AssetManifestFilename
-          : ServerManifestFilename
-    })
-  );
+  if (target === BuildTarget.Browser) {
+    plugins.push(assetsManifest());
+  } else if (target === BuildTarget.Server) {
+    plugins.push(serverManifest());
+  }
 
   return plugins;
 }

@@ -5,8 +5,7 @@ import express from "express";
 import morgan from "morgan";
 import signalExit from "signal-exit";
 
-import { BuildMode, BuildTarget } from "@remix-run/core";
-
+import { BuildMode, BuildTarget } from "./build";
 import { watch, write } from "./compiler";
 import type { RemixConfig } from "./config";
 
@@ -31,7 +30,7 @@ export async function startDevServer(
 
 function createRequestHandler(config: RemixConfig) {
   let serverBuildStart = 0;
-  let browserBuildStart = 0;
+  let assetsBuildStart = 0;
 
   signalExit(
     watch(config, {
@@ -58,13 +57,13 @@ function createRequestHandler(config: RemixConfig) {
       mode: BuildMode.Development,
       target: BuildTarget.Browser,
       onBuildStart() {
-        browserBuildStart = Date.now();
+        assetsBuildStart = Date.now();
       },
       async onBuildEnd(build) {
-        await write(build, config.browserBuildDirectory);
-        let dir = path.relative(process.cwd(), config.browserBuildDirectory);
-        let time = Date.now() - browserBuildStart;
-        console.log(`Wrote browser build to ./${dir} in ${time}ms`);
+        await write(build, config.assetsBuildDirectory);
+        let dir = path.relative(process.cwd(), config.assetsBuildDirectory);
+        let time = Date.now() - assetsBuildStart;
+        console.log(`Wrote assets build to ./${dir} in ${time}ms`);
       },
       onError(error) {
         console.error(error);

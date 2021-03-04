@@ -140,13 +140,21 @@ function decodeCookieValue(value: string, secrets: string[]): any {
 }
 
 function encodeData(value: any): string {
-  return Buffer.from(JSON.stringify(value)).toString("base64");
+  return btoa(JSON.stringify(value));
 }
 
 function decodeData(value: string): any {
   try {
-    return JSON.parse(Buffer.from(value, "base64").toString());
+    return JSON.parse(atob(value));
   } catch (error) {
     return {};
   }
+}
+
+function btoa(b: string): string {
+  return Buffer.from(b, "binary").toString("base64");
+}
+
+function atob(a: string): string {
+  return Buffer.from(a, "base64").toString("binary");
 }

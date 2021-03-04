@@ -1,30 +1,39 @@
-import type { Location } from "history";
 import type { RouteObject, Params } from "react-router";
-import { matchRoutes } from "react-router";
+import { matchRoutes as match } from "react-router";
 
-import type { ConfigRouteObject } from "./config/routes";
+import type { ServerRoute, ServerRouteManifest } from "./routes";
 
-export type { ConfigRouteObject };
-
-export interface ConfigRouteMatch {
+export interface RouteMatch<Route> {
   params: Params;
   pathname: string;
-  route: ConfigRouteObject;
+  route: Route;
 }
 
-function matchConfigRoutes(
-  routes: ConfigRouteObject[],
-  location: string | Location
-): ConfigRouteMatch[] | null {
-  let matches = matchRoutes((routes as unknown) as RouteObject[], location);
+export type ServerRouteMatch = RouteMatch<ServerRoute>;
+
+export function createRoutes(
+  routeManifest: ServerRouteManifest,
+  parentRouteId?: string
+): ServerRoute[] {
+  return Object.keys(routeManifest)
+    .filter(key => routeManifest[key].parentId === parentRouteId)
+    .map(id => ({
+      ...routeManifest[id],
+      children: createRoutes(routeManifest, id)
+    }));
+}
+
+export function matchRoutes(
+  routes: ServerRoute[],
+  pathname: string
+): ServerRouteMatch[] | null {
+  let matches = match((routes as unknown) as RouteObject[], pathname);
 
   if (!matches) return null;
 
   return matches.map(match => ({
     params: match.params,
     pathname: match.pathname,
-    route: (match.route as unknown) as ConfigRouteObject
+    route: (match.route as unknown) as ServerRoute
   }));
 }
-
-export { matchConfigRoutes as matchRoutes };

@@ -4,42 +4,42 @@ import type { Location } from "history";
 import type { Params, RouteObject } from "react-router";
 import { matchRoutes } from "react-router-dom";
 import type {
-  EntryRouteObject,
+  EntryRoute,
   EntryRouteMatch,
   RouteManifest
 } from "@remix-run/core";
 
 import invariant from "./invariant";
 
-export interface ClientRouteObject {
-  id: string;
+export interface ClientRoute {
   path: string;
-  element: ReactNode;
   caseSensitive?: boolean;
-  children?: ClientRouteObject[];
+  id: string;
+  element: ReactNode;
+  children?: ClientRoute[];
 }
 
 type RouteComponentType = ComponentType<{ id: string }>;
 
 export function createClientRoute(
-  entryRoute: EntryRouteObject,
+  entryRoute: EntryRoute,
   elementType: RouteComponentType
-): ClientRouteObject {
+): ClientRoute {
   let Component = elementType;
   return {
-    id: entryRoute.id,
     path: entryRoute.path,
-    element: <Component id={entryRoute.id} />,
-    caseSensitive: !!entryRoute.caseSensitive
+    caseSensitive: !!entryRoute.caseSensitive,
+    id: entryRoute.id,
+    element: <Component id={entryRoute.id} />
   };
 }
 
 export function createClientRoutes(
-  routeManifest: RouteManifest<EntryRouteObject>,
+  routeManifest: RouteManifest<EntryRoute>,
   elementType: RouteComponentType
-): ClientRouteObject[] {
-  let routes: ClientRouteObject[] = [];
-  let addedRoutes: { [routeId: string]: ClientRouteObject } = {};
+): ClientRoute[] {
+  let routes: ClientRoute[] = [];
+  let addedRoutes: { [routeId: string]: ClientRoute } = {};
 
   let routeIds = Object.keys(routeManifest).sort(a =>
     // need to put "root" first so it sorts first, this is a bit of hack that
@@ -73,7 +73,7 @@ export function createClientRoutes(
 export interface ClientRouteMatch {
   params: Params;
   pathname: string;
-  route: ClientRouteObject;
+  route: ClientRoute;
 }
 
 export function createClientMatches(
@@ -87,7 +87,7 @@ export function createClientMatches(
 }
 
 export function matchClientRoutes(
-  routes: ClientRouteObject[],
+  routes: ClientRoute[],
   location: Location | string
 ): ClientRouteMatch[] {
   let matches = matchRoutes((routes as unknown) as RouteObject[], location);
@@ -97,6 +97,6 @@ export function matchClientRoutes(
   return matches.map(match => ({
     params: match.params,
     pathname: match.pathname,
-    route: (match.route as unknown) as ClientRouteObject
+    route: (match.route as unknown) as ClientRoute
   }));
 }

@@ -14,15 +14,15 @@ describe("readConfig", () => {
   it("generates a config", async () => {
     expect(config).toMatchInlineSnapshot(
       {
-        appDirectory: expect.any(String),
-        browserBuildDirectory: expect.any(String),
         rootDirectory: expect.any(String),
-        serverBuildDirectory: expect.any(String)
+        appDirectory: expect.any(String),
+        serverBuildDirectory: expect.any(String),
+        assetsBuildDirectory: expect.any(String)
       },
       `
       Object {
         "appDirectory": Any<String>,
-        "browserBuildDirectory": Any<String>,
+        "assetsBuildDirectory": Any<String>,
         "devServerPort": 8002,
         "mdx": undefined,
         "publicPath": "/build/",

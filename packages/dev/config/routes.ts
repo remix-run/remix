@@ -2,16 +2,16 @@
  * A route that was created using `defineRoutes` or created conventionally from
  * looking at the files on the filesystem.
  */
-export interface ConfigRouteObject {
+export interface ConfigRoute {
   /**
    * The path this route uses to match on the URL pathname.
    */
   path: string;
 
   /**
-   * This route's child routes.
+   * Should be `true` if the `path` is case-sensitive. Defaults to `false`.
    */
-  children?: ConfigRouteObject[];
+  caseSensitive?: boolean;
 
   /**
    * The unique id for this route, named like the `moduleFile` but without
@@ -34,30 +34,9 @@ export interface ConfigRouteObject {
   moduleFile: string;
 
   /**
-   * Should be `true` if the `path` is case-sensitive.
+   * This route's child routes.
    */
-  caseSensitive?: boolean;
-}
-
-export type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
-
-export interface RouteManifest<RouteObject = FlatConfigRouteObject> {
-  [routeId: string]: RouteObject;
-}
-
-export function createRouteManifest(
-  routes: ConfigRouteObject[],
-  manifest: RouteManifest = {}
-): RouteManifest {
-  for (let route of routes) {
-    let { children, ...rest } = route;
-    manifest[route.id] = rest;
-    if (children) {
-      createRouteManifest(children, manifest);
-    }
-  }
-
-  return manifest;
+  children?: ConfigRoute[];
 }
 
 export interface DefineRouteOptions {
@@ -68,9 +47,6 @@ export interface DefineRouteOptions {
   caseSensitive?: boolean;
 }
 
-/**
- * A function for defining child routes.
- */
 interface DefineRouteChildren {
   (): void;
 }
@@ -89,7 +65,7 @@ interface DefineRouteChildren {
  *     });
  *   });
  */
-export interface DefineRoute {
+export interface DefineRouteFunction {
   (
     /**
      * The path this route uses to match the URL pathname.
@@ -104,22 +80,29 @@ export interface DefineRoute {
      */
     moduleFile: string,
 
+    /**
+     * Options for defining routes, or a function for defining child routes.
+     */
     optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
+
+    /**
+     * A function for defining child routes.
+     */
     children?: DefineRouteChildren
   ): void;
 }
 
-export type DefineRoutes = typeof defineRoutes;
+export type DefineRoutesFunction = typeof defineRoutes;
 
 /**
  * A function for defining routes programmatically, instead of using the
  * filesystem convention.
  */
 export function defineRoutes(
-  callback: (defineRoute: DefineRoute) => void
-): ConfigRouteObject[] {
-  let routes: ConfigRouteObject[] = [];
-  let currentParents: ConfigRouteObject[] = [];
+  callback: (defineRoute: DefineRouteFunction) => void
+): ConfigRoute[] {
+  let routes: ConfigRoute[] = [];
+  let currentParents: ConfigRoute[] = [];
   let alreadyReturned = false;
 
   function defineRoute(
@@ -147,7 +130,7 @@ export function defineRoutes(
       options = optionsOrChildren || {};
     }
 
-    let route: ConfigRouteObject = {
+    let route: ConfigRoute = {
       id: createRouteId(moduleFile),
       path: path || "/",
       moduleFile

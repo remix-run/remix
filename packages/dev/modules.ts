@@ -1,13 +1,20 @@
 /**
+ * Loads a CommonJS module from the filesystem using node's `require` function.
+ */
+export function loadModule(file: string): any {
+  return require(file);
+}
+
+/**
  * Purges all entries that begin with the given prefix from node's internal
- * require cache.
+ * `require` cache.
  *
  * This is useful when running the Remix build in watch mode because we
- * currently load the Remix config using CommonJS require, which means that it
+ * currently load remix.config.js using CommonJS require, which means that it
  * can require() other files it might need. So we just purge them all to make
  * sure we pick up the latest changes.
  */
-export function purgeRequireCache(
+export function purgeModuleCache(
   prefix: string,
   includeNodeModules = false
 ): void {

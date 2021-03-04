@@ -1,28 +1,6 @@
 import "./assetImportTypes";
 
-export { createAdapter } from "./adapter";
-
-export { BuildMode, BuildTarget } from "./build";
-export type {
-  BuildManifest,
-  AssetManifest,
-  ServerManifest
-} from "./buildManifest";
-export { AssetManifestFilename, ServerManifestFilename } from "./buildManifest";
-export type {
-  AppData,
-  AppLoadContext,
-  RouteComponent,
-  ErrorBoundaryComponent,
-  HeadersFunction,
-  MetaFunction,
-  LinksFunction,
-  LoaderFunction,
-  ActionFunction,
-  RouteModule,
-  RouteModules,
-  ServerEntryModule
-} from "./buildModules";
+export type { ServerBuild, ServerEntryModule } from "./build";
 
 export type {
   CookieParseOptions,
@@ -35,12 +13,12 @@ export { createCookie, isCookie } from "./cookies";
 
 export type {
   EntryContext,
-  EntryManifest,
-  EntryRouteObject,
+  AssetsManifest,
+  EntryRoute,
+  EntryRouteManifest,
   EntryRouteMatch,
-  RouteData,
-  SerializedError,
-  ComponentDidCatchEmulator
+  ComponentDidCatchEmulator,
+  SerializedError
 } from "./entry";
 
 export type {
@@ -49,14 +27,7 @@ export type {
   RequestInit,
   ResponseInit
 } from "./fetch";
-export {
-  Headers,
-  Request,
-  isRequestLike,
-  Response,
-  isResponseLike,
-  fetch
-} from "./fetch";
+export { Headers, Request, Response, fetch } from "./fetch";
 
 export type {
   LinkDescriptor,
@@ -64,6 +35,22 @@ export type {
   BlockLinkDescriptor,
   PageLinkDescriptor
 } from "./links";
+
+export type {
+  AppLoadContext,
+  AppData,
+  RouteComponent,
+  ErrorBoundaryComponent,
+  HeadersFunction,
+  MetaFunction,
+  LinksFunction,
+  LoaderFunction,
+  ActionFunction,
+  RouteModule,
+  RouteManifest,
+  RouteData,
+  RouteModules
+} from "./routes";
 
 export { json, redirect } from "./responses";
 
@@ -82,6 +69,3 @@ export { createFileSessionStorage } from "./sessions/fileStorage";
 export { createMemorySessionStorage } from "./sessions/memoryStorage";
 
 export { warnOnce } from "./warnings";
-
-// TODO: remove
-export type { RouteManifest } from "./config/routes";

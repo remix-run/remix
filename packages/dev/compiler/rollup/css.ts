@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import path from "path";
 import { promises as fsp } from "fs";
 import postcss from "postcss";
@@ -6,8 +5,9 @@ import prettyBytes from "pretty-bytes";
 import prettyMs from "pretty-ms";
 import type { Plugin } from "rollup";
 import type Processor from "postcss/lib/processor";
-import { BuildTarget } from "@remix-run/core";
 
+import { BuildTarget } from "../../build";
+import { getHash } from "../crypto";
 import { log, logInfo } from "../logging";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
@@ -28,7 +28,8 @@ export default function cssPlugin({
     name: "css",
 
     async buildStart({ plugins }) {
-      if (!config) config = await getRemixConfig(plugins);
+      config = await getRemixConfig(plugins);
+
       if (!processor) {
         let postCssConfig = await getPostCssConfig(config.rootDirectory, mode);
         processor = postcss(postCssConfig.plugins);
@@ -61,12 +62,14 @@ export default function cssPlugin({
       }
 
       this.addWatchFile(id);
+
       let url = await processCssAsset(
         processor,
         id,
         config,
         target === BuildTarget.Browser
       );
+
       return `export default ${JSON.stringify(url)}`;
     }
   };
@@ -81,18 +84,19 @@ async function processCssAsset(
   let start = Date.now();
 
   let source = await fsp.readFile(id);
-  let hash = createHash("sha1").update(source).digest("hex");
+  let hash = getHash(source, 8);
 
   let relativeSourcePath = id.replace(config.appDirectory + "/", "");
   let extRegex = /(\.[^/.]+$)/;
   let relativeAssetPath = relativeSourcePath.replace(extRegex, `__${hash}.css`);
-  let localAssetPath = path.join(
-    config.browserBuildDirectory,
-    relativeAssetPath
-  );
-  let publicPath = config.publicPath + relativeAssetPath;
+  let url = config.publicPath + relativeAssetPath;
 
   if (emit) {
+    let localAssetPath = path.join(
+      config.assetsBuildDirectory,
+      relativeAssetPath
+    );
+
     if (await assetExists(localAssetPath)) {
       logInfo("css exists, skipping", relativeSourcePath);
     } else {
@@ -112,7 +116,7 @@ async function processCssAsset(
     }
   }
 
-  return publicPath;
+  return url;
 }
 
 async function assetExists(filePath: string) {

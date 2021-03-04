@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "Express",
       script: "server.js",
-      watch: ["remix.config.js", "server-build/asset-manifest.json"],
+      watch: ["remix.config.js", "build/assets.json"],
       watch_options: {
         followSymlinks: false
       },

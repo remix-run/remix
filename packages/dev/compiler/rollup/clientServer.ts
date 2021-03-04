@@ -1,6 +1,6 @@
 import type { Plugin } from "rollup";
-import { BuildTarget } from "@remix-run/core";
 
+import { BuildTarget } from "../../build";
 import empty from "./empty";
 
 /**

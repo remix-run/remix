@@ -1,8 +1,4 @@
-import type {
-  EntryRouteObject,
-  RouteModule,
-  RouteModules
-} from "@remix-run/core";
+import type { EntryRoute, RouteModule, RouteModules } from "@remix-run/core";
 
 export type { RouteModule, RouteModules };
 
@@ -10,7 +6,7 @@ export type { RouteModule, RouteModules };
  * Dynamically loads a route module from a bundle on the server.
  */
 export async function loadRouteModule(
-  route: EntryRouteObject,
+  route: EntryRoute,
   routeModulesCache: RouteModules
 ): Promise<RouteModule | null> {
   if (route.id in routeModulesCache) {
@@ -18,7 +14,7 @@ export async function loadRouteModule(
   }
 
   try {
-    let routeModule = await import(route.moduleUrl);
+    let routeModule = await import(route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
   } catch (error) {

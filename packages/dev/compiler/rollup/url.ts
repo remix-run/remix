@@ -1,9 +1,10 @@
-// Code adapted from https://github.com/preactjs/wmr
 import path from "path";
-import { promises as fs } from "fs";
+import { promises as fsp } from "fs";
 import type { Plugin } from "rollup";
-import { BuildTarget } from "@remix-run/core";
 
+import { BuildTarget } from "../../build";
+import createUrl from "../createUrl";
+import { getHash, addHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -16,11 +17,11 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
     name: "url",
 
     async buildStart({ plugins }) {
-      if (!config) config = await getRemixConfig(plugins);
+      config = await getRemixConfig(plugins);
     },
 
     async resolveId(id, importer) {
-      if (id[0] === "\0" || id[0] === "\b") return;
+      if (id[0] === "\0") return;
 
       if (id.startsWith("url:")) {
         // explicit `url:` prefix
@@ -29,20 +30,9 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
         return;
       }
 
-      const resolved = await this.resolve(id, importer, { skipSelf: true });
-      if (!resolved) return;
+      let resolved = await this.resolve(id, importer, { skipSelf: true });
 
-      resolved.id = `\0url:${resolved.id}`;
-      return resolved;
-    },
-
-    resolveFileUrl({ chunkId, relativePath, fileName }) {
-      if (target === BuildTarget.Browser) {
-        let jsonPath = JSON.stringify(relativePath);
-        return `new URL(${jsonPath}, import.meta.url).pathname`;
-      } else {
-        return generateServerUrl(chunkId, fileName, config);
-      }
+      return resolved && `\0url:${resolved.id}`;
     },
 
     async load(id) {
@@ -52,31 +42,21 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
         return;
       }
 
-      let name = id.replace(config.appDirectory + "/", "");
-      let fileId = this.emitFile({
-        type: "asset",
-        name: name,
-        source:
-          target === BuildTarget.Browser
-            ? await fs.readFile(id)
-            : JSON.stringify(name)
-      });
-
       this.addWatchFile(id);
-      return `export default import.meta.ROLLUP_FILE_URL_${fileId}`;
+
+      let source = await fsp.readFile(id);
+      let fileName = addHash(
+        path.relative(config.appDirectory, id),
+        getHash(source, 8)
+      );
+
+      if (target === BuildTarget.Browser) {
+        this.emitFile({ type: "asset", fileName, source });
+      }
+
+      return `export default ${JSON.stringify(
+        createUrl(config.publicPath, fileName)
+      )}`;
     }
   };
-}
-
-function generateServerUrl(chunkId: string, name: string, config: RemixConfig) {
-  let manifestPath = path.join(
-    config.serverBuildDirectory,
-    "asset-manifest.json"
-  );
-  let importerDir = path.dirname(
-    path.join(config.serverBuildDirectory, chunkId)
-  );
-  let manifestImportPath = path.relative(importerDir, manifestPath);
-
-  return `"${config.publicPath}"+require("./${manifestImportPath}").entries["${name}"].file`;
 }

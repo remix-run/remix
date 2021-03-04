@@ -1,16 +1,16 @@
 import fs from "fs";
 import path from "path";
 
-import type { ConfigRouteObject, DefineRoute } from "./routes";
+import type { ConfigRoute, DefineRouteFunction } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
 
 /**
  * All file extensions we support for route modules.
  */
-export const moduleExts = [".md", ".mdx", ".js", ".jsx", ".ts", ".tsx"];
+export const routeModuleExts = [".js", ".jsx", ".md", ".mdx", ".ts", ".tsx"];
 
-export function isModuleFile(filename: string): boolean {
-  return moduleExts.includes(path.extname(filename));
+export function isRouteModuleFile(filename: string): boolean {
+  return routeModuleExts.includes(path.extname(filename));
 }
 
 /**
@@ -24,13 +24,13 @@ export function isModuleFile(filename: string): boolean {
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
+export function defineConventionalRoutes(appDir: string): ConfigRoute[] {
   let files: {
     [routeId: string]: string;
   } = {};
 
   function defineNestedRoutes(
-    defineRoute: DefineRoute,
+    defineRoute: DefineRouteFunction,
     parentRouteId?: string
   ) {
     let routeIds = Object.keys(files);
@@ -56,11 +56,11 @@ export function defineConventionalRoutes(appDir: string): ConfigRouteObject[] {
   visitFiles(path.join(appDir, "routes"), file => {
     let routeId = createRouteId(path.join("routes", file));
 
-    if (isModuleFile(file)) {
+    if (isRouteModuleFile(file)) {
       files[routeId] = path.join("routes", file);
     } else {
       throw new Error(
-        `Invalid route component file: ${path.join(appDir, "routes", file)}`
+        `Invalid route module file: ${path.join(appDir, "routes", file)}`
       );
     }
   });

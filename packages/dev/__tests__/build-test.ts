@@ -1,7 +1,7 @@
 import path from "path";
 import type { OutputAsset, RollupOutput } from "rollup";
-import { BuildMode, BuildTarget } from "@remix-run/core";
 
+import { BuildMode, BuildTarget } from "../build";
 import type { BuildOptions } from "../compiler";
 import { build, generate } from "../compiler";
 import type { RemixConfig } from "../config";

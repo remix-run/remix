@@ -1,7 +1,7 @@
 import fs from "fs";
 import type { Plugin } from "rollup";
-import { BuildTarget } from "@remix-run/core";
 
+import { BuildTarget } from "../../build";
 import { getRemixConfig } from "./remixConfig";
 
 /**
@@ -76,7 +76,7 @@ export default function routeModulesPlugin({
           // available in the browser. All the rest will be tree-shaken out so
           // we don't end up with server-only code (and its dependencies) in the
           // browser bundles.
-          return `export { default, meta, links, handle, ErrorBoundary } from ${JSON.stringify(
+          return `export { ErrorBoundary, default, handle, links, meta } from ${JSON.stringify(
             source
           )};`;
         }

@@ -200,6 +200,7 @@ function getServerConfig(name) {
     },
     input: path.resolve(__dirname, `packages/${name}/index.ts`),
     output: {
+      banner: banner,
       dir: `build/node_modules/@remix-run/${name}`,
       format: "cjs",
       preserveModules: true,

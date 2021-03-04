@@ -18,7 +18,7 @@ import prettyMs from "pretty-ms";
 import type { RemixConfig } from "../config";
 import { log, logInfo } from "./logging";
 
-// Don't use the sharp cache, we use the config.browserBuildDirectory as the
+// Don't use the sharp cache, we use the config.publicBuildDirectory as the
 // cache so that we don't process images even between restarts of the dev
 // server. Also, through some experimenting, the sharp cache seems to be based
 // on filenames, not the content of the file, so replacing an image with a new
@@ -75,14 +75,14 @@ interface BuildImageAsset {
    *
    * Normally we'd let rollup hash the file based on content, but by generating
    * the name ourselves we can try to read it from the
-   * `config.browserBuildDirectory` directory if its already been processed.
+   * `config.publicBuildDirectory` directory if its already been processed.
    */
   name: string;
 
   /**
    * The image format.
    */
-  format: ImageAsset["format"];
+  format: "jpeg" | "png" | "webp" | "avif";
 
   /**
    * The image width in pixels
@@ -202,7 +202,7 @@ export async function getBuildImageAssets(
 }
 
 /**
- * Gets the asset buffer either from the config.browserBuildDirectory or
+ * Gets the asset buffer either from the config.publicBuildDirectory or
  * generates a new one if it needs to
  */
 
@@ -210,7 +210,7 @@ export async function emitAsset(
   buildImageAsset: BuildImageAsset,
   config: RemixConfig
 ): Promise<void> {
-  let filePath = path.join(config.browserBuildDirectory, buildImageAsset.name);
+  let filePath = path.join(config.assetsBuildDirectory, buildImageAsset.name);
 
   if (await assetExists(filePath)) {
     logInfo("img exists, skipping", buildImageAsset.name);
@@ -262,7 +262,7 @@ async function getPlaceholder(
   config: RemixConfig
 ) {
   let placeholderFileName = path.join(
-    config.browserBuildDirectory,
+    config.assetsBuildDirectory,
     `${name}__${metaHash}__placeholder.txt`
   );
 
@@ -397,7 +397,7 @@ async function processBuildImageAsset(
   image[transform.format]({ quality: transform.quality });
 
   // ensure directory because we're doing this outside of rollup's "emitAsset"
-  let filePath = path.join(config.browserBuildDirectory, buildImageAsset.name);
+  let filePath = path.join(config.assetsBuildDirectory, buildImageAsset.name);
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await image.toFile(filePath);
   let stats = await fsp.stat(filePath);
