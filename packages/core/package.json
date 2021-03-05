@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/core",
   "description": "The core classes and functions of Remix",
-  "version": "0.13.3",
+  "version": "0.14.0-pre.0",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
     "@types/cookie": "^0.4.0",
