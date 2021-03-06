@@ -1,14 +1,12 @@
 import path from "path";
 import { promises as fsp } from "fs";
 import postcss from "postcss";
-import prettyBytes from "pretty-bytes";
-import prettyMs from "pretty-ms";
-import type { Plugin } from "rollup";
 import type Processor from "postcss/lib/processor";
+import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../../build";
-import { getHash } from "../crypto";
-import { log, logInfo } from "../logging";
+import createUrl from "../createUrl";
+import { getHash, addHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -55,77 +53,42 @@ export default function cssPlugin({
     },
 
     async load(id) {
-      if (id.startsWith("\0css:")) {
-        id = id.slice(5);
-      } else {
-        return;
-      }
+      if (!id.startsWith("\0css:")) return;
+      id = id.slice(5);
 
       this.addWatchFile(id);
 
-      let url = await processCssAsset(
-        processor,
-        id,
-        config,
-        target === BuildTarget.Browser
+      let source = await fsp.readFile(id);
+      let fileName = addHash(
+        path.relative(config.appDirectory, id),
+        getHash(source, 8)
       );
 
-      return `export default ${JSON.stringify(url)}`;
-    }
-  };
-}
+      return `export default ${JSON.stringify(
+        createUrl(config.publicPath, fileName)
+      )}`;
+    },
 
-async function processCssAsset(
-  processor: Processor,
-  id: string,
-  config: RemixConfig,
-  emit: boolean
-) {
-  let start = Date.now();
+    async transform(code, id) {
+      if (!id.startsWith("\0css:")) return;
+      id = id.slice(5);
 
-  let source = await fsp.readFile(id);
-  let hash = getHash(source, 8);
+      if (target !== BuildTarget.Browser) return;
 
-  let relativeSourcePath = id.replace(config.appDirectory + "/", "");
-  let extRegex = /(\.[^/.]+$)/;
-  let relativeAssetPath = relativeSourcePath.replace(extRegex, `__${hash}.css`);
-  let url = config.publicPath + relativeAssetPath;
+      let source = await fsp.readFile(id);
+      let fileName = addHash(
+        path.relative(config.appDirectory, id),
+        getHash(source, 8)
+      );
 
-  if (emit) {
-    let localAssetPath = path.join(
-      config.assetsBuildDirectory,
-      relativeAssetPath
-    );
-
-    if (await assetExists(localAssetPath)) {
-      logInfo("css exists, skipping", relativeSourcePath);
-    } else {
+      console.log(`processing CSS for ${id}`);
       let result = await processor.process(source, { from: id });
 
-      await fsp.mkdir(path.dirname(localAssetPath), { recursive: true });
-      await fsp.writeFile(localAssetPath, result.css);
+      this.emitFile({ type: "asset", fileName, source: result.css });
 
-      let stats = await fsp.stat(localAssetPath);
-
-      log(
-        `Built css: %s, %s, %s`,
-        prettyMs(Date.now() - start),
-        prettyBytes(stats.size),
-        relativeSourcePath
-      );
+      return code;
     }
-  }
-
-  return url;
-}
-
-async function assetExists(filePath: string) {
-  try {
-    await fsp.access(filePath);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  };
 }
 
 async function getPostCssConfig(appDirectory: string, mode: string) {

@@ -36,11 +36,8 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
     },
 
     async load(id) {
-      if (id.startsWith("\0url:")) {
-        id = id.slice(5);
-      } else {
-        return;
-      }
+      if (!id.startsWith("\0url:")) return;
+      id = id.slice(5);
 
       this.addWatchFile(id);
 
