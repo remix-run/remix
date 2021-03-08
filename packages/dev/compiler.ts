@@ -22,6 +22,7 @@ import { terser } from "rollup-plugin-terser";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
+import { isImportHint } from "./compiler/importHints";
 import { ignorePackages } from "./compiler/browserIgnore";
 
 import assetsManifest from "./compiler/rollup/assetsManifest";
@@ -107,9 +108,8 @@ export function watch(
   let buildOptions = { mode, target };
   let plugins = [
     remixConfig({ rootDir: config.rootDirectory }),
-    watchDirectory({
-      sourceDir: config.appDirectory
-    }),
+    // Watch for newly created route files.
+    watchDirectory({ dir: config.appDirectory }),
     ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
   ];
 
@@ -173,12 +173,6 @@ function isLocalModuleId(id: string): boolean {
     // "/path/to/node_modules/react/index.js"
     path.isAbsolute(id)
   );
-}
-
-const importHints = ["css:", "img:", "url:"];
-
-function isImportHint(id: string): boolean {
-  return importHints.some(hint => id.startsWith(hint));
 }
 
 function getExternalOption(target: string): ExternalOption | undefined {

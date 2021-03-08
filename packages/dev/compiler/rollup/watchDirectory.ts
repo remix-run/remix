@@ -4,27 +4,22 @@ import chokidar from "chokidar";
 import tmp from "tmp";
 
 /**
- * This is a workaround for a bug in Rollup where this.addWatchFile does
- * not correctly listen for files that are added to a directory.
- * See https://github.com/rollup/rollup/issues/3704
+ * Triggers a rebuild whenever anything in the given `dir` changes, including
+ * adding new files.
  */
-export default function watchDirectory({
-  sourceDir
-}: {
-  sourceDir: string;
-}): Plugin {
+export default function watchDirectoryPlugin({ dir }: { dir: string }): Plugin {
   let tmpfile = tmp.fileSync();
   let startedWatcher = false;
 
   function startWatcher() {
     return new Promise((accept, reject) => {
       chokidar
-        .watch(sourceDir, {
+        .watch(dir, {
           ignoreInitial: true,
           ignored: /node_modules/,
           followSymlinks: false
         })
-        .on("add", handleAdd)
+        .on("add", triggerRebuild)
         .on("ready", accept)
         .on("error", reject);
     });
@@ -35,13 +30,14 @@ export default function watchDirectory({
     await fsp.utimes(tmpfile.name, now, now);
   }
 
-  function handleAdd() {
-    triggerRebuild();
-  }
-
   return {
-    name: "watch-directory",
+    name: "watchDirectory",
+
     async buildStart() {
+      // We have to use our own watcher because `this.addWatchFile` does not
+      // listen for the `add` event, and we want to know when new files show up
+      // in the `app` directory.
+      // See https://github.com/rollup/rollup/issues/3704
       if (!startedWatcher) {
         await startWatcher();
         startedWatcher = true;

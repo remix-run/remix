@@ -1,13 +1,26 @@
+import type { BinaryLike } from "crypto";
 import { createHash } from "crypto";
+import { createReadStream } from "fs";
 import type { OutputBundle } from "rollup";
 
-export function getHash(source: Buffer | string, length?: number): string {
-  let hash = createHash("sha1").update(source).digest("hex");
-  return length ? hash.slice(0, length) : hash;
+export function getHash(source: BinaryLike): string {
+  return createHash("sha1").update(source).digest("hex");
 }
 
-export function addHash(fileName: string, hash: string): string {
-  return fileName.replace(/(\.\w+)?$/, `-${hash}$1`);
+export async function getFileHash(file: string): Promise<string> {
+  return new Promise((accept, reject) => {
+    let hash = createHash("sha1");
+    let stream = createReadStream(file);
+
+    stream
+      .on("error", reject)
+      .on("data", data => {
+        hash.update(data);
+      })
+      .on("end", () => {
+        accept(hash.digest("hex"));
+      });
+  });
 }
 
 export function getBundleHash(bundle: OutputBundle): string {
@@ -19,4 +32,8 @@ export function getBundleHash(bundle: OutputBundle): string {
   }
 
   return hash.digest("hex");
+}
+
+export function addHash(fileName: string, hash: string): string {
+  return fileName.replace(/(\.\w+)?$/, `-${hash}$1`);
 }

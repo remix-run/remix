@@ -4,7 +4,7 @@ import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../../build";
 import createUrl from "../createUrl";
-import { getHash, addHash } from "../crypto";
+import { getHash, addHash, getFileHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -24,7 +24,6 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
       if (id[0] === "\0") return;
 
       if (id.startsWith("url:")) {
-        // explicit `url:` prefix
         id = id.slice(4);
       } else if (!IMPLICIT_URL.test(id)) {
         return;
@@ -41,19 +40,29 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
 
       this.addWatchFile(id);
 
-      let source = await fsp.readFile(id);
-      let fileName = addHash(
-        path.relative(config.appDirectory, id),
-        getHash(source, 8)
-      );
-
-      if (target === BuildTarget.Browser) {
-        this.emitFile({ type: "asset", fileName, source });
-      }
+      let hash = (await getFileHash(id)).slice(0, 8);
+      let fileName = addHash(path.relative(config.appDirectory, id), hash);
 
       return `export default ${JSON.stringify(
         createUrl(config.publicPath, fileName)
       )}`;
+    },
+
+    async transform(code, id) {
+      if (target !== BuildTarget.Browser) return;
+
+      if (!id.startsWith("\0url:")) return;
+      id = id.slice(5);
+
+      let source = await fsp.readFile(id);
+      let fileName = addHash(
+        path.relative(config.appDirectory, id),
+        getHash(source).slice(0, 8)
+      );
+
+      this.emitFile({ type: "asset", fileName, source });
+
+      return code;
     }
   };
 }

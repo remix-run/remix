@@ -6,7 +6,7 @@ import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../../build";
 import createUrl from "../createUrl";
-import { getHash, addHash } from "../crypto";
+import { getHash, addHash, getFileHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -35,21 +35,12 @@ export default function cssPlugin({
     },
 
     async resolveId(id, importer) {
-      if (id[0] === "\0" || id[0] === "\b") return;
+      if (id[0] === "\0" || !id.startsWith("css:")) return;
+      id = id.slice(4);
 
-      if (id.startsWith("css:")) {
-        id = id.slice(4);
-        // } else if (!IMPLICIT_URL.test(id)) {
-        //   return;
-      } else {
-        return;
-      }
+      let resolved = await this.resolve(id, importer, { skipSelf: true });
 
-      const resolved = await this.resolve(id, importer, { skipSelf: true });
-      if (!resolved) return;
-
-      resolved.id = `\0css:${resolved.id}`;
-      return resolved;
+      return resolved && `\0css:${resolved.id}`;
     },
 
     async load(id) {
@@ -58,11 +49,8 @@ export default function cssPlugin({
 
       this.addWatchFile(id);
 
-      let source = await fsp.readFile(id);
-      let fileName = addHash(
-        path.relative(config.appDirectory, id),
-        getHash(source, 8)
-      );
+      let hash = (await getFileHash(id)).slice(0, 8);
+      let fileName = addHash(path.relative(config.appDirectory, id), hash);
 
       return `export default ${JSON.stringify(
         createUrl(config.publicPath, fileName)
@@ -70,25 +58,36 @@ export default function cssPlugin({
     },
 
     async transform(code, id) {
+      if (target !== BuildTarget.Browser) return;
+
       if (!id.startsWith("\0css:")) return;
       id = id.slice(5);
-
-      if (target !== BuildTarget.Browser) return;
 
       let source = await fsp.readFile(id);
       let fileName = addHash(
         path.relative(config.appDirectory, id),
-        getHash(source, 8)
+        getHash(source).slice(0, 8)
       );
 
-      console.log(`processing CSS for ${id}`);
-      let result = await processor.process(source, { from: id });
-
-      this.emitFile({ type: "asset", fileName, source: result.css });
+      this.emitFile({
+        type: "asset",
+        fileName,
+        source: await generateCssSource(id, source, processor)
+      });
 
       return code;
     }
   };
+}
+
+async function generateCssSource(
+  file: string,
+  content: Buffer,
+  processor: Processor
+): Promise<string> {
+  console.log(`generating CSS for ${file}`);
+  let result = await processor.process(content, { from: file });
+  return result.css;
 }
 
 async function getPostCssConfig(appDirectory: string, mode: string) {
