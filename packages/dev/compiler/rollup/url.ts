@@ -4,7 +4,7 @@ import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../../build";
 import createUrl from "../createUrl";
-import { getHash, addHash, getFileHash } from "../crypto";
+import { getHash, addHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -36,33 +36,23 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
 
     async load(id) {
       if (!id.startsWith("\0url:")) return;
-      id = id.slice(5);
 
-      this.addWatchFile(id);
+      let file = id.slice(5);
+      let source = await fsp.readFile(file);
+      let fileName = addHash(
+        path.relative(config.appDirectory, file),
+        getHash(source).slice(0, 8)
+      );
 
-      let hash = (await getFileHash(id)).slice(0, 8);
-      let fileName = addHash(path.relative(config.appDirectory, id), hash);
+      this.addWatchFile(file);
+
+      if (target === BuildTarget.Browser) {
+        this.emitFile({ type: "asset", fileName, source });
+      }
 
       return `export default ${JSON.stringify(
         createUrl(config.publicPath, fileName)
       )}`;
-    },
-
-    async transform(code, id) {
-      if (target !== BuildTarget.Browser) return;
-
-      if (!id.startsWith("\0url:")) return;
-      id = id.slice(5);
-
-      let source = await fsp.readFile(id);
-      let fileName = addHash(
-        path.relative(config.appDirectory, id),
-        getHash(source).slice(0, 8)
-      );
-
-      this.emitFile({ type: "asset", fileName, source });
-
-      return code;
     }
   };
 }

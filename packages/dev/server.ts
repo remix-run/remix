@@ -6,10 +6,10 @@ import morgan from "morgan";
 import signalExit from "signal-exit";
 
 import { BuildMode, BuildTarget } from "./build";
-import { watch, write } from "./compiler";
+import * as compiler from "./compiler";
 import type { RemixConfig } from "./config";
 
-export async function startDevServer(
+export function startDevServer(
   config: RemixConfig,
   {
     onListen
@@ -18,7 +18,6 @@ export async function startDevServer(
   } = {}
 ) {
   let requestHandler = createRequestHandler(config);
-
   let server = http.createServer(requestHandler);
 
   server.listen(config.devServerPort, onListen);
@@ -33,15 +32,17 @@ function createRequestHandler(config: RemixConfig) {
   let assetsBuildStart = 0;
 
   signalExit(
-    watch(config, {
+    compiler.watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Server,
+      cache: config.cacheDirectory,
       onBuildStart() {
         console.log("Building Remix...");
         serverBuildStart = Date.now();
       },
       async onBuildEnd(build) {
-        await write(build, config.serverBuildDirectory);
+        await compiler.write(build, config.serverBuildDirectory);
+
         let dir = path.relative(process.cwd(), config.serverBuildDirectory);
         let time = Date.now() - serverBuildStart;
         console.log(`Wrote server build to ./${dir} in ${time}ms`);
@@ -53,14 +54,16 @@ function createRequestHandler(config: RemixConfig) {
   );
 
   signalExit(
-    watch(config, {
+    compiler.watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Browser,
+      cache: config.cacheDirectory,
       onBuildStart() {
         assetsBuildStart = Date.now();
       },
       async onBuildEnd(build) {
-        await write(build, config.assetsBuildDirectory);
+        await compiler.write(build, config.assetsBuildDirectory);
+
         let dir = path.relative(process.cwd(), config.assetsBuildDirectory);
         let time = Date.now() - assetsBuildStart;
         console.log(`Wrote assets build to ./${dir} in ${time}ms`);

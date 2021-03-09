@@ -10,14 +10,20 @@ import { createRouteManifest } from "./config/routesManifest";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 
 /**
- * The user-provided config in remix.config.js.
+ * The user-provided config in `remix.config.js`.
  */
 export interface AppConfig {
   /**
-   * The path to the `app` directory, relative to remix.config.js. Defaults to
+   * The path to the `app` directory, relative to `remix.config.js`. Defaults to
    * "app".
    */
   appDirectory?: string;
+
+  /**
+   * The path to a directory Remix can use for caching things in development,
+   * relative to `remix.config.js`. Defaults to ".cache".
+   */
+  cacheDirectory?: string;
 
   /**
    * A function for defining custom routes, in addition to those already defined
@@ -28,13 +34,13 @@ export interface AppConfig {
   ) => Promise<ReturnType<DefineRoutesFunction>>;
 
   /**
-   * The path to the server build, relative to remix.config.js. Defaults to
+   * The path to the server build, relative to `remix.config.js`. Defaults to
    * "build".
    */
   serverBuildDirectory?: string;
 
   /**
-   * The path to the browser build, relative to remix.config.js. Defaults to
+   * The path to the browser build, relative to `remix.config.js`. Defaults to
    * "public/build".
    */
   assetsBuildDirectory?: string;
@@ -77,6 +83,11 @@ export interface RemixConfig {
    * The absolute path to the source directory.
    */
   appDirectory: string;
+
+  /**
+   * The absolute path to the cache directory.
+   */
+  cacheDirectory: string;
 
   /**
    * An array of all available routes, nested according to route hierarchy.
@@ -151,6 +162,11 @@ export async function readConfig(
     appConfig.appDirectory || "app"
   );
 
+  let cacheDirectory = path.resolve(
+    rootDirectory,
+    appConfig.cacheDirectory || ".cache"
+  );
+
   let serverBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.serverBuildDirectory || "build"
@@ -183,6 +199,7 @@ export async function readConfig(
 
   let remixConfig: RemixConfig = {
     appDirectory,
+    cacheDirectory,
     devServerPort,
     mdx: appConfig.mdx,
     assetsBuildDirectory,

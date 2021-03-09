@@ -15,6 +15,7 @@
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.2.0",
     "@rollup/plugin-replace": "^2.3.4",
+    "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
     "express": "^4.17.1",
     "front-matter": "^4.0.2",
@@ -29,6 +30,7 @@
     "signal-exit": "^3.0.3"
   },
   "devDependencies": {
+    "@types/cacache": "^15.0.0",
     "@types/express": "^4.17.11",
     "@types/morgan": "^1.9.2",
     "@types/sharp": "^0.27.1",

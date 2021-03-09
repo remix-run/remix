@@ -1,6 +1,9 @@
 import * as path from "path";
+import cacache from "cacache";
 import type { Plugin } from "rollup";
 import sharp from "sharp";
+import prettyBytes from "pretty-bytes";
+import prettyMs from "pretty-ms";
 
 import { BuildTarget } from "../../build";
 import { addHash, getFileHash, getHash } from "../crypto";
@@ -12,6 +15,11 @@ import { getRemixConfig } from "./remixConfig";
 // the sharp cache seems to be based on filenames, not the content of the file,
 // so replacing an image with a new one by the same name didn't work.
 sharp.cache(false);
+
+const transparent1x1gif =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+
+const imageFormats = ["avif", "jpeg", "png", "webp"];
 
 export default function imgPlugin({ target }: { target: string }): Plugin {
   let config: RemixConfig;
@@ -36,49 +44,58 @@ export default function imgPlugin({ target }: { target: string }): Plugin {
 
     async load(id) {
       if (!id.startsWith("\0img:")) return;
-      id = id.slice(5);
 
-      let { baseId, search } = parseId(id);
+      let { baseId: file, search } = parseId(id.slice(5));
+      let params = new URLSearchParams(search);
+      let hash = (await getFileHash(file)).slice(0, 8);
 
-      this.addWatchFile(baseId);
+      this.addWatchFile(file);
 
-      let hash = await getFileHash(baseId);
-      let mod = await getImageModule(
-        config.appDirectory,
-        baseId,
-        hash,
-        new URLSearchParams(search),
-        config.publicPath
-      );
-
-      return mod;
-    },
-
-    async transform(code, id) {
-      if (target !== BuildTarget.Browser) return;
-
-      if (!id.startsWith("\0img:")) return;
-      id = id.slice(5);
-
-      let { baseId, search } = parseId(id);
-
-      let hash = await getFileHash(baseId);
       let assets = await getImageAssets(
         config.appDirectory,
-        baseId,
+        file,
         hash,
-        new URLSearchParams(search)
+        params
       );
 
-      for (let asset of assets) {
-        this.emitFile({
-          type: "asset",
-          fileName: asset.fileName,
-          source: await generateImageAssetSource(baseId, asset)
-        });
+      if (target === BuildTarget.Browser) {
+        for (let asset of assets) {
+          let { fileName, hash } = asset;
+
+          let source: string | Uint8Array;
+          try {
+            let cached = await cacache.get(config.cacheDirectory, hash);
+            source = cached.data;
+          } catch (error) {
+            if (error.code !== "ENOENT") throw error;
+            source = await generateImageAssetSource(file, asset);
+            await cacache.put(config.cacheDirectory, hash, source);
+          }
+
+          this.emitFile({ type: "asset", fileName, source });
+        }
       }
 
-      return code;
+      let placeholder =
+        params.get("placeholder") != null
+          ? await generateImagePlaceholder(file, hash, config.cacheDirectory)
+          : transparent1x1gif;
+
+      let images = assets.map(asset => ({
+        src: config.publicPath + asset.fileName,
+        width: asset.width,
+        height: asset.height,
+        format: asset.transform.format
+      }));
+
+      return `
+        export let images = ${JSON.stringify(images, null, 2)};
+        let primaryImage = images[images.length - 1];
+        let srcset = images.map(image => image.src + " " + image.width + "w").join(",");
+        let placeholder = ${JSON.stringify(placeholder)};
+        let mod = { ...primaryImage, srcset, placeholder };
+        export default mod;
+      `;
     }
   };
 }
@@ -92,45 +109,6 @@ function parseId(id: string): { baseId: string; search: string } {
         search: id.slice(searchIndex)
       };
 }
-
-const transparent1x1gif =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
-
-async function getImageModule(
-  dir: string,
-  file: string,
-  hash: string,
-  params: URLSearchParams,
-  publicPath: string
-): Promise<string> {
-  let assets = await getImageAssets(dir, file, hash, params);
-
-  // Although we can defer generating asset sources until later, we have to
-  // generate the placeholder source here because it is inlined in the image
-  // module as a `data:` URI.
-  let placeholder =
-    params.get("placeholder") != null
-      ? await generateImagePlaceholder(file, hash)
-      : transparent1x1gif;
-
-  let images = assets.map(asset => ({
-    src: publicPath + asset.fileName,
-    width: asset.width,
-    height: asset.height,
-    format: asset.transform.format
-  }));
-
-  return `
-    export let images = ${JSON.stringify(images, null, 2)};
-    let primaryImage = images[images.length - 1];
-    let srcset = images.map(image => image.src + " " + image.width + "w").join(",");
-    let placeholder = ${JSON.stringify(placeholder)};
-    let mod = { ...primaryImage, srcset, placeholder };
-    export default mod;
-  `;
-}
-
-const imageFormats = ["avif", "jpeg", "png", "webp"];
 
 interface ImageTransform {
   width?: number;
@@ -173,6 +151,7 @@ function getImageTransforms(
 
 interface ImageAsset {
   fileName: string;
+  hash: string;
   width: number;
   height: number;
   transform: ImageTransform;
@@ -181,7 +160,7 @@ interface ImageAsset {
 async function getImageAssets(
   dir: string,
   file: string,
-  hash: string,
+  sourceHash: string,
   params: URLSearchParams
 ): Promise<ImageAsset[]> {
   let defaultFormat = path.extname(file).slice(1);
@@ -210,18 +189,19 @@ async function getImageAssets(
         }
       }
 
+      let hash = getHash(
+        sourceHash +
+          transform.width +
+          transform.height +
+          transform.quality +
+          transform.format
+      ).slice(0, 8);
       let fileName = addHash(
         addHash(path.relative(dir, file), `${width}x${height}`),
-        getHash(
-          hash +
-            transform.width +
-            transform.height +
-            transform.quality +
-            transform.format
-        ).slice(0, 8)
+        hash
       );
 
-      return { fileName, width, height, transform };
+      return { fileName, hash, width, height, transform };
     })
   );
 }
@@ -230,8 +210,7 @@ async function generateImageAssetSource(
   file: string,
   asset: ImageAsset
 ): Promise<Buffer> {
-  console.log(`generating image asset for ${file} (${asset.fileName})`);
-
+  let start = Date.now();
   let image = sharp(file);
 
   if (asset.width || asset.height) {
@@ -241,27 +220,49 @@ async function generateImageAssetSource(
   // image.jpeg(), image.png(), etc.
   image[asset.transform.format]({ quality: asset.transform.quality });
 
-  return image.toBuffer();
-}
+  let buffer = await image.toBuffer();
 
-// We can't use Rollup for caching placeholders because we need to inline them
-// in the image module in `load()` (instead of generating a separate asset). So
-// we keep this local cache to speed up the build.
-const placeholderCache: { [imageHash: string]: string } = {};
+  if (process.env.VERBOSE) {
+    console.log(
+      "Built image %s, %s, %s",
+      `"${asset.fileName}"`,
+      prettyMs(Date.now() - start),
+      prettyBytes(buffer.byteLength)
+    );
+  }
+
+  return buffer;
+}
 
 async function generateImagePlaceholder(
   file: string,
-  hash: string
+  hash: string,
+  cacheDir: string
 ): Promise<string> {
-  let placeholder = placeholderCache[hash];
+  let cacheKey = `placeholder-${hash}`;
 
-  if (!placeholder) {
-    console.log(`generating placeholder image for ${file}`);
+  let buffer: Buffer;
+  try {
+    let cached = await cacache.get(cacheDir, cacheKey);
+    buffer = cached.data;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+
+    let start = Date.now();
     let image = sharp(file).resize({ width: 50 }).jpeg({ quality: 25 });
-    let buffer = await image.toBuffer();
-    placeholder = `data:image/jpeg;base64,${buffer.toString("base64")}`;
-    placeholderCache[hash] = placeholder;
+    buffer = await image.toBuffer();
+
+    if (process.env.VERBOSE) {
+      console.log(
+        "Built placeholder image for %s, %s, %s",
+        `"${path.basename(file)}"`,
+        prettyMs(Date.now() - start),
+        prettyBytes(buffer.byteLength)
+      );
+    }
+
+    await cacache.put(cacheDir, cacheKey, buffer);
   }
 
-  return placeholder;
+  return `data:image/jpeg;base64,${buffer.toString("base64")}`;
 }

@@ -1,12 +1,15 @@
 import path from "path";
 import { promises as fsp } from "fs";
+import cacache from "cacache";
 import postcss from "postcss";
 import type Processor from "postcss/lib/processor";
 import type { Plugin } from "rollup";
+import prettyBytes from "pretty-bytes";
+import prettyMs from "pretty-ms";
 
 import { BuildTarget } from "../../build";
 import createUrl from "../createUrl";
-import { getHash, addHash, getFileHash } from "../crypto";
+import { getHash, addHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -45,37 +48,31 @@ export default function cssPlugin({
 
     async load(id) {
       if (!id.startsWith("\0css:")) return;
-      id = id.slice(5);
 
-      this.addWatchFile(id);
+      let file = id.slice(5);
+      let originalSource = await fsp.readFile(file);
+      let hash = getHash(originalSource).slice(0, 8);
+      let fileName = addHash(path.relative(config.appDirectory, file), hash);
 
-      let hash = (await getFileHash(id)).slice(0, 8);
-      let fileName = addHash(path.relative(config.appDirectory, id), hash);
+      this.addWatchFile(file);
+
+      if (target === BuildTarget.Browser) {
+        let source: string | Uint8Array;
+        try {
+          let cached = await cacache.get(config.cacheDirectory, hash);
+          source = cached.data;
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+          source = await generateCssSource(file, originalSource, processor);
+          await cacache.put(config.cacheDirectory, hash, source);
+        }
+
+        this.emitFile({ type: "asset", fileName, source });
+      }
 
       return `export default ${JSON.stringify(
         createUrl(config.publicPath, fileName)
       )}`;
-    },
-
-    async transform(code, id) {
-      if (target !== BuildTarget.Browser) return;
-
-      if (!id.startsWith("\0css:")) return;
-      id = id.slice(5);
-
-      let source = await fsp.readFile(id);
-      let fileName = addHash(
-        path.relative(config.appDirectory, id),
-        getHash(source).slice(0, 8)
-      );
-
-      this.emitFile({
-        type: "asset",
-        fileName,
-        source: await generateCssSource(id, source, processor)
-      });
-
-      return code;
     }
   };
 }
@@ -85,8 +82,18 @@ async function generateCssSource(
   content: Buffer,
   processor: Processor
 ): Promise<string> {
-  console.log(`generating CSS for ${file}`);
+  let start = Date.now();
   let result = await processor.process(content, { from: file });
+
+  if (process.env.VERBOSE) {
+    console.log(
+      "Built CSS for %s, %s, %s",
+      `"${path.basename(file)}"`,
+      prettyMs(Date.now() - start),
+      prettyBytes(Buffer.byteLength(result.css))
+    );
+  }
+
   return result.css;
 }
 

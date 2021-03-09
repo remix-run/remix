@@ -7,8 +7,10 @@ import type {
   OutputOptions,
   Plugin,
   RollupBuild,
+  RollupCache,
   RollupError,
   RollupOutput,
+  RollupWatcher,
   TreeshakingOptions
 } from "rollup";
 import * as rollup from "rollup";
@@ -22,6 +24,7 @@ import { terser } from "rollup-plugin-terser";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
+import { readBuildCache, writeBuildCache } from "./compiler/buildCache";
 import { isImportHint } from "./compiler/importHints";
 import { ignorePackages } from "./compiler/browserIgnore";
 
@@ -37,27 +40,26 @@ import serverManifest from "./compiler/rollup/serverManifest";
 import url from "./compiler/rollup/url";
 import watchDirectory from "./compiler/rollup/watchDirectory";
 
-/**
- * All file extensions we support for entry files.
- */
-export const entryExts = [".js", ".jsx", ".ts", ".tsx"];
-
 export interface RemixBuild extends RollupBuild {
-  options: BuildOptions;
+  options: Required<BuildOptions>;
 }
 
 export function createBuild(
   rollupBuild: RollupBuild,
-  options: BuildOptions
+  options: Required<BuildOptions>
 ): RemixBuild {
   let build = (rollupBuild as unknown) as RemixBuild;
   build.options = options;
   return build;
 }
 
+export interface CacheOptions {
+  cache?: string;
+}
+
 export interface BuildOptions {
-  mode: BuildMode;
-  target: BuildTarget;
+  mode?: BuildMode;
+  target?: BuildTarget;
 }
 
 /**
@@ -67,8 +69,9 @@ export async function build(
   config: RemixConfig,
   {
     mode = BuildMode.Production,
-    target = BuildTarget.Server
-  }: Partial<BuildOptions> = {}
+    target = BuildTarget.Server,
+    cache
+  }: BuildOptions & CacheOptions = {}
 ): Promise<RemixBuild> {
   let buildOptions = { mode, target };
   let plugins = [
@@ -76,20 +79,28 @@ export async function build(
     ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
   ];
 
+  let cacheKey = `build-${mode}-${target}`;
+  let buildCache = cache ? await readBuildCache(cache, cacheKey) : undefined;
+
   let rollupBuild = await rollup.rollup({
+    cache: buildCache,
     external: getExternalOption(target),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins
   });
 
+  if (cache) {
+    await writeBuildCache(cache, cacheKey, rollupBuild.cache);
+  }
+
   return createBuild(rollupBuild, buildOptions);
 }
 
 export interface WatchOptions extends BuildOptions {
-  onBuildStart: () => void;
-  onBuildEnd: (build: RemixBuild) => void;
-  onError: (error: RollupError) => void;
+  onBuildStart?: () => void;
+  onBuildEnd?: (build: RemixBuild) => void;
+  onError?: (error: RollupError) => void;
 }
 
 /**
@@ -100,10 +111,11 @@ export function watch(
   {
     mode = BuildMode.Development,
     target = BuildTarget.Browser,
+    cache,
     onBuildStart,
     onBuildEnd,
     onError
-  }: Partial<WatchOptions> = {}
+  }: WatchOptions & CacheOptions = {}
 ): () => void {
   let buildOptions = { mode, target };
   let plugins = [
@@ -113,38 +125,53 @@ export function watch(
     ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
   ];
 
-  let watcher = rollup.watch({
-    external: getExternalOption(target),
-    treeshake: getTreeshakeOption(target),
-    onwarn: getOnWarnOption(target),
-    plugins,
-    watch: {
-      // Skip the write here and do it in a callback instead. This gives us
-      // a more consistent interface between `build` and `watch`. Both of them
-      // give you access to the raw build and let you do the generate/write
-      // step separately.
-      skipWrite: true
-    }
-  });
+  let cacheKey = `build-${mode}-${target}`;
+  let buildCachePromise: Promise<RollupCache | undefined> = cache
+    ? readBuildCache(cache, cacheKey)
+    : Promise.resolve(undefined);
 
-  watcher.on("event", event => {
-    if (event.code === "ERROR") {
-      if (onError) {
-        onError(event.error);
-      } else {
-        console.error(event.error);
+  let watcher: RollupWatcher;
+  buildCachePromise.then(buildCache => {
+    watcher = rollup.watch({
+      cache: buildCache,
+      external: getExternalOption(target),
+      treeshake: getTreeshakeOption(target),
+      onwarn: getOnWarnOption(target),
+      plugins,
+      watch: {
+        buildDelay: 100,
+        // Skip the write here and do it in a callback instead. This gives us
+        // a more consistent interface between `build` and `watch`. Both of them
+        // give you access to the raw build and let you do the generate/write
+        // step separately.
+        skipWrite: true
       }
-    } else if (event.code === "BUNDLE_START") {
-      if (onBuildStart) onBuildStart();
-    } else if (event.code === "BUNDLE_END") {
-      if (onBuildEnd) {
-        onBuildEnd(createBuild(event.result, buildOptions));
+    });
+
+    watcher.on("event", async event => {
+      if (event.code === "ERROR") {
+        if (onError) {
+          onError(event.error);
+        } else {
+          console.error(event.error);
+        }
+      } else if (event.code === "BUNDLE_START") {
+        if (onBuildStart) onBuildStart();
+      } else if (event.code === "BUNDLE_END") {
+        if (onBuildEnd) {
+          let rollupBuild = event.result;
+          onBuildEnd(createBuild(rollupBuild, buildOptions));
+
+          if (cache) {
+            await writeBuildCache(cache, cacheKey, rollupBuild.cache);
+          }
+        }
       }
-    }
-  });
+    });
+  }, onError);
 
   return () => {
-    watcher.close();
+    if (watcher) watcher.close();
   };
 }
 
@@ -188,6 +215,8 @@ function getExternalOption(target: string): ExternalOption | undefined {
       ignorePackages;
 }
 
+const entryExts = [".js", ".jsx", ".ts", ".tsx"];
+
 function getInputOption(config: RemixConfig, target: string): InputOption {
   let input: InputOption = {};
 
@@ -219,10 +248,7 @@ function getInputOption(config: RemixConfig, target: string): InputOption {
 
   for (let key of Object.keys(config.routeManifest)) {
     let route = config.routeManifest[key];
-
-    if (route.moduleFile) {
-      input[route.id] = path.resolve(config.appDirectory, route.moduleFile);
-    }
+    input[route.id] = path.resolve(config.appDirectory, route.moduleFile);
   }
 
   return input;
