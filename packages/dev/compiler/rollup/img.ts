@@ -222,14 +222,12 @@ async function generateImageAssetSource(
 
   let buffer = await image.toBuffer();
 
-  if (process.env.VERBOSE) {
-    console.log(
-      "Built image %s, %s, %s",
-      `"${asset.fileName}"`,
-      prettyMs(Date.now() - start),
-      prettyBytes(buffer.byteLength)
-    );
-  }
+  console.log(
+    "Built image %s, %s, %s",
+    `"${asset.fileName}"`,
+    prettyBytes(buffer.byteLength),
+    prettyMs(Date.now() - start)
+  );
 
   return buffer;
 }
@@ -252,14 +250,12 @@ async function generateImagePlaceholder(
     let image = sharp(file).resize({ width: 50 }).jpeg({ quality: 25 });
     buffer = await image.toBuffer();
 
-    if (process.env.VERBOSE) {
-      console.log(
-        "Built placeholder image for %s, %s, %s",
-        `"${path.basename(file)}"`,
-        prettyMs(Date.now() - start),
-        prettyBytes(buffer.byteLength)
-      );
-    }
+    console.log(
+      "Built placeholder image for %s, %s, %s",
+      `"${path.basename(file)}"`,
+      prettyBytes(buffer.byteLength),
+      prettyMs(Date.now() - start)
+    );
 
     await cacache.put(cacheDir, cacheKey, buffer);
   }
