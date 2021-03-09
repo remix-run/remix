@@ -10,7 +10,24 @@ import ReactDOMServer from "react-dom/server";
 import type { MdxConfig, MdxFunctionOption } from "../compiler/rollup/mdx";
 import mdxPlugin from "../compiler/rollup/mdx";
 
+import { getRemixConfig } from "../compiler/rollup/remixConfig";
+let mockedGetRemixConfig = (getRemixConfig as unknown) as jest.MockedFunction<
+  () => any
+>;
+
+jest.mock("../compiler/rollup/remixConfig");
+
 describe("mdx rollup plugin", () => {
+  beforeEach(() => {
+    mockedGetRemixConfig.mockImplementation(async () => {
+      return {};
+    });
+  });
+
+  afterEach(() => {
+    mockedGetRemixConfig.mockReset();
+  });
+
   it("renders", async () => {
     let mod = await bundleMdxFile("basic.mdx");
     expect(renderMdxModule(mod)).toMatchInlineSnapshot(`"<p>I am mdx</p>"`);

@@ -37,17 +37,22 @@ export type MdxConfig = MdxFunctionOption | MdxOptions;
  * frontmatter.
  */
 export default function mdxPlugin({
-  mdxConfig: mdxConfigArg
+  mdxConfig: mdxConfigArg,
+  cache: cacheArg
 }: {
   mdxConfig?: MdxConfig;
+  cache?: string;
 } = {}): Plugin {
-  let config: RemixConfig;
+  let mdxConfig: MdxConfig;
+  let cache: string;
 
   return {
     name: "mdx",
 
     async buildStart({ plugins }) {
-      config = await getRemixConfig(plugins);
+      let config = await getRemixConfig(plugins);
+      mdxConfig = mdxConfigArg || config.mdx;
+      cache = cacheArg || config.cacheDirectory;
     },
 
     async load(id) {
@@ -58,19 +63,17 @@ export default function mdxPlugin({
       let hash = getHash(source).slice(0, 8);
 
       let code: string;
-      try {
-        let cached = await cacache.get(config.cacheDirectory, hash);
-        code = cached.data.toString("utf-8");
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-
-        code = await generateRouteModule(
-          file,
-          source,
-          mdxConfigArg || config.mdx
-        );
-
-        await cacache.put(config.cacheDirectory, hash, code);
+      if (cache) {
+        try {
+          let cached = await cacache.get(cache, hash);
+          code = cached.data.toString("utf-8");
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+          code = await generateRouteModule(file, source, mdxConfig);
+          await cacache.put(cache, hash, code);
+        }
+      } else {
+        code = await generateRouteModule(file, source, mdxConfig);
       }
 
       return code;
@@ -112,11 +115,13 @@ async function generateRouteModule(
 
   code += await mdx(body, mdxOptions);
 
-  console.log(
-    'Built MDX for "%s", %s',
-    path.basename(file),
-    prettyMs(Date.now() - start)
-  );
+  if (process.env.NODE_ENV !== "test") {
+    console.log(
+      'Built MDX for "%s", %s',
+      path.basename(file),
+      prettyMs(Date.now() - start)
+    );
+  }
 
   return code;
 }
