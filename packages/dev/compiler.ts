@@ -7,10 +7,8 @@ import type {
   OutputOptions,
   Plugin,
   RollupBuild,
-  RollupCache,
   RollupError,
   RollupOutput,
-  RollupWatcher,
   TreeshakingOptions
 } from "rollup";
 import * as rollup from "rollup";
@@ -24,7 +22,6 @@ import { terser } from "rollup-plugin-terser";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
-import { readBuildCache, writeBuildCache } from "./compiler/buildCache";
 import { isImportHint } from "./compiler/importHints";
 import { ignorePackages } from "./compiler/browserIgnore";
 
@@ -53,10 +50,6 @@ export function createBuild(
   return build;
 }
 
-export interface CacheOptions {
-  cache?: string;
-}
-
 export interface BuildOptions {
   mode?: BuildMode;
   target?: BuildTarget;
@@ -69,9 +62,8 @@ export async function build(
   config: RemixConfig,
   {
     mode = BuildMode.Production,
-    target = BuildTarget.Server,
-    cache
-  }: BuildOptions & CacheOptions = {}
+    target = BuildTarget.Server
+  }: BuildOptions = {}
 ): Promise<RemixBuild> {
   let buildOptions = { mode, target };
   let plugins = [
@@ -79,20 +71,12 @@ export async function build(
     ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
   ];
 
-  let cacheKey = `build-${mode}-${target}`;
-  let buildCache = cache ? await readBuildCache(cache, cacheKey) : undefined;
-
   let rollupBuild = await rollup.rollup({
-    cache: buildCache,
     external: getExternalOption(target),
     treeshake: getTreeshakeOption(target),
     onwarn: getOnWarnOption(target),
     plugins
   });
-
-  if (cache) {
-    await writeBuildCache(cache, cacheKey, rollupBuild.cache);
-  }
 
   return createBuild(rollupBuild, buildOptions);
 }
@@ -111,11 +95,10 @@ export function watch(
   {
     mode = BuildMode.Development,
     target = BuildTarget.Browser,
-    cache,
     onBuildStart,
     onBuildEnd,
     onError
-  }: WatchOptions & CacheOptions = {}
+  }: WatchOptions = {}
 ): () => void {
   let buildOptions = { mode, target };
   let plugins = [
@@ -125,53 +108,40 @@ export function watch(
     ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
   ];
 
-  let cacheKey = `build-${mode}-${target}`;
-  let buildCachePromise: Promise<RollupCache | undefined> = cache
-    ? readBuildCache(cache, cacheKey)
-    : Promise.resolve(undefined);
+  let watcher = rollup.watch({
+    external: getExternalOption(target),
+    treeshake: getTreeshakeOption(target),
+    onwarn: getOnWarnOption(target),
+    plugins,
+    watch: {
+      buildDelay: 100,
+      // Skip the write here and do it in a callback instead. This gives us
+      // a more consistent interface between `build` and `watch`. Both of them
+      // give you access to the raw build and let you do the generate/write
+      // step separately.
+      skipWrite: true
+    }
+  });
 
-  let watcher: RollupWatcher;
-  buildCachePromise.then(buildCache => {
-    watcher = rollup.watch({
-      cache: buildCache,
-      external: getExternalOption(target),
-      treeshake: getTreeshakeOption(target),
-      onwarn: getOnWarnOption(target),
-      plugins,
-      watch: {
-        buildDelay: 100,
-        // Skip the write here and do it in a callback instead. This gives us
-        // a more consistent interface between `build` and `watch`. Both of them
-        // give you access to the raw build and let you do the generate/write
-        // step separately.
-        skipWrite: true
+  watcher.on("event", async event => {
+    if (event.code === "ERROR") {
+      if (onError) {
+        onError(event.error);
+      } else {
+        console.error(event.error);
       }
-    });
-
-    watcher.on("event", async event => {
-      if (event.code === "ERROR") {
-        if (onError) {
-          onError(event.error);
-        } else {
-          console.error(event.error);
-        }
-      } else if (event.code === "BUNDLE_START") {
-        if (onBuildStart) onBuildStart();
-      } else if (event.code === "BUNDLE_END") {
-        if (onBuildEnd) {
-          let rollupBuild = event.result;
-          onBuildEnd(createBuild(rollupBuild, buildOptions));
-
-          if (cache) {
-            await writeBuildCache(cache, cacheKey, rollupBuild.cache);
-          }
-        }
+    } else if (event.code === "BUNDLE_START") {
+      if (onBuildStart) onBuildStart();
+    } else if (event.code === "BUNDLE_END") {
+      if (onBuildEnd) {
+        let rollupBuild = event.result;
+        onBuildEnd(createBuild(rollupBuild, buildOptions));
       }
-    });
-  }, onError);
+    }
+  });
 
   return () => {
-    if (watcher) watcher.close();
+    watcher.close();
   };
 }
 

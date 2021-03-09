@@ -17,16 +17,14 @@ export async function build(remixRoot: string, mode?: string) {
     compiler.write(
       await compiler.build(config, {
         mode: buildMode,
-        target: BuildTarget.Server,
-        cache: config.cacheDirectory
+        target: BuildTarget.Server
       }),
       config.serverBuildDirectory
     ),
     compiler.write(
       await compiler.build(config, {
         mode: buildMode,
-        target: BuildTarget.Browser,
-        cache: config.cacheDirectory
+        target: BuildTarget.Browser
       }),
       config.assetsBuildDirectory
     )

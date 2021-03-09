@@ -35,7 +35,6 @@ function createRequestHandler(config: RemixConfig) {
     compiler.watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Server,
-      cache: config.cacheDirectory,
       onBuildStart() {
         console.log("Building Remix...");
         serverBuildStart = Date.now();
@@ -57,7 +56,6 @@ function createRequestHandler(config: RemixConfig) {
     compiler.watch(config, {
       mode: BuildMode.Development,
       target: BuildTarget.Browser,
-      cache: config.cacheDirectory,
       onBuildStart() {
         assetsBuildStart = Date.now();
       },
