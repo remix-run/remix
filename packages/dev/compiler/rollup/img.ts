@@ -223,8 +223,8 @@ async function generateImageAssetSource(
   let buffer = await image.toBuffer();
 
   console.log(
-    "Built image %s, %s, %s",
-    `"${asset.fileName}"`,
+    'Built image "%s", %s, %s',
+    asset.fileName,
     prettyBytes(buffer.byteLength),
     prettyMs(Date.now() - start)
   );
@@ -251,8 +251,8 @@ async function generateImagePlaceholder(
     buffer = await image.toBuffer();
 
     console.log(
-      "Built placeholder image for %s, %s, %s",
-      `"${path.basename(file)}"`,
+      'Built placeholder image for "%s", %s, %s',
+      path.basename(file),
       prettyBytes(buffer.byteLength),
       prettyMs(Date.now() - start)
     );

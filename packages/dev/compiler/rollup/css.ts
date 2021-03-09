@@ -86,8 +86,8 @@ async function generateCssSource(
   let result = await processor.process(content, { from: file });
 
   console.log(
-    "Built CSS for %s, %s, %s",
-    `"${path.basename(file)}"`,
+    'Built CSS for "%s", %s, %s',
+    path.basename(file),
     prettyBytes(Buffer.byteLength(result.css)),
     prettyMs(Date.now() - start)
   );
