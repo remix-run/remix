@@ -13,42 +13,66 @@ const license = fs.readFileSync(licenseFile, "utf-8");
 const banner = "// " + license.split("\n").join("\n// ");
 
 /** @type {import("rollup").RollupOptions} */
-let dev = {
-  external(id) {
-    return !isLocalModuleId(id);
+let dev = [
+  {
+    external(id) {
+      return !isLocalModuleId(id);
+    },
+    input: [
+      path.resolve(__dirname, "packages/dev/compiler.ts"),
+      path.resolve(__dirname, "packages/dev/config.ts"),
+      path.resolve(__dirname, "packages/dev/server.ts")
+    ],
+    output: {
+      banner: banner,
+      dir: "build/node_modules/@remix-run/dev",
+      format: "cjs",
+      preserveModules: true,
+      exports: "named"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"]
+      }),
+      nodeResolve({
+        extensions: [".ts"]
+      }),
+      copy({
+        targets: [
+          {
+            src: path.resolve(__dirname, "packages/dev/package.json"),
+            dest: "build/node_modules/@remix-run/dev"
+          }
+        ]
+      })
+    ]
   },
-  input: [
-    path.resolve(__dirname, "packages/dev/cli.ts"),
-    path.resolve(__dirname, "packages/dev/compiler.ts"),
-    path.resolve(__dirname, "packages/dev/config.ts"),
-    path.resolve(__dirname, "packages/dev/server.ts")
-  ],
-  output: {
-    banner: banner,
-    dir: "build/node_modules/@remix-run/dev",
-    format: "cjs",
-    preserveModules: true,
-    exports: "named"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts"]
-    }),
-    nodeResolve({
-      extensions: [".ts"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/dev/package.json"),
-          dest: "build/node_modules/@remix-run/dev"
-        }
-      ]
-    })
-  ]
-};
+  // We need to build the CLI separately because it requires a special banner so
+  // it can be started with the node executable.
+  {
+    external() {
+      return true;
+    },
+    input: path.resolve(__dirname, "packages/dev/cli.ts"),
+    output: {
+      banner: "#!/usr/bin/env node\n" + banner,
+      dir: "build/node_modules/@remix-run/dev",
+      format: "cjs"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"]
+      }),
+      nodeResolve({
+        extensions: [".ts"]
+      })
+    ]
+  }
+];
 
 /** @type {import("rollup").RollupOptions} */
 let core = {
@@ -231,6 +255,6 @@ let architect = getServerConfig("architect");
 let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [core, data, dev, architect, express, vercel, ...react];
+let builds = [core, data, ...dev, architect, express, vercel, ...react];
 
 export default builds;
