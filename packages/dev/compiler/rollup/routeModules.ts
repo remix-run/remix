@@ -4,6 +4,8 @@ import type { Plugin } from "rollup";
 import { BuildTarget } from "../../build";
 import { getRemixConfig } from "./remixConfig";
 
+export const magicProxy = "?route-module-proxy";
+
 /**
  * A resolver/loader for route modules that does a few things:
  *
@@ -17,8 +19,6 @@ export default function routeModulesPlugin({
 }: {
   target: string;
 }): Plugin {
-  let magicProxy = "?route-module-proxy";
-
   return {
     name: "routeModules",
 

@@ -1,6 +1,6 @@
 import path from "path";
 import { promises as fsp } from "fs";
-import type { OutputBundle, Plugin } from "rollup";
+import type { OutputBundle, Plugin, RenderedModule } from "rollup";
 
 import invariant from "../../invariant";
 import { getBundleHash } from "../crypto";
@@ -96,15 +96,27 @@ function getAssetsManifest(
         module: publicPath + chunk.fileName,
         imports: chunk.imports.map(path => publicPath + path)
       };
-    } else if (routeIds.includes(chunk.name)) {
+    } else if (
+      routeIds.includes(chunk.name) &&
+      chunk.facadeModuleId.endsWith("?route-module-proxy")
+    ) {
       let route = routeManifest[chunk.name];
 
       // When we build route modules, we put a shim in front with the
       // ?route-module-proxy query string on the end (see routeModules.ts).
       // Removing this suffix gets us back to the original source module id.
-      let moduleId = chunk.facadeModuleId;
-      let sourceModuleId = moduleId.replace("?route-module-proxy", "");
-      let sourceModule = chunk.modules[sourceModuleId];
+      let sourceModuleId = chunk.facadeModuleId.replace(
+        "?route-module-proxy",
+        ""
+      );
+
+      // Usually the source module will be contained in this chunk, but if
+      // someone imports a route module from within another route module, Rollup
+      // will place the source module in a shared chunk. So we have to go find
+      // the chunk with the source module in it.
+      let sourceModule =
+        chunk.modules[sourceModuleId] ||
+        findRenderedModule(bundle, sourceModuleId);
 
       invariant(sourceModule, `Cannot find source module for ${route.id}`);
 
@@ -136,6 +148,18 @@ function getAssetsManifest(
   optimizeRoutes(routes, entry.imports);
 
   return { version, entry, routes };
+}
+
+function findRenderedModule(
+  bundle: OutputBundle,
+  name: string
+): RenderedModule | undefined {
+  for (let key in bundle) {
+    let chunk = bundle[key];
+    if (chunk.type === "chunk" && name in chunk.modules) {
+      return chunk.modules[name];
+    }
+  }
 }
 
 type ImportsCache = { [routeId: string]: string[] };
