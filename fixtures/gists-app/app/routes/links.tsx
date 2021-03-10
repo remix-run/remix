@@ -1,6 +1,5 @@
 import { useRouteData, Link, block } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/core";
+import type { LinksFunction, LoaderFunction } from "@remix-run/react";
 
 import redText from "css:../styles/redText.css";
 import guitar from "img:../components/guitar.jpg?width=500&height=500";
