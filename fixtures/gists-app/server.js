@@ -27,6 +27,7 @@ app.get("/user-gists/:username", (req, res) => {
 app.all(
   "*",
   createRequestHandler({
+    build: require("./build"),
     getLoadContext() {
       return { userId: 4 };
     }

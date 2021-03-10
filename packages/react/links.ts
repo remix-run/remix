@@ -1,6 +1,6 @@
 import type { Location } from "history";
 import type {
-  EntryManifest,
+  AssetsManifest,
   RouteModule,
   LinkDescriptor,
   HTMLLinkDescriptor,
@@ -9,7 +9,7 @@ import type {
 } from "@remix-run/core";
 
 import type { RouteData } from "./data";
-import type { ClientRouteMatch, ClientRouteObject } from "./routes";
+import type { ClientRouteMatch, ClientRoute } from "./routes";
 import { matchClientRoutes as matchRoutes } from "./routes";
 import type { RouteModules } from "./routeModules";
 
@@ -98,8 +98,8 @@ export function getLinks(
   matches: ClientRouteMatch[],
   routeData: RouteData,
   routeModules: RouteModules,
-  manifest: EntryManifest,
-  clientRoutes: ClientRouteObject[]
+  manifest: AssetsManifest,
+  clientRoutes: ClientRoute[]
 ): HTMLLinkDescriptor[] {
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
@@ -155,8 +155,8 @@ function getPageLinkDescriptors(
   descriptor: PageLinkDescriptor,
   location: Location,
   matches: ClientRouteMatch[],
-  manifest: EntryManifest,
-  clientRoutes: ClientRouteObject[]
+  manifest: AssetsManifest,
+  clientRoutes: ClientRoute[]
 ): HTMLLinkDescriptor[] {
   let [pathname, search = ""] = descriptor.page.split("?");
   let nextMatches = matchRoutes(clientRoutes, pathname);
@@ -192,7 +192,7 @@ function getPageLinkDescriptors(
 function getDataLinks(
   descriptor: PageLinkDescriptor,
   matches: ClientRouteMatch[],
-  manifestPatch: EntryManifest
+  manifestPatch: AssetsManifest
 ): HTMLLinkDescriptor[] {
   let { page, data, ...rest } = descriptor;
   return matches
@@ -211,12 +211,12 @@ function getDataLinks(
 // while deduping.
 function getCurrentPageModulePreloadHrefs(
   matches: ClientRouteMatch[],
-  manifest: EntryManifest
+  manifest: AssetsManifest
 ): string[] {
   return matches
     .map(match => {
       let route = manifest.routes[match.route.id];
-      let hrefs = [route.moduleUrl];
+      let hrefs = [route.module];
 
       if (route.imports) {
         hrefs = hrefs.concat(route.imports);
@@ -230,13 +230,13 @@ function getCurrentPageModulePreloadHrefs(
 function getPageScripts(
   descriptor: PageLinkDescriptor,
   matches: ClientRouteMatch[],
-  manifestPatch: EntryManifest
+  manifestPatch: AssetsManifest
 ): HTMLLinkDescriptor[] {
   let { page, data, ...rest } = descriptor;
   return matches
     .map(match => {
       let route = manifestPatch.routes[match.route.id];
-      let hrefs = [route.moduleUrl];
+      let hrefs = [route.module];
       if (route.imports) {
         hrefs = hrefs.concat(route.imports);
       }

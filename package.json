@@ -1,12 +1,10 @@
 {
   "private": true,
   "name": "remix",
-  "bin": {
-    "remix": "./build/node_modules/@remix-run/cli"
-  },
   "scripts": {
     "clean": "git clean -fdX .",
-    "build": "rollup -c && tsc -b",
+    "build": "rollup -c && tsc -b && node ./scripts/license.js",
+    "license": "node ./scripts/license.js",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
     "version": "node ./scripts/version.js",
@@ -15,9 +13,9 @@
   "workspaces": [
     "fixtures/gists-app",
     "packages/architect",
-    "packages/cli",
     "packages/core",
     "packages/data",
+    "packages/dev",
     "packages/express",
     "packages/react",
     "packages/vercel"
@@ -54,6 +52,7 @@
     "eslint-plugin-react": "^7.21.5",
     "eslint-plugin-react-hooks": "^4.2.0",
     "express": "^4.17.1",
+    "glob": "^7.1.6",
     "history": "^5.0.0",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",

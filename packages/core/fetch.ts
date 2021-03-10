@@ -1,31 +1,20 @@
-import type {
+import type { Response } from "node-fetch";
+
+export type {
   HeadersInit,
   RequestInfo,
   RequestInit,
   ResponseInit
 } from "node-fetch";
-import fetch, { Headers, Request, Response } from "node-fetch";
 
-export type { HeadersInit, RequestInfo, RequestInit, ResponseInit };
-export { Request, Response, Headers, fetch };
+export { Headers, Request, Response, default as fetch } from "node-fetch";
 
-export function isRequestLike(object: any): object is Request {
+export function isResponse(value: any): value is Response {
   return (
-    object &&
-    typeof object.method === "string" &&
-    typeof object.url === "string" &&
-    typeof object.headers === "object" &&
-    typeof object.body === "object" &&
-    typeof object.bodyUsed === "boolean"
-  );
-}
-
-export function isResponseLike(object: any): object is Response {
-  return (
-    object &&
-    typeof object.status === "number" &&
-    typeof object.headers === "object" &&
-    typeof object.body === "object" &&
-    typeof object.bodyUsed === "boolean"
+    value != null &&
+    typeof value.status === "number" &&
+    typeof value.statusText === "string" &&
+    typeof value.headers === "object" &&
+    typeof value.body !== "undefined"
   );
 }

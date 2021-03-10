@@ -1,193 +1,113 @@
+import type { Location } from "history";
+import type { ComponentType } from "react";
+import type { Params } from "react-router";
+
+import type { HeadersInit, Headers, Request, Response } from "./fetch";
+import type { LinkDescriptor } from "./links";
+
 /**
- * A route that was created using `defineRoutes` or created conventionally from
- * looking at the files on the filesystem.
+ * An object of data returned from the server's `getLoadContext` function. This
+ * will be passed to the data loaders.
  */
-export interface ConfigRouteObject {
-  /**
-   * The path this route uses to match on the URL pathname.
-   */
+export type AppLoadContext = any;
+
+/**
+ * Some data that was returned from a route data loader.
+ */
+export type AppData = any;
+
+/**
+ * A React component that is rendered for a route.
+ */
+export type RouteComponent = ComponentType;
+
+/**
+ * A React component that is rendered when there is an error on a route.
+ */
+export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+
+/**
+ * A function that returns HTTP headers to be used for a route. These headers
+ * will be merged with (and take precedence over) headers from parent routes.
+ */
+export interface HeadersFunction {
+  (args: { loaderHeaders: Headers; parentHeaders: Headers }):
+    | Headers
+    | HeadersInit;
+}
+
+/**
+ * A function that returns an object of name + content pairs to use for
+ * `<meta>` tags for a route. These tags will be merged with (and take
+ * precedence over) tags from parent routes.
+ */
+export interface MetaFunction {
+  (args: {
+    data: AppData;
+    parentsData: RouteData;
+    params: Params;
+    location: Location;
+  }): { [name: string]: string };
+}
+
+/**
+ * A function that defines `<link>` tags to be inserted into the `<head>` of
+ * the document on route transitions.
+ */
+export interface LinksFunction {
+  (args: { data: AppData }): LinkDescriptor[];
+}
+
+/**
+ * A function that loads data for a route.
+ */
+export interface LoaderFunction {
+  (args: { request: Request; context: AppLoadContext; params: Params }):
+    | Promise<AppData>
+    | AppData;
+}
+
+/**
+ * A function that handles data mutations for a route.
+ */
+export interface ActionFunction {
+  (args: { request: Request; context: AppLoadContext; params: Params }):
+    | Promise<Response>
+    | Response;
+}
+
+/**
+ * A module that contains info about a route including headers, meta tags, and
+ * the route component for rendering HTML markup.
+ */
+export interface RouteModule {
+  default: RouteComponent;
+  ErrorBoundary?: ErrorBoundaryComponent;
+  headers?: HeadersFunction;
+  meta?: MetaFunction;
+  loader?: LoaderFunction;
+  action?: ActionFunction;
+  links?: LinksFunction;
+  handle?: any;
+}
+
+export interface RouteManifest<Route> {
+  [routeId: string]: Route;
+}
+
+export type RouteData = RouteManifest<AppData>;
+export type RouteModules = RouteManifest<RouteModule>;
+
+export interface Route {
   path: string;
-
-  /**
-   * This route's child routes.
-   */
-  children?: ConfigRouteObject[];
-
-  /**
-   * The unique id for this route, named like the `moduleFile` but without
-   * the file extension. So `routes/gists/$username.js` will have an `id` of
-   * `routes/gists/$username`.
-   */
+  caseSensitive?: boolean;
   id: string;
-
-  /**
-   * The unique `id` for this route's parent route, if there is one.
-   */
   parentId?: string;
-
-  /**
-   * The path to the file that exports the React component rendered by this
-   * route as its default export, relative to the `config.appDirectory`. So the
-   * module file for route id `routes/gists/$username` will be
-   * `routes/gists/$username.js`.
-   */
-  moduleFile: string;
-
-  /**
-   * Should be `true` if the `path` is case-sensitive.
-   */
-  caseSensitive?: boolean;
 }
 
-export type FlatConfigRouteObject = Omit<ConfigRouteObject, "children">;
-
-export interface RouteManifest<RouteObject = FlatConfigRouteObject> {
-  [routeId: string]: RouteObject;
+export interface ServerRoute extends Route {
+  module: RouteModule;
+  children: ServerRoute[];
 }
 
-export function createRouteManifest(
-  routes: ConfigRouteObject[],
-  manifest: RouteManifest = {}
-): RouteManifest {
-  for (let route of routes) {
-    let { children, ...rest } = route;
-    manifest[route.id] = rest;
-    if (children) {
-      createRouteManifest(children, manifest);
-    }
-  }
-
-  return manifest;
-}
-
-export interface DefineRouteOptions {
-  /**
-   * Should be `true` if the route `path` is case-sensitive. Defaults to
-   * `false`.
-   */
-  caseSensitive?: boolean;
-}
-
-/**
- * A function for defining child routes.
- */
-interface DefineRouteChildren {
-  (): void;
-}
-
-/**
- * A function for defining a route that is passed as the argument to the
- * `defineRoutes` callback.
- *
- * Calls to this function are designed to be nested, using the `children`
- * callback argument.
- *
- *   defineRoutes(route => {
- *     route('/', 'pages/layout', () => {
- *       route('react-router', 'pages/react-router');
- *       route('reach-ui', 'pages/reach-ui');
- *     });
- *   });
- */
-export interface DefineRoute {
-  (
-    /**
-     * The path this route uses to match the URL pathname.
-     */
-    path: string,
-
-    /**
-     * The path to the file that exports the React component rendered by this
-     * route as its default export, relative to `config.appDirectory`.
-     * Additional exports may include `headers`, `meta`, `loader`, `action`,
-     * and `ErrorBoundary`.
-     */
-    moduleFile: string,
-
-    optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
-    children?: DefineRouteChildren
-  ): void;
-}
-
-export type DefineRoutes = typeof defineRoutes;
-
-/**
- * A function for defining routes programmatically, instead of using the
- * filesystem convention.
- */
-export function defineRoutes(
-  callback: (defineRoute: DefineRoute) => void
-): ConfigRouteObject[] {
-  let routes: ConfigRouteObject[] = [];
-  let currentParents: ConfigRouteObject[] = [];
-  let alreadyReturned = false;
-
-  function defineRoute(
-    path: string,
-    moduleFile: string,
-    optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
-    children?: DefineRouteChildren
-  ): void {
-    if (alreadyReturned) {
-      throw new Error(
-        "You tried to define routes asynchronously but started defining " +
-          "routes before the async work was done. Please await all async " +
-          "data before calling `defineRoutes()`"
-      );
-    }
-
-    let options: DefineRouteOptions;
-    if (typeof optionsOrChildren === "function") {
-      // route(path, moduleFile, children)
-      options = {};
-      children = optionsOrChildren;
-    } else {
-      // route(path, moduleFile, options, children)
-      // route(path, moduleFile, options)
-      options = optionsOrChildren || {};
-    }
-
-    let route: ConfigRouteObject = {
-      id: createRouteId(moduleFile),
-      path: path || "/",
-      moduleFile
-    };
-
-    if (typeof options.caseSensitive !== "undefined") {
-      route.caseSensitive = !!options.caseSensitive;
-    }
-
-    let parentRoute = currentParents[currentParents.length - 1];
-    if (parentRoute) {
-      route.parentId = parentRoute.id;
-      if (!parentRoute.children) parentRoute.children = [];
-      parentRoute.children.push(route);
-    } else {
-      routes.push(route);
-    }
-
-    if (children) {
-      currentParents.push(route);
-      children();
-      currentParents.pop();
-    }
-  }
-
-  callback(defineRoute);
-
-  alreadyReturned = true;
-
-  return routes;
-}
-
-export function createRouteId(file: string) {
-  return normalizeSlashes(stripFileExtension(file));
-}
-
-function normalizeSlashes(file: string) {
-  return file.split("\\").join("/");
-}
-
-function stripFileExtension(file: string) {
-  return file.replace(/\.[a-z0-9]+$/i, "");
-}
+export type ServerRouteManifest = RouteManifest<Omit<ServerRoute, "children">>;

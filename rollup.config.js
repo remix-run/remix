@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import babel from "@rollup/plugin-babel";
 import copy from "rollup-plugin-copy";
@@ -7,44 +8,81 @@ function isLocalModuleId(id) {
   return id.startsWith(".") || path.isAbsolute(id);
 }
 
-/** @type {import('rollup').RollupOptions} */
-let cli = {
-  external(id) {
-    return !isLocalModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/cli/index.ts"),
-  output: {
-    banner: "#!/usr/bin/env node",
-    dir: "build/node_modules/@remix-run/cli",
-    format: "cjs"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts"]
-    }),
-    nodeResolve({
-      extensions: [".ts"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/cli/package.json"),
-          dest: "build/node_modules/@remix-run/cli"
-        }
-      ]
-    })
-  ]
-};
+const licenseFile = path.resolve(__dirname, "LICENSE.md");
+const license = fs.readFileSync(licenseFile, "utf-8");
+const banner = "// " + license.split("\n").join("\n// ");
 
-/** @type {import('rollup').RollupOptions} */
+/** @type {import("rollup").RollupOptions} */
+let dev = [
+  {
+    external(id) {
+      return !isLocalModuleId(id);
+    },
+    input: [
+      path.resolve(__dirname, "packages/dev/cli/commands.ts"),
+      path.resolve(__dirname, "packages/dev/compiler.ts"),
+      path.resolve(__dirname, "packages/dev/config.ts"),
+      path.resolve(__dirname, "packages/dev/server.ts")
+    ],
+    output: {
+      banner: banner,
+      dir: "build/node_modules/@remix-run/dev",
+      format: "cjs",
+      preserveModules: true,
+      exports: "named"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"]
+      }),
+      nodeResolve({
+        extensions: [".ts"]
+      }),
+      copy({
+        targets: [
+          {
+            src: path.resolve(__dirname, "packages/dev/package.json"),
+            dest: "build/node_modules/@remix-run/dev"
+          }
+        ]
+      })
+    ]
+  },
+  // We need to build the CLI separately because it requires a special banner so
+  // it can be started with the node executable.
+  {
+    external() {
+      return true;
+    },
+    input: path.resolve(__dirname, "packages/dev/cli.ts"),
+    output: {
+      banner: "#!/usr/bin/env node\n" + banner,
+      dir: "build/node_modules/@remix-run/dev",
+      format: "cjs"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"]
+      }),
+      nodeResolve({
+        extensions: [".ts"]
+      })
+    ]
+  }
+];
+
+/** @type {import("rollup").RollupOptions} */
 let core = {
   external(id) {
     return !isLocalModuleId(id);
   },
   input: path.resolve(__dirname, "packages/core/index.ts"),
   output: {
+    banner: banner,
     dir: "build/node_modules/@remix-run/core",
     format: "cjs",
     preserveModules: true,
@@ -70,13 +108,14 @@ let core = {
   ]
 };
 
-/** @type {import('rollup').RollupOptions} */
+/** @type {import("rollup").RollupOptions} */
 let data = {
   external(id) {
     return !isLocalModuleId(id);
   },
   input: path.resolve(__dirname, "packages/data/index.ts"),
   output: {
+    banner: banner,
     dir: "build/node_modules/@remix-run/data",
     format: "cjs",
     preserveModules: true
@@ -101,7 +140,7 @@ let data = {
   ]
 };
 
-/** @type {import('rollup').RollupOptions[]} */
+/** @type {import("rollup").RollupOptions[]} */
 let react = [
   // We need 2 builds for @remix-run/react. Here's why:
   //
@@ -125,6 +164,7 @@ let react = [
       index: path.resolve(__dirname, "packages/react/index.tsx")
     },
     output: {
+      banner: banner,
       dir: "build/node_modules/@remix-run/react/esm",
       format: "esm",
       preserveModules: true,
@@ -158,6 +198,7 @@ let react = [
       server: path.resolve(__dirname, "packages/react/server.tsx")
     },
     output: {
+      banner: banner,
       dir: "build/node_modules/@remix-run/react",
       format: "cjs",
       preserveModules: true,
@@ -176,18 +217,15 @@ let react = [
   }
 ];
 
-let architect = getPlatformConfig("architect");
-let express = getPlatformConfig("express");
-let vercel = getPlatformConfig("vercel");
-
-function getPlatformConfig(name) {
-  /** @type {import('rollup').RollupOptions} */
+function getServerConfig(name) {
+  /** @type {import("rollup").RollupOptions} */
   return {
     external(id) {
       return !isLocalModuleId(id);
     },
     input: path.resolve(__dirname, `packages/${name}/index.ts`),
     output: {
+      banner: banner,
       dir: `build/node_modules/@remix-run/${name}`,
       format: "cjs",
       preserveModules: true,
@@ -214,5 +252,10 @@ function getPlatformConfig(name) {
   };
 }
 
-let builds = [architect, cli, core, data, express, vercel, ...react];
+let architect = getServerConfig("architect");
+let express = getServerConfig("express");
+let vercel = getServerConfig("vercel");
+
+let builds = [core, data, ...dev, architect, express, vercel, ...react];
+
 export default builds;

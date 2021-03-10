@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs").promises;
 
 exports.appDirectory = "./app";
-exports.browserBuildDirectory = "./public/build";
+exports.publicBuildDirectory = "./public/build";
 exports.publicPath = "/build/";
 exports.serverBuildDirectory = "./build";
 

@@ -15,7 +15,7 @@ import type {
   SerializedError,
   HTMLLinkDescriptor,
   ComponentDidCatchEmulator,
-  EntryManifest as Manifest
+  AssetsManifest
 } from "@remix-run/core";
 
 import {
@@ -32,7 +32,7 @@ import invariant from "./invariant";
 import { createHtml } from "./markup";
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
-import type { ClientRouteMatch, ClientRouteObject } from "./routes";
+import type { ClientRouteMatch, ClientRoute } from "./routes";
 import {
   createClientRoutes,
   createClientMatches,
@@ -91,14 +91,14 @@ function setFormIdle() {
 // RemixEntry
 
 interface RemixEntryContextType {
-  manifest: Manifest;
+  manifest: AssetsManifest;
   matches: ClientRouteMatch[];
   componentDidCatchEmulator: ComponentDidCatchEmulator;
   routeData: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
   pendingLocation: Location | undefined;
-  clientRoutes: ClientRouteObject[];
+  clientRoutes: ClientRoute[];
   links: HTMLLinkDescriptor[];
 }
 
@@ -568,7 +568,7 @@ export function Scripts() {
       .map(
         (match, index) =>
           `import * as route${index} from ${JSON.stringify(
-            manifest.routes[match.route.id].moduleUrl
+            manifest.routes[match.route.id].module
           )};`
       )
       .join("\n")}
@@ -586,8 +586,8 @@ export function Scripts() {
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
-        <script src={manifest.manifestUrl} type="module" />
-        <script src={manifest.entryModuleUrl} type="module" />
+        <script src={manifest.url} type="module" />
+        <script src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -607,11 +607,11 @@ export function Scripts() {
     .concat(nextMatches)
     .map(match => {
       let route = manifest.routes[match.route.id];
-      return (route.imports || []).concat([route.moduleUrl]);
+      return (route.imports || []).concat([route.module]);
     })
     .flat(1);
 
-  let preloads = manifest.entryModuleImports.concat(routePreloads);
+  let preloads = manifest.entry.imports.concat(routePreloads);
 
   return (
     <>

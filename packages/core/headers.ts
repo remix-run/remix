@@ -1,47 +1,30 @@
-import type { RouteModule, RouteModules } from "./buildModules";
+import type { ServerBuild } from "./build";
 import type { Response } from "./fetch";
 import { Headers } from "./fetch";
-import type { ConfigRouteMatch } from "./match";
-
-export function getRouteHeaders(
-  routeModule: RouteModule,
-  loaderHeaders: Headers,
-  parentHeaders: Headers
-): Headers {
-  if (!routeModule.headers) {
-    return new Headers();
-  }
-
-  return new Headers(
-    routeModule.headers({
-      loaderHeaders,
-      parentHeaders
-    })
-  );
-}
+import type { ServerRouteMatch } from "./match";
 
 export function getDocumentHeaders(
-  matches: ConfigRouteMatch[],
-  routeModules: RouteModules,
+  build: ServerBuild,
+  matches: ServerRouteMatch[],
   routeLoaderResponses: Response[]
 ): Headers {
   return matches.reduce((parentHeaders, match, index) => {
-    let routeModule = routeModules[match.route.id];
+    let routeModule = build.routes[match.route.id].module;
     let loaderResponse = routeLoaderResponses[index];
     let loaderHeaders = loaderResponse.headers;
 
-    let routeHeaders = getRouteHeaders(
-      routeModule,
-      loaderHeaders,
-      parentHeaders
+    let headers = new Headers(
+      routeModule.headers
+        ? routeModule.headers({ loaderHeaders, parentHeaders })
+        : undefined
     );
 
     // Automatically preserve Set-Cookie headers that were set either by the
     // loader or by a parent route.
-    prependCookies(loaderHeaders, routeHeaders);
-    prependCookies(parentHeaders, routeHeaders);
+    prependCookies(loaderHeaders, headers);
+    prependCookies(parentHeaders, headers);
 
-    return routeHeaders;
+    return headers;
   }, new Headers());
 }
 
