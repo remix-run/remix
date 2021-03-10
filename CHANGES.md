@@ -2,6 +2,24 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Streamlined production builds and deploy requirements
+  - No more deploying app source code (`remix.config.js` and/or the `app` directory) to production
+  - No more including Remix dev-only dependencies in production deploys
+- Eliminated dynamic requires from production builds
+- Added `config.cacheDirectory` for caching compiler build output
+
+### Bug Fixes
+
+- Don't replace `process.env.NODE_ENV` in (node) server builds
+
+### Breaking Changes
+
+- Removed `@remix-run/cli` package, use `@remix-run/dev` instead
+
 ## 0.13.3 - Wed Feb 24 2021
 
 ### Bug Fixes
