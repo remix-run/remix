@@ -328,7 +328,14 @@ function getBuildPlugins(
   );
 
   if (target !== BuildTarget.Server) {
-    plugins.push(replace({ "process.env.NODE_ENV": JSON.stringify(mode) }));
+    plugins.push(
+      replace({
+        preventAssignment: true,
+        values: {
+          "process.env.NODE_ENV": JSON.stringify(mode)
+        }
+      })
+    );
   }
 
   if (target !== BuildTarget.Server && mode === BuildMode.Production) {
