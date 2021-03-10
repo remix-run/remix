@@ -105,10 +105,9 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/core to version ${nextVersion}`)
   );
 
-  // - Update @remix-run/dev version + @remix-run/core dep
+  // - Update @remix-run/dev version
   await updatePackageConfig("dev", config => {
     config.version = nextVersion;
-    config.dependencies["@remix-run/core"] = nextVersion;
   });
   console.log(
     chalk.green(`  Updated @remix-run/dev to version ${nextVersion}`)
