@@ -4,7 +4,8 @@ import type { Plugin } from "rollup";
 import { BuildTarget } from "../../build";
 import { getRemixConfig } from "./remixConfig";
 
-export const magicProxy = "?route-module-proxy";
+export const routeModuleProxy = "?route-module-proxy";
+export const emptyRouteModule = "?empty-route-module";
 
 /**
  * A resolver/loader for route modules that does a few things:
@@ -31,7 +32,7 @@ export default function routeModulesPlugin({
 
         for (let alias in input) {
           if (routeIds.includes(alias)) {
-            input[alias] = input[alias] + magicProxy;
+            input[alias] = input[alias] + routeModuleProxy;
           }
         }
       }
@@ -39,40 +40,51 @@ export default function routeModulesPlugin({
       return options;
     },
 
-    resolveId(id, importer) {
-      if (id.endsWith(magicProxy)) {
+    async resolveId(id, importer) {
+      if (id.endsWith(routeModuleProxy) || id.endsWith(emptyRouteModule)) {
         return id;
       }
 
       if (
-        importer?.endsWith(magicProxy) &&
-        importer.slice(0, -magicProxy.length) === id &&
-        target === BuildTarget.Browser
+        importer &&
+        importer.endsWith(routeModuleProxy) &&
+        importer.slice(0, -routeModuleProxy.length) === id
       ) {
-        // Use synthetic named exports on route modules when they are imported
-        // from the browser proxy module. Since it explicitly names the exports
-        // it wants, this prevents Rollup from complaining when they're not
-        // there. `default` (the component) is the only required export, all
-        // others default to `undefined`.
-        return { id, syntheticNamedExports: true };
+        let resolved = await this.resolve(id, importer, { skipSelf: true });
+
+        if (resolved) {
+          if (isEmptyFile(resolved.id)) {
+            resolved.id = resolved.id + emptyRouteModule;
+          }
+
+          // Using syntheticNamedExports here prevents Rollup from complaining
+          // when the route source module may not have some of the properties
+          // we explicitly list in the proxy module.
+          resolved.syntheticNamedExports = true;
+
+          return resolved;
+        }
       }
 
       return null;
     },
 
     load(id) {
-      if (id.endsWith(magicProxy)) {
-        let source = id.slice(0, -magicProxy.length);
+      if (id.endsWith(emptyRouteModule)) {
+        let source = id.slice(0, -emptyRouteModule.length);
 
-        if (isEmptyFile(source)) {
-          this.addWatchFile(source);
-          // In a new file, default to an empty component. This prevents
-          // errors in dev (watch) mode when creating new routes.
-          return `export default function () { throw new Error('Route "${source}" is empty, put a default export in there') }`;
-        }
+        this.addWatchFile(source);
+
+        // In a new file, default to an empty component. This prevents errors in
+        // dev (watch) mode when creating new routes.
+        return `export default function () { throw new Error('Route "${source}" is empty, put a default export in there!') }`;
+      }
+
+      if (id.endsWith(routeModuleProxy)) {
+        let source = id.slice(0, -routeModuleProxy.length);
 
         if (target === BuildTarget.Browser) {
-          // Create a proxy module that exports only the methods we want to be
+          // Create a proxy module that re-exports only the things we want to be
           // available in the browser. All the rest will be tree-shaken out so
           // we don't end up with server-only code (and its dependencies) in the
           // browser bundles.

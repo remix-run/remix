@@ -4,6 +4,7 @@ import type { OutputBundle, Plugin, RenderedModule } from "rollup";
 
 import invariant from "../../invariant";
 import { getBundleHash } from "../crypto";
+import { routeModuleProxy, emptyRouteModule } from "./routeModules";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
@@ -98,25 +99,25 @@ function getAssetsManifest(
       };
     } else if (
       routeIds.includes(chunk.name) &&
-      chunk.facadeModuleId.endsWith("?route-module-proxy")
+      chunk.facadeModuleId.endsWith(routeModuleProxy)
     ) {
       let route = routeManifest[chunk.name];
 
-      // When we build route modules, we put a shim in front with the
-      // ?route-module-proxy query string on the end (see routeModules.ts).
-      // Removing this suffix gets us back to the original source module id.
-      let sourceModuleId = chunk.facadeModuleId.replace(
-        "?route-module-proxy",
-        ""
-      );
+      // When we build route modules, we put a shim in front that ends with a
+      // ?route-module-proxy string. Removing this suffix gets us back to the
+      // original source module id.
+      let sourceModuleId = chunk.facadeModuleId.replace(routeModuleProxy, "");
 
       // Usually the source module will be contained in this chunk, but if
       // someone imports a route module from within another route module, Rollup
       // will place the source module in a shared chunk. So we have to go find
-      // the chunk with the source module in it.
+      // the chunk with the source module in it. If the source module was empty,
+      // it will have the ?empty-route-module suffix on it.
       let sourceModule =
         chunk.modules[sourceModuleId] ||
-        findRenderedModule(bundle, sourceModuleId);
+        chunk.modules[sourceModuleId + emptyRouteModule] ||
+        findRenderedModule(bundle, sourceModuleId) ||
+        findRenderedModule(bundle, sourceModuleId + emptyRouteModule);
 
       invariant(sourceModule, `Cannot find source module for ${route.id}`);
 
