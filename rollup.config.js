@@ -19,6 +19,7 @@ let dev = [
       return !isLocalModuleId(id);
     },
     input: [
+      path.resolve(__dirname, "packages/dev/cli/commands.ts"),
       path.resolve(__dirname, "packages/dev/compiler.ts"),
       path.resolve(__dirname, "packages/dev/config.ts"),
       path.resolve(__dirname, "packages/dev/server.ts")
