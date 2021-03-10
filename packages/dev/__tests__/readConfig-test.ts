@@ -53,6 +53,12 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "*",
           },
+          "routes/empty": Object {
+            "id": "routes/empty",
+            "moduleFile": "routes/empty.js",
+            "parentId": "root",
+            "path": "empty",
+          },
           "routes/gists": Object {
             "id": "routes/gists",
             "moduleFile": "routes/gists.js",
@@ -146,6 +152,12 @@ describe("readConfig", () => {
                 "moduleFile": "routes/404.js",
                 "parentId": "root",
                 "path": "*",
+              },
+              Object {
+                "id": "routes/empty",
+                "moduleFile": "routes/empty.js",
+                "parentId": "root",
+                "path": "empty",
               },
               Object {
                 "children": Array [

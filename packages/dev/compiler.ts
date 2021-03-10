@@ -324,13 +324,14 @@ function getBuildPlugins(
       extensions: [".js", ".json", ".jsx", ".ts", ".tsx"],
       preferBuiltins: target !== BuildTarget.Browser
     }),
-    commonjs(),
-    replace({
-      "process.env.NODE_ENV": JSON.stringify(mode)
-    })
+    commonjs()
   );
 
-  if (mode === BuildMode.Production) {
+  if (target !== BuildTarget.Server) {
+    plugins.push(replace({ "process.env.NODE_ENV": JSON.stringify(mode) }));
+  }
+
+  if (target !== BuildTarget.Server && mode === BuildMode.Production) {
     plugins.push(terser({ ecma: 2017 }));
   }
 
