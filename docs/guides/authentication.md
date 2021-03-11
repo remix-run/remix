@@ -1,4 +1,0 @@
----
-title: Authentications
-disabled: true
----
