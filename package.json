@@ -13,10 +13,10 @@
   "workspaces": [
     "fixtures/gists-app",
     "packages/architect",
-    "packages/core",
     "packages/data",
     "packages/dev",
     "packages/express",
+    "packages/node",
     "packages/react",
     "packages/vercel"
   ],

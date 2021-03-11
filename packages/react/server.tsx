@@ -2,7 +2,7 @@ import type { Location, To } from "history";
 import { Action, createPath } from "history";
 import type { ReactElement } from "react";
 import React from "react";
-import type { EntryContext } from "@remix-run/core";
+import type { EntryContext } from "@remix-run/node";
 
 import { RemixEntry } from "./components";
 

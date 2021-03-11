@@ -76,14 +76,14 @@ let dev = [
 ];
 
 /** @type {import("rollup").RollupOptions} */
-let core = {
+let node = {
   external(id) {
     return !isLocalModuleId(id);
   },
-  input: path.resolve(__dirname, "packages/core/index.ts"),
+  input: path.resolve(__dirname, "packages/node/index.ts"),
   output: {
     banner: banner,
-    dir: "build/node_modules/@remix-run/core",
+    dir: "build/node_modules/@remix-run/node",
     format: "cjs",
     preserveModules: true,
     exports: "named"
@@ -100,8 +100,8 @@ let core = {
     copy({
       targets: [
         {
-          src: path.resolve(__dirname, "packages/core/package.json"),
-          dest: "build/node_modules/@remix-run/core"
+          src: path.resolve(__dirname, "packages/node/package.json"),
+          dest: "build/node_modules/@remix-run/node"
         }
       ]
     })
@@ -150,7 +150,7 @@ let react = [
   //   loading because it loads all route modules up front when the server boots
   //
   // The compiler aliases @remix-run/react to @remix-run/react/esm when building
-  // browser bundles (see packages/core/compiler.ts).
+  // browser bundles (see packages/node/compiler.ts).
   //
   // TODO: We may eventually need a 3rd build that uses SystemJS for the route
   // loader in a <script nomodule> for older browsers (IE 11), depending on what
@@ -256,6 +256,6 @@ let architect = getServerConfig("architect");
 let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [core, data, ...dev, architect, express, vercel, ...react];
+let builds = [node, data, ...dev, architect, express, vercel, ...react];
 
 export default builds;

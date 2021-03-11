@@ -1,5 +1,5 @@
 import type { Location } from "history";
-import type { AppData, RouteData } from "@remix-run/core";
+import type { AppData, RouteData } from "@remix-run/node";
 
 export type { AppData, RouteData };
 

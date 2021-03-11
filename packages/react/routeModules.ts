@@ -1,4 +1,4 @@
-import type { EntryRoute, RouteModule, RouteModules } from "@remix-run/core";
+import type { EntryRoute, RouteModule, RouteModules } from "@remix-run/node";
 
 export type { RouteModule, RouteModules };
 

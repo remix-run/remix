@@ -1,6 +1,6 @@
 {
-  "name": "@remix-run/core",
-  "description": "The core classes and functions of Remix",
+  "name": "@remix-run/node",
+  "description": "Node.js bindings for Remix",
   "version": "0.14.1",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {

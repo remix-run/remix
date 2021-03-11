@@ -16,7 +16,7 @@ import type {
   HTMLLinkDescriptor,
   ComponentDidCatchEmulator,
   AssetsManifest
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 import {
   AppData,

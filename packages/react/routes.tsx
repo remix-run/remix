@@ -7,7 +7,7 @@ import type {
   EntryRoute,
   EntryRouteMatch,
   RouteManifest
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 import invariant from "./invariant";
 

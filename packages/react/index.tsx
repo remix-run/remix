@@ -10,14 +10,14 @@ export type {
   // shorthand
   LoaderFunction as Loader,
   ActionFunction as Action
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 export type {
   LinkDescriptor,
   HTMLLinkDescriptor,
   BlockLinkDescriptor,
   PageLinkDescriptor
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 export type { FormProps, SubmitOptions, SubmitFunction } from "./components";
 export {

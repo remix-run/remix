@@ -1,6 +1,6 @@
 import React from "react";
 import type { Location } from "history";
-import type { ErrorBoundaryComponent } from "@remix-run/core";
+import type { ErrorBoundaryComponent } from "@remix-run/node";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;

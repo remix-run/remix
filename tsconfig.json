@@ -2,10 +2,10 @@
   "files": [],
   "references": [
     { "path": "packages/architect" },
-    { "path": "packages/core" },
     { "path": "packages/data" },
     { "path": "packages/dev" },
     { "path": "packages/express" },
+    { "path": "packages/node" },
     { "path": "packages/react" },
     { "path": "packages/vercel" }
   ]

@@ -4,6 +4,6 @@
   "version": "0.14.1",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
-    "@remix-run/core": "0.14.1"
+    "@remix-run/node": "0.14.1"
   }
 }

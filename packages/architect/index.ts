@@ -3,11 +3,11 @@ import type {
   Request as ArcRequest,
   Response as ArcResponse
 } from "@architect/functions";
-import type { ServerBuild, AppLoadContext } from "@remix-run/core";
+import type { ServerBuild, AppLoadContext } from "@remix-run/node";
 import {
   Request,
   createRequestHandler as createRemixRequestHandler
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 import "./fetchGlobals";
 

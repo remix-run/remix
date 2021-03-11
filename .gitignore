@@ -1,6 +1,7 @@
 .vscode
+
 /build/
 node_modules/
 yarn-error.log
 
-/TODO.md
+/MICHAEL_TODOS.md

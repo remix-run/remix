@@ -5,7 +5,7 @@ import {
   fetch as nodeFetch,
   RequestInit,
   RequestInfo
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 declare module global {
   export { Headers, Request, Response, fetch };

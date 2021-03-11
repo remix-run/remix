@@ -5,12 +5,12 @@ import type {
   RequestInit,
   Response,
   ServerBuild
-} from "@remix-run/core";
+} from "@remix-run/node";
 import {
   Headers,
   Request,
   createRequestHandler as createRemixRequestHandler
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 import "./fetchGlobals";
 

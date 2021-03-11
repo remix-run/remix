@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import React from "react";
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
-import type { EntryContext } from "@remix-run/core";
+import type { EntryContext } from "@remix-run/node";
 
 import { RemixEntry } from "./components";
 import type { RouteModules } from "./routeModules";

@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Breaking Changes
+
+- Rename `@remix-run/core` => `@remix-run/node`
+
 ## 0.14.1 - Thu Mar 11 2021
 
 ### Bug Fixes

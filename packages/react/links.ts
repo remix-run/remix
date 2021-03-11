@@ -6,7 +6,7 @@ import type {
   HTMLLinkDescriptor,
   PageLinkDescriptor,
   BlockLinkDescriptor
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 import type { RouteData } from "./data";
 import type { ClientRouteMatch, ClientRoute } from "./routes";

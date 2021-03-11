@@ -39,11 +39,15 @@ async function run() {
   let prerelease = semver.prerelease(taggedVersion);
   let tag = prerelease ? prerelease[0] : "latest";
 
-  // - Publish all packages, starting with core
-  let basePackageNames = await fsp.readdir(npmModulesDir);
-  basePackageNames.sort(a => (a === "core" ? -1 : 0));
-
-  for (let name of basePackageNames) {
+  for (let name of [
+    "node",
+    "express",
+    "architect",
+    "vercel",
+    "react",
+    "data",
+    "dev"
+  ]) {
     await npm(["publish", "--tag", tag, path.join(npmModulesDir, name)], {
       stdio: "inherit"
     });

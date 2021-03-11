@@ -1,9 +1,9 @@
 module.exports = {
   projects: [
     {
-      displayName: "core",
+      displayName: "node",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/core/**/*-test.[jt]s?(x)"]
+      testMatch: ["<rootDir>/packages/node/**/*-test.[jt]s?(x)"]
     },
     {
       displayName: "dev",

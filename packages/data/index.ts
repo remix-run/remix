@@ -10,7 +10,7 @@ export type {
   // shorthand
   LoaderFunction as Loader,
   ActionFunction as Action
-} from "@remix-run/core";
+} from "@remix-run/node";
 
 export type {
   Cookie,
@@ -19,9 +19,9 @@ export type {
   Session,
   SessionStorage,
   SessionIdStorageStrategy
-} from "@remix-run/core";
+} from "@remix-run/node";
 
-export { Headers, Request, Response } from "@remix-run/core";
+export { Headers, Request, Response } from "@remix-run/node";
 
 export {
   createCookie,
@@ -34,4 +34,4 @@ export {
   createMemorySessionStorage,
   json,
   redirect
-} from "@remix-run/core";
+} from "@remix-run/node";
