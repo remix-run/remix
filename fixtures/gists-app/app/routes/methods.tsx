@@ -3,8 +3,8 @@ import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 import type { FormProps } from "@remix-run/react";
 import { json, redirect } from "@remix-run/data";
 import type { LoaderFunction, ActionFunction } from "@remix-run/data";
-import styles from "url:../styles/methods.css";
 
+import styles from "url:../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";
 
 export function links() {

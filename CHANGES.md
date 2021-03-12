@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Always use `.css` extension on output files for `css:` imports
+- Avoid an infinite loop when importing files w/out `url:` hint
+
 ## 0.14.0 - Wed Mar 10 2021
 
 ### Improvements

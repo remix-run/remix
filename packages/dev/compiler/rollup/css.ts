@@ -13,8 +13,6 @@ import { getHash, addHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
-// const IMPLICIT_URL = /\.(?:css|less|scss|sass)$/i;
-
 export default function cssPlugin({
   target,
   mode
@@ -38,10 +36,11 @@ export default function cssPlugin({
     },
 
     async resolveId(id, importer) {
-      if (id[0] === "\0" || !id.startsWith("css:")) return;
-      id = id.slice(4);
+      if (!id.startsWith("css:")) return null;
 
-      let resolved = await this.resolve(id, importer, { skipSelf: true });
+      let resolved = await this.resolve(id.slice(4), importer, {
+        skipSelf: true
+      });
 
       return resolved && `\0css:${resolved.id}`;
     },
@@ -52,7 +51,10 @@ export default function cssPlugin({
       let file = id.slice(5);
       let originalSource = await fsp.readFile(file);
       let hash = getHash(originalSource).slice(0, 8);
-      let fileName = addHash(path.relative(config.appDirectory, file), hash);
+      let fileName = addHash(
+        path.relative(config.appDirectory, file),
+        hash
+      ).replace(/(\.\w+)?$/, ".css");
 
       this.addWatchFile(file);
 

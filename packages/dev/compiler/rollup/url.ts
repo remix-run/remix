@@ -8,8 +8,6 @@ import { getHash, addHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 
-const IMPLICIT_URL = /\.(?:svg|mp4|webm|ogg|mp3|wav|flac|aac|woff2?|eot|ttf|otf)$/i;
-
 export default function urlPlugin({ target }: { target: string }): Plugin {
   let config: RemixConfig;
 
@@ -21,15 +19,11 @@ export default function urlPlugin({ target }: { target: string }): Plugin {
     },
 
     async resolveId(id, importer) {
-      if (id[0] === "\0") return;
+      if (!id.startsWith("url:")) return null;
 
-      if (id.startsWith("url:")) {
-        id = id.slice(4);
-      } else if (!IMPLICIT_URL.test(id)) {
-        return;
-      }
-
-      let resolved = await this.resolve(id, importer, { skipSelf: true });
+      let resolved = await this.resolve(id.slice(4), importer, {
+        skipSelf: true
+      });
 
       return resolved && `\0url:${resolved.id}`;
     },

@@ -32,10 +32,9 @@ export default function imgPlugin({ target }: { target: string }): Plugin {
     },
 
     async resolveId(id, importer) {
-      if (id[0] === "\0" || !id.startsWith("img:")) return;
-      id = id.slice(4);
+      if (!id.startsWith("img:")) return null;
 
-      let { baseId, search } = parseId(id);
+      let { baseId, search } = parseId(id.slice(4));
 
       let resolved = await this.resolve(baseId, importer, { skipSelf: true });
 
