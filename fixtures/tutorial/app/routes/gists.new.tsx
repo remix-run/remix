@@ -1,5 +1,6 @@
+import type { LinksFunction } from "@remix-run/express";
 import { Form, usePendingFormSubmit } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/data";
+
 import styles from "url:../styles/gists.new.css";
 
 export let links: LinksFunction = () => {

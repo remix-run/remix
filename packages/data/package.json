@@ -1,9 +1,0 @@
-{
-  "name": "@remix-run/data",
-  "description": "Classes and functions for Remix data loaders and actions",
-  "version": "0.14.1",
-  "repository": "https://github.com/remix-run/remix",
-  "dependencies": {
-    "@remix-run/node": "0.14.1"
-  }
-}

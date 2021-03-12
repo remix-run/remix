@@ -1,7 +1,7 @@
 import express from "express";
 import supertest from "supertest";
 
-import { createRequestHandler } from "../index";
+import { createRequestHandler } from "../server";
 
 import { Response } from "@remix-run/node";
 

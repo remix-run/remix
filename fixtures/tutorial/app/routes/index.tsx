@@ -1,5 +1,6 @@
 import { useRouteData } from "@remix-run/react";
-import type { LoaderFunction, LinksFunction } from "@remix-run/data";
+import type { LoaderFunction, LinksFunction } from "@remix-run/express";
+
 import styles from "url:../styles/index.css";
 
 export let loader: LoaderFunction = async () => {

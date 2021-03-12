@@ -1,6 +1,7 @@
-import { Meta, Scripts, Links, useRouteData } from "@remix-run/react";
 import { Link, Outlet } from "react-router-dom";
-import type { LoaderFunction, LinksFunction } from "@remix-run/data";
+import type { LoaderFunction, LinksFunction } from "@remix-run/express";
+import { Meta, Scripts, Links, useRouteData } from "@remix-run/react";
+
 import styles from "url:./styles/global.css";
 
 export let loader: LoaderFunction = async () => {

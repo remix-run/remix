@@ -1,18 +1,15 @@
-// TODO: Does this belong here or in @remix-run/data?
 export type {
+  // route modules
   RouteComponent,
   ErrorBoundaryComponent,
   HeadersFunction,
   MetaFunction,
   LinksFunction,
-  LoaderFunction,
   ActionFunction,
-  // shorthand
-  LoaderFunction as Loader,
-  ActionFunction as Action
-} from "@remix-run/node";
-
-export type {
+  ActionFunction as Action, // shorthand
+  LoaderFunction,
+  LoaderFunction as Loader, // shorthand
+  // links
   LinkDescriptor,
   HTMLLinkDescriptor,
   BlockLinkDescriptor,

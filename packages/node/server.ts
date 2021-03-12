@@ -15,7 +15,7 @@ import type { ServerRouteMatch } from "./match";
 import { createRoutes, matchRoutes } from "./match";
 import { ServerMode, isServerMode } from "./mode";
 import type { AppLoadContext, ServerRoute } from "./routes";
-import { json, jsonError } from "./responses";
+import { json } from "./responses";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -287,6 +287,10 @@ async function handleDocumentRequest(
   }
 
   return response;
+}
+
+function jsonError(error: string, status = 403): Response {
+  return json({ error }, { status });
 }
 
 function isActionRequest(request: Request): boolean {

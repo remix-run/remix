@@ -1,8 +1,8 @@
 import * as React from "react";
-import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
+import type { LoaderFunction, ActionFunction } from "@remix-run/express";
+import { json, redirect } from "@remix-run/express";
 import type { FormProps } from "@remix-run/react";
-import { json, redirect } from "@remix-run/data";
-import type { LoaderFunction, ActionFunction } from "@remix-run/data";
+import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 
 import styles from "url:../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";

@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
+    "lib": ["ES2019"],
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "moduleResolution": "node",
-    "target": "es2019",
+    "target": "ES2019",
     "strict": true,
     "skipLibCheck": true
   }

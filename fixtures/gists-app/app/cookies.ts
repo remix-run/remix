@@ -1,4 +1,4 @@
-import { createCookie } from "@remix-run/data";
+import { createCookie } from "@remix-run/express";
 
 export let userPrefsCookie = createCookie("user-prefs", {
   path: "/",

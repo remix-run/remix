@@ -1,9 +1,14 @@
 {
-  "extends": "../../config/node-tsconfig.json",
+  "include": ["../../types/**/*", "**/*"],
+  "exclude": ["__tests__/**/*"],
   "compilerOptions": {
+    "lib": ["ES2019"],
+    "target": "ES2019",
+
+    "moduleResolution": "node",
+    "strict": true,
+
     "outDir": "../../build/node_modules/@remix-run/architect",
     "rootDir": "."
-  },
-  "include": ["../../types/**/*", "**/*"],
-  "exclude": ["__tests__/**/*"]
+  }
 }

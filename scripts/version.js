@@ -97,29 +97,12 @@ async function run(args) {
   );
   if (answer === false) return 0;
 
-  // - Update @remix-run/node version
-  await updatePackageConfig("node", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/node to version ${nextVersion}`)
-  );
-
   // - Update @remix-run/dev version
   await updatePackageConfig("dev", config => {
     config.version = nextVersion;
   });
   console.log(
     chalk.green(`  Updated @remix-run/dev to version ${nextVersion}`)
-  );
-
-  // - Update @remix-run/data version + @remix-run/node dep
-  await updatePackageConfig("data", config => {
-    config.version = nextVersion;
-    config.dependencies["@remix-run/node"] = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/data to version ${nextVersion}`)
   );
 
   // - Update @remix-run/react version
@@ -130,7 +113,15 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
   );
 
-  // - Update platform versions + @remix-run/node dep
+  // - Update @remix-run/node version
+  await updatePackageConfig("node", config => {
+    config.version = nextVersion;
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/node to version ${nextVersion}`)
+  );
+
+  // - Update node server versions + @remix-run/node dep
   for (let platform of ["architect", "express", "vercel"]) {
     await updatePackageConfig(platform, config => {
       config.version = nextVersion;

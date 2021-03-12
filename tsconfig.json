@@ -2,7 +2,6 @@
   "files": [],
   "references": [
     { "path": "packages/architect" },
-    { "path": "packages/data" },
     { "path": "packages/dev" },
     { "path": "packages/express" },
     { "path": "packages/node" },

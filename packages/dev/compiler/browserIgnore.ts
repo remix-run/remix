@@ -18,7 +18,9 @@ export let ignorePackages = builtins.concat([
   //
   // TODO: For some adventurous soul, try to figure out why Rollup can't parse
   // its own output...
-  "@remix-run/data",
+  "@remix-run/architect",
+  "@remix-run/express",
+  "@remix-run/vercel",
   "apollo-server",
   "better-sqlite3",
   "bookshelf",

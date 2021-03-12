@@ -1,12 +1,12 @@
+import type { LoaderFunction, ActionFunction } from "@remix-run/express";
+import { redirect } from "@remix-run/express";
 import { useRouteData } from "@remix-run/react";
-import { redirect } from "@remix-run/data";
-import type { Loader, Action } from "@remix-run/data";
 
-export let loader: Loader = () => {
+export let loader: LoaderFunction = () => {
   return fetch("https://api.github.com/gists");
 };
 
-export let action: Action = async ({ request }) => {
+export let action: ActionFunction = async ({ request }) => {
   let body = new URLSearchParams(await request.text());
 
   let fileName = body.get("fileName") as string;

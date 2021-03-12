@@ -1,7 +1,11 @@
-import { useRouteData, Form, useSubmit } from "@remix-run/react";
-import type { MetaFunction, Loader, Action } from "@remix-run/data";
-import { redirect } from "@remix-run/data";
 import { Link } from "react-router-dom";
+import type {
+  MetaFunction,
+  LoaderFunction,
+  ActionFunction
+} from "@remix-run/express";
+import { redirect } from "@remix-run/express";
+import { useRouteData, Form, useSubmit } from "@remix-run/react";
 
 import { userPrefsCookie } from "../cookies";
 
@@ -19,11 +23,11 @@ export let meta: MetaFunction = () => {
   return { title: "User Preferences" };
 };
 
-export let loader: Loader = async ({ request }) => {
+export let loader: LoaderFunction = async ({ request }) => {
   return getUserPrefs(request.headers.get("Cookie"));
 };
 
-export let action: Action = async ({ request }) => {
+export let action: ActionFunction = async ({ request }) => {
   let userPrefs = getUserPrefs(request.headers.get("Cookie"));
   let formParams = new URLSearchParams(await request.text());
 

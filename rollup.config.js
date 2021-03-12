@@ -108,38 +108,6 @@ let node = {
   ]
 };
 
-/** @type {import("rollup").RollupOptions} */
-let data = {
-  external(id) {
-    return !isLocalModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/data/index.ts"),
-  output: {
-    banner: banner,
-    dir: "build/node_modules/@remix-run/data",
-    format: "cjs",
-    preserveModules: true
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/data/package.json"),
-          dest: "build/node_modules/@remix-run/data"
-        }
-      ]
-    })
-  ]
-};
-
 /** @type {import("rollup").RollupOptions[]} */
 let react = [
   // We need 2 builds for @remix-run/react. Here's why:
@@ -256,6 +224,6 @@ let architect = getServerConfig("architect");
 let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [node, data, ...dev, architect, express, vercel, ...react];
+let builds = [...dev, node, architect, express, vercel, ...react];
 
 export default builds;

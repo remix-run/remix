@@ -1,5 +1,5 @@
+import type { LoaderFunction } from "@remix-run/express";
 import { useRouteData } from "@remix-run/react";
-import type { Loader } from "@remix-run/data";
 
 interface User {
   avatar_url: string;
@@ -9,7 +9,7 @@ interface User {
   name: string;
 }
 
-export let loader: Loader = ({ params }) => {
+export let loader: LoaderFunction = ({ params }) => {
   return fetch(`https://api.github.com/users/${params.member}`);
 };
 

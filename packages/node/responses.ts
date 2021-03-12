@@ -17,10 +17,6 @@ export function json(data: any, init: number | ResponseInit = {}): Response {
   return new Response(JSON.stringify(data), { ...init, headers });
 }
 
-export function jsonError(error: string, status = 403): Response {
-  return json({ error }, { status });
-}
-
 /**
  * A redirect response. Sets the status code and the `Location` header.
  * Defaults to "302 Found".
