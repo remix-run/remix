@@ -16,19 +16,12 @@ export { Headers, Request, Response } from "node-fetch";
  * @see https://github.com/node-fetch/node-fetch
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
  */
-export function fetch(input: RequestInfo, init?: RequestInit) {
+export function fetch(
+  input: RequestInfo,
+  init?: RequestInit
+): Promise<Response> {
   // Default to { compress: false } so responses can be proxied through more
   // easily in loaders. Otherwise the response stream encoding will not match
   // the Content-Encoding response header.
   return nodeFetch(input, { compress: false, ...init });
-}
-
-export function isResponse(value: any): value is Response {
-  return (
-    value != null &&
-    typeof value.status === "number" &&
-    typeof value.statusText === "string" &&
-    typeof value.headers === "object" &&
-    typeof value.body !== "undefined"
-  );
 }

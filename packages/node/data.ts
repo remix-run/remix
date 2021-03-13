@@ -2,7 +2,7 @@ import type { Params } from "react-router";
 
 import type { ServerBuild } from "./build";
 import type { Request } from "./fetch";
-import { Response, isResponse } from "./fetch";
+import { Response } from "./fetch";
 import { json } from "./responses";
 import type { AppLoadContext } from "./routes";
 
@@ -62,4 +62,14 @@ export async function callRouteAction(
     status: 303,
     headers: result.headers
   });
+}
+
+function isResponse(value: any): value is Response {
+  return (
+    value != null &&
+    typeof value.status === "number" &&
+    typeof value.statusText === "string" &&
+    typeof value.headers === "object" &&
+    typeof value.body !== "undefined"
+  );
 }
