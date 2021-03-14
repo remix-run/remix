@@ -85,7 +85,7 @@ function getAssetsManifest(
   let version = getBundleHash(bundle).slice(0, 8);
 
   let routeIds = Object.keys(routeManifest);
-  let entry: AssetsManifest["entry"];
+  let entry: AssetsManifest["entry"] | undefined;
   let routes: AssetsManifest["routes"] = Object.create(null);
 
   for (let key in bundle) {
@@ -99,7 +99,7 @@ function getAssetsManifest(
       };
     } else if (
       routeIds.includes(chunk.name) &&
-      chunk.facadeModuleId.endsWith(routeModuleProxy)
+      chunk.facadeModuleId?.endsWith(routeModuleProxy)
     ) {
       let route = routeManifest[chunk.name];
 
@@ -194,7 +194,9 @@ function optimizeRouteImports(
     );
   }
 
-  let routeImports = route.imports.filter(url => !parentImports.includes(url));
+  let routeImports = (route.imports || []).filter(
+    url => !parentImports.includes(url)
+  );
 
   // Setting `route.imports = undefined` prevents `imports: []` from showing up
   // in the manifest JSON when there are no imports.

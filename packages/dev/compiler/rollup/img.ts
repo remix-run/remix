@@ -5,6 +5,7 @@ import sharp from "sharp";
 import prettyBytes from "pretty-bytes";
 import prettyMs from "pretty-ms";
 
+import invariant from "../../invariant";
 import { BuildTarget } from "../../build";
 import { addHash, getFileHash, getHash } from "../crypto";
 import type { RemixConfig } from "./remixConfig";
@@ -176,6 +177,11 @@ async function getImageAssets(
       } else {
         let meta = await sharp(file).metadata();
 
+        invariant(
+          typeof meta.width === "number" && typeof meta.height === "number",
+          `Cannot get image metadata: ${file}`
+        );
+
         if (transform.width) {
           width = transform.width;
           height = Math.round(transform.width / (meta.width / meta.height));
@@ -217,6 +223,7 @@ async function generateImageAssetSource(
   }
 
   // image.jpeg(), image.png(), etc.
+  // @ts-ignore
   image[asset.transform.format]({ quality: asset.transform.quality });
 
   let buffer = await image.toBuffer();

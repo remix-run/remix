@@ -62,7 +62,7 @@ function getServerManifest(
   };
 
   let routeIds = Object.keys(routeManifest);
-  let entry: ServerManifest["entry"];
+  let entry: ServerManifest["entry"] | undefined;
   let routes: ServerManifest["routes"] = Object.create(null);
 
   for (let key in bundle) {

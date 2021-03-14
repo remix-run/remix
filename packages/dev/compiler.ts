@@ -68,7 +68,7 @@ export async function build(
   let buildOptions = { mode, target };
   let plugins = [
     remixConfig({ rootDir: config.rootDirectory }),
-    ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
+    ...getBuildPlugins(buildOptions)
   ];
 
   let rollupBuild = await rollup.rollup({
@@ -105,7 +105,7 @@ export function watch(
     remixConfig({ rootDir: config.rootDirectory }),
     // Watch for newly created route files.
     watchDirectory({ dir: config.appDirectory }),
-    ...getBuildPlugins(config.serverBuildDirectory, buildOptions)
+    ...getBuildPlugins(buildOptions)
   ];
 
   let watcher = rollup.watch({
@@ -187,7 +187,7 @@ function getExternalOption(target: string): ExternalOption | undefined {
 
 const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 
-function getInputOption(config: RemixConfig, target: string): InputOption {
+function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
@@ -237,7 +237,9 @@ function findFile(
   return undefined;
 }
 
-function getTreeshakeOption(target: string): TreeshakingOptions | undefined {
+function getTreeshakeOption(
+  target: BuildTarget
+): TreeshakingOptions | undefined {
   return target === BuildTarget.Browser
     ? // When building for the browser, we need to be very aggressive with code
       // removal so we can be sure all imports of server-only code are removed.
@@ -252,7 +254,9 @@ function getTreeshakeOption(target: string): TreeshakingOptions | undefined {
     : undefined;
 }
 
-function getOnWarnOption(target: string): InputOptions["onwarn"] | undefined {
+function getOnWarnOption(
+  target: BuildTarget
+): InputOptions["onwarn"] | undefined {
   return target === BuildTarget.Browser
     ? (warning, warn) => {
         if (warning.code === "EMPTY_BUNDLE") {
@@ -268,10 +272,7 @@ function getOnWarnOption(target: string): InputOptions["onwarn"] | undefined {
     : undefined;
 }
 
-function getBuildPlugins(
-  serverBuildDir: string,
-  { mode, target }: BuildOptions
-): Plugin[] {
+function getBuildPlugins({ mode, target }: Required<BuildOptions>): Plugin[] {
   let plugins: Plugin[] = [
     remixInputs({
       getInput(config) {
