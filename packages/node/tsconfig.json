@@ -1,5 +1,4 @@
 {
-  "include": ["../../types/**/*", "**/*"],
   "exclude": ["__tests__/**/*"],
   "compilerOptions": {
     "lib": ["ES2019"],
@@ -13,6 +12,9 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/node",
-    "rootDir": "."
+    "rootDir": ".",
+
+    // Avoid naming conflicts between lib.dom.d.ts and globals.ts
+    "skipLibCheck": true
   }
 }

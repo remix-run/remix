@@ -13,8 +13,6 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/dev",
-    "rootDir": ".",
-
-    "skipLibCheck": true
+    "rootDir": "."
   }
 }

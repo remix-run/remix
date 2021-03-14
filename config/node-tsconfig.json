@@ -1,9 +1,0 @@
-{
-  "extends": "./base-tsconfig.json",
-  "compilerOptions": {
-    "lib": ["es2019"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "target": "es2019"
-  }
-}

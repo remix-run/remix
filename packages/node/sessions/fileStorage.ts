@@ -1,6 +1,6 @@
-import crypto from "crypto";
+import { randomBytes } from "crypto";
 import { promises as fsp } from "fs";
-import path from "path";
+import * as path from "path";
 
 import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
 import { createSessionStorage } from "../sessions";
@@ -38,7 +38,7 @@ export function createFileSessionStorage({
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions
         // with existing ids when creating new sessions, which speeds things up.
-        let id = crypto.randomBytes(8).toString("hex");
+        let id = randomBytes(8).toString("hex");
 
         try {
           let file = getFile(dir, id);

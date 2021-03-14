@@ -1,9 +1,19 @@
 {
-  "extends": "../../config/browser-tsconfig.json",
+  "exclude": ["__tests__/**/*"],
   "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+    "target": "ES2020",
+    "module": "ES2020",
+
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "jsx": "react",
+
+    "declaration": true,
+    "emitDeclarationOnly": true,
+
     "outDir": "../../build/node_modules/@remix-run/react",
     "rootDir": "."
-  },
-  "include": ["../../types/**/*", "**/*"],
-  "exclude": ["__tests__/**/*"]
+  }
 }
