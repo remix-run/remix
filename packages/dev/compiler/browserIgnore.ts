@@ -5,6 +5,7 @@ import builtins from "builtin-modules";
 const remixServerPackages = [
   "@remix-run/architect",
   "@remix-run/express",
+  "@remix-run/node",
   "@remix-run/vercel"
 ];
 
