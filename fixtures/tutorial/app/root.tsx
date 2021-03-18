@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router-dom";
-import type { LoaderFunction, LinksFunction } from "@remix-run/express";
+import type { LoaderFunction, LinksFunction } from "@remix-run/node";
 import { Meta, Scripts, Links, useRouteData } from "@remix-run/react";
 
 import styles from "url:./styles/global.css";

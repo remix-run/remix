@@ -22,5 +22,6 @@
     "@types/jsesc": "^2.5.1",
     "@types/node-fetch": "^2.5.7",
     "@types/tmp": "^0.2.0"
-  }
+  },
+  "sideEffects": false
 }

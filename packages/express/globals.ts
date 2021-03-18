@@ -3,36 +3,32 @@
 // globals. So we isolate the globals to this one file only and disable
 // type-checking here to get around it.
 // @ts-nocheck
-import {
-  Headers as NodeFetchHeaders,
-  Request as NodeFetchRequest,
-  Response as NodeFetchResponse,
+import type {
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  Response as NodeResponse,
   fetch as nodeFetch
-} from "./fetch";
+} from "@remix-run/node";
+import { installGlobals } from "@remix-run/node";
 
 declare global {
   // Allows referencing these symbols as true globals, e.g.
   // var headers = new Headers();
-  const Headers: typeof NodeFetchHeaders;
-  const Request: typeof NodeFetchRequest;
-  const Response: typeof NodeFetchResponse;
+  const Headers: typeof NodeHeaders;
+  const Request: typeof NodeRequest;
+  const Response: typeof NodeResponse;
   const fetch: typeof nodeFetch;
 
   namespace NodeJS {
     interface Global {
       // Allows referencing properties of node's `global` object, i.e.
       // var headers = new global.Headers();
-      Headers: typeof NodeFetchHeaders;
-      Request: typeof NodeFetchRequest;
-      Response: typeof NodeFetchResponse;
+      Headers: typeof NodeHeaders;
+      Request: typeof NodeRequest;
+      Response: typeof NodeResponse;
       fetch: typeof nodeFetch;
     }
   }
 }
 
-export function installGlobals() {
-  global.Headers = NodeFetchHeaders;
-  global.Request = NodeFetchRequest;
-  global.Response = NodeFetchResponse;
-  global.fetch = nodeFetch;
-}
+installGlobals();

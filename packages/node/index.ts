@@ -29,6 +29,8 @@ export type {
 } from "./fetch";
 export { Headers, Request, Response, fetch } from "./fetch";
 
+export { installGlobals } from "./globals";
+
 export type {
   LinkDescriptor,
   HTMLLinkDescriptor,

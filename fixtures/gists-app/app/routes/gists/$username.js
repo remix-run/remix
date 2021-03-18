@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { json, redirect } from "@remix-run/express";
+import { json, redirect } from "@remix-run/node";
 import { useRouteData } from "@remix-run/react";
 
 let fakeGists = [

@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
-import type { LoaderFunction } from "@remix-run/express";
-import { fetch } from "@remix-run/express";
+import type { LoaderFunction } from "@remix-run/node";
+import { fetch } from "@remix-run/node";
 import { useRouteData } from "@remix-run/react";
 
 interface Member {

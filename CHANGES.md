@@ -6,7 +6,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 ### Breaking Changes
 
-- Removed `@remix-run/data` package. Use server packages instead (i.e. `@remix-run/express`, `@remix-run/architect`, or `@remix-run/vercel`)
+- Removed `@remix-run/data` package. Use `@remix-run/node` package instead
 - Rename `@remix-run/core` => `@remix-run/node`
 
 ## 0.14.1 - Thu Mar 11 2021

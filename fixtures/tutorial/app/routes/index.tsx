@@ -1,5 +1,5 @@
+import type { LoaderFunction, LinksFunction } from "@remix-run/node";
 import { useRouteData } from "@remix-run/react";
-import type { LoaderFunction, LinksFunction } from "@remix-run/express";
 
 import styles from "url:../styles/index.css";
 
