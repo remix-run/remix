@@ -9,9 +9,14 @@ export function isBuildMode(mode: any): mode is BuildMode {
 
 export enum BuildTarget {
   Browser = "browser",
-  Server = "server"
+  Server = "server", // TODO: remove
+  Node14 = "node14"
 }
 
 export function isBuildTarget(target: any): target is BuildTarget {
-  return target === BuildTarget.Browser || target === BuildTarget.Server;
+  return (
+    target === BuildTarget.Browser ||
+    target === BuildTarget.Server ||
+    target === BuildTarget.Node14
+  );
 }

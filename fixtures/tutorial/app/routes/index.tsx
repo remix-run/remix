@@ -1,15 +1,15 @@
 import type { LoaderFunction, LinksFunction } from "@remix-run/node";
 import { useRouteData } from "@remix-run/react";
 
-import styles from "url:../styles/index.css";
+// import styles from "url:../styles/index.css";
 
 export let loader: LoaderFunction = async () => {
   return { message: "this is awesome 😎" };
 };
 
-export let links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: styles }];
-};
+// export let links: LinksFunction = () => {
+//   return [{ rel: "stylesheet", href: styles }];
+// };
 
 export function meta() {
   return {

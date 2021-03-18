@@ -18,7 +18,7 @@ declare global {
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
-export default function RemixBrowser(): ReactElement {
+export function RemixBrowser(): ReactElement {
   let historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
     historyRef.current = createBrowserHistory({ window });

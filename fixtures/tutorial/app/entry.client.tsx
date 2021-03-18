@@ -1,8 +1,8 @@
 import ReactDOM from "react-dom";
-import Remix from "@remix-run/react/browser";
+import { RemixBrowser } from "@remix-run/react";
 
 ReactDOM.hydrate(
   // @ts-ignore
-  <Remix />,
+  <RemixBrowser />,
   document
 );

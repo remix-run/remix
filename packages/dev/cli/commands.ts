@@ -1,5 +1,6 @@
 import { BuildMode, isBuildMode, BuildTarget } from "../build";
 import * as compiler from "../compiler";
+import * as compiler2 from "../compiler2";
 import { readConfig } from "../config";
 import { startDevServer } from "../server";
 
@@ -29,6 +30,17 @@ export async function build(remixRoot: string, mode?: string) {
       config.assetsBuildDirectory
     )
   ]);
+
+  console.log("done!");
+}
+
+export async function build2(remixRoot: string, mode?: string) {
+  let buildMode = isBuildMode(mode) ? mode : BuildMode.Production;
+
+  console.log(`Building Remix app for ${buildMode}...`);
+
+  let config = await readConfig(remixRoot);
+  await compiler2.build(config);
 
   console.log("done!");
 }

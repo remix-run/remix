@@ -1,4 +1,5 @@
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
 import { loadModule } from "./modules";
@@ -90,6 +91,16 @@ export interface RemixConfig {
   cacheDirectory: string;
 
   /**
+   * The absolute path to the entry.client file.
+   */
+  entryClientFile: string;
+
+  /**
+   * The absolute path to the entry.server file.
+   */
+  entryServerFile: string;
+
+  /**
    * An array of all available routes, nested according to route hierarchy.
    */
   routes: ConfigRoute[];
@@ -168,6 +179,16 @@ export async function readConfig(
     appConfig.cacheDirectory || ".cache"
   );
 
+  let entryClientFile = findEntry(appDirectory, "entry.client");
+  if (!entryClientFile) {
+    throw new Error(`Missing "entry.client" file in ${appDirectory}`);
+  }
+
+  let entryServerFile = findEntry(appDirectory, "entry.server");
+  if (!entryServerFile) {
+    throw new Error(`Missing "entry.server" file in ${appDirectory}`);
+  }
+
   let serverBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.serverBuildDirectory || "build"
@@ -201,6 +222,8 @@ export async function readConfig(
   let remixConfig: RemixConfig = {
     appDirectory,
     cacheDirectory,
+    entryClientFile,
+    entryServerFile,
     devServerPort,
     mdx: appConfig.mdx,
     assetsBuildDirectory,
@@ -217,4 +240,15 @@ export async function readConfig(
 
 function addTrailingSlash(path: string): string {
   return path.endsWith("/") ? path : path + "/";
+}
+
+const entryExts = [".js", ".jsx", ".ts", ".tsx"];
+
+function findEntry(dir: string, basename: string): string | undefined {
+  for (let ext of entryExts) {
+    let file = path.resolve(dir, basename + ext);
+    if (fs.existsSync(file)) return file;
+  }
+
+  return undefined;
 }

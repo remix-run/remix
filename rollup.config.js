@@ -45,6 +45,10 @@ let dev = [
           {
             src: path.resolve(__dirname, "packages/dev/package.json"),
             dest: "build/node_modules/@remix-run/dev"
+          },
+          {
+            src: path.resolve(__dirname, "packages/dev/compiler2/shims"),
+            dest: "build/node_modules/@remix-run/dev/compiler2"
           }
         ]
       })
@@ -109,81 +113,37 @@ let node = {
 };
 
 /** @type {import("rollup").RollupOptions[]} */
-let react = [
-  // We need 2 builds for @remix-run/react. Here's why:
-  //
-  // - ESM build runs in the browser and uses dynamic `import()` in the route
-  //   loader to load route modules from the server
-  // - CommonJS build runs on the server. It doesn't need to do any dynamic code
-  //   loading because it loads all route modules up front when the server boots
-  //
-  // The compiler aliases @remix-run/react to @remix-run/react/esm when building
-  // browser bundles (see packages/node/compiler.ts).
-  //
-  // TODO: We may eventually need a 3rd build that uses SystemJS for the route
-  // loader in a <script nomodule> for older browsers (IE 11), depending on what
-  // our browser support level is.
-  {
-    external(id) {
-      return !isLocalModuleId(id);
-    },
-    input: {
-      browser: path.resolve(__dirname, "packages/react/browser.tsx"),
-      index: path.resolve(__dirname, "packages/react/index.tsx")
-    },
-    output: {
-      banner: banner,
-      dir: "build/node_modules/@remix-run/react/esm",
-      format: "esm",
-      preserveModules: true,
-      exports: "auto"
-    },
-    plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"]
-      }),
-      nodeResolve({
-        extensions: [".ts", ".tsx"]
-      }),
-      copy({
-        targets: [
-          {
-            src: path.resolve(__dirname, "packages/react/package.json"),
-            dest: "build/node_modules/@remix-run/react"
-          }
-        ]
-      })
-    ]
+let react = {
+  external(id) {
+    return !isLocalModuleId(id);
   },
-  {
-    external(id) {
-      return !isLocalModuleId(id);
-    },
-    input: {
-      index: path.resolve(__dirname, "packages/react/index.tsx"),
-      server: path.resolve(__dirname, "packages/react/server.tsx")
-    },
-    output: {
-      banner: banner,
-      dir: "build/node_modules/@remix-run/react",
-      format: "cjs",
-      preserveModules: true,
-      exports: "auto"
-    },
-    plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"]
-      }),
-      nodeResolve({
-        extensions: [".ts", ".tsx"]
-      })
-    ]
-  }
-];
+  input: path.resolve(__dirname, "packages/react/index.tsx"),
+  output: {
+    banner: banner,
+    dir: "build/node_modules/@remix-run/react",
+    format: "esm",
+    preserveModules: true,
+    exports: "auto"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    nodeResolve({
+      extensions: [".ts", ".tsx"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/react/package.json"),
+          dest: "build/node_modules/@remix-run/react"
+        }
+      ]
+    })
+  ]
+};
 
 function getServerConfig(name) {
   /** @type {import("rollup").RollupOptions} */
@@ -224,6 +184,6 @@ let architect = getServerConfig("architect");
 let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [...dev, node, architect, express, vercel, ...react];
+let builds = [...dev, node, architect, express, vercel, react];
 
 export default builds;

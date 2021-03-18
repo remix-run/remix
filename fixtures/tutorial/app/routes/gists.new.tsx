@@ -1,11 +1,11 @@
 import type { LinksFunction } from "@remix-run/node";
 import { Form, usePendingFormSubmit } from "@remix-run/react";
 
-import styles from "url:../styles/gists.new.css";
+// import styles from "url:../styles/gists.new.css";
 
-export let links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: styles }];
-};
+// export let links: LinksFunction = () => {
+//   return [{ rel: "stylesheet", href: styles }];
+// };
 
 export default function NewGist() {
   let pendingForm = usePendingFormSubmit();

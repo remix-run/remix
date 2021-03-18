@@ -3,12 +3,11 @@ import type { Headers, Request, Response } from "./fetch";
 import type { ServerRouteManifest } from "./routes";
 
 export interface ServerBuild {
-  version: string;
-  assets: AssetsManifest;
   entry: {
     module: ServerEntryModule;
   };
   routes: ServerRouteManifest;
+  assets: AssetsManifest;
 }
 
 /**

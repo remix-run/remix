@@ -281,18 +281,18 @@ function getBuildPlugins({ mode, target }: Required<BuildOptions>): Plugin[] {
     })
   ];
 
-  if (target === BuildTarget.Browser) {
-    plugins.push(
-      alias({
-        entries: [
-          {
-            find: "@remix-run/react",
-            replacement: "@remix-run/react/esm"
-          }
-        ]
-      })
-    );
-  }
+  // if (target === BuildTarget.Browser) {
+  //   plugins.push(
+  //     alias({
+  //       entries: [
+  //         {
+  //           find: "@remix-run/react",
+  //           replacement: "@remix-run/react/esm"
+  //         }
+  //       ]
+  //     })
+  //   );
+  // }
 
   plugins.push(
     clientServer({ target }),

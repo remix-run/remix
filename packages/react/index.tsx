@@ -16,6 +16,9 @@ export type {
   PageLinkDescriptor
 } from "@remix-run/node";
 
+export { RemixBrowser } from "./browser";
+export { RemixServer } from "./server";
+
 export type { FormProps, SubmitOptions, SubmitFunction } from "./components";
 export {
   Meta,
