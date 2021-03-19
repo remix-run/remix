@@ -8,7 +8,7 @@ export function isBuildMode(mode: any): mode is BuildMode {
 }
 
 export enum BuildTarget {
-  Browser = "browser",
+  Browser = "browser", // TODO: remove
   Server = "server", // TODO: remove
   Node14 = "node14"
 }
@@ -19,4 +19,9 @@ export function isBuildTarget(target: any): target is BuildTarget {
     target === BuildTarget.Server ||
     target === BuildTarget.Node14
   );
+}
+
+export interface BuildOptions {
+  mode: BuildMode;
+  target: BuildTarget;
 }

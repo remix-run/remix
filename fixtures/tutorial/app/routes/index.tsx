@@ -4,7 +4,7 @@ import { useRouteData } from "@remix-run/react";
 import styles from "../styles/index.css";
 
 export let loader: LoaderFunction = async () => {
-  return { message: "this is cool 😎" };
+  return { message: "this is nice 😎" };
 };
 
 export let links: LinksFunction = () => {
