@@ -2,15 +2,16 @@ import { Link, Outlet } from "react-router-dom";
 import type { LoaderFunction, LinksFunction } from "@remix-run/node";
 import { Meta, Scripts, Links, useRouteData } from "@remix-run/react";
 
-// import styles from "url:./styles/global.css";
+// @ts-expect-error
+import styles from "./styles/global.css";
 
 export let loader: LoaderFunction = async () => {
   return { date: new Date() };
 };
 
-// export let links: LinksFunction = () => {
-//   return [{ rel: "stylesheet", href: styles }];
-// };
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: styles }];
+};
 
 export default function App() {
   let data = useRouteData();

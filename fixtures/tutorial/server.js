@@ -13,7 +13,7 @@ app.use(express.static("public"));
 app.all(
   "*",
   createRequestHandler({
-    build: require("./build/app"),
+    build: require("./build"),
     getLoadContext() {
       // Whatever you return here will be passed as `context` to your loaders.
     }

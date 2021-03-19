@@ -9,7 +9,9 @@
     "predev": "yarn run install_remix",
     "dev": "pm2-dev pm2.config.js",
     "prestart": "yarn run install_remix",
-    "start": "node server.js"
+    "start": "node server.js",
+    "prewatch": "yarn run install_remix",
+    "watch": "node node_modules/@remix-run/dev/cli watch2"
   },
   "dependencies": {
     "express": "^4.17.1",

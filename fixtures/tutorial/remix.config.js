@@ -1,8 +1,8 @@
 module.exports = {
   appDirectory: "app",
-  browserBuildDirectory: "public/build",
+  assetsBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "build/app",
+  serverBuildDirectory: "build",
   devServerPort: 8002,
   routes(defineRoutes) {
     return defineRoutes(route => {
