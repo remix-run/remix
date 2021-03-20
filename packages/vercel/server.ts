@@ -55,7 +55,9 @@ export function createRequestHandler({
 
 function createRemixRequest(req: NowRequest): Request {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
-  let url = new URL(req.url!, `https://${host}`);
+  // doesn't seem to be available on their req object!
+  let protocol = req.headers["x-forwarded-proto"] || "https";
+  let url = new URL(req.url!, `${protocol}://${host}`);
 
   let headers = new Headers();
   for (let key in req.headers) {
