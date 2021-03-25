@@ -1,24 +1,44 @@
 ---
 title: Loading Data
+order: 3
 ---
 
-Page data in Remix comes from "loaders" inside of "data modules". These loaders are only ever run server side so you can use whatever node modules you need to load data, including a direct connection to your database.
+Page data in Remix comes from a "loader" defined inside of your Route Module. While they live in the same file as the React Component, these loaders are only ever run server side. This means you can write sever side code right next to your component, like a direct connection to your database. Remix will remove the server-side code from the browser bundle, so you don't have to worry about it causing problems in the browser.
 
-If you name a data module the same as an app route, Remix will automatically call the loader in the data module before rendering, passing that data to your route.
+## Your First Loader
+
+Inside of your `app/routes/gists.tsx` file, export a `loader` function that fetches the latest gists from the public:
+
+```tsx [2, 4-6]
+import React from "react";
+import type { LoaderFunction } from "@remix-run/data";
+
+export let loader: LoaderFunction = () => {
+  return fetch("https://api.github.com/gists");
+};
+
+export default function Gists() {
+  /* ... */
+}
+```
 
 ## Accessing data for a route
 
-Even though we haven't created a loader yet, we can still ask for the data at a route as if we had one and we'll get `null`.
+Now that we have a loader in place, you can access that data with the `useRouteData` hook.
 
-Open up `app/routes/gists.ts`, then console log the data prop to see it using the `useRouteData` hook.
-
-```jsx
+```tsx [3, 10-11]
 import React from "react";
+import type { LoaderFunction } from "@remix-run/data";
 import { useRouteData } from "@remix-run/react";
+
+export let loader: Loader = () => {
+  return fetch("https://api.github.com/gists");
+};
 
 export default function Gists() {
   let data = useRouteData();
   console.log(data);
+
   return (
     <div>
       <h2>Public Gists</h2>
@@ -27,23 +47,7 @@ export default function Gists() {
 }
 ```
 
-If you visit "/gists" you should see `null` in the console (in both the browser and the terminal since we're server rendering in development).
-
-## Your First Loader
-
-Now let's make the loader. Create the file `loaders/routes/gists.ts` and put this in it.
-
-```js
-import type { Loader } from "@remix-run/data";
-
-let loader: Loader = () => {
-  return fetch("https://api.github.com/gists");
-};
-
-export { loader };
-```
-
-Refresh the browser at "/gists" and you should see a bunch of gists in the console!
+If you visit "/gists" you should see a list of gists in both the browser console and the terminal since we're server rendering in development.
 
 ## Built on the Web Fetch API
 
@@ -59,41 +63,57 @@ Instead of coming up with our own API, we built Remix on top of the Web Fetch AP
 return new Response(JSON.stringify({ teapot: true }), {
   status: 418,
   headers: {
-    "content-type": "application/json",
-    "cache-control": "max-age=3600"
+    "Content-Type": "application/json",
+    "Cache-Control": "max-age=3600"
   }
 });
 ```
 
 So back to our question, why didn't we have to await the fetch and then await the `res.json`? Because Remix awaits your loader, and `fetch` resolves to response, and Remix is expecting exactly that type of object.
 
-## Other return values
+## Response Helpers
 
-You don't have to built up a full response, loaders can return plain objects, you just lose control over your headers this way:
+Most of the time you'll want to use one of Remix's built-in response helpers in your loaders.
 
-```js
-const db = require("../db");
-module.exports = async () => {
-  let arrayOfStuff = await db.query(someQuery);
-  return arrayOfStuff();
-};
-```
-
-Remix also has a json helper so you can set headers without having to worry about the content type and stringifying the body, etc. This is likely your bread and butter.
+The `json` helper will deal with the content type automatically while still giving you control over the headers, status code, etc.
 
 ```js
-const { json } = require("@remix-run/loader");
+import { json } from "@remix-run/data";
 
-module.exports = async () => {
+export let loader: Loader = () => {
   let arrayOfStuff = await db.query(someQuery);
 
   return json(arrayOfStuff, {
-    "cache-control": "max-age=60"
+    "Cache-Control": "max-age=60",
   });
 };
 ```
 
-## Why cache-control headers matter in loaders:
+Here's how you can indicate data-based a 404:
+
+```tsx
+import { json } from "@remix-run/data";
+
+export let loader: Loader = ({ params }) => {
+  let record = await findSomeRecord(params.id);
+  if (record == null) {
+    return json({ notFound: true }, { status: 404 });
+  }
+  return json(record);
+};
+```
+
+## Other return values
+
+You don't have to build up a full response or use a helper, loaders can return plain objects, you just lose control over your headers this way:
+
+```ts
+export let loader: LoaderFunction = () => {
+  return { anything: "you want" };
+};
+```
+
+## Why Cache-Control headers matter in loaders:
 
 We saw that our routes can define their cache control, so why does it matter for loaders? It matters for two reasons:
 
@@ -101,10 +121,10 @@ First, your data usually knows better what the cache control should be than your
 
 Open up `app/routes/gists.ts` and update your headers function like so:
 
-```jsx
+```tsx
 export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
   return {
-    "cache-control": loaderHeaders.get("cache-control")
+    "Cache-Control": loaderHeaders.get("Cache-Control")
   };
 }
 ```
@@ -119,8 +139,7 @@ The second reason this matters is that Remix calls your loaders via `fetch` in t
 
 Whew, okay, back to our app. Go ahead and map over that array however you'd like, here's a suggestion:
 
-```jsx
-// ...
+```tsx [6-12]
 export default function Gists() {
   let data = useRouteData();
   return (
@@ -138,13 +157,13 @@ export default function Gists() {
 }
 ```
 
-Bit lazy on the type there, but hopefully you'll forgive us! Alright, refresh and you should see a beautiful list of gists (glist?).
+Bit lazy on the type there, but hopefully you'll forgive us! Alright, refresh and you should see a beautiful list of gists (a glist?).
 
 ## Data for meta tags
 
 Like headers, meta tags pretty much always depend on data too, so Remix passes the data to your meta tag function. Open up `app/routes/gists.tsx` again and update your meta function:
 
-```jsx
+```tsx
 export function meta({ data }) {
   return {
     title: "Public Gists",
@@ -155,6 +174,74 @@ export function meta({ data }) {
 
 Now if somebody posts a link to this site on social media, the preview will include the description with that data-driven meta description 🙌.
 
----
+## Finished Product
 
-[Next up: Nested Routes and Params](/dashboard/docs/nested-routes-params)
+Here's the full code using all of the Route APIs we've introduced so far, as well as a quick type for a Gist.
+
+```tsx
+import React from "react";
+import { useRouteData } from "@remix-run/react";
+import type { LoaderFunction } from "@remix-run/data";
+
+// Define the Gist type
+interface Gist {
+  id: string;
+  html_url: string;
+  files: {
+    [fileName: string]: {
+      filename: string;
+      type: string;
+      language: string;
+      raw_url: string;
+      size: number;
+    };
+  };
+}
+
+// Load data for this route and define some caching headers so that when the
+// user navigates here multiple times it won't make the request more than once
+// per 300 seconds
+export let loader: LoaderFunction = () => {
+  let res = await fetch("https://api.github.com/gists");
+  let gists = await res.json();
+  return json(gists, {
+    headers: {
+      "Cache-Control": "max-age=300"
+    }
+  });
+};
+
+// The title and meta tags for the document's <head>
+export function meta({ data }: { data: Gist[] }) {
+  return {
+    title: "Public Gists",
+    description: `View the latest ${data.length} gists from the public`
+  };
+}
+
+// The HTTP headers for the server rendered request, just use the cache control
+// from the loader.
+export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
+  return {
+    "Cache-Control": loaderHeaders.get("Cache-Control")
+  };
+}
+
+export default function Gists() {
+  // useRouteData supports TypeScript generics so you can say what this hook
+  // returns
+  let data = useRouteData<Gist[]>();
+  return (
+    <div>
+      <h2>Public Gists</h2>
+      <ul>
+        {data.map(gist => (
+          <li key={gist.id}>
+            <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```

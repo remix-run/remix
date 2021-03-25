@@ -1,4 +1,3 @@
 ---
 title: Performance
-disabled: true
 ---

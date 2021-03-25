@@ -2,15 +2,16 @@
 title: "@remix-run/react"
 ---
 
-This module is only to be used inside your app/ folder, not in your loaders/. It contains module for use inside of the React layer.
+This package contains components and hooks for building the frontend of a Remix app with React.
 
-## `Meta`, `Styles`, `Routes`, `Script`
+## `Meta`, `Links`, `Scripts`, `Outlet`
 
-These components are to be used once inside of your global application layout. They include everything Remix figured out or built in order for your page to render properly.
+These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```jsx
+```tsx
 import React from "react";
-import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
+import { Meta, Links, Scripts } from "@remix-run/react";
+import { Outlet } from "react-router-dom";
 
 export default function App() {
   return (
@@ -18,37 +19,10 @@ export default function App() {
       <head>
         <meta charSet="utf-8" />
         <Meta />
-        <Styles />
+        <Links />
       </head>
       <body>
-        <Routes />
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-```
-
-## `useGlobalData`
-
-This hook returns the data loaded from your `loaders/global.js` file. It is not intended to be a "global data store", it's simply a root loader for any serverside information you need to fetch for your primary layout.
-
-```jsx
-import React from "react";
-import { useGlobalData, Meta, Scripts, Styles, Routes } from "@remix-run/react";
-
-export default function App() {
-  let globalData = useGlobalData();
-
-  return (
-    <html lang={globalData.lang}>
-      <head>
-        <meta charSet="utf-8" />
-        <Meta />
-        <Styles />
-      </head>
-      <body>
-        <Routes />
+        <Outlet />
         <Scripts />
       </body>
     </html>
@@ -60,7 +34,7 @@ export default function App() {
 
 This hook returns the data from your route data loader.
 
-```jsx
+```tsx
 import React from "react";
 import { useRouteData } from "@remix-run/react";
 
@@ -70,20 +44,9 @@ export default function Invoices() {
 }
 ```
 
-Note that the data is already passed to your component as a prop, so this hook is more useful for creating abstractions with hooks.
+`useRouteData` can be useful for creating abstractions that do some transformation on the data for your route. For example, with Firebase you could build a hook that turns the static data fetched from the server into a live document in the client.
 
-```jsx
-import React from "react";
-import { useRouteData } from "@remix-run/react";
-
-export default function Invoices({ data: invoices }) {
-  // don't need the hook
-}
-```
-
-For example, with firebase you could build a hook that turns the static data fetched from the server into a live document in the client:
-
-```jsx
+```tsx
 // if you're using firebase you could build a "live" route document
 function useLiveRouteData() {
   // your server could return the path of the data it fetched, and the data on
@@ -100,27 +63,18 @@ function useLiveRouteData() {
 }
 ```
 
-## useLocationPending
-
-Removed, use `usePendingLocation`
-
-## usePendingLocation
+## `usePendingLocation`
 
 During a clientside route transition, Remix loads the resources for the next page before continuing the transition (because we're all sick of flickering spinners). But we also need some UI to acknowledge that they clicked a link. This is the purpose of this hook.
 
-Whenever a transition is happening, this hook will return the pending (or next) location. when it's over, it will return `undefined`. With this information you can create a loading indication on the current page, a link, or even globally in your App.js.
+Whenever a transition is happening, this hook will return the pending (or next) location. when it's over, it will return `undefined`. With this information you can create a loading indication on the current page, a link, or even globally in your root.tsx.
 
 This example fades the page out if the transition is taking longer than 300ms.
 
-```jsx
+```tsx
 import React from "react";
-import {
-  usePendingLocation,
-  Meta,
-  Scripts,
-  Styles,
-  Routes
-} from "@remix-run/react";
+import { usePendingLocation, Meta, Links, Scripts } from "@remix-run/react";
+import { Outlet } from "react-router-dom";
 
 export default function App() {
   let pendingLocation = usePendingLocation();
@@ -130,7 +84,7 @@ export default function App() {
       <head>
         <meta charSet="utf-8" />
         <Meta />
-        <Styles />
+        <Links />
       </head>
       <body
         style={{
@@ -139,7 +93,7 @@ export default function App() {
           transitionDelay: "300ms"
         }}
       >
-        <Routes />
+        <Outlet />
         <Scripts />
       </body>
     </html>
@@ -147,7 +101,7 @@ export default function App() {
 }
 ```
 
-### useBeforeUnload
+## `useBeforeUnload`
 
 This hook is just a helper around `window.onbeforeunload`.
 
@@ -157,7 +111,7 @@ If you've got any important state on the page when this happens, you're going to
 
 Remix or not, this is just good practice to do anyway. The user can change the url, accidentally close the browser window, etc.
 
-```jsx
+```tsx
 import { useBeforeUnload } from "@remix-run/react";
 
 function SomeForm() {
@@ -180,7 +134,7 @@ function SomeForm() {
 
   return (
     // ...
-  )
+  );
 }
 ```
 
@@ -189,17 +143,20 @@ function SomeForm() {
 ```js
 import { Form } from "@remix-run/react";
 
-//
-<Form>
-  <input type="text" name="title" />
-</Form>;
+function HomePage() {
+  return (
+    <Form>
+      <input type="text" name="title" />
+    </Form>
+  );
+}
 ```
 
 The `<Form>` component is how to perform data mutations like creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
-For an in-depth look at mutations with form, check out the <Link to="../mutations">Mutations</Link> page.
+For an in-depth look at mutations with form, check out the [Mutations]("../mutations") page.
 
-### Form `action` prop
+### `<Form action>`
 
 ```js
 <Form action="/projects/new" />
@@ -207,7 +164,7 @@ For an in-depth look at mutations with form, check out the <Link to="../mutation
 
 This tells the form which action to call. The `action` export of the matching data module will be called. In the above example, the action url would match a file at `data/routes/projects/new.ts`.
 
-### Form `method` prop
+### `<Form method>`
 
 ```js
 <Form method="post" />
@@ -217,13 +174,13 @@ This determins the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP
 
 Native `<form>` only supports get and post, so if you want your form to work with JavaScript on or off the page you'll need to stick with those two. Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" method="delete" />`. If you always include JavaScript, you don't need to worry about this.
 
-### Form `encType` prop
+### `<Form encType>`
 
 Defaults to `application/x-www-urlencoded`, which is also the only supported value right now. Before 1.0 we'll also support `multipart/form-data`.
 
-### Form `replace` prop
+### `<Form replace>`
 
-```js
+```tsx
 <Form replace />
 ```
 
@@ -231,13 +188,94 @@ Instructs the form to replace the current entry in the history stack, instead of
 
 Note: has no effect without JavaScript on the page.
 
-### Form `forceRefresh` prop
+### `<Form forceRefresh>`
 
-```js
+```tsx
 <Form forceRefresh />
 ```
 
 If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page.
+
+## `useFormAction`
+
+Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
+
+```tsx
+<button formAction={useFormAction("destroy")} formMethod="DELETE">
+  Delete
+</button>
+```
+
+## `useSubmit`
+
+Returns the function that may be used to submit a `<form>` (or some raw `FormData`) to the server using the same process that `<Form>` uses internally `onSubmit`. If you're familiar with React Router's `useNavigate`, you can think about this as the same thing but for `<Form>` instead of `<Link>`.
+
+This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
+
+```tsx
+import { useSubmit } from "@remix-run/react";
+
+function UserPreferences() {
+  let submit = useSubmit();
+
+  function handleChange(event) {
+    submit(event.currentTarget, { replace: true });
+  }
+
+  return (
+    <form method="POST" onChange={handleChange}>
+      {/* ... */}
+    </form>
+  );
+}
+```
+
+This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity.
+
+```tsx
+import { useCallback, useEffect, useState } from "react";
+import { useSubmit } from "@remix-run/react";
+
+const oneMinute = 60_000;
+
+function useSessionTimeout(initialTimeout) {
+  let submit = useSubmit();
+  let [sessionTimeout, setSessionTimeout] = useState(initialTimeout);
+
+  let handleTimeout = useCallback(() => {
+    submit(null, { method: "POST", action: "/logout" });
+  });
+
+  useEffect(() => {
+    let timer = setTimeout(handleTimeout, sessionTimeout);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [sessionTimeout]);
+
+  return setSessionTimeout;
+}
+
+function AdminPage() {
+  // User will be automatically signed out after 5 mins of inactivity.
+  let setSessionTimeout = useSessionTimeout(5 * oneMinute);
+
+  // TODO: Use `setSessionTimeout(n)` when there is some activity
+  // on the page to reset the timer and extend the session.
+
+  return (
+    <div>
+      {/* User can use this form sign sign out immediately */}
+      <form method="POST" action="/logout">
+        <button>Sign out</button>
+      </form>
+
+      {/* ... */}
+    </div>
+  );
+}
+```
 
 ## `usePendingFormSubmit`
 
@@ -245,10 +283,10 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 import { usePendingFormSubmit } from "@remix-run/react";
 
 // ...
-let { method, data } = usePendingFormSubmit();
+let { method, encType, data } = usePendingFormSubmit();
 ```
 
-Returns `{ method, data }` that are currently being used to submit a `<Form>`. This is useful for showing a pending indicator, optimistic UI for some newly created/destroyed data.
+Returns `{ method, encType, data }` that are currently being used to submit a `<Form>`. This is useful for showing a pending indicator, optimistic UI for some newly created/destroyed data.
 
 When the form is no longer pending, this hook will return `undefined`.
 
@@ -273,6 +311,81 @@ function SomeForm() {
       </label>
       <button type="submit">Submit</button>
     </Form>
+  );
+}
+```
+
+## `useMatches`
+
+Returns the current route matches on the page:
+
+```js
+let matches = useMatches();
+```
+
+Matches has the following shape:
+
+```js
+[
+  { pathname, data, params, handle }, // root route
+  { pathname, data, params, handle }, // layout route
+  { pathname, data, params, handle } // child route
+  // etc.
+];
+```
+
+Remix internally knows the all of the routes that match at the very top of the application hierachy even though routes down deeper fetched the data. It's how `<Meta />`, `<Links />`, and `<Scripts />` elements know what to render.
+
+This hook allows you to create similar conventions, giving you access to all of the route matches and their data on the current page.
+
+This is useful for creating things like data-driven breadcrumbs or any other kind of app convention. Before you can do that, you need a way for your route to export an api, or a "handle". Check out how we can create breadcrumbs in `root.tsx`.
+
+First, your routes can put whatever they want on the `handle`, here we use `breadcrumb`, it's not a Remix thing, it's whatever you want.
+
+```tsx
+// routes/some-route.tsx
+export let handle = {
+  breadcrumb: () => <Link to="/some-route">Some Route</Link>
+};
+```
+
+```tsx
+// routes/some-route/some-child-route.tsx
+export let handle = {
+  breadcrumb: () => <Link to="/some-route/some-child-route">Child Route</Link>
+};
+```
+
+And then we can use this in our root route:
+
+```tsx
+import { Links, Scripts, useRouteData, useMatches } from "@remix-run/react";
+
+export default function Root() {
+  let matches = useMatches();
+
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <Links />
+      </head>
+      <body>
+        <header>
+          <ol>
+            {matches
+              // skip routes that don't have a breadcrumb
+              .filter(match => match.handle && match.handle.breadcrumb)
+              // render breadcrumbs!
+              .map((match, index) => (
+                <li key={index}>{match.handle.breadcrumb(match)}</li>
+              ))}
+          </ol>
+        </header>
+
+        <Outlet />
+      </body>
+    </html>
   );
 }
 ```

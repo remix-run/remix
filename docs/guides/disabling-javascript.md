@@ -4,22 +4,28 @@ title: Disabling JavaScript
 
 Do you ever look at a page on your site and think "why are we loading all of this JavaScript? There's nothing on this page but links!" This may seem a little odd for a JavaScript framework, but you can easily turn off JavaScript with a boolean but your data loading and links will still all work.
 
-## Editing App.js to Disable JavaScript
+Here's how we like to do it:
 
-In the near future we'll have a more built in way to do this, but this works pretty well already. Edit your App.js file (or whichever file you render the `<Scripts/>` tag in) and add something like this:
+## Add a `handle` to JavaScript Enabled Route Modules
 
-```jsx
+Open up each route module you want to include JavaScript for and add this:
+
+```js
+export let handle = { hydrate: true };
+```
+
+Now open `root.tsx`, bring in `useMatches` and add this:
+
+```tsx
 import React from "react";
-import { Meta, Scripts, Styles, Routes } from "@remix-run/react";
-import { useLocation } from "react-router-dom";
-
-// set up the urls you don't want to serve JavaScript at all
-let noScriptPaths = new Set(["/", "/buy", "/privacy", "/about"]);
+import { Meta, Links, Scripts, useMatches } from "@remix-run/react";
+import { Outlet } from "react-router-dom";
 
 export default function App() {
-  let location = useLocation();
-  // decide if you should include scripts
-  let includeScripts = !noScriptPaths.has(location.pathname);
+  let matches = useMatches();
+
+  // If at least one route wants to hydrate, this will return true
+  let includeScripts = matches.some(match => match.handle?.hydrate);
 
   // then use the flag to render scripts or not
   return (
@@ -27,10 +33,11 @@ export default function App() {
       <head>
         <meta charSet="utf-8" />
         <Meta />
-        <Styles />
+        <Links />
       </head>
-      <body className="bg-white text-gray-900">
-        <Routes />
+      <body>
+        <Outlet />
+        {/* include the scripts, or not! */}
         {includeScripts && <Scripts />}
       </body>
     </html>
@@ -46,7 +53,7 @@ On any page, at anytime, you can flip between plain HTML and full clientside tra
 
 If you need one tiny bit of interactivity, use a `<script dangerouslySetInnerHTML>`.
 
-```jsx
+```tsx
 <select id="qty">
   <option>1</option>
   <option>2</option>
@@ -67,4 +74,4 @@ If you need one tiny bit of interactivity, use a `<script dangerouslySetInnerHTM
 />
 ```
 
-There's little reason to load 100kb of JavaScript for one small interactive piece of a landing page. Watch this space, we have got PLANS.
+There's little reason to load 100kb of JavaScript for one small interactive piece of a landing page.

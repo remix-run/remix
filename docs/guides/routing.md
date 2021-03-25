@@ -45,7 +45,7 @@ An Index Route is the route that renders when the layout's path is matched exact
 
 ```
 ├── invoices
-│   └── $id.js
+│   └── $id.js
 └── invoices.js
 ```
 
@@ -58,13 +58,13 @@ If we add the file `invoices/index.js`, then that new index route will render at
 ```
 ├── invoices
 │   ├── $id.js
-│   └── index.js
+│   └── index.js
 └── invoices.js
 ```
 
 The component tree would be:
 
-```jsx
+```tsx
 <App>
   <Invoices>
     <InvoicesIndex />
@@ -78,7 +78,7 @@ If you want to add slashes to the URL, but not create a layout hierarchy, use `.
 
 If we created the file `routes/invoices.new.js` the component tree looks like this:
 
-```jsx
+```tsx
 <App>
   <InvoicesNew />
 </App>
@@ -86,7 +86,7 @@ If we created the file `routes/invoices.new.js` the component tree looks like th
 
 If we created the file `routes/invoices/new.js`, the component tree looks like this:
 
-```jsx
+```tsx
 <App>
   <Invoices>
     <New />
@@ -108,9 +108,9 @@ Assuming the following `routes/` directory:
 ├── 404.js
 ├── contact.js
 ├── invoices
-│   ├── $id.edit.js
-│   ├── $id.js
-│   └── late.js
+│   ├── $id.edit.js
+│   ├── $id.js
+│   └── late.js
 ├── invoices.js
 └── invoices.new.js
 ```
@@ -129,17 +129,3 @@ Let's look at a few URLs and what the component tree looks like.
 | /contact           | `App.js > routes/contact.js`                                |
 
 Nested files are nested layouts. Flat files are flat layouts.
-
-## Action Only Routes
-
-Your routes are defined primarily by the `app/routes` folder, but you can also have "action only" routes. These are files in `data/routes/some-action.ts` that only export an `action`. Since actions are required to redirect, it's possible to have a route at `/some-route` even if there is no UI there.
-
-```ts
-// data/routes/some-action.ts
-let action = () => {
-  // ...
-  redirect("/elsewhere");
-};
-
-export { action };
-```

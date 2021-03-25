@@ -1,4 +1,3 @@
 ---
-title: HTML Meta
-disabled: true
+title: SEO and Meta Tags
 ---

@@ -1,4 +1,4 @@
 ---
-title: Architect
+title: Handling Images
 disabled: true
 ---

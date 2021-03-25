@@ -1,5 +1,5 @@
 ---
-title: Mutations with Actions and Form
+title: Data Mutations with Actions
 ---
 
 Data mutations in Remix are built on top of two fundamental web APIs: `<form>` and HTTP. We then use progressive enhancement to enable optimistic UI, loading indicators, and validation feedback--but the programming model is still built on HTML forms.
@@ -84,40 +84,47 @@ Let's start with our project form from earlier but make it usable:
 
 Let's say you've got the route `app/routes/projects/new.js` with this form in it:
 
-```jsx
-<form method="post" action="/projects">
-  <p>
-    <label>
-      Name: <input name="name" type="text" />
-    </label>
-  </p>
-  <p>
-    <label>
-      Description:
-      <br />
-      <textarea name="description" />
-    </label>
-  </p>
-  <p>
-    <button type="submit">Create</button>
-  </p>
-</form>
+```tsx
+export default function NewProject() {
+  return (
+    <form method="post" action="/projects/new">
+      <p>
+        <label>
+          Name: <input name="name" type="text" />
+        </label>
+      </p>
+      <p>
+        <label>
+          Description:
+          <br />
+          <textarea name="description" />
+        </label>
+      </p>
+      <p>
+        <button type="submit">Create</button>
+      </p>
+    </form>
+  );
+}
 ```
 
-Now make a data module that will handle the action somewhere like `data/routes/projects/new.ts`. Any form submits that aren't "get" submits will call your data "action", any "get" requests (links, and the rare `<form method="get">`) will be handled by your "loader".
+Now add the route action. Any form submits that aren't "get" submits will call your data "action", any "get" requests (links, and the rare `<form method="get">`) will be handled by your "loader".
 
-```js
+```ts
 import type { Action } from "@remix-run/data";
 import { redirect } from "@remix-run/data";
 
 // Note the "action" export name, this will handle our form POST
-let action: Action = async ({ request }) => {
+export let action: Action = async ({ request }) => {
   let newProject = new URLSearchParams(await request.text());
   let project = await createProject(Object.fromEntries(newProject));
+
   return redirect(`/projects/${project.id}`);
 };
 
-export { action };
+export default function NewProject() {
+  // ... same as before
+}
 ```
 
 And that's it! Assuming `createProject` does what we want it to, that's the core functionality.
@@ -154,11 +161,9 @@ If there are validation errors, we want to go back to the form and display them.
 import type { Action, loader } from "@remix-run/data";
 import { redirect } from "@remix-run/data";
 
-let action: Action = async ({ request, session }) => {
+export let action: Action = async ({ request, session }) => {
   let newProject = new URLSearchParams(await request.text());
-  let [errors, project] = await createProject(
-    Object.fromEntries(newProject)
-  );
+  let [errors, project] = await createProject(Object.fromEntries(newProject));
 
   if (errors) {
     // session.flash puts a value in the session that can only be read on the
@@ -171,17 +176,15 @@ let action: Action = async ({ request, session }) => {
   return redirect(`/projects/${project.id}`);
 };
 
-let loader: Loader = () => {
+export let loader: Loader = () => {
   // we'll be back here in a minute
 };
-
-export { action, loader };
 ```
 
 After we redirect from the validation errors, we end up back in this same data module, only this time it's a "GET", so our `exports.loader` will get called. Let's read the session data and send it to the form:
 
 ```js
-let loader: Loader = ({ request, session }) => {
+export let loader: Loader = ({ request, session }) => {
   return session.get("failedSubmit") || null;
 };
 ```
@@ -190,12 +193,12 @@ Now we can display the validation errors and the previous values in our UI with 
 
 Notice how we add `defaultValue` to all of our inputs. Remember, this is still a `<form>`, so it's just normal browser/server stuff happening. We're getting the values back from the server so the user doesn't have to re-type what they had.
 
-```jsx
-function NewProject() {
+```tsx
+export default function NewProject() {
   let failedSubmit = useRouteData();
 
   return (
-    <form method="post" action="/projects">
+    <form method="post" action="/projects/new">
       <p>
         <label>
           Name:{" "}
@@ -238,15 +241,15 @@ function NewProject() {
 
 Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch` and then give you access to the pending form information to build pending UI.
 
-```jsx
+```tsx
 import { Form, useRouteData } from "@remix-run/react";
 
-function NewProject() {
+export default function NewProject() {
   let failedSubmit = useRouteData();
 
   return (
     // note the capital "F" <Form> now
-    <Form method="post" action="/projects">
+    <Form method="post" action="/projects/new">
       {/* ... */}
     </Form>
   );
@@ -257,10 +260,18 @@ HOLD UP! If all you do is change your `<form>` to `<Form>`, you made the UX a li
 
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `usePendingFormSubmit`. When there is a pending form submit, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method..
 
-```jsx
+```tsx
 import { Form, useRouteData, usePendingFormSubmit } from "@remix-run/react";
 
-function NewProject() {
+export let loader: Loader = () => {
+  // same as before
+};
+
+export let action: Action = () => {
+  // same as before
+};
+
+export default function NewProject() {
   let failedSubmit = useRouteData();
 
   // when the form is being processed on the server, this returns the same data
@@ -322,7 +333,7 @@ We didn't do much with `pendingForm`, on this page, but you can ask for values f
 
 Now that we're using JavaScript to submit this page, our validation errors can be animated in because the page is stateful. First we'll make a fancy component that animates its height and opacity:
 
-```jsx
+```tsx
 function ValidationMessage({ errorMessage, isPending }) {
   let [show, setShow] = React.useState(!!error);
 
@@ -350,7 +361,7 @@ function ValidationMessage({ errorMessage, isPending }) {
 
 Now we can wrap our old error messages in this new fancy component, and even turn the borders of our fields red that have errors:
 
-```jsx
+```tsx
 function NewProject() {
   let failedSubmit = useRouteData();
   let pendingForm = usePendingFormSubmit();
@@ -423,7 +434,38 @@ Check out this sample Todo app component that uses all the tricks we've just lea
 
 Here's the component route:
 
-```jsx
+```tsx
+import type { Action, Loader } from "@remix-run/data";
+import { json, redirect } from "@remix-run/data";
+import { readTodos, createTodo, deleteTodo } from "../models/todo";
+
+export let loader: Loader = = async ({ request, session }) => {
+  let todos = await readTodos();
+  let error = session.get("error") || null;
+  return json({ todos, error });
+};
+
+export let action: Action = async ({ request }) => {
+  let body = new URLSearchParams(await request.text());
+
+  switch (request.method) {
+    case "post": {
+      let [_, error] = await createTodo(body.name);
+      if (error) {
+        session.flash("error", error);
+      }
+      return redirect("/todos");
+    }
+    case "delete": {
+      await deleteTodo(body.id);
+      return redirect("/todos");
+    }
+    default: {
+      throw new Error(`Unknown method! ${request.method}`);
+    }
+  }
+};
+
 export default function Todos() {
   let { todos } = useRouteData();
   let pendingForm = usePendingFormSubmit();
@@ -468,7 +510,7 @@ export default function Todos() {
             style={{
               opacity:
                 // pending delete indicator
-                state === "deleting" && pendingTodo.id === todo.id ? 0.25 : 1
+                state === "deleting" && pendingTodo.id === todo.id ? 0.25 : 1,
             }}
           >
             {todo.name}{" "}
@@ -497,43 +539,6 @@ function DeleteButton({ id, disabled, ...props }) {
 }
 ```
 
-And the data module:
-
-```ts
-import type { Action, Loader } from "@remix-run/data";
-import { json, redirect } from "@remix-run/data";
-import { readTodos, createTodo, deleteTodo } from "../models/todo";
-
-let loader: Loader = = async ({ request, session }) => {
-  let todos = await readTodos();
-  let error = session.get("error") || null;
-  return json({ todos, error });
-};
-
-let action: Action = async ({ request }) => {
-  let body = new URLSearchParams(await request.text());
-
-  switch (request.method) {
-    case "post": {
-      let [_, error] = await createTodo(body.get("name"));
-      if (error) {
-        session.flash("error", error);
-      }
-      return redirect("/todos");
-    }
-    case "delete": {
-      await deleteTodo(body.get("id"));
-      return redirect("/todos");
-    }
-    default: {
-      throw new Error(`Unknown method! ${request.method}`);
-    }
-  }
-};
-
-export { loader, action }
-```
-
 ## Review
 
 First we built the project form without JavaScript in mind. A simple form, posting to a data action.
@@ -546,8 +551,8 @@ From your components perspective, all that happend was the `usePendingFormSubmit
 
 ## See also
 
-- [Form](/dashboard/docs/react#form)
-- [usePendingLocation](/dashboard/docs/react#usependinglocation)
-- [Sessions](/dashboard/docs/sessions)
-- [Actions](/dashboard/docs/actions)
-- [Loaders](/dashboard/docs/loaders)
+- [Form](../api/react#form)
+- [usePendingLocation](../api/react#usependinglocation)
+- [Sessions](../guides/sessions)
+- [Actions](../api/app/route-module#action)
+- [Loaders](../api/app/route-module#loader)

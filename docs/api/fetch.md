@@ -28,7 +28,3 @@ Remix adds `Request`, `Response`, `Headers`, and `fetch` to your loader's global
 [https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
 
 The MDN docs around `fetch` are pretty great, but they're a bit lacking on the other objects.
-
-## Loader Docs
-
-While you may benefit from reading the MDN docs, our [Loader documentation](./loader.md) goes into detail on how to use these APIs in Remix.

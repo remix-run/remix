@@ -1,4 +1,3 @@
 ---
-title: Not Found
-disabled: true
+title: Not Found (404) Handling
 ---

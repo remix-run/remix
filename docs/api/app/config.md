@@ -4,7 +4,7 @@ title: remix.config.js
 
 When remix first starts up, it reads your config file, you need to make sure this file is deployed to your server as it's read when the server starts.
 
-## `appDirectory?: string`
+## appDirectory
 
 The path to the `app` directory, relative to remix.config.js. Defaults to "app".
 
@@ -16,7 +16,7 @@ exports.appDirectory = "./app";
 exports.appDirectory = "./elsewhere";
 ```
 
-## `routes?: (defineRoutes: DefineRoutes) => Promise<ReturnType<DefineRoutes>>`
+## routes
 
 A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`.
@@ -80,7 +80,6 @@ exports.routes = async (defineRoute) => {
       "some/route/file.js",
       {
         loader: "whatever.js",
-        style: "whatever.css",
       },
       () => {
         route("more", "another.js");
@@ -90,27 +89,23 @@ exports.routes = async (defineRoute) => {
 };
 ```
 
-## `loadersDirectory?: string`
-
-The path to the `loaders` directory, relative to remix.config.js. Defaults to "loaders". Needs to be deployed to your server because these modules are required dynamically at runtime.
-
-## `browserBuildDirectory?: string`
+## browserBuildDirectory
 
 The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
 
-## `publicPath?: string`
+## publicPath
 
 The URL prefix of the browser build with a trailing slash. Defaults to "/build/". This is the path the browser will use to find assets.
 
-## `serverBuildDirectory?: string`
+## serverBuildDirectory
 
 The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
 
-## `devServerPort?: number`
+## devServerPort
 
 The port number to use for the dev server. Defaults to 8002.
 
-## `mdx?: MdxOptions`
+## mdx
 
 Options to use when compiling MDX.
 

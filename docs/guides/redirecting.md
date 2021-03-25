@@ -1,4 +1,3 @@
 ---
 title: Redirecting
-disabled: true
 ---

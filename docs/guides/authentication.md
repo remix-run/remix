@@ -1,4 +1,6 @@
 ---
-title: Authentications
+title: Authentication
 disabled: true
 ---
+
+Coming soon...
