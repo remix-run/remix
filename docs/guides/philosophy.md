@@ -1,5 +1,5 @@
 ---
-title: Remix Philosophy
+title: Philosophy
 ---
 
 We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and ecommerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front-end and the backend of a web project.
@@ -21,15 +21,19 @@ These two technologies have been around for a long time. They're solid. Remix em
 
 **Augment the UX with JavaScript**
 
-The data layer of a Remix app functions with or without JavaScript. Adding JavaScript allows Remix to speed up the user experience in two ways on a page transition:
+While most recent frameworks only have read APIs for data, Remix has both read and write. HTML `<form>` has been the staple for data mutations since the 90s, Remix embraces and augments that API. This enables the data layer of a Remix app to function with _or without_ JavaScript on the page.
+
+Adding JavaScript allows Remix to speed up the user experience in two ways on a page transition:
 
 1. Not downloading and evaluating JavaScript and CSS assets
 2. Only fetching data for the parts of the layout that change
 
-Additionally, with JavaScript on the page, Remix can provide the developer with APIs to make the UX nicer on page transitions:
+Also, with JavaScript on the page, Remix can provide the developer with APIs to make the UX nicer on page transitions:
 
 1. Add nicer pending UI than the browser's spinning favicon
 2. Add optimistic UI on data actions (create, read, update, delete, etc.)
+
+Finally, since data mutation is built into Remix, it knows when to refetch data that could have been changed after a mutation, ensuring different parts of your page dont' get out of sync.
 
 The point is not so much to make the app work without JavaScript, it's more about keeping the simpler client/server model. Being able to leave JavaScript at the door is a nice side-effect.
 
