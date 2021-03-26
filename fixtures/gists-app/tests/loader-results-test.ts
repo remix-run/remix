@@ -19,17 +19,19 @@ describe("loader results", () => {
   describe("when a loader returns a redirect", () => {
     it("sends a redirect", async () => {
       let res = await page.goto(`${testServer}/gists/mjijackson`);
-      let chain = res.request().redirectChain();
+      let chain = res!.request().redirectChain();
       expect(chain.length).toEqual(1);
-      expect(chain[0].response().status()).toEqual(302);
-      expect(chain[0].response().headers().location).toEqual("/gists/mjackson");
+      expect(chain[0].response()!.status()).toEqual(302);
+      expect(chain[0].response()!.headers().location).toEqual(
+        "/gists/mjackson"
+      );
     });
   });
 
   describe("when a loader returns not found", () => {
     it("sends a not found page", async () => {
       let res = await page.goto(`${testServer}/gists/_why`);
-      expect(res.status()).toEqual(404);
+      expect(res!.status()).toEqual(404);
       expect(await getHtml(page, "[data-test-id=content]")).toMatchSnapshot();
     });
   });

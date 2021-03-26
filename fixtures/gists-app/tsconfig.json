@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "lib": ["ES2019"],
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "moduleResolution": "node",
-    "target": "ES2019",
+    "target": "ES2020",
+    "module": "ES2020",
     "strict": true,
-    "skipLibCheck": true
+
+    // Remix takes care of building everything in `remix build`.
+    "noEmit": true
   }
 }

@@ -21,7 +21,7 @@ describe("uncaught exceptions", () => {
       it("renders the root ErrorBoundary on document requests", async () => {
         await Utils.disableJavaScript(page);
         let response = await page.goto(`${testServer}/render-errors?throw`);
-        expect(response.status()).toBe(500);
+        expect(response!.status()).toBe(500);
         expect(await Utils.getHtml(page, '[data-test-id="app-error-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-error-boundary\\">
@@ -52,7 +52,7 @@ describe("uncaught exceptions", () => {
       it("renders the route ErrorBoundary on document requests", async () => {
         await Utils.disableJavaScript(page);
         let response = await page.goto(`${testServer}/render-errors/nested`);
-        expect(response.status()).toBe(500);
+        expect(response!.status()).toBe(500);
         expect(await Utils.getHtml(page, '[data-test-id="/render-errors"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"/render-errors\\">
@@ -107,7 +107,7 @@ describe("uncaught exceptions", () => {
       it("renders the root ErrorBoundary on document requests", async () => {
         await Utils.disableJavaScript(page);
         let response = await page.goto(`${testServer}/loader-errors?throw`);
-        expect(response.status()).toBe(500);
+        expect(response!.status()).toBe(500);
         expect(await Utils.getHtml(page, '[data-test-id="app-error-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-error-boundary\\">
@@ -146,7 +146,7 @@ describe("uncaught exceptions", () => {
       it("renders the route ErrorBoundary on document requests", async () => {
         await Utils.disableJavaScript(page);
         let response = await page.goto(`${testServer}/loader-errors/nested`);
-        expect(response.status()).toBe(500);
+        expect(response!.status()).toBe(500);
         expect(await Utils.getHtml(page, '[data-test-id="/loader-errors"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"/loader-errors\\">
