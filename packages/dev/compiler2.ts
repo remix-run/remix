@@ -223,6 +223,11 @@ function createServerBuild(
     case BuildTarget.Node14:
       externals = nodeBuiltins
         .concat(dependencies)
+        // We need to bundle @remix-run/react because it is ESM and we can't
+        // require it from the CommonJS output.
+        .filter(dep => dep !== "@remix-run/react")
+        // assets.json is external because this build runs in parallel with the
+        // browser build and it's not there yet.
         .concat(path.resolve(config.serverBuildDirectory, "assets.json"));
       break;
     default:
