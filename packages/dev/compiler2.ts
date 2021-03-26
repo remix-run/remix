@@ -185,7 +185,7 @@ function createBrowserBuild(
       // All entry points are virtual modules that will be loaded by the
       // browserEntryPointsPlugin. This allows us to treeshake server-only
       // code that we don't want to run in the browser.
-      path.resolve(config.appDirectory, config.entryClientFile) + "?browser",
+      path.resolve(config.appDirectory, config.entryClientFile),
       ...Object.keys(config.routes).map(
         key =>
           path.resolve(config.appDirectory, config.routes[key].file) +
