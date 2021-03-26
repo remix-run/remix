@@ -8,7 +8,7 @@ import { getRouteExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
 
-type Route = RemixConfig["routeManifest"][string];
+type Route = RemixConfig["routes"][string];
 
 interface AssetsManifest {
   version: string;
@@ -33,7 +33,6 @@ interface AssetsManifest {
 
 export async function createAssetsManifest(
   config: RemixConfig,
-  options: BuildOptions,
   metafile: esbuild.Metafile
 ): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
@@ -51,16 +50,18 @@ export async function createAssetsManifest(
       .map(im => resolveUrl(im.path));
   }
 
-  let clientEntryPoint = `browser-entry-points:${config.entryClientFile}?browser`;
-  let routesByEntryPoint: Map<string, Route> = Object.keys(
-    config.routeManifest
-  ).reduce((map, key) => {
-    let route = config.routeManifest[key];
-    let file = path.resolve(config.appDirectory, route.moduleFile);
-    let entryPoint = `browser-entry-points:${file}?browser`;
-    map.set(entryPoint, route);
-    return map;
-  }, new Map());
+  let entryClientFile = path.resolve(
+    config.appDirectory,
+    config.entryClientFile
+  );
+  let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
+    (map, key) => {
+      let route = config.routes[key];
+      map.set(path.resolve(config.appDirectory, route.file), route);
+      return map;
+    },
+    new Map()
+  );
 
   let entry: AssetsManifest["entry"] | undefined;
   let routes: AssetsManifest["routes"] = {};
@@ -68,19 +69,19 @@ export async function createAssetsManifest(
   for (let key of Object.keys(metafile.outputs).sort()) {
     let output = metafile.outputs[key];
     if (!output.entryPoint) continue;
-    if (output.entryPoint === clientEntryPoint) {
+
+    let entryPointFile = path.resolve(
+      output.entryPoint.replace(/(^browser-entry-point:|\?browser$)/g, "")
+    );
+    if (entryPointFile === entryClientFile) {
       entry = {
         module: resolveUrl(key),
         imports: resolveImports(output.imports)
       };
     } else {
-      let route = routesByEntryPoint.get(output.entryPoint);
+      let route = routesByFile.get(entryPointFile);
       invariant(route, `Cannot get route for entry point ${output.entryPoint}`);
-      let sourceExports = await getRouteExportsCached(
-        config,
-        options,
-        route.id
-      );
+      let sourceExports = await getRouteExportsCached(config, route.id);
       routes[route.id] = {
         id: route.id,
         parentId: route.parentId,

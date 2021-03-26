@@ -12,7 +12,6 @@
     "@babel/preset-react": "^7.12.13",
     "@babel/preset-typescript": "^7.13.0",
     "@mdx-js/mdx": "^1.6.22",
-    "@rollup/plugin-alias": "^3.1.2",
     "@rollup/plugin-babel": "^5.3.0",
     "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-json": "^4.1.0",
@@ -23,6 +22,7 @@
     "esbuild": "^0.9.5",
     "express": "^4.17.1",
     "front-matter": "^4.0.2",
+    "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "morgan": "^1.10.0",
     "postcss": "^8.2.6",
@@ -37,6 +37,7 @@
   "devDependencies": {
     "@types/cacache": "^15.0.0",
     "@types/express": "^4.17.11",
+    "@types/lodash.debounce": "^4.0.6",
     "@types/morgan": "^1.9.2",
     "@types/sharp": "^0.27.1",
     "@types/signal-exit": "^3.0.0",

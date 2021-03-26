@@ -1,7 +1,7 @@
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 
-import type { ConfigRoute, DefineRouteFunction } from "./routes";
+import type { RouteManifest, DefineRouteFunction } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
 
 /**
@@ -24,27 +24,25 @@ export function isRouteModuleFile(filename: string): boolean {
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(appDir: string): ConfigRoute[] {
+export function defineConventionalRoutes(appDir: string): RouteManifest {
   let files: {
     [routeId: string]: string;
   } = {};
 
   function defineNestedRoutes(
     defineRoute: DefineRouteFunction,
-    parentRouteId?: string
-  ) {
+    parentId?: string
+  ): void {
     let routeIds = Object.keys(files);
     let childRouteIds = routeIds.filter(
-      id => findParentRouteId(routeIds, id) === parentRouteId
+      id => findParentRouteId(routeIds, id) === parentId
     );
 
     for (let routeId of childRouteIds) {
       let routePath =
         routeId === "routes/404"
           ? "*"
-          : createRoutePath(
-              routeId.slice((parentRouteId || "routes").length + 1)
-            );
+          : createRoutePath(routeId.slice((parentId || "routes").length + 1));
 
       defineRoute(routePath, files[routeId], () => {
         defineNestedRoutes(defineRoute, routeId);
@@ -65,40 +63,7 @@ export function defineConventionalRoutes(appDir: string): ConfigRoute[] {
     }
   });
 
-  function defineLayoutRoutes(rootRouteName: string) {
-    let id = rootRouteName;
-    let routes = defineRoutes(defineNestedRoutes);
-
-    // Add the root route id to the first level routes
-    for (let shallowRoute of routes) {
-      shallowRoute.parentId = id;
-    }
-
-    return [
-      {
-        id,
-        path: "/",
-        moduleFile: findRootRouteModule(appDir, rootRouteName),
-        children: routes
-      }
-    ];
-  }
-
-  return defineLayoutRoutes("root");
-}
-
-function findRootRouteModule(appDir: string, name: string) {
-  let potentialNames = ["js", "jsx", "tsx"].map(ext => `${name}.${ext}`);
-
-  for (let name of potentialNames) {
-    let rootPath = path.join(appDir, name);
-    if (fs.existsSync(rootPath)) {
-      return name;
-    }
-  }
-  throw new Error(
-    "No root route module found. Please create a file at `<appDir>/root.{js,jsx,tsx}`"
-  );
+  return defineRoutes(defineNestedRoutes);
 }
 
 function createRoutePath(routeId: string): string {

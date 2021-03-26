@@ -2,7 +2,6 @@ import { Link, Outlet } from "react-router-dom";
 import type { LoaderFunction, LinksFunction } from "@remix-run/node";
 import { Meta, Scripts, Links, useRouteData } from "@remix-run/react";
 
-// @ts-expect-error
 import styles from "./styles/global.css";
 
 export let loader: LoaderFunction = async () => {

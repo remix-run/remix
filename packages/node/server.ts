@@ -1,13 +1,7 @@
 import { loadRouteData, callRouteAction } from "./data";
 import type { ServerBuild } from "./build";
 import type { ComponentDidCatchEmulator, EntryContext } from "./entry";
-import {
-  serializeError,
-  createClientMatches,
-  createRouteData,
-  createRouteModules,
-  createServerHandoffString
-} from "./entry";
+import * as entry from "./entry";
 import type { Request } from "./fetch";
 import { Response } from "./fetch";
 import { getDocumentHeaders } from "./headers";
@@ -93,7 +87,7 @@ async function handleDataRequest(
           routeMatch.params
         );
   } catch (error) {
-    return json(serializeError(error), {
+    return json(entry.serializeError(error), {
       status: 500,
       headers: {
         "X-Remix-Error": "unfortunately, yes"
@@ -194,7 +188,7 @@ async function handleDocumentRequest(
         );
       }
 
-      componentDidCatchEmulator.error = serializeError(response);
+      componentDidCatchEmulator.error = entry.serializeError(response);
       routeLoaderResults[index] = json(null, { status: 500 });
     } else if (isRedirectResponse(response)) {
       return response;
@@ -218,12 +212,11 @@ async function handleDocumentRequest(
 
   let serverEntryModule = build.entry.module;
   let headers = getDocumentHeaders(build, matches, routeLoaderResponses);
-  let clientMatches = createClientMatches(matches, build.assets.routes);
-  let routeData = await createRouteData(matches, routeLoaderResponses);
-  let routeModules = createRouteModules(build.routes);
-
+  let entryMatches = entry.createMatches(matches, build.assets.routes);
+  let routeData = await entry.createRouteData(matches, routeLoaderResponses);
+  let routeModules = entry.createRouteModules(build.routes);
   let serverHandoff = {
-    matches: clientMatches,
+    matches: entryMatches,
     componentDidCatchEmulator,
     routeData
   };
@@ -231,7 +224,7 @@ async function handleDocumentRequest(
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
-    serverHandoffString: createServerHandoffString(serverHandoff)
+    serverHandoffString: entry.createServerHandoffString(serverHandoff)
   };
 
   let response: Response | Promise<Response>;
@@ -258,8 +251,8 @@ async function handleDocumentRequest(
     // now. I'm okay with tracking our position in the route tree while
     // rendering, that's pretty much how hooks work 😂)
     componentDidCatchEmulator.trackBoundaries = false;
-    componentDidCatchEmulator.error = serializeError(error);
-    serverEntryContext.serverHandoffString = createServerHandoffString(
+    componentDidCatchEmulator.error = entry.serializeError(error);
+    serverEntryContext.serverHandoffString = entry.createServerHandoffString(
       serverHandoff
     );
 

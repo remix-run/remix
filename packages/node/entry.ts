@@ -75,14 +75,14 @@ export function serializeError(error: Error): SerializedError {
   };
 }
 
-export function createClientMatches(
+export function createMatches(
   matches: ServerRouteMatch[],
-  clientRoutes: EntryRouteManifest
+  routes: EntryRouteManifest
 ): EntryRouteMatch[] {
   return matches.map(match => ({
     params: match.params,
     pathname: match.pathname,
-    route: clientRoutes[match.route.id]
+    route: routes[match.route.id]
   }));
 }
 

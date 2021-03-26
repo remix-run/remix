@@ -3,11 +3,9 @@ import * as path from "path";
 import type { MdxOptions } from "@mdx-js/mdx";
 
 import { loadModule } from "./modules";
-import type { ConfigRoute, DefineRoutesFunction } from "./config/routes";
+import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
-import type { RouteManifest } from "./config/routesManifest";
-import { createRouteManifest } from "./config/routesManifest";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 
 /**
@@ -15,8 +13,8 @@ import { ServerMode, isValidServerMode } from "./config/serverModes";
  */
 export interface AppConfig {
   /**
-   * The path to the `app` directory, relative to `remix.config.js`. Defaults to
-   * "app".
+   * The path to the `app` directory, relative to `remix.config.js`. Defaults
+   * to "app".
    */
   appDirectory?: string;
 
@@ -81,7 +79,7 @@ export interface RemixConfig {
   rootDirectory: string;
 
   /**
-   * The absolute path to the source directory.
+   * The absolute path to the application source directory.
    */
   appDirectory: string;
 
@@ -91,24 +89,19 @@ export interface RemixConfig {
   cacheDirectory: string;
 
   /**
-   * The absolute path to the entry.client file.
+   * The path to the entry.client file, relative to `config.appDirectory`.
    */
   entryClientFile: string;
 
   /**
-   * The absolute path to the entry.server file.
+   * The path to the entry.server file, relative to `config.appDirectory`.
    */
   entryServerFile: string;
 
   /**
-   * An array of all available routes, nested according to route hierarchy.
+   * An object of all available routes, keyed by route id.
    */
-  routes: ConfigRoute[];
-
-  /**
-   * An object of all available routes, keyed by id.
-   */
-  routeManifest: RouteManifest;
+  routes: RouteManifest;
 
   /**
    * The absolute path to the server build directory.
@@ -158,13 +151,13 @@ export async function readConfig(
   }
 
   let rootDirectory = path.resolve(remixRoot);
-  let appConfigFile = path.resolve(rootDirectory, "remix.config.js");
+  let configFile = path.resolve(rootDirectory, "remix.config.js");
 
   let appConfig: AppConfig;
   try {
-    appConfig = loadModule(appConfigFile);
+    appConfig = loadModule(configFile);
   } catch (error) {
-    console.error(`Error loading Remix config in ${appConfigFile}`);
+    console.error(`Error loading Remix config in ${configFile}`);
     console.error(error);
     process.exit();
   }
@@ -205,21 +198,30 @@ export async function readConfig(
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
-  let routes = defineConventionalRoutes(appDirectory);
-  if (appConfig.routes) {
-    let manualRoutes = await appConfig.routes(defineRoutes);
-    for (let shallowRoute of manualRoutes) {
-      shallowRoute.parentId = "root";
-    }
-    let root = routes[0];
-    (root.children || (root.children = [])).push(...manualRoutes);
+  let rootRouteFile = findEntry(appDirectory, "root");
+  if (!rootRouteFile) {
+    throw new Error(`Missing "root" route file in ${appDirectory}`);
   }
 
-  let routeManifest = createRouteManifest(routes);
+  let routes: RouteManifest = {
+    root: { path: "/", id: "root", file: rootRouteFile }
+  };
+  if (fs.existsSync(path.resolve(appDirectory, "routes"))) {
+    let conventionalRoutes = defineConventionalRoutes(appDirectory);
+    for (let key of Object.keys(conventionalRoutes)) {
+      let route = conventionalRoutes[key];
+      routes[route.id] = { ...route, parentId: route.parentId || "root" };
+    }
+  }
+  if (appConfig.routes) {
+    let manualRoutes = await appConfig.routes(defineRoutes);
+    for (let key of Object.keys(manualRoutes)) {
+      let route = manualRoutes[key];
+      routes[route.id] = { ...route, parentId: route.parentId || "root" };
+    }
+  }
 
-  // TODO: validate routes
-
-  let remixConfig: RemixConfig = {
+  return {
     appDirectory,
     cacheDirectory,
     entryClientFile,
@@ -230,12 +232,9 @@ export async function readConfig(
     publicPath,
     rootDirectory,
     routes,
-    routeManifest,
     serverBuildDirectory,
     serverMode
   };
-
-  return remixConfig;
 }
 
 function addTrailingSlash(path: string): string {
@@ -247,7 +246,7 @@ const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 function findEntry(dir: string, basename: string): string | undefined {
   for (let ext of entryExts) {
     let file = path.resolve(dir, basename + ext);
-    if (fs.existsSync(file)) return file;
+    if (fs.existsSync(file)) return path.relative(dir, file);
   }
 
   return undefined;

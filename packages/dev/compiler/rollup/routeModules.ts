@@ -1,4 +1,4 @@
-import fs from "fs";
+import * as fs from "fs";
 import type { Plugin } from "rollup";
 
 import { BuildTarget } from "../../build";
@@ -28,7 +28,7 @@ export default function routeModulesPlugin({
 
       if (input && typeof input === "object" && !Array.isArray(input)) {
         let config = await getRemixConfig(options.plugins);
-        let routeIds = Object.keys(config.routeManifest);
+        let routeIds = Object.keys(config.routes);
 
         for (let alias in input) {
           if (routeIds.includes(alias)) {

@@ -12,38 +12,43 @@ describe("defineRoutes", () => {
     });
 
     expect(routes).toMatchInlineSnapshot(`
-      Array [
-        Object {
+      Object {
+        "routes/home": Object {
+          "caseSensitive": false,
+          "file": "routes/home.js",
           "id": "routes/home",
-          "moduleFile": "routes/home.js",
+          "parentId": undefined,
           "path": "/",
         },
-        Object {
-          "children": Array [
-            Object {
-              "id": "routes/inbox/index",
-              "moduleFile": "routes/inbox/index.js",
-              "parentId": "routes/inbox",
-              "path": "/",
-            },
-            Object {
-              "id": "routes/inbox/$messageId",
-              "moduleFile": "routes/inbox/$messageId.js",
-              "parentId": "routes/inbox",
-              "path": ":messageId",
-            },
-            Object {
-              "id": "routes/inbox/archive",
-              "moduleFile": "routes/inbox/archive.js",
-              "parentId": "routes/inbox",
-              "path": "archive",
-            },
-          ],
+        "routes/inbox": Object {
+          "caseSensitive": false,
+          "file": "routes/inbox.js",
           "id": "routes/inbox",
-          "moduleFile": "routes/inbox.js",
+          "parentId": undefined,
           "path": "inbox",
         },
-      ]
+        "routes/inbox/$messageId": Object {
+          "caseSensitive": false,
+          "file": "routes/inbox/$messageId.js",
+          "id": "routes/inbox/$messageId",
+          "parentId": "routes/inbox",
+          "path": ":messageId",
+        },
+        "routes/inbox/archive": Object {
+          "caseSensitive": false,
+          "file": "routes/inbox/archive.js",
+          "id": "routes/inbox/archive",
+          "parentId": "routes/inbox",
+          "path": "archive",
+        },
+        "routes/inbox/index": Object {
+          "caseSensitive": false,
+          "file": "routes/inbox/index.js",
+          "id": "routes/inbox/index",
+          "parentId": "routes/inbox",
+          "path": "/",
+        },
+      }
     `);
   });
 
@@ -57,18 +62,22 @@ describe("defineRoutes", () => {
     });
 
     expect(routes).toMatchInlineSnapshot(`
-      Array [
-        Object {
+      Object {
+        "one": Object {
+          "caseSensitive": false,
+          "file": "one.md",
           "id": "one",
-          "moduleFile": "one.md",
+          "parentId": undefined,
           "path": "one",
         },
-        Object {
+        "two": Object {
+          "caseSensitive": false,
+          "file": "two.md",
           "id": "two",
-          "moduleFile": "two.md",
+          "parentId": undefined,
           "path": "two",
         },
-      ]
+      }
     `);
   });
 });

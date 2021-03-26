@@ -1,3 +1,5 @@
+import * as path from "path";
+
 /**
  * A route that was created using `defineRoutes` or created conventionally from
  * looking at the files on the filesystem.
@@ -14,8 +16,8 @@ export interface ConfigRoute {
   caseSensitive?: boolean;
 
   /**
-   * The unique id for this route, named like the `moduleFile` but without
-   * the file extension. So `routes/gists/$username.js` will have an `id` of
+   * The unique id for this route, named like its `file` but without the
+   * extension. So `app/routes/gists/$username.jsx` will have an `id` of
    * `routes/gists/$username`.
    */
   id: string;
@@ -26,17 +28,14 @@ export interface ConfigRoute {
   parentId?: string;
 
   /**
-   * The path to the file that exports the React component rendered by this
-   * route as its default export, relative to the `config.appDirectory`. So the
-   * module file for route id `routes/gists/$username` will be
-   * `routes/gists/$username.js`.
+   * The path to the entry point for this route, relative to
+   * `config.appDirectory`.
    */
-  moduleFile: string;
+  file: string;
+}
 
-  /**
-   * This route's child routes.
-   */
-  children?: ConfigRoute[];
+export interface RouteManifest {
+  [routeId: string]: ConfigRoute;
 }
 
 export interface DefineRouteOptions {
@@ -74,11 +73,9 @@ export interface DefineRouteFunction {
 
     /**
      * The path to the file that exports the React component rendered by this
-     * route as its default export, relative to `config.appDirectory`.
-     * Additional exports may include `headers`, `meta`, `loader`, `action`,
-     * and `ErrorBoundary`.
+     * route as its default export, relative to the `app` directory.
      */
-    moduleFile: string,
+    file: string,
 
     /**
      * Options for defining routes, or a function for defining child routes.
@@ -100,17 +97,17 @@ export type DefineRoutesFunction = typeof defineRoutes;
  */
 export function defineRoutes(
   callback: (defineRoute: DefineRouteFunction) => void
-): ConfigRoute[] {
-  let routes: ConfigRoute[] = [];
-  let currentParents: ConfigRoute[] = [];
+): RouteManifest {
+  let routes: RouteManifest = Object.create(null);
+  let parentRoutes: ConfigRoute[] = [];
   let alreadyReturned = false;
 
-  function defineRoute(
-    path: string,
-    moduleFile: string,
-    optionsOrChildren?: DefineRouteOptions | DefineRouteChildren,
-    children?: DefineRouteChildren
-  ): void {
+  let defineRoute: DefineRouteFunction = (
+    path,
+    file,
+    optionsOrChildren,
+    children
+  ) => {
     if (alreadyReturned) {
       throw new Error(
         "You tried to define routes asynchronously but started defining " +
@@ -121,40 +118,34 @@ export function defineRoutes(
 
     let options: DefineRouteOptions;
     if (typeof optionsOrChildren === "function") {
-      // route(path, moduleFile, children)
+      // route(path, file, children)
       options = {};
       children = optionsOrChildren;
     } else {
-      // route(path, moduleFile, options, children)
-      // route(path, moduleFile, options)
+      // route(path, file, options, children)
+      // route(path, file, options)
       options = optionsOrChildren || {};
     }
 
     let route: ConfigRoute = {
-      id: createRouteId(moduleFile),
       path: path || "/",
-      moduleFile
+      caseSensitive: !!options.caseSensitive,
+      id: createRouteId(file),
+      parentId:
+        parentRoutes.length > 0
+          ? parentRoutes[parentRoutes.length - 1].id
+          : undefined,
+      file
     };
 
-    if (typeof options.caseSensitive !== "undefined") {
-      route.caseSensitive = !!options.caseSensitive;
-    }
-
-    let parentRoute = currentParents[currentParents.length - 1];
-    if (parentRoute) {
-      route.parentId = parentRoute.id;
-      if (!parentRoute.children) parentRoute.children = [];
-      parentRoute.children.push(route);
-    } else {
-      routes.push(route);
-    }
+    routes[route.id] = route;
 
     if (children) {
-      currentParents.push(route);
+      parentRoutes.push(route);
       children();
-      currentParents.pop();
+      parentRoutes.pop();
     }
-  }
+  };
 
   callback(defineRoute);
 
@@ -168,7 +159,7 @@ export function createRouteId(file: string) {
 }
 
 function normalizeSlashes(file: string) {
-  return file.split("\\").join("/");
+  return file.split(path.win32.sep).join("/");
 }
 
 function stripFileExtension(file: string) {

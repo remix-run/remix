@@ -12,7 +12,6 @@ import type {
   TreeshakingOptions
 } from "rollup";
 import * as rollup from "rollup";
-import alias from "@rollup/plugin-alias";
 import babel from "@rollup/plugin-babel";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
@@ -174,10 +173,15 @@ function isLocalModuleId(id: string): boolean {
 
 function getExternalOption(target: string): ExternalOption | undefined {
   return target === BuildTarget.Server
-    ? // Exclude non-local module identifiers from the server bundles.
-      // This includes identifiers like "react" which will be resolved
-      // dynamically at runtime using require().
-      (id: string) => !isLocalModuleId(id) && !isImportHint(id)
+    ? (id: string) =>
+        // We need to bundle @remix-run/react since it is ESM and we
+        // are building CommonJS output.
+        id !== "@remix-run/react" &&
+        // Exclude non-local module identifiers from the server bundles.
+        // This includes identifiers like "react" which will be resolved
+        // dynamically at runtime using require().
+        !isLocalModuleId(id) &&
+        !isImportHint(id)
     : // Exclude packages we know we don't want in the browser bundles.
       // These *should* be stripped from the browser bundles anyway when
       // tree-shaking kicks in, so making them external just saves Rollup
@@ -185,56 +189,27 @@ function getExternalOption(target: string): ExternalOption | undefined {
       ignorePackages;
 }
 
-const entryExts = [".js", ".jsx", ".ts", ".tsx"];
-
 function getInputOption(config: RemixConfig, target: BuildTarget): InputOption {
   let input: InputOption = {};
 
   if (target === BuildTarget.Browser) {
-    let entryClientFile = findFile(
+    input["entry.client"] = path.resolve(
       config.appDirectory,
-      "entry.client",
-      entryExts
+      config.entryClientFile
     );
-
-    if (entryClientFile) {
-      input["entry.client"] = entryClientFile;
-    } else {
-      throw new Error(`Missing "entry.client" file in ${config.appDirectory}`);
-    }
   } else if (target === BuildTarget.Server) {
-    let entryServerFile = findFile(
+    input["entry.server"] = path.resolve(
       config.appDirectory,
-      "entry.server",
-      entryExts
+      config.entryServerFile
     );
-
-    if (entryServerFile) {
-      input["entry.server"] = entryServerFile;
-    } else {
-      throw new Error(`Missing "entry.server" file in ${config.appDirectory}`);
-    }
   }
 
-  for (let key of Object.keys(config.routeManifest)) {
-    let route = config.routeManifest[key];
-    input[route.id] = path.resolve(config.appDirectory, route.moduleFile);
+  for (let key of Object.keys(config.routes)) {
+    let route = config.routes[key];
+    input[route.id] = path.resolve(config.appDirectory, route.file);
   }
 
   return input;
-}
-
-function findFile(
-  dir: string,
-  basename: string,
-  possibleExts: string[]
-): string | undefined {
-  for (let ext of possibleExts) {
-    let file = path.resolve(dir, basename + ext);
-    if (fs.existsSync(file)) return file;
-  }
-
-  return undefined;
 }
 
 function getTreeshakeOption(
@@ -280,19 +255,6 @@ function getBuildPlugins({ mode, target }: Required<BuildOptions>): Plugin[] {
       }
     })
   ];
-
-  // if (target === BuildTarget.Browser) {
-  //   plugins.push(
-  //     alias({
-  //       entries: [
-  //         {
-  //           find: "@remix-run/react",
-  //           replacement: "@remix-run/react/esm"
-  //         }
-  //       ]
-  //     })
-  //   );
-  // }
 
   plugins.push(
     clientServer({ target }),

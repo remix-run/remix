@@ -420,7 +420,13 @@ function useRemixRouteContext(): RemixRouteContextType {
   return context;
 }
 
-export function RemixRoute({ id: routeId }: { id: string }) {
+function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
+  throw new Error(
+    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.`
+  );
+}
+
+export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
   let {
     routeData,
@@ -428,61 +434,51 @@ export function RemixRoute({ id: routeId }: { id: string }) {
     componentDidCatchEmulator
   } = useRemixEntryContext();
 
-  let data = routeData[routeId];
-  let routeModule = routeModules[routeId];
-
-  let context: RemixRouteContextType = {
-    data,
-    id: routeId
-  };
-
+  let data = routeData[id];
+  let { default: Component, ErrorBoundary } = routeModules[id];
+  let children = Component ? <Component /> : <DefaultRouteComponent id={id} />;
   let element = (
-    <RemixRouteContext.Provider value={context}>
-      <routeModule.default />
-    </RemixRouteContext.Provider>
+    <RemixRouteContext.Provider value={{ data, id }} children={children} />
   );
 
-  if (routeModule.ErrorBoundary) {
-    // Only wrap in error boundary if the route defined one, otherwise let the
-    // error bubble to the parent boundary. We could default to using error
-    // boundaries around every route, but now if the app doesn't want users
-    // seeing the default Remix ErrorBoundary component, they *must* define an
-    // error boundary for *every* route and that would be annoying. Might as
-    // well make it required at that point.
-    //
-    // By conditionally wrapping like this, we allow apps to define a top level
-    // ErrorBoundary component and be done with it. Then, if they want to, they
-    // can add more specific boundaries by exporting ErrorBoundary components
-    // for whichever routes they please.
+  // Only wrap in error boundary if the route defined one, otherwise let the
+  // error bubble to the parent boundary. We could default to using error
+  // boundaries around every route, but now if the app doesn't want users
+  // seeing the default Remix ErrorBoundary component, they *must* define an
+  // error boundary for *every* route and that would be annoying. Might as
+  // well make it required at that point.
+  //
+  // By conditionally wrapping like this, we allow apps to define a top level
+  // ErrorBoundary component and be done with it. Then, if they want to, they
+  // can add more specific boundaries by exporting ErrorBoundary components
+  // for whichever routes they please.
+  if (!ErrorBoundary) return element;
 
-    // If we tried to render and failed, and this route threw the error, find it
-    // and pass it to the ErrorBoundary to emulate `componentDidCatch`
-    let maybeServerRenderError =
-      componentDidCatchEmulator.error &&
-      (componentDidCatchEmulator.renderBoundaryRouteId === routeId ||
-        componentDidCatchEmulator.loaderBoundaryRouteId === routeId)
-        ? deserializeError(componentDidCatchEmulator.error)
-        : undefined;
+  // If we tried to render and failed, and this route threw the error, find it
+  // and pass it to the ErrorBoundary to emulate `componentDidCatch`
+  let maybeServerRenderError =
+    componentDidCatchEmulator.error &&
+    (componentDidCatchEmulator.renderBoundaryRouteId === id ||
+      componentDidCatchEmulator.loaderBoundaryRouteId === id)
+      ? deserializeError(componentDidCatchEmulator.error)
+      : undefined;
 
-    // This needs to run after we check for the error from a previous render,
-    // otherwise we will incorrectly render this boundary for a loader error
-    // deeper in the tree.
-    if (componentDidCatchEmulator.trackBoundaries) {
-      componentDidCatchEmulator.renderBoundaryRouteId = routeId;
-    }
-
-    return (
-      <RemixErrorBoundary
-        location={location}
-        component={routeModule.ErrorBoundary}
-        error={maybeServerRenderError}
-      >
-        {element}
-      </RemixErrorBoundary>
-    );
+  // This needs to run after we check for the error from a previous render,
+  // otherwise we will incorrectly render this boundary for a loader error
+  // deeper in the tree.
+  if (componentDidCatchEmulator.trackBoundaries) {
+    componentDidCatchEmulator.renderBoundaryRouteId = id;
   }
 
-  return element;
+  return (
+    <RemixErrorBoundary
+      location={location}
+      component={ErrorBoundary}
+      error={maybeServerRenderError}
+    >
+      {element}
+    </RemixErrorBoundary>
+  );
 }
 
 ////////////////////////////////////////////////////////////////////////////////

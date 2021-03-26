@@ -13,10 +13,10 @@ export type ServerRouteMatch = RouteMatch<ServerRoute>;
 
 export function createRoutes(
   routeManifest: ServerRouteManifest,
-  parentRouteId?: string
+  parentId?: string
 ): ServerRoute[] {
   return Object.keys(routeManifest)
-    .filter(key => routeManifest[key].parentId === parentRouteId)
+    .filter(key => routeManifest[key].parentId === parentId)
     .map(id => ({
       ...routeManifest[id],
       children: createRoutes(routeManifest, id)

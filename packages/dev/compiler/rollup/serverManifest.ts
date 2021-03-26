@@ -24,7 +24,7 @@ export default function serverManifestPlugin({
     },
 
     async generateBundle(_options, bundle) {
-      let manifest = getServerManifest(bundle, config.routeManifest);
+      let manifest = getServerManifest(bundle, config.routes);
       let source = getCommonjsModule(manifest);
       this.emitFile({ type: "asset", fileName, source });
     }
@@ -52,7 +52,7 @@ interface ServerManifest {
 
 function getServerManifest(
   bundle: OutputBundle,
-  routeManifest: RemixConfig["routeManifest"]
+  routeManifest: RemixConfig["routes"]
 ): ServerManifest {
   let version = getBundleHash(bundle).slice(0, 8);
 

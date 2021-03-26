@@ -43,6 +43,7 @@ export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
 
 export default function Gists() {
   let data = useRouteData();
+
   return (
     <div>
       <h2>Public Gists</h2>

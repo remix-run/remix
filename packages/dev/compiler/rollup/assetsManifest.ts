@@ -35,7 +35,7 @@ export default function assetsManifestPlugin({
     async generateBundle(_options, bundle) {
       let manifest = getAssetsManifest(
         bundle,
-        config.routeManifest,
+        config.routes,
         config.publicPath
       );
 
@@ -79,7 +79,7 @@ interface AssetsManifest {
 
 function getAssetsManifest(
   bundle: OutputBundle,
-  routeManifest: RemixConfig["routeManifest"],
+  routeManifest: RemixConfig["routes"],
   publicPath: string
 ): AssetsManifest {
   let version = getBundleHash(bundle).slice(0, 8);

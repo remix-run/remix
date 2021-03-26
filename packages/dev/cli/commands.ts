@@ -1,4 +1,6 @@
+import * as path from "path";
 import signalExit from "signal-exit";
+import prettyMs from "pretty-ms";
 
 import { BuildMode, isBuildMode, BuildTarget } from "../build";
 import * as compiler from "../compiler";
@@ -36,39 +38,6 @@ export async function build(remixRoot: string, mode?: string) {
   console.log("done!");
 }
 
-export async function build2(remixRoot: string, mode?: string) {
-  let buildMode = isBuildMode(mode) ? mode : BuildMode.Production;
-
-  console.log(`Building Remix app in ${buildMode} mode...`);
-
-  let start = Date.now();
-
-  let config = await readConfig(remixRoot);
-  await compiler2.build(config, { mode: buildMode });
-
-  console.log(`Built in ${Date.now() - start}ms`);
-}
-
-export async function watch2(remixRoot: string, mode?: string) {
-  let buildMode = isBuildMode(mode) ? mode : BuildMode.Development;
-
-  console.log(`Watching Remix app in ${buildMode} mode...`);
-
-  let start = Date.now();
-  let config = await readConfig(remixRoot);
-
-  let unwatch = await compiler2.watch(config, {
-    mode: buildMode,
-    onRebuild({ ms }) {
-      console.log(`Rebuilt in ${ms}ms`);
-    }
-  });
-
-  console.log(`Built in ${Date.now() - start}ms`);
-
-  signalExit(unwatch);
-}
-
 /**
  * Runs the dev server for a Remix app.
  */
@@ -82,4 +51,59 @@ export async function run(remixRoot: string) {
       );
     }
   });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+export async function build2(
+  remixRoot: string,
+  modeArg?: string
+): Promise<void> {
+  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Production;
+
+  console.log(`Building Remix app in ${mode} mode...`);
+
+  let start = Date.now();
+  let config = await readConfig(remixRoot);
+  await compiler2.build(config, { mode: mode });
+
+  console.log(`Built in ${prettyMs(Date.now() - start)}`);
+}
+
+export async function watch2(
+  remixRoot: string,
+  modeArg?: string
+): Promise<void> {
+  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+
+  console.log(`Watching Remix app in ${mode} mode...`);
+
+  let start = Date.now();
+  let config = await readConfig(remixRoot);
+  signalExit(
+    await compiler2.watch(config, {
+      mode,
+      onRebuildStart() {
+        start = Date.now();
+      },
+      onRebuildFinish() {
+        console.log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
+      },
+      onFileCreated(file) {
+        console.log(`File created: ${path.relative(process.cwd(), file)}`);
+      },
+      onFileChanged(file) {
+        console.log(`File changed: ${path.relative(process.cwd(), file)}`);
+      },
+      onFileDeleted(file) {
+        console.log(`File deleted: ${path.relative(process.cwd(), file)}`);
+      }
+    })
+  );
+
+  console.log(`Built in ${prettyMs(Date.now() - start)}`);
+}
+
+export function run2(remixRoot: string): Promise<void> {
+  return watch2(remixRoot);
 }

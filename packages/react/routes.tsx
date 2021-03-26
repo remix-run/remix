@@ -23,9 +23,8 @@ type RouteComponentType = ComponentType<{ id: string }>;
 
 export function createClientRoute(
   entryRoute: EntryRoute,
-  elementType: RouteComponentType
+  Component: RouteComponentType
 ): ClientRoute {
-  let Component = elementType;
   return {
     path: entryRoute.path,
     caseSensitive: !!entryRoute.caseSensitive,
@@ -36,38 +35,17 @@ export function createClientRoute(
 
 export function createClientRoutes(
   routeManifest: RouteManifest<EntryRoute>,
-  elementType: RouteComponentType
+  Component: RouteComponentType,
+  parentId?: string
 ): ClientRoute[] {
-  let routes: ClientRoute[] = [];
-  let addedRoutes: { [routeId: string]: ClientRoute } = {};
-
-  let routeIds = Object.keys(routeManifest).sort(a =>
-    // need to put "root" first so it sorts first, this is a bit of hack that
-    // will need to be revisted when we support multiple root layouts
-    a === "root" ? -1 : 0
-  );
-
-  for (let routeId of routeIds) {
-    let entryRoute = routeManifest[routeId];
-    let route = createClientRoute(entryRoute, elementType);
-
-    if (entryRoute.parentId) {
-      let parentRoute = addedRoutes[entryRoute.parentId];
-
-      invariant(
-        parentRoute,
-        `Missing parent route "${entryRoute.parentId}" for ${entryRoute.id}`
-      );
-
-      (parentRoute.children || (parentRoute.children = [])).push(route);
-    } else {
-      routes.push(route);
-    }
-
-    addedRoutes[routeId] = route;
-  }
-
-  return routes;
+  return Object.keys(routeManifest)
+    .filter(key => routeManifest[key].parentId === parentId)
+    .map(key => {
+      let route = createClientRoute(routeManifest[key], Component);
+      let children = createClientRoutes(routeManifest, Component, route.id);
+      if (children.length > 0) route.children = children;
+      return route;
+    });
 }
 
 export interface ClientRouteMatch {

@@ -10,6 +10,7 @@ export function isBuildMode(mode: any): mode is BuildMode {
 export enum BuildTarget {
   Browser = "browser", // TODO: remove
   Server = "server", // TODO: remove
+  CloudflareWorkers = "cloudflare-workers",
   Node14 = "node14"
 }
 
