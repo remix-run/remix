@@ -1,5 +1,4 @@
 const path = require("path");
-const fsp = require("fs").promises;
 const { exec, spawn } = require("child_process");
 const { promisify } = require("util");
 const semver = require("semver");
@@ -39,15 +38,7 @@ async function run() {
   let prerelease = semver.prerelease(taggedVersion);
   let tag = prerelease ? prerelease[0] : "latest";
 
-  for (let name of [
-    "node",
-    "express",
-    "architect",
-    "vercel",
-    "react",
-    "data",
-    "dev"
-  ]) {
+  for (let name of ["dev", "node", "architect", "express", "vercel", "react"]) {
     await npm(["publish", "--tag", tag, path.join(npmModulesDir, name)], {
       stdio: "inherit"
     });
