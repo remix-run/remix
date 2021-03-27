@@ -71,7 +71,7 @@ export async function createAssetsManifest(
     if (!output.entryPoint) continue;
 
     let entryPointFile = path.resolve(
-      output.entryPoint.replace(/(^browser-entry-point:|\?browser$)/g, "")
+      output.entryPoint.replace(/(^browser-route-module:|\?browser$)/g, "")
     );
     if (entryPointFile === entryClientFile) {
       entry = {

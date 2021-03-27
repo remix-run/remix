@@ -182,10 +182,10 @@ function createBrowserBuild(
 
   return esbuild.build({
     entryPoints: [
-      // All entry points are virtual modules that will be loaded by the
-      // browserEntryPointsPlugin. This allows us to treeshake server-only
-      // code that we don't want to run in the browser.
       path.resolve(config.appDirectory, config.entryClientFile),
+      // All route entry points are virtual modules that will be loaded by the
+      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+      // that we don't want to run in the browser (i.e. action & loader).
       ...Object.keys(config.routes).map(
         key =>
           path.resolve(config.appDirectory, config.routes[key].file) +
@@ -209,7 +209,10 @@ function createBrowserBuild(
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
-    plugins: [emptyRouteModulesPlugin(config), browserEntryPointsPlugin(config)]
+    plugins: [
+      emptyRouteModulesPlugin(config),
+      browserRouteModulesPlugin(config)
+    ]
   });
 }
 
@@ -292,14 +295,10 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
  * This plugin loads route modules for the browser build, using module shims
  * that export only thing that are safe for the browser.
  */
-function browserEntryPointsPlugin(config: RemixConfig): esbuild.Plugin {
+function browserRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
   return {
-    name: "browser-entry-points",
+    name: "browser-route-modules",
     async setup(build) {
-      let entryClientFile = path.resolve(
-        config.appDirectory,
-        config.entryClientFile
-      );
       let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
         (map, key) => {
           let route = config.routes[key];
@@ -310,28 +309,21 @@ function browserEntryPointsPlugin(config: RemixConfig): esbuild.Plugin {
       );
 
       build.onResolve({ filter: /\?browser$/ }, args => {
-        if (args.kind === "entry-point") {
-          return { path: args.path, namespace: "browser-entry-point" };
-        }
+        return { path: args.path, namespace: "browser-route-module" };
       });
 
       build.onLoad(
-        { filter: /\?browser$/, namespace: "browser-entry-point" },
+        { filter: /\?browser$/, namespace: "browser-route-module" },
         async args => {
           let file = args.path.replace(/\?browser$/, "");
+          let route = routesByFile.get(file);
+          invariant(route, `Cannot get route by path: ${args.path}`);
 
-          let contents: string;
-          if (file === entryClientFile) {
-            contents = `export * from ${JSON.stringify(file)};`;
-          } else {
-            let route = routesByFile.get(file);
-            invariant(route, `Cannot get route by path: ${args.path}`);
-            let exports = (
-              await getRouteExportsCached(config, route.id)
-            ).filter(ex => !!browserSafeRouteExports[ex]);
-            let spec = exports.length > 0 ? `{ ${exports.join(", ")} }` : "*";
-            contents = `export ${spec} from ${JSON.stringify(file)};`;
-          }
+          let exports = (await getRouteExportsCached(config, route.id)).filter(
+            ex => !!browserSafeRouteExports[ex]
+          );
+          let spec = exports.length > 0 ? `{ ${exports.join(", ")} }` : "*";
+          let contents = `export ${spec} from ${JSON.stringify(file)};`;
 
           return {
             contents,
