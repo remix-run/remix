@@ -1,18 +1,18 @@
 ---
-title: "@remix-run/node"
+title: "@remix-run/data"
 ---
 
 This package provides request/response helpers for your route `loader` and `action` exports on servers that run Node.js.
 
 ```ts
 // Types
-import type { LoaderFunction, ActionFunction } from "@remix-run/node";
+import type { LoaderFunction, ActionFunction } from "@remix-run/data";
 
 // Helpers
-import { json, redirect } from "@remix-run/node";
+import { json, redirect } from "@remix-run/data";
 
 // Web Fetch API objects
-import { Request, Response, Headers, fetch } from "@remix-run/node";
+import { Request, Response, Headers, fetch } from "@remix-run/data";
 ```
 
 ## `json`
@@ -20,8 +20,8 @@ import { Request, Response, Headers, fetch } from "@remix-run/node";
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
 ```ts
-import type { LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/data";
+import { json } from "@remix-run/data";
 
 export let loader: LoaderFunction = () => {
   // So you can write this:
@@ -57,7 +57,7 @@ export let loader: Loader = () => {
 This is shortcut for sending 30x responses.
 
 ```ts [7]
-import { ActionFunction } from "@remix-run/node";
+import { ActionFunction } from "@remix-run/data";
 
 export let action: ActionFunction = () => {
   let userSession = await getUserSessionOrWhatever();
@@ -104,3 +104,35 @@ return new Response("", {
   }
 });
 ```
+
+## `createCookie`
+
+TODO: Please see the [Cookie Guide](../guides/cookies)
+
+## `isCookie`
+
+TODO: Please see the [Cookie Guide](../guides/cookies)
+
+## `createSession`
+
+TODO: Please see the [Sessions Guide](../guides/sessions)
+
+## `isSession`
+
+TODO: Please see the [Sessions Guide](../guides/sessions)
+
+## `createSessionStorage`
+
+TODO: Please see the [Sessions Guide](../guides/sessions)
+
+## `createCookieSessionStorage`
+
+TODO: Please see the [Sessions Guide](../guides/sessions)
+
+## `createFileSessionStorage`
+
+TODO: Please see the [Sessions Guide](../guides/sessions)
+
+## `createMemorySessionStorage`
+
+TODO: Please see the [Sessions Guide](../guides/sessions)

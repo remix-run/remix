@@ -151,7 +151,7 @@ Normally you'd use the `json` helper from your [environment](../environments).
 
 ```js
 import db from "../db";
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/data";
 
 export let loader: Loader = async () => {
   let users = await db.query("users");
@@ -171,7 +171,7 @@ See also:
 Loaders can return Responses with status codes. This is very useful for "not found" data making it's way all the way down to the browser's UI with a real 404 status code, 500s, etc.
 
 ```js [6]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/data";
 
 export let loader = async () => {
   let res = db.query("users").where("id", "=", "_why");
