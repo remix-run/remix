@@ -45,7 +45,7 @@ In order for npm (or yarn) to be able to install Remix, you need to add your lic
 
 It should look something like this:
 
-```
+```bash
 //npm.remix.run/:_authToken=<your token>
 @remix-run:registry=https://npm.remix.run
 ```
@@ -58,7 +58,7 @@ You can also add those lines to your home directory `~/.npmrc`, then all of your
 
 A lot our customers like to use an environment variable for their token. You can export it from your bash profile and/or set it up on your CI.
 
-```
+```bash
 //npm.remix.run/:_authToken=${REMIX_REGISTRY_TOKEN}
 @remix-run:registry=https://npm.remix.run
 ```
