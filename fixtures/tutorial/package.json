@@ -25,5 +25,6 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "pm2": "^4.5.1"
-  }
+  },
+  "sideEffects": false
 }
