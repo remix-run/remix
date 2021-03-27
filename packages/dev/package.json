@@ -19,7 +19,7 @@
     "@rollup/plugin-replace": "^2.4.1",
     "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
-    "esbuild": "^0.9.5",
+    "esbuild": "^0.10.1",
     "express": "^4.17.1",
     "front-matter": "^4.0.2",
     "lodash.debounce": "^4.0.8",
