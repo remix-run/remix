@@ -337,15 +337,18 @@ function browserRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
 }
 
 /**
- * This plugin loads route modules so we can handle newly created files
- * gracefully.
+ * This plugin interprets empty route modules as `export {}` so they are
+ * not loaded as CommonJS (with `{ default: {} }`) by esbuild.
+ * See https://github.com/evanw/esbuild/issues/1043
  */
 function emptyRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
   return {
     name: "empty-route-modules",
     setup(build) {
       let routeFiles = new Set(
-        Object.keys(config.routes).map(key => config.routes[key].file)
+        Object.keys(config.routes).map(key =>
+          path.resolve(config.appDirectory, config.routes[key].file)
+        )
       );
 
       build.onResolve({ filter: /.*/ }, args => {
@@ -358,11 +361,9 @@ function emptyRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
         let file = args.path;
         let contents = await fsp.readFile(file, "utf-8");
 
-        if (contents.length === 0) {
-          // In dev mode, when a new file is created we use `export {}` to work
-          // around an issue with esbuild where it uses `{ default: {} }`
-          // instead. Otherwise we wouldn't need this plugin at all!
-          // See https://github.com/evanw/esbuild/issues/1043
+        // Try to find at least one export. If we can't, default to `export {}`
+        // so esbuild interprets this file as ESM instead of CommonJS.
+        if (!/\bexport \S/.test(contents)) {
           return { contents: "export {}", loader: "js" };
         }
 
