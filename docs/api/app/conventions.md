@@ -34,8 +34,8 @@ There are a few conventions that Remix uses you should be aware of.
 
 ## Asset Imports
 
-- **Importing images with `img:`**: You can import images assets with `import image from `img:./something.jpg`. Check out the [image docs](/dashboard/docs/images).
+- **Importing images with `img:`**: You can import images assets with `import image from "img:./something.jpg"`. Check out the [image docs](/dashboard/docs/images).
 
-- **Importing css with `css:`**: You can import css assets with `import styles from `css:./something.css`. Check out the [styling docs](/dashboard/docs/styling).
+- **Importing css with `css:`**: You can import css assets with `import styles from "css:./something.css"`. Check out the [styling docs](/dashboard/docs/styling).
 
-- **Importing any asset with `url:`**: You can import any assets with `import assetUrl from `url:./something.mp3`. Remix will return the public URL of the file and hash the name of the asset for long term caching.
+- **Importing any asset with `url:`**: You can import any assets with `import assetUrl from "url:./something.mp3"`. Remix will return the public URL of the file and hash the name of the asset for long term caching.
