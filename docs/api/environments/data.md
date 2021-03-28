@@ -107,32 +107,32 @@ return new Response("", {
 
 ## `createCookie`
 
-TODO: Please see the [Cookie Guide](../../guides/cookies/)
+TODO: Please see the [Cookie Guide](../../../guides/cookies/)
 
 ## `isCookie`
 
-TODO: Please see the [Cookie Guide](../../guides/cookies/)
+TODO: Please see the [Cookie Guide](../../../guides/cookies/)
 
 ## `createSession`
 
-TODO: Please see the [Sessions Guide](../../guides/sessions/)
+TODO: Please see the [Sessions Guide](../../../guides/sessions/)
 
 ## `isSession`
 
-TODO: Please see the [Sessions Guide](../../guides/sessions/)
+TODO: Please see the [Sessions Guide](../../../guides/sessions/)
 
 ## `createSessionStorage`
 
-TODO: Please see the [Sessions Guide](../../guides/sessions/)
+TODO: Please see the [Sessions Guide](../../../guides/sessions/)
 
 ## `createCookieSessionStorage`
 
-TODO: Please see the [Sessions Guide](../../guides/sessions/)
+TODO: Please see the [Sessions Guide](../../../guides/sessions/)
 
 ## `createFileSessionStorage`
 
-TODO: Please see the [Sessions Guide](../../guides/sessions/)
+TODO: Please see the [Sessions Guide](../../../guides/sessions/)
 
 ## `createMemorySessionStorage`
 
-TODO: Please see the [Sessions Guide](../../guides/sessions/)
+TODO: Please see the [Sessions Guide](../../../guides/sessions/)
