@@ -9,6 +9,7 @@ import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import invariant from "./invariant";
+import { warnOnce } from "./warnings";
 import { createAssetsManifest } from "./compiler2/assets";
 import { getAppDependencies } from "./compiler2/dependencies";
 import { loaders, getLoaderForFile } from "./compiler2/loaders";
@@ -79,7 +80,7 @@ export async function watch(
     if (onRebuildStart) onRebuildStart();
     await Promise.all([
       browserBuild.rebuild!().then(build =>
-        generateManifests(config, options, build.metafile!)
+        generateManifests(config, build.metafile!)
       ),
       serverBuild.rebuild!()
     ]);
@@ -146,8 +147,6 @@ async function buildEverything(
   config: RemixConfig,
   options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult[]> {
-  let appDeps = Object.keys(await getAppDependencies(config));
-
   // TODO:
   // When building for node, we build both the browser and server builds in
   // parallel and emit the asset manifest as a separate file in the output
@@ -156,28 +155,28 @@ async function buildEverything(
   // builds serially so we can inline the asset manifest into the server build
   // in a single JavaScript file.
 
-  let browserBuildPromise = createBrowserBuild(config, options, appDeps);
-  let serverBuildPromise = createServerBuild(config, options, appDeps);
+  let browserBuildPromise = createBrowserBuild(config, options);
+  let serverBuildPromise = createServerBuild(config, options);
 
   return Promise.all([
     browserBuildPromise.then(async build => {
-      await generateManifests(config, options, build.metafile!);
+      await generateManifests(config, build.metafile!);
       return build;
     }),
     serverBuildPromise
   ]);
 }
 
-function createBrowserBuild(
+async function createBrowserBuild(
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean },
-  dependencies: string[]
+  options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
   // *actually* be external in the browser build (we want to bundle all deps) so
   // this is really just making sure we don't accidentally have any dependencies
   // on node built-ins in browser bundles.
+  let dependencies = Object.keys(await getAppDependencies(config));
   let externals = nodeBuiltins.filter(mod => !dependencies.includes(mod));
 
   return esbuild.build({
@@ -216,26 +215,11 @@ function createBrowserBuild(
   });
 }
 
-function createServerBuild(
+async function createServerBuild(
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean },
-  dependencies: string[]
+  options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
-  let externals: string[];
-  switch (options.target) {
-    case BuildTarget.Node14:
-      externals = nodeBuiltins
-        .concat(dependencies)
-        // We need to bundle @remix-run/react because it is ESM and we can't
-        // require it from the CommonJS output.
-        .filter(dep => dep !== "@remix-run/react")
-        // assets.json is external because this build runs in parallel with the
-        // browser build and it's not there yet.
-        .concat(path.resolve(config.serverBuildDirectory, "assets.json"));
-      break;
-    default:
-      throw new Error(`Unknown build target: ${options.target}`);
-  }
+  let dependencies = Object.keys(await getAppDependencies(config));
 
   return esbuild.build({
     stdin: {
@@ -246,7 +230,6 @@ function createServerBuild(
     format: "cjs",
     platform: "node",
     target: options.target,
-    external: externals,
     inject: [reactShim],
     loader: loaders,
     bundle: true,
@@ -255,13 +238,52 @@ function createServerBuild(
     // of CSS and other files.
     assetNames: "assets/[name]-[hash]",
     publicPath: config.publicPath,
-    plugins: [emptyRouteModulesPlugin(config)]
+    plugins: [
+      emptyRouteModulesPlugin(config),
+      manualExternalsPlugin((id, importer) => {
+        // assets.json is external because this build runs in parallel with the
+        // browser build and it's not there yet.
+        if (id === "./assets.json" && importer === "<stdin>") return true;
+
+        // We need to bundle @remix-run/react because it is ESM and we can't
+        // require it from the CommonJS output.
+        if (id === "@remix-run/react") return false;
+
+        // Mark all bare imports as external. They will be require()'d at
+        // runtime from node_modules.
+        if (isBareModuleId(id)) {
+          let packageName = getNpmPackageName(id);
+          warnOnce(
+            /\bnode_modules\b/.test(importer) ||
+              dependencies.includes(packageName),
+            `The path "${id}" is imported in ` +
+              `${path.relative(process.cwd(), importer)} but ` +
+              `${packageName} is not listed in your package.json dependencies. ` +
+              `Did you forget to install it?`,
+            packageName
+          );
+          return true;
+        }
+
+        return false;
+      })
+    ]
   });
+}
+
+function isBareModuleId(id: string): boolean {
+  return !id.startsWith(".") && !id.startsWith("/");
+}
+
+function getNpmPackageName(id: string): string {
+  let split = id.split("/");
+  let packageName = split[0];
+  if (packageName.startsWith("@")) packageName += `/${split[1]}`;
+  return packageName;
 }
 
 async function generateManifests(
   config: RemixConfig,
-  options: BuildOptions,
   metafile: esbuild.Metafile
 ): Promise<string[]> {
   let assetsManifest = await createAssetsManifest(config, metafile);
@@ -361,9 +383,9 @@ function emptyRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
         let file = args.path;
         let contents = await fsp.readFile(file, "utf-8");
 
-        // Try to find at least one export. If we can't, default to `export {}`
-        // so esbuild interprets this file as ESM instead of CommonJS.
-        if (!/\bexport \S/.test(contents)) {
+        // Default to `export {}` if the file is empty so esbuild interprets
+        // this file as ESM instead of CommonJS.
+        if (!/\S/.test(contents)) {
           return { contents: "export {}", loader: "js" };
         }
 
@@ -372,6 +394,24 @@ function emptyRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
           resolveDir: path.dirname(file),
           loader: getLoaderForFile(file)
         };
+      });
+    }
+  };
+}
+
+/**
+ * This plugin marks paths external using a callback function.
+ */
+function manualExternalsPlugin(
+  isExternal: (id: string, importer: string) => boolean
+): esbuild.Plugin {
+  return {
+    name: "manual-externals",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, args => {
+        if (isExternal(args.path, args.importer)) {
+          return { path: args.path, external: true };
+        }
       });
     }
   };
