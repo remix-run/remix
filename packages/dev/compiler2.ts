@@ -196,18 +196,19 @@ async function createBrowserBuild(
   let dependencies = Object.keys(await getAppDependencies(config));
   let externals = nodeBuiltins.filter(mod => !dependencies.includes(mod));
 
+  let entryPoints: esbuild.BuildOptions["entryPoints"] = {
+    "entry.client": path.resolve(config.appDirectory, config.entryClientFile)
+  };
+  for (let id of Object.keys(config.routes)) {
+    // All route entry points are virtual modules that will be loaded by the
+    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+    // that we don't want to run in the browser (i.e. action & loader).
+    entryPoints[id] =
+      path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
+  }
+
   return esbuild.build({
-    entryPoints: [
-      path.resolve(config.appDirectory, config.entryClientFile),
-      // All route entry points are virtual modules that will be loaded by the
-      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-      // that we don't want to run in the browser (i.e. action & loader).
-      ...Object.keys(config.routes).map(
-        key =>
-          path.resolve(config.appDirectory, config.routes[key].file) +
-          "?browser"
-      )
-    ],
+    entryPoints,
     outdir: config.assetsBuildDirectory,
     format: "esm",
     external: externals,
@@ -218,9 +219,9 @@ async function createBrowserBuild(
     metafile: true,
     incremental: options.incremental,
     minify: options.mode === BuildMode.Production,
-    entryNames: "[name]-[hash]",
-    chunkNames: "shared/[name]-[hash]",
-    assetNames: "assets/[name]-[hash]",
+    entryNames: "[dir]/[name]-[hash]",
+    chunkNames: "_shared/[name]-[hash]",
+    assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode)
@@ -253,7 +254,7 @@ async function createServerBuild(
     incremental: options.incremental,
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
-    assetNames: "assets/[name]-[hash]",
+    assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
     plugins: [
       emptyRouteModulesPlugin(config),
