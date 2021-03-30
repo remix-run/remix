@@ -5,6 +5,7 @@
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
     "@types/cookie": "^0.4.0",
+    "@types/node-fetch": "^2.5.7",
     "cookie": "^0.4.1",
     "cookie-signature": "^1.1.0",
     "history": "^5.0.0",
@@ -20,7 +21,6 @@
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
     "@types/jsesc": "^2.5.1",
-    "@types/node-fetch": "^2.5.7",
     "@types/tmp": "^0.2.0"
   },
   "sideEffects": false
