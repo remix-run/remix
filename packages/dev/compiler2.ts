@@ -21,19 +21,34 @@ import { writeFileSafe } from "./compiler2/utils/fs";
 // as a source file when building the app.
 const reactShim = path.resolve(__dirname, "compiler2/shims/react.ts");
 
-interface BuildOptions {
+interface BuildConfig {
   mode: BuildMode;
   target: BuildTarget;
+}
+
+function defaultWarningHandler(message: string, key: string) {
+  warnOnce(false, message, key);
+}
+
+function defaultErrorHandler(message: string) {
+  console.error(message);
+}
+
+interface BuildOptions extends Partial<BuildConfig> {
+  onWarning?(message: string, key: string): void;
+  onError?(message: string): void;
 }
 
 export async function build(
   config: RemixConfig,
   {
     mode = BuildMode.Production,
-    target = BuildTarget.Node14
-  }: Partial<BuildOptions> = {}
+    target = BuildTarget.Node14,
+    onWarning = defaultWarningHandler,
+    onError = defaultErrorHandler
+  }: BuildOptions = {}
 ): Promise<void> {
-  await buildEverything(config, { mode, target });
+  await buildEverything(config, { mode, target, onWarning, onError });
 }
 
 interface WatchOptions extends BuildOptions {
@@ -49,14 +64,16 @@ export async function watch(
   {
     mode = BuildMode.Development,
     target = BuildTarget.Node14,
+    onWarning = defaultWarningHandler,
+    onError = defaultErrorHandler,
     onRebuildStart,
     onRebuildFinish,
     onFileCreated,
     onFileChanged,
     onFileDeleted
-  }: Partial<WatchOptions> = {}
+  }: WatchOptions = {}
 ): Promise<() => void> {
-  let options = { mode, target, incremental: true };
+  let options = { mode, target, onWarning, onError, incremental: true };
   let [browserBuild, serverBuild] = await buildEverything(config, options);
 
   async function disposeBuilders() {
@@ -145,7 +162,7 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 async function buildEverything(
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
+  options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult[]> {
   // TODO:
   // When building for node, we build both the browser and server builds in
@@ -217,7 +234,7 @@ async function createBrowserBuild(
 
 async function createServerBuild(
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
+  options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
 
@@ -253,16 +270,19 @@ async function createServerBuild(
         // runtime from node_modules.
         if (isBareModuleId(id)) {
           let packageName = getNpmPackageName(id);
-          warnOnce(
-            /\bnode_modules\b/.test(importer) ||
-              nodeBuiltins.includes(packageName) ||
-              dependencies.includes(packageName),
-            `The path "${id}" is imported in ` +
-              `${path.relative(process.cwd(), importer)} but ` +
-              `${packageName} is not listed in your package.json dependencies. ` +
-              `Did you forget to install it?`,
-            packageName
-          );
+          if (
+            !/\bnode_modules\b/.test(importer) &&
+            !nodeBuiltins.includes(packageName) &&
+            !dependencies.includes(packageName)
+          ) {
+            options.onWarning(
+              `The path "${id}" is imported in ` +
+                `${path.relative(process.cwd(), importer)} but ` +
+                `${packageName} is not listed in your package.json dependencies. ` +
+                `Did you forget to install it?`,
+              packageName
+            );
+          }
           return true;
         }
 
