@@ -289,7 +289,7 @@ async function generateManifests(
 ): Promise<string[]> {
   let assetsManifest = await createAssetsManifest(config, metafile);
 
-  let filename = `manifest-${assetsManifest.version}.js`;
+  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
   assetsManifest.url = config.publicPath + filename;
 
   return Promise.all([
