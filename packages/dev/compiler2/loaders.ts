@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as esbuild from "esbuild";
 
-export const loaders: esbuild.BuildOptions["loader"] = {
+export const loaders: { [ext: string]: esbuild.Loader } = {
   ".aac": "file",
   ".css": "file",
   ".eot": "file",
@@ -9,6 +9,8 @@ export const loaders: esbuild.BuildOptions["loader"] = {
   ".gif": "file",
   ".jpeg": "file",
   ".jpg": "file",
+  ".js": "jsx",
+  ".jsx": "jsx",
   ".json": "json",
   ".md": "text",
   ".mdx": "text",
@@ -18,6 +20,8 @@ export const loaders: esbuild.BuildOptions["loader"] = {
   ".otf": "file",
   ".png": "file",
   ".svg": "file",
+  ".ts": "ts",
+  ".tsx": "tsx",
   ".ttf": "file",
   ".wav": "file",
   ".webm": "file",
@@ -27,15 +31,7 @@ export const loaders: esbuild.BuildOptions["loader"] = {
 };
 
 export function getLoaderForFile(file: string): esbuild.Loader {
-  switch (path.extname(file)) {
-    case ".js":
-    case ".jsx":
-      return "js";
-    case ".ts":
-      return "ts";
-    case ".tsx":
-      return "tsx";
-    default:
-      throw new Error(`Cannot get loader for file ${file}`);
-  }
+  let ext = path.extname(file);
+  if (ext in loaders) return loaders[ext];
+  throw new Error(`Cannot get loader for file ${file}`);
 }
