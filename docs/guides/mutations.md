@@ -111,8 +111,8 @@ export default function NewProject() {
 Now add the route action. Any form submits that aren't "get" submits will call your data "action", any "get" requests (links, and the rare `<form method="get">`) will be handled by your "loader".
 
 ```ts
-import type { Action } from "@remix-run/data";
-import { redirect } from "@remix-run/data";
+import type { Action } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 
 // Note the "action" export name, this will handle our form POST
 export let action: Action = async ({ request }) => {
@@ -158,8 +158,8 @@ let [errors, project] = await createProject(newProject);
 If there are validation errors, we want to go back to the form and display them. If enabled, Remix sends a `session` object to your loaders and actions, we can use that to store the form validation errors.
 
 ```js
-import type { Action, loader } from "@remix-run/data";
-import { redirect } from "@remix-run/data";
+import type { Action, loader } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 
 export let action: Action = async ({ request, session }) => {
   let newProject = new URLSearchParams(await request.text());
@@ -435,8 +435,8 @@ Check out this sample Todo app component that uses all the tricks we've just lea
 Here's the component route:
 
 ```tsx
-import type { Action, Loader } from "@remix-run/data";
-import { json, redirect } from "@remix-run/data";
+import type { Action, Loader } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { readTodos, createTodo, deleteTodo } from "../models/todo";
 
 export let loader: Loader = = async ({ request, session }) => {

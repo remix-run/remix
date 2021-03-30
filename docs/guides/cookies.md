@@ -16,7 +16,7 @@ First, create a cookie:
 
 ```js
 // app/cookies.js
-import { createCookie } from "@remix-run/data";
+import { createCookie } from "@remix-run/node";
 
 export let userPrefs = createCookie("user-prefs", {
   maxAge: 604_800 // one week
@@ -31,7 +31,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 // app/routes/index.js
 import React from "react";
 import { useRouteData } from "@remix-run/react";
-import { json, redirect } from "@remix-run/data";
+import { json, redirect } from "@remix-run/node";
 
 import { userPrefs as cookie } from "../cookies";
 

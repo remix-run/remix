@@ -151,7 +151,7 @@ Normally you'd use the `json` helper from your [environment](../environments).
 
 ```js
 import db from "../db";
-import { json } from "@remix-run/data";
+import { json } from "@remix-run/node";
 
 export let loader: Loader = async () => {
   let users = await db.query("users");
@@ -171,7 +171,7 @@ See also:
 Loaders can return Responses with status codes. This is very useful for "not found" data making it's way all the way down to the browser's UI with a real 404 status code, 500s, etc.
 
 ```js [6]
-import { json } from "@remix-run/data";
+import { json } from "@remix-run/node";
 
 export let loader = async () => {
   let res = db.query("users").where("id", "=", "_why");
@@ -225,7 +225,7 @@ Like `loader`, action is a server only function to handle data mutations and oth
 Actions are triggered from `<form method="post">` or Remix `<Form method="post | put | patch | delete" />` submits. Note you must always `redirect` (we do this so users can't click "back" and accidentally resubmit the form).
 
 ```tsx
-import { redirect } from "@remix-run/data";
+import { redirect } from "@remix-run/node";
 import { PrismaClient } from "@prisma/client";
 
 let prisma = new PrismaClient();
@@ -317,7 +317,7 @@ All that said, you can avoid this entire problem by _not defining headers in lay
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
 ```tsx
-import type { MetaFunction } from "@remix-run/data";
+import type { MetaFunction } from "@remix-run/node";
 
 export let meta: MetaFunction = () => {
   return {

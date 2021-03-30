@@ -1,18 +1,18 @@
 ---
-title: "@remix-run/data"
+title: "@remix-run/node"
 ---
 
 This package provides request/response helpers for your route `loader` and `action` exports on servers that run Node.js.
 
 ```ts
 // Types
-import type { LoaderFunction, ActionFunction } from "@remix-run/data";
+import type { LoaderFunction, ActionFunction } from "@remix-run/node";
 
 // Helpers
-import { json, redirect } from "@remix-run/data";
+import { json, redirect } from "@remix-run/node";
 
 // Web Fetch API objects
-import { Request, Response, Headers, fetch } from "@remix-run/data";
+import { Request, Response, Headers, fetch } from "@remix-run/node";
 ```
 
 ## `json`
@@ -20,8 +20,8 @@ import { Request, Response, Headers, fetch } from "@remix-run/data";
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
 ```ts
-import type { LoaderFunction } from "@remix-run/data";
-import { json } from "@remix-run/data";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 
 export let loader: LoaderFunction = () => {
   // So you can write this:
@@ -39,7 +39,7 @@ export let loader: LoaderFunction = () => {
 You can also pass a status code and headers:
 
 ```ts
-export let loader: Loader = () => {
+export let loader: LoaderFunction = () => {
   return json(
     { not: "coffee" },
     {
@@ -57,7 +57,7 @@ export let loader: Loader = () => {
 This is shortcut for sending 30x responses.
 
 ```ts [7]
-import { ActionFunction } from "@remix-run/data";
+import { ActionFunction } from "@remix-run/node";
 
 export let action: ActionFunction = () => {
   let userSession = await getUserSessionOrWhatever();

@@ -16,7 +16,7 @@ We recommend setting up your session storage object in `app/sessions.js` so all 
 
 ```js
 // app/sessions.js
-import { createCookieSessionStorage } from "@remix-run/data";
+import { createCookieSessionStorage } from "@remix-run/node";
 
 let { getSession, commitSession, destroySession } = createCookieSessionStorage({
   // This is either a Cookie (or a set of CookieOptions) that
@@ -35,7 +35,7 @@ For file-backed sessions, use `createFileSessionStorage()`. File session storage
 
 ```js
 // app/sessions.js
-import { createCookie, createFileSessionStorage } from "@remix-run/data";
+import { createCookie, createFileSessionStorage } from "@remix-run/node";
 
 // In this example the Cookie is created separately.
 let sessionCookie = createCookie("__session", {
@@ -63,7 +63,7 @@ A simple login form might look something like this:
 
 ```js
 // app/routes/login.js
-import { json, redirect } from "@remix-run/data";
+import { json, redirect } from "@remix-run/node";
 
 import { getSession, commitSession } from "../sessions";
 
@@ -143,7 +143,7 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 The following example shows how you could do this using a generic database client:
 
 ```js
-import { createSessionStorage } from "@remix-run/data";
+import { createSessionStorage } from "@remix-run/node";
 
 function createDatabaseSessionStorage({ cookie, host, port }) {
   // Configure your database client...
@@ -236,7 +236,7 @@ export async function action({ request, params }) {
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Meta, Links, Scripts } from "@remix-run/react";
-import { json } from "@remix-run/data";
+import { json } from "@remix-run/node";
 
 import { getSession, commitSession } from "./sessions";
 
