@@ -11,8 +11,6 @@
     "watch": "rollup -c -w"
   },
   "workspaces": [
-    "fixtures/gists-app",
-    "fixtures/tutorial",
     "packages/architect",
     "packages/dev",
     "packages/express",
