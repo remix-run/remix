@@ -255,6 +255,7 @@ async function createServerBuild(
           let packageName = getNpmPackageName(id);
           warnOnce(
             /\bnode_modules\b/.test(importer) ||
+              nodeBuiltins.includes(packageName) ||
               dependencies.includes(packageName),
             `The path "${id}" is imported in ` +
               `${path.relative(process.cwd(), importer)} but ` +
