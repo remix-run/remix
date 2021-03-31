@@ -2,7 +2,17 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## 0.15.2 - Tue Mar 30 2021
+
+### Bug Fixes
+
+- Fix external module detection on Windows
+
 ## 0.15.0 - Tue Mar 30 2021
+
+### Improvements
+
+- Introduced new compiler based on esbuild
 
 ### Breaking Changes
 
