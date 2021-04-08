@@ -62,7 +62,7 @@ You've seen a `loader` already. Now you're going to create an `action`. Go back 
 
 ```ts [2,3-5]
 import React from "react";
-import type { ActionFunction } from "@remix-run/data";
+import type { ActionFunction } from "@remix-run/node";
 
 export let action: ActionFunction = async ({ request }) => {
   // ...
@@ -110,8 +110,8 @@ Alright, back to our component, let's handle the form post and create a new gist
 
 ```ts [3,5,36]
 import React from "react";
-import type { ActionFunction } from "@remix-run/data";
-import { redirect } from "@remix-run/data";
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 
 let action: Action = async ({ request }) => {
   // Very important or else it won't work :)
@@ -161,8 +161,8 @@ Let's update the code and add some loading indication. Note the new imports and 
 
 ```tsx [4,11,16-22,48-67]
 import React from "react";
-import type { ActionFunction } from "@remix-run/data";
-import { redirect } from "@remix-run/data";
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { Form, usePendingFormSubmit } from "@remix-run/react";
 
 export let action: ActionFunction = async ({ request }) => {

@@ -11,7 +11,7 @@ Inside of your `app/routes/gists.tsx` file, export a `loader` function that fetc
 
 ```tsx [2, 4-6]
 import React from "react";
-import type { LoaderFunction } from "@remix-run/data";
+import type { LoaderFunction } from "@remix-run/node";
 
 export let loader: LoaderFunction = () => {
   return fetch("https://api.github.com/gists");
@@ -28,7 +28,7 @@ Now that we have a loader in place, you can access that data with the `useRouteD
 
 ```tsx [3, 10-11]
 import React from "react";
-import type { LoaderFunction } from "@remix-run/data";
+import type { LoaderFunction } from "@remix-run/node";
 import { useRouteData } from "@remix-run/react";
 
 export let loader: Loader = () => {
@@ -78,7 +78,7 @@ Most of the time you'll want to use one of Remix's built-in response helpers in 
 The `json` helper will deal with the content type automatically while still giving you control over the headers, status code, etc.
 
 ```js
-import { json } from "@remix-run/data";
+import { json } from "@remix-run/node";
 
 export let loader: Loader = () => {
   let arrayOfStuff = await db.query(someQuery);
@@ -92,7 +92,7 @@ export let loader: Loader = () => {
 Here's how you can indicate data-based a 404:
 
 ```tsx
-import { json } from "@remix-run/data";
+import { json } from "@remix-run/node";
 
 export let loader: Loader = ({ params }) => {
   let record = await findSomeRecord(params.id);
@@ -181,7 +181,7 @@ Here's the full code using all of the Route APIs we've introduced so far, as wel
 ```tsx
 import React from "react";
 import { useRouteData } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/data";
+import type { LoaderFunction } from "@remix-run/node";
 
 // Define the Gist type
 interface Gist {
