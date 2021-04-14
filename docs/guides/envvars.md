@@ -97,7 +97,7 @@ Instead we recommmend keeping all of your environment variables on the server (a
 
 3. **Access the values**
 
-   ```tsx
+   ```tsx [4]
    import { loadStripe } from "@stripe/stripe-js";
 
    export async function redirectToStripeCheckout(sessionId) {
