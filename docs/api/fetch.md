@@ -2,7 +2,9 @@
 title: Web Fetch API
 ---
 
-While you may be familiar with the different http request/response APIs in server side JavaScript, you might not realize that when browsers added `window.fetch`, they also add three other objects: `Headers`, `Request`, and `Response`. When you do this:
+When browsers added `window.fetch`, they also add three other objects: `Headers`, `Request`, and `Response`. Remix is built upon this API.
+
+When you do this:
 
 ```js
 let res = await fetch(url);
@@ -17,7 +19,12 @@ console.log(json);
 // { hello: "there" }
 ```
 
-Rather than pick a server-side API, Remix adopt's the Web Fetch API for all http handling. Note that our deployment wrappers like `@remix-run/express` are simply adapters between the deployment server's API and the Web API. `@remix-run/express` interperets a Web API Response that you return from a loader or your server entry, into an express response to actually send from the server.
+Rather than pick a server-side API, Remix adopt's the Web Fetch API for all http handling. Note that our deployment wrappers like `@remix-run/express` are simply adapters between the deployment server's API and the Web API. `@remix-run/express` interperets a Web API Response that you return from a loader or your server entry into an express response.
+
+While you can use these APIs directly in Remix, you'll typically use response helpers instead:
+
+- [json](../node/#json)
+- [redirect](../node/#redirect)
 
 ## Globally Available
 
@@ -26,5 +33,3 @@ Remix adds `Request`, `Response`, `Headers`, and `fetch` to your loader's global
 ## MDN Docs
 
 [https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
-
-The MDN docs around `fetch` are pretty great, but they're a bit lacking on the other objects.

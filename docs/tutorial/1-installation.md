@@ -4,16 +4,14 @@ description: Get started with Remix, first step is installing.
 order: 1
 ---
 
-Welcome to Remix! Thank you so much for supporting us. We'll get you up and running in a few minutes.
-
-If you run into any trouble, ask for help through one of the [support channels](/dashboard/support).
-
-## Cloning a starter project
-
-Remix isn't a full web server, it's just a function that can run on any web server where JavaScript runs. In production you only deploy two things:
+Your Remix app isn't just a bunch of static assets to be uploaded somewhere, it has a server component as well. However, it's also not full web server, it's just a function that can run on any web server where JavaScript runs. In production you only deploy two things:
 
 - An http request handler on your server of choice
 - Static assets to the server or CDN
+
+To help with this, we've got multiple starter repos for different servers.
+
+## Cloning a Starter Project
 
 We have three starter repositories right now and plan to add more, so take your pick:
 
@@ -41,7 +39,7 @@ Our starters use TypeScript, we encourage you to learn it if you haven't tried i
 
 ## Edit `.npmrc`
 
-In order for npm (or yarn) to be able to install Remix, you need to add your license key to the `.npmrc` configuration. You'll find it on the [dashboard](/dashboard).
+In order for npm (or yarn) to be able to install Remix, you need to add your license key to the `.npmrc` configuration. You'll find it on the [dashboard](https://remix.run/dashboard).
 
 It should look something like this:
 
@@ -56,16 +54,16 @@ You can also add those lines to your home directory `~/.npmrc`, then all of your
 
 ### Environment variable for NPM tokens
 
-A lot our customers like to use an environment variable for their token. You can export it from your bash profile and/or set it up on your CI.
+Alternatively, a lot our customers like to use an environment variable for their token. You can export it from your bash profile and/or set it up on your CI.
 
 ```bash
 //npm.remix.run/:_authToken=${REMIX_REGISTRY_TOKEN}
 @remix-run:registry=https://npm.remix.run
 ```
 
-This way you can share a repo with other people who have a remix license without commiting it to the source code.
+This way you can share a repo with other people who have a Remix license without commiting it to the source code.
 
-## Start the development server
+## Start the server
 
 Depending on the starter template you used, the step here can be a little different. Refer to the README.md in your project for more specific instructions on how to start the dev server and which port it will be running on.
 

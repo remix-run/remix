@@ -1,5 +1,4 @@
 ---
 title: Performance
+disabled: true
 ---
-
-TODO:

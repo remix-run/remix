@@ -2,16 +2,20 @@
 title: Styling
 ---
 
-There are a few popular ways to style your markup in the React community, here is the current support in Remix:
+There are a few popular ways to style your markup in the React community. The following have direct support in Remix:
 
-- ✅ Remote Stylesheets
-- ✅ Plain Stylesheets
-- ✅ Preprocessed CSS with PostCSS
-- ✅ Tailwind
-- ✅ CSS-in-JS libraries like Styled components
-- ⛔️ CSS Modules (we're not against them, just haven't added them)
+- Remote Stylesheets
+- Plain Stylesheets
 
-The primary way to style in Remix is to add a `<link>` to the document when a route is active with the [Route Module Links](/dashboard/docs/route-module#links) export.
+While not built-in to Remix, you can use these also:
+
+- PostCSS
+- Tailwind
+- CSS-in-JS libraries (that don't require babel)
+
+Remix does not currently support CSS Modules. However, the Remix compiler uses [esbuild](https://esbuild.github.io) which will eventualy have direct support for them. When it supports them, Remix will.
+
+The primary way to style in Remix is to add a `<link>` to the document when a route is active with [Route Module Links](../../api/app/route-module/) export.
 
 ## Remote Stylesheets
 
@@ -31,114 +35,224 @@ export let links: LinksFunction = () => {
 };
 ```
 
-## Plain Stylesheets
+## Stylesheets in the `app/` folder
 
-For stylesheets you control, but don't want to process with PostCSS, use the `url:` import hint and `links`.
+Any stylesheets inside the `app` folder can be imported into your modules. Remix will:
+
+1. Copy the file to your browser build directory
+2. Fingerprint the file for long-term caching
+3. Return the public URL to your module to be used while rendering
 
 ```ts
 // root.tsx
 import type { LinksFunction } from "@remix-run/react";
-import styles from "url:./styles/app.css";
+import styles from "./styles/app.css";
 
 export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: styles }];
 };
 ```
 
-## PostCSS
+## PostCSS / Tailwind
 
-If you want to process a stylesheet with PostCSS, use the `css:` import hint.
+While not built into Remix's compiler, it is straight forward to use PostCSS and Tailwind. The strategy is straight forward:
 
-First, you'll need a `postcss.config.js` file in the root of your remix app.
+1. Use `postcss` cli directly alongside Remix
+2. Buld CSS into the Remix app directory
+3. Import your stylesheet to your modules like any other stylesheet
 
-```js
-// postcss.config.js
-module.exports = {
-  plugins: [require("autoprefixer"), require("cssnano")]
-};
-```
+Here's a quick guide to getting it set up. We encourage you to read the official [Tailwind installation instructions](https://tailwindcss.com/docs/installation#installing-tailwind-css-as-a-post-css-plugin) as well.
 
-And then all CSS imports will be processed with your PostCSS config:
+1.  You'll to install them as dev dependencies in your app:
 
-```ts
-// root.tsx
-import type { LinksFunction } from "@remix-run/react";
-import styles from "css:./styles/app.css";
+    ```sh
+    npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
+    ```
 
-export let links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: styles }];
-};
-```
+2.  Add `postcss.config.js` in the Remix root.
 
-## Tailwind
+    ```js filename=postcss.config.js
+    module.exports = {
+      plugins: {
+        tailwindcss: {},
+        autoprefixer: {}
+      }
+    };
+    ```
 
-Remix has support for Tailwind through the built-in PostCSS support. You will need:
+3.  And one more config: `tailwind.config.js`:
 
-```js
-// postcss.config.js
-module.exports = {
-  plugins: [require("autoprefixer"), require("tailwindcss")]
-};
-```
+    ```js filename=tailwind.config.js
+    module.exports = {
+      purge: [
+        "./app/**/*.tsx",
+        "./app/**/*.jsx",
+        "./app/**/*.js",
+        "./app/**/*.ts"
+      ],
+      darkMode: false, // or 'media' or 'class'
+      theme: {
+        extend: {}
+      },
+      variants: {},
+      plugins: []
+    };
+    ```
 
-```js
-// tailwind.config.js
-module.exports = {
-  purge: ["./app/**/*.tsx", "./app/**/*.js", "./app/**/*.mdx"],
-  plugins: [],
-  theme: {},
-  variants: {}
-};
-```
+4.  Add a css file to `./styles/app.css`
 
-We recommend putting all of your tailwind imports into a single css file like `styles/tailwind.css`:
+    ```css
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+    ```
 
-```css
-/* styles/tailwind.css */
+5.  Add some scripts to your `package.json`
 
-/* purgecss start ignore */
-@tailwind base;
-@tailwind components;
-/* purgecss end ignore */
+    ```json
+    {
+      "scripts": {
+        "watch:css": "postcss styles --base styles --dir app/styles -w",
+        "build:css": "postcss styles --base styles --dir app/styles --env production"
+      }
+    }
+    ```
 
-@tailwind utilities;
-@tailwind screens;
-```
+    These commands will process files from `./styles` into `./app/styles` where your Remix modules can import them.
 
-Tailwind, in development, is hundreds of thousands of lines long (in production it's usually less than 10kb). Making any changes to the file that imports the big pieces of tailwind will slow down your rebuilds significantly. By putting them in a single file that never really changes you avoid paying that price as often.
+    ```
+    .
+    ├── app
+    │   └── styles (processed files)
+    │       ├── app.css
+    │       └── routes
+    │           └── index.css
+    └── styles (source files)
+        ├── app.css
+        └── routes
+            └── index.css
+    ```
 
-Any global styles you might change often can go in an `app.css` file, saving you lots of time by avoiding rebuilding the tailwind styles:
+    We recommend adding `/styles` to your `.gitignore`.
 
-```css
-/* styles/app.css */
+6.  Use it! When you're developing styles, open a terminal tab and run your new watch script:
 
-body {
-  font-family: "Times New Roman";
-}
+    ```sh
+    npm run css:watch
+    ```
 
-:focus:not(:focus-visible) {
-  outline: none;
-}
-```
+    When you're building for production, run
 
-Now you can import these into your root route:
+    ```sh
+    npm run css:build
+    ```
 
-```tsx
-// root.tsx
-import type { LinksFunction } from "@remix-run/react";
-import tailwind from "css:./styles/tailwind.css";
-import styles from "css:./styles/app.css";
+    Then import like any other css file:
 
-export let links: LinksFunction = () => {
-  return [
-    { rel: "stylesheet", href: tailwind },
-    { rel: "stylesheet", href: styles }
-  ];
-};
-```
+    ```tsx filename=root.tsx
+    import type { LinksFunction } from "@remix-run/react";
+    import styles from "./styles/app.css";
+
+    export let links: LinksFunction = () => {
+      return [{ rel: "stylesheet", href: styles }];
+    };
+    ```
 
 ## CSS-in-JS libraries
 
-You can use CSS-in-JS libraries like Styled Components in Remix just fine, the only trick is server rendering and extracting the styles from render.
+You can use CSS-in-JS libraries like Styled Components, but you need to perform a "double render" in order to extract the styles from the component tree during the server render.
 
-TODO: show a copy/paste example
+We don't recommend this approach for two reasons:
+
+1. Styles are embedded into your HTML documents instead of cachable URLs. Browsers can't cache the styles shared between pages and HTML documents now must expire on your CDN with the styles inside of them.
+
+2. It's a double render. Probably not a big deal, but it's just not needed.
+
+We do recognize that CSS in JS solutions really shine for shared component systems.
+
+Here's some sample code to show how you might use Styled Components with Remix:
+
+1. First you'll need some context to put your styles on so that your root route can render them.
+
+   ```tsx filename=app/StylesContext.tsx
+   // app/StylesContext.tsx
+   import { createContext } from "react";
+   export default createContext<null | string>(null);
+   ```
+
+2. Your `entry.server.tsx` will look something like this:
+
+   ```tsx filename=entry.server.tsx lines=6,7,16,20-26,29-30,35,37
+   // app/entry.server.tsx
+   import ReactDOMServer from "react-dom/server";
+   import type { EntryContext } from "@remix-run/node";
+   import { RemixServer } from "@remix-run/react";
+   import { renderToString } from "react-dom/server";
+   import { ServerStyleSheet } from "styled-components";
+   import StylesContext from "./StylesContext";
+
+   export default function handleRequest(
+     request: Request,
+     responseStatusCode: number,
+     responseHeaders: Headers,
+     remixContext: EntryContext
+   ) {
+     // set up the Styled Components sheet
+     const sheet = new ServerStyleSheet();
+
+     // This render is thrown away, it's here simply to let styled components
+     // extract the styles used
+     renderToString(
+       sheet.collectStyles(
+         <StylesContext.Provider value={null}>
+           <RemixServer context={remixContext} url={request.url} />
+         </StylesContext.Provider>
+       )
+     );
+
+     // Now that we've rendered, we get the styles out of the sheet
+     let styles = sheet.getStyleTags();
+     sheet.seal();
+
+     // Finally, we render a second time, but this time we have styles to apply,
+     // make sure to pass them to `<StylesContext.Provider value>`
+     let markup = ReactDOMServer.renderToString(
+       <StylesContext.Provider value={styles}>
+         <RemixServer context={remixContext} url={request.url} />
+       </StylesContext.Provider>
+     );
+
+     return new Response("<!DOCTYPE html>" + markup, {
+       status: responseStatusCode,
+       headers: {
+         ...Object.fromEntries(responseHeaders),
+         "Content-Type": "text/html"
+       }
+     });
+   }
+   ```
+
+3. Finally, access and render the styles in your root route.
+
+   ```tsx filename=app/root.tsx lines=3,4,7,13
+   // app/root.tsx
+   import { Meta, Scripts } from "@remix-run/react";
+   import { useContext } from "react";
+   import StylesContext from "./StylesContext";
+
+   export default function Root() {
+     let styles = useContext(StylesContext);
+
+     return (
+       <html>
+         <head>
+           <Meta />
+           {styles}
+         </head>
+         <body>
+           <Scripts />
+         </body>
+       </html>
+     );
+   }
+   ```

@@ -1,5 +1,4 @@
 ---
 title: MDX
+disabled: true
 ---
-
-TODO:

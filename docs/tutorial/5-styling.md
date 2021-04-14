@@ -18,7 +18,7 @@ Now open up `routes/team.tsx` and add this:
 
 ```tsx [1,2]
 import type { LinksFunction } from "@remix-run/react";
-import styles from "url:../styles/team.css";
+import styles from "../styles/team.css";
 
 let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: styles }];

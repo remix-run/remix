@@ -11,15 +11,15 @@ The Remix philosophy can be summed up in four points:
 3. Use JavaScript to augment the user experience by emulating browser behavior
 4. Don't over-abstract the underlying technologies
 
-**Server/Client Model**
+## Server/Client Model
 
 When a page has a data dependency, Remix favors fetching and processing that data on the server at request time, rather than making it a part of the build/deploy pipeline. Couple this with thoughtful HTTP caching techniques, CDNs, and built-in Browser/HTML features to achieve optimal performance, for both the users and you, the developer.
 
-**Browsers, HTTP, and HTML**
+## Browsers, HTTP, and HTML
 
 These technologies have been around for a long time. They're solid. Remix embraces them completely. Combining HTTP Caching, Remix's focus on URLs for assets, dynamic server rendering, and HTML features like `<link rel=prefetch>`, you have all the tools to make your app snappy. Browsers and HTML got really good in the 20+ years we've been using it.
 
-**Augment the UX with JavaScript**
+## Augment the UX with JavaScript
 
 While most recent frameworks only have read APIs for data, Remix has both read and write. HTML `<form>` has been the staple for data mutations since the 90s, Remix embraces and augments that API. This enables the data layer of a Remix app to function with _or without_ JavaScript on the page.
 
@@ -37,7 +37,7 @@ Finally, since data mutation is built into Remix, it knows when to refetch data 
 
 The point is not so much to make the app work without JavaScript, it's more about keeping the simpler client/server model. Being able to leave JavaScript at the door is a nice side-effect.
 
-**Don't over-abstract the underlying technologies**
+## Don't over-abstract the underlying technologies
 
 This one is more for us. We've been educators for the 5 years before Remix. Our tagline is _Build Better Websites_. We also think of it with a little extra on the end: _Build Better Websites, Sometimes with Remix_. If you get good at Remix, you will accidentally get good at web development in general.
 
