@@ -25,7 +25,7 @@ export default function App() {
       <body>
         <ul>
           <li>
-            <Link to="/gists">Public Gists</Link>
+            <Link to="/gists">Sweet Gists</Link>
           </li>
           <li>
             <Link to="/beef/and/cheese">Beef and cheese</Link>
