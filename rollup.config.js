@@ -145,6 +145,65 @@ let react = {
   ]
 };
 
+/** @type {import("rollup").RollupOptions} */
+let express = [
+  {
+    external(id) {
+      return !isLocalModuleId(id);
+    },
+    input: [
+      path.resolve(__dirname, "packages/express/index.ts"),
+      path.resolve(__dirname, "packages/express/app.ts")
+    ],
+    output: {
+      banner: banner,
+      dir: `build/node_modules/@remix-run/express`,
+      format: "cjs",
+      preserveModules: true,
+      exports: "auto"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts", ".tsx"]
+      }),
+      nodeResolve({
+        extensions: [".ts", ".tsx"]
+      }),
+      copy({
+        targets: [
+          {
+            src: path.resolve(__dirname, `packages/express/package.json`),
+            dest: `build/node_modules/@remix-run/express`
+          }
+        ]
+      })
+    ]
+  },
+  {
+    external() {
+      return true;
+    },
+    input: path.resolve(__dirname, "packages/express/serve.ts"),
+    output: {
+      banner: "#!/usr/bin/env node\n" + banner,
+      dir: "build/node_modules/@remix-run/express",
+      format: "cjs"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"]
+      }),
+      nodeResolve({
+        extensions: [".ts"]
+      })
+    ]
+  }
+];
+
 function getServerConfig(name) {
   /** @type {import("rollup").RollupOptions} */
   return {
@@ -181,9 +240,8 @@ function getServerConfig(name) {
 }
 
 let architect = getServerConfig("architect");
-let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [...dev, node, architect, express, vercel, react];
+let builds = [...dev, node, architect, ...express, vercel, react];
 
 export default builds;

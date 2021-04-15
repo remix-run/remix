@@ -3,8 +3,13 @@
   "description": "Express server request handler for Remix",
   "version": "0.15.3",
   "repository": "https://github.com/remix-run/remix",
+  "bin": {
+    "remix-serve": "serve.js"
+  },
   "dependencies": {
-    "@remix-run/node": "0.15.3"
+    "@remix-run/node": "0.15.3",
+    "morgan": "^1.10.0",
+    "compression": "^1.7.4"
   },
   "peerDependencies": {
     "express": "^4.17.1"
@@ -12,6 +17,8 @@
   "devDependencies": {
     "@types/express": "^4.17.9",
     "@types/supertest": "^2.0.10",
+    "@types/morgan": "^1.9.2",
+    "@types/compression": "^1.7.0",
     "supertest": "^6.0.1"
   }
 }
