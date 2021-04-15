@@ -146,18 +146,15 @@ let react = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let express = [
+let serve = [
   {
     external(id) {
       return !isLocalModuleId(id);
     },
-    input: [
-      path.resolve(__dirname, "packages/express/index.ts"),
-      path.resolve(__dirname, "packages/express/app.ts")
-    ],
+    input: [path.resolve(__dirname, "packages/serve/app.ts")],
     output: {
       banner: banner,
-      dir: `build/node_modules/@remix-run/express`,
+      dir: `build/node_modules/@remix-run/serve`,
       format: "cjs",
       preserveModules: true,
       exports: "auto"
@@ -174,8 +171,8 @@ let express = [
       copy({
         targets: [
           {
-            src: path.resolve(__dirname, `packages/express/package.json`),
-            dest: `build/node_modules/@remix-run/express`
+            src: path.resolve(__dirname, `packages/serve/package.json`),
+            dest: `build/node_modules/@remix-run/serve`
           }
         ]
       })
@@ -185,10 +182,10 @@ let express = [
     external() {
       return true;
     },
-    input: path.resolve(__dirname, "packages/express/serve.ts"),
+    input: path.resolve(__dirname, "packages/express/index.ts"),
     output: {
       banner: "#!/usr/bin/env node\n" + banner,
-      dir: "build/node_modules/@remix-run/express",
+      dir: "build/node_modules/@remix-run/serve",
       format: "cjs"
     },
     plugins: [
@@ -274,8 +271,9 @@ function getServerConfig(name) {
 }
 
 let architect = getServerConfig("architect");
+let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [...dev, node, architect, ...express, vercel, react, create];
+let builds = [...dev, node, architect, ...serve, vercel, react, create];
 
 export default builds;

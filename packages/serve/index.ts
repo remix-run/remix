@@ -1,5 +1,5 @@
 import path from "path";
-import getApp from "./app";
+import getServer from "./app";
 
 let port = process.env.PORT || 3000;
 
@@ -14,7 +14,7 @@ if (!buildPath) {
   );
 } else {
   let resolovedBuildPath = path.resolve(process.cwd(), buildPath);
-  getApp(resolovedBuildPath).listen(port, () => {
+  getServer(resolovedBuildPath).listen(port, () => {
     console.log(`Remix App Server started on port ${port}`);
   });
 }

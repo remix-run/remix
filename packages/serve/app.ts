@@ -1,10 +1,7 @@
-import path from "path";
 import express from "express";
 import compression from "compression";
 import morgan from "morgan";
-import { createRequestHandler } from "./index";
-
-////////////////////////////////////////////////////////////////////////////////
+import { createRequestHandler } from "@remix-run/express";
 
 ////////////////////////////////////////////////////////////////////////////////
 export default function getApp(buildPath: string) {
