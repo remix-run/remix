@@ -43,9 +43,9 @@ export async function dev(
 
   let start = Date.now();
   let config =
-    typeof remixRootOrConfig === "string"
-      ? await readConfig(remixRootOrConfig)
-      : remixRootOrConfig;
+    typeof remixRootOrConfig === "object"
+      ? remixRootOrConfig
+      : await readConfig(remixRootOrConfig);
   signalExit(
     await compiler2.watch(config, {
       mode,
