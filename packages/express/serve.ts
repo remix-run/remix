@@ -1,11 +1,20 @@
-import app from "./app";
+import path from "path";
+import getApp from "./app";
 
 let port = process.env.PORT || 3000;
 
-app.listen(port, () => {
-  if (process.env.NODE_ENV === "production") {
-    console.log(`Remix server started on port ${port}`);
-  } else {
-    console.log(`Remix server started at http://localhost:${port}`);
-  }
-});
+let buildPath = process.argv[2];
+if (!buildPath) {
+  console.log(
+    `Please pass in the directory of your Remix server build directory:
+
+    remix-serve build
+
+`
+  );
+} else {
+  let resolovedBuildPath = path.resolve(process.cwd(), buildPath);
+  getApp(resolovedBuildPath).listen(port, () => {
+    console.log(`Remix App Server started on port ${port}`);
+  });
+}

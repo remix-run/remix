@@ -2,60 +2,23 @@ import * as path from "path";
 import signalExit from "signal-exit";
 import prettyMs from "pretty-ms";
 
-import { BuildMode, isBuildMode, BuildTarget } from "../build";
-import * as compiler from "../compiler";
+import { BuildMode, isBuildMode } from "../build";
 import * as compiler2 from "../compiler2";
-import { readConfig } from "../config";
-import { startDevServer } from "../server";
+import { readConfig, RemixConfig } from "../config";
 
-/**
- * Runs the build for a Remix app.
- */
-export async function build(remixRoot: string, mode?: string) {
-  let buildMode = isBuildMode(mode) ? mode : BuildMode.Production;
-
-  console.log(`Building Remix app for ${buildMode}...`);
-
-  let config = await readConfig(remixRoot);
-
-  await Promise.all([
-    compiler.write(
-      await compiler.build(config, {
-        mode: buildMode,
-        target: BuildTarget.Server
-      }),
-      config.serverBuildDirectory
-    ),
-    compiler.write(
-      await compiler.build(config, {
-        mode: buildMode,
-        target: BuildTarget.Browser
-      }),
-      config.assetsBuildDirectory
-    )
-  ]);
-
-  console.log("done!");
-}
-
-/**
- * Runs the dev server for a Remix app.
- */
 export async function run(remixRoot: string) {
   let config = await readConfig(remixRoot);
+  let getAppServer = require("@remix-run/express/app");
+  let port = process.env.PORT || 3000;
 
-  startDevServer(config, {
-    onListen() {
-      console.log(
-        `Remix dev server running on port ${config.devServerPort}...`
-      );
-    }
+  getAppServer(config.serverBuildDirectory).listen(port, () => {
+    console.log(`Remix App Server started at http://localhost:${port}`);
   });
+
+  dev(config);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-export async function build2(
+export async function build(
   remixRoot: string,
   modeArg?: string
 ): Promise<void> {
@@ -70,8 +33,8 @@ export async function build2(
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
-export async function watch2(
-  remixRoot: string,
+export async function dev(
+  remixRootOrConfig: string | RemixConfig,
   modeArg?: string
 ): Promise<void> {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
@@ -79,7 +42,10 @@ export async function watch2(
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let start = Date.now();
-  let config = await readConfig(remixRoot);
+  let config =
+    typeof remixRootOrConfig === "string"
+      ? await readConfig(remixRootOrConfig)
+      : remixRootOrConfig;
   signalExit(
     await compiler2.watch(config, {
       mode,
@@ -102,8 +68,4 @@ export async function watch2(
   );
 
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
-}
-
-export function run2(remixRoot: string): Promise<void> {
-  return watch2(remixRoot);
 }

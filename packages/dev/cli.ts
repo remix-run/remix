@@ -39,18 +39,11 @@ switch (cli.input[0]) {
   case "build":
     commands.build(cli.input[1], process.env.NODE_ENV);
     break;
+  case "dev":
+    commands.dev(cli.input[1]);
+    break;
   case "run":
     commands.run(cli.input[1]);
-    break;
-
-  case "build2":
-    commands.build2(cli.input[1], process.env.NODE_ENV);
-    break;
-  case "watch2":
-    commands.watch2(cli.input[1], process.env.NODE_ENV);
-    break;
-  case "run2":
-    commands.run2(cli.input[1]);
     break;
 
   default:
