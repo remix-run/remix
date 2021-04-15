@@ -923,7 +923,7 @@ export function useMatches() {
 }
 
 /**
- * Returns the data for the current route from `data/routes/*`.
+ * Returns the data from the current route's `loader`.
  */
 export function useRouteData<T = AppData>(): T {
   return useRemixRouteContext().data;
@@ -940,7 +940,8 @@ export function usePendingFormSubmit(): FormSubmit | undefined {
 
 /**
  * Returns the next location if a location change is pending. This is useful
- * for showing loading indicators during route transitions from `<Link>` clicks.
+ * for showing loading indicators during route transitions from `<Link>`
+ * clicks.
  */
 export function usePendingLocation(): Location | undefined {
   return useRemixEntryContext().pendingLocation;
