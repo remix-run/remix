@@ -17,6 +17,7 @@
     "packages/express",
     "packages/node",
     "packages/react",
+    "packages/serve",
     "packages/vercel"
   ],
   "dependencies": {

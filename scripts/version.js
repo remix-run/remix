@@ -91,7 +91,7 @@ async function run(args) {
     nextVersion = getNextVersion(currentVersion, givenVersion, prereleaseId);
   }
 
-  // - Confirm the next version number
+  // Confirm the next version number
   let answer = await prompt(
     `Are you sure you want to bump version ${currentVersion} to ${nextVersion}? [Yn] `
   );
@@ -103,7 +103,7 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
 
-  // - Update @remix-run/dev version
+  // Update @remix-run/dev version
   await updatePackageConfig("dev", config => {
     config.version = nextVersion;
   });
@@ -111,7 +111,7 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/dev to version ${nextVersion}`)
   );
 
-  // - Update @remix-run/react version
+  // Update @remix-run/react version
   await updatePackageConfig("react", config => {
     config.version = nextVersion;
   });
@@ -119,7 +119,7 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
   );
 
-  // - Update @remix-run/node version
+  // Update @remix-run/node version
   await updatePackageConfig("node", config => {
     config.version = nextVersion;
   });
@@ -127,7 +127,7 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/node to version ${nextVersion}`)
   );
 
-  // - Update node server versions + @remix-run/node dep
+  // Update node server versions + @remix-run/node dep
   for (let platform of ["architect", "express", "vercel"]) {
     await updatePackageConfig(platform, config => {
       config.version = nextVersion;
@@ -138,8 +138,17 @@ async function run(args) {
     );
   }
 
+  // Update @remix-run/serve version + @remix-run/express dep
+  await updatePackageConfig("serve", config => {
+    config.version = nextVersion;
+    config.dependencies["@remix-run/express"] = nextVersion;
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/serve to version ${nextVersion}`)
+  );
+
   if (!isPrereleaseVersion(nextVersion)) {
-    // - Update CHANGES.md release date
+    // Update CHANGES.md release date
     await updateChangesVersion(nextVersion, new Date());
     console.log(
       chalk.green(`  Updated release version and date in CHANGES.md`)

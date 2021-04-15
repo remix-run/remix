@@ -1,6 +1,6 @@
 {
-  "name": "@remix-run/express",
-  "description": "Express server request handler for Remix",
+  "name": "@remix-run/serve",
+  "description": "Production application server for Remix",
   "version": "0.0.0-experimental-ebc8102",
   "repository": "https://github.com/remix-run/remix",
   "bin": {
