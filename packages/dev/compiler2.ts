@@ -228,7 +228,24 @@ async function createBrowserBuild(
     },
     plugins: [
       emptyRouteModulesPlugin(config),
-      browserRouteModulesPlugin(config)
+      browserRouteModulesPlugin(config, /\?browser$/),
+      manualExternalsPlugin((id, importer) => {
+        let resolved = path.resolve(importer, id);
+
+        if (
+          resolved.startsWith(config.appDirectory) &&
+          /\.server(\.[jt]sx?)?$/.test(resolved)
+        ) {
+          // Mark .server.js modules external in the browser build. These should
+          // be tree-shaken from the browser bundles anyway, but making them
+          // "external" tells esbuild to not even try to parse them. This is an
+          // escape hatch for users that lets them avoid esbuild errors/warnings
+          // from node-specific modules not intended for the browser.
+          return true;
+        }
+
+        return false;
+      })
     ]
   });
 }
@@ -339,7 +356,10 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
  * This plugin loads route modules for the browser build, using module shims
  * that export only thing that are safe for the browser.
  */
-function browserRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
+function browserRouteModulesPlugin(
+  config: RemixConfig,
+  suffixMatcher: RegExp
+): esbuild.Plugin {
   return {
     name: "browser-route-modules",
     async setup(build) {
@@ -352,14 +372,14 @@ function browserRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
         new Map()
       );
 
-      build.onResolve({ filter: /\?browser$/ }, args => {
+      build.onResolve({ filter: suffixMatcher }, args => {
         return { path: args.path, namespace: "browser-route-module" };
       });
 
       build.onLoad(
-        { filter: /\?browser$/, namespace: "browser-route-module" },
+        { filter: suffixMatcher, namespace: "browser-route-module" },
         async args => {
-          let file = args.path.replace(/\?browser$/, "");
+          let file = args.path.replace(suffixMatcher, "");
           let route = routesByFile.get(file);
           invariant(route, `Cannot get route by path: ${args.path}`);
 

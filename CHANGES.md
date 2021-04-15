@@ -2,6 +2,13 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Added `.server.js` support to the new compiler as an escape hatch for server-only code
+  that should not end up in the browser bundles
+
 ## 0.15.2 - Tue Mar 30 2021
 
 ### Bug Fixes
