@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "dev": "remix run",
+    "start": "remix-serve"
+  },
+  "dependencies": {
+    "@remix-run/serve": "*",
+    "@remix-run/node": "*"
+  }
+}

@@ -204,6 +204,40 @@ let express = [
   }
 ];
 
+let create = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/create-remix/index.ts"),
+  output: {
+    banner: "#!/usr/bin/env node\n" + banner,
+    dir: "build/node_modules/create-remix",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    }),
+    nodeResolve({
+      extensions: [".ts"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, `packages/create-remix/package.json`),
+          dest: `build/node_modules/create-remix`
+        },
+        {
+          src: path.resolve(__dirname, `packages/create-remix/templates/*`),
+          dest: `build/node_modules/create-remix/templates`
+        }
+      ]
+    })
+  ]
+};
+
 function getServerConfig(name) {
   /** @type {import("rollup").RollupOptions} */
   return {
@@ -242,6 +276,6 @@ function getServerConfig(name) {
 let architect = getServerConfig("architect");
 let vercel = getServerConfig("vercel");
 
-let builds = [...dev, node, architect, ...express, vercel, react];
+let builds = [...dev, node, architect, ...express, vercel, react, create];
 
 export default builds;
