@@ -1,13 +1,13 @@
 {
   "name": "@remix-run/express",
   "description": "Express server request handler for Remix",
-  "version": "0.0.0-experimental-ad3239b",
+  "version": "0.0.0-experimental-ebc8102",
   "repository": "https://github.com/remix-run/remix",
   "bin": {
     "remix-serve": "serve.js"
   },
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-ad3239b",
+    "@remix-run/node": "0.0.0-experimental-ebc8102",
     "morgan": "^1.10.0",
     "compression": "^1.7.4"
   },
