@@ -97,6 +97,12 @@ async function run(args) {
   );
   if (answer === false) return 0;
 
+  // Update create-remix version
+  await updatePackageConfig("create-remix", config => {
+    config.version = nextVersion;
+  });
+  console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
+
   // - Update @remix-run/dev version
   await updatePackageConfig("dev", config => {
     config.version = nextVersion;
