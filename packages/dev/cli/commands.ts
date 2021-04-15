@@ -1,15 +1,21 @@
+////////////////////////////////////////////////////////////////////////////////
+// In 0.17
+//
+// - fn run3() -> fn run()
+// - fn watch2() -> fn dev()
+// - fn build2() -> fn build()
 import * as path from "path";
 import signalExit from "signal-exit";
 import prettyMs from "pretty-ms";
-
 import { BuildMode, isBuildMode, BuildTarget } from "../build";
 import * as compiler from "../compiler";
 import * as compiler2 from "../compiler2";
 import { readConfig } from "../config";
+import type { RemixConfig } from "../config";
 import { startDevServer } from "../server";
 
 /**
- * Runs the build for a Remix app.
+ * Runs the build for a Remix app with the old rollup compiler
  */
 export async function build(remixRoot: string, mode?: string) {
   let buildMode = isBuildMode(mode) ? mode : BuildMode.Production;
@@ -39,7 +45,7 @@ export async function build(remixRoot: string, mode?: string) {
 }
 
 /**
- * Runs the dev server for a Remix app.
+ * Runs the old rollup dev watcher.
  */
 export async function run(remixRoot: string) {
   let config = await readConfig(remixRoot);
@@ -55,6 +61,9 @@ export async function run(remixRoot: string) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Runs the new esbuild compiler
+ */
 export async function build2(
   remixRoot: string,
   modeArg?: string
@@ -70,21 +79,29 @@ export async function build2(
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
+/**
+ * Watches with the new esbuild compiler
+ */
 export async function watch2(
-  remixRoot: string,
-  modeArg?: string
+  remixRootOrConfig: string | RemixConfig,
+  modeArg?: string,
+  onRebuildStart?: () => void
 ): Promise<void> {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
 
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let start = Date.now();
-  let config = await readConfig(remixRoot);
+  let config =
+    typeof remixRootOrConfig === "object"
+      ? remixRootOrConfig
+      : await readConfig(remixRootOrConfig);
   signalExit(
     await compiler2.watch(config, {
       mode,
       onRebuildStart() {
         start = Date.now();
+        onRebuildStart && onRebuildStart();
       },
       onRebuildFinish() {
         console.log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
@@ -106,4 +123,30 @@ export async function watch2(
 
 export function run2(remixRoot: string): Promise<void> {
   return watch2(remixRoot);
+}
+
+/**
+ * Runs the built-in remix app server and dev asset server
+ */
+export async function run3(remixRoot: string) {
+  if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
+  let config = await readConfig(remixRoot);
+  let getAppServer = require("@remix-run/serve/app");
+  let port = process.env.PORT || 3000;
+
+  getAppServer(config.serverBuildDirectory).listen(port, () => {
+    console.log(`Remix App Server started at http://localhost:${port}`);
+  });
+
+  watch2(config, BuildMode.Development, () => {
+    purgeAppRequireCache(config.serverBuildDirectory);
+  });
+}
+
+function purgeAppRequireCache(buildPath: string) {
+  for (let key in require.cache) {
+    if (key.startsWith(buildPath)) {
+      delete require.cache[key];
+    }
+  }
 }

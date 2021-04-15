@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "dev": "remix dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@remix-run/vercel": "*",
+    "@vercel/node": "^1.8.3"
+  },
+  "devDependencies": {
+    "vercel": "^21.2.2"
+  }
+}

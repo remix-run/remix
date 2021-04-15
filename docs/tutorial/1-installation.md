@@ -4,76 +4,30 @@ description: Get started with Remix, first step is installing.
 order: 1
 ---
 
-Your Remix app isn't just a bunch of static assets to be uploaded somewhere, it has a server component as well. However, it's also not full web server, it's just a function that can run on any web server where JavaScript runs. In production you only deploy two things:
+Let's get started! Here's what you'll need:
 
-- An http request handler on your server of choice
-- Static assets to the server or CDN
+1. Your Remix license key:
 
-To help with this, we've got multiple starter repos for different servers.
+- Get it from the [Remix Dashboard](https://remix.run/dashboard).
+- [Buy one](https://remix.run/buy) if you don't have one yet!
 
-## Cloning a Starter Project
+2. Node.js. [Get it here](https://nodejs.org)
 
-We have three starter repositories right now and plan to add more, so take your pick:
+Open up your terminal and type this:
 
-- [Express](https://github.com/remix-run/starter-express)
-- [Vercel](https://github.com/remix-run/starter-vercel)
-- AWS API Gateway via [Architect](https://github.com/remix-run/starter-vercel)
+```sh
+npm init remix
+```
 
-For this tutorial we'll be using our express starter repo since it doesn't require an account anywhere. Note that Remix does not depend on express, express is simply our server that we'll attach the Remix request handler to. If you picked another starter, make sure you check out the README to get it running.
+When it asks which server you want to use, pick "Remix App Server" for this tutorial. You'll notice that there are a lot of options, you can learn how to deploy to any server you want in the [../../byos/](Bring Your Own Server) guide.
 
-```bash
-# depending on how you're machine is set up with github
+Enough chat, let's go!
 
-# can do this:
-$ git clone git@github.com:remix-run/starter-express.git my-remix-app
-
-# or this
-$ git clone https://github.com/remix-run/starter-express.git my-remix-app
-
+```sh
 cd my-remix-app
+npm run dev
 ```
 
-**TypeScript Note**
+Your new website should be up at [http://localhost:3000](http://localhost:3000).
 
-Our starters use TypeScript, we encourage you to learn it if you haven't tried it yet. We keep the types very basic in this tutorial. If you really don't want to use TypeScript there is a [branch in the express repo without TypeScript](https://github.com/remix-run/starter-express/tree/no-typescript), you can use that.
-
-## Edit `.npmrc`
-
-In order for npm (or yarn) to be able to install Remix, you need to add your license key to the `.npmrc` configuration. You'll find it on the [dashboard](https://remix.run/dashboard).
-
-It should look something like this:
-
-```bash
-//npm.remix.run/:_authToken=<your token>
-@remix-run:registry=https://npm.remix.run
-```
-
-The first line allows npm to authenticate you with our npm registry when installing packages and the second line tells npm to use our registry whenever you are installing something with the npm scope `@remix-run`.
-
-You can also add those lines to your home directory `~/.npmrc`, then all of your Remix projects don't need their own `.npmrc` file.
-
-### Environment variable for NPM tokens
-
-Alternatively, a lot our customers like to use an environment variable for their token. You can export it from your bash profile and/or set it up on your CI.
-
-```bash
-//npm.remix.run/:_authToken=${REMIX_REGISTRY_TOKEN}
-@remix-run:registry=https://npm.remix.run
-```
-
-This way you can share a repo with other people who have a Remix license without commiting it to the source code.
-
-## Start the server
-
-Depending on the starter template you used, the step here can be a little different. Refer to the README.md in your project for more specific instructions on how to start the dev server and which port it will be running on.
-
-If you're using the express starter, you'll do this:
-
-```bash
-$ npm install
-$ npm run dev
-```
-
-Now open up your browser to [http://localhost:3000](http://localhost:3000) and you should see the hello world page!
-
-**Note**: We're using pm2-dev in package.json to run two processes in the same window with `npm run dev`. Remix does not require two processes in production, just development. If you look in `pm2.config.js` we're calling `remix run`. It's just a file watcher to rebuild the Remix assets. In production those files will be built and deployed to your static asset server or CDN. The other process is the app server which Remix doesn't own. It could be express, or vercel, or arc, etc.
+Congrats, you can now add "Remix Developer" to your résumé.

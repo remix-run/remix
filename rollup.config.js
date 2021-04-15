@@ -145,6 +145,96 @@ let react = {
   ]
 };
 
+/** @type {import("rollup").RollupOptions} */
+let serve = [
+  {
+    external(id) {
+      return !isLocalModuleId(id);
+    },
+    input: [path.resolve(__dirname, "packages/serve/app.ts")],
+    output: {
+      banner: banner,
+      dir: `build/node_modules/@remix-run/serve`,
+      format: "cjs",
+      preserveModules: true,
+      exports: "auto"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts", ".tsx"]
+      }),
+      nodeResolve({
+        extensions: [".ts", ".tsx"]
+      }),
+      copy({
+        targets: [
+          {
+            src: path.resolve(__dirname, `packages/serve/package.json`),
+            dest: `build/node_modules/@remix-run/serve`
+          }
+        ]
+      })
+    ]
+  },
+  {
+    external() {
+      return true;
+    },
+    input: path.resolve(__dirname, "packages/serve/index.ts"),
+    output: {
+      banner: "#!/usr/bin/env node\n" + banner,
+      dir: "build/node_modules/@remix-run/serve",
+      format: "cjs"
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"]
+      }),
+      nodeResolve({
+        extensions: [".ts"]
+      })
+    ]
+  }
+];
+
+let create = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/create-remix/index.ts"),
+  output: {
+    banner: "#!/usr/bin/env node\n" + banner,
+    dir: "build/node_modules/create-remix",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    }),
+    nodeResolve({
+      extensions: [".ts"]
+    }),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, `packages/create-remix/package.json`),
+          dest: `build/node_modules/create-remix`
+        },
+        {
+          src: path.resolve(__dirname, `packages/create-remix/templates/*`),
+          dest: `build/node_modules/create-remix/templates`
+        }
+      ]
+    })
+  ]
+};
+
 function getServerConfig(name) {
   /** @type {import("rollup").RollupOptions} */
   return {
@@ -184,6 +274,15 @@ let architect = getServerConfig("architect");
 let express = getServerConfig("express");
 let vercel = getServerConfig("vercel");
 
-let builds = [...dev, node, architect, express, vercel, react];
+let builds = [
+  ...dev,
+  node,
+  architect,
+  express,
+  vercel,
+  react,
+  create,
+  ...serve
+];
 
 export default builds;

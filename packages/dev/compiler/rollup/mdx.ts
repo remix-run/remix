@@ -6,7 +6,6 @@ import parseFrontMatter from "front-matter";
 import mdx from "@mdx-js/mdx";
 import prettyMs from "pretty-ms";
 
-import type { RemixConfig } from "./remixConfig";
 import { getRemixConfig } from "./remixConfig";
 import { getHash } from "../crypto";
 

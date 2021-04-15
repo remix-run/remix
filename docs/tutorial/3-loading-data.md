@@ -77,21 +77,18 @@ Most of the time you'll want to use one of Remix's built-in response helpers in 
 
 The `json` helper will deal with the content type automatically while still giving you control over the headers, status code, etc.
 
-```js
+```js [1,5]
 import { json } from "@remix-run/node";
 
 export let loader: Loader = () => {
   let arrayOfStuff = await db.query(someQuery);
-
-  return json(arrayOfStuff, {
-    "Cache-Control": "max-age=60",
-  });
+  return json(arrayOfStuff);
 };
 ```
 
 Here's how you can indicate data-based a 404:
 
-```tsx
+```tsx [6]
 import { json } from "@remix-run/node";
 
 export let loader: Loader = ({ params }) => {
@@ -112,28 +109,6 @@ export let loader: LoaderFunction = () => {
   return { anything: "you want" };
 };
 ```
-
-## Why Cache-Control Headers Matter in Loaders:
-
-We saw that our routes can define their cache control, so why does it matter for loaders? It matters for two reasons:
-
-First, your data usually knows better what the cache control should be than your route because the data changes more often than the markup. Because of this, the loader's headers are passed to the route's header function.
-
-Open up `app/routes/gists.ts` and update your headers function like so:
-
-```tsx
-export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
-  return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
-  };
-}
-```
-
-The `loaderHeaders` object is an instance of the [Web Fetch API Headers constructor](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
-
-Now when the browser or a CDN wants to cache our page, it gets the headers from our data source, which is usually what you want. Note in our case we're actually just using headers GitHub sent in the response from our fetch!
-
-The second reason this matters is that Remix calls your loaders via `fetch` in the browser on client side transitions. By returning good cache headers here, when the user clicks back/forward or visits the same page multiple times, the browser won't actually make another request for the data but will use a cached version instead. This greatly speeds up a website's performance, even for pages that you can't cache on a CDN. A lot of React apps rely on a JavaScript cache, but browser caches already work great!
 
 ## Rendering the Gists
 

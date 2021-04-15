@@ -3,11 +3,7 @@ const { exec, spawn } = require("child_process");
 const { promisify } = require("util");
 const semver = require("semver");
 
-const npmModulesDir = path.resolve(
-  __dirname,
-  "../build/node_modules/@remix-run"
-);
-
+const npmModulesDir = path.resolve(__dirname, "../build/node_modules");
 const x = promisify(exec);
 
 function invariant(cond, message) {
@@ -28,7 +24,7 @@ async function getTaggedVersion() {
 }
 
 async function run() {
-  // - Make sure there's a current tag
+  // Make sure there's a current tag
   let taggedVersion = await getTaggedVersion();
   invariant(
     taggedVersion !== "",
@@ -38,10 +34,26 @@ async function run() {
   let prerelease = semver.prerelease(taggedVersion);
   let tag = prerelease ? prerelease[0] : "latest";
 
-  for (let name of ["dev", "node", "architect", "express", "vercel", "react"]) {
-    await npm(["publish", "--tag", tag, path.join(npmModulesDir, name)], {
-      stdio: "inherit"
-    });
+  // Publish create-remix package
+  await npm(
+    ["publish", "--tag", tag, path.join(npmModulesDir, "create-remix")],
+    { stdio: "inherit" }
+  );
+
+  // Publish all @remix-run/* packages
+  for (let name of [
+    "dev",
+    "serve",
+    "node",
+    "architect",
+    "express",
+    "vercel",
+    "react"
+  ]) {
+    await npm(
+      ["publish", "--tag", tag, path.join(npmModulesDir, "@remix-run", name)],
+      { stdio: "inherit" }
+    );
   }
 
   return 0;

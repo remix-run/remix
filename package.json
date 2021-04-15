@@ -12,10 +12,12 @@
   },
   "workspaces": [
     "packages/architect",
+    "packages/create-remix",
     "packages/dev",
     "packages/express",
     "packages/node",
     "packages/react",
+    "packages/serve",
     "packages/vercel"
   ],
   "dependencies": {

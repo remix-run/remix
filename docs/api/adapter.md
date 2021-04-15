@@ -15,7 +15,11 @@ We will be adding a few more eventually:
 
 These adapters are imported into your server's entry and is not used inside of your Remix app itself.
 
-Each adapter has the same API.
+If you intialized your app with `npm init remix` with something other than the built-in Remix App Server, you will note a `server/index.js` file that imports and uses one of these adapters.
+
+<docs-info>If you're using the built-in Remix App Server, you don't interact with this API</docs-info>
+
+Each adapter has the same API. In the future we may have helpers specific to the platform you're deploying to.
 
 ## `createRequestHandler`
 
@@ -59,18 +63,4 @@ const { createRequestHandler } = require("@remix-run/architect");
 exports.handler = createRequestHandler({ build: require("./build") });
 ```
 
-You don't really interact much with this API thanks to our starter repos that set all this boilerplate up for you.
-
-## Starter Repos
-
-We maintain a few starter repos to get you deploying production apps quickly. The README in each starter has deployment instructions. We maintain the following:
-
-- [Express](https://github.com/remix-run/starter-express)
-- [Architect (AWS Lambda)](https://github.com/remix-run/starter-vercel)
-- [Vercel](https://github.com/remix-run/starter-vercel)
-
-We will be adding the following soon:
-
-- Fly.io
-- Cloudflare Workers
-- Netlify
+## Starter Templates

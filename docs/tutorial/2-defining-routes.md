@@ -32,7 +32,7 @@ import { Link } from "react-router-dom";
 <Link to="/gists">Gists</Link>;
 ```
 
-That's it. Make a file, get a route. If you add a "." in the name, like `gists.public.js`, then the URL will be "gists/public". If you put it into a folder like `gists/public.js` then you're defining a nested route--which we'll talk about later in this tutorial.
+That's it. Make a file, get a route.
 
 ## Meta tags
 
@@ -52,41 +52,3 @@ export default function Gists() {
   // ...
 }
 ```
-
-## Headers
-
-Each route can also define its http headers. This is mostly important for http caching. Remix doesn't rely on building your website into static files to be uploaded to a CDN for performance, instead we rely on cache headers. The end result of either approach is the same: a static document on a CDN. [Check out this video for more information on that](https://youtu.be/bfLFHp7Sbkg).
-
-Usually, the difficulty with cache headers is configuring them. In Remix we've made it easy. Just export a `headers` function from your route.
-
-```tsx
-export function headers() {
-  return {
-    "Cache-Control": "public, max-age=300, s-maxage=3600"
-  };
-}
-
-export function meta() {
-  /* ... */
-}
-
-export default function Gists() {
-  /* ... */
-}
-```
-
-The max-age tells the user's browser to cache this for 300 seconds, or 5 minutes. That means if they click back or on a link to the same page again within 5 minutes, the browser won't even make a request for the page, it will use the cache.
-
-The s-maxage tells the CDN to cache it for an hour. Here's what it looks like when the first person visits our website:
-
-1. Request comes in to the website, which is really the CDN
-2. CDN doesn't have the document cached, so it makes a request to our server (the "origin server").
-3. Our server builds the page and sends it to the CDN
-4. The CDN caches it and sends it to the visitor.
-
-Now, when the next person visits our page, it looks like this:
-
-1. Request comes to the CDN
-2. CDN has the document cached already and sends it right away without ever touching our origin server!
-
-We have a lot more to say about caching in the [CDN Caching](../guides/caching) guide, make sure to read it sometime.

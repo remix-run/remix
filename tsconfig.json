@@ -2,10 +2,12 @@
   "files": [],
   "references": [
     { "path": "packages/architect" },
+    { "path": "packages/create-remix" },
     { "path": "packages/dev" },
     { "path": "packages/express" },
     { "path": "packages/node" },
     { "path": "packages/react" },
+    { "path": "packages/serve" },
     { "path": "packages/vercel" }
   ]
 }

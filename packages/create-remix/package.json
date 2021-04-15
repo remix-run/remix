@@ -1,0 +1,17 @@
+{
+  "name": "create-remix",
+  "description": "Scaffolds new Remix Apps",
+  "version": "0.0.0-experimental-78fc0ef",
+  "repository": "https://github.com/remix-run/remix",
+  "bin": {
+    "create-remix": "index.js"
+  },
+  "dependencies": {
+    "inquirer": "^8.0.0",
+    "fs-extra": "^9.1.0",
+    "chalk-animation": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^7.3.1"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "build": "remix build2",
+    "dev": "remix dev",
+    "start": "arc sandbox"
+  },
+  "dependencies": {
+    "@architect/functions": "^3.13.3",
+    "@remix-run/architect": "*",
+    "aws-sdk": "2.796.0"
+  }
+}
