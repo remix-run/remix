@@ -1,10 +1,10 @@
 {
   "name": "@remix-run/vercel",
   "description": "Vercel server request handler for Remix",
-  "version": "0.0.0-experimental-ebc8102",
+  "version": "0.0.0-experimental-164637c",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-ebc8102"
+    "@remix-run/node": "0.0.0-experimental-164637c"
   },
   "peerDependencies": {
     "@vercel/node": "^1.8.3"
