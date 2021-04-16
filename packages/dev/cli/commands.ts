@@ -7,8 +7,9 @@ import * as compiler2 from "../compiler2";
 import { readConfig, RemixConfig } from "../config";
 
 export async function run(remixRoot: string) {
+  if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
   let config = await readConfig(remixRoot);
-  let getAppServer = require("@remix-run/serve");
+  let getAppServer = require("@remix-run/serve/app");
   let port = process.env.PORT || 3000;
 
   getAppServer(config.serverBuildDirectory).listen(port, () => {

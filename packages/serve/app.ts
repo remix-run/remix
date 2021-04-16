@@ -3,7 +3,6 @@ import compression from "compression";
 import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
 
-////////////////////////////////////////////////////////////////////////////////
 export default function getApp(buildPath: string) {
   let app = express();
 

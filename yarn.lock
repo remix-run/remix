@@ -1702,30 +1702,6 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@remix-run/express@0.0.0-experimental-ebc8102":
-  version "0.0.0-experimental-ebc8102"
-  resolved "https://npm.remix.run/download/@remix-run/express/0.0.0-experimental-ebc8102/6e26ee83f9d319855e6e8893c9213a4252225b9e6fdee6bae79f312fdd752fde#942905cae1d6e955b316e69f8b62fd3302400945"
-  integrity sha512-01L64yaTpPXs/DY4BtggztejQbBL3nrMHm9YXEPfuFE4V8Y3D5CUz59tvR+03kumsBvG+E1KgdF9zl/0/pvKwg==
-  dependencies:
-    "@remix-run/node" "0.0.0-experimental-ebc8102"
-    compression "^1.7.4"
-    morgan "^1.10.0"
-
-"@remix-run/node@0.0.0-experimental-ebc8102":
-  version "0.0.0-experimental-ebc8102"
-  resolved "https://npm.remix.run/download/@remix-run/node/0.0.0-experimental-ebc8102/e4e4da947d67fdd99ae98016b63fac57956bb0b63f304aa879db4a6be1c0f100#13b603551f00be0ee38f18c2c2d34b76050fc4fc"
-  integrity sha512-4GTVqkho6MFLdySIBchYpFPluj2HMm1MLiDOIQaLMPKjYL5qyEllApPwx78+LWsBWSuJRXGieQsGfp0Ih+ky3Q==
-  dependencies:
-    "@types/cookie" "^0.4.0"
-    "@types/node-fetch" "^2.5.7"
-    cookie "^0.4.1"
-    cookie-signature "^1.1.0"
-    history "^5.0.0"
-    jsesc "^3.0.1"
-    node-fetch "^2.6.1"
-    react-router-dom "^6.0.0-beta.0"
-    tmp "^0.2.1"
-
 "@rollup/plugin-babel@^5.2.2", "@rollup/plugin-babel@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@rollup/plugin-babel/-/plugin-babel-5.3.0.tgz#9cb1c5146ddd6a4968ad96f209c50c62f92f9879"

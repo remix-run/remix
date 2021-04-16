@@ -182,7 +182,7 @@ let serve = [
     external() {
       return true;
     },
-    input: path.resolve(__dirname, "packages/express/index.ts"),
+    input: path.resolve(__dirname, "packages/serve/index.ts"),
     output: {
       banner: "#!/usr/bin/env node\n" + banner,
       dir: "build/node_modules/@remix-run/serve",

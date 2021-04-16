@@ -8,9 +8,7 @@ if (!buildPath) {
   console.log(
     `Please pass in the directory of your Remix server build directory:
 
-    remix-serve build
-
-`
+    remix-serve ./build`
   );
 } else {
   let resolovedBuildPath = path.resolve(process.cwd(), buildPath);
