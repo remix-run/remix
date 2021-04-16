@@ -4,7 +4,7 @@ import { json, redirect } from "@remix-run/node";
 import type { FormProps } from "@remix-run/react";
 import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
 
-import styles from "url:../styles/methods.css";
+import styles from "../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";
 
 export function links() {

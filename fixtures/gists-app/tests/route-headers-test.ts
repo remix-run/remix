@@ -45,7 +45,7 @@ describe("route headers", () => {
     });
   });
 
-  describe("from an MDX route", () => {
+  describe.skip("from an MDX route", () => {
     it("are correct", async () => {
       let responses = collectResponses(
         page,

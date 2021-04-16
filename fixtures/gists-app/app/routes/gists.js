@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 import { json } from "@remix-run/node";
 import { Link, useRouteData, usePendingLocation } from "@remix-run/react";
 
-import styles from "css:../styles/gists.css";
+import styles from "../styles/gists.css";
 import Shared from "../components/Shared";
 
 export function links() {

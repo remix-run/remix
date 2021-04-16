@@ -32,20 +32,6 @@ describe("readConfig", () => {
         "publicPath": "/build/",
         "rootDirectory": Any<String>,
         "routes": Object {
-          "pages/one": Object {
-            "caseSensitive": false,
-            "file": "pages/one.mdx",
-            "id": "pages/one",
-            "parentId": "root",
-            "path": "/page/one",
-          },
-          "pages/two": Object {
-            "caseSensitive": false,
-            "file": "pages/two.mdx",
-            "id": "pages/two",
-            "parentId": "root",
-            "path": "/page/two",
-          },
           "root": Object {
             "file": "root.js",
             "id": "root",

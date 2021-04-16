@@ -1,9 +1,8 @@
 import { useRouteData, Link, block } from "@remix-run/react";
 import type { LinksFunction, LoaderFunction } from "@remix-run/react";
 
-import redText from "css:../styles/redText.css";
-import guitar from "img:../components/guitar.jpg?width=500&height=500";
-import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
+import redText from "../styles/redText.css";
+import guitar from "../components/guitar.jpg";
 
 interface User {
   name: string;
@@ -22,7 +21,7 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
   let styleLink = { rel: "stylesheet", href: redText };
 
   // block on this image
-  let blocker = block({ rel: "preload", as: "image", href: guitar.src });
+  let blocker = block({ rel: "preload", as: "image", href: guitar });
 
   // preload gist pages, get data for the first
   let pageLinks = data.map((user, index) => ({
@@ -45,18 +44,9 @@ export default function LinksPage() {
       ))}
       <hr />
       <p>
-        <img alt="another guitar..." src={guitar.src} data-test-id="blocked" />
+        <img alt="another guitar..." src={guitar} data-test-id="blocked" />
         <br />
         Preloaded and blocked guitar, no layout shift.
-      </p>
-      <p>
-        <img
-          alt="another guitar..."
-          src={notPreloadedGuitar.src}
-          data-test-id="not-blocked"
-        />
-        <br />
-        Not preloaded, not blocked, layout shift!
       </p>
     </div>
   );

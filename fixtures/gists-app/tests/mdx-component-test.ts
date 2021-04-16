@@ -6,7 +6,7 @@ import { getHtml, reactIsHydrated } from "./utils";
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
 
-describe("mdx component", () => {
+describe.skip("mdx component", () => {
   let browser: Browser;
   let page: Page;
   beforeEach(async () => {

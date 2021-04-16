@@ -6,7 +6,7 @@ import { reactIsHydrated, collectResponses, disableJavaScript } from "./utils";
 const testPort = 3000;
 const testServer = `http://localhost:${testPort}`;
 
-describe("route module link export", () => {
+describe.skip("route module link export", () => {
   let browser: Browser;
   let page: Page;
   beforeEach(async () => {
