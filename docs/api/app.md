@@ -510,7 +510,7 @@ The links function defines which `<link>` elements to add to the page when the u
 import type { LinksFunction } from "@remix-run/react";
 import { block } from "@remix-run/react";
 
-export let links: MetaFunction = () => {
+export let links: LinksFunction = () => {
   return [
     { rel: "icon", href: "/favicon.png", type: "image/png" },
     { rel: "stylesheet", href: "https://example.com/some/styles.css" },
