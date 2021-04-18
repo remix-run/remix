@@ -139,7 +139,7 @@ This is no longer a module side effect (runs when the module is imported), but r
 
 ### Higher Order Functions in Loaders
 
-Higher order functions are an effective composition strategy. However, if you use them to _create_ a loader or action, your app can break. Here we'll show you how to still use the pattern within the constraints of Remix. Briefly put, they need to be inside the loader, but they can't define the loader.
+Higher order functions are an effective composition strategy. However, if you use them to _create_ a loader or action, your app can break because the creation of the function is a module side-effect. To use higher order functions within the constraints of Remix they need to be _inside_ the loader.
 
 Here are a few really common use cases:
 
