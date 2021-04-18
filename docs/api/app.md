@@ -204,10 +204,8 @@ This function is only ever run on the server. On the initial server render it wi
 
 Using the database ORM Prisma as an example:
 
-```tsx
-import { PrismaClient } from "@prisma/client";
-
-let prisma = new PrismaClient();
+```tsx [3-5,8]
+import { prisma } from "../db";
 
 export let loader = () => {
   return await prisma.user.findMany();
@@ -225,7 +223,7 @@ export default function Users() {
 }
 ```
 
-Because `prisma` isn't used in the default component export it will be removed from the browser bundle. And because nothing is using `PrismaClient` anymore, the entire dependency is removed from the browser bundle.
+Because `prisma` is only used in the loader it will be removed from the browser bundle.
 
 ### Loader arg: params
 
