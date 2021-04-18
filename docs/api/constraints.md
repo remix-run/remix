@@ -161,7 +161,7 @@ You can combine them together too:
 
 ```ts
 export let loader = ({ request }) => {
-  return addTrailingSlash(request.url, () => {
+  return removeTrailingSlash(request.url, () => {
     return withSession(request, session => {
       return requireUser(session, user => {
         return json(user);
@@ -176,7 +176,7 @@ There are a lot of functional composition strategies you could implement as an a
 <docs-error>Using a higher order function to create the loader function itself will <i>not</i> work</docs-error>
 
 ```ts bad
-export let loader = addTrailingSlash(async () => {
+export let loader = removeTrailingSlash(async () => {
   let posts = await db.posts.findMany();
   return json(posts);
 });
@@ -184,26 +184,23 @@ export let loader = addTrailingSlash(async () => {
 
 Can you see why?
 
-The problem is we've called `addTrailingSlash` _in the module scope_. It's exactly like our `console.log` except we assigned it to a variable. Either way, it's a module side effect so the compiler has to keep it around (maybe there's a `console.log` inside of `addTrailingSlash` 😅).
+The problem is we've called `removeTrailingSlash` _in the module scope_. It's exactly like our `console.log` except we assigned it to a variable. Either way, it's a module side effect so the compiler has to keep it around (maybe there's a `console.log` inside of `removeTrailingSlash` 😅).
 
 Even if we tried to do magic tricks with the compiler to remove these kinds of patterns, in our experience they're much harder to write than the ones we're about to show you.
 
 Let's implement a couple of the helpers we've been discussing:
 
-#### `addTrailingSlash`
+#### `removeTrailingSlash`
 
-```js filename=addTrailingSlash.js
+```js filename=removeTrailingSlash.js
 import { redirect } from "@remix-run/node";
 
-export function addTrailingSlash(request, next) {
+export function removeTrailingSlash(request, next) {
   let url = new URL(request.url);
-  if (
-    // not a remix transition fetch request
-    !url.searchParams.has("_data") &&
-    // doesn't have a trailing slash already
-    !url.pathname.endsWith("/")
-  ) {
-    return redirect(request.url + "/", { status: 308 });
+  if (url.pathname.endsWith("/")) {
+    return redirect(request.url.slice(0, -1), {
+      status: 308,
+    });
   }
   return next();
 }
