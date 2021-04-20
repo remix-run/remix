@@ -1,10 +1,9 @@
 import * as path from "path";
 import * as esbuild from "esbuild";
 
-import type { BuildOptions } from "../build";
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
-import { getRouteExportsCached } from "./routes";
+import { getRouteModuleExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
 
@@ -81,7 +80,7 @@ export async function createAssetsManifest(
     } else {
       let route = routesByFile.get(entryPointFile);
       invariant(route, `Cannot get route for entry point ${output.entryPoint}`);
-      let sourceExports = await getRouteExportsCached(config, route.id);
+      let sourceExports = await getRouteModuleExportsCached(config, route.id);
       routes[route.id] = {
         id: route.id,
         parentId: route.parentId,

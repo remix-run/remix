@@ -3,12 +3,11 @@ import * as esbuild from "esbuild";
 
 import * as cache from "../cache";
 import type { RemixConfig } from "../config";
-import { loaders } from "./loaders";
 import { getFileHash } from "./utils/crypto";
 
 type CachedRouteExports = { hash: string; exports: string[] };
 
-export async function getRouteExportsCached(
+export async function getRouteModuleExportsCached(
   config: RemixConfig,
   routeId: string
 ): Promise<string[]> {
@@ -24,7 +23,7 @@ export async function getRouteExportsCached(
   }
 
   if (!cached || cached.hash !== hash) {
-    let exports = await getRouteExports(config, routeId);
+    let exports = await getRouteModuleExports(config, routeId);
     cached = { hash, exports };
     try {
       await cache.putJson(config.cacheDirectory, key, cached);
@@ -36,7 +35,7 @@ export async function getRouteExportsCached(
   return cached.exports;
 }
 
-export async function getRouteExports(
+export async function getRouteModuleExports(
   config: RemixConfig,
   routeId: string
 ): Promise<string[]> {
@@ -44,15 +43,9 @@ export async function getRouteExports(
     entryPoints: [
       path.resolve(config.appDirectory, config.routes[routeId].file)
     ],
-    platform: "node",
-    target: "node14",
+    platform: "neutral",
     format: "esm",
-    bundle: true,
-    splitting: true,
     metafile: true,
-    loader: loaders,
-    publicPath: config.publicPath,
-    outdir: ".",
     write: false
   });
   let metafile = result.metafile!;

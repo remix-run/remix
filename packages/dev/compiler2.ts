@@ -13,7 +13,7 @@ import { warnOnce } from "./warnings";
 import { createAssetsManifest } from "./compiler2/assets";
 import { getAppDependencies } from "./compiler2/dependencies";
 import { loaders, getLoaderForFile } from "./compiler2/loaders";
-import { getRouteExportsCached } from "./compiler2/routes";
+import { getRouteModuleExportsCached } from "./compiler2/routes";
 import { writeFileSafe } from "./compiler2/utils/fs";
 
 // When we build Remix, this shim file is copied directly into the output
@@ -227,25 +227,8 @@ async function createBrowserBuild(
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
     plugins: [
-      emptyRouteModulesPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
-      manualExternalsPlugin((id, importer) => {
-        let resolved = path.resolve(importer, id);
-
-        if (
-          resolved.startsWith(config.appDirectory) &&
-          /\.server(\.[jt]sx?)?$/.test(resolved)
-        ) {
-          // Mark .server.js modules external in the browser build. These should
-          // be tree-shaken from the browser bundles anyway, but making them
-          // "external" tells esbuild to not even try to parse them. This is an
-          // escape hatch for users that lets them avoid esbuild errors/warnings
-          // from node-specific modules not intended for the browser.
-          return true;
-        }
-
-        return false;
-      })
+      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
   });
 }
@@ -274,7 +257,8 @@ async function createServerBuild(
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
     plugins: [
-      emptyRouteModulesPlugin(config),
+      serverRouteModulesPlugin(config),
+      emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
       manualExternalsPlugin((id, importer) => {
         // assets.json is external because this build runs in parallel with the
         // browser build and it's not there yet.
@@ -342,123 +326,6 @@ async function generateManifests(
   ]);
 }
 
-type Route = RemixConfig["routes"][string];
-
-const browserSafeRouteExports: { [name: string]: boolean } = {
-  ErrorBoundary: true,
-  default: true,
-  handle: true,
-  links: true,
-  meta: true
-};
-
-/**
- * This plugin loads route modules for the browser build, using module shims
- * that export only thing that are safe for the browser.
- */
-function browserRouteModulesPlugin(
-  config: RemixConfig,
-  suffixMatcher: RegExp
-): esbuild.Plugin {
-  return {
-    name: "browser-route-modules",
-    async setup(build) {
-      let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
-        (map, key) => {
-          let route = config.routes[key];
-          map.set(path.resolve(config.appDirectory, route.file), route);
-          return map;
-        },
-        new Map()
-      );
-
-      build.onResolve({ filter: suffixMatcher }, args => {
-        return { path: args.path, namespace: "browser-route-module" };
-      });
-
-      build.onLoad(
-        { filter: suffixMatcher, namespace: "browser-route-module" },
-        async args => {
-          let file = args.path.replace(suffixMatcher, "");
-          let route = routesByFile.get(file);
-          invariant(route, `Cannot get route by path: ${args.path}`);
-
-          let exports = (await getRouteExportsCached(config, route.id)).filter(
-            ex => !!browserSafeRouteExports[ex]
-          );
-          let spec = exports.length > 0 ? `{ ${exports.join(", ")} }` : "*";
-          let contents = `export ${spec} from ${JSON.stringify(file)};`;
-
-          return {
-            contents,
-            resolveDir: path.dirname(file),
-            loader: "js"
-          };
-        }
-      );
-    }
-  };
-}
-
-/**
- * This plugin interprets empty route modules as `export {}` so they are
- * not loaded as CommonJS (with `{ default: {} }`) by esbuild.
- * See https://github.com/evanw/esbuild/issues/1043
- */
-function emptyRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
-  return {
-    name: "empty-route-modules",
-    setup(build) {
-      let routeFiles = new Set(
-        Object.keys(config.routes).map(key =>
-          path.resolve(config.appDirectory, config.routes[key].file)
-        )
-      );
-
-      build.onResolve({ filter: /.*/ }, args => {
-        if (routeFiles.has(args.path)) {
-          return { path: args.path, namespace: "route-module" };
-        }
-      });
-
-      build.onLoad({ filter: /.*/, namespace: "route-module" }, async args => {
-        let file = args.path;
-        let contents = await fsp.readFile(file, "utf-8");
-
-        // Default to `export {}` if the file is empty so esbuild interprets
-        // this file as ESM instead of CommonJS.
-        if (!/\S/.test(contents)) {
-          return { contents: "export {}", loader: "js" };
-        }
-
-        return {
-          contents,
-          resolveDir: path.dirname(file),
-          loader: getLoaderForFile(file)
-        };
-      });
-    }
-  };
-}
-
-/**
- * This plugin marks paths external using a callback function.
- */
-function manualExternalsPlugin(
-  isExternal: (id: string, importer: string) => boolean
-): esbuild.Plugin {
-  return {
-    name: "manual-externals",
-    setup(build) {
-      build.onResolve({ filter: /.*/ }, args => {
-        if (isExternal(args.path, args.importer)) {
-          return { path: args.path, external: true };
-        }
-      });
-    }
-  };
-}
-
 function getServerEntryPointModule(
   config: RemixConfig,
   options: BuildOptions
@@ -498,4 +365,157 @@ export const routes = {
         `Cannot generate server entry point module for target: ${options.target}`
       );
   }
+}
+
+type Route = RemixConfig["routes"][string];
+
+const browserSafeRouteExports: { [name: string]: boolean } = {
+  ErrorBoundary: true,
+  default: true,
+  handle: true,
+  links: true,
+  meta: true
+};
+
+/**
+ * This plugin loads route modules for the browser build, using module shims
+ * that re-export only the route module exports that are safe for the browser.
+ */
+function browserRouteModulesPlugin(
+  config: RemixConfig,
+  suffixMatcher: RegExp
+): esbuild.Plugin {
+  return {
+    name: "browser-route-modules",
+    async setup(build) {
+      let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
+        (map, key) => {
+          let route = config.routes[key];
+          map.set(path.resolve(config.appDirectory, route.file), route);
+          return map;
+        },
+        new Map()
+      );
+
+      build.onResolve({ filter: suffixMatcher }, args => {
+        return { path: args.path, namespace: "browser-route-module" };
+      });
+
+      build.onLoad(
+        { filter: suffixMatcher, namespace: "browser-route-module" },
+        async args => {
+          let file = args.path.replace(suffixMatcher, "");
+          let route = routesByFile.get(file);
+          invariant(route, `Cannot get route by path: ${args.path}`);
+
+          let exports = (
+            await getRouteModuleExportsCached(config, route.id)
+          ).filter(ex => !!browserSafeRouteExports[ex]);
+          let spec = exports.length > 0 ? `{ ${exports.join(", ")} }` : "*";
+          let contents = `export ${spec} from ${JSON.stringify(file)};`;
+
+          return {
+            contents,
+            resolveDir: path.dirname(file),
+            loader: "js"
+          };
+        }
+      );
+    }
+  };
+}
+
+/**
+ * This plugin substitutes an empty module for any modules in the `app`
+ * directory that match the given `filter`.
+ */
+function emptyModulesPlugin(
+  config: RemixConfig,
+  filter: RegExp
+): esbuild.Plugin {
+  return {
+    name: "empty-modules",
+    setup(build) {
+      build.onResolve({ filter }, args => {
+        let resolved = path.resolve(args.resolveDir, args.path);
+        if (
+          // Limit this behavior to modules found in only the `app` directory.
+          // This allows node_modules to use the `.server.js` and `.client.js`
+          // naming conventions with different semantics.
+          resolved.startsWith(config.appDirectory)
+        ) {
+          return { path: args.path, namespace: "empty-module" };
+        }
+      });
+
+      build.onLoad({ filter: /.*/, namespace: "empty-module" }, () => {
+        return {
+          // Use an empty CommonJS module here instead of ESM to avoid "No
+          // matching export" errors in esbuild for stuff that is imported
+          // from this file.
+          contents: "module.exports = {};",
+          loader: "js"
+        };
+      });
+    }
+  };
+}
+
+/**
+ * This plugin loads route modules for the server build.
+ */
+function serverRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
+  return {
+    name: "server-route-modules",
+    setup(build) {
+      let routeFiles = new Set(
+        Object.keys(config.routes).map(key =>
+          path.resolve(config.appDirectory, config.routes[key].file)
+        )
+      );
+
+      build.onResolve({ filter: /.*/ }, args => {
+        if (routeFiles.has(args.path)) {
+          return { path: args.path, namespace: "route-module" };
+        }
+      });
+
+      build.onLoad({ filter: /.*/, namespace: "route-module" }, async args => {
+        let file = args.path;
+        let contents = await fsp.readFile(file, "utf-8");
+
+        // Default to `export {}` if the file is empty so esbuild interprets
+        // this file as ESM instead of CommonJS with `default: {}`. This helps
+        // in development when creating new files.
+        // See https://github.com/evanw/esbuild/issues/1043
+        if (!/\S/.test(contents)) {
+          return { contents: "export {}", loader: "js" };
+        }
+
+        return {
+          contents,
+          resolveDir: path.dirname(file),
+          loader: getLoaderForFile(file)
+        };
+      });
+    }
+  };
+}
+
+/**
+ * This plugin marks paths external using a callback function.
+ */
+function manualExternalsPlugin(
+  isExternal: (id: string, importer: string) => boolean
+): esbuild.Plugin {
+  return {
+    name: "manual-externals",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, args => {
+        if (isExternal(args.path, args.importer)) {
+          return { path: args.path, external: true };
+        }
+      });
+    }
+  };
 }

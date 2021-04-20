@@ -2,6 +2,19 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Added `.client.js` support to the new compiler for keeping browser-specific code out
+  of the server build
+
+### Bug Fixes
+
+- Fixed some uses of `.server.js` when esbuild is not able to prune the `import` for
+  some reason (still need to figure out why). Instead of marking `.server.js` modules
+  as "external", they are now substituted with an empty module instead.
+
 ## 0.15.4 - Thu Apr 15 2021
 
 ### Improvements
