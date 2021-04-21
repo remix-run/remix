@@ -1,6 +1,12 @@
-import { Link, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import type { LoaderFunction, LinksFunction } from "@remix-run/node";
-import { Meta, Scripts, Links, useRouteData } from "@remix-run/react";
+import {
+  Meta,
+  Scripts,
+  Links,
+  useRouteData,
+  useLiveReload
+} from "@remix-run/react";
 
 import styles from "./styles/global.css";
 
@@ -14,6 +20,7 @@ export let links: LinksFunction = () => {
 
 export default function App() {
   let data = useRouteData();
+  useLiveReload();
 
   return (
     <html lang="en">
@@ -23,20 +30,6 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <ul>
-          <li>
-            <Link to="/gists">Sweet Gists</Link>
-          </li>
-          <li>
-            <Link to="/beef/and/cheese">Beef and cheese</Link>
-          </li>
-          <li>
-            <Link to="/beef/and/cheddar">Beef and cheddar</Link>
-          </li>
-          <li>
-            <Link to="/portugeuse/sausage">Portugeuse Sausage</Link>
-          </li>
-        </ul>
         <Outlet />
         <footer>
           <p>This page was rendered at {data.date.toLocaleString()}</p>

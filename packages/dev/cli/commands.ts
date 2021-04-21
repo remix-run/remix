@@ -13,6 +13,7 @@ import * as compiler2 from "../compiler2";
 import { readConfig } from "../config";
 import type { RemixConfig } from "../config";
 import { startDevServer } from "../server";
+import WebSocket from "ws";
 
 /**
  * Runs the build for a Remix app with the old rollup compiler
@@ -88,7 +89,6 @@ export async function watch2(
   onRebuildStart?: () => void
 ): Promise<void> {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
-
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let start = Date.now();
@@ -96,29 +96,51 @@ export async function watch2(
     typeof remixRootOrConfig === "object"
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
+
+  let wss = new WebSocket.Server({ port: 3001 });
+  function broadcast(event: { type: string; [key: string]: any }) {
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(event));
+      }
+    });
+  }
+
+  function log(_message: string) {
+    let message = `💿 ${_message}`;
+    console.log(message);
+    broadcast({ type: "LOG", message });
+  }
+
   signalExit(
     await compiler2.watch(config, {
       mode,
+      // TODO: esbuild compiler just blows up on syntax errors in the app
+      // onError(errorMessage) {
+      //   console.error(errorMessage);
+      // },
       onRebuildStart() {
         start = Date.now();
         onRebuildStart && onRebuildStart();
+        log("Rebuilding...");
       },
       onRebuildFinish() {
-        console.log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
+        log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
+        broadcast({ type: "RELOAD" });
       },
       onFileCreated(file) {
-        console.log(`File created: ${path.relative(process.cwd(), file)}`);
+        log(`File created: ${path.relative(process.cwd(), file)}`);
       },
       onFileChanged(file) {
-        console.log(`File changed: ${path.relative(process.cwd(), file)}`);
+        log(`File changed: ${path.relative(process.cwd(), file)}`);
       },
       onFileDeleted(file) {
-        console.log(`File deleted: ${path.relative(process.cwd(), file)}`);
+        log(`File deleted: ${path.relative(process.cwd(), file)}`);
       }
     })
   );
 
-  console.log(`Built in ${prettyMs(Date.now() - start)}`);
+  console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
 }
 
 export function run2(remixRoot: string): Promise<void> {

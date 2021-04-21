@@ -1,5 +1,11 @@
 import type { LinksFunction, LoaderFunction } from "@remix-run/react";
-import { Meta, Links, Scripts, useRouteData } from "@remix-run/react";
+import {
+  Meta,
+  Links,
+  Scripts,
+  useRouteData,
+  useLiveReload
+} from "@remix-run/react";
 import { Outlet } from "react-router-dom";
 
 import stylesUrl from "./styles/global.css";
@@ -38,6 +44,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export default function App() {
   let data = useRouteData();
+  useLiveReload();
 
   return (
     <html lang="en">
