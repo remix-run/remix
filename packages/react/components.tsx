@@ -73,7 +73,8 @@ function setFormPending(
   action: string
 ): void {
   pendingFormSubmit = { method, encType, data, action };
-  formState = method === "get" ? FormState.PendingGet : FormState.Pending;
+  formState =
+    method.toLowerCase() === "get" ? FormState.PendingGet : FormState.Pending;
 }
 
 // 2. When the loader action redirects
@@ -836,7 +837,7 @@ export function useSubmit(): SubmitFunction {
         );
       }
 
-      method = options.method || "GET";
+      method = options.method || "get";
       action = options.action || defaultAction;
       encType = options.encType || "application/x-www-form-urlencoded";
 
@@ -859,9 +860,12 @@ export function useSubmit(): SubmitFunction {
 
     setFormPending(method, encType, formData, action);
 
-    let url = new URL(action);
+    let url = new URL(
+      action,
+      `${window.location.protocol}//${window.location.host}`
+    );
 
-    if (method === "get") {
+    if (method.toLowerCase() === "get") {
       for (let [name, value] of formData) {
         if (typeof value === "string") {
           url.searchParams.set(name, value);
