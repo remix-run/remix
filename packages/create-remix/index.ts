@@ -43,6 +43,7 @@ async function go() {
     appDir: string;
     server: "remix" | "arc" | "fly" | "vercel";
     install: boolean;
+    lang: "ts" | "js";
   }>([
     {
       type: "list",
@@ -61,27 +62,31 @@ async function go() {
       ]
     },
     {
+      type: "list",
+      name: "lang",
+      message: "TypeScript or JavaScript?",
+      choices: [
+        { name: "TypeScript", value: "ts" },
+        { name: "JavaScript", value: "js" }
+      ]
+    },
+    {
       type: "confirm",
       name: "install",
       message: "Do you want me to run `npm install`?",
       default: true
     }
-    // {
-    //   type: "list",
-    //   name: "lang",
-    //   message: "TypeScript or JavaScript?",
-    //   choices: [
-    //     { name: "TypeScript", value: "ts" },
-    //     { name: "JavaScript", value: "js" }
-    //   ]
-    // },
   ]);
 
   // add a space under the prompt
   console.log();
 
   // copy the shared template
-  let sharedTemplate = path.resolve(__dirname, "templates", "_shared");
+  let sharedTemplate = path.resolve(
+    __dirname,
+    "templates",
+    `_shared_${answers.lang}`
+  );
   await fse.copy(sharedTemplate, appDir);
 
   // copy the server template
