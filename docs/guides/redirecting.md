@@ -1,5 +1,4 @@
 ---
 title: Redirecting
+disabled: true
 ---
-
-TODO:

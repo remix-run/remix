@@ -2,8 +2,6 @@
 title: React Router v6
 ---
 
-# React Router v6
-
 Remix uses React Router v6, which is not yet released (we wanted to make sure it was good enough for Remix first, it's a big change!).
 
 In general you work with Links, useLocation, and useParams, but there's more to the API that you can use in Remix. Some of the APIs in Remix will also be moving into React Router (like useLocationPending).

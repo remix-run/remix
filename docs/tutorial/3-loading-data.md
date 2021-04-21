@@ -22,7 +22,7 @@ export default function Gists() {
 }
 ```
 
-## Accessing data for a route
+## Accessing Data for a Route
 
 Now that we have a loader in place, you can access that data with the `useRouteData` hook.
 
@@ -103,7 +103,7 @@ export let loader: Loader = ({ params }) => {
 };
 ```
 
-## Other return values
+## Other Return Values
 
 You don't have to build up a full response or use a helper, loaders can return plain objects, you just lose control over your headers this way:
 
@@ -113,7 +113,7 @@ export let loader: LoaderFunction = () => {
 };
 ```
 
-## Why Cache-Control headers matter in loaders:
+## Why Cache-Control Headers Matter in Loaders:
 
 We saw that our routes can define their cache control, so why does it matter for loaders? It matters for two reasons:
 
@@ -135,7 +135,7 @@ Now when the browser or a CDN wants to cache our page, it gets the headers from 
 
 The second reason this matters is that Remix calls your loaders via `fetch` in the browser on client side transitions. By returning good cache headers here, when the user clicks back/forward or visits the same page multiple times, the browser won't actually make another request for the data but will use a cached version instead. This greatly speeds up a website's performance, even for pages that you can't cache on a CDN. A lot of React apps rely on a JavaScript cache, but browser caches already work great!
 
-## Rendering the gists
+## Rendering the Gists
 
 Whew, okay, back to our app. Go ahead and map over that array however you'd like, here's a suggestion:
 
@@ -159,7 +159,7 @@ export default function Gists() {
 
 Bit lazy on the type there, but hopefully you'll forgive us! Alright, refresh and you should see a beautiful list of gists (a glist?).
 
-## Data for meta tags
+## Data for Meta Tags
 
 Like headers, meta tags pretty much always depend on data too, so Remix passes the data to your meta tag function. Open up `app/routes/gists.tsx` again and update your meta function:
 

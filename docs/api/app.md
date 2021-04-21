@@ -1,8 +1,179 @@
 ---
-title: Route Module
+title: Application Module APIs
 ---
 
+A lot of Remix API isn't imported from a package like `@remix-run/react` or `@remix-run/node`, but are instead conventions and exports from your application modules.
+
+# remix.config.js
+
+When remix first starts up, it reads your config file, you need to make sure this file is deployed to your server as it's read when the server starts.
+
+```tsx
+module.exports = {
+  appDirectory: "app",
+  browserBuildDirectory: "public/build",
+  devServerPort: 8002,
+  publicPath: "/build/",
+  serverBuildDirectory: "build",
+  routes(defineRoutes) {
+    return defineRoute(route => {
+      route("/somewhere/cool/*", "catchall.tsx");
+    });
+  }
+};
+```
+
+## appDirectory
+
+The path to the `app` directory, relative to remix.config.js. Defaults to "app".
+
+```js
+// default
+exports.appDirectory = "./app";
+
+// custom
+exports.appDirectory = "./elsewhere";
+```
+
+## routes
+
+A function for defining custom routes, in addition to those already defined
+using the filesystem convention in `app/routes`. Both sets of routes will be merged.
+
+```tsx
+exports.routes = async (defineRoutes) => {
+  // If you need to do async work, do it before calling `defineRoutes`, we use
+  // the call stack of `route` inside to set nesting.
+
+  return defineRoutes((route) => {
+    // A common use for this is catchall routes.
+    // - The first argument is the React Router path to match against
+    // - The second is the relative filename of the route handler
+    route("/some/path/*", "catchall.tsx")
+
+    // if you want to nest routes, use the optional callback argument
+    route("some/:path", "some/route/file.js", () => {
+      // - path is relative to parent path
+      // - filenames are still relative to the app directory
+      route("relative/path", "some/other/file")
+    });
+
+  }
+}
+```
+
+## browserBuildDirectory
+
+The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
+
+## publicPath
+
+The URL prefix of the browser build with a trailing slash. Defaults to "/build/". This is the path the browser will use to find assets.
+
+## serverBuildDirectory
+
+The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
+
+## devServerPort
+
+The port number to use for the dev server. Defaults to 8002.
+
+## mdx
+
+Options to use when compiling MDX.
+
+```js
+exports.mdx = {
+  rehypePlugins: [require("@mapbox/rehype-prism"), require("rehype-slug")]
+};
+```
+
+# File Name Conventions
+
+There are a few conventions that Remix uses you should be aware of.
+
+## Special Files
+
+- **`remix.config.js`**: Remix uses this file to know how to build your app for production and run it in development. This file is required.
+- **`app/entry.server.{js,tsx}`**: This is your entry into the server rendering piece of Remix. This file is required.
+- **`app/entry.client.{js,tsx}`**: This is your entry into the browser rendering/hydration piece of Remix. This file is required.
+
+## Route Filenames
+
+- **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes: you can export a `loader`, `action`, etc.
+- **`app/routes/*.{js,jsx,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
+- **`app/routes/{folder}/*.js`**: Folders inside of routes will create nested URLs.
+- **`app/routes/{folder}` with `app/routes/{folder}.js`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
+- **Dots in route filesnames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `routes/some.long.url.tsx` will create the URL `/some/long/url`.
+- **`app/routes/index.js`**: Routes named "index" will render when the parent layout route's path is matched exactly.
+- **`$param`**: The dollar sign denotes a dynamic segment of the URL. It will be parsed and passed to your loaders and routes.
+
+  For example: `routes/users/$userId.tsx` will match the following URLs: `users/123` and `users/abc` but not `users/123/abc` because that has too many segments. See the <Link to="../routing">routing guide</Link> for more information.
+
+  Some CLIs require you to escape the \$ when creating files:
+
+  ```bash
+  touch routes/\$params.tsx
+  ```
+
+  Params can be nested routes, just create a folder with the `$` in it.
+
+- **`routes/404.tsx`**: When a URL can't be matched to a route, Remix uses this file to render a 404 page. We don't like this convention because "/404" should be a valid URL (maybe you're showing the best BBQ in Atlanta!). This is what we've got right now though. This will probably.
+
+# entry.client.js
+
+Remix uses `app/entry.client.js` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
+
+Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module](../entry.server).
+
+Here's a basic example:
+
+```tsx
+import ReactDOM from "react-dom";
+import Remix from "@remix-run/react/browser";
+
+ReactDOM.hydrate(<Remix />, document);
+```
+
+As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup thing likes `window.history.scrollRestoration`, etc.
+
+# entry.server.js
+
+Remix uses `app/entry.server.js` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
+
+This module should render the markup for the current page using a `<Remix>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
+
+Here's a basic example:
+
+```tsx
+import ReactDOMServer from "react-dom/server";
+import type { EntryContext } from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  let markup = ReactDOMServer.renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  responseHeaders.set("Content-Type", "text/html");
+
+  return new Response("<!DOCTYPE html>" + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders
+  });
+}
+```
+
+# Route Module API
+
 A route in Remix is mostly a React component, with a couple extra exports.
+
+It's important to read [Route Module Constraints](../constraints/).
 
 ## Component
 
@@ -360,7 +531,7 @@ Examples:
 ```tsx
 import type { LinksFunction } from "@remix-run/react";
 import { block } from "@remix-run/react";
-import stylesHref from "url:../styles/something.css";
+import stylesHref from "../styles/something.css";
 
 export let links: LinksFunction = () => {
   return [
@@ -478,4 +649,34 @@ export let handle = {
 };
 ```
 
-Please refer to the [`useMatches` documentation](/dashboard/docs/react#usematches) for more information.
+This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](../react/#usematches) for more information.
+
+# Asset URL Imports
+
+Any files inside the `app` folder can be imported into your modules. Remix will:
+
+1. Copy the file to your browser build directory
+2. Fingerprint the file for long-term caching
+3. Return the public URL to your module to be used while rendering
+
+It's most common for stylesheets, but can used for anything.
+
+```tsx
+// root.tsx
+import type { LinksFunction } from "@remix-run/react";
+import styles from "./styles/app.css";
+import banner from "./images/banner.jpg";
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: styles }];
+};
+
+export default function Page() {
+  return (
+    <div>
+      <h1>Some Page</h1>
+      <img src={banner} />
+    </div>
+  );
+}
+```
