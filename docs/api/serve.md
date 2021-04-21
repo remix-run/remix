@@ -1,5 +1,5 @@
 ---
-title: "@remix/serve"
+title: "@remix-run/serve"
 ---
 
 While you can bring your own server, Remix ships with a built-in, production ready application server.
