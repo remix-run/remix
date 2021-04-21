@@ -74,6 +74,6 @@ $ vercel --prod
 
 ### GitHub Automatic Deployments
 
-We're still trying to figure out to make this work, but manual vercel deploys and GitHub vercel deploys are inconsistent. For some reason the GitHub integration doesn't deploy the public folder. We don't know how to tell it to.
+For some reason the GitHub integration doesn't deploy the public folder. We're working with Vercel to figure this out.
 
 For now, [you can set up a GitHub action with this config](https://gist.github.com/mcansh/91f8effda798b41bb373351fad217070) from our friend @mcansh.
