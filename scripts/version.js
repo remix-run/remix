@@ -85,7 +85,7 @@ async function run(args) {
   ensureCleanWorkingDirectory();
 
   // - Get the next version number
-  let currentVersion = await getPackageVersion("react");
+  let currentVersion = await getPackageVersion("remix-react");
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(currentVersion, givenVersion, prereleaseId);
@@ -104,7 +104,7 @@ async function run(args) {
   console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
 
   // Update @remix-run/dev version
-  await updatePackageConfig("dev", config => {
+  await updatePackageConfig("remix-dev", config => {
     config.version = nextVersion;
   });
   console.log(
@@ -112,7 +112,7 @@ async function run(args) {
   );
 
   // Update @remix-run/react version
-  await updatePackageConfig("react", config => {
+  await updatePackageConfig("remix-react", config => {
     config.version = nextVersion;
   });
   console.log(
@@ -120,7 +120,7 @@ async function run(args) {
   );
 
   // Update @remix-run/node version
-  await updatePackageConfig("node", config => {
+  await updatePackageConfig("remix-node", config => {
     config.version = nextVersion;
   });
   console.log(
@@ -128,18 +128,18 @@ async function run(args) {
   );
 
   // Update node server versions + @remix-run/node dep
-  for (let platform of ["architect", "express", "vercel"]) {
-    await updatePackageConfig(platform, config => {
+  for (let name of ["architect", "express", "vercel"]) {
+    await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/node"] = nextVersion;
     });
     console.log(
-      chalk.green(`  Updated @remix-run/${platform} to version ${nextVersion}`)
+      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
     );
   }
 
   // Update @remix-run/serve version + @remix-run/express dep
-  await updatePackageConfig("serve", config => {
+  await updatePackageConfig("remix-serve", config => {
     config.version = nextVersion;
     config.dependencies["@remix-run/express"] = nextVersion;
   });
@@ -155,7 +155,7 @@ async function run(args) {
     );
   }
 
-  // - Commit and tag
+  // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
   execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
 

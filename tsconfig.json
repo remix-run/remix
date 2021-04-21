@@ -1,13 +1,13 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/architect" },
     { "path": "packages/create-remix" },
-    { "path": "packages/dev" },
-    { "path": "packages/express" },
-    { "path": "packages/node" },
-    { "path": "packages/react" },
-    { "path": "packages/serve" },
-    { "path": "packages/vercel" }
+    { "path": "packages/remix-architect" },
+    { "path": "packages/remix-dev" },
+    { "path": "packages/remix-express" },
+    { "path": "packages/remix-node" },
+    { "path": "packages/remix-react" },
+    { "path": "packages/remix-serve" },
+    { "path": "packages/remix-vercel" }
   ]
 }

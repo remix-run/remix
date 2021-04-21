@@ -34,12 +34,6 @@ async function run() {
   let prerelease = semver.prerelease(taggedVersion);
   let tag = prerelease ? prerelease[0] : "latest";
 
-  // Publish create-remix package
-  await npm(
-    ["publish", "--tag", tag, path.join(npmModulesDir, "create-remix")],
-    { stdio: "inherit" }
-  );
-
   // Publish all @remix-run/* packages
   for (let name of [
     "dev",
@@ -55,6 +49,12 @@ async function run() {
       { stdio: "inherit" }
     );
   }
+
+  // Publish create-remix package
+  await npm(
+    ["publish", "--tag", tag, path.join(npmModulesDir, "create-remix")],
+    { stdio: "inherit" }
+  );
 
   return 0;
 }
