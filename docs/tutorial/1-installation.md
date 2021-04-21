@@ -6,12 +6,16 @@ order: 1
 
 Let's get started! Here's what you'll need:
 
+## Prereqs
+
 1. Your Remix license key:
 
 - Get it from the [Remix Dashboard](https://remix.run/dashboard).
 - [Buy one](https://remix.run/buy) if you don't have one yet!
 
 2. Node.js. [Get it here](https://nodejs.org)
+
+## Installation
 
 Open up your terminal and type this:
 
