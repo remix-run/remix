@@ -225,11 +225,15 @@ let createRemix = {
       targets: [
         {
           src: path.resolve(__dirname, "packages/create-remix/package.json"),
-          dest: `build/node_modules/create-remix`
+          dest: "build/node_modules/create-remix"
+        },
+        {
+          src: path.resolve(__dirname, "packages/create-remix/README.md"),
+          dest: "build/node_modules/create-remix"
         },
         {
           src: path.resolve(__dirname, "packages/create-remix/templates/*"),
-          dest: `build/node_modules/create-remix/templates`
+          dest: "build/node_modules/create-remix/templates"
         }
       ]
     })
