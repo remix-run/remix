@@ -23,7 +23,7 @@ Open up your terminal and type this:
 npm init remix
 ```
 
-When it asks which server you want to use, pick "Remix App Server" for this tutorial. You'll notice that there are a lot of options, you can learn how to deploy to any server you want in the [../../byos/](Bring Your Own Server) guide.
+When it asks which server you want to use, pick "Remix App Server" for this tutorial. You'll notice that there are a lot of options, so you can deploy to any server you want.
 
 Enough chat, let's go!
 
