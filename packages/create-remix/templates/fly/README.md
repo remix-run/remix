@@ -23,7 +23,7 @@
 
    ```sh
    # .zshrc, .profile, .bash_rc, etc.
-   export REMIX_TOKEN = "your token here"
+   export REMIX_TOKEN="your token here"
    ```
 
    After you've done that, either open a new terminal tab or run `source ~/.zshrc` (or whatever your rc file is) to get the new env var available in your shell. Now you can run a local `npm install`.
