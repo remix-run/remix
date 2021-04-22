@@ -34,7 +34,7 @@ async function go() {
   let appDir = path.resolve(cwd, dir);
   if (fse.existsSync(appDir)) {
     console.log(
-      `\n⚠️ Oops, "${appDir}" already exists. Please try again with a different directory.`
+      `\n💿️🚨 Oops, "${appDir}" already exists. Please try again with a different directory.`
     );
     process.exit();
   }
@@ -127,11 +127,17 @@ async function go() {
     JSON.stringify(appPkg, null, 2)
   );
 
+  let envTokenServers = ["fly"];
+  let warnAboutEnvToken = false;
+
   // Handle Remix token
   // If they've got an envvar, just use that
   if (process.env.REMIX_TOKEN) {
     console.log("💿 Detected REMIX_TOKEN on env, using local .npmrc.");
     await writeEnvNpmRc(appDir);
+  } else if (envTokenServers.includes(answers.server)) {
+    await writeEnvNpmRc(appDir);
+    warnAboutEnvToken = true;
   } else {
     // if they have it in their home directory, just move on
     if (await hasHomeNpmRc()) {
@@ -153,7 +159,7 @@ async function go() {
     }
   }
 
-  if (answers.install) {
+  if (answers.install && !warnAboutEnvToken) {
     process.chdir(appDir);
     await npm(["install", "--supress-warnings", "--no-fund"]);
   }
@@ -162,8 +168,14 @@ async function go() {
     console.log(`💿 That's it! \`cd\` into "${dir}" and run \`npm run dev\`!`);
   } else {
     console.log(
-      `💿 That's it! Since you're using \`${answers.server}\`, make sure to check the README for development and deployment instructions.`
+      `💿 That's it! \`cd\` into "${dir}" and check the README for development and deployment instructions with ${answers.server}`
     );
+
+    if (warnAboutEnvToken) {
+      console.log(
+        `\n💿️🚨 Your REMIX_TOKEN was not found in process.env but is required for ${answers.server}. Check the README for instructions.`
+      );
+    }
   }
 }
 
