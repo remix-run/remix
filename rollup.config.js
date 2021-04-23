@@ -150,7 +150,7 @@ let remixServe = {
   external(id) {
     return !isLocalModuleId(id);
   },
-  input: [path.resolve(__dirname, "packages/remix-serve/app.ts")],
+  input: [path.resolve(__dirname, "packages/remix-serve/index.ts")],
   output: {
     banner: banner,
     dir: `build/node_modules/@remix-run/serve`,
@@ -183,7 +183,7 @@ let remixServeCli = {
   external() {
     return true;
   },
-  input: path.resolve(__dirname, "packages/remix-serve/index.ts"),
+  input: path.resolve(__dirname, "packages/remix-serve/cli.ts"),
   output: {
     banner: "#!/usr/bin/env node\n" + banner,
     dir: "build/node_modules/@remix-run/serve",

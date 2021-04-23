@@ -5,11 +5,11 @@
   "scripts": {
     "install_remix": "mkdir -p node_modules && cp -r ../../build/node_modules/* node_modules",
     "prebuild": "yarn run install_remix",
-    "build": "node node_modules/@remix-run/dev/cli build2",
+    "build": "node node_modules/@remix-run/dev/cli.js build2",
     "prestart": "yarn run install_remix",
-    "start": "node node_modules/@remix-run/express/serve ./build",
+    "start": "node node_modules/@remix-run/serve/cli.js ./build",
     "preremixrun": "yarn run install_remix",
-    "remixrun": "node node_modules/@remix-run/dev/cli run3"
+    "remixrun": "node node_modules/@remix-run/dev/cli.js run3"
   },
   "dependencies": {
     "compression": "^1.7.4",
