@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/react",
   "description": "React DOM bindings for Remix",
-  "version": "0.16.3",
+  "version": "0.16.4",
   "type": "module",
   "repository": "https://github.com/remix-run/remix",
   "dependencies": {
