@@ -1,4 +1,3 @@
-import type { LinksFunction, LoaderFunction } from "@remix-run/react";
 import {
   Meta,
   Links,
@@ -10,11 +9,11 @@ import { Outlet } from "react-router-dom";
 
 import stylesUrl from "./styles/global.css";
 
-export let links: LinksFunction = () => {
+export let links = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
-export let loader: LoaderFunction = async () => {
+export let loader = async () => {
   return { date: new Date() };
 };
 
@@ -43,7 +42,7 @@ export default function App() {
   );
 }
 
-export function ErrorBoundary({ error }: { error: Error }) {
+export function ErrorBoundary({ error }) {
   return (
     <html lang="en">
       <head>

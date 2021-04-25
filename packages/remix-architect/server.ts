@@ -59,7 +59,9 @@ function createRemixRequest(req: ArcRequest): Request {
 
   return new Request(url.toString(), {
     method: req.requestContext.http.method,
-    headers: req.headers,
+    headers: req.cookies
+      ? { ...req.headers, Cookie: req.cookies.join(";") }
+      : req.headers,
     body:
       req.body && req.isBase64Encoded
         ? Buffer.from(req.body, "base64").toString()
