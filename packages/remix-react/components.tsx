@@ -675,7 +675,7 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
    * A function to call when the form is submitted. If you call
    * `event.preventDefault()` then this form will not do anything.
    */
-  onSubmit?: React.FormEventHandler;
+  onSubmit?: React.FormEventHandler<HTMLFormElement>;
 }
 
 /**
@@ -701,20 +701,22 @@ export let Form = React.forwardRef<HTMLFormElement, FormProps>(
     let formMethod = method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action);
 
-    function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-      onSubmit && onSubmit(event);
-      if (event.defaultPrevented) return;
-      event.preventDefault();
-      submit(event.currentTarget, { method, replace });
-    }
-
     return (
       <form
         ref={forwardedRef}
         method={formMethod}
         action={formAction}
         encType={encType}
-        onSubmit={forceRefresh ? undefined : handleSubmit}
+        onSubmit={
+          forceRefresh
+            ? undefined
+            : event => {
+                onSubmit && onSubmit(event);
+                if (event.defaultPrevented) return;
+                event.preventDefault();
+                submit(event.currentTarget, { method, replace });
+              }
+        }
         {...props}
       />
     );
