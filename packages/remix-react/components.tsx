@@ -1,6 +1,6 @@
+import type { Action, Location } from "history";
 import type { FormHTMLAttributes } from "react";
 import React from "react";
-import type { Action, Location } from "history";
 import type { Navigator } from "react-router";
 import {
   Router,
@@ -10,17 +10,9 @@ import {
   useNavigate,
   useResolvedPath
 } from "react-router-dom";
-import type {
-  EntryContext,
-  SerializedError,
-  HTMLLinkDescriptor,
-  ComponentDidCatchEmulator,
-  AssetsManifest
-} from "@remix-run/node";
 
+import type { AppData } from "./data";
 import {
-  AppData,
-  RouteData,
   FormEncType,
   FormMethod,
   FormSubmit,
@@ -28,21 +20,23 @@ import {
   extractData,
   isRedirectResponse
 } from "./data";
-import invariant from "./invariant";
-import { createHtml } from "./markup";
-import type { RouteModules } from "./routeModules";
-import { loadRouteModule } from "./routeModules";
-import type { ClientRouteMatch, ClientRoute } from "./routes";
-import {
-  createClientRoutes,
-  createClientMatches,
-  matchClientRoutes
-} from "./routes";
+import type { EntryContext, AssetsManifest } from "./entry";
+import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary
 } from "./errorBoundaries";
-import { getLinks, preloadBlockingLinks } from "./links";
+import invariant from "./invariant";
+import type { HTMLLinkDescriptor } from "./links";
+import { getLinks, preloadBlockingLinks } from "./linksPreloading";
+import { createHtml } from "./markup";
+import type { ClientRoute } from "./routes";
+import { createClientRoutes } from "./routes";
+import type { RouteData } from "./routeData";
+import type { RouteMatch } from "./routeMatching";
+import { createClientMatches, matchClientRoutes } from "./routeMatching";
+import type { RouteModules } from "./routeModules";
+import { loadRouteModule } from "./routeModules";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
@@ -93,7 +87,7 @@ function setFormIdle() {
 
 interface RemixEntryContextType {
   manifest: AssetsManifest;
-  matches: ClientRouteMatch[];
+  matches: RouteMatch<ClientRoute>[];
   componentDidCatchEmulator: ComponentDidCatchEmulator;
   routeData: RouteData;
   routeModules: RouteModules;
@@ -174,6 +168,7 @@ export function RemixEntry({
 
     (async () => {
       let nextMatches = matchClientRoutes(clientRoutes, nextLocation);
+      invariant(nextMatches, `No routes match path "${nextLocation.pathname}"`);
 
       let didRedirect = false;
       function handleDataRedirect(response: Response) {
@@ -594,11 +589,15 @@ export function Scripts() {
   }, []);
 
   // avoid waterfall when importing the next route module
-  let nextMatches = React.useMemo(
-    () =>
-      pendingLocation ? matchClientRoutes(clientRoutes, pendingLocation) : [],
-    [pendingLocation, clientRoutes]
-  );
+  let nextMatches = React.useMemo(() => {
+    if (pendingLocation) {
+      let matches = matchClientRoutes(clientRoutes, pendingLocation);
+      invariant(matches, `No routes match path "${pendingLocation.pathname}"`);
+      return matches;
+    }
+
+    return [];
+  }, [pendingLocation, clientRoutes]);
 
   let routePreloads = matches
     .concat(nextMatches)

@@ -1,41 +1,46 @@
 import type { ComponentType, ReactNode } from "react";
 import React from "react";
-import type { Location } from "history";
-import type { Params, RouteObject } from "react-router";
-import { matchRoutes } from "react-router-dom";
-import type {
-  EntryRoute,
-  EntryRouteMatch,
-  RouteManifest
-} from "@remix-run/node";
 
-import invariant from "./invariant";
-
-export interface ClientRoute {
-  path: string;
-  caseSensitive?: boolean;
-  id: string;
-  element: ReactNode;
-  children?: ClientRoute[];
+export interface RouteManifest<Route> {
+  [routeId: string]: Route;
 }
 
-type RouteComponentType = ComponentType<{ id: string }>;
+interface Route {
+  caseSensitive?: boolean;
+  id: string;
+  path: string;
+}
+
+export interface EntryRoute extends Route {
+  hasAction?: boolean;
+  hasLoader?: boolean;
+  imports?: string[];
+  module: string;
+  parentId?: string;
+}
+
+export interface ClientRoute extends Route {
+  children?: ClientRoute[];
+  element: ReactNode;
+}
+
+type RemixRouteComponentType = ComponentType<{ id: string }>;
 
 export function createClientRoute(
   entryRoute: EntryRoute,
-  Component: RouteComponentType
+  Component: RemixRouteComponentType
 ): ClientRoute {
   return {
-    path: entryRoute.path,
     caseSensitive: !!entryRoute.caseSensitive,
+    element: <Component id={entryRoute.id} />,
     id: entryRoute.id,
-    element: <Component id={entryRoute.id} />
+    path: entryRoute.path
   };
 }
 
 export function createClientRoutes(
   routeManifest: RouteManifest<EntryRoute>,
-  Component: RouteComponentType,
+  Component: RemixRouteComponentType,
   parentId?: string
 ): ClientRoute[] {
   return Object.keys(routeManifest)
@@ -46,35 +51,4 @@ export function createClientRoutes(
       if (children.length > 0) route.children = children;
       return route;
     });
-}
-
-export interface ClientRouteMatch {
-  params: Params;
-  pathname: string;
-  route: ClientRoute;
-}
-
-export function createClientMatches(
-  matches: EntryRouteMatch[],
-  elementType: RouteComponentType
-): ClientRouteMatch[] {
-  return matches.map(match => ({
-    ...match,
-    route: createClientRoute(match.route, elementType)
-  }));
-}
-
-export function matchClientRoutes(
-  routes: ClientRoute[],
-  location: Location | string
-): ClientRouteMatch[] {
-  let matches = matchRoutes((routes as unknown) as RouteObject[], location);
-
-  invariant(matches, "Missing matches");
-
-  return matches.map(match => ({
-    params: match.params,
-    pathname: match.pathname,
-    route: (match.route as unknown) as ClientRoute
-  }));
 }

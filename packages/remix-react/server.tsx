@@ -2,9 +2,9 @@ import type { Location, To } from "history";
 import { Action, createPath } from "history";
 import type { ReactElement } from "react";
 import React from "react";
-import type { EntryContext } from "@remix-run/node";
 
 import { RemixEntry } from "./components";
+import type { EntryContext } from "./entry";
 
 export interface RemixServerProps {
   context: EntryContext;

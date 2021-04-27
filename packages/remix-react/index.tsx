@@ -1,23 +1,5 @@
-export type {
-  // route modules
-  RouteComponent,
-  ErrorBoundaryComponent,
-  HeadersFunction,
-  MetaFunction,
-  LinksFunction,
-  ActionFunction,
-  ActionFunction as Action, // shorthand
-  LoaderFunction,
-  LoaderFunction as Loader, // shorthand
-  // links
-  LinkDescriptor,
-  HTMLLinkDescriptor,
-  BlockLinkDescriptor,
-  PageLinkDescriptor
-} from "@remix-run/node";
-
+export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
-export { RemixServer } from "./server";
 
 export type { FormProps, SubmitOptions, SubmitFunction } from "./components";
 export {
@@ -38,4 +20,7 @@ export {
 
 export type { FormMethod, FormEncType, FormSubmit } from "./data";
 
-export { block } from "./links";
+export { block } from "./linksPreloading";
+
+export type { RemixServerProps } from "./server";
+export { RemixServer } from "./server";
