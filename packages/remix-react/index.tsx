@@ -8,14 +8,14 @@ export {
   Scripts,
   Link,
   Form,
+  LiveReload,
   useFormAction,
   useSubmit,
   usePendingFormSubmit,
   useRouteData,
   usePendingLocation,
   useBeforeUnload,
-  useMatches,
-  useLiveReload
+  useMatches
 } from "./components";
 
 export type { FormMethod, FormEncType, FormSubmit } from "./data";
