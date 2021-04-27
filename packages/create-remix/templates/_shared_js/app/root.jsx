@@ -1,4 +1,4 @@
-import { Meta, Links, Scripts, useRouteData, useLiveReload } from "remix";
+import { Meta, Links, Scripts, useRouteData, LiveReload } from "remix";
 import { Outlet } from "react-router-dom";
 
 import stylesUrl from "./styles/global.css";
@@ -11,10 +11,7 @@ export function loader() {
   return { date: new Date() };
 }
 
-export default function App() {
-  let data = useRouteData();
-  useLiveReload();
-
+function Document({ children }) {
   return (
     <html lang="en">
       <head>
@@ -24,38 +21,37 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Outlet />
-
-        <footer>
-          <p>This page was rendered at {data.date.toLocaleString()}</p>
-        </footer>
+        {children}
 
         <Scripts />
+        {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>
     </html>
   );
 }
 
-export function ErrorBoundary({ error }) {
+export default function App() {
+  let data = useRouteData();
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
-        <title>Oops!</title>
-      </head>
-      <body>
-        <div>
-          <h1>App Error</h1>
-          <pre>{error.message}</pre>
-          <p>
-            Replace this UI with what you want users to see when your app throws
-            uncaught errors.
-          </p>
-        </div>
+    <Document>
+      <Outlet />
+      <footer>
+        <p>This page was rendered at {data.date.toLocaleString()}</p>
+      </footer>
+    </Document>
+  );
+}
 
-        <Scripts />
-      </body>
-    </html>
+export function ErrorBoundary({ error }) {
+  console.error(error);
+  return (
+    <Document>
+      <h1>App Error</h1>
+      <pre>{error.message}</pre>
+      <p>
+        Replace this UI with what you want users to see when your app throws
+        uncaught errors.
+      </p>
+    </Document>
   );
 }
