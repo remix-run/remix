@@ -2,7 +2,7 @@
 
 [Remix](https://remix.run) is a web framework that helps you build better websites with React.
 
-This is the init script for a new Remix app. To run it, open a new shell and run
+To get started, open a new shell and run:
 
 ```sh
 $ npm init remix
