@@ -1,4 +1,4 @@
-import type { MetaFunction } from "@remix-run/react";
+import type { MetaFunction } from "remix";
 
 export let meta: MetaFunction = () => {
   return { title: "Ain't nothing here" };
