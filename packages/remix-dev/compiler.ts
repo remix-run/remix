@@ -1,4 +1,3 @@
-import fs from "fs";
 import path from "path";
 import type {
   ExternalOption,
@@ -174,14 +173,10 @@ function isLocalModuleId(id: string): boolean {
 function getExternalOption(target: string): ExternalOption | undefined {
   return target === BuildTarget.Server
     ? (id: string) =>
-        // We need to bundle @remix-run/react since it is ESM and we
-        // are building CommonJS output.
-        id !== "@remix-run/react" &&
         // Exclude non-local module identifiers from the server bundles.
         // This includes identifiers like "react" which will be resolved
         // dynamically at runtime using require().
-        !isLocalModuleId(id) &&
-        !isImportHint(id)
+        !isLocalModuleId(id) && !isImportHint(id)
     : // Exclude packages we know we don't want in the browser bundles.
       // These *should* be stripped from the browser bundles anyway when
       // tree-shaking kicks in, so making them external just saves Rollup

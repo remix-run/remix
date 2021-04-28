@@ -18,7 +18,7 @@ Now open `root.tsx`, bring in `useMatches` and add this:
 
 ```tsx [2,6,8-9,21-22]
 import React from "react";
-import { Meta, Links, Scripts, useMatches } from "@remix-run/react";
+import { Meta, Links, Scripts, useMatches } from "remix";
 import { Outlet } from "react-router-dom";
 
 export default function App() {

@@ -17,7 +17,7 @@ Go ahead and add the stylesheets `styles/team.css` and `styles/team.$member.css`
 Now open up `routes/team.tsx` and add this:
 
 ```tsx [1,2]
-import type { LinksFunction } from "@remix-run/react";
+import type { LinksFunction } from "remix";
 import styles from "../styles/team.css";
 
 let links: LinksFunction = () => {
@@ -32,7 +32,7 @@ The `links` export tells Remix which `<link>` tags to add to the document when t
 Now go do the same in `routes/team/$member.tsx`:
 
 ```tsx [3,5-7]
-import type { LinksFunction } from "@remix-run/react";
+import type { LinksFunction } from "remix";
 
 import styles from "../../styles/team.$member.css";
 

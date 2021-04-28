@@ -1,8 +1,5 @@
 import ReactDOM from "react-dom";
-import { RemixBrowser } from "@remix-run/react";
+import { RemixBrowser } from "remix";
 
-ReactDOM.hydrate(
-  // @ts-ignore
-  <RemixBrowser />,
-  document
-);
+// @ts-expect-error
+ReactDOM.hydrate(<RemixBrowser />, document);

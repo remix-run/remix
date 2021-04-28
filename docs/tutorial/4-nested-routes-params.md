@@ -23,8 +23,8 @@ Now add this to `team.tsx`, it's another quick fetch to the GitHub API and a com
 ```tsx
 import React from "react";
 import { Link, Outlet } from "react-router-dom";
-import { useRouteData } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
+import { useRouteData } from "remix";
+import type { LoaderFunction } from "remix";
 
 interface Member {
   id: string;
@@ -108,8 +108,8 @@ Now create another loader and component combo:
 
 ```tsx
 import React from "react";
-import { useRouteData } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
+import { useRouteData } from "remix";
+import type { LoaderFunction } from "remix";
 
 interface User {
   avatar_url: string;

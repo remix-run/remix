@@ -84,8 +84,8 @@ async function run(args) {
 
   ensureCleanWorkingDirectory();
 
-  // - Get the next version number
-  let currentVersion = await getPackageVersion("remix-react");
+  // Get the next version number
+  let currentVersion = await getPackageVersion("remix");
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(currentVersion, givenVersion, prereleaseId);
@@ -103,7 +103,13 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
 
-  // Update @remix-run/dev version
+  // Update remix version
+  await updatePackageConfig("remix", config => {
+    config.version = nextVersion;
+  });
+  console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
+
+  // Update remix-dev version
   await updatePackageConfig("remix-dev", config => {
     config.version = nextVersion;
   });
@@ -111,15 +117,7 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/dev to version ${nextVersion}`)
   );
 
-  // Update @remix-run/react version
-  await updatePackageConfig("remix-react", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
-  );
-
-  // Update @remix-run/node version
+  // Update remix-node version
   await updatePackageConfig("remix-node", config => {
     config.version = nextVersion;
   });
@@ -127,7 +125,7 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/node to version ${nextVersion}`)
   );
 
-  // Update node server versions + @remix-run/node dep
+  // Update remix-* node server versions + remix-node dep
   for (let name of ["architect", "express", "vercel"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
@@ -138,7 +136,15 @@ async function run(args) {
     );
   }
 
-  // Update @remix-run/serve version + @remix-run/express dep
+  // Update remix-react version
+  await updatePackageConfig("remix-react", config => {
+    config.version = nextVersion;
+  });
+  console.log(
+    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
+  );
+
+  // Update remix-serve version + remix-express dep
   await updatePackageConfig("remix-serve", config => {
     config.version = nextVersion;
     config.dependencies["@remix-run/express"] = nextVersion;
@@ -160,13 +166,11 @@ async function run(args) {
   execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
 
   console.log(chalk.green(`  Committed and tagged version ${nextVersion}`));
-
-  return 0;
 }
 
 run(process.argv.slice(2)).then(
-  code => {
-    process.exit(code);
+  () => {
+    process.exit(0);
   },
   error => {
     console.error(error);

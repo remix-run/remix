@@ -2,7 +2,7 @@
   "name": "create-remix",
   "description": "Scaffolds new Remix Apps",
   "version": "0.16.5",
-  "repository": "https://github.com/remix-run/remix",
+  "homepage": "https://remix.run",
   "bin": {
     "create-remix": "index.js"
   },

@@ -1,12 +1,6 @@
 import { Outlet } from "react-router-dom";
-import type { LoaderFunction, LinksFunction } from "@remix-run/node";
-import {
-  Meta,
-  Scripts,
-  Links,
-  useRouteData,
-  useLiveReload
-} from "@remix-run/react";
+import type { LoaderFunction, LinksFunction } from "remix";
+import { Meta, Scripts, Links, useRouteData, useLiveReload } from "remix";
 
 import styles from "./styles/global.css";
 

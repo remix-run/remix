@@ -1,6 +1,5 @@
-import type { LoaderFunction, ActionFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { useRouteData } from "@remix-run/react";
+import type { LoaderFunction, ActionFunction } from "remix";
+import { redirect, useRouteData } from "remix";
 
 export let loader: LoaderFunction = () => {
   return fetch("https://api.github.com/gists");

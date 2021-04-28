@@ -1,4 +1,4 @@
 import ReactDOM from "react-dom";
-import { RemixBrowser as Remix } from "@remix-run/react";
+import { RemixBrowser } from "remix";
 
-ReactDOM.hydrate(<Remix />, document);
+ReactDOM.hydrate(<RemixBrowser />, document);

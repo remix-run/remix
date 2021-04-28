@@ -111,8 +111,8 @@ export default function NewProject() {
 Now add the route action. Any form submits that aren't "get" submits will call your data "action", any "get" requests (links, and the rare `<form method="get">`) will be handled by your "loader".
 
 ```ts
-import type { Action } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
+import type { Action } from "remix";
+import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
 export let action: Action = async ({ request }) => {
@@ -158,8 +158,8 @@ let [errors, project] = await createProject(newProject);
 If there are validation errors, we want to go back to the form and display them. If enabled, Remix sends a `session` object to your loaders and actions, we can use that to store the form validation errors.
 
 ```js
-import type { Action, loader } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
+import type { Action, loader } from "remix";
+import { redirect } from "remix";
 
 export let action: Action = async ({ request, session }) => {
   let newProject = new URLSearchParams(await request.text());
@@ -242,7 +242,7 @@ export default function NewProject() {
 Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch` and then give you access to the pending form information to build pending UI.
 
 ```tsx
-import { Form, useRouteData } from "@remix-run/react";
+import { Form, useRouteData } from "remix";
 
 export default function NewProject() {
   let failedSubmit = useRouteData();
@@ -261,7 +261,7 @@ HOLD UP! If all you do is change your `<form>` to `<Form>`, you made the UX a li
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `usePendingFormSubmit`. When there is a pending form submit, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method..
 
 ```tsx
-import { Form, useRouteData, usePendingFormSubmit } from "@remix-run/react";
+import { Form, useRouteData, usePendingFormSubmit } from "remix";
 
 export let loader: Loader = () => {
   // same as before
@@ -435,8 +435,8 @@ Check out this sample Todo app component that uses all the tricks we've just lea
 Here's the component route:
 
 ```tsx
-import type { Action, Loader } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import type { Action, Loader } from "remix";
+import { json, redirect } from "remix";
 import { readTodos, createTodo, deleteTodo } from "../models/todo";
 
 export let loader: Loader = = async ({ request, session }) => {
