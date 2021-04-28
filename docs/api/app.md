@@ -2,7 +2,7 @@
 title: Application Module APIs
 ---
 
-A lot of Remix API isn't imported from a package like `@remix-run/react` or `@remix-run/node`, but are instead conventions and exports from your application modules.
+A lot of Remix API isn't imported from `remix`, but are instead conventions and exports from your application modules.
 
 # remix.config.js
 
@@ -147,8 +147,8 @@ Here's a basic example:
 
 ```tsx
 import ReactDOMServer from "react-dom/server";
-import type { EntryContext } from "@remix-run/node";
-import { RemixServer } from "@remix-run/react";
+import type { EntryContext } from "remix";
+import { RemixServer } from "remix";
 
 export default function handleRequest(
   request: Request,
@@ -320,7 +320,7 @@ Normally you'd use the `json` helper from your [environment](../environments).
 
 ```js
 import db from "../db";
-import { json } from "@remix-run/node";
+import { json } from "remix";
 
 export let loader: Loader = async () => {
   let users = await db.query("users");
@@ -340,7 +340,7 @@ See also:
 Loaders can return Responses with status codes. This is very useful for "not found" data making it's way all the way down to the browser's UI with a real 404 status code, 500s, etc.
 
 ```js [6]
-import { json } from "@remix-run/node";
+import { json } from "remix";
 
 export let loader = async () => {
   let res = db.query("users").where("id", "=", "_why");
@@ -394,7 +394,7 @@ Like `loader`, action is a server only function to handle data mutations and oth
 Actions are triggered from `<form method="post">` or Remix `<Form method="post | put | patch | delete" />` submits. Note you must always `redirect` (we do this so users can't click "back" and accidentally resubmit the form).
 
 ```tsx
-import { redirect } from "@remix-run/node";
+import { redirect } from "remix";
 import { PrismaClient } from "@prisma/client";
 
 let prisma = new PrismaClient();
@@ -486,7 +486,7 @@ All that said, you can avoid this entire problem by _not defining headers in lay
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
 ```tsx
-import type { MetaFunction } from "@remix-run/node";
+import type { MetaFunction } from "remix";
 
 export let meta: MetaFunction = () => {
   return {
@@ -505,8 +505,8 @@ In the case of nested routes, the meta tags are merged, so parent routes can add
 The links function defines which `<link>` elements to add to the page when the user visits a page.
 
 ```tsx
-import type { LinksFunction } from "@remix-run/react";
-import { block } from "@remix-run/react";
+import type { LinksFunction } from "remix";
+import { block } from "remix";
 
 export let links: LinksFunction = () => {
   return [
@@ -527,8 +527,8 @@ This is an object representation of a normal `<link {...props} />` element. [Vie
 Examples:
 
 ```tsx
-import type { LinksFunction } from "@remix-run/react";
-import { block } from "@remix-run/react";
+import type { LinksFunction } from "remix";
+import { block } from "remix";
 import stylesHref from "../styles/something.css";
 
 export let links: LinksFunction = () => {
@@ -568,8 +568,8 @@ export let links: LinksFunction = () => {
 You can block `{ rel: "preload" }` HTMLLinkDescriptors on client side page transitions by wrapping them in `block(descriptor)`.
 
 ```tsx
-import type { LinksFunction } from "@remix-run/react";
-import { block } from "@remix-run/react";
+import type { LinksFunction } from "remix";
+import { block } from "remix";
 
 export let links: LinksFunction = () => {
   return [
@@ -599,7 +599,7 @@ These descriptors allow you to prefetch the resources for a page the user is _li
 Let's take the login → dashboard example:
 
 ```js
-import type { LinksFunction } from "@remix-run/react";
+import type { LinksFunction } from "remix";
 
 export let links: LinksFunction = () => {
   return [{ page: "/dashboard" }];
@@ -661,7 +661,7 @@ It's most common for stylesheets, but can used for anything.
 
 ```tsx
 // root.tsx
-import type { LinksFunction } from "@remix-run/react";
+import type { LinksFunction } from "remix";
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
 

@@ -17,7 +17,7 @@ The Remix compiler can automatically remove server code from the browser bundles
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { useRouteData } from "@remix-run/react";
+import { useRouteData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -46,7 +46,7 @@ export { meta, default } from "./routes/posts.tsx";
 The compiler will now analyze the code in `routes/posts.tsx` and only keep code that's inside of `meta` and the component. The result is something like this:
 
 ```tsx
-import { useRouteData } from "@remix-run/react";
+import { useRouteData } from "remix";
 import PostsView from "../PostsView";
 
 export function meta() {
@@ -72,7 +72,7 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
 ```tsx bad lines=5
-import { useRouteData } from "@remix-run/react";
+import { useRouteData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -95,7 +95,7 @@ export default function Posts() {
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
 ```tsx bad lines=3,5
-import { useRouteData } from "@remix-run/react";
+import { useRouteData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
 
@@ -116,7 +116,7 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
 ```tsx [6]
-import { useRouteData } from "@remix-run/react";
+import { useRouteData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -193,13 +193,13 @@ Let's implement a couple of the helpers we've been discussing:
 #### `removeTrailingSlash`
 
 ```js filename=removeTrailingSlash.js
-import { redirect } from "@remix-run/node";
+import { redirect } from "remix";
 
 export function removeTrailingSlash(request, next) {
   let url = new URL(request.url);
   if (url.pathname.endsWith("/")) {
     return redirect(request.url.slice(0, -1), {
-      status: 308,
+      status: 308
     });
   }
   return next();
@@ -215,7 +215,7 @@ This type of function is a lot easier to author than the kind that don't work wi
 This helper allows loaders and actions to skip all the request/response cookie header boilerplate, and ensures the session is always committed.
 
 ```js filename=withSession.js
-import { Response, json, createCookieSessionStorage } from "@remix-run/node";
+import { Response, json, createCookieSessionStorage } from "remix";
 
 let { getSession, commitSession, destroySession } = createCookieSessionStorage({
   cookie: { name: "__session" }
@@ -265,7 +265,7 @@ export let loader = async ({ request }) => {
 If you're using TypeScript, you can use this to get the types right:
 
 ```ts [1, 5]
-import type { LoaderFunction } from "@remix-run/node";
+import type { LoaderFunction } from "remix";
 
 export function withSession(
   request: Request,

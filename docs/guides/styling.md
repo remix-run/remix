@@ -23,7 +23,7 @@ You can load stylesheets from any server, here's an example of loading a modern 
 
 ```ts
 // root.tsx
-import type { LinksFunction } from "@remix-run/react";
+import type { LinksFunction } from "remix";
 
 export let links: LinksFunction = () => {
   return [
@@ -45,7 +45,7 @@ Any stylesheets inside the `app` folder can be imported into your modules. Remix
 
 ```ts
 // root.tsx
-import type { LinksFunction } from "@remix-run/react";
+import type { LinksFunction } from "remix";
 import styles from "./styles/app.css";
 
 export let links: LinksFunction = () => {
@@ -150,7 +150,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
     Then import like any other css file:
 
     ```tsx filename=root.tsx
-    import type { LinksFunction } from "@remix-run/react";
+    import type { LinksFunction } from "remix";
     import styles from "./styles/app.css";
 
     export let links: LinksFunction = () => {
@@ -185,8 +185,8 @@ Here's some sample code to show how you might use Styled Components with Remix:
    ```tsx filename=entry.server.tsx lines=6,7,16,20-26,29-30,35,37
    // app/entry.server.tsx
    import ReactDOMServer from "react-dom/server";
-   import type { EntryContext } from "@remix-run/node";
-   import { RemixServer } from "@remix-run/react";
+   import type { EntryContext } from "remix";
+   import { RemixServer } from "remix";
    import { renderToString } from "react-dom/server";
    import { ServerStyleSheet } from "styled-components";
    import StylesContext from "./StylesContext";
@@ -236,7 +236,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
 
    ```tsx filename=app/root.tsx lines=3,4,7,13
    // app/root.tsx
-   import { Meta, Scripts } from "@remix-run/react";
+   import { Meta, Scripts } from "remix";
    import { useContext } from "react";
    import StylesContext from "./StylesContext";
 
