@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "build": "remix build2",
-    "dev": "remix run3",
+    "build": "remix build",
+    "dev": "remix run",
     "deploy": "flyctl deploy --build-arg REMIX_TOKEN=${REMIX_TOKEN}",
     "start": "remix-serve build"
   },

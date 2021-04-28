@@ -122,8 +122,8 @@ let remixDev = {
           dest: "build/node_modules/@remix-run/dev"
         },
         {
-          src: path.resolve(__dirname, "packages/remix-dev/compiler2/shims"),
-          dest: "build/node_modules/@remix-run/dev/compiler2"
+          src: path.resolve(__dirname, "packages/remix-dev/compiler/shims"),
+          dest: "build/node_modules/@remix-run/dev/compiler"
         }
       ]
     })

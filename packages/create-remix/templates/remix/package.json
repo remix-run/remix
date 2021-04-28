@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "remix run3",
+    "dev": "remix run",
     "start": "remix-serve build"
   },
   "dependencies": {

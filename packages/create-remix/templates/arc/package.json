@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "remix build2",
+    "build": "remix build",
     "dev": "remix dev",
     "start": "arc sandbox"
   },
