@@ -1,5 +1,5 @@
-import type { LoaderFunction } from "@remix-run/node";
-import { useRouteData } from "@remix-run/react";
+import type { LoaderFunction } from "remix";
+import { useRouteData } from "remix";
 
 export let loader: LoaderFunction = ({ params }) => {
   return params["*"];

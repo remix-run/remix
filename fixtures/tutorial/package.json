@@ -3,7 +3,7 @@
   "name": "tutorial",
   "version": "1.0.0",
   "scripts": {
-    "install_remix": "mkdir -p node_modules && cp -r ../../build/node_modules/* node_modules",
+    "install_remix": "mkdir -p node_modules && cp -r ../../build/node_modules/* node_modules && node node_modules/remix/cli.js server=@remix-run/node client=@remix-run/react",
     "prebuild": "yarn run install_remix",
     "build": "node node_modules/@remix-run/dev/cli.js build2",
     "preremixrun": "yarn run install_remix",

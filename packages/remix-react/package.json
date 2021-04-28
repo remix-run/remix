@@ -2,8 +2,9 @@
   "name": "@remix-run/react",
   "description": "React DOM bindings for Remix",
   "version": "0.16.5",
-  "type": "module",
   "repository": "https://github.com/remix-run/remix",
+  "main": "./index.js",
+  "browser": "./browser/index.js",
   "dependencies": {
     "history": "^5.0.0",
     "react-router-dom": "^6.0.0-beta.0"
@@ -11,5 +12,8 @@
   "peerDependencies": {
     "react": ">=16.8",
     "react-dom": ">=16.8"
+  },
+  "scripts": {
+    "postinstall": "remix-setup client=@remix-run/react"
   }
 }

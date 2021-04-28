@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix",
+  "name": "remix-monorepo",
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c && tsc -b && node ./scripts/license.js",
@@ -12,6 +12,7 @@
   },
   "workspaces": [
     "packages/create-remix",
+    "packages/remix",
     "packages/remix-architect",
     "packages/remix-dev",
     "packages/remix-express",

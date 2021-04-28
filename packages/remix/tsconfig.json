@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2019"],
+
+    "strict": true,
+
+    "declaration": true,
+    "emitDeclarationOnly": true,
+
+    "outDir": "../../build/node_modules/remix",
+    "rootDir": "."
+  }
+}

@@ -1,5 +1,5 @@
-import type { LinksFunction } from "@remix-run/node";
-import { Form, usePendingFormSubmit } from "@remix-run/react";
+import type { LinksFunction } from "remix";
+import { Form, usePendingFormSubmit } from "remix";
 
 import styles from "../styles/gists.new.css";
 
