@@ -50,18 +50,21 @@ async function run() {
     );
   }
 
+  // Publish remix package
+  await npm(["publish", "--tag", tag, path.join(npmModulesDir, "remix")], {
+    stdio: "inherit"
+  });
+
   // Publish create-remix package
   await npm(
     ["publish", "--tag", tag, path.join(npmModulesDir, "create-remix")],
     { stdio: "inherit" }
   );
-
-  return 0;
 }
 
 run().then(
-  code => {
-    process.exit(code);
+  () => {
+    process.exit(0);
   },
   error => {
     console.error(error);
