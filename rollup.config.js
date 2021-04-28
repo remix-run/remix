@@ -56,7 +56,11 @@ let remix = {
   external() {
     return true;
   },
-  input: path.resolve(__dirname, "packages/remix/index.ts"),
+  input: [
+    path.resolve(__dirname, "packages/remix/client.ts"),
+    path.resolve(__dirname, "packages/remix/index.ts"),
+    path.resolve(__dirname, "packages/remix/server.ts")
+  ],
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix",
@@ -80,26 +84,6 @@ let remix = {
           dest: "build/node_modules/remix"
         }
       ]
-    })
-  ]
-};
-
-/** @type {import("rollup").RollupOptions} */
-let remixSetupCli = {
-  external(id) {
-    return isBareModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/remix/cli.ts"),
-  output: {
-    banner: "#!/usr/bin/env node\n" + licenseBanner,
-    dir: "build/node_modules/remix",
-    format: "cjs"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts"]
     })
   ]
 };
@@ -360,7 +344,6 @@ let remixServeCli = {
 let builds = [
   createRemix,
   remix,
-  remixSetupCli,
   remixDev,
   remixDevCli,
   remixNode,

@@ -12,8 +12,5 @@
   "peerDependencies": {
     "react": ">=16.8",
     "react-dom": ">=16.8"
-  },
-  "scripts": {
-    "postinstall": "remix-setup client=@remix-run/react"
   }
 }
