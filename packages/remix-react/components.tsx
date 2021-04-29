@@ -564,7 +564,7 @@ export function Scripts() {
           )};`
       )
       .join("\n")}
-    window.__remixRouteModules = {${matches
+window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};`;
 
@@ -574,11 +574,11 @@ export function Scripts() {
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
+        <script src={manifest.url} />
         <script
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
-        <script src={manifest.url} type="module" />
         <script src={manifest.entry.module} type="module" />
       </>
     );

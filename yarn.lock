@@ -3231,10 +3231,10 @@ es-to-primitive@^1.2.1:
     is-date-object "^1.0.1"
     is-symbol "^1.0.2"
 
-esbuild@0.11.4:
-  version "0.11.4"
-  resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.11.4.tgz#7f7901a340ea1166b1a1076897d971a068139ecb"
-  integrity sha512-qWGlOOTwyTn4f846LoR47Mif4Aek4rY9ChdXN7q7G15HpDYq3pxwnPFWe2os/jOq8naFh2Z+FqWfkq8ZP6kATw==
+esbuild@0.11.16:
+  version "0.11.16"
+  resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.11.16.tgz#435f00474fb21e70f59a545b85e4cfc7ba106485"
+  integrity sha512-34ZWjo4ouvM5cDe7uRoM9GFuMyEmpH9fnVYmomvS1cq9ED9d/0ZG1r+p4P2VbX7ihjv36zA2SWTmP8Zmt/EANA==
 
 escalade@^3.1.1:
   version "3.1.1"

@@ -40,7 +40,7 @@ describe("route module link export", () => {
       expect(cssResponses.length).toEqual(1);
     });
 
-    it("preloads, blocks, and prevents layout shift with images", async () => {
+    it.skip("preloads, blocks, and prevents layout shift with images", async () => {
       await page.goto(`${testServer}/`, { waitUntil: "networkidle0" });
       await reactIsHydrated(page);
 
