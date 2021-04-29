@@ -2,6 +2,17 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Added a new `remix` package for all app code imports
+
+### Breaking Changes
+
+- Removed the old compiler, streamlined `remix` CLI commands
+- Use `<LiveReload>` elemente instead of `useLiveReload()` hook
+
 ## 0.15.5 - Tue Apr 20 2021
 
 ### Improvements
