@@ -5,7 +5,7 @@
   "scripts": {
     "install_remix": "mkdir -p node_modules && cp -r ../../build/node_modules/* node_modules",
     "prebuild": "yarn run install_remix",
-    "build": "node node_modules/@remix-run/dev/cli build",
+    "build": "node node_modules/@remix-run/dev/cli.js build",
     "predev": "yarn run install_remix",
     "dev": "pm2-dev pm2.config.js",
     "prestart": "yarn run install_remix",

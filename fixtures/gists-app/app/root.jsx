@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { Links, Scripts, useRouteData, useMatches } from "@remix-run/react";
+import { Links, Scripts, useRouteData, useMatches } from "remix";
 import { Outlet, Link } from "react-router-dom";
 
-import styles from "css:./styles/app.css";
+import stylesHref from "./styles/app.css";
 
 export function links() {
   return [
@@ -10,7 +10,7 @@ export function links() {
       rel: "stylesheet",
       href: "https://unpkg.com/@exampledev/new.css@1.1.3/new.css"
     },
-    { rel: "stylesheet", href: styles }
+    { rel: "stylesheet", href: stylesHref }
   ];
 }
 

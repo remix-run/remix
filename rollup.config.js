@@ -56,6 +56,7 @@ let remix = {
   external() {
     return true;
   },
+  // input: path.resolve(__dirname, "packages/remix/index.ts"),
   input: [
     path.resolve(__dirname, "packages/remix/client.ts"),
     path.resolve(__dirname, "packages/remix/index.ts"),
@@ -89,6 +90,32 @@ let remix = {
 };
 
 /** @type {import("rollup").RollupOptions} */
+let remixBrowser = {
+  external() {
+    return true;
+  },
+  // input: path.resolve(__dirname, "packages/remix/index.ts"),
+  input: [
+    path.resolve(__dirname, "packages/remix/client.ts"),
+    path.resolve(__dirname, "packages/remix/index.ts"),
+    path.resolve(__dirname, "packages/remix/server.ts")
+  ],
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/remix/browser",
+    format: "esm",
+    preserveModules: true
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
 let remixDev = {
   external(id) {
     return isBareModuleId(id);
@@ -96,8 +123,7 @@ let remixDev = {
   input: [
     path.resolve(__dirname, "packages/remix-dev/cli/commands.ts"),
     path.resolve(__dirname, "packages/remix-dev/compiler.ts"),
-    path.resolve(__dirname, "packages/remix-dev/config.ts"),
-    path.resolve(__dirname, "packages/remix-dev/server.ts")
+    path.resolve(__dirname, "packages/remix-dev/config.ts")
   ],
   output: {
     banner: licenseBanner,
@@ -344,6 +370,7 @@ let remixServeCli = {
 let builds = [
   createRemix,
   remix,
+  remixBrowser,
   remixDev,
   remixDevCli,
   remixNode,

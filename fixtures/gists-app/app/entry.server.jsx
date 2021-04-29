@@ -1,5 +1,5 @@
 import ReactDOMServer from "react-dom/server";
-import { RemixServer as Remix } from "@remix-run/react";
+import { RemixServer } from "remix";
 
 export default function handleRequest(
   request,
@@ -8,7 +8,7 @@ export default function handleRequest(
   remixContext
 ) {
   let markup = ReactDOMServer.renderToString(
-    <Remix context={remixContext} url={request.url} />
+    <RemixServer context={remixContext} url={request.url} />
   );
 
   return new Response("<!DOCTYPE html>" + markup, {

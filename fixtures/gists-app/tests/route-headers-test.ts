@@ -44,20 +44,4 @@ describe("route headers", () => {
       );
     });
   });
-
-  describe("from an MDX route", () => {
-    it("are correct", async () => {
-      let responses = collectResponses(
-        page,
-        url => url.pathname === "/page/one"
-      );
-
-      await page.goto(`${testServer}/page/one`);
-
-      expect(responses).toHaveLength(1);
-      expect(responses[0].headers()["cache-control"]).toEqual(
-        "public, max-age=0, must-revalidate"
-      );
-    });
-  });
 });

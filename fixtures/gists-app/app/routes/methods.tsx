@@ -1,14 +1,18 @@
 import * as React from "react";
-import type { LoaderFunction, ActionFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import type { FormProps } from "@remix-run/react";
-import { useRouteData, Form, usePendingFormSubmit } from "@remix-run/react";
+import type { LoaderFunction, ActionFunction, FormProps } from "remix";
+import {
+  useRouteData,
+  usePendingFormSubmit,
+  Form,
+  json,
+  redirect
+} from "remix";
 
-import styles from "url:../styles/methods.css";
+import stylesHref from "../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";
 
 export function links() {
-  return [{ rel: "stylesheet", href: styles }];
+  return [{ rel: "stylesheet", href: stylesHref }];
 }
 
 export let loader: LoaderFunction = async ({ request }) => {

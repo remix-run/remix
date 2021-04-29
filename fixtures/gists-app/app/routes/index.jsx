@@ -1,9 +1,8 @@
 import { useEffect } from "react";
-import { Link } from "@remix-run/react";
+import { Link } from "remix";
 
 import Shared from "../components/Shared";
-import Guitar from "../components/Guitar";
-
+// import Guitar from "../components/Guitar";
 import { message as clientMessage } from "../scripts/message.client";
 import { message as serverMessage } from "../scripts/message.server";
 
@@ -83,8 +82,10 @@ export default function Index() {
         </ul>
       </nav>
       <Shared />
+      {/*
       <hr />
       <Guitar />
+      */}
     </div>
   );
 }

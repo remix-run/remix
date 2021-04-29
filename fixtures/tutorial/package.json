@@ -5,9 +5,9 @@
   "scripts": {
     "install_remix": "mkdir -p node_modules && cp -r ../../build/node_modules/* node_modules",
     "prebuild": "yarn run install_remix",
-    "build": "node node_modules/@remix-run/dev/cli.js build2",
-    "preremixrun": "yarn run install_remix",
-    "remixrun": "node node_modules/@remix-run/dev/cli.js run3",
+    "build": "node node_modules/@remix-run/dev/cli.js build",
+    "predev": "yarn run install_remix",
+    "dev": "node node_modules/@remix-run/dev/cli.js run",
     "prestart": "yarn run install_remix",
     "start": "node node_modules/@remix-run/serve/cli.js ./build"
   },

@@ -1,9 +1,9 @@
-import { useRouteData, Link, block } from "@remix-run/react";
-import type { LinksFunction, LoaderFunction } from "@remix-run/react";
+import type { LinksFunction, LoaderFunction } from "remix";
+import { useRouteData, Link } from "remix";
 
-import redText from "css:../styles/redText.css";
-import guitar from "img:../components/guitar.jpg?width=500&height=500";
-import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
+import redTextHref from "../styles/redText.css";
+// import guitar from "img:../components/guitar.jpg?width=500&height=500";
+// import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
 
 interface User {
   name: string;
@@ -19,10 +19,10 @@ export let loader: LoaderFunction = (): User[] => {
 
 export let links: LinksFunction = ({ data }: { data: any[] }) => {
   // this blocks on transitions automatically
-  let styleLink = { rel: "stylesheet", href: redText };
+  let styleLink = { rel: "stylesheet", href: redTextHref };
 
   // block on this image
-  let blocker = block({ rel: "preload", as: "image", href: guitar.src });
+  // let blocker = block({ rel: "preload", as: "image", href: guitar.src });
 
   // preload gist pages, get data for the first
   let pageLinks = data.map((user, index) => ({
@@ -30,7 +30,7 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
     data: index === 0
   }));
 
-  return [styleLink, blocker, ...pageLinks];
+  return [styleLink, ...pageLinks];
 };
 
 export default function LinksPage() {
@@ -43,6 +43,7 @@ export default function LinksPage() {
           <Link to={`/gists/${user.id}`}>{user.name}</Link>
         </li>
       ))}
+      {/*
       <hr />
       <p>
         <img alt="another guitar..." src={guitar.src} data-test-id="blocked" />
@@ -58,6 +59,7 @@ export default function LinksPage() {
         <br />
         Not preloaded, not blocked, layout shift!
       </p>
+      */}
     </div>
   );
 }

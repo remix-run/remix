@@ -1,11 +1,5 @@
-import { Link } from "react-router-dom";
-import type {
-  MetaFunction,
-  LoaderFunction,
-  ActionFunction
-} from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { useRouteData, Form, useSubmit } from "@remix-run/react";
+import type { MetaFunction, LoaderFunction, ActionFunction } from "remix";
+import { useRouteData, useSubmit, Form, Link, redirect } from "remix";
 
 import { userPrefsCookie } from "../cookies";
 

@@ -1,12 +1,11 @@
 import { Outlet } from "react-router-dom";
-import { json } from "@remix-run/node";
-import { Link, useRouteData, usePendingLocation } from "@remix-run/react";
+import { Link, useRouteData, usePendingLocation, json } from "remix";
 
-import styles from "css:../styles/gists.css";
 import Shared from "../components/Shared";
+import stylesHref from "../styles/gists.css";
 
 export function links() {
-  return [{ rel: "stylesheet", href: styles }];
+  return [{ rel: "stylesheet", href: stylesHref }];
 }
 
 export function loader() {

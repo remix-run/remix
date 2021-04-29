@@ -1,4 +1,4 @@
-import { useRouteData } from "@remix-run/react";
+import { useRouteData } from "remix";
 
 let fakeGists = [
   {
