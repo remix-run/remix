@@ -138,13 +138,13 @@ Here's a quick guide to getting it set up. We encourage you to read the official
 6.  Use it! When you're developing styles, open a terminal tab and run your new watch script:
 
     ```sh
-    npm run css:watch
+    npm run watch:css
     ```
 
     When you're building for production, run
 
     ```sh
-    npm run css:build
+    npm run build:css
     ```
 
     Then import like any other css file:
