@@ -398,6 +398,14 @@ function deserializeError(data: SerializedError): Error {
   return error;
 }
 
+function Routes() {
+  // TODO: Add `renderMatches` function to RR that we can use and then we don't
+  // need this component, we can just `renderMatches` from RemixEntry
+  let { clientRoutes } = useRemixEntryContext();
+  let element = useRoutes(clientRoutes);
+  return element;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // RemixRoute
 
@@ -621,18 +629,6 @@ window.__remixRouteModules = {${matches
 
 function dedupe(array: any[]) {
   return [...new Set(array)];
-}
-
-/**
- * Renders the routes for this page. Suspends if we don't yet have the manifest
- * or routes for this page and need to get them from the server.
- */
-function Routes() {
-  // TODO: Add `renderMatches` function to RR that we can use and then we don't
-  // need this component, we can just `renderMatches` from RemixEntry
-  let { clientRoutes } = useRemixEntryContext();
-  let element = useRoutes(clientRoutes);
-  return element;
 }
 
 export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
