@@ -1,44 +1,25 @@
-# Welcome to Remix development!
+# Welcome to Remix!
 
-Remix is a framework for shipping better websites.
+Remix is a framework for building better websites using modern web standards and
+best practices. We are happy you're here!
 
-## Development
+This repository contains the Remix source code. It's a work in progress, so we
+appreciate your patience as we figure things out.
 
-```bash
-# install everything
-yarn install
+## Documentation
 
-# run the build
-yarn build
+For documentation about Remix, please visit [our website](https://docs.remix.run).
 
-# run the tests
-yarn test
-# run the tests for a specific package
-yarn test react
-# run the tests in watch mode
-yarn test react --watch
+The documentation is automatically generated on each release from the files in
+[the `docs` directory](docs).
 
-# cut a release
-yarn run version major|minor|patch|prerelease [prereleaseId]
-yarn run publish
-# or, to automatically publish from GitHub Actions
-git push origin --follow-tags
+## Contributing
 
-# cut a prerelease
-# make a branch to hold your commits
-git checkout -b release/0.8.0
+If you're interested in contributing code and/or documentation, please [read
+this first](CONTRIBUTING.md).
 
-# add the pre release tag
-yarn run version prerelease pre
+## Code of Conduct
 
-# push as usual
-git push origin release/0.8.0 --follow-tags
-```
-
-## Roadmap
-
-- dev server
-  - changes to loaders appear when you reload the page
-  - changes to components immediately show up
-  - changes to styles immediately show up
-  - dev server proxy function for various platforms
+Please see our [code of conduct](CODE_OF_CONDUCT.md) for any questions about the
+kind of community we are trying to build here and what to do if you need help
+with someone who is not acting professionally.
