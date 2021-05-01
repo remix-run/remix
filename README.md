@@ -3,8 +3,8 @@
 Remix is a framework for building better websites using modern web standards and
 best practices. We are happy you're here!
 
-This repository contains the Remix source code. It's a work in progress, so we
-appreciate your patience as we figure things out.
+This repository contains the Remix source code. This repo is a work in progress,
+so we appreciate your patience as we figure things out.
 
 ## Documentation
 
