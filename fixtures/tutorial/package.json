@@ -3,7 +3,8 @@
   "name": "tutorial",
   "version": "1.0.0",
   "scripts": {
-    "install_remix": "mkdir -p node_modules && cp -r ../../build/node_modules/* node_modules",
+    "install_remix": "node scripts/install_remix.js",
+    "postinstall": "yarn build",
     "prebuild": "yarn run install_remix",
     "build": "node node_modules/@remix-run/dev/cli.js build",
     "predev": "yarn run install_remix",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
+    "fs-extra": "^10.0.0",
     "pm2": "^4.5.1"
   },
   "sideEffects": false

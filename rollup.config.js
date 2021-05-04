@@ -56,12 +56,7 @@ let remix = {
   external() {
     return true;
   },
-  // input: path.resolve(__dirname, "packages/remix/index.ts"),
-  input: [
-    path.resolve(__dirname, "packages/remix/client.ts"),
-    path.resolve(__dirname, "packages/remix/index.ts"),
-    path.resolve(__dirname, "packages/remix/server.ts")
-  ],
+  input: path.resolve(__dirname, "packages/remix/index.ts"),
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix",
@@ -90,16 +85,32 @@ let remix = {
 };
 
 /** @type {import("rollup").RollupOptions} */
+let remixSetup = {
+  external(id) {
+    return isBareModuleId(id);
+  },
+  input: path.resolve(__dirname, "packages/remix/setup.ts"),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/remix",
+    format: "cjs",
+    preserveModules: true
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
 let remixBrowser = {
   external() {
     return true;
   },
-  // input: path.resolve(__dirname, "packages/remix/index.ts"),
-  input: [
-    path.resolve(__dirname, "packages/remix/client.ts"),
-    path.resolve(__dirname, "packages/remix/index.ts"),
-    path.resolve(__dirname, "packages/remix/server.ts")
-  ],
+  input: path.resolve(__dirname, "packages/remix/index.ts"),
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix/browser",
@@ -212,6 +223,68 @@ let remixNode = {
   ]
 };
 
+/** @type {import("rollup").RollupOptions} */
+let remixNodeMagicExports = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/remix-node/magicExports/server.ts"),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/node/magicExports",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
+let remixNodeMagicExportsBrowser = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/remix-node/magicExports/server.ts"),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/node/magicExports/browser",
+    format: "esm"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
+let remixNodeScripts = {
+  external(id) {
+    return isBareModuleId(id);
+  },
+  input: [
+    path.resolve(__dirname, "packages/remix-node/scripts/postinstall.ts")
+  ],
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/node/scripts",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
 /** @return {import("rollup").RollupOptions} */
 function getServerConfig(name) {
   return {
@@ -286,6 +359,28 @@ let remixReact = {
   ]
 };
 
+/** @type {import("rollup").RollupOptions[]} */
+let remixReactScripts = {
+  external(id) {
+    return isBareModuleId(id);
+  },
+  input: [
+    path.resolve(__dirname, "packages/remix-react/scripts/postinstall.ts")
+  ],
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/react/scripts",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
 // The browser build of remix-react is ESM so we can treeshake it.
 /** @type {import("rollup").RollupOptions[]} */
 let remixReactBrowser = {
@@ -306,6 +401,46 @@ let remixReactBrowser = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions[]} */
+let remixReactMagicExports = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/remix-react/magicExports/client.ts"),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/react/magicExports",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions[]} */
+let remixReactMagicExportsBrowser = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/remix-react/magicExports/client.ts"),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/react/magicExports/browser",
+    format: "esm"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
     })
   ]
@@ -370,15 +505,22 @@ let remixServeCli = {
 let builds = [
   createRemix,
   remix,
+  remixSetup,
   remixBrowser,
   remixDev,
   remixDevCli,
   remixNode,
+  remixNodeScripts,
+  remixNodeMagicExports,
+  remixNodeMagicExportsBrowser,
   remixArchitect,
   remixExpress,
   remixVercel,
   remixReact,
+  remixReactScripts,
   remixReactBrowser,
+  remixReactMagicExports,
+  remixReactMagicExportsBrowser,
   remixServe,
   remixServeCli
 ];

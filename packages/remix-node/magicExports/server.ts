@@ -1,4 +1,5 @@
-// export * from "@remix-run/node";
+// This file lists all exports from this package that are available to `import
+// "remix"`.
 
 export type {
   ServerBuild,

@@ -5,5 +5,8 @@
   "homepage": "https://remix.run",
   "main": "index.js",
   "browser": "browser/index.js",
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "fs-extra": "^10.0.0"
+  }
 }
