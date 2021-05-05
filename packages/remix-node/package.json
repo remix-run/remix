@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/node",
   "description": "Node.js bindings for Remix",
-  "version": "0.0.0-experimental-ae5931d",
+  "version": "0.0.0-experimental-2e35619",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
     "@types/cookie": "^0.4.0",
