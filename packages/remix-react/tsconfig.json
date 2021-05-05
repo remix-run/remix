@@ -1,5 +1,5 @@
 {
-  "exclude": ["__tests__/**/*"],
+  "exclude": ["__tests__/**/*", "scripts/**/*"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "target": "ES2020",

@@ -8,6 +8,24 @@ function isBareModuleId(id) {
   return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
+/** @return {import('rollup').Plugin} */
+function copyAsset(
+  file,
+  { fileName = path.basename(file), transform = null } = {}
+) {
+  return {
+    name: "copy-asset",
+    buildStart() {
+      this.addWatchFile(file);
+    },
+    generateBundle() {
+      let source = fs.readFileSync(file);
+      if (transform) source = transform(source);
+      this.emitFile({ type: "asset", fileName, source });
+    }
+  };
+}
+
 const licenseFile = path.resolve(__dirname, "LICENSE.md");
 const license = fs.readFileSync(licenseFile, "utf-8");
 const licenseBanner = "// " + license.split("\n").join("\n// ");
@@ -32,16 +50,10 @@ let createRemix = {
     nodeResolve({
       extensions: [".ts"]
     }),
+    copyAsset(path.resolve(__dirname, "packages/create-remix/package.json")),
+    copyAsset(path.resolve(__dirname, "packages/create-remix/README.md")),
     copy({
       targets: [
-        {
-          src: path.resolve(__dirname, "packages/create-remix/package.json"),
-          dest: "build/node_modules/create-remix"
-        },
-        {
-          src: path.resolve(__dirname, "packages/create-remix/README.md"),
-          dest: "build/node_modules/create-remix"
-        },
         {
           src: path.resolve(__dirname, "packages/create-remix/templates/*"),
           dest: "build/node_modules/create-remix/templates"
@@ -69,32 +81,21 @@ let remix = {
       exclude: /node_modules/,
       extensions: [".ts"]
     }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/remix/package.json"),
-          dest: "build/node_modules/remix"
-        },
-        {
-          src: path.resolve(__dirname, "packages/remix/README.md"),
-          dest: "build/node_modules/remix"
-        }
-      ]
-    })
+    copyAsset(path.resolve(__dirname, "packages/remix/package.json")),
+    copyAsset(path.resolve(__dirname, "packages/remix/README.md"))
   ]
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixSetup = {
+let remixMagic = {
   external(id) {
     return isBareModuleId(id);
   },
-  input: path.resolve(__dirname, "packages/remix/setup.ts"),
+  input: path.resolve(__dirname, "packages/remix/magic.ts"),
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix",
-    format: "cjs",
-    preserveModules: true
+    format: "cjs"
   },
   plugins: [
     babel({
@@ -152,12 +153,9 @@ let remixDev = {
     nodeResolve({
       extensions: [".ts"]
     }),
+    copyAsset(path.resolve(__dirname, "packages/remix-dev/package.json")),
     copy({
       targets: [
-        {
-          src: path.resolve(__dirname, "packages/remix-dev/package.json"),
-          dest: "build/node_modules/@remix-run/dev"
-        },
         {
           src: path.resolve(__dirname, "packages/remix-dev/compiler/shims"),
           dest: "build/node_modules/@remix-run/dev/compiler"
@@ -212,13 +210,17 @@ let remixNode = {
     nodeResolve({
       extensions: [".ts", ".tsx"]
     }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/remix-node/package.json"),
-          dest: "build/node_modules/@remix-run/node"
-        }
-      ]
+    copyAsset(path.resolve(__dirname, "packages/remix-node/package.json"), {
+      transform(source) {
+        let packageJson = {
+          ...JSON.parse(source),
+          scripts: {
+            postinstall: "node scripts/postinstall.js"
+          }
+        };
+
+        return JSON.stringify(packageJson, null, 2);
+      }
     })
   ]
 };
@@ -308,14 +310,7 @@ function getServerConfig(name) {
       nodeResolve({
         extensions: [".ts", ".tsx"]
       }),
-      copy({
-        targets: [
-          {
-            src: path.resolve(__dirname, `packages/remix-${name}/package.json`),
-            dest: `build/node_modules/@remix-run/${name}`
-          }
-        ]
-      })
+      copyAsset(path.resolve(__dirname, `packages/remix-${name}/package.json`))
     ]
   };
 }
@@ -348,13 +343,17 @@ let remixReact = {
     nodeResolve({
       extensions: [".ts", ".tsx"]
     }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/remix-react/package.json"),
-          dest: "build/node_modules/@remix-run/react"
-        }
-      ]
+    copyAsset(path.resolve(__dirname, "packages/remix-react/package.json"), {
+      transform(source) {
+        let packageJson = {
+          ...JSON.parse(source),
+          scripts: {
+            postinstall: "node scripts/postinstall.js"
+          }
+        };
+
+        return JSON.stringify(packageJson, null, 2);
+      }
     })
   ]
 };
@@ -468,14 +467,7 @@ let remixServe = {
     nodeResolve({
       extensions: [".ts", ".tsx"]
     }),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/remix-serve/package.json"),
-          dest: `build/node_modules/@remix-run/serve`
-        }
-      ]
-    })
+    copyAsset(path.resolve(__dirname, "packages/remix-serve/package.json"))
   ]
 };
 
@@ -505,7 +497,7 @@ let remixServeCli = {
 let builds = [
   createRemix,
   remix,
-  remixSetup,
+  remixMagic,
   remixBrowser,
   remixDev,
   remixDevCli,

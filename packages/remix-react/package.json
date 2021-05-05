@@ -13,8 +13,5 @@
     "react": ">=16.8",
     "react-dom": ">=16.8"
   },
-  "scripts": {
-    "postinstall": "node ./scripts/postinstall.js"
-  },
   "sideEffects": false
 }
