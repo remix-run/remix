@@ -4,16 +4,19 @@ import path from "path";
 import fse from "fs-extra";
 import inquirer from "inquirer";
 import { homedir } from "os";
-import { spawn } from "child_process";
+import spawn from "cross-spawn";
 
-////////////////////////////////////////////////////////////////////////////////
-try {
-  go();
-} catch (error) {
-  throw error;
-}
+run().then(
+  () => {
+    process.exit(0);
+  },
+  error => {
+    console.error(error);
+    process.exit(1);
+  }
+);
 
-async function go() {
+async function run() {
   let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
   await new Promise(res => setTimeout(res, 1500));
   anim.stop();
@@ -78,7 +81,6 @@ async function go() {
     }
   ]);
 
-  // add a space under the prompt
   console.log();
 
   // copy the shared template
