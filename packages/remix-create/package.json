@@ -1,0 +1,16 @@
+{
+  "name": "@remix-run/create",
+  "description": "Application generator for Remix",
+  "version": "0.17.0",
+  "repository": "https://github.com/remix-run/packages",
+  "bin": {
+    "remix-create": "cli.js"
+  },
+  "dependencies": {
+    "fs-extra": "^9.1.0",
+    "inquirer": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^7.3.1"
+  }
+}

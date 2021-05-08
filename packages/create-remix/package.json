@@ -1,19 +1,19 @@
 {
   "name": "create-remix",
-  "description": "Scaffolds new Remix Apps",
-  "version": "0.17.0",
+  "version": "0.1.0",
+  "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "bin": {
-    "create-remix": "index.js"
+    "create-remix": "cli.js"
   },
   "dependencies": {
     "chalk-animation": "^1.6.0",
-    "cross-spawn": "^7.0.3",
-    "fs-extra": "^9.1.0",
-    "inquirer": "^8.0.0"
+    "fs-extra": "^10.0.0",
+    "inquirer": "^8.0.0",
+    "meow": "^7.1.1"
   },
   "devDependencies": {
-    "@types/cross-spawn": "^6.0.2",
+    "@types/chalk-animation": "^1.6.0",
     "@types/inquirer": "^7.3.1"
   }
 }

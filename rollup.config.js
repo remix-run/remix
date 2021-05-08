@@ -35,9 +35,9 @@ let createRemix = {
   external() {
     return true;
   },
-  input: path.resolve(__dirname, "packages/create-remix/index.ts"),
+  input: path.resolve(__dirname, "packages/create-remix/cli.ts"),
   output: {
-    banner: "#!/usr/bin/env node\n" + licenseBanner,
+    banner: "#!/usr/bin/env node \n" + licenseBanner,
     dir: "build/node_modules/create-remix",
     format: "cjs"
   },
@@ -47,19 +47,9 @@ let createRemix = {
       exclude: /node_modules/,
       extensions: [".ts"]
     }),
-    nodeResolve({
-      extensions: [".ts"]
-    }),
+    nodeResolve({ extensions: [".ts"] }),
     copyAsset(path.resolve(__dirname, "packages/create-remix/package.json")),
-    copyAsset(path.resolve(__dirname, "packages/create-remix/README.md")),
-    copy({
-      targets: [
-        {
-          src: path.resolve(__dirname, "packages/create-remix/templates/*"),
-          dest: "build/node_modules/create-remix/templates"
-        }
-      ]
-    })
+    copyAsset(path.resolve(__dirname, "packages/create-remix/README.md"))
   ]
 };
 
@@ -128,6 +118,36 @@ let remixBrowser = {
 };
 
 /** @type {import("rollup").RollupOptions} */
+let remixCreate = {
+  external() {
+    return true;
+  },
+  input: path.resolve(__dirname, "packages/remix-create/cli.ts"),
+  output: {
+    banner: "#!/usr/bin/env node\n" + licenseBanner,
+    dir: "build/node_modules/@remix-run/create",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts"]
+    }),
+    nodeResolve({ extensions: [".ts"] }),
+    copyAsset(path.resolve(__dirname, "packages/remix-create/package.json")),
+    copy({
+      targets: [
+        {
+          src: path.resolve(__dirname, "packages/remix-create/templates/*"),
+          dest: "build/node_modules/@remix-run/create/templates"
+        }
+      ]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
 let remixDev = {
   external(id) {
     return isBareModuleId(id);
@@ -150,9 +170,7 @@ let remixDev = {
       exclude: /node_modules/,
       extensions: [".ts"]
     }),
-    nodeResolve({
-      extensions: [".ts"]
-    }),
+    nodeResolve({ extensions: [".ts"] }),
     copyAsset(path.resolve(__dirname, "packages/remix-dev/package.json")),
     copy({
       targets: [
@@ -182,9 +200,7 @@ let remixDevCli = {
       exclude: /node_modules/,
       extensions: [".ts"]
     }),
-    nodeResolve({
-      extensions: [".ts"]
-    })
+    nodeResolve({ extensions: [".ts"] })
   ]
 };
 
@@ -207,9 +223,7 @@ let remixNode = {
       exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
     }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
+    nodeResolve({ extensions: [".ts", ".tsx"] }),
     copyAsset(path.resolve(__dirname, "packages/remix-node/package.json"), {
       transform(source) {
         let packageJson = {
@@ -307,9 +321,7 @@ function getServerConfig(name) {
         exclude: /node_modules/,
         extensions: [".ts", ".tsx"]
       }),
-      nodeResolve({
-        extensions: [".ts", ".tsx"]
-      }),
+      nodeResolve({ extensions: [".ts", ".tsx"] }),
       copyAsset(path.resolve(__dirname, `packages/remix-${name}/package.json`))
     ]
   };
@@ -340,9 +352,7 @@ let remixReact = {
       exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
     }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
+    nodeResolve({ extensions: [".ts", ".tsx"] }),
     copyAsset(path.resolve(__dirname, "packages/remix-react/package.json"), {
       transform(source) {
         let packageJson = {
@@ -399,9 +409,7 @@ let remixReactBrowser = {
       exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
     }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    })
+    nodeResolve({ extensions: [".ts", ".tsx"] })
   ]
 };
 
@@ -464,9 +472,7 @@ let remixServe = {
       exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
     }),
-    nodeResolve({
-      extensions: [".ts", ".tsx"]
-    }),
+    nodeResolve({ extensions: [".ts", ".tsx"] }),
     copyAsset(path.resolve(__dirname, "packages/remix-serve/package.json"))
   ]
 };
@@ -488,9 +494,7 @@ let remixServeCli = {
       exclude: /node_modules/,
       extensions: [".ts"]
     }),
-    nodeResolve({
-      extensions: [".ts"]
-    })
+    nodeResolve({ extensions: [".ts"] })
   ]
 };
 
@@ -499,6 +503,7 @@ let builds = [
   remix,
   remixMagic,
   remixBrowser,
+  remixCreate,
   remixDev,
   remixDevCli,
   remixNode,
