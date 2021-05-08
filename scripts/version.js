@@ -9,10 +9,6 @@ const semver = require("semver");
 
 const packagesDir = path.resolve(__dirname, "../packages");
 
-function invariant(cond, message) {
-  if (!cond) throw new Error(message);
-}
-
 function packageJson(packageName) {
   return path.join(packagesDir, packageName, "package.json");
 }
@@ -20,17 +16,19 @@ function packageJson(packageName) {
 function ensureCleanWorkingDirectory() {
   let status = execSync(`git status --porcelain`).toString().trim();
   let lines = status.split("\n");
-  invariant(
-    lines.every(line => line === "" || line.startsWith("?")),
-    "Working directory is not clean. Please commit or stash your changes."
-  );
+  if (!lines.every(line => line === "" || line.startsWith("?"))) {
+    console.error(
+      "Working directory is not clean. Please commit or stash your changes."
+    );
+    process.exit(1);
+  }
 }
 
 function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
-  invariant(
-    givenVersion != null,
-    `Missing next version. Usage: node version.js [nextVersion]`
-  );
+  if (givenVersion == null) {
+    console.error("Missing next version. Usage: node version.js [nextVersion]");
+    process.exit(1);
+  }
 
   let nextVersion;
   if (givenVersion === "experimental") {
@@ -40,7 +38,10 @@ function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
     nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
   }
 
-  invariant(nextVersion != null, `Invalid version specifier: ${givenVersion}`);
+  if (nextVersion == null) {
+    console.error(`Invalid version specifier: ${givenVersion}`);
+    process.exit(1);
+  }
 
   return nextVersion;
 }
@@ -97,33 +98,21 @@ async function run(args) {
   );
   if (answer === false) return 0;
 
-  // Update create-remix version
-  await updatePackageConfig("create-remix", config => {
-    config.version = nextVersion;
-  });
-  console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
-
   // Update remix version
   await updatePackageConfig("remix", config => {
     config.version = nextVersion;
   });
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
-  // Update remix-dev version
-  await updatePackageConfig("remix-dev", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/dev to version ${nextVersion}`)
-  );
-
-  // Update remix-node version
-  await updatePackageConfig("remix-node", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/node to version ${nextVersion}`)
-  );
+  // Update remix-create, remix-dev, remix-node, and remix-react versions
+  for (let name of ["create", "dev", "node", "react"]) {
+    await updatePackageConfig(`remix-${name}`, config => {
+      config.version = nextVersion;
+    });
+    console.log(
+      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
+    );
+  }
 
   // Update remix-* node server versions + remix-node dep
   for (let name of ["architect", "express", "vercel"]) {
@@ -135,14 +124,6 @@ async function run(args) {
       chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
     );
   }
-
-  // Update remix-react version
-  await updatePackageConfig("remix-react", config => {
-    config.version = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/react to version ${nextVersion}`)
-  );
 
   // Update remix-serve version + remix-express dep
   await updatePackageConfig("remix-serve", config => {
