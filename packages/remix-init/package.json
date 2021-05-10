@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "fs-extra": "^9.1.0",
-    "inquirer": "^8.0.0"
+    "inquirer": "^8.0.0",
+    "semver": "^7.3.5"
   },
   "devDependencies": {
     "@types/inquirer": "^7.3.1"

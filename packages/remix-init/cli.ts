@@ -2,6 +2,7 @@ import * as path from "path";
 import { execSync } from "child_process";
 import fse from "fs-extra";
 import inquirer from "inquirer";
+import semver from "semver";
 
 run().then(
   () => {
@@ -88,10 +89,9 @@ async function run() {
   ["dependencies", "devDependencies"].forEach(pkgKey => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
-        // can't use ^ for experimental releases
-        // should probably use ^ when we release
-        // appPkg[pkgKey][key] = `^${pkg.version}`;
-        appPkg[pkgKey][key] = `${pkg.version}`;
+        appPkg[pkgKey][key] = semver.prerelease(pkg.version)
+          ? pkg.version // pin prerelease versions
+          : `^${pkg.version}`;
       }
     }
   });
