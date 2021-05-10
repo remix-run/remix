@@ -20,8 +20,8 @@ async function run() {
     install: boolean;
   }>([
     {
-      type: "list",
       name: "server",
+      type: "list",
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
@@ -36,8 +36,8 @@ async function run() {
       ]
     },
     {
-      type: "list",
       name: "lang",
+      type: "list",
       message: "TypeScript or JavaScript?",
       choices: [
         { name: "TypeScript", value: "ts" },
@@ -45,16 +45,16 @@ async function run() {
       ]
     },
     {
-      type: "confirm",
       name: "install",
+      type: "confirm",
       message: "Do you want me to run `npm install`?",
       default: true
     }
   ]);
 
-  let appDir = process.cwd();
-
   console.log();
+
+  let appDir = process.cwd();
 
   // copy the shared template
   let sharedTemplate = path.resolve(

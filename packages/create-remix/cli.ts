@@ -23,13 +23,16 @@ const help = `
     $ npm init remix -- [flags...] [<dir>]
     $ npx create-remix [flags...] [<dir>]
 
+  If <dir> is not provided up front you will be prompted for it.
+
   Flags:
     --auth              Your Remix license key. May be provided up front to avoid
                         a prompt later if the script is not able to automatically
                         detect it on this machine. Defaults to using the value of
                         the REMIX_TOKEN environment variable or the auth token in
                         $HOME/.npmrc
-    --tag               The version tag of Remix to use. Defaults to "latest"
+    --tag               The version tag of Remix to use, may also be a specific
+                        version. Defaults to "latest"
     --help, -h          Show this help message
     --version, -v       Show the version of this script
 `;
@@ -61,9 +64,8 @@ async function run() {
   await new Promise(res => setTimeout(res, 1500));
   anim.stop();
 
-  console.log(
-    "\n💿 Welcome to Remix! Let's get you set up with a new project.\n"
-  );
+  console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
+  console.log();
 
   // Figure out the app directory
   let appDir = path.resolve(
@@ -118,8 +120,8 @@ async function run() {
     }
   }
 
-  // Finish up with @remix-run/create at the right version
-  execSync(`npx --yes @remix-run/create@${flags.tag}`, {
+  // Finish up with @remix-run/init at the right version
+  execSync(`npx --yes @remix-run/init@${flags.tag}`, {
     stdio: "inherit",
     cwd: appDir
   });

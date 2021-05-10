@@ -104,8 +104,8 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
-  // Update remix-create, remix-dev, remix-node, and remix-react versions
-  for (let name of ["create", "dev", "node", "react"]) {
+  // Update remix-dev, remix-init, remix-node, and remix-react versions
+  for (let name of ["dev", "init", "node", "react"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
     });

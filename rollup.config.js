@@ -118,14 +118,14 @@ let remixBrowser = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixCreate = {
+let remixInit = {
   external() {
     return true;
   },
-  input: path.resolve(__dirname, "packages/remix-create/cli.ts"),
+  input: path.resolve(__dirname, "packages/remix-init/cli.ts"),
   output: {
     banner: "#!/usr/bin/env node\n" + licenseBanner,
-    dir: "build/node_modules/@remix-run/create",
+    dir: "build/node_modules/@remix-run/init",
     format: "cjs"
   },
   plugins: [
@@ -135,12 +135,12 @@ let remixCreate = {
       extensions: [".ts"]
     }),
     nodeResolve({ extensions: [".ts"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-create/package.json")),
+    copyAsset(path.resolve(__dirname, "packages/remix-init/package.json")),
     copy({
       targets: [
         {
-          src: path.resolve(__dirname, "packages/remix-create/templates/*"),
-          dest: "build/node_modules/@remix-run/create/templates"
+          src: path.resolve(__dirname, "packages/remix-init/templates/*"),
+          dest: "build/node_modules/@remix-run/init/templates"
         }
       ]
     })
@@ -503,7 +503,7 @@ let builds = [
   remix,
   remixMagic,
   remixBrowser,
-  remixCreate,
+  remixInit,
   remixDev,
   remixDevCli,
   remixNode,

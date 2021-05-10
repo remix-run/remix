@@ -11,7 +11,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/@remix-run/create",
+    "outDir": "../../build/node_modules/@remix-run/init",
     "rootDir": "."
   }
 }
