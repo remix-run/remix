@@ -26,14 +26,14 @@ async function run() {
 
   // Publish all @remix-run/* packages
   for (let name of [
-    "create",
     "dev",
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
     "vercel",
     "react",
-    "serve"
+    "serve",
+    "init" // publish init last
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
