@@ -8,7 +8,17 @@ export async function installMagicExports(
   let remixDir = path.dirname(require.resolve("remix"));
   let packageJsonFile = path.resolve(remixDir, "package.json");
 
+  console.log(
+    `Copying files from ${path.relative(
+      process.cwd(),
+      filesDir
+    )} to ${path.relative(process.cwd(), remixDir)}...`
+  );
   await fse.copy(filesDir, remixDir);
+
+  console.log(
+    `Adding ${Object.keys(dependencies).join(", ")} to remix's dependencies...`
+  );
   await fse.writeJson(
     packageJsonFile,
     assignDependencies(await fse.readJson(packageJsonFile), dependencies),
