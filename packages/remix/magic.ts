@@ -1,21 +1,37 @@
-import * as fs from "fs-extra";
+import * as fse from "fs-extra";
 import * as path from "path";
 
-export async function installMagicExports(sourceDir: string): Promise<void> {
-  let installDir = path.resolve(findClosestNodeModulesDir("remix"), "remix");
-  await fs.copy(sourceDir, installDir);
+export async function installMagicExports(
+  sourceDir: string,
+  dependencies: { [name: string]: string }
+): Promise<void> {
+  let remixDir = path.dirname(require.resolve("remix"));
+  let packageJsonFile = path.resolve(remixDir, "package.json");
+
+  await fse.copy(sourceDir, remixDir);
+  await writeJson(
+    packageJsonFile,
+    assignDependencies(readJson(packageJsonFile), dependencies)
+  );
 }
 
-function findClosestNodeModulesDir(packageName: string): string {
-  let dir = path.dirname(require.resolve(packageName));
-
-  while (path.basename(dir) !== "node_modules") {
-    let prevDir = dir;
-    dir = path.dirname(dir);
-    if (prevDir === dir) {
-      throw new Error("Cannot find node_modules dir");
-    }
+function assignDependencies(
+  object: any,
+  dependencies: { [name: string]: string }
+): typeof object {
+  if (!object.dependencies) {
+    object.dependencies = {};
   }
 
-  return dir;
+  Object.assign(object.dependencies, dependencies);
+
+  return object;
+}
+
+async function readJson(file: string): Promise<any> {
+  return JSON.parse((await fse.readFile(file)).toString());
+}
+
+async function writeJson(file: string, contents: any): Promise<void> {
+  await fse.writeFile(file, JSON.stringify(contents, null, 2));
 }
