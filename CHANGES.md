@@ -2,6 +2,15 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Improvements
+
+- Added dynamic install support for `@remix-run/node` and `@remix-run/react` to
+  the `remix` package, so it is updated when they are installed
+- Moved templates from `create-remix` package into `@remix-run/init` so they can
+  be versioned and published along with all other Remix packages
+
 ## 0.17.0 - Thu Apr 29 2021
 
 ### Improvements
