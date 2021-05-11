@@ -43,6 +43,5 @@ build and publish it manually.
 
 ```bash
 yarn build
-cd build/node_modules/create-remix
-npm publish
+npm publish build/node_modules/create-remix
 ```
