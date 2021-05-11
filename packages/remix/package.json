@@ -1,7 +1,7 @@
 {
   "name": "remix",
   "description": "A framework for building better websites",
-  "version": "0.17.1-pre.5",
+  "version": "0.17.1",
   "homepage": "https://remix.run",
   "main": "index.js",
   "browser": "browser/index.js",
