@@ -36,3 +36,13 @@ yarn run publish
 # or, to automatically publish from GitHub Actions
 git push origin --follow-tags
 ```
+
+All packages are published together except for `create-remix`, which is
+versioned and published separately. To publish `create-remix`, just run the
+build and publish it manually.
+
+```bash
+yarn build
+cd build/node_modules/create-remix
+npm publish
+```
