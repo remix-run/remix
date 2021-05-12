@@ -19,6 +19,10 @@ if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
 
+app.get("/fails.css", (req, res) => {
+  res.status(500).send("Boom! No CSS here!");
+});
+
 // server-side redirect
 app.get("/user-gists/:username", (req, res) => {
   res.redirect(301, `/gists/${req.params.username}`);

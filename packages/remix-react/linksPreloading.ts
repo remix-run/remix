@@ -63,18 +63,25 @@ async function preloadBlockingLink(
     let link = document.createElement("link");
     Object.assign(link, descriptor);
 
-    link.onload = async () => {
+    function removeLink() {
+      // TODO: what happens when they click another link fast? will react
+      // flip out about this being in the head? Wrapped in try/catch just
+      // in case.
       try {
-        // TODO: what happens when they click another link fast? will react
-        // flip out about this being in the head? Wrapped in try/catch just
-        // in case.
         document.head.removeChild(link);
       } catch (error) {}
+    }
 
+    link.onload = async () => {
+      removeLink();
       if (link.as === "image") {
         await moveImageFromDiskToMemoryCacheToAvoidLayoutShift(descriptor.href);
       }
+      resolve();
+    };
 
+    link.onerror = error => {
+      removeLink();
       resolve();
     };
 
@@ -129,14 +136,6 @@ export function getLinks(
         );
       } else if (isBlockLinkDescriptor(descriptor)) {
         return [descriptor.link];
-      } else if (descriptor.rel === "stylesheet") {
-        // add styles as preloads so they download with higher priority than
-        // modulepreloads in `<Scripts>`. Otherwise rendering is blocked by
-        // modules because rendering is blocked by styles by the browser, and
-        // styles, without preloading, would be lower priority than the
-        // modulepreloads.
-        let { type, rel, ...rest } = descriptor;
-        return [{ rel: "preload", as: "style", ...rest }, descriptor];
       } else {
         return [descriptor];
       }

@@ -27,6 +27,8 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
     media: "(max-width: 10px)"
   };
 
+  let fails = { rel: "stylesheet", href: "/fails.css" };
+
   // block on this image
   // let blocker = block({ rel: "preload", as: "image", href: guitar.src });
 
@@ -36,7 +38,7 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
     data: index === 0
   }));
 
-  return [styleLink, nonMatching, ...pageLinks];
+  return [styleLink, nonMatching, fails, ...pageLinks];
 };
 
 export default function LinksPage() {

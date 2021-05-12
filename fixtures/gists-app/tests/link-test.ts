@@ -47,7 +47,7 @@ describe("route module link export", () => {
       // here even though we only blocked on 1. The fact we got here means the
       // browser didn't hang forever waiting for `link.onload` of the stylesheet
       // that doesn't match, telling us the code works as expected.
-      expect(cssResponses.length).toEqual(2);
+      expect(cssResponses.length).toEqual(4);
     });
 
     it("adds links to the document", async () => {
@@ -56,7 +56,7 @@ describe("route module link export", () => {
         url.pathname.endsWith(".css")
       );
       await page.goto(`${testServer}/links`);
-      expect(cssResponses.length).toEqual(4);
+      expect(cssResponses.length).toEqual(5);
     });
 
     it("waits for new styles to load before transitioning", async () => {
