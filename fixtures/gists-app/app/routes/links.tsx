@@ -2,6 +2,7 @@ import type { LinksFunction, LoaderFunction } from "remix";
 import { useRouteData, Link } from "remix";
 
 import redTextHref from "../styles/redText.css";
+import blueTextHref from "../styles/blueText.css";
 // import guitar from "img:../components/guitar.jpg?width=500&height=500";
 // import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
 
@@ -20,6 +21,11 @@ export let loader: LoaderFunction = (): User[] => {
 export let links: LinksFunction = ({ data }: { data: any[] }) => {
   // this blocks on transitions automatically
   let styleLink = { rel: "stylesheet", href: redTextHref };
+  let nonMatching = {
+    rel: "stylesheet",
+    href: blueTextHref,
+    media: "(max-width: 10px)"
+  };
 
   // block on this image
   // let blocker = block({ rel: "preload", as: "image", href: guitar.src });
@@ -30,7 +36,7 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
     data: index === 0
   }));
 
-  return [styleLink, ...pageLinks];
+  return [styleLink, nonMatching, ...pageLinks];
 };
 
 export default function LinksPage() {

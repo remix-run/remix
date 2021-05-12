@@ -17,13 +17,46 @@ describe("route module link export", () => {
   afterEach(() => browser.close());
 
   describe("route links export", () => {
+    it("waits for new styles to load before transitioning", async () => {
+      await page.goto(`${testServer}/`);
+      await reactIsHydrated(page);
+
+      let cssResponses = collectResponses(page, url =>
+        url.pathname.endsWith(".css")
+      );
+
+      await page.click('a[href="/gists"]');
+      await page.waitForSelector('[data-test-id="/gists/index"]');
+
+      expect(cssResponses.length).toEqual(1);
+    });
+
+    it("does not wait for styles that don't match the window media", async () => {
+      await page.goto(`${testServer}/`);
+      await reactIsHydrated(page);
+
+      let cssResponses = collectResponses(page, url =>
+        url.pathname.endsWith(".css")
+      );
+
+      await page.click('a[href="/links"]');
+      await page.waitForSelector('[data-test-id="/links"]');
+
+      // the browser loads both links, but it doesn't parse, apply, or call
+      // `link.onload` of links that don't match the media query, so we have "2"
+      // here even though we only blocked on 1. The fact we got here means the
+      // browser didn't hang forever waiting for `link.onload` of the stylesheet
+      // that doesn't match, telling us the code works as expected.
+      expect(cssResponses.length).toEqual(2);
+    });
+
     it("adds links to the document", async () => {
       await disableJavaScript(page);
       let cssResponses = collectResponses(page, url =>
         url.pathname.endsWith(".css")
       );
       await page.goto(`${testServer}/links`);
-      expect(cssResponses.length).toEqual(3);
+      expect(cssResponses.length).toEqual(4);
     });
 
     it("waits for new styles to load before transitioning", async () => {

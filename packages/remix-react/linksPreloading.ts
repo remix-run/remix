@@ -38,7 +38,12 @@ export async function preloadBlockingLinks(
     }
   }
 
-  return Promise.all(blockingLinks.map(preloadBlockingLink));
+  // don't block on things that links with non-matching media queries
+  let matchingLinks = blockingLinks.filter(
+    link => !link.media || window.matchMedia(link.media).matches
+  );
+
+  return Promise.all(matchingLinks.map(preloadBlockingLink));
 }
 
 async function preloadBlockingLink(
