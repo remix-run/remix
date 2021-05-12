@@ -247,7 +247,7 @@ Maybe seeing how this would be used will help:
 export let action = async ({ request }) => {
   return withSession(request, session => {
     session.flash("message", "Functional Composition is Fun! (ctional)");
-    return redirect("/this/same/page");
+    return "/this/same/page";
   });
 };
 

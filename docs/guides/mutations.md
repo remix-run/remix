@@ -119,7 +119,7 @@ export let action: Action = async ({ request }) => {
   let newProject = new URLSearchParams(await request.text());
   let project = await createProject(Object.fromEntries(newProject));
 
-  return redirect(`/projects/${project.id}`);
+  return `/projects/${project.id}`;
 };
 
 export default function NewProject() {
@@ -144,6 +144,8 @@ The right thing to do is redirect from the "POST" so that when the user clicks b
 Remix forces you to redirect from actions so that this bug never makes it into your app.
 
 ## Form Validation
+
+<docs-error>This section is out of date and will be updated soon, please see <a href="../guides/sessions/">Sessions</a>.</docs-error>
 
 It's common to validate forms both clientside and serverside. It's also (unfortunately) common to only validate clientside, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server.
 
@@ -170,7 +172,7 @@ export let action: Action = async ({ request, session }) => {
     // very next request. Here we put both the errors and the newProject values
     // to be read later in the component
     session.flash("failedSubmit", { errors, values: newProject });
-    return redirect(`/projects`);
+    return redirect(`/projects`, {});
   }
 
   return redirect(`/projects/${project.id}`);
