@@ -18,7 +18,7 @@
     "@remix-run/dev": "*"
   },
   "engines": {
-    "node": "14"
+    "node": ">=14"
   },
   "sideEffects": false
 }
