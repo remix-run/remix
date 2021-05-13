@@ -16,6 +16,100 @@ describe("uncaught exceptions", () => {
 
   afterEach(() => browser.close());
 
+  describe("an uncaught action error", () => {
+    describe("in an action with an error boundary", () => {
+      it("renders the error boundary without JavaScript", async () => {
+        await Utils.disableJavaScript(page);
+        await page.goto(`${testServer}/action-errors-self-boundary`);
+
+        let [, response2] = await Promise.all([
+          page.click("button[type=submit]"),
+          page.waitForNavigation()
+        ]);
+
+        expect(response2!.status()).toBe(500);
+
+        let html = await Utils.getHtml(
+          page,
+          '[data-test-id="action-error-boundary"]'
+        );
+        expect(html).toMatchInlineSnapshot(`
+          "<div data-test-id=\\"action-error-boundary\\">
+            <h1>Action Error Boundary</h1>
+            <pre>I am an action error!</pre>
+          </div>
+          "
+        `);
+      });
+
+      it("renders the error boundary with JavaScript", async () => {
+        await page.goto(`${testServer}/action-errors-self-boundary`);
+        await Utils.reactIsHydrated(page);
+        await page.click("button[type=submit]");
+        await page.waitForSelector('[data-test-id="action-error-boundary"]');
+        let html = await Utils.getHtml(
+          page,
+          '[data-test-id="action-error-boundary"]'
+        );
+        expect(html).toMatchInlineSnapshot(`
+          "<div data-test-id=\\"action-error-boundary\\">
+            <h1>Action Error Boundary</h1>
+            <pre>I am an action error!</pre>
+          </div>
+          "
+        `);
+      });
+    });
+
+    describe("in an action without an error boundary", () => {
+      it("renders the parent error boundary without JavaScript", async () => {
+        await Utils.disableJavaScript(page);
+        await page.goto(`${testServer}/action-errors`);
+
+        let [, response2] = await Promise.all([
+          page.click("button[type=submit]"),
+          page.waitForNavigation()
+        ]);
+
+        expect(response2!.status()).toBe(500);
+
+        let html = await Utils.getHtml(
+          page,
+          '[data-test-id="app-error-boundary"]'
+        );
+        expect(html).toMatchInlineSnapshot(`
+          "<div data-test-id=\\"app-error-boundary\\">
+            <h1>App Error Boundary</h1>
+            <pre>I am an action error!</pre>
+          </div>
+          "
+        `);
+      });
+
+      it("renders the error boundary with JavaScript", async () => {
+        await page.goto(`${testServer}/action-errors`);
+        await Utils.reactIsHydrated(page);
+        await page.click("button[type=submit]");
+        await page.waitForSelector('[data-test-id="app-error-boundary"]');
+        let html = await Utils.getHtml(
+          page,
+          '[data-test-id="app-error-boundary"]'
+        );
+        expect(html).toMatchInlineSnapshot(`
+          "<div data-test-id=\\"app-error-boundary\\">
+            <h1>App Error Boundary</h1>
+            <pre>I am an action error!</pre>
+          </div>
+          "
+        `);
+      });
+    });
+  });
+
+  describe("an ErrorBoundary with an Outlet", () => {
+    it.todo("Does not render anything in the outlet");
+  });
+
   describe("an uncaught render error", () => {
     describe("on a route without an ErrorBoundary", () => {
       it("renders the root ErrorBoundary on document requests", async () => {

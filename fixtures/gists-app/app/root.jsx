@@ -69,10 +69,7 @@ export function ErrorBoundary({ error }) {
       <head>
         <meta charSet="utf-8" />
         <title>Oops!</title>
-        <link
-          rel="stylesheet"
-          href="//unpkg.com/@exampledev/new.css@1.1.3/new.css"
-        />
+        <Links />
       </head>
       <body>
         <div data-test-id="app-error-boundary">

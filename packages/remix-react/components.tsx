@@ -40,7 +40,6 @@ import { loadRouteModule } from "./routeModules";
 
 ////////////////////////////////////////////////////////////////////////////////
 // FormState
-
 enum FormState {
   Idle = "idle",
 
@@ -191,6 +190,15 @@ export function RemixEntry({
         }
       }
 
+      let actionErrored: boolean = false;
+
+      let componentDidCatchEmulator: ComponentDidCatchEmulator = {
+        trackBoundaries: false,
+        renderBoundaryRouteId: null,
+        loaderBoundaryRouteId: null,
+        error: undefined
+      };
+
       if (formState === FormState.Pending) {
         let leafMatch = nextMatches[nextMatches.length - 1];
         let leafRoute = manifest.routes[leafMatch.route.id];
@@ -209,36 +217,44 @@ export function RemixEntry({
           pendingFormSubmit
         );
 
-        // TODO: Handle error responses here...
-        handleDataRedirect(response as Response);
-
-        // Expecting handleDataRedirect to redirect, so we don't need to worry
-        // about doing anything else in here.
-        return;
+        if (response instanceof Error) {
+          componentDidCatchEmulator.error = response;
+          actionErrored = true;
+        } else {
+          handleDataRedirect(response as Response);
+          // Expecting handleDataRedirect to redirect, so we don't need to worry
+          // about doing anything else in here.
+          return;
+        }
       }
 
       function maybeHandleDataRedirect(response: any) {
         if (!didRedirect) handleDataRedirect(response);
       }
 
-      // NOTE: Keep in sync with `links.ts` data diff
-      let newMatches =
+      // NOTE: Keep in sync with `linksPreload.ts` data diff
+      let matchesToLoad =
         // reload all routes on form submits and search changes
         formState === FormState.Redirected ||
         location.search !== nextLocation.search
           ? nextMatches
-          : nextMatches.filter(
-              (match, index) =>
+          : nextMatches.filter((match, index, arr) => {
+              // ignore action loader if we're rendering an action error
+              if (actionErrored && arr.length - 1 === index) {
+                return false;
+              }
+              return (
                 // new route
                 !matches[index] ||
                 // existing route but params changed
                 matches[index].pathname !== match.pathname ||
                 // catchall param changed
                 matches[index].params["*"] !== match.params["*"]
-            );
+              );
+            });
 
       let transitionResults = await Promise.all(
-        newMatches.map(async match => {
+        matchesToLoad.map(async match => {
           let routeId = match.route.id;
           let route = manifest.routes[routeId];
 
@@ -269,14 +285,36 @@ export function RemixEntry({
         })
       );
 
-      let componentDidCatchEmulator: ComponentDidCatchEmulator = {
-        trackBoundaries: false,
-        renderBoundaryRouteId: null,
-        loaderBoundaryRouteId: null,
-        error: undefined
-      };
+      if (actionErrored) {
+        // figure out the deepest error boundary
+        let withBoundaries = getMatchesUpToDeepestErrorBoundary(
+          matches,
+          routeModules
+        );
+        componentDidCatchEmulator.loaderBoundaryRouteId =
+          withBoundaries[withBoundaries.length - 1].route.id;
+      }
 
       for (let { routeId, dataResult } of transitionResults) {
+        let isExceptional /* just like you */ =
+          isRedirectResponse(dataResult) || dataResult instanceof Error;
+
+        // Rare case where an action throws an error, and then when we try to render
+        // the action's page to tell the user about the the error, a loader above
+        // the action route *also* threw an error or tried to redirect!
+        //
+        // Instead of rendering the loader error or redirecting like usual, we
+        // ignore the loader error or redirect because the action error was first
+        // and is higher priority to surface.  Perhaps the action error is the
+        // reason the loader blows up now! It happened first and is more important
+        // to address.
+        //
+        // We just give up and move on with rendering the error as deeply as we can,
+        // which is the previous iteration of this loop
+        if (actionErrored && isExceptional) {
+          break;
+        }
+
         if (
           !(dataResult instanceof Response || dataResult instanceof Error) ||
           componentDidCatchEmulator.error
@@ -293,6 +331,8 @@ export function RemixEntry({
         if (dataResult instanceof Error) {
           componentDidCatchEmulator.error = dataResult;
         } else if (isRedirectResponse(dataResult)) {
+          // TODO: I think we can `break` here since we're iterating in order
+          // and we don't care about any deeper redirects/errors?
           maybeHandleDataRedirect(dataResult);
         }
       }
@@ -320,7 +360,8 @@ export function RemixEntry({
       if (isCurrent && !didRedirect) {
         if (
           formState === FormState.Redirected ||
-          formState === FormState.PendingGet
+          formState === FormState.PendingGet ||
+          actionErrored
         ) {
           setFormIdle();
         }
@@ -973,4 +1014,24 @@ export function LiveReload() {
       }}
     />
   );
+}
+
+function getMatchesUpToDeepestErrorBoundary(
+  matches: RouteMatch<ClientRoute>[],
+  routeModules: RouteModules
+) {
+  let deepestErrorBoundaryIndex: number = -1;
+
+  matches.forEach((match, index) => {
+    if (routeModules[match.route.id].ErrorBoundary) {
+      deepestErrorBoundaryIndex = index;
+    }
+  });
+
+  if (deepestErrorBoundaryIndex === -1) {
+    // no error boundaries in the app!
+    return [];
+  }
+
+  return matches.slice(0, deepestErrorBoundaryIndex + 1);
 }
