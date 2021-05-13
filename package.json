@@ -61,7 +61,7 @@
     "meow": "^7.1.1",
     "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
-    "puppeteer": "^5.3.0",
+    "puppeteer": "^9.1.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^6.0.0-beta.0",
