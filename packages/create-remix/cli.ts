@@ -3,6 +3,7 @@ import { execSync } from "child_process";
 import { homedir } from "os";
 import chalkAnimation from "chalk-animation";
 import fse from "fs-extra";
+import semver from "semver";
 import inquirer from "inquirer";
 import meow from "meow";
 
@@ -85,7 +86,10 @@ async function run() {
   // Create the app directory
   if (fse.existsSync(appDir)) {
     console.log(
-      `️🚨 Oops, "${appDir}" already exists. Please try again with a different directory.`
+      `️🚨 Oops, "${path.relative(
+        process.cwd(),
+        appDir
+      )}" already exists. Please try again with a different directory.`
     );
     process.exit(1);
   } else {
@@ -119,7 +123,7 @@ async function run() {
   }
 
   // Finish up with @remix-run/init at the right version
-  execSync(`npx --yes @remix-run/init@${flags.tag}`, {
+  execSync(getNpxCommand(`@remix-run/init@${flags.tag}`), {
     stdio: "inherit",
     cwd: appDir
   });
@@ -130,6 +134,20 @@ async function run() {
       appDir
     )}" and check the README for development and deploy instructions!`
   );
+}
+
+function getNpxCommand(script: string): string {
+  let version = execSync("npm --version").toString().trim();
+  let major = semver.major(version);
+
+  if (major === 7) {
+    return `npx --yes --quiet ${script}`;
+  } else if (major === 6) {
+    return `npx --quiet ${script}`;
+  }
+
+  console.error(`npm < version 6 is not supported (you're using ${version})`);
+  process.exit(1);
 }
 
 async function hasHomeNpmAuthToken(): Promise<boolean> {
