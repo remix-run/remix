@@ -133,7 +133,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
             └── index.css
     ```
 
-    We recommend adding `/styles` to your `.gitignore`.
+    We recommend adding `app/styles` to your `.gitignore`.
 
 6.  Use it! When you're developing styles, open a terminal tab and run your new watch script:
 
