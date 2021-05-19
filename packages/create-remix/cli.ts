@@ -17,8 +17,6 @@ script so we don't have to tell users to purge their cached versions of it.
 */
 
 const help = `
-  Create a new Remix app.
-
   Usage:
     $ npm init remix -- [flags...] [<dir>]
     $ npx create-remix [flags...] [<dir>]
@@ -53,7 +51,7 @@ async function run() {
       auth: { type: "string" },
       help: { type: "boolean", default: false, alias: "h" },
       tag: { type: "string", default: "latest" },
-      version: { type: "string", alias: "v" }
+      version: { type: "boolean", default: false, alias: "v" }
     }
   });
 
