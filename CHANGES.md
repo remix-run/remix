@@ -2,6 +2,12 @@
 
 This is a history of changes to [Remix](https://remix.run).
 
+## Unreleased
+
+### Bug Fixes
+
+- Fixed `npm init remix` using npm 6
+
 ## 0.17.1 - Tue May 11 2021
 
 ### Improvements
