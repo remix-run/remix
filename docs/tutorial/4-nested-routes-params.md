@@ -143,7 +143,7 @@ export default function TeamMember() {
 
 Note that Remix parses the params from the url (the `$member` portion of `routes/team/$member`) and passes them to the loader.
 
-You should be able to visit http://localhost:3000/members, click the members, and watch the data update.
+You should be able to visit http://localhost:3000/team, click the members, and watch the data update.
 
 ## Reviewing the end result
 

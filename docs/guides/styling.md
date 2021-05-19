@@ -66,7 +66,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
 1.  You'll to install them as dev dependencies in your app:
 
     ```sh
-    npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
+    npm install -D tailwindcss@latest postcss@latest autoprefixer@latest postcss-cli@latest
     ```
 
 2.  Add `postcss.config.js` in the Remix root.
@@ -133,7 +133,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
             └── index.css
     ```
 
-    We recommend adding `/styles` to your `.gitignore`.
+    We recommend adding `app/styles` to your `.gitignore`.
 
 6.  Use it! When you're developing styles, open a terminal tab and run your new watch script:
 
