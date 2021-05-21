@@ -24,7 +24,7 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
   let nonMatching = {
     rel: "stylesheet",
     href: blueTextHref,
-    media: "(max-width: 10px)"
+    media: "(prefers-color-scheme: beef)"
   };
 
   let fails = { rel: "stylesheet", href: "/fails.css" };
