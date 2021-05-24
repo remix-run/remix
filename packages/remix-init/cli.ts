@@ -16,7 +16,7 @@ run().then(
 
 async function run() {
   let answers = await inquirer.prompt<{
-    server: "remix" | "arc" | "fly" | "vercel";
+    server: "remix" | "express" | "arc" | "fly" | "vercel";
     lang: "ts" | "js";
     install: boolean;
   }>([
@@ -28,6 +28,7 @@ async function run() {
       loop: false,
       choices: [
         { name: "Remix App Server", value: "remix" },
+        { name: "Express Server", value: "express" },
         { name: "Architect (AWS Lambda)", value: "arc" },
         { name: "Fly.io", value: "fly" },
         // { name: "Render", value: "render" },
