@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "dev": "remix dev",
+    "start": "NODE_ENV=production node server/index.js",
+    "start:dev": "NODE_ENV=development node server/index.js"
+  },
+  "dependencies": {
+    "@remix-run/express": "*",
+    "@remix-run/node": "*",
+    "compression": "^1.7.4",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0"
+  }
+}
