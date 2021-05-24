@@ -1,5 +1,6 @@
 ---
-title: "remix"
+title: Remix package
+order: 2
 ---
 
 This package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.

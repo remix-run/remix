@@ -1,5 +1,6 @@
 ---
 title: Application Module APIs
+order: 1
 ---
 
 A lot of Remix API isn't imported from `remix`, but are instead conventions and exports from your application modules.
