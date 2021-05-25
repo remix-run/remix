@@ -3,13 +3,7 @@ title: Remix Docs
 description: Remix! brings the best of modern web development without leaving behind the fundamental parts that make it great. Deploy server rendered, code split, dynamic-data driven React apps to any cloud service provider. Experience unparalleled performance and leave the big build process behind.
 ---
 
-Welcome to Remix! We have put our heart and soul into this project. The API isn't stable yet but it's getting there. We appreciate your patience as we tighten the screws on this thing.
-
-We're still in the "supporter preview" so the docs are incomplete and written in a hurry, but they're good enough to get you moving.
-
-## Important Updates
-
-Please check the [v0.15.0 release notes](./releases/0.15.0/), we shuffled around some packages and added the new esbuild compiler.
+Welcome to Remix! We have put our heart and soul into this project. The API is pretty stable now and now we're tightening the screws on this thing. We don't expect more breaking API changes (but no promises 😅) as we work toward a 1.0 release. These docs are still a bit incomplete and written in a hurry, but they're good enough to get you moving.
 
 ## Getting Started
 
@@ -17,6 +11,6 @@ First things first, do the [Quickstart Tutorial](tutorial/1-installation/). Afte
 
 ## Getting help
 
-The [Support](https://remix.run/dashboard/support) page lists several resources to get help, check it out if you're stuck (and you will be, things are changing fast at the moment). We are very active on the [discord server](https://remix.run/dashboard/chat), during the supporter preview you'll probably get help fastest there. Please don't be shy!
+The [Support](https://remix.run/dashboard/support) page lists several resources to get help, check it out if you're stuck (and you will be, things are changing fast at the moment). We are very active on the [discord server](https://remix.run/dashboard/chat) so you'll probably get help fastest there. Please don't be shy!
 
-And with that, good luck! We hope you love Remix, even in its early state.
+And with that, good luck! We hope you love Remix.
