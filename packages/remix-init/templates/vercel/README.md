@@ -54,9 +54,9 @@ When you ran `npm init remix`, we probably created an npmrc in your home directo
 If it looks something like that, then you can run these commands to add your npmrc from the command line:
 
 ```bash
-$ vercel env add NPM_RC development < ~/.npmrc
-$ vercel env add NPM_RC preview < ~/.npmrc
-$ vercel env add NPM_RC production < ~/.npmrc
+$ vercel env add plain NPM_RC development < ~/.npmrc
+$ vercel env add plain NPM_RC preview < ~/.npmrc
+$ vercel env add plain NPM_RC production < ~/.npmrc
 ```
 
 You can also add this environment variable in your vercel project dashboard.
