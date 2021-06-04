@@ -111,11 +111,11 @@ export default function NewProject() {
 Now add the route action. Any form submits that aren't "get" submits will call your data "action", any "get" requests (links, and the rare `<form method="get">`) will be handled by your "loader".
 
 ```ts
-import type { Action } from "remix";
+import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
-export let action: Action = async ({ request }) => {
+export let action: ActionFunction = async ({ request }) => {
   let newProject = new URLSearchParams(await request.text());
   let project = await createProject(Object.fromEntries(newProject));
 
