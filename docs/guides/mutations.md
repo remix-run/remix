@@ -160,10 +160,10 @@ let [errors, project] = await createProject(newProject);
 If there are validation errors, we want to go back to the form and display them. If enabled, Remix sends a `session` object to your loaders and actions, we can use that to store the form validation errors.
 
 ```js
-import type { Action, loader } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
 import { redirect } from "remix";
 
-export let action: Action = async ({ request, session }) => {
+export let action: ActionFunction = async ({ request, session }) => {
   let newProject = new URLSearchParams(await request.text());
   let [errors, project] = await createProject(Object.fromEntries(newProject));
 
@@ -178,7 +178,7 @@ export let action: Action = async ({ request, session }) => {
   return redirect(`/projects/${project.id}`);
 };
 
-export let loader: Loader = () => {
+export let loader: LoaderFunction = () => {
   // we'll be back here in a minute
 };
 ```
@@ -437,17 +437,17 @@ Check out this sample Todo app component that uses all the tricks we've just lea
 Here's the component route:
 
 ```tsx
-import type { Action, Loader } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
 import { json, redirect } from "remix";
 import { readTodos, createTodo, deleteTodo } from "../models/todo";
 
-export let loader: Loader = = async ({ request, session }) => {
+export let loader: LoaderFunction = = async ({ request, session }) => {
   let todos = await readTodos();
   let error = session.get("error") || null;
   return json({ todos, error });
 };
 
-export let action: Action = async ({ request }) => {
+export let action: ActionFunction = async ({ request }) => {
   let body = new URLSearchParams(await request.text());
 
   switch (request.method) {
