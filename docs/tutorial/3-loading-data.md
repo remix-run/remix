@@ -80,7 +80,7 @@ The `json` helper will deal with the content type automatically while still givi
 ```js [1,5]
 import { json } from "remix";
 
-export let loader: Loader = () => {
+export let loader = async () => {
   let arrayOfStuff = await db.query(someQuery);
   return json(arrayOfStuff);
 };
@@ -91,7 +91,7 @@ Here's how you can indicate data-based a 404:
 ```tsx [6]
 import { json } from "remix";
 
-export let loader: Loader = ({ params }) => {
+export let loader = async ({ params }) => {
   let record = await findSomeRecord(params.id);
   if (record == null) {
     return json({ notFound: true }, { status: 404 });
@@ -104,8 +104,8 @@ export let loader: Loader = ({ params }) => {
 
 You don't have to build up a full response or use a helper, loaders can return plain objects, you just lose control over your headers this way:
 
-```ts
-export let loader: LoaderFunction = () => {
+```js
+export function loader() {
   return { anything: "you want" };
 };
 ```
