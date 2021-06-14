@@ -9,6 +9,7 @@ export interface EntryContext {
   manifest: AssetsManifest;
   matches: RouteMatch<EntryRoute>[];
   routeData: RouteData;
+  actionData?: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
 }

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`loader results when a loader returns not found sends a not found page 1`] = `
-"<div data-test-id=\\"content\\">
+"<div data-test-id=\\"content\\" id=\\"content\\">
   <div data-test-id=\\"/gists\\">
     <header>
       <h1>Gists</h1>
