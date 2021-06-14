@@ -1,5 +1,5 @@
 ---
-title: Remix package
+title: Remix Package
 order: 2
 ---
 
@@ -7,11 +7,11 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 # Components and Hooks
 
-## `Meta`, `Links`, `Scripts`, `Outlet`
+## `Meta`, `Links`, `Scripts`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx [2,10,11,14,15]
+```tsx [2,10,11,15]
 import React from "react";
 import { Meta, Links, Scripts } from "remix";
 import { Outlet } from "react-router-dom";
@@ -33,80 +33,1081 @@ export default function App() {
 }
 ```
 
-## `useRouteData`
+## ~~`useRouteData`~~
 
-This hook returns the data from your route data loader.
+<docs-warning>Deprecated, use <a href="#useLoaderData">useLoaderData</a></docs-warning>
+
+## `useLoaderData`
+
+This hook returns the JSON parsed data from your route data loader.
 
 ```tsx [2,9]
 import React from "react";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
 export function loader() {
-  return { some: "data" };
+  return fakeDb.invoices.findAll();
 }
 
 export default function Invoices() {
-  let invoices = useRouteData();
+  let invoices = useLoaderData();
   // ...
 }
 ```
 
-`useRouteData` can be useful for creating abstractions that do some transformation on the data for your route. For example, with Firebase you could build a hook that turns the static data fetched from the server into a live document in the client.
+## `<Form>`
 
-```tsx
-// if you're using firebase you could build a "live" route document
-function useLiveRouteData() {
-  // your server could return the path of the data it fetched, and the data on
-  // two keys. If all routes loaders with live data follow this convention, it
-  // doesn't matter which route we're using this hook in
-  let { path, data } = useRouteData();
+The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
-  // maybe you've got a firebase abstraction that takes a path to subscribe to
-  // and initial data.
-  let liveData = useFirestoreDoc(path, data);
+```js
+import { Form } from "remix";
 
-  // return the live data
-  return liveData;
-}
-```
-
-## `usePendingLocation`
-
-During a clientside route transition, Remix loads the resources for the next page before continuing the transition (because we're all sick of flickering spinners). But we also need some UI to acknowledge that they clicked a link. This is the purpose of this hook.
-
-Whenever a transition is happening, this hook will return the pending (or next) location. when it's over, it will return `undefined`. With this information you can create a loading indication on the current page, a link, or even globally in your root.tsx.
-
-This example fades the page out if the transition is taking longer than 300ms.
-
-```tsx
-import React from "react";
-import { usePendingLocation, Meta, Links, Scripts } from "remix";
-import { Outlet } from "react-router-dom";
-
-export default function App() {
-  let pendingLocation = usePendingLocation();
-
+function NewEvent() {
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <Meta />
-        <Links />
-      </head>
-      <body
-        style={{
-          opacity: !!pendingLocation ? "0.15" : "1",
-          transition: "opacity 500ms ease-in-out",
-          transitionDelay: "300ms"
-        }}
-      >
-        <Outlet />
-        <Scripts />
-      </body>
-    </html>
+    <Form method="post" action="/events">
+      <input type="text" name="title" />
+      <input type="text" name="description" />
+    </Form>
   );
 }
 ```
+
+- Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
+- After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
+- `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript)
+- You can build "optimistic UI" and pending indicators with `useTransition`
+
+For an in-depth look at mutations with form, check out the [Mutations](../../guides/mutations/) page.
+
+### `<Form action>`
+
+The form action is optional. If omitted, the current route will handle the action. You may want to post to a different route.
+
+```js
+<Form action="/projects/new" />
+```
+
+This would call the action for a route found at `app/routes/projects/new.tsx`.
+
+### `<Form method>`
+
+This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
+
+```js
+<Form method="post" />
+```
+
+Native `<form>` only supports get and post, so if you want your form to work with JavaScript on or off the page you'll need to stick with those two.
+
+Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" method="delete" />`. If you always include JavaScript, you don't need to worry about this.
+
+### `<Form encType>`
+
+Defaults to `application/x-www-urlencoded`, which is also the only supported value right now.
+
+### `<Form replace>`
+
+```tsx
+<Form replace />
+```
+
+Instructs the form to replace the current entry in the history stack, instead of pushing the new entry. If you expect a form to be submitted multiple times you may not want the user to have to click "back" for every submission to get to the previous page.
+
+<docs-warning>This has no effect without JavaScript on the page.</docs-warning>
+
+### `<Form forceRefresh>`
+
+If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page.
+
+```tsx
+<Form forceRefresh />
+```
+
+<docs-info>This is recommended over <code>&lt;form></code></docs-info>
+
+When the `action` prop is ommitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
+
+- `<form>` uses the current URL as the default which can lead to surprising results: forms inside parent routes will post to the child action if you're at the child's URL and the parents action when you're at the parent's URL. This means as the user navigates, the form's behavior changes.
+- `<Form>` will always post to the route's action, independent of the URL. A form in a parent route will always post to the parent, even if you're at the child's URL.
+
+See also:
+
+- [`useTransition`](#usetransition)
+- [`useActionData`](#usetransition)
+- [`useSubmit`](#usesubmit)
+
+## `useActionData`
+
+This hook returns the JSON parsed data from your route action. If there has been no submsision at the current location it returns undefined.
+
+```tsx [2,11,20]
+import React from "react";
+import { useActionData } from "remix";
+
+export function action({ request }) {
+  let body = new URLSearchParams(await request.text());
+  let name = body.get("visitorsName");
+  return { message: `Hello, ${name}` };
+}
+
+export default function Invoices() {
+  let data = useActionData();
+  return (
+    <Form method="post">
+      <p>
+        <label>
+          What is your name?
+          <input type="text" name="visitorsName" />
+        </label>
+      </p>
+      <p>{data ? data.message : "Waiting..."}</p>;
+    </Form>
+  );
+}
+```
+
+The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
+
+```tsx [21, 30, 38, 42-44]
+import { redirect, json, Form, useActionData } from "remix";
+
+export function action({ request }) {
+  let body = Object.fromEntries(
+    new URLSearchParams(await request.text())
+  );
+  let errors = {};
+
+  // validate the fields
+  if (!body.email.includes("@")) {
+    errors.email =
+      "That doesn't look like an email address";
+  }
+
+  if (body.password.length < 6) {
+    errors.password = "Password must be > 6 characters";
+  }
+
+  // return data if we have errors
+  if (Object.keys(errors).length) {
+    return json(errors, { status: 422 });
+  }
+
+  // otherwise create the user and redirect
+  await createUser(body);
+  return redirect("/dashboard");
+}
+
+export default function Signup() {
+  let errors = useActionData();
+
+  return (
+    <>
+      <h1>Signup</h1>
+      <Form method="post">
+        <p>
+          <input type="text" name="email" />
+          {errors?.email && <span>{errors.email}</span>}
+        </p>
+        <p>
+          <input type="text" name="password" />
+          {errors?.password && (
+            <span>{errors.password}</span>
+          )}
+        </p>
+        <p>
+          <button type="submit">Sign up</button>
+        </p>
+      </Form>
+    </>
+  );
+}
+```
+
+### Notes about resubmissions
+
+When using `<Form>` (instead of `<form>` or `<Form forceRefresh>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
+
+<docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
+
+Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't even want this to happen.
+
+For example, consider this user flow:
+
+1. The user lands at `/buy`
+2. They submit a form to `/checkout`
+3. They click a link to `/order/123`
+
+The history stack looks like this, where "\*" is the current entry:
+
+```
+GET /buy > POST /checkout > *GET /order/123
+```
+
+Now consider the user clicks the back button 😨
+
+```
+GET /buy - *POST /checkout < GET /order/123
+```
+
+The browser will repost the same information and likely charge their credit card again. You usually don't want this.
+
+The decades-old best practice is to redirect in the POST request. This way the location disappears from the browser's history stack and the user can't "back into it" anymore.
+
+```
+GET /buy > POST /checkout, Redirect > GET /order/123
+```
+
+This results in a history stack that looks like this:
+
+```
+GET /buy - *GET /order/123
+```
+
+Now the user can click back without resubmitting the form.
+
+**When you should worry about this**
+
+Usually your actions will either return validation issues or redirect, and then you're data and your user's are safe no matter how the form is submitted. But to go into further detail, if you're using:
+
+- `<form>`
+- `<Form forceRefresh>`
+- You're not rendering `<Scripts/>`
+- The user has JavaScript disabled
+
+The browser will resubmit the form in these situations unless you redirect from the action. If these are cases you want to support, we recommend you follow the age-old best practice of redirecting from actions.
+
+If you're using `<Form>` and don't care to support the cases above, you don't need to redirect from your actions. However, if you don't redirect from an action, make sure reposting the same information isn't dangerous to your data or your visitors because you can't control if they have JavaScript enabled or not.
+
+See also:
+
+- [`action`](../app/#action)
+- [`useTransition`](#usetransition)
+
+## `useFormAction`
+
+Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
+
+```tsx
+<button
+  formAction={useFormAction("destroy")}
+  formMethod="DELETE"
+>
+  Delete
+</button>
+```
+
+## `useSubmit`
+
+Returns the function that may be used to submit a `<form>` (or some raw `FormData`) to the server using the same process that `<Form>` uses internally `onSubmit`. If you're familiar with React Router's `useNavigate`, you can think about this as the same thing but for `<Form>` instead of `<Link>`.
+
+This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
+
+```tsx
+import { useSubmit } from "remix";
+
+function UserPreferences() {
+  let submit = useSubmit();
+
+  function handleChange(event) {
+    submit(event.currentTarget, { replace: true });
+  }
+
+  return (
+    <form method="post" onChange={handleChange}>
+      {/* ... */}
+    </form>
+  );
+}
+```
+
+This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity.
+
+```tsx [2,7,13]
+import { useCallback, useEffect, useState } from "react";
+import { useSubmit } from "remix";
+
+const oneMinute = 60_000;
+
+function useSessionTimeout(initialTimeout) {
+  let submit = useSubmit();
+  let [sessionTimeout, setSessionTimeout] = useState(
+    initialTimeout
+  );
+
+  let handleTimeout = useCallback(() => {
+    submit(null, { method: "post", action: "/logout" });
+  });
+
+  useEffect(() => {
+    let timer = setTimeout(handleTimeout, sessionTimeout);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [sessionTimeout]);
+
+  return setSessionTimeout;
+}
+
+function AdminPage() {
+  // User will be automatically signed out after 5 mins of inactivity.
+  let setSessionTimeout = useSessionTimeout(5 * oneMinute);
+
+  // TODO: Use `setSessionTimeout(n)` when there is some activity
+  // on the page to reset the timer and extend the session.
+
+  return (
+    <div>
+      {/* User can use this form sign sign out immediately */}
+      <form method="post" action="/logout">
+        <button>Sign out</button>
+      </form>
+
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+## ~`usePendingLocation`~
+
+<docs-warning>Deprecated, use <a href="#usetransition"><code>useTransition().location</code></a></docs-warning>
+
+## ~~`usePendingFormSubmit`~~
+
+<docs-warning>Deprecated, use <a href="#usetransition">useTransition().submission</a></docs-warning>
+
+## `useTransition`
+
+This hook tells you everything you need to know about a page transition to build pending navigation indicators and optimistic UI on data mutations. Things like:
+
+- Global loading spinners
+- Spinners on clicked links
+- Disabling forms while the mutation is happening
+- Adding spinners to submit buttons
+- Optimistically showing a new record while it's being created on the server
+- Optimistically showing the new state of a record while it's being updated
+
+```js
+import { useTransition } from "remix";
+
+function SomeComponent() {
+  let transition = useTransition();
+  transition.state;
+  transtion.type;
+  transition.submission;
+  transition.location;
+}
+```
+
+### `transition.state`
+
+You can know the state of the transition with `transition.state`, it will be one of:
+
+- **idle** - There is no transition pending.
+- **submitting** - A form has been submitted, if GET, then the route loader is being called, if POST, PUT, PATCH, DELETE, then the route action is being called.
+- **loading** - The loaders for the next routes are being called to render the next page.
+
+Normal navigations and GET form submissions transition as follows:
+
+```
+idle → loading → idle
+```
+
+Form submissions with POST, PUT, PATCH, or DELETE transition as follows:
+
+```
+idle → submitting → loading → idle
+```
+
+```tsx
+function SubmitButton() {
+  let transition = useTransition();
+
+  let text =
+    : transition.state === "submitting"
+    ? "Saving..."
+    : transition.state === "loading"
+    ? "Loading..."
+    : "Go"
+
+  return <button type="submit">{text}</button>;
+}
+```
+
+### `transition.type`
+
+Most pending UI only cares about `transition.state`, but the transition can tell you even more information on `transition.type`.
+
+Remix calls your route loaders at various times, like on normal link clicks or after a form submission completes. If you'd like to build pending indication that is more granular than "loading" and "submitting", use the `transition.type`.
+
+Depending on the transition state, the types can be the following:
+
+- `state === "idle"`
+
+  - **idle** - The type is always idle when the state is idle
+
+- `state === "submitting"`
+
+  - **actionSubmission** - A form has been submitted with POST, PUT, PATCH, or DELETE, and the action is being called.
+  - **loaderSubmission** - A form has been submitted with GET and the loader is being called
+
+- `state === "loading"`
+
+  - **loaderSubmissionRedirect** - A "loaderSubmission" was redirected by the loader and the next routes are being loaded
+  - **actionRedirect** - An "actionSubmission" was redirected by the action and the next routes are being loaded
+  - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
+  - **fetchActionRedirect** - An action [fetcher](#usefetcher) redirected and the next routes are being loaded.
+  - **redirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded.
+  - **load** - A normal load from a normal navigation.
+
+```tsx
+function SubmitButton() {
+  let transition = useTransition();
+
+  let loadTexts = {
+    actionRedirect: "Data saved, redirecting...",
+    actionReload: "Data saved, reloading fresh data...",
+  };
+
+  let text =
+    transition.state === "submitting"
+      ? "Saving..."
+      : transition.state === "loading"
+      ? loadTexts[transition.type] || "Loading..."
+      : "Go";
+
+  return <button type="submit"></button>;
+}
+```
+
+### `transition.submission`
+
+Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object.
+
+TODO: Example
+
+### `transition.location`
+
+This tells you what the next location is going to be. Its most useful when matching against the next URL for custom links and hooks.
+
+For example, this `Link` knows when it's page is loading and it's about to become active:
+
+```tsx [7-9]
+import { Link, useResolvedPath } from "react-router-dom";
+
+function PendingLink({ to, children }) {
+  let transition = useTransition();
+  let path = useResolvedPath(to);
+
+  let isPending =
+    transition.state === "loading" &&
+    transition.location.pathname === path.pathname;
+
+  return (
+    <Link
+      data-pending={isPending ? "true" : null}
+      to={to}
+      children={children}
+    />
+  );
+}
+```
+
+Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
+
+## `useFetcher`
+
+This hook will call loaders and actions without navigating. It's similar to `useFetch()` wrappers found in many React apps but with extra behavior specific to Remix (like capturing data updates automatically across the whole page).
+
+```tsx
+import { useFetcher } from "remix";
+
+function SomeComponent() {
+  let fetcher = useFetcher();
+
+  // trigger the fetch with these
+  <fetcher.Form {..formOptions} />;
+  fetcher.submit(data, options);
+  fetcher.load(href);
+
+  // build UI with these
+  fetcher.state;
+  fetcher.type;
+  fetcher.submission;
+  fetcher.data;
+}
+```
+
+In HTML/HTTP, data mutations and loads are modeled with navigation: `<a href>` and `<form action>` both cause a navigation in the browser. The remix equivalents are `<Link>` and `<Form>`.
+
+In Remix, when the user submits a `<Form>` the action is called and then the loaders for the routes on the page are called again to get fresh data.
+
+But sometimes you want to call an action to update data (and get the routes to reload) but you don't want the URL to change. Many interactions with the server aren't navigation events. This hook lets you plug your UI into your actions and loaders without navigating.
+
+Notes about how it works:
+
+- Automatically handles cancellation of the fetch at the browser level
+- When submitting with POST, PUT, PATCH, DELETE, the action is called first
+  - After the action completes, the loaders on the page are reloaded to capture any mutations that may have happened, automatically keeping your UI in sync with your server state
+- When multiple fetchers are inflight at once, it will
+  - commit the freshest available data as they each land
+  - ensure no stale loads overrite fresher data, no matter which order the responses return
+- Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
+- Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
+
+### `fetcher.state`
+
+You can know the state of the fetcher with `fetcher.state`, it will be one of:
+
+- **idle** - nothing is being fetched
+- **submitting** - A form has been submitted. If the method is GET then the route loader is being called, if POST, PUT, PATCH, or DELETE then the route action is being called.
+- **loading** - The loaders for the routes are being reloaded after an action submission completed.
+
+### `fetcher.type`
+
+This is the type of state the fetcher is in. It's like `fetcher.state` but more granular. Depending on the fetcher's state, the types can be the following:
+
+- `state === "idle"`
+
+  - **init** - The fetcher isn't doing anything currently and hasn't done anything yet.
+  - **done** - The fetcher isn't doing anything currently, but it has completed a fetch and you can safely read the `fetcher.data`.
+
+- `state === "submitting"`
+
+  - **actionSubmission** - A form has been submitted with POST, PUT, PATCH, or DELETE, and the action is being called.
+  - **loaderSubmission** - A form has been submitted with GET and the loader is being called
+
+- `state === "loading"`
+
+  - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
+  - **load** - A route's loader is being called without a submission (`fetcher.load()`)
+
+### `fetcher.submission`
+
+When using `<fetcher.Form>` or `fetcher.submit()`, the form submission is available to build optimistic UI.
+
+It is not available when the fetcher state is "idle" or "loading".
+
+### `fetcher.data`
+
+When using `<fetcher.Form>` or `fetcher.submit()`, the action or loader's response is stored here.
+
+In the case of action submissions, the data is available even before the routes on the page are reloaded.
+
+It is not available when the fetcher state is "submitting". If you need it around when the same form is resubmit, you'll need to persist it to your own React state.
+
+### `fetcher.Form`
+
+Just like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
+
+```tsx
+function SomeComp() {
+  let fetcher = useFetcher();
+  return (
+    <fetcher.Form method="post" action="/some/route">
+      <input type="text" />
+    </fetcher.Form>
+  );
+}
+```
+
+### `fetcher.submit()`
+
+Just like `useSubmit` except it doesn't cause a navigation.
+
+```tsx
+let fetcher = useFetcher();
+fetcher.submit({ some: "values" }, { method: "post" });
+```
+
+### `fetcher.load()`
+
+Loads data from a route loader.
+
+```tsx
+let fetcher = useFetcher();
+fetcher.load("/some/route");
+fetcher.data; // the data from the loader
+```
+
+### Examples
+
+**Newsletter Signup Form**
+
+Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job:
+
+```tsx
+// routes/newsletter/subscribe.js
+export function action({ request }) {
+  let body = new URLSearchParams(await request.text());
+  try {
+    await subscribe(body.get("email"));
+    return json({ ok: true });
+  } catch (error) {
+    return json({ error: error.message });
+  }
+}
+```
+
+```tsx
+// NewsletterSignup.js
+function NewsletterSignup() {
+  let newsletter = useFetcher();
+  let ref = useRef();
+
+  useEffect(() => {
+    if (newsletter.type === "done" && newsletter.data.ok) {
+      ref.current.reset();
+    }
+  }, [newsletter]);
+
+  return (
+    <newsletter.Form
+      ref={ref}
+      method="post"
+      action="/newsletter/subscribe"
+    >
+      <p>
+        <input type="text" name="email" />{" "}
+        <button
+          type="submit"
+          disabled={newsletter.state === "submitting"}
+        >
+          Subscribe
+        </button>
+      </p>
+
+      {newsletter.type === "done" &&
+        (newsletter.data.ok ? (
+          <p>Thanks for subscribing!</p>
+        ) : newsletter.data.error ? (
+          <p data-error>{newsletter.data.error}</p>
+        ) : null)}
+    </newsletter.Form>
+  );
+}
+```
+
+<docs-info>You can still provide a no-JavaScript experience</docs-info>
+
+Because `useFetcher` doesn't cause a navigation, it won't automatically work if there is no JavaScript on the page like a normal Remix `<Form>` will because the browser will still navigate to the form's action.
+
+If you want to support a no JavaScript experience, just export a component from the route with the action.
+
+```tsx
+// routes/newsletter/subscribe.js
+export function action({ request }) {
+  // just like before
+}
+
+export default function NewsletterSignupRoute() {
+  let data = useActionData();
+  return (
+    <Form method="post" action="/newsletter/subscribe">
+      <p>
+        <input type="text" name="email" />{" "}
+        <button type="submit">Subscribe</button>
+      </p>
+
+      {newsletter.data.ok ? (
+        <p>Thanks for subscribing!</p>
+      ) : newsletter.data.error ? (
+        <p data-error>{newsletter.data.error}</p>
+      ) : null}
+    </Form>
+  );
+}
+```
+
+- When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll just get a solid, dynamic experience
+- When JS is not on the page, they'll be transitioned to the signup page by the browser.
+
+You could even refactor the component to take props from the hooks and reuse it:
+
+```tsx
+// NewsletterSignup.js
+import { Form, useFetcher } from "remix";
+
+// used in the footer
+export function NewsletterSignup() {
+  let newsletter = useFetcher();
+  return (
+    <NewsletterForm
+      Form={newsletter.Form}
+      data={newsletter.data}
+      state={newsletter.state}
+      type={newsletter.type}
+    />
+  );
+}
+
+// used here and in the route
+export function NewsletterForm({
+  Form,
+  data,
+  state,
+  type,
+}) {
+  // refactor a bit in here, just read from props instead of useFetcher
+}
+```
+
+And now you could reuse the same form, but it gets data from a different hook for the no-js experience:
+
+```tsx
+// routes/newsletter/subscribe.js
+import { NewsletterForm } from "~/NewsletterSignup";
+import { Form } from "remix";
+
+export default function NewsletterSignupRoute() {
+  let data = useActionData();
+  return (
+    <NewsletterForm
+      Form={Form}
+      data={data}
+      state="idle"
+      type="done"
+    />
+  );
+}
+```
+
+**Mark Article as Read**
+
+Imagine you want to mark an article has been read by the current user after they've been on the page for a while and scrolled to the bottom, you could make a hook that looks something like this:
+
+```tsx
+function useMarkAsRead({ articleId, userId }) {
+  let marker = useFetcher();
+
+  useSpentSomeTimeHereAndScrolledToTheBottom(() => {
+    marker.submit(
+      { userId },
+      {
+        method: "POST",
+        action: "/article/${articleID}/mark-as-read",
+      }
+    );
+  });
+}
+```
+
+**User Avatar Details Popup**
+
+Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
+
+```tsx
+// routes/user/$id/details.js
+export function loader({ params }) {
+  return fakeDb.user.find({ where: { id: params.id } });
+}
+```
+
+```tsx
+// UserAvatar.js
+function UserAvatar({ partialUser }) {
+  let userDetails = useFetcher();
+  let [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    if (showDetails && userDetails.type === "init") {
+      userDetails.load(`/users/${user.id}/details`);
+    }
+  }, [showDetails]);
+
+  return (
+    <div
+      onMouseEnter={() => setShowDetails(true)}
+      onMouseLeave={() => setShowDetails(false)}
+    >
+      <img src={partialUser.profileImageUrl} />
+      {showDetails &&
+        (userDetails.type === "done" ? (
+          <UserPopup user={userDetails.data} />
+        ) : (
+          <UserPopupLoading />
+        ))}
+    </div>
+  );
+}
+```
+
+**Async Reach UI Combobox**
+
+If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
+
+```tsx
+// routes/cities/serach
+```
+
+```tsx
+function CitySearchCombobox() {
+  let cities = useFetcher();
+
+  return (
+    <cities.Form method="get" action="/city-search">
+      <Combobox aria-label="Cities">
+        <div>
+          <ComboboxInput
+            onChange={(event) =>
+              cities.submit(event.target.form)
+            }
+          />
+          {cities.state === "submitting" && <Spinner />}
+        </div>
+
+        {cities.data && (
+          <ComboboxPopover className="shadow-popup">
+            {cities.data.error ? (
+              <p>Failed to load cities :(</p>
+            ) : cities.data.length ? (
+              <ComboboxList>
+                {cities.data.map((city) => (
+                  <ComboboxOption
+                    key={city.id}
+                    value={city.name}
+                  />
+                ))}
+              </ComboboxList>
+            ) : (
+              <span>No results found</span>
+            )}
+          </ComboboxPopover>
+        )}
+      </Combobox>
+    </cities.Form>
+  );
+}
+```
+
+## `useFetchers`
+
+Returns an array of all inflight fetchers.
+
+This is useful for components throughout the app that didn't create the fetchers but want to use their submissions to participate in optimistic UI.
+
+For example, imagine a UI where the sidebar lists projects and the main view displays a list of checkboxes for the current project. The sidebar could display the number of completed and total tasks for each project.
+
+```
+┌─────────────────┬────────────────────────────┐
+│                 │                            │
+│   Soccer  (8/9) │ [x] Do the dishes          │
+│                 │                            │
+│ > Home    (2/4) │ [x] Fold laundry           │
+│                 │                            │
+│                 │ [ ] Replace battery in the │
+│                 │     smoke alarm            │
+│                 │                            │
+│                 │ [ ] Change lights in kids  │
+│                 │     bathroom               │
+│                 │                            │
+└─────────────────┴────────────────────────────┘
+```
+
+When the user clicks a checkbox, the submission goes to the action to change the state of the task. Instead of creating a "loading state" we want to create an "optimistic UI" that will **immediately** update the checkbox to appear checked even though the server hasn't processed it yet. In the checkbox component, we can use `fetcher.submission`:
+
+```tsx
+function Task({ task }) {
+  let toggle = useFetcher();
+  let checked = toggle.submission
+    ? // use the optimistic version
+      Boolean(toggle.formData.get("complete"))
+    : // use the normal version
+      task.complete;
+
+  let { projectId, id } = task;
+  return (
+    <toggle.Form
+      method="put"
+      action={`/project/${projectId}/tasks/${id}`}
+    >
+      <label>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => toggle.submit(e.target.form)}
+        />
+      </label>
+    </toggle.Form>
+  );
+}
+```
+
+This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks on of them!
+
+```
+┌─────────────────┬────────────────────────────┐
+│                 │                            │
+│   Soccer  (8/9) │ [x] Do the dishes          │
+│                 │                            │
+│ > Home    (2/4) │ [x] Fold laundry           │
+│                 │                            │
+│          CLICK!-->[x] Replace battery in the │
+│                 │     smoke alarm            │
+│                 │                            │
+│                 │ [ ] Change lights in kids  │
+│                 │     bathroom               │
+│                 │                            │
+└─────────────────┴────────────────────────────┘
+```
+
+Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's gonna feel a little funny.
+
+This is where `useFetchers` comes in. Up in the sidebar we can get access too all of the inflight fetcher states from the checkboxes--even though it's not the component that created them.
+
+The strategy has three steps:
+
+1. Find the submissions for tasks in a specific project
+2. Use the `fetcher.submission.formData` to immediatly update the count
+3. Use the normal task's state if it's not inflight
+
+Here's some sample code:
+
+```js
+function ProjectTaskCount({ project }) {
+  let fetchers = useFetchers();
+  let completedTasks = 0;
+
+  // 1) Find my task's submissions
+  let myFetchers = new Map();
+  for (let f of fetchers) {
+    if (
+      f.submission &&
+      f.submission.action.startsWith(
+        `/projects/${project.id}/task`
+      )
+    ) {
+      let taskId = f.submission.formData.get("id");
+      myFetchers.set(
+        parseInt(taskId),
+        f.submission.formData.get("complete") === "on"
+      );
+    }
+  }
+
+  for (let task of project.tasks) {
+    // 2) use the optimistic version
+    if (myFetchers.has(task.id)) {
+      if (myFetchers.get(task.id)) {
+        completedTasks++;
+      }
+    }
+    // 3) use the normal version
+    else if (task.complete) {
+      completedTasks++;
+    }
+  }
+
+  return (
+    <small>
+      {completedTasks}/{project.tasks.length}
+    </small>
+  );
+}
+```
+
+## `useMatches`
+
+Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
+
+```js
+let matches = useMatches();
+```
+
+`matches` has the following shape:
+
+```js
+[
+  { pathname, data, params, handle }, // root route
+  { pathname, data, params, handle }, // layout route
+  { pathname, data, params, handle }, // child route
+  // etc.
+];
+```
+
+Remix knows all of your route matches and data at the top of the React element tree. That's how we can:
+
+- add meta tags to the top of the document even though they are defined in nested routes lower in the tree
+- add `<link>` tags to assets at the top of the document even though ...
+- add `<script>` bundles for each route at the top of the document ...
+
+Pairing [route `handle`](../app/#handle) with `useMatches`, you can build your own, similar conventions to Remix's built-in `<Meta>`, `<Links>`, and `<Scripts>` components.
+
+Let's consider building some breadcrumbs. If a route wants to participate in these breadcrumbs at the top of the root layout, it normally can't because it renders down low in the tree.
+
+You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, it's not a Remix thing, it's whatever you want. Here it's added to a parent route:
+
+1. Add the breadcrumb handle to the parent route
+
+   ```tsx
+   // routes/parent.tsx
+   export let handle = {
+     breadcrumb: () => <Link to="/parent">Some Route</Link>,
+   };
+   ```
+
+2. We can do the same for a child route
+
+   ```tsx
+   // routes/parent/child.tsx
+   export let handle = {
+     breadcrumb: () => (
+       <Link to="/parent/child">Child Route</Link>
+     ),
+   };
+   ```
+
+3. Now we can put it all together in our root route with `useMatches`.
+
+   ```tsx [6, 21-32]
+   // root.tsx
+   import {
+     Links,
+     Scripts,
+     useLoaderData,
+     useMatches,
+   } from "remix";
+
+   export default function Root() {
+     let matches = useMatches();
+
+     return (
+       <html lang="en">
+         <head>
+           <meta charSet="utf-8" />
+           <Links />
+         </head>
+         <body>
+           <header>
+             <ol>
+               {matches
+                 // skip routes that don't have a breadcrumb
+                 .filter(
+                   (match) =>
+                     match.handle && match.handle.breadcrumb
+                 )
+                 // render breadcrumbs!
+                 .map((match, index) => (
+                   <li key={index}>
+                     {match.handle.breadcrumb(match)}
+                   </li>
+                 ))}
+             </ol>
+           </header>
+
+           <Outlet />
+         </body>
+       </html>
+     );
+   }
+   ```
+
+Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we could have used `match.data` to use our route's data in the breadcrumb.
+
+Another common use case is [enabling JavaScript for some routes and not others](../../guides/disabling-javascript/).
+
+Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
 
 ## `useBeforeUnload`
 
@@ -145,285 +1146,6 @@ function SomeForm() {
 }
 ```
 
-## `<Form>`
-
-The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
-
-- Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
-- After a `<Form>` submit, all of the loaders on the page will be reloaded. This ensures that any updates to your data on the server are reflected with fresh fetches from your loaders.
-- You can build "optimistic UI" and pending indicators with `usePendingFormSubmit`
-- `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript)
-
-```js
-import { Form } from "remix";
-
-function HomePage() {
-  return (
-    <Form>
-      <input type="text" name="title" />
-    </Form>
-  );
-}
-```
-
-For an in-depth look at mutations with form, check out the [Mutations](../../guides/mutations/) page.
-
-### `<Form action>`
-
-The form action is optional. If omitted, the current route will handle the action. You may want to post to a different route.
-
-```js
-<Form action="/projects/new" />
-```
-
-This would call the action for a route found at `app/routes/projects/new.tsx`.
-
-### `<Form method>`
-
-This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
-
-```js
-<Form method="post" />
-```
-
-Native `<form>` only supports get and post, so if you want your form to work with JavaScript on or off the page you'll need to stick with those two.
-
-Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" method="delete" />`. If you always include JavaScript, you don't need to worry about this.
-
-### `<Form encType>`
-
-Defaults to `application/x-www-urlencoded`, which is also the only supported value right now.
-
-### `<Form replace>`
-
-```tsx
-<Form replace />
-```
-
-Instructs the form to replace the current entry in the history stack, instead of pushing the new entry. This is useful for small mutations of records inside a list view, like "delete" or "mark complete". Anything that isn't really a page navigation.
-
-Note: has no effect without JavaScript on the page.
-
-### `<Form forceRefresh>`
-
-```tsx
-<Form forceRefresh />
-```
-
-If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page.
-
-## `useFormAction`
-
-Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
-
-```tsx
-<button formAction={useFormAction("destroy")} formMethod="DELETE">
-  Delete
-</button>
-```
-
-## `useSubmit`
-
-Returns the function that may be used to submit a `<form>` (or some raw `FormData`) to the server using the same process that `<Form>` uses internally `onSubmit`. If you're familiar with React Router's `useNavigate`, you can think about this as the same thing but for `<Form>` instead of `<Link>`.
-
-This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
-
-```tsx
-import { useSubmit } from "remix";
-
-function UserPreferences() {
-  let submit = useSubmit();
-
-  function handleChange(event) {
-    submit(event.currentTarget, { replace: true });
-  }
-
-  return (
-    <form method="post" onChange={handleChange}>
-      {/* ... */}
-    </form>
-  );
-}
-```
-
-This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity.
-
-```tsx [2,7,11]
-import { useCallback, useEffect, useState } from "react";
-import { useSubmit } from "remix";
-
-const oneMinute = 60_000;
-
-function useSessionTimeout(initialTimeout) {
-  let submit = useSubmit();
-  let [sessionTimeout, setSessionTimeout] = useState(initialTimeout);
-
-  let handleTimeout = useCallback(() => {
-    submit(null, { method: "post", action: "/logout" });
-  });
-
-  useEffect(() => {
-    let timer = setTimeout(handleTimeout, sessionTimeout);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [sessionTimeout]);
-
-  return setSessionTimeout;
-}
-
-function AdminPage() {
-  // User will be automatically signed out after 5 mins of inactivity.
-  let setSessionTimeout = useSessionTimeout(5 * oneMinute);
-
-  // TODO: Use `setSessionTimeout(n)` when there is some activity
-  // on the page to reset the timer and extend the session.
-
-  return (
-    <div>
-      {/* User can use this form sign sign out immediately */}
-      <form method="post" action="/logout">
-        <button>Sign out</button>
-      </form>
-
-      {/* ... */}
-    </div>
-  );
-}
-```
-
-## `usePendingFormSubmit`
-
-```js
-import { usePendingFormSubmit } from "remix";
-
-// ...
-let { method, encType, data } = usePendingFormSubmit();
-```
-
-Returns `{ method, encType, data }` that are currently being used to submit a `<Form>`. This is useful for showing a pending indicator, optimistic UI for some newly created/destroyed data.
-
-When the form is no longer pending, this hook will return `undefined`.
-
-Here's a quick example:
-
-```js [1,4,6]
-import { usePendingFormSubmit } from "remix";
-
-function SomeForm() {
-  let pendingSubmit = usePendingFormSubmit();
-
-  return pendingSubmit ? (
-    <div>
-      <h2>Creating...</h2>
-      <p>Name: {pendingSubmit.data.get("name")}</p>
-      <p>Description: {pendingSubmit.data.get("description")}</p>
-    </div>
-  ) : (
-    <Form>
-      <label>
-        Name: <input type="text" name="name" />
-      </label>
-      <label>
-        Description: <input type="text" name="description" />
-      </label>
-      <button type="submit">Submit</button>
-    </Form>
-  );
-}
-```
-
-## `useMatches`
-
-Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
-
-```js
-let matches = useMatches();
-```
-
-`matches` has the following shape:
-
-```js
-[
-  { pathname, data, params, handle }, // root route
-  { pathname, data, params, handle }, // layout route
-  { pathname, data, params, handle } // child route
-  // etc.
-];
-```
-
-Remix knows all of your route matches and data at the top of the React element tree. That's how we can:
-
-- add meta tags to the top of the document even though they are defined in nested routes lower in the tree
-- add `<link>` tags to assets at the top of the document even though ...
-- add `<script>` bundles for each route at the top of the document ...
-
-Pairing [route `handle`](../app/#handle) with `useMatches`, you can build your own, similar conventions to Remix's built-in `<Meta>`, `<Links>`, and `<Scripts>` components.
-
-Let's consider building some breadcrumbs. If a route wants to participate in these breadcrumbs at the top of the root layout, it normally can't because it renders down low in the tree.
-
-You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, it's not a Remix thing, it's whatever you want. Here it's added to a parent route:
-
-1. Add the breadcrumb handle to the parent route
-
-   ```tsx
-   // routes/parent.tsx
-   export let handle = {
-     breadcrumb: () => <Link to="/parent">Some Route</Link>
-   };
-   ```
-
-2. We can do the same for a child route
-
-   ```tsx
-   // routes/parent/child.tsx
-   export let handle = {
-     breadcrumb: () => <Link to="/parent/child">Child Route</Link>
-   };
-   ```
-
-3. Now we can put it all together in our root route with `useMatches`.
-
-   ```tsx [5, 16-22]
-   // root.tsx
-   import { Links, Scripts, useRouteData, useMatches } from "remix";
-
-   export default function Root() {
-     let matches = useMatches();
-
-     return (
-       <html lang="en">
-         <head>
-           <meta charSet="utf-8" />
-           <Links />
-         </head>
-         <body>
-           <header>
-             <ol>
-               {matches
-                 // skip routes that don't have a breadcrumb
-                 .filter(match => match.handle && match.handle.breadcrumb)
-                 // render breadcrumbs!
-                 .map((match, index) => (
-                   <li key={index}>{match.handle.breadcrumb(match)}</li>
-                 ))}
-             </ol>
-           </header>
-
-           <Outlet />
-         </body>
-       </html>
-     );
-   }
-   ```
-
-Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we could have used `match.data` to use our route's data in the breadcrumb.
-
-Another common use case is [enabling JavaScript for some routes and not others](../../guides/disabling-javascript/).
-
-Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
-
 # HTTP Helpers
 
 ## `json`
@@ -441,8 +1163,8 @@ export let loader: LoaderFunction = () => {
   // Instead of this:
   return new Response(JSON.stringify({ any: "thing" }), {
     headers: {
-      "Content-Type": "application/json; charset=utf-8"
-    }
+      "Content-Type": "application/json; charset=utf-8",
+    },
   });
 };
 ```
@@ -456,8 +1178,8 @@ export let loader: LoaderFunction = () => {
     {
       status: 418,
       headers: {
-        "Cache-Control": "no-store"
-      }
+        "Cache-Control": "no-store",
+      },
     }
   );
 };
@@ -494,15 +1216,15 @@ You can also send a `ResponseInit` to set headers, like committing a session.
 ```ts
 redirect(path, {
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 
 redirect(path, {
   status: 302,
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 ```
 
@@ -516,8 +1238,8 @@ return redirect("/else/where", 303);
 return new Response("", {
   status: 303,
   headers: {
-    Location: "/else/where"
-  }
+    Location: "/else/where",
+  },
 });
 ```
 
@@ -542,7 +1264,7 @@ First, create a cookie:
 import { createCookie } from "remix";
 
 export let userPrefs = createCookie("user-prefs", {
-  maxAge: 604_800 // one week
+  maxAge: 604_800, // one week
 });
 ```
 
@@ -553,19 +1275,26 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 ```js
 // app/routes/index.js
 import React from "react";
-import { useRouteData, json, redirect } from "remix";
+import { useLoaderData, json, redirect } from "remix";
 
 import { userPrefs as cookie } from "../cookies";
 
 export async function loader({ request }) {
-  let value = await cookie.parse(request.headers.get("Cookie")) || {};
-  let showBanner = "showBanner" in value ? value.showBanner : true;
+  let value =
+    (await cookie.parse(request.headers.get("Cookie"))) ||
+    {};
+  let showBanner =
+    "showBanner" in value ? value.showBanner : true;
   return { showBanner };
 }
 
 export async function action({ request }) {
-  let value = await cookie.parse(request.headers.get("Cookie")) || {};
-  let bodyParams = new URLSearchParams(await request.text());
+  let value =
+    (await cookie.parse(request.headers.get("Cookie"))) ||
+    {};
+  let bodyParams = new URLSearchParams(
+    await request.text()
+  );
 
   if (bodyParams.get("bannerVisibility") === "hidden") {
     value.showBanner = false;
@@ -573,13 +1302,13 @@ export async function action({ request }) {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await cookie.serialize(value)
-    }
+      "Set-Cookie": await cookie.serialize(value),
+    },
   });
 }
 
 export default function Home() {
-  let { showBanner } = useRouteData();
+  let { showBanner } = useLoaderData();
 
   return (
     <div>
@@ -614,7 +1343,7 @@ let cookie = createCookie("user-prefs", {
   httpOnly: true,
   secure: true,
   expires: new Date(Date.now() + 60),
-  maxAge: 60
+  maxAge: 60,
 });
 
 // You can either use the defaults:
@@ -634,7 +1363,7 @@ To sign a cookie, provide one or more `secrets` when you first create the cookie
 
 ```js
 let cookie = createCookie("user-prefs", {
-  secrets: ["s3cret1"]
+  secrets: ["s3cret1"],
 });
 ```
 
@@ -645,7 +1374,7 @@ Secrets may be rotated by adding new secrets to the front of the `secrets` array
 ```js
 // app/cookies.js
 let cookie = createCookie("user-prefs", {
-  secrets: ["n3wsecr3t", "olds3cret"]
+  secrets: ["n3wsecr3t", "olds3cret"],
 });
 
 // in your route module...
@@ -657,8 +1386,8 @@ export async function loader({ request }) {
   new Response("...", {
     headers: {
       // Set-Cookie is signed with "n3wsecr3t"
-      "Set-Cookie": await cookie.serialize(value)
-    }
+      "Set-Cookie": await cookie.serialize(value),
+    },
   });
 }
 ```
@@ -679,7 +1408,7 @@ let cookie = createCookie("cookie-name", {
   path: "/",
   sameSite: "lax",
   secrets: ["s3cret1"],
-  secure: true
+  secure: true,
 });
 ```
 
@@ -716,7 +1445,9 @@ The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
 ```js
-let value = await cookie.parse(request.headers.get("Cookie"));
+let value = await cookie.parse(
+  request.headers.get("Cookie")
+);
 ```
 
 ### `cookie.serialize()`
@@ -726,8 +1457,10 @@ Serializes a value and combines it with this cookie's options to create a `Set-C
 ```js
 new Response("...", {
   headers: {
-    "Set-Cookie": await cookie.serialize({ showBanner: true })
-  }
+    "Set-Cookie": await cookie.serialize({
+      showBanner: true,
+    }),
+  },
 });
 ```
 
@@ -739,7 +1472,9 @@ Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
-cookie = createCookie("user-prefs", { secrets: ["soopersekrit"] });
+cookie = createCookie("user-prefs", {
+  secrets: ["soopersekrit"],
+});
 console.log(cookie.isSigned); // true
 ```
 
@@ -749,7 +1484,7 @@ The `Date` on which this cookie expires. Note that if a cookie has both `maxAge`
 
 ```js
 let cookie = createCookie("user-prefs", {
-  expires: new Date("2021-01-01")
+  expires: new Date("2021-01-01"),
 });
 
 console.log(cookie.expires); // "2020-01-01T00:00:00.000Z"
@@ -776,7 +1511,11 @@ This is an example of a cookie session storage:
 // app/sessions.js
 import { createCookieSessionStorage } from "remix";
 
-let { getSession, commitSession, destroySession } = createCookieSessionStorage({
+let {
+  getSession,
+  commitSession,
+  destroySession,
+} = createCookieSessionStorage({
   // a Cookie from `createCookie` or the CookieOptions to create one
   cookie: {
     name: "__session",
@@ -789,8 +1528,8 @@ let { getSession, commitSession, destroySession } = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: ["s3cret1"],
-    secure: true
-  }
+    secure: true,
+  },
 });
 
 export { getSession, commitSession, destroySession };
@@ -804,12 +1543,14 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```js filename=app/routes/login.js lines=2,5,7,12,16,22,31,36,41,46
+```js filename=app/routes/login.js lines=2,5-7,9,14,18,24-26,37,42,47,52
 import { json, redirect } from "remix";
 import { getSession, commitSession } from "../sessions";
 
 export async function loader({ request }) {
-  let session = await getSession(request.headers.get("Cookie"));
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
 
   if (session.has("userId")) {
     // Redirect to the home page if they are already signed in.
@@ -820,14 +1561,18 @@ export async function loader({ request }) {
 
   return json(data, {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 
 export async function action({ request }) {
-  let session = await getSession(request.headers.get("Cookie"));
-  let bodyParams = new URLSearchParams(await request.text());
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
+  let bodyParams = new URLSearchParams(
+    await request.text()
+  );
 
   let userId = await validateCredentials(
     bodyParams.get("username"),
@@ -840,8 +1585,8 @@ export async function action({ request }) {
     // Redirect back to the login page with errors.
     return redirect("/login", {
       headers: {
-        "Set-Cookie": await commitSession(session)
-      }
+        "Set-Cookie": await commitSession(session),
+      },
     });
   }
 
@@ -850,13 +1595,13 @@ export async function action({ request }) {
   // Login succeeded, send them to the home page.
   return redirect("/", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 
 export default function Login() {
-  let { currentUser, error } = useRouteData();
+  let { currentUser, error } = useLoaderData();
 
   return (
     <div>
@@ -869,7 +1614,8 @@ export default function Login() {
           Username: <input type="text" name="username" />
         </label>
         <label>
-          Password: <input type="password" name="password" />
+          Password:{" "}
+          <input type="password" name="password" />
         </label>
       </form>
     </div>
@@ -879,7 +1625,7 @@ export default function Login() {
 
 ## Session Gotchas
 
-Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you
+Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you need to be sure no other loaders in the request are going to want to read that, otherwise you'll get race conditions. Typically if you're using flash, you'll want to have a single loader read it, if another loader wants a flash message, use a different key for that loader.
 
 ## `createSession`
 
@@ -898,7 +1644,11 @@ The following example shows how you could do this using a generic database clien
 ```js
 import { createSessionStorage } from "remix";
 
-function createDatabaseSessionStorage({ cookie, host, port }) {
+function createDatabaseSessionStorage({
+  cookie,
+  host,
+  port,
+}) {
   // Configure your database client...
   let db = createDatabaseClient(host, port);
 
@@ -919,7 +1669,7 @@ function createDatabaseSessionStorage({ cookie, host, port }) {
     },
     async deleteData(id) {
       await db.delete(id);
-    }
+    },
   });
 }
 ```
@@ -930,14 +1680,14 @@ And then you can use it like this:
 let {
   getSession,
   commitSession,
-  destroySession
+  destroySession,
 } = createDatabaseSessionStorage({
   host: "localhost",
   port: 1234,
   cookie: {
     name: "__session",
-    sameSite: "lax"
-  }
+    sameSite: "lax",
+  },
 });
 ```
 
@@ -949,16 +1699,22 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+
 ```js
 import { createCookieSessionStorage } from "remix";
 
-let { getSession, commitSession, destroySession } = createCookieSessionStorage({
+let {
+  getSession,
+  commitSession,
+  destroySession,
+} = createCookieSessionStorage({
   // a Cookie from `createCookie` or the same CookieOptions to create one
   cookie: {
     name: "__session",
     secrets: ["r3m1xr0ck5"],
-    sameSite: "lax"
-  }
+    sameSite: "lax",
+  },
 });
 ```
 
@@ -972,19 +1728,26 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 
 ```js
 // app/sessions.js
-import { createCookie, createFileSessionStorage } from "remix";
+import {
+  createCookie,
+  createFileSessionStorage,
+} from "remix";
 
 // In this example the Cookie is created separately.
 let sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
-let { getSession, commitSession, destroySession } = createFileSessionStorage({
+let {
+  getSession,
+  commitSession,
+  destroySession,
+} = createFileSessionStorage({
   // The root directory where you want to store the files.
   // Make sure it's writable!
   dir: "/app/sessions",
-  cookie: sessionCookie
+  cookie: sessionCookie,
 });
 
 export { getSession, commitSession, destroySession };
@@ -998,19 +1761,26 @@ This storage keeps all the cookie information in your server's memory.
 
 ```js
 // app/sessions.js
-import { createCookie, createFileSessionStorage } from "remix";
+import {
+  createCookie,
+  createFileSessionStorage,
+} from "remix";
 
 // In this example the Cookie is created separately.
 let sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
-let { getSession, commitSession, destroySession } = createFileSessionStorage({
+let {
+  getSession,
+  commitSession,
+  destroySession,
+} = createFileSessionStorage({
   // The root directory where you want to store the files.
   // Make sure it's writable!
   dir: "/app/sessions",
-  cookie: sessionCookie
+  cookie: sessionCookie,
 });
 
 export { getSession, commitSession, destroySession };
@@ -1020,9 +1790,11 @@ export { getSession, commitSession, destroySession };
 
 After retrieving a session with `getSession`, the session object returned has a handful of methods and properties:
 
-```js [2]
+```js
 export async function action({ request }) {
-  let session = await getSession(request.headers.get("Cookie"));
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
   session.get("foo");
   session.has("bar");
   // etc.
@@ -1049,12 +1821,16 @@ session.set("userId", "1234");
 
 Sets a session value that will be unset the first time it is read. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
-```js [7-10,14]
+```js
 import { getSession, commitSession } from "../sessions";
 
 export async function action({ request, params }) {
-  let session = await getSession(request.headers.get("Cookie"));
-  let deletedProject = await archiveProject(params.projectId);
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
+  let deletedProject = await archiveProject(
+    params.projectId
+  );
 
   session.flash(
     "globalMessage",
@@ -1063,8 +1839,8 @@ export async function action({ request, params }) {
 
   return redirect("/dashboard", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 ```
@@ -1073,7 +1849,7 @@ Now we can read the message in a loader.
 
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
-```js [8,9,18,25,34]
+```js
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Meta, Links, Scripts, json } from "remix";
@@ -1081,24 +1857,24 @@ import { Meta, Links, Scripts, json } from "remix";
 import { getSession, commitSession } from "./sessions";
 
 export async function loader({ request }) {
-  let session = await getSession(request.headers.get("Cookie"));
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
   let message = session.get("globalMessage") || null;
 
   return json(
     { message },
     {
       headers: {
-        // When working with flash messages, it's important to remember
-        // to commit the session after a session.get() because the session
-        // contents have changed!
-        "Set-Cookie": await commitSession(session)
-      }
+        // only necessary with cookieSesionStorage
+        "Set-Cookie": await commitSession(session),
+      },
     }
   );
 }
 
 export default function App() {
-  let { message } = useRouteData();
+  let { message } = useLoaderData();
 
   return (
     <html>
@@ -1132,13 +1908,13 @@ Removes a value from the session.
 session.unset("name");
 ```
 
-<docs-info>You must commit the session whenever you `unset`</docs-info>
+<docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
 ```js
 return json(data, {
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 ```
 
@@ -1149,6 +1925,7 @@ import type {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
-  LinksFunction
+  LinksFunction,
+  ShouldReloadFunction,
 } from "remix";
 ```

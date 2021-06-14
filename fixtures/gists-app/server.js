@@ -11,7 +11,7 @@ app.use(compression());
 
 app.use(
   express.static("public", {
-    maxAge: process.env.NODE_ENV === "production" ? "1y" : undefined
+    maxAge: "1y"
   })
 );
 

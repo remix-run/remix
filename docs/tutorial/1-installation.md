@@ -13,7 +13,7 @@ Let's get started! Here's what you'll need:
    - Get it from the [Remix Dashboard](https://remix.run/dashboard).
    - [Buy one](https://remix.run/buy) if you don't have one yet!
 
-2. Node.js. [Get it here](https://nodejs.org)
+2. Node.js v14+. [Get it here](https://nodejs.org)
 
 ## Installation
 
@@ -29,7 +29,7 @@ Enough chat, let's go!
 
 ```sh
 cd my-remix-app
-npm run dev
+remix run
 ```
 
 Your new website should be up at [http://localhost:3000](http://localhost:3000).

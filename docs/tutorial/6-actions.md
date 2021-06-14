@@ -9,7 +9,7 @@ We're going to be creating data here. If you've been doing web development for a
 
 - Post a plain HTML form to a Remix action, no JavaScript involved
 - Use the special Remix `<Form>` to post with JavaScript
-- Add special "loading" UI now that we have JavaScript involved with `usePendingFormSubmit`
+- Add special "loading" UI now that we have JavaScript involved with `useTransition`
 
 The big takeaway here is that actions (and data mutations) in Remix are modeled as html form navigation. When submiting with JavaScript, Remix can make it faster and ensure the data updates appear on the entire page without a full page reload. Or, you can leave JavaScript at the door and use basic forms.
 
@@ -60,7 +60,7 @@ Now let's go create an "action" to handle this form.
 
 You've seen a `loader` already. Now you're going to create an `action`. Go back to your new route and this:
 
-```ts [2,3-5]
+```ts [2,4-6]
 import React from "react";
 import type { ActionFunction } from "remix";
 
@@ -108,7 +108,7 @@ export let action = () => {};
 
 Alright, back to our component, let's handle the form post and create a new gist with the GitHub API:
 
-```ts [3,5,36]
+```ts [3,5,37]
 import React from "react";
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
@@ -116,15 +116,17 @@ import { redirect } from "remix";
 let action: Action = async ({ request }) => {
   // Very important or else it won't work :)
   let token = "insert your github token here";
-  // in a real world scenario you'd want this token to be an enviornment
-  // variable on your server, but as long as you only use it in this action, it
-  // won't get included in the browser bundle.
+  // in a real world scenario you'd want this token to be
+  // an enviornment variable on your server, but as long
+  // as you only use it in this action, it won't get
+  // included in the browser bundle.
 
-  // get the form body out of the request using standard web APIs on the server
+  // get the form body out of the request using standard web
+  // APIs on the server
   let body = new URLSearchParams(await request.text());
 
-  // pull off what we need from the form, note they are named the same thing
-  // as the `<input/>` in the form.
+  // pull off what we need from the form, note they are
+  // named the same thing as the `<input/>` in the form.
   let fileName = body.get("fileName");
   let content = body.get("content");
 
@@ -134,15 +136,15 @@ let action: Action = async ({ request }) => {
     body: JSON.stringify({
       description: "Created from Remix Form!",
       public: true,
-      files: { [fileName]: { content } }
+      files: { [fileName]: { content } },
     }),
     headers: {
       "Content-Type": "application/json",
-      Authorization: `token ${token}`
-    }
+      Authorization: `token ${token}`,
+    },
   });
 
-  // you always have to redirect from actions
+  // redirect out of here to go see our new gist!
   return redirect("/gists");
 };
 
@@ -155,30 +157,33 @@ Alright, fill out your form and give it a shot! You should see your new gist on 
 
 ## Upgrading to `<Form>` and pending UI states
 
-With a regular `<form>` we're letting the browser handle the post and the pending UI (the address bar/favicon animation). Remix has a `<Form>` component and hook to go along with it to let you progressively enhance your forms. If your budget for this feature is short, just use a `<form>` and move on with your life. If you've got the time to make a fancy user experience, with Remix you don't have to rewrite your code to do the fetch with `useEffect` and manage your own state: you can just add the fancy bits with `<Form>`.
+With a regular `<form>` we're letting the browser handle the post and the pending UI (the address bar/favicon animation). Remix has a `<Form>` component and hook to go along with it to let you progressively enhance your forms. If your budget for this feature is short, just use a `<form>` (or rather, `<Form forceRefresh>` is the preferred way), let the browser handle it, and move on with your life.
 
-Let's update the code and add some loading indication. Note the new imports and the capital "F" `<Form>`. Now Remix is going to handle the form submit clientside with `fetch` and you get access to the serialized form data in `usePendingFormSubmit()` to build that fancy UI.
+If you've got the time to make a fancy user experience, with Remix you don't have to rewrite your code to do the fetch with `useEffect` and manage your own state: you can just add the fancy bits with `<Form>`.
 
-```tsx [4,11,16-22,48-67]
+Let's update the code and add some loading indication. Note the new imports and the capital "F" `<Form>`. Now Remix is going to handle the form submit clientside with `fetch` and you get access to the serialized form data in `useTransition()` to build that fancy UI.
+
+```tsx [4,11,16-23,49-67]
 import React from "react";
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
-import { Form, usePendingFormSubmit } from "remix";
+import { Form, useTransition } from "remix";
 
 export let action: ActionFunction = async ({ request }) => {
   // ... same as before
 };
 
 export default function NewGist() {
-  let pendingForm = usePendingFormSubmit();
+  let transition = useTransition();
 
   return (
     <>
       <h2>New Gist!</h2>
-      {pendingForm ? (
+      {transition.state === "submitting" ? (
         <div>
           <p>
-            <Loading /> Creating gist: {pendingForm.data.get("fileName")}
+            <Loading /> Creating gist:{" "}
+            {transtion.formData.get("fileName")}
           </p>
         </div>
       ) : (

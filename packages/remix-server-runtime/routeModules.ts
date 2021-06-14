@@ -15,10 +15,9 @@ export interface RouteModules<RouteModule> {
  */
 export interface ActionFunction<TRequest = Request, TResponse = Response> {
   (args: { request: TRequest; context: AppLoadContext; params: Params }):
-    | Promise<TResponse | Response | string>
+    | Promise<TResponse | Response>
     | TResponse
-    | Response
-    | string;
+    | Response;
 }
 
 /**
@@ -34,9 +33,11 @@ export interface HeadersFunction<
   THeaders = Headers,
   THeadersInit = HeadersInit
 > {
-  (args: { loaderHeaders: THeaders; parentHeaders: THeaders }):
-    | THeaders
-    | THeadersInit;
+  (args: {
+    actionHeaders: THeaders;
+    loaderHeaders: THeaders;
+    parentHeaders: THeaders;
+  }): THeaders | THeadersInit;
 }
 
 /**
