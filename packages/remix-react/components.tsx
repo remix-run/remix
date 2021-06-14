@@ -11,7 +11,7 @@ import {
   useResolvedPath
 } from "react-router-dom";
 
-import type { AppData } from "./data";
+import { AppData, FormSubmitLocationState, isFormNavigation } from "./data";
 import {
   FormEncType,
   FormMethod,
@@ -39,49 +39,6 @@ import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 
 ////////////////////////////////////////////////////////////////////////////////
-// FormState
-enum FormState {
-  Idle = "idle",
-
-  // non-get submits
-  // - idle -> pending -> redirected -> idle
-  // - reload data from all routes on the redirect
-  Pending = "pending",
-  Redirected = "redirected",
-
-  // get submits
-  // - idle -> pendingGet -> idle
-  // - just normal navigation except store the FormSubmit for usePendingFormSubmit
-  PendingGet = "pendingGet"
-}
-
-let pendingFormSubmit: FormSubmit | undefined = undefined;
-let formState = FormState.Idle;
-
-// 1. When a form is submitted, we go into a pending state
-function setFormPending(
-  method: string,
-  encType: string,
-  data: FormData,
-  action: string
-): void {
-  pendingFormSubmit = { method, encType, data, action };
-  formState =
-    method.toLowerCase() === "get" ? FormState.PendingGet : FormState.Pending;
-}
-
-// 2. When the loader action redirects
-function setFormRedirected() {
-  formState = FormState.Redirected;
-}
-
-// 3. After Remix finishes the transition, we go back to idle
-function setFormIdle() {
-  pendingFormSubmit = undefined;
-  formState = FormState.Idle;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
 interface RemixEntryContextType {
@@ -89,6 +46,7 @@ interface RemixEntryContextType {
   matches: RouteMatch<ClientRoute>[];
   componentDidCatchEmulator: ComponentDidCatchEmulator;
   routeData: RouteData;
+  actionData?: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
   pendingLocation: Location | undefined;
@@ -123,6 +81,7 @@ export function RemixEntry({
     manifest,
     matches: entryMatches,
     routeData: entryRouteData,
+    actionData: entryActionData,
     routeModules,
     serverHandoffString,
     componentDidCatchEmulator: entryComponentDidCatchEmulator
@@ -133,6 +92,7 @@ export function RemixEntry({
     location: nextLocation,
     matches: createClientMatches(entryMatches, RemixRoute),
     routeData: entryRouteData,
+    actionData: entryActionData,
     componentDidCatchEmulator: entryComponentDidCatchEmulator
   });
 
@@ -141,6 +101,7 @@ export function RemixEntry({
     location,
     matches,
     routeData,
+    actionData,
     componentDidCatchEmulator
   } = state;
 
@@ -160,6 +121,16 @@ export function RemixEntry({
     );
   }, [location, matches, routeData, routeModules, manifest, clientRoutes]);
 
+  // Repost a form submit if the user clicked browser refresh button
+  React.useEffect(() => {
+    if (isFormNavigation(location)) {
+      let { pathname, search, hash, state } = location;
+      navigator.replace({ pathname, search, hash }, state);
+    }
+  }, []); // eslint-disable-line
+  // this isn't synchronization, we only want to do this on mount, so we don't
+  // include any deps in there
+
   React.useEffect(() => {
     if (location === nextLocation) return;
 
@@ -170,7 +141,10 @@ export function RemixEntry({
       invariant(nextMatches, `No routes match path "${nextLocation.pathname}"`);
 
       let didRedirect = false;
-      function handleDataRedirect(response: Response) {
+      function handleDataRedirect(
+        response: Response,
+        isActionRedirect: boolean = false
+      ) {
         let url = new URL(
           response.headers.get("X-Remix-Redirect")!,
           window.location.origin
@@ -178,19 +152,17 @@ export function RemixEntry({
 
         didRedirect = true;
 
-        if (formState === FormState.Pending) {
-          setFormRedirected();
-        }
-
         // TODO: navigator.replace() should just handle different origins
         if (url.origin !== window.location.origin) {
           window.location.replace(url.href);
         } else {
-          navigator.replace(url.pathname + url.search);
+          let state = isActionRedirect ? { isActionRedirect: true } : undefined;
+          navigator.replace(url.pathname + url.search, state);
         }
       }
 
       let actionErrored: boolean = false;
+      let actionResponse: Response | undefined;
 
       let componentDidCatchEmulator: ComponentDidCatchEmulator = {
         trackBoundaries: false,
@@ -199,7 +171,7 @@ export function RemixEntry({
         error: undefined
       };
 
-      if (formState === FormState.Pending) {
+      if (isFormNavigation(nextLocation)) {
         let leafMatch = nextMatches[nextMatches.length - 1];
         let leafRoute = manifest.routes[leafMatch.route.id];
 
@@ -211,20 +183,18 @@ export function RemixEntry({
           );
         }
 
-        let response = await fetchData(
-          nextLocation,
-          leafRoute.id,
-          pendingFormSubmit
-        );
+        let response = await fetchData(nextLocation, leafRoute.id);
 
         if (response instanceof Error) {
           componentDidCatchEmulator.error = response;
           actionErrored = true;
-        } else {
-          handleDataRedirect(response as Response);
+        } else if (isRedirectResponse(response)) {
+          handleDataRedirect(response as Response, true);
           // Expecting handleDataRedirect to redirect, so we don't need to worry
           // about doing anything else in here.
           return;
+        } else {
+          actionResponse = response;
         }
       }
 
@@ -234,8 +204,9 @@ export function RemixEntry({
 
       // NOTE: Keep in sync with `linksPreload.ts` data diff
       let matchesToLoad =
-        // reload all routes on form submits and search changes
-        formState === FormState.Redirected ||
+        isFormNavigation(nextLocation) ||
+        isRedirectedFormNavigation(nextLocation) ||
+        // reload all routes on search param changes
         location.search !== nextLocation.search
           ? nextMatches
           : nextMatches.filter((match, index, arr) => {
@@ -260,7 +231,9 @@ export function RemixEntry({
 
           // get data and module in parallel
           let [dataResult, routeModule] = await Promise.all([
-            route.hasLoader ? fetchData(nextLocation, route.id) : undefined,
+            route.hasLoader
+              ? fetchData(nextLocation, route.id, true)
+              : undefined,
             loadRouteModule(route, routeModules)
           ]);
 
@@ -316,7 +289,12 @@ export function RemixEntry({
         }
 
         if (
+          // Need a comment explaining this case, I don't get it? If it's not a
+          // response or error, what the heck is it? Does this mean there's no
+          // loader at this route?
           !(dataResult instanceof Response || dataResult instanceof Error) ||
+          // keep going if we already have an error, parent errors beat child
+          // errors, maybe one day we'll surface all of them
           componentDidCatchEmulator.error
         ) {
           continue;
@@ -357,20 +335,17 @@ export function RemixEntry({
         return memo;
       }, {} as RouteData);
 
-      if (isCurrent && !didRedirect) {
-        if (
-          formState === FormState.Redirected ||
-          formState === FormState.PendingGet ||
-          actionErrored
-        ) {
-          setFormIdle();
-        }
+      let actionData = actionResponse
+        ? await extractData(actionResponse)
+        : undefined;
 
+      if (isCurrent && !didRedirect) {
         setState({
           action: nextAction,
           location: nextLocation,
           matches: nextMatches,
           routeData: nextRouteData,
+          actionData: actionData,
           componentDidCatchEmulator
         });
       }
@@ -385,6 +360,7 @@ export function RemixEntry({
     location,
     matches,
     routeData,
+    entryActionData,
     navigator,
     manifest,
     routeModules,
@@ -396,6 +372,7 @@ export function RemixEntry({
     matches,
     componentDidCatchEmulator,
     routeData,
+    actionData,
     routeModules,
     serverHandoffString,
     pendingLocation: nextLocation !== location ? nextLocation : undefined,
@@ -481,10 +458,7 @@ export function RemixRoute({ id }: { id: string }) {
 
   let data = routeData[id];
   let { default: Component, ErrorBoundary } = routeModules[id];
-  let children = Component ? <Component /> : <DefaultRouteComponent id={id} />;
-  let element = (
-    <RemixRouteContext.Provider value={{ data, id }} children={children} />
-  );
+  let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
 
   // Only wrap in error boundary if the route defined one, otherwise let the
   // error bubble to the parent boundary. We could default to using error
@@ -497,7 +471,12 @@ export function RemixRoute({ id }: { id: string }) {
   // ErrorBoundary component and be done with it. Then, if they want to, they
   // can add more specific boundaries by exporting ErrorBoundary components
   // for whichever routes they please.
-  if (!ErrorBoundary) return element;
+  //
+  if (!ErrorBoundary) {
+    return (
+      <RemixRouteContext.Provider value={{ data, id }} children={element} />
+    );
+  }
 
   // If we tried to render and failed, and this route threw the error, find it
   // and pass it to the ErrorBoundary to emulate `componentDidCatch`
@@ -515,14 +494,28 @@ export function RemixRoute({ id }: { id: string }) {
     componentDidCatchEmulator.renderBoundaryRouteId = id;
   }
 
+  let context = maybeServerRenderError
+    ? {
+        id,
+        get data() {
+          console.error("You cannot `useLoaderData` in an error boundary.");
+          return undefined;
+        }
+      }
+    : { id, data };
+
+  // It's important for the route context to be above the error boundary so that
+  // a call to `useRouteData` doesn't accidentally get the parents route's data.
   return (
-    <RemixErrorBoundary
-      location={location}
-      component={ErrorBoundary}
-      error={maybeServerRenderError}
-    >
-      {element}
-    </RemixErrorBoundary>
+    <RemixRouteContext.Provider value={context}>
+      <RemixErrorBoundary
+        location={location}
+        component={ErrorBoundary}
+        error={maybeServerRenderError}
+      >
+        {element}
+      </RemixErrorBoundary>
+    </RemixRouteContext.Provider>
   );
 }
 
@@ -896,8 +889,6 @@ export function useSubmit(): SubmitFunction {
       }
     }
 
-    setFormPending(method, encType, formData, action);
-
     let url = new URL(
       action,
       `${window.location.protocol}//${window.location.host}`
@@ -913,7 +904,16 @@ export function useSubmit(): SubmitFunction {
       }
     }
 
-    navigate(url.pathname + url.search, { replace: options.replace });
+    let state: FormSubmitLocationState = {
+      isFormSubmit: true,
+      // @ts-expect-error types don't know that FormData can be passed to URLSearchParams
+      body: new URLSearchParams(formData).toString(),
+      action,
+      method,
+      encType
+    };
+
+    navigate(url.pathname + url.search, { replace: options.replace, state });
   };
 }
 
@@ -967,8 +967,15 @@ export function useMatches() {
 /**
  * Returns the data from the current route's `loader`.
  */
-export function useRouteData<T = AppData>(): T {
+export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
+}
+
+let useRouteData = useLoaderData;
+export { useRouteData };
+
+export function useActionData() {
+  return useRemixEntryContext().actionData;
 }
 
 /**
@@ -977,7 +984,15 @@ export function useRouteData<T = AppData>(): T {
  * animation for some newly created/destroyed data.
  */
 export function usePendingFormSubmit(): FormSubmit | undefined {
-  return pendingFormSubmit ? pendingFormSubmit : undefined;
+  let location = usePendingLocation();
+
+  if (!location || !location.state) {
+    return undefined;
+  }
+
+  // FIXME: not sure how to deal w/ the types here
+  let state = location.state as FormSubmitLocationState;
+  return { ...state, data: new URLSearchParams(state.body) };
 }
 
 /**
@@ -1034,4 +1049,16 @@ function getMatchesUpToDeepestErrorBoundary(
   }
 
   return matches.slice(0, deepestErrorBoundaryIndex + 1);
+}
+
+interface ActionRedirectLocationState {
+  isActionRedirect: boolean;
+}
+
+function isRedirectedFormNavigation(location: Location): boolean {
+  if (!location.state) return false;
+
+  // FIXME: don't know how to do the types here
+  let state = location.state as ActionRedirectLocationState;
+  return state.isActionRedirect;
 }

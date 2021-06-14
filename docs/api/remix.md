@@ -33,40 +33,21 @@ export default function App() {
 }
 ```
 
-## `useRouteData`
+## `useLoaderData`
 
-This hook returns the data from your route data loader.
+This hook returns the JSON parsed data from your route data loader.
 
 ```tsx [2,9]
 import React from "react";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
 export function loader() {
   return { some: "data" };
 }
 
 export default function Invoices() {
-  let invoices = useRouteData();
+  let invoices = useLoaderData();
   // ...
-}
-```
-
-`useRouteData` can be useful for creating abstractions that do some transformation on the data for your route. For example, with Firebase you could build a hook that turns the static data fetched from the server into a live document in the client.
-
-```tsx
-// if you're using firebase you could build a "live" route document
-function useLiveRouteData() {
-  // your server could return the path of the data it fetched, and the data on
-  // two keys. If all routes loaders with live data follow this convention, it
-  // doesn't matter which route we're using this hook in
-  let { path, data } = useRouteData();
-
-  // maybe you've got a firebase abstraction that takes a path to subscribe to
-  // and initial data.
-  let liveData = useFirestoreDoc(path, data);
-
-  // return the live data
-  return liveData;
 }
 ```
 
@@ -211,6 +192,116 @@ Note: has no effect without JavaScript on the page.
 ```
 
 If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page.
+
+## `useActionData`
+
+This hook returns the JSON parsed data from your route action. If no form has been submit, it returns `undefined`.
+
+```tsx [2,9]
+import React from "react";
+import { useActionData } from "remix";
+
+export function action() {
+  return { message: "hello" };
+}
+
+export default function Invoices() {
+  let data = useActionData();
+  return <div>{data ? data.message : "Waiting..."}</div>;
+}
+```
+
+<docs-info>It is not expected to use this hook very often, you should redirect from actions most of the time.</docs-info>
+
+Form submits are navigation events in browsers, which means users can click the back button into a location that had a form submit _and the browser will resubmit the form_. You usually don't even want this to happen.
+
+For example, consider this user flow:
+
+1. The user lands at `/buy`
+2. They submit a form to `/checkout`
+3. The click a link to `/order/123`
+
+The history stack looks like this, where "\*" is the current entry:
+
+```
+GET /buy -> POST /checkout -> *GET /order/123
+```
+
+Now consider the user clicks the back button 😨
+
+```
+GET /buy -> *POST /checkout <- GET /order/123
+```
+
+The browser will repost the same information and likely charge their credit card again. You usually don't want this.
+
+The decades-old best practice is to redirect in the POST request. This way the location disappears from the browser's history stack and the user can't "back into it" anymore.
+
+```
+GET /buy -> POST /checkout, Redirect -> GET /order/123
+```
+
+This results in a history stack that looks like this:
+
+```
+GET /buy -> *GET /order/123
+```
+
+Now the user can click back without resubmitting the form.
+
+With progressively enhanced Forms, Remix follows the browser behavior by resubmitting forms when the user clicks back, forward, or refreshes into the location. If you don't want the form to be resubmit on back clicks/refreshes you will want to redirect out of your actions.
+
+So, if you're supposed to redirect from actions instead of return data, you might be wondering wtheck is the point of this hook? The most common use-case is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions).
+
+```tsx
+import { redirect, json, Form } from "remix";
+
+export function action({ request }) {
+  let body = Object.fromEntries(new URLSearchParams(await request.text()));
+  let errors = {};
+
+  // validate the fields
+  if (!body.email.includes("@")) {
+    errors.email = "That doesn't look like an email address";
+  }
+
+  if (body.password.length < 6) {
+    errors.password = "Password must be > 6 characters";
+  }
+
+  // return data if we have errors
+  if (Object.keys(errors).length) {
+    return json(errors, { status: 422 });
+  }
+
+  // otherwise create the user and redirect
+  await createUser(body);
+  return redirect("/dashboard");
+}
+
+export default function Signup() {
+  let errors = useActionData();
+
+  return (
+    <>
+      <h1>Signup</h1>
+      <Form method="post">
+        <p>
+          <input type="text" name="email" />
+          {errors?.email && <span>{errors.email}</span>}
+        </p>
+        <p>
+          <input type="text" name="password" />
+          {errors?.password && <span>{errors.password}</span>}
+        </p>
+        <p>
+          <button type="submit">Sign up</button>
+        </p>
+      </Form>
+    </>
+  );
+}
+```
 
 ## `useFormAction`
 
@@ -387,7 +478,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
 
    ```tsx [5, 16-22]
    // root.tsx
-   import { Links, Scripts, useRouteData, useMatches } from "remix";
+   import { Links, Scripts, useLoaderData, useMatches } from "remix";
 
    export default function Root() {
      let matches = useMatches();
@@ -553,7 +644,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 ```js
 // app/routes/index.js
 import React from "react";
-import { useRouteData, json, redirect } from "remix";
+import { useLoaderData, json, redirect } from "remix";
 
 import { userPrefs as cookie } from "../cookies";
 
@@ -579,7 +670,7 @@ export async function action({ request }) {
 }
 
 export default function Home() {
-  let { showBanner } = useRouteData();
+  let { showBanner } = useLoaderData();
 
   return (
     <div>
@@ -856,7 +947,7 @@ export async function action({ request }) {
 }
 
 export default function Login() {
-  let { currentUser, error } = useRouteData();
+  let { currentUser, error } = useLoaderData();
 
   return (
     <div>
@@ -1098,7 +1189,7 @@ export async function loader({ request }) {
 }
 
 export default function App() {
-  let { message } = useRouteData();
+  let { message } = useLoaderData();
 
   return (
     <html>

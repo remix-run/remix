@@ -1,4 +1,4 @@
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
 let fakeGists = [
   {
@@ -44,7 +44,7 @@ export let handle = {
 };
 
 export default function GistsIndex() {
-  let data = useRouteData();
+  let data = useLoaderData();
 
   return (
     <div data-test-id="/gists/index">

@@ -55,6 +55,9 @@ export default function Index() {
             <Link to="/methods">Forms</Link>
           </li>
           <li>
+            <Link to="/actions">actions</Link>
+          </li>
+          <li>
             <Link to="/loader-errors?throw">
               Loader error with no ErrorBoundary
             </Link>

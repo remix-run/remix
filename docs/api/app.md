@@ -213,7 +213,7 @@ export let loader = () => {
 };
 
 export default function Users() {
-  let data = useRouteData();
+  let data = useLoaderData();
   return (
     <ul>
       {data.map(user => (
@@ -376,7 +376,7 @@ Now your route component can deal with it:
 
 ```tsx
 export default function Something() {
-  let data = useRouteData();
+  let data = useLoaderData();
 
   if (data.error) {
     return <ErrorMessage>{data.message}</ErrorMessage>;
@@ -390,9 +390,9 @@ The initial server render will get a 500 for this page, and client side transiti
 
 ## action
 
-Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the route's action is called instead of its loader.
+Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the deepest matching route action is called before the loaders page.
 
-Actions are triggered from `<form method="post">` or Remix `<Form method="post | put | patch | delete" />` submits. Note you must always return a redirect (we do this so users can't click "back" and accidentally resubmit the form).
+Actions are triggered from `<Form method="post | put | patch | delete" />` submits.
 
 ```tsx
 import { redirect } from "remix";
@@ -408,31 +408,7 @@ export let action = async ({ params, request }) => {
     data: Object.fromEntries(data)
   });
 
-  return `/posts/${params.postId}`;
-};
-```
-
-You must return a redirect of some sort, there are three, depending on your needs:
-
-```tsx
-export let action = async () => {
-  // you can return a string
-  return `/posts/${params.postId}`;
-
-  // or use the redirect helper, useful when committing sessions
-  return redirect(`/posts/${params.postId}`, {
-    headers: {
-      "Set-Cookie": await commitSession()
-    }
-  });
-
-  // or if you want to get really low level, construct your own response
-  return new Response("", {
-    status: 303,
-    headers: {
-      Location: "/somewhere"
-    }
-  });
+  return redirect(`/posts/${params.postId}`);
 };
 ```
 
