@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
 import type { LoaderFunction } from "remix";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
 interface Member {
   id: string;
@@ -12,7 +12,7 @@ export let loader: LoaderFunction = () => {
 };
 
 export default function Team() {
-  let data = useRouteData<Member[]>();
+  let data = useLoaderData<Member[]>();
 
   return (
     <div>

@@ -1,5 +1,5 @@
 import type { LoaderFunction, ActionFunction } from "remix";
-import { redirect, useRouteData } from "remix";
+import { redirect, useLoaderData } from "remix";
 
 export let loader: LoaderFunction = () => {
   return fetch("https://api.github.com/gists");
@@ -41,7 +41,7 @@ export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
 }
 
 export default function Gists() {
-  let data = useRouteData();
+  let data = useLoaderData();
 
   return (
     <div>

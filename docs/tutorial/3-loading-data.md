@@ -24,19 +24,19 @@ export default function Gists() {
 
 ## Accessing Data for a Route
 
-Now that we have a loader in place, you can access that data with the `useRouteData` hook.
+Now that we have a loader in place, you can access that data with the `useLoaderData` hook.
 
 ```tsx [3, 10-11]
 import React from "react";
 import type { LoaderFunction } from "remix";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
 export let loader: Loader = () => {
   return fetch("https://api.github.com/gists");
 };
 
 export default function Gists() {
-  let data = useRouteData();
+  let data = useLoaderData();
   console.log(data);
 
   return (
@@ -107,7 +107,7 @@ You don't have to build up a full response or use a helper, loaders can return p
 ```js
 export function loader() {
   return { anything: "you want" };
-};
+}
 ```
 
 ## Rendering the Gists
@@ -116,7 +116,7 @@ Whew, okay, back to our app. Go ahead and map over that array however you'd like
 
 ```tsx [6-12]
 export default function Gists() {
-  let data = useRouteData();
+  let data = useLoaderData();
   return (
     <div>
       <h2>Public Gists</h2>
@@ -155,7 +155,7 @@ Here's the full code using all of the Route APIs we've introduced so far, as wel
 
 ```tsx
 import React from "react";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 // Define the Gist type
@@ -203,9 +203,9 @@ export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
 }
 
 export default function Gists() {
-  // useRouteData supports TypeScript generics so you can say what this hook
+  // useLoaderData supports TypeScript generics so you can say what this hook
   // returns
-  let data = useRouteData<Gist[]>();
+  let data = useLoaderData<Gist[]>();
   return (
     <div>
       <h2>Public Gists</h2>

@@ -11,16 +11,24 @@ export {
   LiveReload,
   useFormAction,
   useSubmit,
-  usePendingFormSubmit,
-  useRouteData,
-  usePendingLocation,
+  useTransition,
+  useFetcher,
+  useFetchers,
+  useLoaderData,
+  useActionData,
   useBeforeUnload,
-  useMatches
+  useMatches,
+  // deprecated
+  usePendingLocation,
+  usePendingFormSubmit,
+  useRouteData
 } from "./components";
 
-export type { FormMethod, FormEncType, FormSubmit } from "./data";
+export type { FormMethod, FormEncType } from "./data";
 
 export { block } from "./linksPreloading";
+
+export type { ShouldReloadFunction } from "./routeModules";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
