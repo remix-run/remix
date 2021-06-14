@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useRouteData, json, redirect } from "remix";
+import { useLoaderData, json, redirect } from "remix";
 
 let fakeGists = [
   {
@@ -66,7 +66,7 @@ export let handle = {
 
 export default function UserGists() {
   let { username } = useParams();
-  let data = useRouteData();
+  let data = useLoaderData();
 
   return (
     <div data-test-id="/gists/$username">

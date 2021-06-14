@@ -1,4 +1,4 @@
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
 import stylesUrl from "../styles/index.css";
 
@@ -18,7 +18,7 @@ export function loader() {
 }
 
 export default function Index() {
-  let data = useRouteData();
+  let data = useLoaderData();
 
   return (
     <div style={{ textAlign: "center", padding: 20 }}>

@@ -17,10 +17,10 @@ module.exports = {
   publicPath: "/build/",
   serverBuildDirectory: "build",
   routes(defineRoutes) {
-    return defineRoute(route => {
+    return defineRoute((route) => {
       route("/somewhere/cool/*", "catchall.tsx");
     });
-  }
+  },
 };
 ```
 
@@ -78,16 +78,6 @@ The path to the server build, relative to remix.config.js. Defaults to "build". 
 ## devServerPort
 
 The port number to use for the dev server. Defaults to 8002.
-
-## mdx
-
-Options to use when compiling MDX.
-
-```js
-exports.mdx = {
-  rehypePlugins: [require("@mapbox/rehype-prism"), require("rehype-slug")]
-};
-```
 
 # File Name Conventions
 
@@ -165,7 +155,7 @@ export default function handleRequest(
 
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
-    headers: responseHeaders
+    headers: responseHeaders,
   });
 }
 ```
@@ -213,10 +203,10 @@ export let loader = () => {
 };
 
 export default function Users() {
-  let data = useRouteData();
+  let data = useLoaderData();
   return (
     <ul>
-      {data.map(user => (
+      {data.map((user) => (
         <li>{user.name}</li>
       ))}
     </ul>
@@ -258,7 +248,9 @@ This is the context you passed in to your deployment wrapper's `getLoaderContext
 Say your express server (or your serverless function handler) looks something like this:
 
 ```js
-const { createRequestHandler } = require("@remix-run/express");
+const {
+  createRequestHandler,
+} = require("@remix-run/express");
 
 app.all(
   "*",
@@ -266,7 +258,7 @@ app.all(
     getLoaderContext(req, res) {
       // this becomes the loader context
       return { req, res };
-    }
+    },
   })
 );
 ```
@@ -311,8 +303,8 @@ export let loader: Loader = async () => {
 
   return new Response(body, {
     headers: {
-      "Content-Type": "application/json"
-    }
+      "Content-Type": "application/json",
+    },
   });
 };
 ```
@@ -331,9 +323,12 @@ export let loader: Loader = async () => {
 
 Between these two examples you can see how `json` just does a little of work to make your loader a lot cleaner.
 
+<docs-info>Remix calls loaders in two ways: on the initial HTML document request and as fetch requests on client side transitions. This means loader response headers will not automatically be applied to your document requests. For more info see <a href="#headers">Headers</a></docs-info>
+
 See also:
 
 - (Remix Web Fetch API)["../other/fetch"]
+- (`headers`)["#headers"]
 - [MDN Response Docs](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 ### Response Status Codes in Loaders
@@ -364,7 +359,7 @@ export let loader: Loader = async () => {
     return json(
       {
         error: true,
-        message: error.message
+        message: error.message,
       },
       { status: 500 }
     );
@@ -376,7 +371,7 @@ Now your route component can deal with it:
 
 ```tsx
 export default function Something() {
-  let data = useRouteData();
+  let data = useLoaderData();
 
   if (data.error) {
     return <ErrorMessage>{data.message}</ErrorMessage>;
@@ -390,9 +385,9 @@ The initial server render will get a 500 for this page, and client side transiti
 
 ## action
 
-Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the route's action is called instead of its loader.
+Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the deepest matching route action is called before the loaders page.
 
-Actions are triggered from `<form method="post">` or Remix `<Form method="post | put | patch | delete" />` submits. Note you must always return a redirect (we do this so users can't click "back" and accidentally resubmit the form).
+Actions are triggered from `<Form method="post | put | patch | delete" />` submits.
 
 ```tsx
 import { redirect } from "remix";
@@ -405,34 +400,10 @@ export let action = async ({ params, request }) => {
 
   let update = await prisma.post.update({
     where: { id: params.postId },
-    data: Object.fromEntries(data)
+    data: Object.fromEntries(data),
   });
 
-  return `/posts/${params.postId}`;
-};
-```
-
-You must return a redirect of some sort, there are three, depending on your needs:
-
-```tsx
-export let action = async () => {
-  // you can return a string
-  return `/posts/${params.postId}`;
-
-  // or use the redirect helper, useful when committing sessions
-  return redirect(`/posts/${params.postId}`, {
-    headers: {
-      "Set-Cookie": await commitSession()
-    }
-  });
-
-  // or if you want to get really low level, construct your own response
-  return new Response("", {
-    status: 303,
-    headers: {
-      Location: "/somewhere"
-    }
-  });
+  return redirect(`/posts/${params.postId}`);
 };
 ```
 
@@ -444,7 +415,7 @@ Each route can define it's own HTTP headers. One of the most important headers i
 export function headers({ loaderHeaders, parentHeaders }) {
   return {
     "X-Stretchy-Pants": "its for fun",
-    "Cache-Control": "max-age=300, s-maxage=3600"
+    "Cache-Control": "max-age=300, s-maxage=3600",
   };
 }
 ```
@@ -454,7 +425,7 @@ Usually your data is a better indicator of your cache duration than your route m
 ```tsx
 export function headers({ loaderHeaders }) {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
+    "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
 }
 ```
@@ -491,15 +462,22 @@ That is all to say that Remix has given you a very large gun with which to shoot
 import parseCacheControl from "parse-cache-control";
 
 export function headers({ loaderHeaders, parentHeaders }) {
-  let loaderCache = parseCacheControl(loaderHeaders.get("Cache-Control"));
-  let parentCache = parseCacheControl(parentHeaders.get("Cache-Control"));
+  let loaderCache = parseCacheControl(
+    loaderHeaders.get("Cache-Control")
+  );
+  let parentCache = parseCacheControl(
+    parentHeaders.get("Cache-Control")
+  );
 
   // take the most conservative between the parent and loader, otherwise
   // we'll be too aggressive for one of them.
-  let maxAge = Math.min(loaderCache["max-age"], parentCache["max-age"]);
+  let maxAge = Math.min(
+    loaderCache["max-age"],
+    parentCache["max-age"]
+  );
 
   return {
-    "Cache-Control": `max-age=${maxAge}`
+    "Cache-Control": `max-age=${maxAge}`,
   };
 }
 ```
@@ -516,7 +494,8 @@ import type { MetaFunction } from "remix";
 export let meta: MetaFunction = () => {
   return {
     title: "Something cool",
-    description: "This becomes the nice preview on search results."
+    description:
+      "This becomes the nice preview on search results.",
   };
 };
 ```
@@ -535,10 +514,21 @@ import { block } from "remix";
 
 export let links: LinksFunction = () => {
   return [
-    { rel: "icon", href: "/favicon.png", type: "image/png" },
-    { rel: "stylesheet", href: "https://example.com/some/styles.css" },
+    {
+      rel: "icon",
+      href: "/favicon.png",
+      type: "image/png",
+    },
+    {
+      rel: "stylesheet",
+      href: "https://example.com/some/styles.css",
+    },
     { page: "/users/123" },
-    block({ rel: "preload", href: "/images/banner.jpg", as: "image" })
+    block({
+      rel: "preload",
+      href: "/images/banner.jpg",
+      as: "image",
+    }),
   ];
 };
 ```
@@ -559,13 +549,17 @@ import stylesHref from "../styles/something.css";
 export let links: LinksFunction = () => {
   return [
     // add a favicon
-    { rel: "icon", href: "/favicon.png", type: "image/png" },
+    {
+      rel: "icon",
+      href: "/favicon.png",
+      type: "image/png",
+    },
 
     // add an external stylesheet
     {
       rel: "stylesheet",
       href: "https://example.com/some/styles.css",
-      crossOrigin: "true"
+      crossOrigin: "true",
     },
 
     // add a local stylesheet, remix will fingerprint the file name for
@@ -575,15 +569,19 @@ export let links: LinksFunction = () => {
     // prefetch an image into the browser cache that the user is likely to see
     // as they interact with this page, perhaps they click a button to reveal in
     // a summary/details element
-    { rel: "prefetch", as: "image", href: "/img/bunny.jpg" },
+    {
+      rel: "prefetch",
+      as: "image",
+      href: "/img/bunny.jpg",
+    },
 
     // only prefetch it if they're on a bigger screen
     {
       rel: "prefetch",
       as: "image",
       href: "/img/bunny.jpg",
-      media: "(min-width: 1000px)"
-    }
+      media: "(min-width: 1000px)",
+    },
   ];
 };
 ```
@@ -601,8 +599,8 @@ export let links: LinksFunction = () => {
     block({
       rel: "preload",
       as: "image",
-      href: "/img/bunny.jpg"
-    })
+      href: "/img/bunny.jpg",
+    }),
   ];
 };
 ```
@@ -668,11 +666,153 @@ Exporting a handle allows you to create application conventions with the `useMat
 
 ```js
 export let handle = {
-  its: "all yours"
+  its: "all yours",
 };
 ```
 
 This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](../react/#usematches) for more information.
+
+## unstable_shouldReload
+
+<docs-warning>This API is unstable, we're confident in the use cases it solves but aren't sure about the API yet, it may change in the future.</docs-warning>
+
+<docs-warning>This feature is an <i>additional</i> optimization. In general, Remix's design does a great job of only calling the loaders that the next page needs and ensuring your UI is in sync with your server. When you use this feature you risk your UI getting out of sync with your server. Use with caution!</docs-warning>
+
+This function lets apps optimize which routes should be reloaded on some client side transitions.
+
+```ts
+import type { ShouldReloadFunction } from "remix";
+
+export let unstable_shouldReload: ShouldReloadFunction = ({
+  // same params that go to `loader` and `action`
+  params,
+
+  // a possible form submission that caused this to be reloaded
+  submission,
+
+  // the next URL being used to render this page
+  url,
+
+  // the previous URL used to render this page
+  prevUrl,
+}) => false; // or `true`;
+```
+
+During client side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
+
+This function lets apps further optimize by returning `false` when Remix is about to reload a route. There are three cases when Remix will reload a route and you have the opportunity to optimize:
+
+- if the `url.search` changes (while the `url.pathname` is the same)
+- after actions are called
+- "refresh" link clicks (click link to same URL)
+
+Otherwise Remix will reload the route and you have no choice:
+
+- A route matches the new URL that didn't match before
+- The `url.pathname` changed (including route params)
+
+Here are a couple of common use-cases:
+
+### Never reloading the root
+
+It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
+
+```js [10]
+export let loader = () => {
+  return {
+    ENV: {
+      CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
+      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+    },
+  };
+};
+
+export let unstable_shouldReload = () => false;
+```
+
+With this in place, Remix will no longer make a request to your root loader for any reason, not after form submissions, not after search param changes, etc.
+
+### Ignoring search params
+
+Another common case is when you've got nested routes and a child component has a feature that uses the search params in the URL, like a search page or some tabs with state you want to keep in the search params.
+
+Consider these routes:
+
+```
+└── $projectId.js
+    └── activity.js
+```
+
+And lets say the UI looks something like this:
+
+```
+┌──────────────────────────────┐
+│    Project: Design Revamp    │
+├────────┬─────────┬───────────┤
+│  Tasks │ Collabs │ >ACTIVITY │
+├────────┴─────────┴───────────┤
+│  Search: _____________       │
+│                              │
+│  - Ryan added an image       │
+│                              │
+│  - Michael commented         │
+│                              │
+└──────────────────────────────┘
+```
+
+The `$activity.js` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+
+```js [2,7]
+export function loader({ request, params }) {
+  let url = new URLSearchParams(request.url);
+  return exampleDb.activity.findAll({
+    where: {
+      projectId: params.projectId,
+      name: {
+        contains: url.searchParams.get("search"),
+      },
+    },
+  });
+}
+```
+
+This is great for the activity route, but Remix doesn't know if the parent loader, `$projectId.js` _also_ cares about the search params. That's why Remix does the safest thing and reloads all the routes on the page when the search params change.
+
+In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.js` doesn't use the search params. Consider that our loader for `$projectId.js` looks something like this:
+
+```tsx
+export function loader({ params }) {
+  return fakedb.findProject(params.projectId);
+}
+```
+
+We want this loader to be called only if the project has had an update, so we can make this really simple and just say to reload if there is a submission:
+
+```tsx
+export function unstable_shouldReload({ submission }) {
+  return Boolean(submission);
+}
+```
+
+Now if the child route causes the search params to change, this route will no longer be reloaded because there was no submission.
+
+<docs-info>When you want to optimize a loader, instead of thinking about the thing causing the reload (search params), think only about the loader's requirements that you're optimizing.</docs-info>
+
+You may want to get more granular and reload only for submissions to this project:
+
+```tsx
+export function unstable_shouldReload({
+  params,
+  submission,
+}) {
+  return (
+    submission &&
+    submission.action === `/projects/${params.projectId}`
+  );
+}
+```
+
+You need to be very careful here, though. That project (or its nested relationships) may be updated by other actions and your app will get out of sync if you don't also consider them.
 
 # Asset URL Imports
 

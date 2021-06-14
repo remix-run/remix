@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { LoaderFunction, ActionFunction, FormProps } from "remix";
 import {
-  useRouteData,
+  useLoaderData,
   usePendingFormSubmit,
   Form,
   json,
@@ -47,7 +47,7 @@ export let action: ActionFunction = async ({ request }) => {
 };
 
 export default function Methods() {
-  let data = useRouteData<{ body: any }>();
+  let data = useLoaderData<{ body: any }>();
   let [method, setMethod] = React.useState<FormProps["method"]>("post");
   let [enctype, setEnctype] = React.useState<FormProps["encType"]>(
     "application/x-www-form-urlencoded"
@@ -104,9 +104,7 @@ export default function Methods() {
           </label>
         </p>
         <p>
-          <button type="submit" disabled={!!pendingForm}>
-            {method}
-          </button>
+          <button type="submit">{method}</button>
         </p>
       </Form>
       <div

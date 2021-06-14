@@ -23,7 +23,7 @@ Now add this to `team.tsx`, it's another quick fetch to the GitHub API and a com
 ```tsx
 import React from "react";
 import { Link, Outlet } from "react-router-dom";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 interface Member {
@@ -33,17 +33,19 @@ interface Member {
 
 export let loader: LoaderFunction = () => {
   // you can point to whatever org you want, ofc
-  return fetch("https://api.github.com/orgs/reacttraining/members");
+  return fetch(
+    "https://api.github.com/orgs/reacttraining/members"
+  );
 };
 
 export default function Team() {
-  let data = useRouteData<Member[]>();
+  let data = useLoaderData<Member[]>();
 
   return (
     <div>
       <h2>Team</h2>
       <ul>
-        {data.map(member => (
+        {data.map((member) => (
           <li key={member.id}>
             <Link to={member.login}>{member.login}</Link>
           </li>
@@ -80,7 +82,8 @@ export default function TeamIndex() {
     <div>
       <h3>Team</h3>
       <p>
-        Here we could show cool stats about the team or recent activity, etc.
+        Here we could show cool stats about the team or
+        recent activity, etc.
       </p>
     </div>
   );
@@ -108,7 +111,7 @@ Now create another loader and component combo:
 
 ```tsx
 import React from "react";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 interface User {
@@ -120,15 +123,21 @@ interface User {
 }
 
 export let loader: LoaderFunction = ({ params }) => {
-  return fetch(`https://api.github.com/users/${params.member}`);
+  return fetch(
+    `https://api.github.com/users/${params.member}`
+  );
 };
 
 export default function TeamMember() {
-  let user = useRouteData<User>();
+  let user = useLoaderData<User>();
   return (
     <div>
       <h3>{user.name}</h3>
-      <img alt="user avatar" src={user.avatar_url} height="50" />
+      <img
+        alt="user avatar"
+        src={user.avatar_url}
+        height="50"
+      />
       <p>{user.bio}</p>
       <dl>
         <dt>Company</dt>

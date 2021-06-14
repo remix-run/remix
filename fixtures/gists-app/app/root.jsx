@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Links, Meta, Scripts, useRouteData, useMatches } from "remix";
+import { Meta, Links, Scripts, useLoaderData, useMatches } from "remix";
 import { Outlet, Link } from "react-router-dom";
 
 import normalizeHref from "@exampledev/new.css/new.css";
@@ -25,13 +25,15 @@ export let handle = {
   breadcrumb: () => <Link to="/">Home</Link>
 };
 
+export let shouldReload = () => false;
+
 export default function Root() {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
   });
 
-  let data = useRouteData();
+  let data = useLoaderData();
   let matches = useMatches();
 
   return (
@@ -51,7 +53,7 @@ export default function Root() {
               ))}
           </ol>
         </header>
-        <div data-test-id="content">
+        <div data-test-id="content" id="content">
           <Outlet />
         </div>
         {data.enableScripts && <Scripts />}

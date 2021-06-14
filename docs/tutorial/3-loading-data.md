@@ -3,7 +3,7 @@ title: Loading Data
 order: 3
 ---
 
-Page data in Remix comes from a "loader" defined inside of your Route Module. While they live in the same file as the React Component, these loaders are only ever run server side. This means you can write sever side code right next to your component, like a direct connection to your database. Remix will remove the server-side code from the browser bundle, so you don't have to worry about it causing problems in the browser.
+Page data in Remix comes from a "loader" defined inside of your Route Module. While they live in the same file as the React Component, these loaders are only ever run server side. This means you can write sever side code right next to your component, like a direct connection to your database. Remix will remove the server-side code from the browser bundle, so you don't have to worry about it causing problems in the browser (if you ever suspect there's a problem, read [Module Constraints](../../other-api/constraints/)).
 
 ## Your First Loader
 
@@ -24,19 +24,19 @@ export default function Gists() {
 
 ## Accessing Data for a Route
 
-Now that we have a loader in place, you can access that data with the `useRouteData` hook.
+Now that we have a loader in place, you can access that data with the `useLoaderData` hook.
 
 ```tsx [3, 10-11]
 import React from "react";
 import type { LoaderFunction } from "remix";
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 
-export let loader: Loader = () => {
+export let loader: LoaderFunction = () => {
   return fetch("https://api.github.com/gists");
 };
 
 export default function Gists() {
-  let data = useRouteData();
+  let data = useLoaderData();
   console.log(data);
 
   return (
@@ -64,8 +64,8 @@ return new Response(JSON.stringify({ teapot: true }), {
   status: 418,
   headers: {
     "Content-Type": "application/json",
-    "Cache-Control": "max-age=3600"
-  }
+    "Cache-Control": "max-age=3600",
+  },
 });
 ```
 
@@ -86,7 +86,7 @@ export let loader = async () => {
 };
 ```
 
-Here's how you can indicate data-based a 404:
+Here's how you could send a 404 page to the user and the browser:
 
 ```tsx [6]
 import { json } from "remix";
@@ -107,7 +107,7 @@ You don't have to build up a full response or use a helper, loaders can return p
 ```js
 export function loader() {
   return { anything: "you want" };
-};
+}
 ```
 
 ## Rendering the Gists
@@ -116,14 +116,16 @@ Whew, okay, back to our app. Go ahead and map over that array however you'd like
 
 ```tsx [6-12]
 export default function Gists() {
-  let data = useRouteData();
+  let data = useLoaderData();
   return (
     <div>
       <h2>Public Gists</h2>
       <ul>
         {data.map((gist: any) => (
           <li key={gist.id}>
-            <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
+            <a href={gist.html_url}>
+              {Object.keys(gist.files)[0]}
+            </a>
           </li>
         ))}
       </ul>
@@ -142,7 +144,7 @@ Like headers, meta tags pretty much always depend on data too, so Remix passes t
 export function meta({ data }) {
   return {
     title: "Public Gists",
-    description: `View the latest ${data.length} gists from the public`
+    description: `View the latest ${data.length} gists from the public`,
   };
 }
 ```
@@ -153,36 +155,17 @@ Now if somebody posts a link to this site on social media, the preview will incl
 
 Here's the full code using all of the Route APIs we've introduced so far, as well as a quick type for a Gist.
 
-```tsx
+```js
 import React from "react";
-import { useRouteData } from "remix";
-import type { LoaderFunction } from "remix";
+import { useLoaderData } from "remix";
 
-// Define the Gist type
-interface Gist {
-  id: string;
-  html_url: string;
-  files: {
-    [fileName: string]: {
-      filename: string;
-      type: string;
-      language: string;
-      raw_url: string;
-      size: number;
-    };
-  };
-}
-
-// Load data for this route and define some caching headers so that when the
-// user navigates here multiple times it won't make the request more than once
-// per 300 seconds
 export let loader: LoaderFunction = () => {
   let res = await fetch("https://api.github.com/gists");
   let gists = await res.json();
   return json(gists, {
     headers: {
-      "Cache-Control": "max-age=300"
-    }
+      "Cache-Control": "max-age=300",
+    },
   });
 };
 
@@ -190,29 +173,29 @@ export let loader: LoaderFunction = () => {
 export function meta({ data }: { data: Gist[] }) {
   return {
     title: "Public Gists",
-    description: `View the latest ${data.length} gists from the public`
+    description: `View the latest ${data.length} public gists`,
   };
 }
 
-// The HTTP headers for the server rendered request, just use the cache control
-// from the loader.
-export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
+// The HTTP headers for the server rendered request, just
+// use the cache control from the loader.
+export function headers({ loaderHeaders } {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
+    "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
 }
 
 export default function Gists() {
-  // useRouteData supports TypeScript generics so you can say what this hook
-  // returns
-  let data = useRouteData<Gist[]>();
+  let data = useLoaderData();
   return (
     <div>
       <h2>Public Gists</h2>
       <ul>
-        {data.map(gist => (
+        {data.map((gist) => (
           <li key={gist.id}>
-            <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
+            <a href={gist.html_url}>
+              {Object.keys(gist.files)[0]}
+            </a>
           </li>
         ))}
       </ul>

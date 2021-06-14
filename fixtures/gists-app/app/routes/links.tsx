@@ -1,5 +1,5 @@
 import type { LinksFunction, LoaderFunction } from "remix";
-import { useRouteData, Link } from "remix";
+import { useLoaderData, Link } from "remix";
 
 import redTextHref from "~/styles/redText.css";
 import blueTextHref from "~/styles/blueText.css";
@@ -42,7 +42,7 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
 };
 
 export default function LinksPage() {
-  let users = useRouteData<User[]>();
+  let users = useLoaderData<User[]>();
   return (
     <div data-test-id="/links">
       <h2>Links Page</h2>
