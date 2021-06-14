@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import type { LoaderFunction, LinksFunction } from "remix";
-import { Meta, Scripts, Links, useRouteData, useLiveReload } from "remix";
+import { Meta, Scripts, Links, useLoaderData, useLiveReload } from "remix";
 
 import styles from "./styles/global.css";
 
@@ -13,7 +13,7 @@ export let links: LinksFunction = () => {
 };
 
 export default function App() {
-  let data = useRouteData();
+  let data = useLoaderData();
   useLiveReload();
 
   return (

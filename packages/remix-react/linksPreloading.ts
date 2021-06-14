@@ -19,7 +19,7 @@ export function block(link: HTMLLinkDescriptor): BlockLinkDescriptor {
 
 export async function preloadBlockingLinks(
   routeModule: RouteModule,
-  data: RouteData
+  data?: RouteData
 ): Promise<void[]> {
   if (!routeModule.links) {
     return [];
@@ -108,7 +108,7 @@ function moveImageFromDiskToMemoryCacheToAvoidLayoutShift(
 export function getLinks(
   location: Location,
   matches: RouteMatch<ClientRoute>[],
-  routeData: RouteData,
+  loaderData: RouteData,
   routeModules: RouteModules,
   manifest: AssetsManifest,
   clientRoutes: ClientRoute[]
@@ -117,7 +117,7 @@ export function getLinks(
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
       if (module.links) {
-        let data = routeData[match.route.id];
+        let data = loaderData[match.route.id];
         return module.links({ data });
       }
       return [];

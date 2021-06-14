@@ -1,4 +1,4 @@
-import { Meta, Links, Scripts, useRouteData, LiveReload } from "remix";
+import { Meta, Links, Scripts, useLoaderData, LiveReload } from "remix";
 import { Outlet } from "react-router-dom";
 
 import stylesUrl from "./styles/global.css";
@@ -31,7 +31,7 @@ function Document({ children }) {
 }
 
 export default function App() {
-  let data = useRouteData();
+  let data = useLoaderData();
   return (
     <Document>
       <Outlet />
