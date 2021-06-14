@@ -23,8 +23,8 @@ export function loader() {
 
 export function headers() {
   return {
-    "test": "value"
-  }
+    test: "value"
+  };
 }
 
 export default function Index() {
@@ -52,13 +52,16 @@ export default function Index() {
             <Link to="/gists/mjijackson">Loader Redirect</Link>
           </li>
           <li>
-            <Link to="/user-gists/ryanflorence">Express Redirect</Link>
-          </li>
-          <li>
             <Link to="/fart">Broken link</Link>
           </li>
           <li>
             <Link to="/methods">Forms</Link>
+          </li>
+          <li>
+            <Link to="/actions">Actions</Link>
+          </li>
+          <li>
+            <Link to="/fetchers">Fetchers</Link>
           </li>
           <li>
             <Link to="/loader-errors?throw">

@@ -1,5 +1,5 @@
 import type { MetaFunction, LoaderFunction, ActionFunction } from "remix";
-import { useRouteData, useSubmit, Form, Link, redirect } from "remix";
+import { useLoaderData, useSubmit, Form, Link, redirect } from "remix";
 
 import { userPrefsCookie } from "../cookies";
 
@@ -43,7 +43,7 @@ export let handle = {
 };
 
 export default function UserPrefs() {
-  let userPrefs = useRouteData();
+  let userPrefs = useLoaderData();
   let submit = useSubmit();
 
   function handleChange(event: React.FormEvent<HTMLFormElement>) {

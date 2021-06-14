@@ -17,7 +17,7 @@ The Remix compiler can automatically remove server code from the browser bundles
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -30,7 +30,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useRouteData();
+  let posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -46,7 +46,7 @@ export { meta, default } from "./routes/posts.tsx";
 The compiler will now analyze the code in `routes/posts.tsx` and only keep code that's inside of `meta` and the component. The result is something like this:
 
 ```tsx
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 
 export function meta() {
@@ -54,7 +54,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useRouteData();
+  let posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -72,7 +72,7 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
 ```tsx bad lines=5
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -87,7 +87,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useRouteData();
+  let posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -95,7 +95,7 @@ export default function Posts() {
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
 ```tsx bad lines=3,5
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
 
@@ -106,7 +106,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useRouteData();
+  let posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -116,7 +116,7 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
 ```tsx [6]
-import { useRouteData } from "remix";
+import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -130,7 +130,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useRouteData();
+  let posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -247,7 +247,7 @@ Maybe seeing how this would be used will help:
 export let action = async ({ request }) => {
   return withSession(request, session => {
     session.flash("message", "Functional Composition is Fun! (ctional)");
-    return "/this/same/page";
+    return redirect("/this/same/page");
   });
 };
 
