@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/init",
   "description": "Application initializer for Remix",
-  "version": "0.17.5",
+  "version": "0.0.0-experimental-1a6f09f",
   "repository": "https://github.com/remix-run/packages",
   "bin": {
     "remix-init": "cli.js"
