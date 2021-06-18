@@ -15,11 +15,7 @@ button {
   padding-bottom: 0.4rem;
   width: 10rem;
   font-size: 80%;
-  background: #f0f0f0;
-}
-
-button:hover {
-  background: #ddd;
+  background: #f0f0f0 !important;
 }
 
 button:active {
@@ -36,6 +32,10 @@ button[data-status="complete"] {
 
 button[data-status="incomplete"] {
   color: blue;
+}
+
+button:hover {
+  background: #ddd;
 }
 
 progress {

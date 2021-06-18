@@ -20,20 +20,20 @@ let tasks: Task[] = [
     id: "taco",
     name: "Eat tacos",
     complete: false,
-    delay: 3000
+    delay: 1000
   },
   {
     id: "puppy",
     name: "Adopt a puppy",
     complete: false,
     delay: 2000
-  },
-  {
-    id: "giveup",
-    name: "Give up",
-    complete: false,
-    delay: 1000
   }
+  // {
+  //   id: "giveup",
+  //   name: "Give up",
+  //   complete: false,
+  //   delay: 1000
+  // }
 ];
 
 export function links() {
@@ -81,9 +81,10 @@ export default function Tasks() {
 
 function TaskItem({ task }: { task: Task }) {
   let ref = useRef<HTMLFormElement>(null);
-  let pending = usePendingFormSubmit();
-  let thisIsPending = pending?.data.get("id") === task.id;
-  let actionData = useActionData();
+
+  let thisIsPending = usePendingFormSubmit(ref);
+  let actionData = useActionData(ref);
+
   let error = actionData?.id === task.id && actionData.error;
 
   return (
@@ -91,14 +92,15 @@ function TaskItem({ task }: { task: Task }) {
       <input type="hidden" name="id" value={task.id} />
       <input type="hidden" name="complete" value={String(!task.complete)} />
       <button
-        disabled={!!pending}
         type="submit"
         data-status={
           error ? "error" : task.complete ? "complete" : "incomplete"
         }
       >
         {task.complete ? "Mark Incomplete" : "Mark Complete"}
-        {thisIsPending && <ProgressBar total={task.delay} />}
+        {thisIsPending && (
+          <ProgressBar key={thisIsPending.id} total={task.delay} />
+        )}
       </button>{" "}
       {task.name} {error && <span style={{ color: "red" }}>{error}</span>}
     </Form>
@@ -109,19 +111,20 @@ function ProgressBar({ total }: { total: number }) {
   let [ts, setTimeStamp] = useState(0);
   let [start, setStart] = useState<null | number>(null);
 
-  useEffect(() => {
-    let id = requestAnimationFrame(now => {
-      setTimeStamp(now);
-      if (!start) setStart(now);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [ts, start]);
-
   let progress = 0;
   if (start) {
     let elapsed = ts - start;
     progress = (elapsed / total) * 100;
   }
+
+  useEffect(() => {
+    if (progress >= 100) return;
+    let id = requestAnimationFrame(now => {
+      setTimeStamp(now);
+      if (!start) setStart(now);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [start, progress]);
 
   return <progress value={progress} max="100" />;
 }

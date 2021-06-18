@@ -96,6 +96,8 @@ export function RemixEntry({
     componentDidCatchEmulator: entryComponentDidCatchEmulator
   });
 
+  let [, forceUpdate] = React.useState({});
+
   let {
     action,
     location,
@@ -184,6 +186,34 @@ export function RemixEntry({
         }
 
         let response = await fetchData(nextLocation, leafRoute.id);
+
+        // cleanup pending form submits
+        // FIXME: location state types again!
+        let state = nextLocation.state as FormSubmitLocationState;
+        let pendingRef = pendingSubmitRefs.get(state.id);
+
+        console.log("cleanup", state.id);
+        invariant(pendingRef, `Missing pendingRef for ${state.id}`);
+        pendingSubmitStates.delete(pendingRef);
+        pendingSubmitRefs.delete(state.id);
+
+        // YOU WERE HERE
+        // we're getting state out of sync w/ the server. need to:
+        // - clean up and update after an action so that the
+        //   pending UI can go away
+        // - need to recall loaders so we get the right data, it's off
+        //   right now if you click the slow button, then fast button,
+        //   and fast button finishes first (because we ignore)
+        // - not sure what to do ... we need to update state for the
+        //   last action to land
+        // - oooh, maybe once two forms go pending we don't refetch
+        //   loaders until they have all settled?
+        // - OR ... refetch loaders on each on when it lands
+        //   and then when the last one lands, refetch again.
+        // - wait, I think that's exactly what reloading after the last
+        //   to land means, which is fine because it's recalling
+        //   loaders, not using data from the action! Perfect!
+        forceUpdate({});
 
         if (response instanceof Error) {
           componentDidCatchEmulator.error = response;
@@ -339,7 +369,24 @@ export function RemixEntry({
         ? await extractData(actionResponse)
         : undefined;
 
-      if (isCurrent && !didRedirect) {
+      if (
+        // if we redirected, don't setState, let the next location do it
+        // TODO: what does this mean for multiple pending forms that redirect
+        // to the same page?
+        !didRedirect ||
+        // we always setState after non-redirect actions so multiple pending
+        // forms can update the loader data cache.
+        // TODO: might not be good
+        // enough? what if the action was fast but the loaders were slow but an
+        // earlier action was slow but the loaders were fast? how do we really
+        // know which loaders should win?  I think it should be *last loaders
+        // requested should win* which doesn't necessarily mean "last action
+        // sent"
+        // what if you click the same button a lot?!
+        isFormNavigation(nextLocation) ||
+        // and for normal navigations, only use the latest GET
+        isCurrent
+      ) {
         setState({
           action: nextAction,
           location: nextLocation,
@@ -743,7 +790,14 @@ export let Form = React.forwardRef<HTMLFormElement, FormProps>(
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
-                submit(event.currentTarget, { method, replace });
+                submit(event.currentTarget, {
+                  method,
+                  replace,
+                  // FIXME: I only want RefObject, not any ref, not sure what to
+                  // do about forwardRef
+                  // @ts-ignore
+                  ref: forwardedRef
+                });
               }
         }
         {...props}
@@ -788,7 +842,14 @@ export interface SubmitOptions {
    * to `false`.
    */
   replace?: boolean;
+
+  /**
+   * The ref to track for `usePendingFormSubmit(ref)` and `useActionData(ref)`
+   */
+  ref?: React.RefObject<any>;
 }
+
+let submitId = 0;
 
 /**
  * Submits a HTML `<form>` to the server without reloading the page.
@@ -910,12 +971,27 @@ export function useSubmit(): SubmitFunction {
       body: new URLSearchParams(formData).toString(),
       action,
       method,
-      encType
+      encType,
+      id: ++submitId
     };
+
+    if (options.ref) {
+      pendingSubmitRefs.set(state.id, options.ref.current);
+      pendingSubmitStates.set(options.ref.current, state);
+    }
 
     navigate(url.pathname + url.search, { replace: options.replace, state });
   };
 }
+
+// So we can look it up in usePendingFormSubmit
+let pendingSubmitStates = new Map<
+  HTMLFormElement | Object,
+  FormSubmitLocationState
+>();
+
+// so we can cleanup before we set state on location changes
+let pendingSubmitRefs = new Map<number, HTMLFormElement | Object>();
 
 function isHtmlElement(object: any): object is HTMLElement {
   return object != null && typeof object.tagName === "string";
@@ -974,7 +1050,7 @@ export function useLoaderData<T = AppData>(): T {
 let useRouteData = useLoaderData;
 export { useRouteData };
 
-export function useActionData() {
+export function useActionData(ref?: React.RefObject<any>) {
   return useRemixEntryContext().actionData;
 }
 
@@ -983,16 +1059,24 @@ export function useActionData() {
  * submit a `<Form>`. This is useful for showing e.g. a pending indicator or
  * animation for some newly created/destroyed data.
  */
-export function usePendingFormSubmit(): FormSubmit | undefined {
-  let location = usePendingLocation();
+export function usePendingFormSubmit(
+  ref?: React.RefObject<any>
+): FormSubmit | undefined {
+  let pendingLocation = usePendingLocation();
 
-  if (!location || !location.state) {
-    return undefined;
-  }
+  let pendingSubmit = ref
+    ? pendingSubmitStates.get(ref.current)
+    : pendingLocation?.state
+    ? // FIXME: not sure how to deal with the location types
+      (pendingLocation.state as FormSubmitLocationState)
+    : undefined;
 
-  // FIXME: not sure how to deal w/ the types here
-  let state = location.state as FormSubmitLocationState;
-  return { ...state, data: new URLSearchParams(state.body) };
+  return pendingSubmit
+    ? {
+        ...pendingSubmit,
+        data: new URLSearchParams(pendingSubmit.body)
+      }
+    : undefined;
 }
 
 /**

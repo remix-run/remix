@@ -14,6 +14,7 @@ export interface FormSubmitLocationState {
   method: string;
   body: string;
   encType: string;
+  id: number;
 }
 
 export interface FormSubmit extends FormSubmitLocationState {
