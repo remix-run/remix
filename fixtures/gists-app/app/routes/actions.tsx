@@ -1,17 +1,18 @@
 import { Form, json, useActionData, useLoaderData } from "remix";
-import type { HeadersFunction } from "remix";
+import type { HeadersFunction, ActionFunction } from "remix";
 
 export function loader() {
   return "ay! data from the loader!";
 }
 
-export function action() {
-  return json("heyooo, data from the action", {
+export let action: ActionFunction = async ({ request }) => {
+  let body = new URLSearchParams(await request.text());
+  return json(`heyooo, data from the action: ${body.get("field1")}`, {
     headers: {
       "x-test": "works"
     }
   });
-}
+};
 
 export let headers: HeadersFunction = ({ actionHeaders }) => {
   return {
