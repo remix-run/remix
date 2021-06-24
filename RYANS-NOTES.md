@@ -2,7 +2,9 @@
 
 - new location comes in
   - isSubmit?
-    - yes
+    - call action
+    -
+    - setActionState
       - Always use the last to be requested loaderData
         - Could come from an earlier post!
       - Always update actionData, even if a new navigation comes through
@@ -16,37 +18,104 @@
 In other words, new navigations only replace pending loads, but actions will still complete.
 
 ```js
-function useRemixTransition(initialLoaderData, initialActionData) {
-  let loaderData = useState(initialActionData);
-  let actionData = useState(actionData);
-  let submits = useState([]);
+////////////////////////////////////////////////////////////////////////////////
+function transitionManager(init, onChange) {
+  let state = "idle";
 
+  let currentLoadId = 0;
+  let pendingLoadIds = [];
+  let abortControllers = new Set();
+  let submitRefs = new WeakMap();
 
-  async function callAction() {
-    let isCurrent = true;
-    let data = await fetch();
-    if ()
-    return () => {
-      isCurrent = false;
-    };
+  let context = {
+    location: init.location,
+    nextLocation: {},
+    loaderData: init.loaderData,
+    actionData: init.actionData,
+    pendingSubmits: new Map(),
+    error: null,
+    errorBoundaryId: null
+  };
+
+  function update(updates) {
+    Object.assign({}, context, updates);
+    onChange(context);
   }
 
-  async function loadNextPage() {
-    let isCurrent = true;
-    return () => {
-      isCurrent = false;
-    };
+  async function get(nextLocation, matches) {
+    let id = ++currentLoadId;
+    let controller = new AbortController();
+
+    pendingLoadIds.push(id);
+    abortControllers.set(id, controller);
+
+    let responses = await fetchEverything(nextLocation, matches);
+    if (isStale()) return;
+
+    let redirect = findRedirect(responses);
+    if (redirect) return handleRedirect(redirect);
+
+    let loaderData = await extractLoaderData(responses);
+    if (isStale()) return;
+
+    let [error, errorBoundaryId] = findError(loaderData);
+
+    clearStaleLoaderIds(error ? Number.MAX_SAFE_INTEGER : id);
+    update({ loaderData, location: nextLocation, error, errorBoundaryId });
+
+    function isStale() {
+      return !pendingLoadIds.includes(id);
+    }
   }
 
-  useEffect(() => {
-    if (nextLocation !== location) {
-      if (isFormSubmit(nextLocation)) {
-        return callAction();
+  async function post(nextLocation, matches, ref) {
+    submitRefs.set(ref, nextLocation.id);
+    let response = await fetchAction(nextLocation);
+
+    if (isStale()) return;
+    if (isRedirect(response)) return handleRedirect(redirect);
+
+    let data = await extractActionData(response);
+    if (isStale()) return;
+
+    // so that React useEffect will see this as a new map
+    let actionData = new Map(state.actionData);
+    actionData.set(ref, data);
+    update({ actionData });
+
+    get(nextLocation, matches);
+
+    function isStale() {
+      let hasBeenReposted = submitRefs.get(ref) !== nextLocation.id;
+      return hasBeenReposted;
+    }
+  }
+
+  function clearStaleLoaderIds(id) {
+    let nextPendingLoadIds = [];
+    for (let oldId of pendingLoadIds) {
+      let isStale = oldId <= id;
+      if (isStale) {
+        abortControllers.get(id).abort();
+        abortControllers.delete(id);
       } else {
-        return loadNextPage();
+        nextPendingLoadIds.push(oldId);
       }
     }
-  }, [nextLocation, location]);
+    pendingLoadIds = nextPendingLoadIds;
+  }
+
+  function handleRedirect(res) {
+    loadNextPage(makeLocationFromRes(res));
+  }
+
+  return (location, matches, submitRef) => {
+    if (isAction(location)) {
+      post(location, matches, submitRef);
+    } else {
+      get(location, matches);
+    }
+  };
 }
 ```
 
