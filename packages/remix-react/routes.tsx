@@ -20,6 +20,8 @@ export interface EntryRoute extends Route {
 }
 
 export interface ClientRoute extends Route {
+  loader?: () => Promise<any> | any;
+  action?: () => Promise<any> | any;
   children?: ClientRoute[];
   element: ReactNode;
 }
