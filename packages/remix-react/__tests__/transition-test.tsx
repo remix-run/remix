@@ -1,5 +1,5 @@
 import { Location } from "history";
-import { createTransitionManager } from "../transition";
+import { createTransitionManager, TransitionRedirect } from "../transition";
 import type { TransitionManagerInit } from "../transition";
 
 let routes = [
@@ -49,7 +49,7 @@ function createTestTransitionManager(
   });
 }
 
-describe("transition emulator", () => {
+describe("transition manager", () => {
   let parentLoader: jest.Mock<string>;
   let childLoader: jest.Mock<string>;
   let paramLoader: jest.Mock<string>;
@@ -145,6 +145,10 @@ describe("transition emulator", () => {
   });
 
   describe("GET navigation", () => {
+    describe("redirects", () => {
+      it.todo("redirects");
+    });
+
     it("fetches data on new locations", async () => {
       await tm.send(createLocation("/a"));
       let state = tm.getState();
@@ -215,50 +219,129 @@ describe("transition emulator", () => {
     });
 
     it.todo("delegates to the route if it should reload or not");
+
+    describe("errors", () => {
+      describe("with an error boundary in the throwing route", () => {
+        it.todo("uses the throwing route's error boundary");
+        it.todo("loads parent data");
+      });
+      describe("with an error boundary above the throwing route", () => {
+        it.todo("uses the nearest error boundary");
+        it.todo("only loads data above error boundary route");
+      });
+    });
   });
 
-  describe("actions", () => {
-    describe("after an action", () => {
-      let parentLoader: jest.Mock;
-      let parentAction: jest.Mock;
-      let childLoader: jest.Mock;
-      let childAction: jest.Mock;
-      let tm: ReturnType<typeof createTestTransitionManager>;
+  describe("POST navigation", () => {
+    let parentLoader: jest.Mock;
+    let parentAction: jest.Mock;
+    let childLoader: jest.Mock;
+    let childAction: jest.Mock;
+    let tm: ReturnType<typeof createTestTransitionManager>;
 
-      beforeEach(() => {
-        parentLoader = jest.fn(() => "PARENT");
-        childLoader = jest.fn(() => "CHILD");
-        parentAction = jest.fn(() => "PARENT");
-        childAction = jest.fn(() => "CHILD");
-        tm = createTestTransitionManager("/", {
-          loaderData: { parent: "PARENT" },
-          routes: [
-            {
-              path: "/",
-              id: "parent",
-              element: {},
-              loader: parentLoader,
-              action: parentAction
-            },
-            {
-              path: "/child",
-              id: "child",
-              element: {},
-              loader: childLoader,
-              action: childAction
-            }
-          ]
-        });
+    beforeEach(() => {
+      parentLoader = jest.fn(() => "PARENT LOADER");
+      childLoader = jest.fn(() => "CHILD LOADER");
+      parentAction = jest.fn(() => "PARENT ACTION");
+      childAction = jest.fn(() => "CHILD ACTION");
+      tm = createTestTransitionManager("/", {
+        loaderData: { parent: "PARENT" },
+        routes: [
+          {
+            path: "/",
+            id: "parent",
+            element: {},
+            loader: parentLoader,
+            action: parentAction,
+            children: [
+              {
+                path: "/child",
+                id: "child",
+                element: {},
+                loader: childLoader,
+                action: childAction
+              }
+            ]
+          }
+        ]
+      });
+    });
+
+    it("calls only the leaf route action", async () => {
+      await tm.send(createLocation("/child", { isAction: true }));
+      expect(parentAction.mock.calls.length).toBe(0);
+      expect(childAction.mock.calls.length).toBe(1);
+    });
+
+    it("reloads all routes after the action", async () => {
+      await tm.send(createLocation("/child", { isAction: true }));
+      expect(parentLoader.mock.calls.length).toBe(1);
+      expect(childLoader.mock.calls.length).toBe(1);
+      expect(tm.getState().actionData).toMatchInlineSnapshot(`"CHILD ACTION"`);
+      expect(tm.getState().loaderData).toMatchInlineSnapshot(`
+          Object {
+            "child": "CHILD LOADER",
+            "parent": "PARENT LOADER",
+          }
+        `);
+    });
+
+    it("loads routes after action redirect", async () => {
+      let actionDeferred = defer();
+      let loaderDeferred = defer();
+      let redirectDeferred = defer();
+
+      let action = jest.fn(() => actionDeferred.promise.then(val => val));
+      let loader = jest.fn(() => loaderDeferred.promise.then(val => val));
+
+      let tm = createTestTransitionManager("/", {
+        onRedirect(location) {
+          tm.send(createLocation(location)).then(
+            () => redirectDeferred.promise
+          );
+        },
+        routes: [
+          { path: "/", id: "root", action, element: {} },
+          { path: "/a", id: "a", loader, element: {} }
+        ],
+        loaderData: {}
       });
 
-      it.only("calls only the leaf route action", async () => {
-        await tm.send(createLocation("/child", { isAction: true }));
-        expect(parentAction.mock.calls.length).toBe(0);
-        expect(childAction.mock.calls.length).toBe(1);
-      });
+      tm.send(createLocation("/", { isAction: true }));
+      await actionDeferred.resolve(new TransitionRedirect("/a"));
 
-      it.todo("reloads all data after the action");
-      it.todo("reloads all data after action redirect");
+      let state = tm.getState();
+      expect(action.mock.calls.length).toBe(1);
+      expect(loader.mock.calls.length).toBe(1);
+      expect(state.actionData).toBeUndefined();
+      expect(state.loaderData).toMatchInlineSnapshot(`Object {}`);
+      expect(state.nextLocation.pathname).toBe("/a");
+
+      await loaderDeferred.resolve("A");
+      await redirectDeferred.resolve();
+      state = tm.getState();
+      expect(state.location.pathname).toBe("/a");
+      expect(state.loaderData.a).toBe("A");
+    });
+
+    it("commits action data as soon as it lands", async () => {
+      let { promise, resolve } = defer();
+      let action = jest.fn(() => promise.then(val => val));
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            element: {},
+            id: "root",
+            path: "/",
+            action
+          }
+        ]
+      });
+      expect(tm.getState().actionData).toBeUndefined();
+      tm.send(createLocation("/", { isAction: true }));
+      let val = "ACTION JACKSON";
+      await resolve(val);
+      expect(tm.getState().actionData).toBe(val);
     });
 
     describe("errors", () => {
@@ -271,10 +354,6 @@ describe("transition emulator", () => {
         it.todo("only loads data above error boundary route");
       });
     });
-  });
-
-  describe("redirects", () => {
-    it.todo("redirects");
   });
 
   describe("actions with refs", () => {
@@ -486,22 +565,28 @@ describe("transition emulator", () => {
   //     });
   //   });
   // });
-
-  it("aborts stale data loads", async () => {
-    let onChange = jest.fn();
-    let tm = createTestTransitionManager("/", { onChange });
-
-    await tm.send(createLocation("/a"));
-    expect(onChange.mock.calls.length).toBe(2);
-
-    let state = tm.getState();
-    expect(state.loaderData).toMatchInlineSnapshot(`
-      Object {
-        "root": "ROOT",
-        "routes/a": Object {
-          "fakeLoaderDataFor": "routes/a",
-        },
-      }
-    `);
-  });
 });
+
+// function defer() {
+//   let resolve, reject;
+//   let promise = new Promise((res, rej) => {
+//     resolve = res;
+//     reject = rej;
+//   });
+//   return { promise, resolve, reject };
+// }
+
+function defer() {
+  let resolve, reject;
+  let promise = new Promise((res, rej) => {
+    resolve = async val => {
+      res(val);
+      await (async () => promise)();
+    };
+    reject = async (error?) => {
+      rej(error);
+      await (async () => promise)();
+    };
+  });
+  return { promise, resolve, reject };
+}

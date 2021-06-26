@@ -1,3 +1,4 @@
+// TODO: try/catch get/post or the fetches or something!
 import type { Location } from "history";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
@@ -7,7 +8,6 @@ import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
 
 type ClientMatch = RouteMatch<ClientRoute>;
-type LoadResult = Response | Error;
 
 export interface TransitionManagerInit {
   routes: ClientRoute[];
@@ -245,20 +245,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return handleRedirect(result.value);
     }
 
-    let [actionData, error] = await extractActionData(result, matches);
-    if (isStale()) return;
-
-    if (error) {
-      await get(location, error);
+    if (result instanceof Error) {
+      await get(location, result);
       return;
     }
 
     if (ref) {
       let refActionData = new Map(state.refActionData);
-      refActionData.set(ref, actionData);
-      update({ actionData, refActionData });
+      refActionData.set(ref, result.value);
+      update({ actionData: result.value, refActionData });
     } else {
-      update({ actionData });
+      update({ actionData: result.value });
     }
 
     await get(location);
@@ -369,7 +366,7 @@ function filterMatchesToLoad(
     // search affects all loaders
     location.search !== state.location.search
   ) {
-    return matches;
+    return matches.filter(match => match.route.loader);
   }
 
   return matches.filter((match, index, arr) => {
@@ -408,29 +405,21 @@ function findRedirect(results: RouteLoaderResult[]): TransitionRedirect | null {
 async function fetchAction(
   location: ActionLocation,
   match: ClientMatch
-): Promise<any> {
+): Promise<RouteLoaderResult> {
   if (!match.route.action) {
-    console.warn(
+    throw new Error(
       `Route "${match.route.id}" does not have an action, but you are trying ` +
         `to submit to it. To fix this, please add an \`action\` function to the route`
     );
-    return new TransitionRedirect(location);
   }
 
-  return match.route.action();
+  let value = await match.route.action();
+  return { match, value };
 }
 
 function findError(results: any[], matches: ClientMatch[]): [Error?, number?] {
   // TODO:
   return [undefined, undefined];
-}
-
-async function extractActionData(
-  result: LoadResult,
-  matches: ClientMatch[]
-): Promise<[RouteData, Error?]> {
-  // TODO:
-  return [{}];
 }
 
 function isRedirectResult(
