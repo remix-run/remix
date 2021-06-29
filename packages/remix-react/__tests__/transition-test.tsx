@@ -396,6 +396,14 @@ describe("transition manager", () => {
       });
     });
 
+    it("removes action data at new locations", async () => {
+      await tm.send(createLocation("/child", { isAction: true }));
+      expect(tm.getState().actionData).toBe("CHILD ACTION");
+
+      await tm.send(createLocation("/child"));
+      expect(tm.getState().actionData).toBeUndefined();
+    });
+
     it("calls only the leaf route action", async () => {
       await tm.send(createLocation("/child", { isAction: true }));
       expect(parentAction.mock.calls.length).toBe(0);
@@ -620,6 +628,15 @@ describe("transition manager", () => {
   });
 
   describe("actions with refs", () => {
+    let submission: SubmissionState = {
+      isAction: true,
+      action: "/",
+      method: "post",
+      body: "name=Ryan&age=40", // geez
+      encType: "application/x-www-form-urlencoded",
+      id: 1
+    };
+
     it("tracks pending submissions by ref", async () => {
       let actionDeferred = defer();
       let tm = createTestTransitionManager("/", {
@@ -633,19 +650,10 @@ describe("transition manager", () => {
         ]
       });
 
-      let submission: SubmissionState = {
-        isAction: true,
-        action: "/",
-        method: "post",
-        body: "name=Ryan&age=40", // geez
-        encType: "application/x-www-form-urlencoded",
-        id: 1
-      };
-
       let ref = {};
       tm.send(createLocation("/", submission), ref);
-      let { pendingSubmissions } = tm.getState();
-      expect(pendingSubmissions.get(ref)).toMatchInlineSnapshot(`
+
+      expect(tm.getState().pendingSubmissions.get(ref)).toMatchInlineSnapshot(`
         Object {
           "action": "/",
           "body": "name=Ryan&age=40",
@@ -655,6 +663,47 @@ describe("transition manager", () => {
           "method": "post",
         }
       `);
+    });
+
+    it("overwrites a ref's pending submission when resubmit", async () => {
+      let actionDeferred = defer();
+
+      let ref = {};
+
+      let submission1: SubmissionState = {
+        isAction: true,
+        action: "/",
+        method: "post",
+        body: "name=Ryan&age=40", // geez
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      let submission2: SubmissionState = {
+        isAction: true,
+        action: "/",
+        method: "post",
+        body: "name=Ryan&age=40", // geez
+        encType: "application/x-www-form-urlencoded",
+        id: 2
+      };
+
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => actionDeferred.promise.then(v => v)
+          }
+        ]
+      });
+
+      tm.send(createLocation("/", submission1), ref);
+      expect(tm.getState().pendingSubmissions.get(ref).id).toBe(1);
+
+      tm.send(createLocation("/", submission2), ref);
+      expect(tm.getState().pendingSubmissions.get(ref).id).toBe(2);
     });
 
     it("cleans up stale submissions", async () => {
@@ -668,15 +717,6 @@ describe("transition manager", () => {
           }
         ]
       });
-
-      let submission: SubmissionState = {
-        isAction: true,
-        action: "/",
-        method: "post",
-        body: "name=Ryan&age=40", // geez
-        encType: "application/x-www-form-urlencoded",
-        id: 1
-      };
 
       let ref = {};
       await tm.send(createLocation("/", submission), ref);
@@ -699,17 +739,7 @@ describe("transition manager", () => {
         ]
       });
 
-      let submission: SubmissionState = {
-        isAction: true,
-        action: "/",
-        method: "post",
-        body: "name=Ryan&age=40", // geez
-        encType: "application/x-www-form-urlencoded",
-        id: 1
-      };
-
-      let ref = {};
-      await tm.send(createLocation("/", submission), ref);
+      await tm.send(createLocation("/", submission), {});
       await redirectDeferred.resolve();
       expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
     });
@@ -732,23 +762,51 @@ describe("transition manager", () => {
         ]
       });
 
-      let submission: SubmissionState = {
-        isAction: true,
-        action: "/",
-        method: "post",
-        body: "name=Ryan&age=40", // geez
-        encType: "application/x-www-form-urlencoded",
-        id: 1
-      };
-
-      let ref = {};
-      await tm.send(createLocation("/", submission), ref);
+      await tm.send(createLocation("/", submission), {});
       expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
     });
 
-    it.todo("tracks action data by ref");
-    it.todo("overwrites resubmitting the same ref");
-    it.todo("cleans up stale action data");
+    it("tracks action data by ref", async () => {
+      let DATA = "REF ACTION DATA";
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => DATA
+          }
+        ]
+      });
+
+      let ref = {};
+      await tm.send(createLocation("/", submission), ref);
+
+      let { refActionData } = tm.getState();
+      expect(refActionData.get(ref)).toBe(DATA);
+    });
+
+    it("cleans up stale action data", async () => {
+      let DATA = "REF ACTION DATA";
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => DATA
+          }
+        ]
+      });
+
+      let ref = {};
+      await tm.send(createLocation("/", submission), ref);
+      expect(tm.getState().refActionData.get(ref)).toBe(DATA);
+
+      await tm.send(createLocation("/"));
+      tm.cleanRef(ref);
+      expect(tm.getState().refActionData.get(ref)).toBeUndefined();
+    });
   });
 
   // describe("navigations while pending", () => {

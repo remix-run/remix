@@ -214,13 +214,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isNextLocation || (onSamePage && isActionRedirect(location))) {
-      update({
+      let nextState: Partial<TransitionState> = {
         loaderData: makeLoaderData(results, matches),
         location: location === state.nextLocation ? location : state.location,
         error,
         errorBoundaryId,
         nextLocation: undefined
-      });
+      };
+
+      if (!isAction(location)) {
+        nextState.actionData = undefined;
+      }
+
+      update(nextState);
     }
   }
 
@@ -363,7 +369,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function dispose() {}
 
-  return { send, getState, dispose };
+  // TODO: Can't figure out a way to do this automatically, I think we need the
+  // rendering engine to tell us when a ref is gone
+  function cleanRef(ref: ActionRef) {
+    if (state.refActionData.has(ref)) {
+      state.refActionData.delete(ref);
+    } else {
+      console.error(`Ignoring cleanRef, doesn't exist in refActionData:`, ref);
+    }
+  }
+
+  return { send, getState, dispose, cleanRef };
 }
 
 export type RouteLoaderResult = {
