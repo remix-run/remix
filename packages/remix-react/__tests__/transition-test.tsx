@@ -146,7 +146,36 @@ describe("transition manager", () => {
 
   describe("GET navigation", () => {
     describe("redirects", () => {
-      it.todo("redirects");
+      it("redirects", async () => {
+        let loaderDeferred = defer();
+        let redirectDeferred = defer();
+        let loader = () => loaderDeferred.promise.then(val => val);
+        let handleRedirect = jest.fn((href: string) => {
+          tm.send(createLocation(href)).then(() => redirectDeferred.promise);
+        });
+
+        tm = createTestTransitionManager("/", {
+          onRedirect: handleRedirect,
+          routes: [
+            { path: "/", id: "root", element: {} },
+            { path: "/will-redirect", id: "redirect", loader, element: {} },
+            { path: "/redirect-target", id: "target", element: {} }
+          ]
+        });
+
+        tm.send(createLocation("/will-redirect"));
+        expect(tm.getState().nextLocation.pathname).toBe("/will-redirect");
+
+        await loaderDeferred.resolve(
+          new TransitionRedirect("/redirect-target")
+        );
+        await redirectDeferred.resolve();
+
+        expect(handleRedirect.mock.calls.length).toBe(1);
+        expect(handleRedirect.mock.calls[0][0]).toBe("/redirect-target");
+        expect(tm.getState().nextLocation).toBeUndefined();
+        expect(tm.getState().location.pathname).toBe("/redirect-target");
+      });
     });
 
     it("fetches data on new locations", async () => {
@@ -209,26 +238,122 @@ describe("transition manager", () => {
         expect(paramLoader.mock.calls.length).toBe(2);
       });
 
-      describe("on push", () => {
-        it.todo("reloads all data");
-      });
+      // describe("on push", () => {
+      //   it.todo("reloads all data");
+      // });
 
-      describe("on pop", () => {
-        it.todo("uses cache"); // oof, not sure we want to bring this back!
-      });
+      // describe("on pop", () => {
+      //   it.todo("uses cache"); // oof, not sure we want to bring this back!
+      // });
     });
 
-    it.todo("delegates to the route if it should reload or not");
+    // it.todo("delegates to the route if it should reload or not");
 
     describe("errors", () => {
       describe("with an error boundary in the throwing route", () => {
-        it.todo("uses the throwing route's error boundary");
-        it.todo("loads parent data");
+        it("uses the throwing route's error boundary", async () => {
+          let ERROR_MESSAGE = "Kaboom!";
+          let loader = () => {
+            throw new Error(ERROR_MESSAGE);
+          };
+          let tm = createTestTransitionManager("/", {
+            routes: [
+              {
+                path: "/",
+                id: "parent",
+                element: {},
+                children: [
+                  {
+                    path: "/child",
+                    id: "child",
+                    element: {},
+                    ErrorBoundary: FakeComponent,
+                    loader
+                  }
+                ]
+              }
+            ]
+          });
+          await tm.send(createLocation("/child"));
+          let state = tm.getState();
+          expect(state.errorBoundaryId).toBe("child");
+          expect(state.error.message).toBe(ERROR_MESSAGE);
+        });
       });
+
       describe("with an error boundary above the throwing route", () => {
-        it.todo("uses the nearest error boundary");
-        it.todo("only loads data above error boundary route");
+        it("uses the nearest error boundary", async () => {
+          let ERROR_MESSAGE = "Kaboom!";
+          let loader = () => {
+            throw new Error(ERROR_MESSAGE);
+          };
+          let child = { path: "/child", id: "child", element: {}, loader };
+          let parent = {
+            path: "/",
+            id: "parent",
+            element: {},
+            ErrorBoundary: FakeComponent,
+            children: [child]
+          };
+
+          let tm = createTestTransitionManager("/", { routes: [parent] });
+          await tm.send(createLocation("/child"));
+          let state = tm.getState();
+          expect(state.errorBoundaryId).toBe("parent");
+          expect(state.error.message).toBe(ERROR_MESSAGE);
+        });
+
+        // somebody elses job?
+        // it.todo("removes matches below error boundary route");
       });
+    });
+
+    it("loads data above error boundary route", async () => {
+      let loaderA = jest.fn(async () => "LOADER A");
+      let loaderB = jest.fn(async () => "LOADER B");
+      let loaderC = async () => {
+        throw new Error("Kaboom!");
+      };
+
+      let tm = createTestTransitionManager("/", {
+        loaderData: {
+          a: await loaderA()
+        },
+        routes: [
+          {
+            path: "/",
+            id: "a",
+            element: {},
+            loader: loaderA,
+            children: [
+              {
+                path: "/b",
+                id: "b",
+                element: {},
+                loader: loaderB,
+                ErrorBoundary: FakeComponent,
+                children: [
+                  {
+                    path: "/c",
+                    id: "c",
+                    element: {},
+                    loader: loaderC
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      });
+      await tm.send(createLocation("/b/c"));
+      let state = tm.getState();
+      expect(state.loaderData).toMatchInlineSnapshot(`
+          Object {
+            "a": "LOADER A",
+            "b": "LOADER B",
+            "c": [Error: Kaboom!],
+          }
+        `);
     });
   });
 
@@ -339,19 +464,153 @@ describe("transition manager", () => {
       });
       expect(tm.getState().actionData).toBeUndefined();
       tm.send(createLocation("/", { isAction: true }));
-      let val = "ACTION JACKSON";
-      await resolve(val);
-      expect(tm.getState().actionData).toBe(val);
+      let VALUE = "ACTION JACKSON";
+      await resolve(VALUE);
+      expect(tm.getState().actionData).toBe(VALUE);
     });
 
     describe("errors", () => {
       describe("with an error boundary in the action route", () => {
-        it.todo("uses the action route's error boundary");
-        it.todo("loads parent data, but not action data");
+        it("uses the action route's error boundary", async () => {
+          let ERROR_MESSAGE = "Kaboom!";
+          let action = () => {
+            throw new Error(ERROR_MESSAGE);
+          };
+          let tm = createTestTransitionManager("/", {
+            routes: [
+              {
+                path: "/",
+                id: "parent",
+                element: {},
+                children: [
+                  {
+                    path: "/child",
+                    id: "child",
+                    element: {},
+                    ErrorBoundary: FakeComponent,
+                    action
+                  }
+                ]
+              }
+            ]
+          });
+          await tm.send(createLocation("/child", { isAction: true }));
+          let state = tm.getState();
+          expect(state.errorBoundaryId).toBe("child");
+          expect(state.error.message).toBe(ERROR_MESSAGE);
+        });
+
+        it("loads parent data, but not action data", async () => {
+          let ERROR_MESSAGE = "Kaboom!";
+          let action = () => {
+            throw new Error(ERROR_MESSAGE);
+          };
+          let parentLoader = jest.fn(async () => "PARENT LOADER");
+          let actionRouteLoader = jest.fn(async () => "CHILD LOADER");
+          let tm = createTestTransitionManager("/", {
+            routes: [
+              {
+                path: "/",
+                id: "parent",
+                element: {},
+                loader: parentLoader,
+                children: [
+                  {
+                    path: "/child",
+                    id: "child",
+                    element: {},
+                    ErrorBoundary: FakeComponent,
+                    action
+                  }
+                ]
+              }
+            ]
+          });
+          await tm.send(createLocation("/child", { isAction: true }));
+          expect(parentLoader.mock.calls.length).toBe(1);
+          expect(actionRouteLoader.mock.calls.length).toBe(0);
+          expect(tm.getState().loaderData).toMatchInlineSnapshot(`
+            Object {
+              "parent": "PARENT LOADER",
+            }
+          `);
+        });
       });
+
       describe("with an error boundary above the action route", () => {
-        it.todo("uses the nearest error boundary");
-        it.todo("only loads data above error boundary route");
+        it("uses the nearest error boundary", async () => {
+          let ERROR_MESSAGE = "Kaboom!";
+          let action = () => {
+            throw new Error(ERROR_MESSAGE);
+          };
+          let tm = createTestTransitionManager("/", {
+            routes: [
+              {
+                path: "/",
+                id: "parent",
+                element: {},
+                ErrorBoundary: FakeComponent,
+                children: [
+                  {
+                    path: "/child",
+                    id: "child",
+                    element: {},
+                    action
+                  }
+                ]
+              }
+            ]
+          });
+          await tm.send(createLocation("/child", { isAction: true }));
+          let state = tm.getState();
+          expect(state.errorBoundaryId).toBe("parent");
+          expect(state.error.message).toBe(ERROR_MESSAGE);
+        });
+      });
+
+      describe("with a parent loader that throws also, good grief!", () => {
+        it("uses action error but nearest errorBoundary to parent", async () => {
+          let ACTION_ERROR_MESSAGE = "Kaboom!";
+          let action = () => {
+            throw new Error(ACTION_ERROR_MESSAGE);
+          };
+          let parentLoader = () => {
+            throw new Error("Should Not See This");
+          };
+
+          let tm = createTestTransitionManager("/", {
+            routes: [
+              {
+                path: "/",
+                id: "root",
+                element: {},
+                ErrorBoundary: FakeComponent,
+                children: [
+                  {
+                    path: "/parent",
+                    id: "parent",
+                    element: {},
+                    loader: parentLoader,
+                    children: [
+                      {
+                        path: "/child",
+                        id: "child",
+                        element: {},
+                        action,
+                        ErrorBoundary: FakeComponent
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          });
+
+          await tm.send(createLocation("/parent/child", { isAction: true }));
+          let state = tm.getState();
+          expect(state.errorBoundaryId).toBe("root");
+          expect(state.error.message).toBe(ACTION_ERROR_MESSAGE);
+        });
       });
     });
   });
@@ -577,16 +836,21 @@ describe("transition manager", () => {
 // }
 
 function defer() {
-  let resolve, reject;
+  let resolve: (val?: any) => Promise<void>;
+  let reject: (error?: Error) => Promise<void>;
   let promise = new Promise((res, rej) => {
-    resolve = async val => {
+    resolve = async (val: any) => {
       res(val);
       await (async () => promise)();
     };
-    reject = async (error?) => {
+    reject = async (error?: Error) => {
       rej(error);
       await (async () => promise)();
     };
   });
   return { promise, resolve, reject };
+}
+
+function FakeComponent() {
+  return null;
 }

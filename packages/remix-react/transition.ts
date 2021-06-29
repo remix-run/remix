@@ -65,7 +65,7 @@ interface TransitionState {
   /**
    * The next location being loaded.
    */
-  nextLocation?: null | Location;
+  nextLocation?: Location;
 
   /**
    * Persists uncaught loader/action errors. TODO: should probably be an array
@@ -75,8 +75,12 @@ interface TransitionState {
 
   /**
    * The id of the nested ErrorBoundary in which to render the error.
+   *
+   * - undefined: no error
+   * - null: error, but no routes have a boundary, use a default
+   * - string: actual id
    */
-  errorBoundaryId?: null | number;
+  errorBoundaryId?: null | string;
 }
 
 /**
@@ -154,7 +158,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     init.onChange(state);
   }
 
-  async function get(location: Location, actionError?: Error) {
+  async function get(
+    location: Location,
+    actionErrorResult?: RouteLoaderErrorResult
+  ) {
     let matches = state.nextMatches;
     invariant(matches, "No matches on state");
 
@@ -166,7 +173,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let isStale = () => !pendingLoads.has(id);
 
-    let results = await loadRouteData(state, location, matches, actionError);
+    let results = await loadRouteData(
+      state,
+      location,
+      matches,
+      actionErrorResult
+    );
 
     if (isStale()) {
       return;
@@ -177,7 +189,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return handleRedirect(redirect);
     }
 
-    let [error, errorBoundaryId] = findError(results, matches);
+    let [error, errorBoundaryId] = findError(
+      results,
+      matches,
+      actionErrorResult
+    );
 
     let url = location.pathname + location.search;
     let isNextLocation = location === state.nextLocation;
@@ -196,7 +212,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
         loaderData: makeLoaderData(results, matches),
         location: location === state.nextLocation ? location : state.location,
         error,
-        errorBoundaryId
+        errorBoundaryId,
+        nextLocation: undefined
       });
     }
   }
@@ -212,7 +229,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let loaderData: RouteData = {};
     for (let { route } of matches) {
-      loaderData[route.id] = newData[route.id] || state.loaderData[route.id];
+      let value = newData[route.id] || state.loaderData[route.id];
+      if (value) {
+        loaderData[route.id] = value;
+      }
     }
 
     return loaderData;
@@ -245,7 +265,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return handleRedirect(result.value);
     }
 
-    if (result instanceof Error) {
+    if (result.value instanceof Error) {
       await get(location, result);
       return;
     }
@@ -327,17 +347,22 @@ export type RouteLoaderRedirectResult = {
   value: TransitionRedirect;
 };
 
+export type RouteLoaderErrorResult = {
+  match: ClientMatch;
+  value: Error;
+};
+
 async function loadRouteData(
   state: TransitionState,
   pendingLocation: Location,
   matches: ClientMatch[],
-  actionError?: Error
+  actionErrorResult?: RouteLoaderErrorResult
 ): Promise<RouteLoaderResult[]> {
   let matchesToLoad = filterMatchesToLoad(
     state,
     pendingLocation,
     matches,
-    actionError
+    actionErrorResult
   );
   return Promise.all(
     matchesToLoad.map(async match => {
@@ -345,8 +370,12 @@ async function loadRouteData(
         match.route.loader,
         `Expected ${match.route.id} to have a loader`
       );
-      let value = await match.route.loader();
-      return { match, value };
+      try {
+        let value = await match.route.loader();
+        return { match, value };
+      } catch (error) {
+        return { match, value: error };
+      }
     })
   );
 }
@@ -355,7 +384,7 @@ function filterMatchesToLoad(
   state: TransitionState,
   location: Location,
   matches: ClientMatch[],
-  actionError?: Error
+  actionErrorResult?: RouteLoaderErrorResult
 ): ClientMatch[] {
   if (
     // mutation, reload for fresh data
@@ -370,11 +399,11 @@ function filterMatchesToLoad(
   }
 
   return matches.filter((match, index, arr) => {
-    if (
-      !match.route.loader ||
-      // don't load action route w/ error
-      (actionError && arr.length - 1 === index)
-    ) {
+    if (actionErrorResult && arr.length - 1 === index) {
+      return false;
+    }
+
+    if (!match.route.loader) {
       return false;
     }
 
@@ -413,13 +442,69 @@ async function fetchAction(
     );
   }
 
-  let value = await match.route.action();
-  return { match, value };
+  try {
+    let value = await match.route.action();
+    return { match, value };
+  } catch (error) {
+    return { match, value: error };
+  }
 }
 
-function findError(results: any[], matches: ClientMatch[]): [Error?, number?] {
-  // TODO:
+// When moved to React Router maybe use the route objects instead of ids?
+function findError(
+  results: RouteLoaderResult[],
+  matches: ClientMatch[],
+  actionErrorResult?: RouteLoaderErrorResult
+): [Error, string | null] | [undefined, undefined] {
+  let loaderErrorResult;
+
+  for (let result of results) {
+    let isError = result.value instanceof Error;
+
+    if (isError) {
+      loaderErrorResult = result;
+      break;
+    }
+  }
+
+  // Weird case where action errored, and then a parent loader ALSO errored, we
+  // use the action error but the loader's nearest boundary (cause we can't
+  // render down to the boundary the action would prefer)
+  if (actionErrorResult && loaderErrorResult) {
+    let boundaryId = findNearestBoundary(loaderErrorResult.match, matches);
+    return [actionErrorResult.value, boundaryId];
+  }
+
+  if (actionErrorResult) {
+    let boundaryId = findNearestBoundary(actionErrorResult.match, matches);
+    return [actionErrorResult.value, boundaryId];
+  }
+
+  if (loaderErrorResult) {
+    let boundaryId = findNearestBoundary(loaderErrorResult.match, matches);
+    return [loaderErrorResult.value, boundaryId];
+  }
+
   return [undefined, undefined];
+}
+
+function findNearestBoundary(
+  matchWithError: ClientMatch,
+  matches: ClientMatch[]
+): string | null {
+  let nearestBoundaryId: null | string = null;
+  for (let match of matches) {
+    if (match.route.ErrorBoundary) {
+      nearestBoundaryId = match.route.id;
+    }
+
+    // only search parents (stop at throwing match)
+    if (match === matchWithError) {
+      break;
+    }
+  }
+
+  return nearestBoundaryId;
 }
 
 function isRedirectResult(

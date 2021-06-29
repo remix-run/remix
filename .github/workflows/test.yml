@@ -6,6 +6,8 @@ on:
       - "**"
     tags-ignore:
       - v*
+    branches-ignore:
+      - "ryan/*"
 
 jobs:
   build:
