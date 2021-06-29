@@ -1,5 +1,9 @@
 import { Location } from "history";
-import { createTransitionManager, TransitionRedirect } from "../transition";
+import {
+  createTransitionManager,
+  SubmissionState,
+  TransitionRedirect
+} from "../transition";
 import type { TransitionManagerInit } from "../transition";
 
 let routes = [
@@ -616,8 +620,135 @@ describe("transition manager", () => {
   });
 
   describe("actions with refs", () => {
-    it.todo("tracks pending submissions by ref");
+    it("tracks pending submissions by ref", async () => {
+      let actionDeferred = defer();
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => actionDeferred.promise.then(v => v)
+          }
+        ]
+      });
+
+      let submission: SubmissionState = {
+        isAction: true,
+        action: "/",
+        method: "post",
+        body: "name=Ryan&age=40", // geez
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      let ref = {};
+      tm.send(createLocation("/", submission), ref);
+      let { pendingSubmissions } = tm.getState();
+      expect(pendingSubmissions.get(ref)).toMatchInlineSnapshot(`
+        Object {
+          "action": "/",
+          "body": "name=Ryan&age=40",
+          "encType": "application/x-www-form-urlencoded",
+          "id": 1,
+          "isAction": true,
+          "method": "post",
+        }
+      `);
+    });
+
+    it("cleans up stale submissions", async () => {
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => "ACTION DATA"
+          }
+        ]
+      });
+
+      let submission: SubmissionState = {
+        isAction: true,
+        action: "/",
+        method: "post",
+        body: "name=Ryan&age=40", // geez
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      let ref = {};
+      await tm.send(createLocation("/", submission), ref);
+      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+    });
+
+    it("cleans up stale submissions on redirects", async () => {
+      let redirectDeferred = defer();
+      let tm = createTestTransitionManager("/", {
+        onRedirect(href) {
+          tm.send(createLocation(href)).then(() => redirectDeferred.promise);
+        },
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => new TransitionRedirect("/")
+          }
+        ]
+      });
+
+      let submission: SubmissionState = {
+        isAction: true,
+        action: "/",
+        method: "post",
+        body: "name=Ryan&age=40", // geez
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      let ref = {};
+      await tm.send(createLocation("/", submission), ref);
+      await redirectDeferred.resolve();
+      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+    });
+
+    it("cleans up stale submissions on errors", async () => {
+      let redirectDeferred = defer();
+      let tm = createTestTransitionManager("/", {
+        onRedirect(href) {
+          tm.send(createLocation(href)).then(() => redirectDeferred.promise);
+        },
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => {
+              throw new Error("Kaboom!");
+            }
+          }
+        ]
+      });
+
+      let submission: SubmissionState = {
+        isAction: true,
+        action: "/",
+        method: "post",
+        body: "name=Ryan&age=40", // geez
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      let ref = {};
+      await tm.send(createLocation("/", submission), ref);
+      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+    });
+
     it.todo("tracks action data by ref");
+    it.todo("overwrites resubmitting the same ref");
+    it.todo("cleans up stale action data");
   });
 
   // describe("navigations while pending", () => {

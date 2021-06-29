@@ -60,7 +60,7 @@ interface TransitionState {
    * Tracks all the pending form submissions by Form and useSubmit refs.
    * TODO: there is no code that deals with this at all!
    */
-  pendingSubmissions?: Map<ActionRef, URLSearchParams>;
+  pendingSubmissions: Map<ActionRef, SubmissionState>;
 
   /**
    * The next location being loaded.
@@ -83,6 +83,15 @@ interface TransitionState {
   errorBoundaryId?: null | string;
 }
 
+export interface SubmissionState {
+  isAction: true;
+  action: string;
+  method: string;
+  body: string;
+  encType: string;
+  id: number;
+}
+
 /**
  * Used to associate a <Form> or submit() with a usePendingSubmission(ref) and
  * useActionData(ref);
@@ -94,7 +103,7 @@ type ActionRef = HTMLFormElement | Object;
  * This enables us to repost form on pop events, even across origin boundaries
  * in the history stack.
  */
-type ActionLocation = Location<{ id: number; isAction: true }>;
+type ActionLocation = Location<SubmissionState>;
 type ActionRedirectLocation = Location<{ id: number; isActionRedirect: true }>;
 
 export class TransitionRedirect {
@@ -133,9 +142,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   // When loads become stale, we can actually abort them instead of just ignoring
   let abortControllers = new Map<number, AbortController>();
-
-  // So we can track if the same form has been submit again while already pending.
-  let submitRefs = new WeakMap();
 
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
@@ -241,17 +247,30 @@ export function createTransitionManager(init: TransitionManagerInit) {
   async function post(location: ActionLocation, ref?: ActionRef) {
     let isStale = () => {
       if (ref) {
-        let refResubmitted = submitRefs.get(ref) !== location.state.id;
-        return refResubmitted;
+        if (state.pendingSubmissions.has(ref)) {
+          let existingRef = state.pendingSubmissions.get(ref);
+          invariant(existingRef, `No pendingSubmission for ${ref}`);
+          let refResubmitted = existingRef.id !== location.state.id;
+          return refResubmitted;
+        }
       }
       return location !== state.nextLocation;
+    };
+
+    let clearPendingSubmission = () => {
+      invariant(ref, "No pending ref but the code tried to clear it.");
+      let nextSubmissions = new Map(state.pendingSubmissions);
+      nextSubmissions.delete(ref);
+      return nextSubmissions;
     };
 
     let matches = state.nextMatches;
     invariant(matches, "No matches on state.");
 
     if (ref) {
-      submitRefs.set(ref, location.state.id);
+      let nextSubmissions = new Map(state.pendingSubmissions);
+      nextSubmissions.set(ref, location.state);
+      update({ pendingSubmissions: nextSubmissions });
     }
 
     let leafMatch = matches.slice(-1)[0];
@@ -262,10 +281,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isRedirectResult(result)) {
+      if (ref) {
+        update({ pendingSubmissions: clearPendingSubmission() });
+      }
       return handleRedirect(result.value);
     }
 
     if (result.value instanceof Error) {
+      if (ref) {
+        update({ pendingSubmissions: clearPendingSubmission() });
+      }
       await get(location, result);
       return;
     }
@@ -273,7 +298,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     if (ref) {
       let refActionData = new Map(state.refActionData);
       refActionData.set(ref, result.value);
-      update({ actionData: result.value, refActionData });
+      update({
+        actionData: result.value,
+        refActionData,
+        pendingSubmissions: clearPendingSubmission()
+      });
     } else {
       update({ actionData: result.value });
     }

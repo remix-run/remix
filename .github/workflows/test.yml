@@ -2,8 +2,6 @@ name: test
 
 on:
   push:
-    branches:
-      - "**"
     tags-ignore:
       - v*
     branches-ignore:
