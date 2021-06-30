@@ -822,54 +822,52 @@ describe("transition manager", () => {
     it.todo("aborts pending actions without refs");
     it.todo("aborts pending actions with refs?");
 
+    let setup = () => {
+      let c = -1;
+      let loaderDeferreds: Deferred[] = [];
+      let navDeferreds: Deferred[] = [];
+      let abortHandlers: jest.Mock[] = [];
+      let handleChange = jest.fn();
+      let loader = async ({ signal }: { signal: AbortSignal }) => {
+        signal.onabort = abortHandlers[c];
+        return loaderDeferreds[c].promise.then((val: any) => val);
+      };
+
+      let tm = createTestTransitionManager("/foo", {
+        onChange: handleChange,
+        loaderData: undefined,
+        routes: [
+          { path: "/foo", id: "foo", loader, element: {} },
+          { path: "/bar", id: "bar", loader, element: {} }
+        ]
+      });
+
+      let navigate = async (location: Location<any>) => {
+        c++;
+        loaderDeferreds.push(defer());
+        navDeferreds.push(defer());
+        abortHandlers.push(jest.fn());
+        tm.send(location).then(() => navDeferreds[c].promise);
+      };
+
+      let resolveNav = async (navIndex: number, loaderVal: any) => {
+        await loaderDeferreds[navIndex].resolve(loaderVal);
+        await navDeferreds[navIndex].resolve();
+      };
+
+      return { abortHandlers, handleChange, tm, navigate, resolveNav };
+    };
+
     describe(`
       GET /foo
       GET /foo
     `, () => {
-      let setup = () => {
-        let c = -1;
-        let loaderDeferreds: Deferred[] = [];
-        let navDeferreds: Deferred[] = [];
-        let abortHandlers: jest.Mock[] = [];
-        let handleChange = jest.fn();
-
-        let tm = createTestTransitionManager("/foo", {
-          onChange: handleChange,
-          loaderData: undefined,
-          routes: [
-            {
-              path: "/foo",
-              id: "foo",
-              loader: async ({ signal }) => {
-                signal.onabort = abortHandlers[c];
-                return loaderDeferreds[c].promise.then((val: any) => val);
-              },
-              element: {}
-            }
-          ]
-        });
-
-        let navigate = async (location: Location<any>) => {
-          c++;
-          loaderDeferreds.push(defer());
-          navDeferreds.push(defer());
-          abortHandlers.push(jest.fn());
-          tm.send(location).then(() => navDeferreds[c].promise);
-        };
-
-        let resolveNav = async (navIndex: number, loaderVal: any) => {
-          await loaderDeferreds[navIndex].resolve(loaderVal);
-          await navDeferreds[navIndex].resolve();
-        };
-
-        return { abortHandlers, handleChange, tm, navigate, resolveNav };
-      };
-
       describe(`
         A) GET /foo |------X
         B) GET /foo   |------O
       `, () => {
-        it("aborts A, commits B", async () => {
+        it("ignores A, commits B", async () => {
+          // TODO: figure out how to abort A and still let action loads fill in data
           let t = setup();
 
           t.navigate(createLocation("/foo"));
@@ -969,190 +967,226 @@ describe("transition manager", () => {
       });
     });
 
+    describe(`
+      GET /foo
+      GET /bar
+    `, () => {
+      describe(`
+        A) GET /foo |------X
+        B) GET /bar    |------O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+
+          t.navigate(createLocation("/foo"));
+          t.navigate(createLocation("/bar"));
+
+          await t.resolveNav(0, "A");
+          expect(t.tm.getState().loaderData).toBeUndefined();
+
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().loaderData.foo).toBeUndefined();
+          // kind of pointless that it was aborted since it landed first, TODO:
+          // figure out if we can abort this the second "GET /bar" comes
+          // through, (right after the navigation). Wait until all the action
+          // stuff is done though, cause I think it might affect this
+          expect(t.abortHandlers[0].mock.calls.length).toBe(1);
+        });
+      });
+
+      describe(`
+        A) GET /foo |------------X
+        B) GET /bar    |------O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+
+          t.navigate(createLocation("/foo"));
+          t.navigate(createLocation("/bar"));
+
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          // TODO: should we abort loads to different URLs? What if we end up
+          // back here in an action? Gonna let the action stuff play out first,
+          // then come back and see if we should have aborted here. Even if you
+          // end up in a third navigation back to /foo, I can't see how the
+          // original /foo could be fresher.
+          // expect(t.abortHandlers[0].mock.calls.length).toBe(1);
+
+          await t.resolveNav(0, "A");
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().loaderData.foo).toBeUndefined();
+        });
+      });
+    });
+
     // describe(`
-    //   GET /foo
+    //   GET /foo > 303 /c
     //   GET /bar
     // `, () => {
     //   describe(`
-    //     A) GET /foo |------X
-    //     B) GET /bar    |------O
+    //     A) GET /foo |-------/c--X
+    //     B) GET /bar   |---O
     //   `, () => {
     //     it.todo("aborts A, commits B");
     //   });
+
     //   describe(`
-    //     A) GET /foo |------------X
-    //     B) GET /bar    |------O
+    //     A) GET /foo |-------/c--X
+    //     B) GET /bar   |---------------O
     //   `, () => {
     //     it.todo("aborts A, commits B");
     //   });
+
+    //   describe(`
+    //     A) GET /foo |--/c--------X
+    //     B) GET /bar           |---O
+    //   `, () => {
+    //     it.todo("aborts A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) GET /foo |--/c--------X
+    //     B) GET /bar           |---------O
+    //   `, () => {
+    //     it.todo("aborts A, commits B");
+    //   });
+    // });
+
+    // describe(`
+    //   GET /foo > 303 /b
+    //   GET /bar
+    // `, () => {
+    //   describe(`
+    //     A) GET /foo |-------/b--X
+    //     B) GET /bar   |---O
+    //   `, () => {
+    //     it.todo("aborts A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) GET /foo |-------/b--X
+    //     B) GET /bar   |---------------O
+    //   `, () => {
+    //     it.todo("aborts A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) GET /foo |--/b--------X
+    //     B) GET /bar            |---O
+    //   `, () => {
+    //     it.todo("aborts A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) GET /foo |--/b3--------X
+    //     B) GET /bar            |---------O
+    //   `, () => {
+    //     it.todo("aborts A, commits B");
+    //   });
+    // });
+
+    // describe(`
+    //   POST /a
+    //   POST /a
+    // `, () => {
+    //   describe(`
+    //     A) POST /a |----|----O
+    //     B) POST /a    |----|----O
+    //   `, () => {
+    //     it.todo("commits A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) POST /a |----|----------X
+    //     B) POST /a    |----|----O
+    //   `, () => {
+    //     it.todo("commits B, aborts A");
+    //   });
+
+    //   describe(`
+    //     A) POST /a |-----------|---O
+    //     B) POST /a    |----|-----O
+    //   `, () => {
+    //     it.todo("commits B, commits A");
+    //   });
+
+    //   describe(`
+    //     A) POST /a |-----------|---O
+    //     B) POST /a    |----|----------X
+    //   `, () => {
+    //     it.todo("commits A, aborts B");
+    //   });
+    // });
+
+    // describe(`
+    //   POST /a > 303 /a
+    //   POST /a > 303 /a
+    // `, () => {
+    //   describe(`
+    //     A) POST /a |----/a----O
+    //     B) POST /a    |----/a----O
+    //   `, () => {
+    //     it.todo("commits A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) POST /a |----/a----------X
+    //     B) POST /a    |----/a----O
+    //   `, () => {
+    //     it.todo("commits B, aborts A");
+    //   });
+
+    //   describe(`
+    //     A) POST /a |-----------/a---O
+    //     B) POST /a    |----/a-----O
+    //   `, () => {
+    //     it.todo("commits B, commits A");
+    //   });
+
+    //   describe(`
+    //     A) POST /a |-----------/a---O
+    //     B) POST /a    |----/a----------X
+    //   `, () => {
+    //     it.todo("commits A, aborts B");
+    //   });
+    // });
+
+    // describe(`
+    //   @    /a
+    //   POST /b > 303 /a
+    //   POST /b > 303 /a
+    // `, () => {
+    //   describe(`
+    //     A) POST /b |----/a----O
+    //     B) POST /b    |----/a----O
+    //   `, () => {
+    //     it.todo("commits A, commits B");
+    //   });
+
+    //   describe(`
+    //     A) POST /b |----/a----------X
+    //     B) POST /b    |----/a----O
+    //   `, () => {
+    //     it.todo("commits B, aborts A");
+    //   });
+
+    //   describe(`
+    //     A) POST /b |-----------/a---O
+    //     B) POST /b    |----/a-----O
+    //   `, () => {
+    //     it.todo("commits B, commits A");
+    //   });
+
+    //   describe(`
+    //     A) POST /b |-----------/a---O
+    //     B) POST /b    |----/a----------X
+    //   `, () => {
+    //     it.todo("commits A, aborts B");
+    //   });
+    // });
   });
-
-  // describe(`
-  //   GET /foo > 303 /c
-  //   GET /bar
-  // `, () => {
-  //   describe(`
-  //     A) GET /foo |-------/c--X
-  //     B) GET /bar   |---O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) GET /foo |-------/c--X
-  //     B) GET /bar   |---------------O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) GET /foo |--/c--------X
-  //     B) GET /bar           |---O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) GET /foo |--/c--------X
-  //     B) GET /bar           |---------O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-  // });
-
-  // describe(`
-  //   GET /foo > 303 /b
-  //   GET /bar
-  // `, () => {
-  //   describe(`
-  //     A) GET /foo |-------/b--X
-  //     B) GET /bar   |---O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) GET /foo |-------/b--X
-  //     B) GET /bar   |---------------O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) GET /foo |--/b--------X
-  //     B) GET /bar            |---O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) GET /foo |--/b3--------X
-  //     B) GET /bar            |---------O
-  //   `, () => {
-  //     it.todo("aborts A, commits B");
-  //   });
-  // });
-
-  // describe(`
-  //   POST /a
-  //   POST /a
-  // `, () => {
-  //   describe(`
-  //     A) POST /a |----|----O
-  //     B) POST /a    |----|----O
-  //   `, () => {
-  //     it.todo("commits A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) POST /a |----|----------X
-  //     B) POST /a    |----|----O
-  //   `, () => {
-  //     it.todo("commits B, aborts A");
-  //   });
-
-  //   describe(`
-  //     A) POST /a |-----------|---O
-  //     B) POST /a    |----|-----O
-  //   `, () => {
-  //     it.todo("commits B, commits A");
-  //   });
-
-  //   describe(`
-  //     A) POST /a |-----------|---O
-  //     B) POST /a    |----|----------X
-  //   `, () => {
-  //     it.todo("commits A, aborts B");
-  //   });
-  // });
-
-  // describe(`
-  //   POST /a > 303 /a
-  //   POST /a > 303 /a
-  // `, () => {
-  //   describe(`
-  //     A) POST /a |----/a----O
-  //     B) POST /a    |----/a----O
-  //   `, () => {
-  //     it.todo("commits A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) POST /a |----/a----------X
-  //     B) POST /a    |----/a----O
-  //   `, () => {
-  //     it.todo("commits B, aborts A");
-  //   });
-
-  //   describe(`
-  //     A) POST /a |-----------/a---O
-  //     B) POST /a    |----/a-----O
-  //   `, () => {
-  //     it.todo("commits B, commits A");
-  //   });
-
-  //   describe(`
-  //     A) POST /a |-----------/a---O
-  //     B) POST /a    |----/a----------X
-  //   `, () => {
-  //     it.todo("commits A, aborts B");
-  //   });
-  // });
-
-  // describe(`
-  //   @    /a
-  //   POST /b > 303 /a
-  //   POST /b > 303 /a
-  // `, () => {
-  //   describe(`
-  //     A) POST /b |----/a----O
-  //     B) POST /b    |----/a----O
-  //   `, () => {
-  //     it.todo("commits A, commits B");
-  //   });
-
-  //   describe(`
-  //     A) POST /b |----/a----------X
-  //     B) POST /b    |----/a----O
-  //   `, () => {
-  //     it.todo("commits B, aborts A");
-  //   });
-
-  //   describe(`
-  //     A) POST /b |-----------/a---O
-  //     B) POST /b    |----/a-----O
-  //   `, () => {
-  //     it.todo("commits B, commits A");
-  //   });
-
-  //   describe(`
-  //     A) POST /b |-----------/a---O
-  //     B) POST /b    |----/a----------X
-  //   `, () => {
-  //     it.todo("commits A, aborts B");
-  //   });
-  // });
-  // });
 });
 
 // function defer() {
