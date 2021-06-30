@@ -830,94 +830,97 @@ describe("transition manager", () => {
         A) GET /a |------X
         B) GET /a   |------O
       `, () => {
-        let latestNavigationKey: string;
-        let loaderDeferreds: { first: Deferred; second: Deferred };
-        let navDeferreds: { first: Deferred; second: Deferred };
-        let abortHandlers: { first: jest.Mock; second: jest.Mock };
-        let handleChange: jest.Mock;
-        let tm: ReturnType<typeof createTestTransitionManager>;
+        let setup = () => {
+          let c = -1;
+          let loaderDeferreds: Deferred[] = [];
+          let navDeferreds: Deferred[] = [];
+          let abortHandlers: jest.Mock[] = [];
+          let handleChange = jest.fn();
 
-        beforeEach(() => {
-          latestNavigationKey = "first";
-          loaderDeferreds = { first: defer(), second: defer() };
-          navDeferreds = { first: defer(), second: defer() };
-          abortHandlers = { first: jest.fn(), second: jest.fn() };
-          handleChange = jest.fn();
-          tm = createTestTransitionManager("/a", {
+          let tm = createTestTransitionManager("/a", {
             onChange: handleChange,
             loaderData: undefined,
             routes: [
               {
                 path: "/a",
                 id: "a",
-                loader: ({ signal }) => {
-                  signal.onabort = abortHandlers[latestNavigationKey];
-                  return loaderDeferreds[latestNavigationKey].promise.then(
-                    (val: any) => val
-                  );
+                loader: async ({ signal }) => {
+                  signal.onabort = abortHandlers[c];
+                  return loaderDeferreds[c].promise.then((val: any) => val);
                 },
                 element: {}
               }
             ]
           });
-        });
+
+          let navigate = async (location: Location<any>) => {
+            c++;
+            loaderDeferreds.push(defer());
+            navDeferreds.push(defer());
+            abortHandlers.push(jest.fn());
+            tm.send(location).then(() => navDeferreds[c].promise);
+          };
+
+          let resolveNav = async (navIndex: number, loaderVal: any) => {
+            await loaderDeferreds[navIndex].resolve(loaderVal);
+            await navDeferreds[navIndex].resolve();
+          };
+
+          return { abortHandlers, handleChange, tm, navigate, resolveNav };
+        };
 
         it("aborts A, commits B", async () => {
-          tm.send(createLocation("/a")).then(() => navDeferreds.first.promise);
-          latestNavigationKey = "second";
-          tm.send(createLocation("/a")).then(() => navDeferreds.second.promise);
+          let t = setup();
 
-          await loaderDeferreds.first.resolve("SHOULD IGNORE");
-          await navDeferreds.first.resolve();
-          expect(tm.getState().loaderData).toBeUndefined();
+          t.navigate(createLocation("/a"));
+          t.navigate(createLocation("/a"));
 
-          await loaderDeferreds.second.resolve("FINAL");
-          await navDeferreds.second.resolve();
-          expect(tm.getState().loaderData.a).toBe("FINAL");
-          expect(abortHandlers.first.mock.calls.length).toBe(1);
-          expect(abortHandlers.second.mock.calls.length).toBe(0);
+          await t.resolveNav(0, "FIRST");
+          expect(t.tm.getState().loaderData).toBeUndefined();
+
+          await t.resolveNav(1, "SECOND");
+          expect(t.tm.getState().loaderData.a).toBe("SECOND");
+          expect(t.abortHandlers[0].mock.calls.length).toBe(1);
+          expect(t.abortHandlers[1].mock.calls.length).toBe(0);
         });
 
         it("updates state only when necessary", async () => {
-          tm.send(createLocation("/a")).then(() => navDeferreds.first.promise);
-          expect(handleChange.mock.calls.length).toBe(1);
+          let t = setup();
 
-          latestNavigationKey = "second";
-          tm.send(createLocation("/a")).then(() => navDeferreds.second.promise);
-          expect(handleChange.mock.calls.length).toBe(2);
+          t.navigate(createLocation("/a"));
+          expect(t.handleChange.mock.calls.length).toBe(1);
 
-          await loaderDeferreds.first.resolve("FIRST");
-          await navDeferreds.first.resolve();
-          expect(handleChange.mock.calls.length).toBe(2);
+          t.navigate(createLocation("/a"));
+          expect(t.handleChange.mock.calls.length).toBe(2);
 
-          await loaderDeferreds.second.resolve("SECOND");
-          await navDeferreds.second.resolve();
-          expect(handleChange.mock.calls.length).toBe(3);
+          await t.resolveNav(0, "FIRST");
+          expect(t.handleChange.mock.calls.length).toBe(2);
+
+          await t.resolveNav(1, "SECOND");
+          expect(t.handleChange.mock.calls.length).toBe(3);
         });
 
-        it("it updates the correct nextLocation", async () => {
-          let originalLocation = tm.getState().location;
+        it("it updates the correct location and nextLocation", async () => {
+          let t = setup();
+          let originalLocation = t.tm.getState().location;
 
           let firstLocation = createLocation("/a");
-          tm.send(firstLocation).then(() => navDeferreds.first.promise);
-          expect(tm.getState().nextLocation).toBe(firstLocation);
-          expect(tm.getState().location).toBe(originalLocation);
+          t.navigate(firstLocation);
+          expect(t.tm.getState().nextLocation).toBe(firstLocation);
+          expect(t.tm.getState().location).toBe(originalLocation);
 
-          latestNavigationKey = "second";
           let secondLocation = createLocation("/a");
-          tm.send(secondLocation).then(() => navDeferreds.second.promise);
-          expect(tm.getState().nextLocation).toBe(secondLocation);
-          expect(tm.getState().location).toBe(originalLocation);
+          t.navigate(secondLocation);
+          expect(t.tm.getState().nextLocation).toBe(secondLocation);
+          expect(t.tm.getState().location).toBe(originalLocation);
 
-          await loaderDeferreds.first.resolve("FIRST");
-          await navDeferreds.first.resolve();
-          expect(tm.getState().location).toBe(originalLocation);
-          expect(tm.getState().nextLocation).toBe(secondLocation);
+          await t.resolveNav(0, "FIRST");
+          expect(t.tm.getState().location).toBe(originalLocation);
+          expect(t.tm.getState().nextLocation).toBe(secondLocation);
 
-          await loaderDeferreds.second.resolve("SECOND");
-          await navDeferreds.second.resolve();
-          expect(tm.getState().location).toBe(secondLocation);
-          expect(tm.getState().nextLocation).toBeUndefined();
+          await t.resolveNav(1, "SECOND");
+          expect(t.tm.getState().location).toBe(secondLocation);
+          expect(t.tm.getState().nextLocation).toBeUndefined();
         });
       });
 
