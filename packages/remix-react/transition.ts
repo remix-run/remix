@@ -47,20 +47,14 @@ interface TransitionState {
   actionData: RouteData;
 
   /**
-   * This persists all the action data that is assigned to a Form or useSubmit ref.
-   */
-  refActionData: Map<ActionRef, RouteData>;
-
-  /**
    * The next matches that are being fetched.
    */
   nextMatches?: ClientMatch[];
 
   /**
    * Tracks all the pending form submissions by Form and useSubmit refs.
-   * TODO: there is no code that deals with this at all!
    */
-  pendingSubmissions: Map<ActionRef, SubmissionState>;
+  pendingSubmissionRefs: Map<ActionRef, SubmissionState>;
 
   /**
    * The next location being loaded.
@@ -129,8 +123,6 @@ export class TransitionRedirect {
  *   One day I think I'd like to collect all of the errors and put them in the
  *   error boundary, any actions, any loaders, everything, but that day is not
  *   today.
- * - Items on state need to change identity when they are updated so that
- *   React.useEffect will work with them.
  */
 
 export function createTransitionManager(init: TransitionManagerInit) {
@@ -143,6 +135,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
   // When loads become stale, we can actually abort them instead of just ignoring
   let abortControllers = new Map<number, AbortController>();
 
+  // Persists all the action data that is assigned to a Form or useSubmit ref.
+  // - Not part of state because we don't know their lifecycle. With
+  //   pendingSubmissionRefs, we know how long we're pending and we know when to
+  //   clean up, but actionDataRefs persist after the submission and any
+  //   subsequent renders that the ref is still current. An app could get rid of a
+  //   ref outside of navigation and there's just no way for us to know.
+  // - Because it is a WeakMap, when the application loses a reference to the
+  //   ActionRef, the browser will garbage collect it and it will automatically
+  //   fall out of this map, so no need for us to clean it up anyway.
+  // - Implementors won't be able to rely on `onChange` for information here,
+  //   but instead use the imperative `getActionDataForRef` method. Good news is
+  //   the only time these are mutated are on navigations, so it should be
+  //   reliable for rendering
+  let actionDataRefs = new WeakMap<ActionRef, RouteData>();
+
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
 
@@ -151,8 +158,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     loaderData: init.loaderData,
     actionData: init.actionData,
     matches,
-    refActionData: new Map(),
-    pendingSubmissions: new Map(),
+    pendingSubmissionRefs: new Map(),
     nextMatches: undefined,
     nextLocation: undefined,
     error: undefined,
@@ -253,8 +259,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
   async function post(location: ActionLocation, ref?: ActionRef) {
     let isStale = () => {
       if (ref) {
-        if (state.pendingSubmissions.has(ref)) {
-          let existingRef = state.pendingSubmissions.get(ref);
+        if (state.pendingSubmissionRefs.has(ref)) {
+          let existingRef = state.pendingSubmissionRefs.get(ref);
           invariant(existingRef, `No pendingSubmission for ${ref}`);
           let refResubmitted = existingRef.id !== location.state.id;
           return refResubmitted;
@@ -265,7 +271,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let clearPendingSubmission = () => {
       invariant(ref, "No pending ref but the code tried to clear it.");
-      let nextSubmissions = new Map(state.pendingSubmissions);
+      let nextSubmissions = new Map(state.pendingSubmissionRefs);
       nextSubmissions.delete(ref);
       return nextSubmissions;
     };
@@ -274,9 +280,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     invariant(matches, "No matches on state.");
 
     if (ref) {
-      let nextSubmissions = new Map(state.pendingSubmissions);
+      let nextSubmissions = new Map(state.pendingSubmissionRefs);
       nextSubmissions.set(ref, location.state);
-      update({ pendingSubmissions: nextSubmissions });
+      update({ pendingSubmissionRefs: nextSubmissions });
     }
 
     let leafMatch = matches.slice(-1)[0];
@@ -288,26 +294,24 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     if (isRedirectResult(result)) {
       if (ref) {
-        update({ pendingSubmissions: clearPendingSubmission() });
+        update({ pendingSubmissionRefs: clearPendingSubmission() });
       }
       return handleRedirect(result.value);
     }
 
     if (result.value instanceof Error) {
       if (ref) {
-        update({ pendingSubmissions: clearPendingSubmission() });
+        update({ pendingSubmissionRefs: clearPendingSubmission() });
       }
       await get(location, result);
       return;
     }
 
     if (ref) {
-      let refActionData = new Map(state.refActionData);
-      refActionData.set(ref, result.value);
+      actionDataRefs.set(ref, result.value);
       update({
         actionData: result.value,
-        refActionData,
-        pendingSubmissions: clearPendingSubmission()
+        pendingSubmissionRefs: clearPendingSubmission()
       });
     } else {
       update({ actionData: result.value });
@@ -369,17 +373,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function dispose() {}
 
-  // TODO: Can't figure out a way to do this automatically, I think we need the
-  // rendering engine to tell us when a ref is gone
-  function cleanRef(ref: ActionRef) {
-    if (state.refActionData.has(ref)) {
-      state.refActionData.delete(ref);
-    } else {
-      console.error(`Ignoring cleanRef, doesn't exist in refActionData:`, ref);
-    }
+  function getActionDataForRef(ref: ActionRef) {
+    return actionDataRefs.get(ref);
   }
 
-  return { send, getState, dispose, cleanRef };
+  return { send, getState, dispose, getActionDataForRef };
 }
 
 export type RouteLoaderResult = {

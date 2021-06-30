@@ -135,8 +135,7 @@ describe("transition manager", () => {
         ],
         "nextLocation": undefined,
         "nextMatches": undefined,
-        "pendingSubmissions": Map {},
-        "refActionData": Map {},
+        "pendingSubmissionRefs": Map {},
       }
     `);
   });
@@ -653,7 +652,8 @@ describe("transition manager", () => {
       let ref = {};
       tm.send(createLocation("/", submission), ref);
 
-      expect(tm.getState().pendingSubmissions.get(ref)).toMatchInlineSnapshot(`
+      expect(tm.getState().pendingSubmissionRefs.get(ref))
+        .toMatchInlineSnapshot(`
         Object {
           "action": "/",
           "body": "name=Ryan&age=40",
@@ -700,10 +700,10 @@ describe("transition manager", () => {
       });
 
       tm.send(createLocation("/", submission1), ref);
-      expect(tm.getState().pendingSubmissions.get(ref).id).toBe(1);
+      expect(tm.getState().pendingSubmissionRefs.get(ref).id).toBe(1);
 
       tm.send(createLocation("/", submission2), ref);
-      expect(tm.getState().pendingSubmissions.get(ref).id).toBe(2);
+      expect(tm.getState().pendingSubmissionRefs.get(ref).id).toBe(2);
     });
 
     it("cleans up stale submissions", async () => {
@@ -720,7 +720,9 @@ describe("transition manager", () => {
 
       let ref = {};
       await tm.send(createLocation("/", submission), ref);
-      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+      expect(tm.getState().pendingSubmissionRefs).toMatchInlineSnapshot(
+        `Map {}`
+      );
     });
 
     it("cleans up stale submissions on redirects", async () => {
@@ -741,7 +743,9 @@ describe("transition manager", () => {
 
       await tm.send(createLocation("/", submission), {});
       await redirectDeferred.resolve();
-      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+      expect(tm.getState().pendingSubmissionRefs).toMatchInlineSnapshot(
+        `Map {}`
+      );
     });
 
     it("cleans up stale submissions on errors", async () => {
@@ -763,7 +767,9 @@ describe("transition manager", () => {
       });
 
       await tm.send(createLocation("/", submission), {});
-      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+      expect(tm.getState().pendingSubmissionRefs).toMatchInlineSnapshot(
+        `Map {}`
+      );
     });
 
     it("tracks action data by ref", async () => {
@@ -782,11 +788,10 @@ describe("transition manager", () => {
       let ref = {};
       await tm.send(createLocation("/", submission), ref);
 
-      let { refActionData } = tm.getState();
-      expect(refActionData.get(ref)).toBe(DATA);
+      expect(tm.getActionDataForRef(ref)).toBe(DATA);
     });
 
-    it("cleans up stale action data", async () => {
+    it("cleans up stale action data when garbage collected", async () => {
       let DATA = "REF ACTION DATA";
       let tm = createTestTransitionManager("/", {
         routes: [
@@ -799,13 +804,15 @@ describe("transition manager", () => {
         ]
       });
 
-      let ref = {};
-      await tm.send(createLocation("/", submission), ref);
-      expect(tm.getState().refActionData.get(ref)).toBe(DATA);
+      let ref: { current?: Object } = {};
+      ref.current = {};
+
+      await tm.send(createLocation("/", submission), ref.current);
+      expect(tm.getActionDataForRef(ref.current)).toBe(DATA);
+      delete ref.current; // should garbage collect? 🤞
 
       await tm.send(createLocation("/"));
-      tm.cleanRef(ref);
-      expect(tm.getState().refActionData.get(ref)).toBeUndefined();
+      expect(tm.getActionDataForRef(ref)).toBeUndefined();
     });
   });
 
