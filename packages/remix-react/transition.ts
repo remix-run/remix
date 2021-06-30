@@ -174,16 +174,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: Location,
     actionErrorResult?: RouteLoaderErrorResult
   ) {
-    let matches = state.nextMatches;
-    invariant(matches, "No matches on state");
-
     let id = ++currentLoadId;
     let controller = new AbortController();
+    let matches = state.nextMatches;
+    invariant(matches, "No matches on state");
+    let isStale = () => !pendingLoads.has(id);
 
     pendingLoads.set(id, location);
     abortControllers.set(id, controller);
 
-    let isStale = () => !pendingLoads.has(id);
+    abortStaleLoads(id);
 
     let results = await loadRouteData(
       state,
@@ -199,7 +199,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let redirect = findRedirect(results);
     if (redirect) {
-      return handleRedirect(redirect);
+      handleRedirect(redirect);
+      return;
     }
 
     let [error, errorBoundaryId] = findError(
@@ -208,33 +209,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionErrorResult
     );
 
-    let url = location.pathname + location.search;
-    let isNextLocation = location === state.nextLocation;
-    let latestUrl = state.location.pathname + state.location.search;
-    let onSamePage = url === latestUrl;
-    let showError = error && location === state.nextLocation;
+    let nextState: Partial<TransitionState> = {
+      loaderData: makeLoaderData(results, matches),
+      location,
+      matches,
+      error,
+      errorBoundaryId,
+      nextLocation: undefined,
+      nextMatches: undefined
+    };
 
-    if (showError) {
-      clearAllPendingLoads(id);
-    } else {
-      clearStalePendingLoads(id, url);
+    if (!isAction(location)) {
+      nextState.actionData = undefined;
     }
 
-    if (isNextLocation || (onSamePage && isActionRedirect(location))) {
-      let nextState: Partial<TransitionState> = {
-        loaderData: makeLoaderData(results, matches),
-        location: location === state.nextLocation ? location : state.location,
-        error,
-        errorBoundaryId,
-        nextLocation: undefined
-      };
-
-      if (!isAction(location)) {
-        nextState.actionData = undefined;
-      }
-
-      update(nextState);
-    }
+    update(nextState);
   }
 
   function makeLoaderData(
@@ -322,36 +311,23 @@ export function createTransitionManager(init: TransitionManagerInit) {
     await get(location);
   }
 
-  function clearPendingLoad(id: number) {
-    if (id !== currentLoadId) {
-      let controller = abortControllers.get(id);
-      invariant(controller, `No abortController for ${id}`);
-      controller.abort();
-    }
+  function abortStaleLoad(id: number) {
+    let controller = abortControllers.get(id);
+    invariant(controller, `No abortController for ${id}`);
+    controller.abort();
     abortControllers.delete(id);
     pendingLoads.delete(id);
   }
 
-  // When multiple loads are in flight and a load with a higher ID lands, we
-  // know we can abort any loads with a lower ID because their data is going to
-  // be stale anyway. We don't clear out any loads at different URLs though, we
-  // might end up back at that URL by the time it lands and would like to
-  // capture the new values it has
-  function clearStalePendingLoads(latestId: number, landedUrl: string) {
-    for (let [id, location] of pendingLoads) {
-      let url = location.pathname + location.search;
-      let isStale = url === landedUrl && id <= latestId;
-      if (isStale) {
-        clearPendingLoad(id);
-      }
-    }
-  }
-
-  // When the latest location throws an exception, we abort everything because
-  // we're going to the error boundary.
-  function clearAllPendingLoads(latestId: number) {
+  // When multiple loads are in flight and a load with a higher ID takes off, we
+  // can abort any loads with a lower ID because their data is going to be stale
+  // when it lands.
+  function abortStaleLoads(latestId: number) {
     for (let [id] of pendingLoads) {
-      clearPendingLoad(id);
+      let isStale = id < latestId;
+      if (isStale) {
+        abortStaleLoad(id);
+      }
     }
   }
 

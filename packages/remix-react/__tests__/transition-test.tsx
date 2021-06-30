@@ -822,32 +822,44 @@ describe("transition manager", () => {
     it.todo("aborts pending actions without refs");
     it.todo("aborts pending actions with refs?");
 
-    let setup = () => {
+    let setup = ({ signals }: { signals: boolean } = { signals: false }) => {
       let c = -1;
       let loaderDeferreds: Deferred[] = [];
       let navDeferreds: Deferred[] = [];
       let abortHandlers: jest.Mock[] = [];
       let handleChange = jest.fn();
       let loader = async ({ signal }: { signal: AbortSignal }) => {
-        signal.onabort = abortHandlers[c];
+        if (signals) {
+          signal.onabort = abortHandlers[c];
+        }
         return loaderDeferreds[c].promise.then((val: any) => val);
       };
 
+      let handleRedirect = jest.fn((href: string) => {
+        navigate(href);
+      });
+
       let tm = createTestTransitionManager("/foo", {
         onChange: handleChange,
+        onRedirect: handleRedirect,
         loaderData: undefined,
         routes: [
           { path: "/foo", id: "foo", loader, element: {} },
-          { path: "/bar", id: "bar", loader, element: {} }
+          { path: "/bar", id: "bar", loader, element: {} },
+          { path: "/baz", id: "baz", loader, element: {} }
         ]
       });
 
-      let navigate = async (location: Location<any>) => {
-        c++;
+      let navigate = async (location: string | Location<any>) => {
+        if (typeof location === "string") {
+          location = createLocation(location);
+        }
+        let myC = ++c;
         loaderDeferreds.push(defer());
         navDeferreds.push(defer());
         abortHandlers.push(jest.fn());
-        tm.send(location).then(() => navDeferreds[c].promise);
+        tm.send(location).then(() => navDeferreds[myC].promise);
+        return (loaderVal: any) => resolveNav(myC, loaderVal);
       };
 
       let resolveNav = async (navIndex: number, loaderVal: any) => {
@@ -855,7 +867,14 @@ describe("transition manager", () => {
         await navDeferreds[navIndex].resolve();
       };
 
-      return { abortHandlers, handleChange, tm, navigate, resolveNav };
+      return {
+        abortHandlers,
+        handleChange,
+        handleRedirect,
+        tm,
+        navigate,
+        resolveNav
+      };
     };
 
     describe(`
@@ -867,28 +886,25 @@ describe("transition manager", () => {
         B) GET /foo   |------O
       `, () => {
         it("ignores A, commits B", async () => {
-          // TODO: figure out how to abort A and still let action loads fill in data
           let t = setup();
 
-          t.navigate(createLocation("/foo"));
-          t.navigate(createLocation("/foo"));
+          t.navigate("/foo");
+          t.navigate("/foo");
 
           await t.resolveNav(0, "A");
           expect(t.tm.getState().loaderData).toBeUndefined();
 
           await t.resolveNav(1, "B");
           expect(t.tm.getState().loaderData.foo).toBe("B");
-          expect(t.abortHandlers[0].mock.calls.length).toBe(1);
-          expect(t.abortHandlers[1].mock.calls.length).toBe(0);
         });
 
         it("updates state only when necessary", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/foo"));
+          t.navigate("/foo");
           expect(t.handleChange.mock.calls.length).toBe(1);
 
-          t.navigate(createLocation("/foo"));
+          t.navigate("/foo");
           expect(t.handleChange.mock.calls.length).toBe(2);
 
           await t.resolveNav(0, "A");
@@ -920,6 +936,20 @@ describe("transition manager", () => {
           expect(t.tm.getState().location).toBe(secondLocation);
           expect(t.tm.getState().nextLocation).toBeUndefined();
         });
+
+        describe("with abort controller signals", () => {
+          it("aborts A, commits B", async () => {
+            let t = setup({ signals: true });
+
+            t.navigate("/foo");
+            t.navigate("/foo");
+            expect(t.abortHandlers[0].mock.calls.length).toBe(1);
+
+            await t.resolveNav(1, "B");
+            expect(t.tm.getState().loaderData.foo).toBe("B");
+            expect(t.abortHandlers[1].mock.calls.length).toBe(0);
+          });
+        });
       });
 
       describe(`
@@ -929,13 +959,12 @@ describe("transition manager", () => {
         it("aborts A, commits B", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/foo"));
-          t.navigate(createLocation("/foo"));
+          t.navigate("/foo");
+          t.navigate("/foo");
 
           await t.resolveNav(1, "B");
           expect(t.tm.getState().loaderData.foo).toBe("B");
           expect(t.handleChange.mock.calls.length).toBe(3);
-          expect(t.abortHandlers[0].mock.calls.length).toBe(1);
 
           await t.resolveNav(0, "A");
           expect(t.tm.getState().loaderData.foo).toBe("B");
@@ -978,8 +1007,8 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/foo"));
-          t.navigate(createLocation("/bar"));
+          t.navigate("/foo");
+          t.navigate("/bar");
 
           await t.resolveNav(0, "A");
           expect(t.tm.getState().loaderData).toBeUndefined();
@@ -987,11 +1016,6 @@ describe("transition manager", () => {
           await t.resolveNav(1, "B");
           expect(t.tm.getState().loaderData.bar).toBe("B");
           expect(t.tm.getState().loaderData.foo).toBeUndefined();
-          // kind of pointless that it was aborted since it landed first, TODO:
-          // figure out if we can abort this the second "GET /bar" comes
-          // through, (right after the navigation). Wait until all the action
-          // stuff is done though, cause I think it might affect this
-          expect(t.abortHandlers[0].mock.calls.length).toBe(1);
         });
       });
 
@@ -1002,17 +1026,11 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/foo"));
-          t.navigate(createLocation("/bar"));
+          t.navigate("/foo");
+          t.navigate("/bar");
 
           await t.resolveNav(1, "B");
           expect(t.tm.getState().loaderData.bar).toBe("B");
-          // TODO: should we abort loads to different URLs? What if we end up
-          // back here in an action? Gonna let the action stuff play out first,
-          // then come back and see if we should have aborted here. Even if you
-          // end up in a third navigation back to /foo, I can't see how the
-          // original /foo could be fresher.
-          // expect(t.abortHandlers[0].mock.calls.length).toBe(1);
 
           await t.resolveNav(0, "A");
           expect(t.tm.getState().loaderData.bar).toBe("B");
@@ -1021,38 +1039,101 @@ describe("transition manager", () => {
       });
     });
 
-    // describe(`
-    //   GET /foo > 303 /c
-    //   GET /bar
-    // `, () => {
-    //   describe(`
-    //     A) GET /foo |-------/c--X
-    //     B) GET /bar   |---O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
+    describe(`
+      GET /foo > 303 /baz
+      GET /bar
+    `, () => {
+      describe(`
+        A) GET /foo |-------/baz--X
+        B) GET /bar   |---O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
 
-    //   describe(`
-    //     A) GET /foo |-------/c--X
-    //     B) GET /bar   |---------------O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
+          t.navigate("/foo");
+          t.navigate("/bar");
 
-    //   describe(`
-    //     A) GET /foo |--/c--------X
-    //     B) GET /bar           |---O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().location.pathname).toBe("/bar");
 
-    //   describe(`
-    //     A) GET /foo |--/c--------X
-    //     B) GET /bar           |---------O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
-    // });
+          await t.resolveNav(0, new TransitionRedirect("/baz"));
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().location.pathname).toBe("/bar");
+          expect(t.handleChange.mock.calls.length).toBe(3);
+          expect(t.handleRedirect.mock.calls.length).toBe(0);
+        });
+      });
+
+      describe(`
+        A) GET /foo |-------/baz--X
+        B) GET /bar   |---------------O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+          t.navigate("/foo");
+          t.navigate("/bar");
+
+          await t.resolveNav(0, new TransitionRedirect("/baz"));
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().location.pathname).toBe("/bar");
+          expect(t.handleRedirect.mock.calls.length).toBe(0);
+        });
+      });
+
+      describe(`
+        A) GET /foo(0) |--/baz(1)---------X
+        B) GET /bar(2)             |--O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+
+          t.navigate("/foo");
+          await t.resolveNav(0, new TransitionRedirect("/baz"));
+          t.navigate("/bar");
+          await t.resolveNav(2, "B");
+          await t.resolveNav(1, "C");
+
+          expect(t.tm.getState().location.pathname).toBe("/bar");
+          expect(t.tm.getState().loaderData.foo).toBeUndefined();
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().loaderData.baz).toBeUndefined();
+        });
+
+        it("sets all the right states at the right time", async () => {
+          let t = setup();
+
+          t.navigate("/foo");
+          expect(t.handleChange.mock.calls.length).toBe(1);
+          expect(t.tm.getState().nextLocation.pathname).toBe("/foo");
+
+          await t.resolveNav(0, new TransitionRedirect("/baz"));
+          expect(t.handleChange.mock.calls.length).toBe(2);
+          expect(t.tm.getState().nextLocation.pathname).toBe("/baz");
+
+          t.navigate("/bar");
+          expect(t.handleChange.mock.calls.length).toBe(3);
+          expect(t.tm.getState().nextLocation.pathname).toBe("/bar");
+
+          await t.resolveNav(2, "B");
+          expect(t.handleChange.mock.calls.length).toBe(4);
+          expect(t.tm.getState().nextLocation).toBeUndefined();
+          expect(t.tm.getState().location.pathname).toBe("/bar");
+
+          await t.resolveNav(1, "C");
+          expect(t.tm.getState().nextLocation).toBeUndefined();
+          expect(t.tm.getState().location.pathname).toBe("/bar");
+          expect(t.handleChange.mock.calls.length).toBe(4);
+        });
+      });
+
+      // describe(`
+      //   A) GET /foo |--/baz--------X
+      //   B) GET /bar           |---------O
+      // `, () => {
+      //   it.todo("aborts A, commits B");
+      // });
+    });
 
     // describe(`
     //   GET /foo > 303 /b
@@ -1188,15 +1269,6 @@ describe("transition manager", () => {
     // });
   });
 });
-
-// function defer() {
-//   let resolve, reject;
-//   let promise = new Promise((res, rej) => {
-//     resolve = res;
-//     reject = rej;
-//   });
-//   return { promise, resolve, reject };
-// }
 
 function defer() {
   let resolve: (val?: any) => Promise<void>;
