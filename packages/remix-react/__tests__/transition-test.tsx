@@ -823,8 +823,8 @@ describe("transition manager", () => {
     it.todo("aborts pending actions with refs?");
 
     describe(`
-      GET /a
-      GET /a
+      GET /foo
+      GET /foo
     `, () => {
       let setup = () => {
         let c = -1;
@@ -833,13 +833,13 @@ describe("transition manager", () => {
         let abortHandlers: jest.Mock[] = [];
         let handleChange = jest.fn();
 
-        let tm = createTestTransitionManager("/a", {
+        let tm = createTestTransitionManager("/foo", {
           onChange: handleChange,
           loaderData: undefined,
           routes: [
             {
-              path: "/a",
-              id: "a",
+              path: "/foo",
+              id: "foo",
               loader: async ({ signal }) => {
                 signal.onabort = abortHandlers[c];
                 return loaderDeferreds[c].promise.then((val: any) => val);
@@ -866,20 +866,20 @@ describe("transition manager", () => {
       };
 
       describe(`
-        A) GET /a |------X
-        B) GET /a   |------O
+        A) GET /foo |------X
+        B) GET /foo   |------O
       `, () => {
         it("aborts A, commits B", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/a"));
-          t.navigate(createLocation("/a"));
+          t.navigate(createLocation("/foo"));
+          t.navigate(createLocation("/foo"));
 
-          await t.resolveNav(0, "FIRST");
+          await t.resolveNav(0, "A");
           expect(t.tm.getState().loaderData).toBeUndefined();
 
-          await t.resolveNav(1, "SECOND");
-          expect(t.tm.getState().loaderData.a).toBe("SECOND");
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().loaderData.foo).toBe("B");
           expect(t.abortHandlers[0].mock.calls.length).toBe(1);
           expect(t.abortHandlers[1].mock.calls.length).toBe(0);
         });
@@ -887,16 +887,16 @@ describe("transition manager", () => {
         it("updates state only when necessary", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/a"));
+          t.navigate(createLocation("/foo"));
           expect(t.handleChange.mock.calls.length).toBe(1);
 
-          t.navigate(createLocation("/a"));
+          t.navigate(createLocation("/foo"));
           expect(t.handleChange.mock.calls.length).toBe(2);
 
-          await t.resolveNav(0, "FIRST");
+          await t.resolveNav(0, "A");
           expect(t.handleChange.mock.calls.length).toBe(2);
 
-          await t.resolveNav(1, "SECOND");
+          await t.resolveNav(1, "B");
           expect(t.handleChange.mock.calls.length).toBe(3);
         });
 
@@ -904,43 +904,43 @@ describe("transition manager", () => {
           let t = setup();
           let originalLocation = t.tm.getState().location;
 
-          let firstLocation = createLocation("/a");
+          let firstLocation = createLocation("/foo");
           t.navigate(firstLocation);
           expect(t.tm.getState().nextLocation).toBe(firstLocation);
           expect(t.tm.getState().location).toBe(originalLocation);
 
-          let secondLocation = createLocation("/a");
+          let secondLocation = createLocation("/foo");
           t.navigate(secondLocation);
           expect(t.tm.getState().nextLocation).toBe(secondLocation);
           expect(t.tm.getState().location).toBe(originalLocation);
 
-          await t.resolveNav(0, "FIRST");
+          await t.resolveNav(0, "A");
           expect(t.tm.getState().location).toBe(originalLocation);
           expect(t.tm.getState().nextLocation).toBe(secondLocation);
 
-          await t.resolveNav(1, "SECOND");
+          await t.resolveNav(1, "B");
           expect(t.tm.getState().location).toBe(secondLocation);
           expect(t.tm.getState().nextLocation).toBeUndefined();
         });
       });
 
       describe(`
-        A) GET /a |----------X
-        B) GET /a   |------O
+        A) GET /foo |----------X
+        B) GET /foo   |------O
       `, () => {
         it("aborts A, commits B", async () => {
           let t = setup();
 
-          t.navigate(createLocation("/a"));
-          t.navigate(createLocation("/a"));
+          t.navigate(createLocation("/foo"));
+          t.navigate(createLocation("/foo"));
 
-          await t.resolveNav(1, "SECOND");
-          expect(t.tm.getState().loaderData.a).toBe("SECOND");
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().loaderData.foo).toBe("B");
           expect(t.handleChange.mock.calls.length).toBe(3);
           expect(t.abortHandlers[0].mock.calls.length).toBe(1);
 
-          await t.resolveNav(0, "FIRST");
-          expect(t.tm.getState().loaderData.a).toBe("SECOND");
+          await t.resolveNav(0, "A");
+          expect(t.tm.getState().loaderData.foo).toBe("B");
           expect(t.handleChange.mock.calls.length).toBe(3);
         });
 
@@ -948,21 +948,21 @@ describe("transition manager", () => {
           let t = setup();
           let originalLocation = t.tm.getState().location;
 
-          let firstLocation = createLocation("/a");
+          let firstLocation = createLocation("/foo");
           t.navigate(firstLocation);
           expect(t.tm.getState().nextLocation).toBe(firstLocation);
           expect(t.tm.getState().location).toBe(originalLocation);
 
-          let secondLocation = createLocation("/a");
+          let secondLocation = createLocation("/foo");
           t.navigate(secondLocation);
           expect(t.tm.getState().nextLocation).toBe(secondLocation);
           expect(t.tm.getState().location).toBe(originalLocation);
 
-          await t.resolveNav(1, "SECOND");
+          await t.resolveNav(1, "B");
           expect(t.tm.getState().nextLocation).toBeUndefined();
           expect(t.tm.getState().location).toBe(secondLocation);
 
-          await t.resolveNav(0, "FIRST");
+          await t.resolveNav(0, "A");
           expect(t.tm.getState().nextLocation).toBeUndefined();
           expect(t.tm.getState().location).toBe(secondLocation);
         });
@@ -970,84 +970,84 @@ describe("transition manager", () => {
     });
 
     // describe(`
-    //   GET /a
-    //   GET /b
+    //   GET /foo
+    //   GET /bar
     // `, () => {
     //   describe(`
-    //     A) GET /a |------X
-    //     B) GET /b    |------O
+    //     A) GET /foo |------X
+    //     B) GET /bar    |------O
     //   `, () => {
     //     it.todo("aborts A, commits B");
     //   });
     //   describe(`
-    //     A) GET /a |------------X
-    //     B) GET /b    |------O
+    //     A) GET /foo |------------X
+    //     B) GET /bar    |------O
     //   `, () => {
     //     it.todo("aborts A, commits B");
     //   });
   });
 
   // describe(`
-  //   GET /a > 303 /c
-  //   GET /b
+  //   GET /foo > 303 /c
+  //   GET /bar
   // `, () => {
   //   describe(`
-  //     A) GET /a |-------/c--X
-  //     B) GET /b   |---O
+  //     A) GET /foo |-------/c--X
+  //     B) GET /bar   |---O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
 
   //   describe(`
-  //     A) GET /a |-------/c--X
-  //     B) GET /b   |---------------O
+  //     A) GET /foo |-------/c--X
+  //     B) GET /bar   |---------------O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
 
   //   describe(`
-  //     A) GET /a |--/c--------X
-  //     B) GET /b           |---O
+  //     A) GET /foo |--/c--------X
+  //     B) GET /bar           |---O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
 
   //   describe(`
-  //     A) GET /a |--/c--------X
-  //     B) GET /b           |---------O
+  //     A) GET /foo |--/c--------X
+  //     B) GET /bar           |---------O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
   // });
 
   // describe(`
-  //   GET /a > 303 /b
-  //   GET /b
+  //   GET /foo > 303 /b
+  //   GET /bar
   // `, () => {
   //   describe(`
-  //     A) GET /a |-------/b--X
-  //     B) GET /b   |---O
+  //     A) GET /foo |-------/b--X
+  //     B) GET /bar   |---O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
 
   //   describe(`
-  //     A) GET /a |-------/b--X
-  //     B) GET /b   |---------------O
+  //     A) GET /foo |-------/b--X
+  //     B) GET /bar   |---------------O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
 
   //   describe(`
-  //     A) GET /a |--/b--------X
-  //     B) GET /b            |---O
+  //     A) GET /foo |--/b--------X
+  //     B) GET /bar            |---O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
 
   //   describe(`
-  //     A) GET /a |--/b3--------X
-  //     B) GET /b            |---------O
+  //     A) GET /foo |--/b3--------X
+  //     B) GET /bar            |---------O
   //   `, () => {
   //     it.todo("aborts A, commits B");
   //   });
