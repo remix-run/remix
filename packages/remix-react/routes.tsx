@@ -20,7 +20,7 @@ export interface EntryRoute extends Route {
 }
 
 export interface ClientRoute extends Route {
-  loader?: () => Promise<any> | any;
+  loader?: ({ signal }: { signal: AbortSignal }) => Promise<any> | any;
   action?: () => Promise<any> | any;
   ErrorBoundary?: ComponentType;
   children?: ClientRoute[];

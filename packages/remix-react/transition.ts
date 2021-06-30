@@ -189,6 +189,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state,
       location,
       matches,
+      controller.signal,
       actionErrorResult
     );
 
@@ -214,7 +215,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let showError = error && location === state.nextLocation;
 
     if (showError) {
-      clearAllPendingLoads();
+      clearAllPendingLoads(id);
     } else {
       clearStalePendingLoads(id, url);
     }
@@ -247,7 +248,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let loaderData: RouteData = {};
     for (let { route } of matches) {
-      let value = newData[route.id] || state.loaderData[route.id];
+      // TODO: need to allow null here
+      let value = newData[route.id] ?? state.loaderData[route.id];
       if (value) {
         loaderData[route.id] = value;
       }
@@ -321,9 +323,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function clearPendingLoad(id: number) {
-    let controller = abortControllers.get(id);
-    invariant(controller, `No abortController for ${id}`);
-    controller.abort();
+    if (id !== currentLoadId) {
+      let controller = abortControllers.get(id);
+      invariant(controller, `No abortController for ${id}`);
+      controller.abort();
+    }
     abortControllers.delete(id);
     pendingLoads.delete(id);
   }
@@ -345,7 +349,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   // When the latest location throws an exception, we abort everything because
   // we're going to the error boundary.
-  function clearAllPendingLoads() {
+  function clearAllPendingLoads(latestId: number) {
     for (let [id] of pendingLoads) {
       clearPendingLoad(id);
     }
@@ -399,6 +403,7 @@ async function loadRouteData(
   state: TransitionState,
   pendingLocation: Location,
   matches: ClientMatch[],
+  signal: AbortSignal,
   actionErrorResult?: RouteLoaderErrorResult
 ): Promise<RouteLoaderResult[]> {
   let matchesToLoad = filterMatchesToLoad(
@@ -414,7 +419,7 @@ async function loadRouteData(
         `Expected ${match.route.id} to have a loader`
       );
       try {
-        let value = await match.route.loader();
+        let value = await match.route.loader({ signal });
         return { match, value };
       } catch (error) {
         return { match, value: error };
