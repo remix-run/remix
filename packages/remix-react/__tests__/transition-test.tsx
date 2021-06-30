@@ -1092,7 +1092,7 @@ describe("transition manager", () => {
           await t.resolveNav(0, new TransitionRedirect("/baz"));
           t.navigate("/bar");
           await t.resolveNav(2, "B");
-          await t.resolveNav(1, "C");
+          await t.resolveNav(1, "A");
 
           expect(t.tm.getState().location.pathname).toBe("/bar");
           expect(t.tm.getState().loaderData.foo).toBeUndefined();
@@ -1120,53 +1120,113 @@ describe("transition manager", () => {
           expect(t.tm.getState().nextLocation).toBeUndefined();
           expect(t.tm.getState().location.pathname).toBe("/bar");
 
-          await t.resolveNav(1, "C");
+          await t.resolveNav(1, "A");
           expect(t.tm.getState().nextLocation).toBeUndefined();
           expect(t.tm.getState().location.pathname).toBe("/bar");
           expect(t.handleChange.mock.calls.length).toBe(4);
         });
       });
 
-      // describe(`
-      //   A) GET /foo |--/baz--------X
-      //   B) GET /bar           |---------O
-      // `, () => {
-      //   it.todo("aborts A, commits B");
-      // });
+      describe(`
+        A) GET /foo(0) |--/baz(1)------X
+        B) GET /bar(2)            |-------O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+
+          t.navigate("/foo");
+          await t.resolveNav(0, new TransitionRedirect("/baz"));
+          t.navigate("/bar");
+          await t.resolveNav(1, "A");
+          await t.resolveNav(2, "B");
+
+          expect(t.tm.getState().location.pathname).toBe("/bar");
+          expect(t.tm.getState().loaderData.foo).toBeUndefined();
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().loaderData.baz).toBeUndefined();
+        });
+      });
     });
 
-    // describe(`
-    //   GET /foo > 303 /b
-    //   GET /bar
-    // `, () => {
-    //   describe(`
-    //     A) GET /foo |-------/b--X
-    //     B) GET /bar   |---O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
+    describe(`
+      GET /foo > 303 /bar
+      GET /bar
+    `, () => {
+      describe(`
+        A) GET /foo(0) |-------/bar(2)--X
+        B) GET /bar(1)   |---O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+          let finalLocation = createLocation("/bar");
 
-    //   describe(`
-    //     A) GET /foo |-------/b--X
-    //     B) GET /bar   |---------------O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
+          t.navigate("/foo");
+          t.navigate(finalLocation);
 
-    //   describe(`
-    //     A) GET /foo |--/b--------X
-    //     B) GET /bar            |---O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().loaderData.bar).toBe("B");
+          expect(t.tm.getState().location).toBe(finalLocation);
 
-    //   describe(`
-    //     A) GET /foo |--/b3--------X
-    //     B) GET /bar            |---------O
-    //   `, () => {
-    //     it.todo("aborts A, commits B");
-    //   });
-    // });
+          await t.resolveNav(0, new TransitionRedirect("/bar"));
+          expect(t.tm.getState().location).toBe(finalLocation);
+          expect(t.handleRedirect.mock.calls.length).toBe(0);
+        });
+      });
+
+      describe(`
+        A) GET /foo |-------/bar--X
+        B) GET /bar   |---------------O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+          let finalLocation = createLocation("/bar");
+
+          t.navigate("/foo");
+          t.navigate(finalLocation);
+
+          await t.resolveNav(0, new TransitionRedirect("/bar"));
+          await t.resolveNav(1, "B");
+          expect(t.tm.getState().location).toBe(finalLocation);
+          expect(t.handleRedirect.mock.calls.length).toBe(0);
+        });
+      });
+
+      describe(`
+        A) GET /foo(0) |--/bar(1)---------X
+        B) GET /bar(2)             |--O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+          let finalLocation = createLocation("/bar");
+
+          t.navigate("/foo");
+          await t.resolveNav(0, new TransitionRedirect("/bar"));
+          t.navigate(finalLocation);
+          await t.resolveNav(2, "B");
+          await t.resolveNav(1, "A");
+
+          expect(t.tm.getState().location).toBe(finalLocation);
+        });
+      });
+
+      describe(`
+        A) GET /foo(0) |--/bar(1)------X
+        B) GET /bar(2)            |-------O
+      `, () => {
+        it("ignores A, commits B", async () => {
+          let t = setup();
+          let finalLocation = createLocation("/bar");
+
+          t.navigate("/foo");
+          await t.resolveNav(0, new TransitionRedirect("/bar"));
+          t.navigate(finalLocation);
+          await t.resolveNav(1, "A");
+          await t.resolveNav(2, "B");
+
+          expect(t.tm.getState().location).toBe(finalLocation);
+        });
+      });
+    });
 
     // describe(`
     //   POST /a
