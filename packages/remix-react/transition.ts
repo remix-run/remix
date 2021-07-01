@@ -130,10 +130,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   // We know which loads to commit and which to ignore by incrementing this ID.
   let currentLoadId = 0;
+  let currentActionId = 0;
+
+  // Track them so we can abort/ignore them when fresher requests come in
   let pendingLoads = new Map<number, Location>();
+  let pendingSubmissions = new Map<number, Location<SubmissionState>>();
 
   // When loads become stale, we can actually abort them instead of just ignoring
-  let abortControllers = new Map<number, AbortController>();
+  let loadAbortControllers = new Map<number, AbortController>();
+  let actionAbortControllers = new Map<number, AbortController>();
 
   // Persists all the action data that is assigned to a Form or useSubmit ref.
   // - Not part of state because we don't know their lifecycle. With
@@ -181,7 +186,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let isStale = () => !pendingLoads.has(id);
 
     pendingLoads.set(id, location);
-    abortControllers.set(id, controller);
+    loadAbortControllers.set(id, controller);
 
     // if (isAction(location)) {
     //   // ???
@@ -235,29 +240,27 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function post(location: ActionLocation, ref?: ActionRef) {
+    let id = ++currentActionId;
     let controller = new AbortController();
 
-    let isStale = () => {
-      if (ref) {
-        if (state.pendingSubmissionRefs.has(ref)) {
-          let existingRef = state.pendingSubmissionRefs.get(ref);
-          invariant(existingRef, `No pendingSubmission for ${ref}`);
-          let refResubmitted = existingRef.id !== location.state.id;
-          return refResubmitted;
-        }
-      }
-      return location !== state.nextLocation;
-    };
+    let matches = state.nextMatches;
+    invariant(matches, "No matches on state.");
 
-    let clearPendingSubmission = () => {
+    let leafMatch = matches.slice(-1)[0];
+
+    let isStale = () => !pendingSubmissions.has(id);
+
+    let clearPendingSubmissionRef = () => {
       invariant(ref, "No pending ref but the code tried to clear it.");
       let nextSubmissions = new Map(state.pendingSubmissionRefs);
       nextSubmissions.delete(ref);
       return nextSubmissions;
     };
 
-    let matches = state.nextMatches;
-    invariant(matches, "No matches on state.");
+    pendingSubmissions.set(id, location);
+    actionAbortControllers.set(id, controller);
+
+    abortStaleSubmissions(id);
 
     if (ref) {
       let nextSubmissions = new Map(state.pendingSubmissionRefs);
@@ -265,7 +268,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
       update({ pendingSubmissionRefs: nextSubmissions });
     }
 
-    let leafMatch = matches.slice(-1)[0];
     let result = await fetchAction(location, leafMatch, controller.signal);
 
     if (isStale()) {
@@ -274,14 +276,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     if (isRedirectResult(result)) {
       if (ref) {
-        update({ pendingSubmissionRefs: clearPendingSubmission() });
+        update({ pendingSubmissionRefs: clearPendingSubmissionRef() });
       }
       return handleRedirect(result.value);
     }
 
     if (result.value instanceof Error) {
       if (ref) {
-        update({ pendingSubmissionRefs: clearPendingSubmission() });
+        update({ pendingSubmissionRefs: clearPendingSubmissionRef() });
       }
       await get(location, result);
       return;
@@ -291,7 +293,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionDataRefs.set(ref, result.value);
       update({
         actionData: result.value,
-        pendingSubmissionRefs: clearPendingSubmission()
+        pendingSubmissionRefs: clearPendingSubmissionRef()
       });
     } else {
       update({ actionData: result.value });
@@ -324,10 +326,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function abortStaleLoad(id: number) {
-    let controller = abortControllers.get(id);
-    invariant(controller, `No abortController for ${id}`);
+    let controller = loadAbortControllers.get(id);
+    invariant(controller, `No abortController for load: ${id}`);
     controller.abort();
-    abortControllers.delete(id);
+    loadAbortControllers.delete(id);
     pendingLoads.delete(id);
   }
 
@@ -339,6 +341,24 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let isStale = id < latestId;
       if (isStale) {
         abortStaleLoad(id);
+      }
+    }
+  }
+
+  // TODO: refactor with abortStaleLoad if this ends up sticking around
+  function abortStaleSubmission(id: number) {
+    let controller = actionAbortControllers.get(id);
+    invariant(controller, `No abortController for submission: ${id}`);
+    controller.abort();
+    actionAbortControllers.delete(id);
+    pendingSubmissions.delete(id);
+  }
+
+  function abortStaleSubmissions(latestId: number) {
+    for (let [id] of pendingSubmissions) {
+      let isStale = id < latestId;
+      if (isStale) {
+        abortStaleSubmission(id);
       }
     }
   }

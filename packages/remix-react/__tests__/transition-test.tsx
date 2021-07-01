@@ -846,6 +846,7 @@ describe("transition manager", () => {
       let actionDeferreds: Deferred[] = [];
       let navDeferreds: Deferred[] = [];
       let abortHandlers: jest.Mock[] = [];
+      let actionAbortHandlers: jest.Mock[] = [];
       let handleChange = jest.fn();
 
       let loader = async ({ signal }: { signal: AbortSignal }) => {
@@ -857,7 +858,7 @@ describe("transition manager", () => {
 
       let action = async ({ signal }: { signal: AbortSignal }) => {
         if (signals) {
-          signal.onabort = abortHandlers[c];
+          signal.onabort = actionAbortHandlers[c];
         }
         return actionDeferreds[c].promise.then((val: any) => val);
       };
@@ -886,6 +887,7 @@ describe("transition manager", () => {
         actionDeferreds.push(defer());
         navDeferreds.push(defer());
         abortHandlers.push(jest.fn());
+        actionAbortHandlers.push(jest.fn());
         tm.send(location).then(() => navDeferreds[myC].promise);
         return (loaderVal: any) => resolveNav(myC, loaderVal);
       };
@@ -901,6 +903,7 @@ describe("transition manager", () => {
 
       return {
         abortHandlers,
+        actionAbortHandlers,
         handleChange,
         handleRedirect,
         tm,
@@ -1269,7 +1272,7 @@ describe("transition manager", () => {
         A) POST /foo(0) |----|----X
         B) POST /foo(1)    |----|----O
       `, () => {
-        it.only("ignores A, commits B", async () => {
+        it("ignores A, commits B", async () => {
           let t = setup();
 
           let locationA = createActionLocation("/foo");
@@ -1285,15 +1288,22 @@ describe("transition manager", () => {
 
           expect(t.tm.getState().location).toBe(locationB);
           expect(t.tm.getState().actionData).toBe("B ACTION");
-          expect(t.tm.getState().loaderData).toMatchInlineSnapshot(`
-            Object {
-              "foo": "B LOADER",
-            }
-          `);
+          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
         });
 
         describe("with signals", () => {
-          it.todo("aborts A, commits B");
+          it("aborts A, commits B", async () => {
+            let t = setup({ signals: true });
+
+            t.navigate(createActionLocation("/foo"));
+            t.navigate(createActionLocation("/foo"));
+            expect(t.actionAbortHandlers[0].mock.calls.length).toBe(1);
+
+            await t.resolveAction(1, "B ACTION");
+            await t.resolveNav(1, "B LOADER");
+            expect(t.tm.getState().actionData).toBe("B ACTION");
+            expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          });
         });
       });
 
