@@ -197,6 +197,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     //   abortStaleLoads(id);
     // }
     abortStaleLoads(id);
+    abortStaleSubmissions(Number.MAX_SAFE_INTEGER);
 
     let results = await loadRouteData(
       state,
@@ -261,6 +262,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     actionAbortControllers.set(id, controller);
 
     abortStaleSubmissions(id);
+    abortStaleLoads(Number.MAX_SAFE_INTEGER);
 
     if (ref) {
       let nextSubmissions = new Map(state.pendingSubmissionRefs);
@@ -372,6 +374,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
   async function send(location: Location, submitRef?: ActionRef) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
+    // TODO: move this into get/post so that post can update pending submission
+    // at the same time?
     update({ nextLocation: location, nextMatches: matches });
 
     if (isAction(location)) {

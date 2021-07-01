@@ -1308,83 +1308,189 @@ describe("transition manager", () => {
       });
 
       describe(`
-        A) POST /foo |----|----------X
-        B) POST /foo    |----|----O
+        A) POST /foo(0) |----|----------X
+        B) POST /foo(1)    |----|----O
       `, () => {
-        it.todo("commits B, aborts A");
+        it("commits B, ignores A", async () => {
+          let t = setup();
+
+          let locationA = createActionLocation("/foo");
+          let locationB = createActionLocation("/foo");
+
+          t.navigate(locationA);
+          t.navigate(locationB);
+
+          await t.resolveAction(0, "A ACTION");
+          await t.resolveAction(1, "B ACTION");
+          await t.resolveNav(1, "B LOADER");
+          await t.resolveNav(0, "A LOADER");
+
+          expect(t.tm.getState().location).toBe(locationB);
+          expect(t.tm.getState().actionData).toBe("B ACTION");
+          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+        });
       });
+
       describe(`
-        A) POST /foo |-----------|---O
+        A) POST /foo |-----------|---X
         B) POST /foo    |----|-----O
       `, () => {
-        it.todo("commits B, commits A");
+        it("commits B, ignores A", async () => {
+          let t = setup();
+
+          let locationA = createActionLocation("/foo");
+          let locationB = createActionLocation("/foo");
+
+          t.navigate(locationA);
+          t.navigate(locationB);
+
+          await t.resolveAction(1, "B ACTION");
+          await t.resolveAction(0, "A ACTION");
+          await t.resolveNav(1, "B LOADER");
+          await t.resolveNav(0, "A LOADER");
+
+          expect(t.tm.getState().location).toBe(locationB);
+          expect(t.tm.getState().actionData).toBe("B ACTION");
+          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+        });
       });
+
       describe(`
-        A) POST /foo |-----------|---O
-        B) POST /foo    |----|----------X
+        A) POST /foo |-----------|---X
+        B) POST /foo    |----|----------O
       `, () => {
-        it.todo("commits A, aborts B");
+        it("commits A, aborts B", async () => {
+          let t = setup();
+
+          let locationA = createActionLocation("/foo");
+          let locationB = createActionLocation("/foo");
+
+          t.navigate(locationA);
+          t.navigate(locationB);
+
+          await t.resolveAction(1, "B ACTION");
+          await t.resolveAction(0, "A ACTION");
+          await t.resolveNav(0, "A LOADER");
+          await t.resolveNav(1, "B LOADER");
+
+          expect(t.tm.getState().location).toBe(locationB);
+          expect(t.tm.getState().actionData).toBe("B ACTION");
+          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+        });
+      });
+
+      describe(`
+        A) POST /foo |--|----------X
+        B) POST /foo       |----|-----O
+      `, () => {
+        it("commits B, ignores A", async () => {
+          let t = setup();
+
+          let locationA = createActionLocation("/foo");
+          let locationB = createActionLocation("/foo");
+
+          t.navigate(locationA);
+          await t.resolveAction(0, "A ACTION");
+          t.navigate(locationB);
+          await t.resolveAction(1, "B ACTION");
+          await t.resolveNav(0, "A LOADER");
+          await t.resolveNav(1, "B LOADER");
+
+          expect(t.tm.getState().location).toBe(locationB);
+          expect(t.tm.getState().actionData).toBe("B ACTION");
+          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+        });
+
+        describe("with signals", () => {
+          it("commits B, ignores A action, aborts A load", async () => {
+            let t = setup({ signals: true });
+
+            let locationA = createActionLocation("/foo");
+            let locationB = createActionLocation("/foo");
+
+            t.navigate(locationA);
+            await t.resolveAction(0, "A ACTION");
+            t.navigate(locationB);
+            await t.resolveAction(1, "B ACTION");
+            expect(t.abortHandlers[0].mock.calls.length).toBe(1);
+
+            await t.resolveNav(1, "B LOADER");
+            expect(t.tm.getState().location).toBe(locationB);
+            expect(t.tm.getState().actionData).toBe("B ACTION");
+            expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          });
+        });
       });
     });
 
     describe(`
-      POST /a > 303 /a
-      POST /a > 303 /a
+      A) POST /foo |---|---X
+      B) GET  /bar   |-------O
     `, () => {
-      describe(`
-        A) POST /a |----/a----O
-        B) POST /a    |----/a----O
-      `, () => {
-        it.todo("commits A, commits B");
-      });
-      describe(`
-        A) POST /a |----/a----------X
-        B) POST /a    |----/a----O
-      `, () => {
-        it.todo("commits B, aborts A");
-      });
-      describe(`
-        A) POST /a |-----------/a---O
-        B) POST /a    |----/a-----O
-      `, () => {
-        it.todo("commits B, commits A");
-      });
-      describe(`
-        A) POST /a |-----------/a---O
-        B) POST /a    |----/a----------X
-      `, () => {
-        it.todo("commits A, aborts B");
+      it("ignores POST /foo, commits GET /bar", async () => {
+        let t = setup();
+
+        let locationA = createActionLocation("/foo");
+        let locationB = createLocation("/bar");
+
+        t.navigate(locationA);
+        t.navigate(locationB);
+        await t.resolveAction(0, "A ACTION");
+        await t.resolveNav(0, "A LOADER");
+        await t.resolveNav(1, "B LOADER");
+
+        expect(t.tm.getState().location).toBe(locationB);
+        expect(t.tm.getState().actionData).toBeUndefined();
+        expect(t.tm.getState().loaderData.bar).toBe("B LOADER");
       });
     });
 
     describe(`
-      @    /a
-      POST /b > 303 /a
-      POST /b > 303 /a
+      A) GET  /foo |-------X
+      B) POST /bar   |--|-----O
+    `, () => {
+      it("ignores POST /foo, commits GET /bar", async () => {
+        let t = setup();
+
+        let locationA = createLocation("/foo");
+        let locationB = createActionLocation("/bar");
+
+        t.navigate(locationA);
+        t.navigate(locationB);
+        await t.resolveAction(1, "B ACTION");
+        await t.resolveNav(0, "A LOADER");
+        await t.resolveNav(1, "B LOADER");
+
+        expect(t.tm.getState().location).toBe(locationB);
+        expect(t.tm.getState().actionData).toBe("B ACTION");
+        expect(t.tm.getState().loaderData.bar).toBe("B LOADER");
+      });
+    });
+
+    describe(`
+      POST /foo > 303 /foo
+      POST /foo > 303 /foo
     `, () => {
       describe(`
-        A) POST /b(0) |----/a(2)----O
-        B) POST /b(1)    |----/a(3)----O
+        A) POST /foo(0) |----/foo(x)----X
+        B) POST /foo(1)    |----/foo(2)----O
       `, () => {
-        it.todo("commits A, commits B");
-      });
-      describe(`
-        A) POST /b |----/a----------X
-        B) POST /b    |----/a----O
-      `, () => {
-        it.todo("commits B, aborts A");
-      });
-      describe(`
-        A) POST /b |-----------/a---O
-        B) POST /b    |----/a-----O
-      `, () => {
-        it.todo("commits B, commits A");
-      });
-      describe(`
-        A) POST /b |-----------/a---O
-        B) POST /b    |----/a----------X
-      `, () => {
-        it.todo("commits A, aborts B");
+        it.only("ignores A, commits B", async () => {
+          let t = setup();
+
+          t.navigate(createActionLocation("/foo"));
+          t.navigate(createActionLocation("/foo"));
+
+          await t.resolveAction(0, new TransitionRedirect("/foo"));
+          expect(t.handleRedirect.mock.calls.length).toBe(0);
+
+          await t.resolveAction(1, new TransitionRedirect("/foo"));
+          expect(t.handleRedirect.mock.calls.length).toBe(1);
+
+          await t.resolveNav(2, "B");
+          expect(t.tm.getState().actionData).toBeUndefined();
+          expect(t.tm.getState().loaderData.foo).toBe("B");
+        });
       });
     });
 
