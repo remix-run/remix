@@ -183,6 +183,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
     pendingLoads.set(id, location);
     abortControllers.set(id, controller);
 
+    // if (isAction(location)) {
+    //   // ???
+    //   // abortResubmits(location)
+    // } else if (isActionRedirect(location)) {
+    //   abortStaleLoad(id);
+    // } else {
+    //   abortStaleLoads(id);
+    // }
     abortStaleLoads(id);
 
     let results = await loadRouteData(
@@ -226,28 +234,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update(nextState);
   }
 
-  function makeLoaderData(
-    results: RouteLoaderResult[],
-    matches: ClientMatch[]
-  ) {
-    let newData: RouteData = {};
-    for (let { match, value } of results) {
-      newData[match.route.id] = value;
-    }
-
-    let loaderData: RouteData = {};
-    for (let { route } of matches) {
-      // TODO: need to allow null here
-      let value = newData[route.id] ?? state.loaderData[route.id];
-      if (value) {
-        loaderData[route.id] = value;
-      }
-    }
-
-    return loaderData;
-  }
-
   async function post(location: ActionLocation, ref?: ActionRef) {
+    let controller = new AbortController();
+
     let isStale = () => {
       if (ref) {
         if (state.pendingSubmissionRefs.has(ref)) {
@@ -277,7 +266,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     let leafMatch = matches.slice(-1)[0];
-    let result = await fetchAction(location, leafMatch);
+    let result = await fetchAction(location, leafMatch, controller.signal);
 
     if (isStale()) {
       return;
@@ -311,6 +300,29 @@ export function createTransitionManager(init: TransitionManagerInit) {
     await get(location);
   }
 
+  ///////////////////
+  // Helpers
+  function makeLoaderData(
+    results: RouteLoaderResult[],
+    matches: ClientMatch[]
+  ) {
+    let newData: RouteData = {};
+    for (let { match, value } of results) {
+      newData[match.route.id] = value;
+    }
+
+    let loaderData: RouteData = {};
+    for (let { route } of matches) {
+      // TODO: need to allow null here
+      let value = newData[route.id] ?? state.loaderData[route.id];
+      if (value) {
+        loaderData[route.id] = value;
+      }
+    }
+
+    return loaderData;
+  }
+
   function abortStaleLoad(id: number) {
     let controller = abortControllers.get(id);
     invariant(controller, `No abortController for ${id}`);
@@ -335,6 +347,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     init.onRedirect(redirect.location);
   }
 
+  ///////////////////
+  // Public Interface
   async function send(location: Location, submitRef?: ActionRef) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
@@ -457,7 +471,8 @@ function findRedirect(results: RouteLoaderResult[]): TransitionRedirect | null {
 
 async function fetchAction(
   location: ActionLocation,
-  match: ClientMatch
+  match: ClientMatch,
+  signal: AbortSignal
 ): Promise<RouteLoaderResult> {
   if (!match.route.action) {
     throw new Error(
@@ -467,7 +482,7 @@ async function fetchAction(
   }
 
   try {
-    let value = await match.route.action();
+    let value = await match.route.action({ signal });
     return { match, value };
   } catch (error) {
     return { match, value: error };

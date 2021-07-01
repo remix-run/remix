@@ -21,7 +21,7 @@ export interface EntryRoute extends Route {
 
 export interface ClientRoute extends Route {
   loader?: ({ signal }: { signal: AbortSignal }) => Promise<any> | any;
-  action?: () => Promise<any> | any;
+  action?: ({ signal }: { signal: AbortSignal }) => Promise<any> | any;
   ErrorBoundary?: ComponentType;
   children?: ClientRoute[];
   element: ReactNode;

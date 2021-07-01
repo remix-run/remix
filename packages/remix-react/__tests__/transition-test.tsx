@@ -37,6 +37,22 @@ function createLocation(path: string, state: any = null): Location {
   };
 }
 
+let submissionId = 0;
+function createActionLocation(path: string, state?: Partial<SubmissionState>) {
+  let submission: SubmissionState = Object.assign(
+    {
+      isAction: true,
+      action: path,
+      method: "post",
+      body: "gosh=dang",
+      encType: "application/x-www-form-urlencoded",
+      id: ++submissionId
+    },
+    state
+  );
+  return createLocation(path, submission);
+}
+
 function createTestTransitionManager(
   pathname: string,
   init?: Partial<TransitionManagerInit>
@@ -54,17 +70,12 @@ function createTestTransitionManager(
 }
 
 describe("transition manager", () => {
-  let parentLoader: jest.Mock<string>;
-  let childLoader: jest.Mock<string>;
-  let paramLoader: jest.Mock<string>;
-  let tm: ReturnType<typeof createTestTransitionManager>;
-
-  beforeEach(() => {
+  let setup = () => {
     fakeKey = 0;
-    parentLoader = jest.fn(() => "PARENT");
-    childLoader = jest.fn(() => "CHILD");
-    paramLoader = jest.fn(() => "PARAM");
-    tm = createTestTransitionManager("/", {
+    let parentLoader = jest.fn(() => "PARENT");
+    let childLoader = jest.fn(() => "CHILD");
+    let paramLoader = jest.fn(() => "PARAM");
+    let tm = createTestTransitionManager("/", {
       loaderData: { parent: "PARENT" },
       routes: [
         {
@@ -89,10 +100,12 @@ describe("transition manager", () => {
         }
       ]
     });
-  });
+    return { parentLoader, childLoader, paramLoader, tm };
+  };
 
   it("initializes state", async () => {
-    expect(tm.getState()).toMatchInlineSnapshot(`
+    let t = setup();
+    expect(t.tm.getState()).toMatchInlineSnapshot(`
       Object {
         "actionData": undefined,
         "error": undefined,
@@ -141,8 +154,9 @@ describe("transition manager", () => {
   });
 
   it("updates state immediately after a new location comes through", () => {
-    tm.send(createLocation("/a"));
-    let state = tm.getState();
+    let t = setup();
+    t.tm.send(createLocation("/a"));
+    let state = t.tm.getState();
     expect(state.nextLocation.pathname).toBe("/a");
     expect(state.nextMatches.length).toBe(2);
   });
@@ -157,7 +171,7 @@ describe("transition manager", () => {
           tm.send(createLocation(href)).then(() => redirectDeferred.promise);
         });
 
-        tm = createTestTransitionManager("/", {
+        let tm = createTestTransitionManager("/", {
           onRedirect: handleRedirect,
           routes: [
             { path: "/", id: "root", element: {} },
@@ -184,9 +198,9 @@ describe("transition manager", () => {
     it.todo("allows `null` as a valid data value");
 
     it("fetches data on new locations", async () => {
-      await tm.send(createLocation("/a"));
-      let state = tm.getState();
-      expect(state.loaderData).toMatchInlineSnapshot(`
+      let t = setup();
+      await t.tm.send(createLocation("/a"));
+      expect(t.tm.getState().loaderData).toMatchInlineSnapshot(`
         Object {
           "child": "CHILD",
           "parent": "PARENT",
@@ -196,9 +210,10 @@ describe("transition manager", () => {
 
     describe("parent -> child transition", () => {
       it("only fetches child data", async () => {
-        await tm.send(createLocation("/a"));
-        let state = tm.getState();
-        expect(parentLoader.mock.calls.length).toBe(0);
+        let t = setup();
+        await t.tm.send(createLocation("/a"));
+        let state = t.tm.getState();
+        expect(t.parentLoader.mock.calls.length).toBe(0);
         expect(state.loaderData).toMatchInlineSnapshot(`
           Object {
             "child": "CHILD",
@@ -210,37 +225,40 @@ describe("transition manager", () => {
 
     describe("search change", () => {
       it("reloads all routes", async () => {
-        await tm.send(createLocation("/a?foo"));
-        expect(parentLoader.mock.calls.length).toBe(1);
-        expect(childLoader.mock.calls.length).toBe(1);
+        let t = setup();
+        await t.tm.send(createLocation("/a?foo"));
+        expect(t.parentLoader.mock.calls.length).toBe(1);
+        expect(t.childLoader.mock.calls.length).toBe(1);
 
-        await tm.send(createLocation("/a?bar"));
-        expect(parentLoader.mock.calls.length).toBe(2);
-        expect(childLoader.mock.calls.length).toBe(2);
+        await t.tm.send(createLocation("/a?bar"));
+        expect(t.parentLoader.mock.calls.length).toBe(2);
+        expect(t.childLoader.mock.calls.length).toBe(2);
       });
     });
 
     describe("param change", () => {
       it("reloads only routes with changed params", async () => {
-        await tm.send(createLocation("/p/one"));
-        expect(parentLoader.mock.calls.length).toBe(0);
-        expect(paramLoader.mock.calls.length).toBe(1);
+        let t = setup();
+        await t.tm.send(createLocation("/p/one"));
+        expect(t.parentLoader.mock.calls.length).toBe(0);
+        expect(t.paramLoader.mock.calls.length).toBe(1);
 
-        await tm.send(createLocation("/p/two"));
-        expect(parentLoader.mock.calls.length).toBe(0);
-        expect(paramLoader.mock.calls.length).toBe(2);
+        await t.tm.send(createLocation("/p/two"));
+        expect(t.parentLoader.mock.calls.length).toBe(0);
+        expect(t.paramLoader.mock.calls.length).toBe(2);
       });
     });
 
     describe("same url", () => {
       it("reloads all routes", async () => {
-        await tm.send(createLocation("/p/one"));
-        expect(parentLoader.mock.calls.length).toBe(0);
-        expect(paramLoader.mock.calls.length).toBe(1);
+        let t = setup();
+        await t.tm.send(createLocation("/p/one"));
+        expect(t.parentLoader.mock.calls.length).toBe(0);
+        expect(t.paramLoader.mock.calls.length).toBe(1);
 
-        await tm.send(createLocation("/p/one"));
-        expect(parentLoader.mock.calls.length).toBe(1);
-        expect(paramLoader.mock.calls.length).toBe(2);
+        await t.tm.send(createLocation("/p/one"));
+        expect(t.parentLoader.mock.calls.length).toBe(1);
+        expect(t.paramLoader.mock.calls.length).toBe(2);
       });
 
       // describe("on push", () => {
@@ -363,18 +381,12 @@ describe("transition manager", () => {
   });
 
   describe("POST navigation", () => {
-    let parentLoader: jest.Mock;
-    let parentAction: jest.Mock;
-    let childLoader: jest.Mock;
-    let childAction: jest.Mock;
-    let tm: ReturnType<typeof createTestTransitionManager>;
-
-    beforeEach(() => {
-      parentLoader = jest.fn(() => "PARENT LOADER");
-      childLoader = jest.fn(() => "CHILD LOADER");
-      parentAction = jest.fn(() => "PARENT ACTION");
-      childAction = jest.fn(() => "CHILD ACTION");
-      tm = createTestTransitionManager("/", {
+    let setup = () => {
+      let parentLoader = jest.fn(() => "PARENT LOADER");
+      let childLoader = jest.fn(() => "CHILD LOADER");
+      let parentAction = jest.fn(() => "PARENT ACTION");
+      let childAction = jest.fn(() => "CHILD ACTION");
+      let tm = createTestTransitionManager("/", {
         loaderData: { parent: "PARENT" },
         routes: [
           {
@@ -395,9 +407,11 @@ describe("transition manager", () => {
           }
         ]
       });
-    });
+      return { parentLoader, childLoader, parentAction, childAction, tm };
+    };
 
     it("removes action data at new locations", async () => {
+      let { tm } = setup();
       await tm.send(createLocation("/child", { isAction: true }));
       expect(tm.getState().actionData).toBe("CHILD ACTION");
 
@@ -406,17 +420,21 @@ describe("transition manager", () => {
     });
 
     it("calls only the leaf route action", async () => {
-      await tm.send(createLocation("/child", { isAction: true }));
-      expect(parentAction.mock.calls.length).toBe(0);
-      expect(childAction.mock.calls.length).toBe(1);
+      let t = setup();
+      await t.tm.send(createLocation("/child", { isAction: true }));
+      expect(t.parentAction.mock.calls.length).toBe(0);
+      expect(t.childAction.mock.calls.length).toBe(1);
     });
 
     it("reloads all routes after the action", async () => {
-      await tm.send(createLocation("/child", { isAction: true }));
-      expect(parentLoader.mock.calls.length).toBe(1);
-      expect(childLoader.mock.calls.length).toBe(1);
-      expect(tm.getState().actionData).toMatchInlineSnapshot(`"CHILD ACTION"`);
-      expect(tm.getState().loaderData).toMatchInlineSnapshot(`
+      let t = setup();
+      await t.tm.send(createLocation("/child", { isAction: true }));
+      expect(t.parentLoader.mock.calls.length).toBe(1);
+      expect(t.childLoader.mock.calls.length).toBe(1);
+      expect(t.tm.getState().actionData).toMatchInlineSnapshot(
+        `"CHILD ACTION"`
+      );
+      expect(t.tm.getState().loaderData).toMatchInlineSnapshot(`
           Object {
             "child": "CHILD LOADER",
             "parent": "PARENT LOADER",
@@ -822,17 +840,26 @@ describe("transition manager", () => {
     it.todo("aborts pending actions without refs");
     it.todo("aborts pending actions with refs?");
 
-    let setup = ({ signals }: { signals: boolean } = { signals: false }) => {
+    let setup = ({ signals }: { signals?: boolean } = {}) => {
       let c = -1;
       let loaderDeferreds: Deferred[] = [];
+      let actionDeferreds: Deferred[] = [];
       let navDeferreds: Deferred[] = [];
       let abortHandlers: jest.Mock[] = [];
       let handleChange = jest.fn();
+
       let loader = async ({ signal }: { signal: AbortSignal }) => {
         if (signals) {
           signal.onabort = abortHandlers[c];
         }
         return loaderDeferreds[c].promise.then((val: any) => val);
+      };
+
+      let action = async ({ signal }: { signal: AbortSignal }) => {
+        if (signals) {
+          signal.onabort = abortHandlers[c];
+        }
+        return actionDeferreds[c].promise.then((val: any) => val);
       };
 
       let handleRedirect = jest.fn((href: string) => {
@@ -844,9 +871,9 @@ describe("transition manager", () => {
         onRedirect: handleRedirect,
         loaderData: undefined,
         routes: [
-          { path: "/foo", id: "foo", loader, element: {} },
-          { path: "/bar", id: "bar", loader, element: {} },
-          { path: "/baz", id: "baz", loader, element: {} }
+          { path: "/foo", id: "foo", loader, action, element: {} },
+          { path: "/bar", id: "bar", loader, action, element: {} },
+          { path: "/baz", id: "baz", loader, action, element: {} }
         ]
       });
 
@@ -856,6 +883,7 @@ describe("transition manager", () => {
         }
         let myC = ++c;
         loaderDeferreds.push(defer());
+        actionDeferreds.push(defer());
         navDeferreds.push(defer());
         abortHandlers.push(jest.fn());
         tm.send(location).then(() => navDeferreds[myC].promise);
@@ -867,13 +895,18 @@ describe("transition manager", () => {
         await navDeferreds[navIndex].resolve();
       };
 
+      let resolveAction = async (navIndex: number, actionVal: any) => {
+        await actionDeferreds[navIndex].resolve(actionVal);
+      };
+
       return {
         abortHandlers,
         handleChange,
         handleRedirect,
         tm,
         navigate,
-        resolveNav
+        resolveNav,
+        resolveAction
       };
     };
 
@@ -1228,103 +1261,224 @@ describe("transition manager", () => {
       });
     });
 
-    // describe(`
-    //   POST /a
-    //   POST /a
-    // `, () => {
-    //   describe(`
-    //     A) POST /a |----|----O
-    //     B) POST /a    |----|----O
-    //   `, () => {
-    //     it.todo("commits A, commits B");
-    //   });
+    describe(`
+      POST /foo
+      POST /foo
+    `, () => {
+      describe(`
+        A) POST /foo(0) |----|----X
+        B) POST /foo(1)    |----|----O
+      `, () => {
+        it.only("ignores A, commits B", async () => {
+          let t = setup();
 
-    //   describe(`
-    //     A) POST /a |----|----------X
-    //     B) POST /a    |----|----O
-    //   `, () => {
-    //     it.todo("commits B, aborts A");
-    //   });
+          let locationA = createActionLocation("/foo");
+          let locationB = createActionLocation("/foo");
 
-    //   describe(`
-    //     A) POST /a |-----------|---O
-    //     B) POST /a    |----|-----O
-    //   `, () => {
-    //     it.todo("commits B, commits A");
-    //   });
+          t.navigate(locationA);
+          t.navigate(locationB);
 
-    //   describe(`
-    //     A) POST /a |-----------|---O
-    //     B) POST /a    |----|----------X
-    //   `, () => {
-    //     it.todo("commits A, aborts B");
-    //   });
-    // });
+          await t.resolveAction(0, "A ACTION");
+          await t.resolveAction(1, "B ACTION");
+          await t.resolveNav(0, "A LOADER");
+          await t.resolveNav(1, "B LOADER");
 
-    // describe(`
-    //   POST /a > 303 /a
-    //   POST /a > 303 /a
-    // `, () => {
-    //   describe(`
-    //     A) POST /a |----/a----O
-    //     B) POST /a    |----/a----O
-    //   `, () => {
-    //     it.todo("commits A, commits B");
-    //   });
+          expect(t.tm.getState().location).toBe(locationB);
+          expect(t.tm.getState().actionData).toBe("B ACTION");
+          expect(t.tm.getState().loaderData).toMatchInlineSnapshot(`
+            Object {
+              "foo": "B LOADER",
+            }
+          `);
+        });
 
-    //   describe(`
-    //     A) POST /a |----/a----------X
-    //     B) POST /a    |----/a----O
-    //   `, () => {
-    //     it.todo("commits B, aborts A");
-    //   });
+        describe("with signals", () => {
+          it.todo("aborts A, commits B");
+        });
+      });
 
-    //   describe(`
-    //     A) POST /a |-----------/a---O
-    //     B) POST /a    |----/a-----O
-    //   `, () => {
-    //     it.todo("commits B, commits A");
-    //   });
+      describe(`
+        A) POST /foo |----|----------X
+        B) POST /foo    |----|----O
+      `, () => {
+        it.todo("commits B, aborts A");
+      });
+      describe(`
+        A) POST /foo |-----------|---O
+        B) POST /foo    |----|-----O
+      `, () => {
+        it.todo("commits B, commits A");
+      });
+      describe(`
+        A) POST /foo |-----------|---O
+        B) POST /foo    |----|----------X
+      `, () => {
+        it.todo("commits A, aborts B");
+      });
+    });
 
-    //   describe(`
-    //     A) POST /a |-----------/a---O
-    //     B) POST /a    |----/a----------X
-    //   `, () => {
-    //     it.todo("commits A, aborts B");
-    //   });
-    // });
+    describe(`
+      POST /a > 303 /a
+      POST /a > 303 /a
+    `, () => {
+      describe(`
+        A) POST /a |----/a----O
+        B) POST /a    |----/a----O
+      `, () => {
+        it.todo("commits A, commits B");
+      });
+      describe(`
+        A) POST /a |----/a----------X
+        B) POST /a    |----/a----O
+      `, () => {
+        it.todo("commits B, aborts A");
+      });
+      describe(`
+        A) POST /a |-----------/a---O
+        B) POST /a    |----/a-----O
+      `, () => {
+        it.todo("commits B, commits A");
+      });
+      describe(`
+        A) POST /a |-----------/a---O
+        B) POST /a    |----/a----------X
+      `, () => {
+        it.todo("commits A, aborts B");
+      });
+    });
 
-    // describe(`
-    //   @    /a
-    //   POST /b > 303 /a
-    //   POST /b > 303 /a
-    // `, () => {
-    //   describe(`
-    //     A) POST /b |----/a----O
-    //     B) POST /b    |----/a----O
-    //   `, () => {
-    //     it.todo("commits A, commits B");
-    //   });
+    describe(`
+      @    /a
+      POST /b > 303 /a
+      POST /b > 303 /a
+    `, () => {
+      describe(`
+        A) POST /b(0) |----/a(2)----O
+        B) POST /b(1)    |----/a(3)----O
+      `, () => {
+        it.todo("commits A, commits B");
+      });
+      describe(`
+        A) POST /b |----/a----------X
+        B) POST /b    |----/a----O
+      `, () => {
+        it.todo("commits B, aborts A");
+      });
+      describe(`
+        A) POST /b |-----------/a---O
+        B) POST /b    |----/a-----O
+      `, () => {
+        it.todo("commits B, commits A");
+      });
+      describe(`
+        A) POST /b |-----------/a---O
+        B) POST /b    |----/a----------X
+      `, () => {
+        it.todo("commits A, aborts B");
+      });
+    });
 
+    // describe("with action refs", () => {
     //   describe(`
-    //     A) POST /b |----/a----------X
-    //     B) POST /b    |----/a----O
+    //     POST /foo
+    //     POST /foo
     //   `, () => {
-    //     it.todo("commits B, aborts A");
+    //     describe(`
+    //       A) POST /foo(0) |----|----O
+    //       B) POST /foo(1)    |----|----O
+    //     `, () => {
+    //       it.only("commits A, commits B", async () => {
+    //         let t = setup();
+    //         let locationA = createActionLocation("/foo");
+    //         let locationB = createActionLocation("/foo");
+    //         t.navigate(locationA);
+    //         expect(t.tm.getState().nextLocation).toBe(locationA);
+    //         t.navigate(locationB);
+    //         expect(t.tm.getState().nextLocation).toBe(locationB);
+    //         await t.resolveAction(0, "A ACTION");
+    //         expect(t.tm.getState);
+    //         await t.resolveAction(1, "B ACTION");
+    //         await t.resolveNav(0, "B LOADER");
+    //         await t.resolveNav(0, "B LOADER");
+    //       });
+    //     });
+    //     describe(`
+    //       A) POST /foo |----|----------X
+    //       B) POST /foo    |----|----O
+    //     `, () => {
+    //       it.todo("commits B, aborts A");
+    //     });
+    //     describe(`
+    //       A) POST /foo |-----------|---O
+    //       B) POST /foo    |----|-----O
+    //     `, () => {
+    //       it.todo("commits B, commits A");
+    //     });
+    //     describe(`
+    //       A) POST /foo |-----------|---O
+    //       B) POST /foo    |----|----------X
+    //     `, () => {
+    //       it.todo("commits A, aborts B");
+    //     });
     //   });
-
     //   describe(`
-    //     A) POST /b |-----------/a---O
-    //     B) POST /b    |----/a-----O
+    //     POST /a > 303 /a
+    //     POST /a > 303 /a
     //   `, () => {
-    //     it.todo("commits B, commits A");
+    //     describe(`
+    //       A) POST /a |----/a----O
+    //       B) POST /a    |----/a----O
+    //     `, () => {
+    //       it.todo("commits A, commits B");
+    //     });
+    //     describe(`
+    //       A) POST /a |----/a----------X
+    //       B) POST /a    |----/a----O
+    //     `, () => {
+    //       it.todo("commits B, aborts A");
+    //     });
+    //     describe(`
+    //       A) POST /a |-----------/a---O
+    //       B) POST /a    |----/a-----O
+    //     `, () => {
+    //       it.todo("commits B, commits A");
+    //     });
+    //     describe(`
+    //       A) POST /a |-----------/a---O
+    //       B) POST /a    |----/a----------X
+    //     `, () => {
+    //       it.todo("commits A, aborts B");
+    //     });
     //   });
-
     //   describe(`
-    //     A) POST /b |-----------/a---O
-    //     B) POST /b    |----/a----------X
+    //     @    /a
+    //     POST /b > 303 /a
+    //     POST /b > 303 /a
     //   `, () => {
-    //     it.todo("commits A, aborts B");
+    //     describe(`
+    //       A) POST /b(0) |----/a(2)----O
+    //       B) POST /b(1)    |----/a(3)----O
+    //     `, () => {
+    //       it.todo("commits A, commits B");
+    //     });
+    //     describe(`
+    //       A) POST /b |----/a----------X
+    //       B) POST /b    |----/a----O
+    //     `, () => {
+    //       it.todo("commits B, aborts A");
+    //     });
+    //     describe(`
+    //       A) POST /b |-----------/a---O
+    //       B) POST /b    |----/a-----O
+    //     `, () => {
+    //       it.todo("commits B, commits A");
+    //     });
+    //     describe(`
+    //       A) POST /b |-----------/a---O
+    //       B) POST /b    |----/a----------X
+    //     `, () => {
+    //       it.todo("commits A, aborts B");
+    //     });
     //   });
     // });
   });
