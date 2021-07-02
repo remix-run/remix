@@ -54,7 +54,7 @@ interface TransitionState {
   /**
    * Tracks all the pending form submissions by Form and useSubmit refs.
    */
-  pendingSubmissionRefs: Map<ActionRef, SubmissionState>;
+  pendingSubmissionRefs: Map<SubmissionRef, SubmissionState>;
 
   /**
    * The next location being loaded.
@@ -90,7 +90,7 @@ export interface SubmissionState {
  * Used to associate a <Form> or submit() with a usePendingSubmission(ref) and
  * useActionData(ref);
  */
-type ActionRef = HTMLFormElement | Object;
+type SubmissionRef = HTMLFormElement | Object;
 
 /**
  * We distinguish GET from POST/PUT/PATCH/DELETE locations with location state.
@@ -133,8 +133,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let currentActionId = 0;
 
   // Track them so we can abort/ignore them when fresher requests come in
-  let pendingLoads = new Map<number, Location>();
-  let pendingSubmissions = new Map<number, Location<SubmissionState>>();
+  let pendingLoads = new Map<number, [Location, SubmissionRef?]>();
+  let pendingSubmissions = new Map<number, [ActionLocation, SubmissionRef?]>();
 
   // When loads become stale, we can actually abort them instead of just ignoring
   let loadAbortControllers = new Map<number, AbortController>();
@@ -153,7 +153,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   //   but instead use the imperative `getActionDataForRef` method. Good news is
   //   the only time these are mutated are on navigations, so it should be
   //   reliable for rendering
-  let actionDataRefs = new WeakMap<ActionRef, RouteData>();
+  let actionDataRefs = new WeakMap<SubmissionRef, RouteData>();
 
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
@@ -177,25 +177,20 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   async function get(
     location: Location,
-    actionErrorResult?: RouteLoaderErrorResult
+    actionErrorResult?: RouteLoaderErrorResult,
+    ref?: SubmissionRef
   ) {
-    let id = ++currentLoadId;
-    let controller = new AbortController();
     let matches = state.nextMatches;
     invariant(matches, "No matches on state");
+
+    let id = ++currentLoadId;
+    let controller = new AbortController();
+
+    pendingLoads.set(id, [location, ref]);
     let isStale = () => !pendingLoads.has(id);
 
-    pendingLoads.set(id, location);
     loadAbortControllers.set(id, controller);
 
-    // if (isAction(location)) {
-    //   // ???
-    //   // abortResubmits(location)
-    // } else if (isActionRedirect(location)) {
-    //   abortStaleLoad(id);
-    // } else {
-    //   abortStaleLoads(id);
-    // }
     abortStaleLoads(id);
     abortStaleSubmissions(Number.MAX_SAFE_INTEGER);
 
@@ -240,17 +235,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update(nextState);
   }
 
-  async function post(location: ActionLocation, ref?: ActionRef) {
-    let id = ++currentActionId;
-    let controller = new AbortController();
-
+  async function post(location: ActionLocation, ref?: SubmissionRef) {
     let matches = state.nextMatches;
     invariant(matches, "No matches on state.");
 
-    let leafMatch = matches.slice(-1)[0];
+    let id = ++currentActionId;
+    let controller = new AbortController();
 
+    pendingSubmissions.set(id, [location, ref]);
     let isStale = () => !pendingSubmissions.has(id);
-
     let clearPendingSubmissionRef = () => {
       invariant(ref, "No pending ref but the code tried to clear it.");
       let nextSubmissions = new Map(state.pendingSubmissionRefs);
@@ -258,8 +251,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return nextSubmissions;
     };
 
-    pendingSubmissions.set(id, location);
     actionAbortControllers.set(id, controller);
+
+    // let url = location.pathname + location.search;
+    // let displayedUrl = state.location.pathname + state.location.search;
+    // let isNewPage = url !== displayedUrl;
 
     abortStaleSubmissions(id);
     abortStaleLoads(Number.MAX_SAFE_INTEGER);
@@ -270,6 +266,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       update({ pendingSubmissionRefs: nextSubmissions });
     }
 
+    let leafMatch = matches.slice(-1)[0];
     let result = await fetchAction(location, leafMatch, controller.signal);
 
     if (isStale()) {
@@ -287,6 +284,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       if (ref) {
         update({ pendingSubmissionRefs: clearPendingSubmissionRef() });
       }
+      // TODO: what do we do about submissionRef here?
       await get(location, result);
       return;
     }
@@ -301,7 +299,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       update({ actionData: result.value });
     }
 
-    await get(location);
+    await get(location, undefined, ref);
   }
 
   ///////////////////
@@ -339,7 +337,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
   // can abort any loads with a lower ID because their data is going to be stale
   // when it lands.
   function abortStaleLoads(latestId: number) {
-    for (let [id] of pendingLoads) {
+    for (let [id, [, ref]] of pendingLoads) {
+      // if you have a ref we're gonna keep you around to let any redirects
+      // settle and then decide if you get to stay
+      // TODO: abort when a later load has landed!
+      if (ref) continue;
       let isStale = id < latestId;
       if (isStale) {
         abortStaleLoad(id);
@@ -357,7 +359,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function abortStaleSubmissions(latestId: number) {
-    for (let [id] of pendingSubmissions) {
+    for (let [id, [, ref]] of pendingSubmissions) {
+      // if you have a ref we're gonna keep you around to let any redirects
+      // settle and then decide if you get to stay
+      if (ref) {
+        continue;
+      }
+
       let isStale = id < latestId;
       if (isStale) {
         abortStaleSubmission(id);
@@ -371,7 +379,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   ///////////////////
   // Public Interface
-  async function send(location: Location, submitRef?: ActionRef) {
+  async function send(location: Location, submissionRef?: SubmissionRef) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
     // TODO: move this into get/post so that post can update pending submission
@@ -379,7 +387,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({ nextLocation: location, nextMatches: matches });
 
     if (isAction(location)) {
-      await post(location, submitRef);
+      await post(location, submissionRef);
     } else {
       await get(location);
     }
@@ -391,11 +399,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function dispose() {}
 
-  function getActionDataForRef(ref: ActionRef) {
+  function getActionDataForRef(ref: SubmissionRef) {
     return actionDataRefs.get(ref);
   }
 
-  return { send, getState, dispose, getActionDataForRef };
+  function getPendingSubmissionForRef(ref: SubmissionRef) {
+    return state.pendingSubmissionRefs.get(ref);
+  }
+
+  return {
+    send,
+    getState,
+    dispose,
+    getActionDataForRef,
+    getPendingSubmissionForRef
+  };
 }
 
 export type RouteLoaderResult = {

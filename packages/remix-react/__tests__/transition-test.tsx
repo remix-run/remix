@@ -100,12 +100,18 @@ describe("transition manager", () => {
         }
       ]
     });
-    return { parentLoader, childLoader, paramLoader, tm };
+    return {
+      parentLoader,
+      childLoader,
+      paramLoader,
+      tm,
+      getState: tm.getState
+    };
   };
 
   it("initializes state", async () => {
     let t = setup();
-    expect(t.tm.getState()).toMatchInlineSnapshot(`
+    expect(t.getState()).toMatchInlineSnapshot(`
       Object {
         "actionData": undefined,
         "error": undefined,
@@ -156,7 +162,7 @@ describe("transition manager", () => {
   it("updates state immediately after a new location comes through", () => {
     let t = setup();
     t.tm.send(createLocation("/a"));
-    let state = t.tm.getState();
+    let state = t.getState();
     expect(state.nextLocation.pathname).toBe("/a");
     expect(state.nextMatches.length).toBe(2);
   });
@@ -200,7 +206,7 @@ describe("transition manager", () => {
     it("fetches data on new locations", async () => {
       let t = setup();
       await t.tm.send(createLocation("/a"));
-      expect(t.tm.getState().loaderData).toMatchInlineSnapshot(`
+      expect(t.getState().loaderData).toMatchInlineSnapshot(`
         Object {
           "child": "CHILD",
           "parent": "PARENT",
@@ -212,7 +218,7 @@ describe("transition manager", () => {
       it("only fetches child data", async () => {
         let t = setup();
         await t.tm.send(createLocation("/a"));
-        let state = t.tm.getState();
+        let state = t.getState();
         expect(t.parentLoader.mock.calls.length).toBe(0);
         expect(state.loaderData).toMatchInlineSnapshot(`
           Object {
@@ -407,7 +413,14 @@ describe("transition manager", () => {
           }
         ]
       });
-      return { parentLoader, childLoader, parentAction, childAction, tm };
+      return {
+        parentLoader,
+        childLoader,
+        parentAction,
+        childAction,
+        tm,
+        getState: tm.getState
+      };
     };
 
     it("removes action data at new locations", async () => {
@@ -431,10 +444,8 @@ describe("transition manager", () => {
       await t.tm.send(createLocation("/child", { isAction: true }));
       expect(t.parentLoader.mock.calls.length).toBe(1);
       expect(t.childLoader.mock.calls.length).toBe(1);
-      expect(t.tm.getState().actionData).toMatchInlineSnapshot(
-        `"CHILD ACTION"`
-      );
-      expect(t.tm.getState().loaderData).toMatchInlineSnapshot(`
+      expect(t.getState().actionData).toMatchInlineSnapshot(`"CHILD ACTION"`);
+      expect(t.getState().loaderData).toMatchInlineSnapshot(`
           Object {
             "child": "CHILD LOADER",
             "parent": "PARENT LOADER",
@@ -841,75 +852,116 @@ describe("transition manager", () => {
     it.todo("aborts pending actions with refs?");
 
     let setup = ({ signals }: { signals?: boolean } = {}) => {
-      let c = -1;
-      let loaderDeferreds: Deferred[] = [];
-      let actionDeferreds: Deferred[] = [];
-      let navDeferreds: Deferred[] = [];
-      let abortHandlers: jest.Mock[] = [];
-      let actionAbortHandlers: jest.Mock[] = [];
+      let guid = -1;
+
+      let nextLoaderId = guid;
+      let nextActionId = guid;
+      let lastRedirect: ReturnType<typeof navigate>;
+
+      let navDeferreds = new Map<number, Deferred>();
+      let loaderDeferreds = new Map<number, Deferred>();
+      let actionDeferreds = new Map<number, Deferred>();
+      let loaderAbortHandlers = new Map<number, jest.Mock>();
+      let actionAbortHandlers = new Map<number, jest.Mock>();
+
       let handleChange = jest.fn();
 
+      let handleRedirect = jest.fn((href: string) => {
+        lastRedirect = navigate(href);
+      });
+
       let loader = async ({ signal }: { signal: AbortSignal }) => {
-        if (signals) {
-          signal.onabort = abortHandlers[c];
-        }
-        return loaderDeferreds[c].promise.then((val: any) => val);
+        if (signals) signal.onabort = loaderAbortHandlers.get(nextLoaderId);
+        return loaderDeferreds
+          .get(nextLoaderId)
+          .promise.then((val: any) => val);
       };
 
       let action = async ({ signal }: { signal: AbortSignal }) => {
-        if (signals) {
-          signal.onabort = actionAbortHandlers[c];
-        }
-        return actionDeferreds[c].promise.then((val: any) => val);
+        if (signals) signal.onabort = actionAbortHandlers.get(nextActionId);
+        return actionDeferreds.get(nextActionId).promise.then((val: any) => {
+          nextLoaderId = nextActionId;
+          return val;
+        });
       };
 
-      let handleRedirect = jest.fn((href: string) => {
-        navigate(href);
-      });
-
-      let tm = createTestTransitionManager("/foo", {
+      let tm = createTestTransitionManager("/", {
         onChange: handleChange,
         onRedirect: handleRedirect,
         loaderData: undefined,
         routes: [
+          { path: "/", id: "root", element: {} },
           { path: "/foo", id: "foo", loader, action, element: {} },
           { path: "/bar", id: "bar", loader, action, element: {} },
           { path: "/baz", id: "baz", loader, action, element: {} }
         ]
       });
 
-      let navigate = async (location: string | Location<any>) => {
-        if (typeof location === "string") {
-          location = createLocation(location);
+      let get = (href: string) => navigate(href);
+      let post = (href: string) => navigate(createActionLocation(href));
+
+      let navigate = (location: string | Location<any>, ref?: Object) => {
+        if (typeof location === "string") location = createLocation(location);
+        let id = ++guid;
+        let loaderAbortHandler = jest.fn();
+        let actionAbortHandler = jest.fn();
+
+        if (location.state?.isAction) {
+          nextActionId = id;
+          actionDeferreds.set(id, defer());
+          actionAbortHandlers.set(id, actionAbortHandler);
+        } else {
+          nextLoaderId = id;
         }
-        let myC = ++c;
-        loaderDeferreds.push(defer());
-        actionDeferreds.push(defer());
-        navDeferreds.push(defer());
-        abortHandlers.push(jest.fn());
-        actionAbortHandlers.push(jest.fn());
-        tm.send(location).then(() => navDeferreds[myC].promise);
-        return (loaderVal: any) => resolveNav(myC, loaderVal);
-      };
 
-      let resolveNav = async (navIndex: number, loaderVal: any) => {
-        await loaderDeferreds[navIndex].resolve(loaderVal);
-        await navDeferreds[navIndex].resolve();
-      };
+        navDeferreds.set(id, defer());
+        loaderDeferreds.set(id, defer());
+        loaderAbortHandlers.set(id, loaderAbortHandler);
 
-      let resolveAction = async (navIndex: number, actionVal: any) => {
-        await actionDeferreds[navIndex].resolve(actionVal);
+        async function resolveAction(val: any) {
+          await actionDeferreds.get(id).resolve(val);
+        }
+
+        async function resolveLoader(val: any) {
+          await loaderDeferreds.get(id).resolve(val);
+          await navDeferreds.get(id).resolve();
+        }
+
+        async function redirectAction(href: string) {
+          await resolveAction(new TransitionRedirect(href));
+          return lastRedirect;
+        }
+
+        async function redirectLoader(href: string) {
+          await resolveLoader(new TransitionRedirect(href));
+          return lastRedirect;
+        }
+
+        tm.send(location, ref).then(() => navDeferreds.get(id).promise);
+
+        return {
+          location,
+          action: {
+            resolve: resolveAction,
+            redirect: redirectAction,
+            abortMock: actionAbortHandler.mock
+          },
+          loader: {
+            resolve: resolveLoader,
+            redirect: redirectLoader,
+            abortMock: loaderAbortHandler.mock
+          }
+        };
       };
 
       return {
-        abortHandlers,
-        actionAbortHandlers,
-        handleChange,
-        handleRedirect,
         tm,
+        get,
+        post,
         navigate,
-        resolveNav,
-        resolveAction
+        getState: tm.getState,
+        handleChange,
+        handleRedirect
       };
     };
 
@@ -924,66 +976,64 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          t.navigate("/foo");
+          let A = t.get("/foo");
+          let B = t.get("/foo");
 
-          await t.resolveNav(0, "A");
-          expect(t.tm.getState().loaderData).toBeUndefined();
+          await A.loader.resolve("A");
+          expect(t.getState().loaderData).toBeUndefined();
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().loaderData.foo).toBe("B");
+          await B.loader.resolve("B");
+          expect(t.getState().loaderData.foo).toBe("B");
         });
 
         it("updates state only when necessary", async () => {
           let t = setup();
 
-          t.navigate("/foo");
+          let A = t.get("/foo");
           expect(t.handleChange.mock.calls.length).toBe(1);
 
-          t.navigate("/foo");
+          let B = t.get("/foo");
           expect(t.handleChange.mock.calls.length).toBe(2);
 
-          await t.resolveNav(0, "A");
+          await A.loader.resolve("A");
           expect(t.handleChange.mock.calls.length).toBe(2);
 
-          await t.resolveNav(1, "B");
+          await B.loader.resolve("B");
           expect(t.handleChange.mock.calls.length).toBe(3);
         });
 
         it("updates the correct location and nextLocation", async () => {
           let t = setup();
-          let originalLocation = t.tm.getState().location;
+          let originalLocation = t.getState().location;
 
-          let firstLocation = createLocation("/foo");
-          t.navigate(firstLocation);
-          expect(t.tm.getState().nextLocation).toBe(firstLocation);
-          expect(t.tm.getState().location).toBe(originalLocation);
+          let A = t.get("/foo");
+          expect(t.getState().nextLocation).toBe(A.location);
+          expect(t.getState().location).toBe(originalLocation);
 
-          let secondLocation = createLocation("/foo");
-          t.navigate(secondLocation);
-          expect(t.tm.getState().nextLocation).toBe(secondLocation);
-          expect(t.tm.getState().location).toBe(originalLocation);
+          let B = t.get("/foo");
+          expect(t.getState().nextLocation).toBe(B.location);
+          expect(t.getState().location).toBe(originalLocation);
 
-          await t.resolveNav(0, "A");
-          expect(t.tm.getState().location).toBe(originalLocation);
-          expect(t.tm.getState().nextLocation).toBe(secondLocation);
+          await A.loader.resolve("A");
+          expect(t.getState().location).toBe(originalLocation);
+          expect(t.getState().nextLocation).toBe(B.location);
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().location).toBe(secondLocation);
-          expect(t.tm.getState().nextLocation).toBeUndefined();
+          await B.loader.resolve("B");
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().nextLocation).toBeUndefined();
         });
 
         describe("with abort controller signals", () => {
           it("aborts A, commits B", async () => {
             let t = setup({ signals: true });
 
-            t.navigate("/foo");
-            t.navigate("/foo");
-            expect(t.abortHandlers[0].mock.calls.length).toBe(1);
+            let A = t.get("/foo");
+            let B = t.get("/foo");
+            expect(A.loader.abortMock.calls.length).toBe(1);
 
-            await t.resolveNav(1, "B");
-            expect(t.tm.getState().loaderData.foo).toBe("B");
-            expect(t.abortHandlers[1].mock.calls.length).toBe(0);
+            await B.loader.resolve("B");
+            expect(t.getState().loaderData.foo).toBe("B");
+            expect(B.loader.abortMock.calls.length).toBe(0);
           });
         });
       });
@@ -995,39 +1045,37 @@ describe("transition manager", () => {
         it("aborts A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          t.navigate("/foo");
+          let A = t.get("/foo");
+          let B = t.get("/foo");
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().loaderData.foo).toBe("B");
+          await B.loader.resolve("B");
+          expect(t.getState().loaderData.foo).toBe("B");
           expect(t.handleChange.mock.calls.length).toBe(3);
 
-          await t.resolveNav(0, "A");
-          expect(t.tm.getState().loaderData.foo).toBe("B");
+          await A.loader.resolve("A");
+          expect(t.getState().loaderData.foo).toBe("B");
           expect(t.handleChange.mock.calls.length).toBe(3);
         });
 
         it("updates the correct location and nextLocation", async () => {
           let t = setup();
-          let originalLocation = t.tm.getState().location;
+          let originalLocation = t.getState().location;
 
-          let firstLocation = createLocation("/foo");
-          t.navigate(firstLocation);
-          expect(t.tm.getState().nextLocation).toBe(firstLocation);
-          expect(t.tm.getState().location).toBe(originalLocation);
+          let A = t.get("/foo");
+          expect(t.getState().nextLocation).toBe(A.location);
+          expect(t.getState().location).toBe(originalLocation);
 
-          let secondLocation = createLocation("/foo");
-          t.navigate(secondLocation);
-          expect(t.tm.getState().nextLocation).toBe(secondLocation);
-          expect(t.tm.getState().location).toBe(originalLocation);
+          let B = t.get("/foo");
+          expect(t.getState().nextLocation).toBe(B.location);
+          expect(t.getState().location).toBe(originalLocation);
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().nextLocation).toBeUndefined();
-          expect(t.tm.getState().location).toBe(secondLocation);
+          await B.loader.resolve("B");
+          expect(t.getState().nextLocation).toBeUndefined();
+          expect(t.getState().location).toBe(B.location);
 
-          await t.resolveNav(0, "A");
-          expect(t.tm.getState().nextLocation).toBeUndefined();
-          expect(t.tm.getState().location).toBe(secondLocation);
+          await A.loader.resolve("A");
+          expect(t.getState().nextLocation).toBeUndefined();
+          expect(t.getState().location).toBe(B.location);
         });
       });
     });
@@ -1043,15 +1091,15 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          t.navigate("/bar");
+          let A = t.get("/foo");
+          let B = t.get("/bar");
 
-          await t.resolveNav(0, "A");
-          expect(t.tm.getState().loaderData).toBeUndefined();
+          await A.loader.resolve("A");
+          expect(t.getState().loaderData).toBeUndefined();
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().loaderData.foo).toBeUndefined();
+          await B.loader.resolve("B");
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().loaderData.foo).toBeUndefined();
         });
       });
 
@@ -1062,15 +1110,15 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          t.navigate("/bar");
+          let A = t.get("/foo");
+          let B = t.get("/bar");
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().loaderData.bar).toBe("B");
+          await B.loader.resolve("B");
+          expect(t.getState().loaderData.bar).toBe("B");
 
-          await t.resolveNav(0, "A");
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().loaderData.foo).toBeUndefined();
+          await A.loader.resolve("A");
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().loaderData.foo).toBeUndefined();
         });
       });
     });
@@ -1086,16 +1134,16 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          t.navigate("/bar");
+          let A = t.get("/foo");
+          let B = t.get("/bar");
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().location.pathname).toBe("/bar");
+          await B.loader.resolve("B");
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().location.pathname).toBe("/bar");
 
-          await t.resolveNav(0, new TransitionRedirect("/baz"));
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().location.pathname).toBe("/bar");
+          await A.loader.redirect("/baz");
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().location.pathname).toBe("/bar");
           expect(t.handleChange.mock.calls.length).toBe(3);
           expect(t.handleRedirect.mock.calls.length).toBe(0);
         });
@@ -1107,79 +1155,79 @@ describe("transition manager", () => {
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
-          t.navigate("/foo");
-          t.navigate("/bar");
+          let A = t.get("/foo");
+          let B = t.get("/bar");
 
-          await t.resolveNav(0, new TransitionRedirect("/baz"));
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().location.pathname).toBe("/bar");
+          await A.loader.redirect("/baz");
+          await B.loader.resolve("B");
+          expect(t.getState().location).toBe(B.location);
           expect(t.handleRedirect.mock.calls.length).toBe(0);
         });
       });
 
       describe(`
-        A) GET /foo(0) |--/baz(1)---------X
-        B) GET /bar(2)             |--O
+        A) GET /foo |--/baz---------X
+        B) GET /bar             |--O
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          await t.resolveNav(0, new TransitionRedirect("/baz"));
-          t.navigate("/bar");
-          await t.resolveNav(2, "B");
-          await t.resolveNav(1, "A");
+          let A = t.get("/foo");
+          let AR = await A.loader.redirect("/baz");
+          let B = t.get("/bar");
+          await B.loader.resolve("B");
+          await AR.loader.resolve("C");
 
-          expect(t.tm.getState().location.pathname).toBe("/bar");
-          expect(t.tm.getState().loaderData.foo).toBeUndefined();
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().loaderData.baz).toBeUndefined();
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().loaderData.foo).toBeUndefined();
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().loaderData.baz).toBeUndefined();
         });
 
         it("sets all the right states at the right time", async () => {
           let t = setup();
 
-          t.navigate("/foo");
+          let A = t.get("/foo");
           expect(t.handleChange.mock.calls.length).toBe(1);
-          expect(t.tm.getState().nextLocation.pathname).toBe("/foo");
+          expect(t.getState().nextLocation.pathname).toBe("/foo");
 
-          await t.resolveNav(0, new TransitionRedirect("/baz"));
+          let AR = await A.loader.redirect("/baz");
           expect(t.handleChange.mock.calls.length).toBe(2);
-          expect(t.tm.getState().nextLocation.pathname).toBe("/baz");
+          expect(t.getState().nextLocation).toBe(AR.location);
 
-          t.navigate("/bar");
+          let B = t.get("/bar");
           expect(t.handleChange.mock.calls.length).toBe(3);
-          expect(t.tm.getState().nextLocation.pathname).toBe("/bar");
+          expect(t.getState().nextLocation).toBe(B.location);
 
-          await t.resolveNav(2, "B");
+          await B.loader.resolve("B");
           expect(t.handleChange.mock.calls.length).toBe(4);
-          expect(t.tm.getState().nextLocation).toBeUndefined();
-          expect(t.tm.getState().location.pathname).toBe("/bar");
+          expect(t.getState().nextLocation).toBeUndefined();
+          expect(t.getState().location).toBe(B.location);
 
-          await t.resolveNav(1, "A");
-          expect(t.tm.getState().nextLocation).toBeUndefined();
-          expect(t.tm.getState().location.pathname).toBe("/bar");
+          await AR.loader.resolve("A");
+          expect(t.getState().nextLocation).toBeUndefined();
+          expect(t.getState().location).toBe(B.location);
           expect(t.handleChange.mock.calls.length).toBe(4);
         });
       });
 
       describe(`
-        A) GET /foo(0) |--/baz(1)------X
-        B) GET /bar(2)            |-------O
+        A) GET /foo |--/baz----X
+        B) GET /bar          |-----O
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          t.navigate("/foo");
-          await t.resolveNav(0, new TransitionRedirect("/baz"));
-          t.navigate("/bar");
-          await t.resolveNav(1, "A");
-          await t.resolveNav(2, "B");
+          let A = t.get("/foo");
+          let AR = await A.loader.redirect("/baz");
+          let B = t.get("/bar");
+          await AR.loader.resolve("A");
+          await B.loader.resolve("B");
 
-          expect(t.tm.getState().location.pathname).toBe("/bar");
-          expect(t.tm.getState().loaderData.foo).toBeUndefined();
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().loaderData.baz).toBeUndefined();
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().loaderData.foo).toBeUndefined();
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().loaderData.baz).toBeUndefined();
         });
       });
     });
@@ -1194,72 +1242,68 @@ describe("transition manager", () => {
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
-          let finalLocation = createLocation("/bar");
 
-          t.navigate("/foo");
-          t.navigate(finalLocation);
+          let A = t.get("/foo");
+          let B = t.get("/bar");
 
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().loaderData.bar).toBe("B");
-          expect(t.tm.getState().location).toBe(finalLocation);
+          await B.loader.resolve("B");
+          expect(t.getState().loaderData.bar).toBe("B");
+          expect(t.getState().location).toBe(B.location);
 
-          await t.resolveNav(0, new TransitionRedirect("/bar"));
-          expect(t.tm.getState().location).toBe(finalLocation);
+          await A.loader.redirect("/bar");
+          expect(t.getState().location).toBe(B.location);
           expect(t.handleRedirect.mock.calls.length).toBe(0);
         });
       });
 
       describe(`
-        A) GET /foo |-------/bar--X
-        B) GET /bar   |---------------O
+        A) GET /foo |-----/bar--X
+        B) GET /bar    |------------O
       `, () => {
-        it("ignores A, commits B", async () => {
+        it("ignores A, commits B, does not redirect", async () => {
           let t = setup();
-          let finalLocation = createLocation("/bar");
 
-          t.navigate("/foo");
-          t.navigate(finalLocation);
+          let A = t.get("/foo");
+          let B = t.get("/bar");
+          await A.loader.redirect("/bar");
+          await B.loader.resolve("B");
 
-          await t.resolveNav(0, new TransitionRedirect("/bar"));
-          await t.resolveNav(1, "B");
-          expect(t.tm.getState().location).toBe(finalLocation);
+          expect(t.getState().location).toBe(B.location);
           expect(t.handleRedirect.mock.calls.length).toBe(0);
         });
       });
 
       describe(`
-        A) GET /foo(0) |--/bar(1)---------X
-        B) GET /bar(2)             |--O
+        A) GET /foo |--/bar-------X
+        B) GET /bar         |--O
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
-          let finalLocation = createLocation("/bar");
 
-          t.navigate("/foo");
-          await t.resolveNav(0, new TransitionRedirect("/bar"));
-          t.navigate(finalLocation);
-          await t.resolveNav(2, "B");
-          await t.resolveNav(1, "A");
+          let A = t.get("/foo");
+          let AR = await A.loader.redirect("/bar");
+          let B = t.get("/bar");
+          await B.loader.resolve("B");
+          await AR.loader.resolve("A");
 
-          expect(t.tm.getState().location).toBe(finalLocation);
+          expect(t.getState().location).toBe(B.location);
         });
       });
 
       describe(`
-        A) GET /foo(0) |--/bar(1)------X
-        B) GET /bar(2)            |-------O
+        A) GET /foo |--/bar------X
+        B) GET /bar          |-------O
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
-          let finalLocation = createLocation("/bar");
 
-          t.navigate("/foo");
-          await t.resolveNav(0, new TransitionRedirect("/bar"));
-          t.navigate(finalLocation);
-          await t.resolveNav(1, "A");
-          await t.resolveNav(2, "B");
+          let A = t.get("/foo");
+          let AR = await A.loader.redirect("/bar");
+          let B = t.get("/bar");
+          await AR.loader.resolve("A");
+          await B.loader.resolve("B");
 
-          expect(t.tm.getState().location).toBe(finalLocation);
+          expect(t.getState().location).toBe(B.location);
         });
       });
     });
@@ -1275,59 +1319,52 @@ describe("transition manager", () => {
         it("ignores A, commits B", async () => {
           let t = setup();
 
-          let locationA = createActionLocation("/foo");
-          let locationB = createActionLocation("/foo");
+          let A = t.post("/foo");
+          let B = t.post("/foo");
+          await A.action.resolve("A ACTION");
+          await B.action.resolve("B ACTION");
+          await A.loader.resolve("A LOADER");
+          await B.loader.resolve("B LOADER");
 
-          t.navigate(locationA);
-          t.navigate(locationB);
-
-          await t.resolveAction(0, "A ACTION");
-          await t.resolveAction(1, "B ACTION");
-          await t.resolveNav(0, "A LOADER");
-          await t.resolveNav(1, "B LOADER");
-
-          expect(t.tm.getState().location).toBe(locationB);
-          expect(t.tm.getState().actionData).toBe("B ACTION");
-          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().actionData).toBe("B ACTION");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
         });
 
         describe("with signals", () => {
           it("aborts A, commits B", async () => {
             let t = setup({ signals: true });
 
-            t.navigate(createActionLocation("/foo"));
-            t.navigate(createActionLocation("/foo"));
-            expect(t.actionAbortHandlers[0].mock.calls.length).toBe(1);
+            let A = t.post("/foo");
+            let B = t.post("/foo");
+            expect(A.action.abortMock.calls.length).toBe(1);
 
-            await t.resolveAction(1, "B ACTION");
-            await t.resolveNav(1, "B LOADER");
-            expect(t.tm.getState().actionData).toBe("B ACTION");
-            expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+            await B.action.resolve("B ACTION");
+            await B.loader.resolve("B LOADER");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().loaderData.foo).toBe("B LOADER");
           });
         });
       });
 
       describe(`
-        A) POST /foo(0) |----|----------X
-        B) POST /foo(1)    |----|----O
+        A) POST /foo |----|----------X
+        B) POST /foo    |----|----O
       `, () => {
         it("commits B, ignores A", async () => {
           let t = setup();
 
-          let locationA = createActionLocation("/foo");
-          let locationB = createActionLocation("/foo");
+          let A = t.post("/foo");
+          let B = t.post("/foo");
 
-          t.navigate(locationA);
-          t.navigate(locationB);
+          await A.action.resolve("A ACTION");
+          await B.action.resolve("B ACTION");
+          await B.loader.resolve("B LOADER");
+          await A.loader.resolve("A LOADER");
 
-          await t.resolveAction(0, "A ACTION");
-          await t.resolveAction(1, "B ACTION");
-          await t.resolveNav(1, "B LOADER");
-          await t.resolveNav(0, "A LOADER");
-
-          expect(t.tm.getState().location).toBe(locationB);
-          expect(t.tm.getState().actionData).toBe("B ACTION");
-          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().actionData).toBe("B ACTION");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
         });
       });
 
@@ -1338,20 +1375,17 @@ describe("transition manager", () => {
         it("commits B, ignores A", async () => {
           let t = setup();
 
-          let locationA = createActionLocation("/foo");
-          let locationB = createActionLocation("/foo");
+          let A = t.post("/foo");
+          let B = t.post("/foo");
 
-          t.navigate(locationA);
-          t.navigate(locationB);
+          await B.action.resolve("B ACTION");
+          await A.action.resolve("A ACTION");
+          await B.loader.resolve("B LOADER");
+          await A.loader.resolve("A LOADER");
 
-          await t.resolveAction(1, "B ACTION");
-          await t.resolveAction(0, "A ACTION");
-          await t.resolveNav(1, "B LOADER");
-          await t.resolveNav(0, "A LOADER");
-
-          expect(t.tm.getState().location).toBe(locationB);
-          expect(t.tm.getState().actionData).toBe("B ACTION");
-          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().actionData).toBe("B ACTION");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
         });
       });
 
@@ -1362,20 +1396,17 @@ describe("transition manager", () => {
         it("commits A, aborts B", async () => {
           let t = setup();
 
-          let locationA = createActionLocation("/foo");
-          let locationB = createActionLocation("/foo");
+          let A = t.post("/foo");
+          let B = t.post("/foo");
 
-          t.navigate(locationA);
-          t.navigate(locationB);
+          await B.action.resolve("B ACTION");
+          await A.action.resolve("A ACTION");
+          await A.loader.resolve("A LOADER");
+          await B.loader.resolve("B LOADER");
 
-          await t.resolveAction(1, "B ACTION");
-          await t.resolveAction(0, "A ACTION");
-          await t.resolveNav(0, "A LOADER");
-          await t.resolveNav(1, "B LOADER");
-
-          expect(t.tm.getState().location).toBe(locationB);
-          expect(t.tm.getState().actionData).toBe("B ACTION");
-          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().actionData).toBe("B ACTION");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
         });
       });
 
@@ -1386,38 +1417,30 @@ describe("transition manager", () => {
         it("commits B, ignores A", async () => {
           let t = setup();
 
-          let locationA = createActionLocation("/foo");
-          let locationB = createActionLocation("/foo");
+          let A = t.post("/foo");
+          await A.action.resolve("A ACTION");
+          let B = t.post("/foo");
+          await B.action.resolve("B ACTION");
+          await A.loader.resolve("A LOADER");
+          await B.loader.resolve("B LOADER");
 
-          t.navigate(locationA);
-          await t.resolveAction(0, "A ACTION");
-          t.navigate(locationB);
-          await t.resolveAction(1, "B ACTION");
-          await t.resolveNav(0, "A LOADER");
-          await t.resolveNav(1, "B LOADER");
-
-          expect(t.tm.getState().location).toBe(locationB);
-          expect(t.tm.getState().actionData).toBe("B ACTION");
-          expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().location).toBe(B.location);
+          expect(t.getState().actionData).toBe("B ACTION");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
         });
 
         describe("with signals", () => {
           it("commits B, ignores A action, aborts A load", async () => {
             let t = setup({ signals: true });
 
-            let locationA = createActionLocation("/foo");
-            let locationB = createActionLocation("/foo");
+            let A = t.post("/foo");
+            await A.action.resolve("A ACTION");
+            let B = t.post("/foo");
+            await B.action.resolve("B ACTION");
+            expect(A.action.abortMock.calls.length).toBe(1);
 
-            t.navigate(locationA);
-            await t.resolveAction(0, "A ACTION");
-            t.navigate(locationB);
-            await t.resolveAction(1, "B ACTION");
-            expect(t.abortHandlers[0].mock.calls.length).toBe(1);
-
-            await t.resolveNav(1, "B LOADER");
-            expect(t.tm.getState().location).toBe(locationB);
-            expect(t.tm.getState().actionData).toBe("B ACTION");
-            expect(t.tm.getState().loaderData.foo).toBe("B LOADER");
+            await B.loader.resolve("B LOADER");
+            expect(t.getState().location).toBe(B.location);
           });
         });
       });
@@ -1430,18 +1453,15 @@ describe("transition manager", () => {
       it("ignores POST /foo, commits GET /bar", async () => {
         let t = setup();
 
-        let locationA = createActionLocation("/foo");
-        let locationB = createLocation("/bar");
+        let A = t.post("/foo");
+        let B = t.get("/bar");
+        await A.action.resolve("A ACTION");
+        await A.loader.resolve("A LOADER");
+        await B.loader.resolve("B LOADER");
 
-        t.navigate(locationA);
-        t.navigate(locationB);
-        await t.resolveAction(0, "A ACTION");
-        await t.resolveNav(0, "A LOADER");
-        await t.resolveNav(1, "B LOADER");
-
-        expect(t.tm.getState().location).toBe(locationB);
-        expect(t.tm.getState().actionData).toBeUndefined();
-        expect(t.tm.getState().loaderData.bar).toBe("B LOADER");
+        expect(t.getState().location).toBe(B.location);
+        expect(t.getState().actionData).toBeUndefined();
+        expect(t.getState().loaderData.bar).toBe("B LOADER");
       });
     });
 
@@ -1452,18 +1472,15 @@ describe("transition manager", () => {
       it("ignores POST /foo, commits GET /bar", async () => {
         let t = setup();
 
-        let locationA = createLocation("/foo");
-        let locationB = createActionLocation("/bar");
+        let A = t.get("/foo");
+        let B = t.post("/bar");
+        await B.action.resolve("B ACTION");
+        await A.loader.resolve("A LOADER");
+        await B.loader.resolve("B LOADER");
 
-        t.navigate(locationA);
-        t.navigate(locationB);
-        await t.resolveAction(1, "B ACTION");
-        await t.resolveNav(0, "A LOADER");
-        await t.resolveNav(1, "B LOADER");
-
-        expect(t.tm.getState().location).toBe(locationB);
-        expect(t.tm.getState().actionData).toBe("B ACTION");
-        expect(t.tm.getState().loaderData.bar).toBe("B LOADER");
+        expect(t.getState().location).toBe(B.location);
+        expect(t.getState().actionData).toBe("B ACTION");
+        expect(t.getState().loaderData.bar).toBe("B LOADER");
       });
     });
 
@@ -1472,131 +1489,147 @@ describe("transition manager", () => {
       POST /foo > 303 /foo
     `, () => {
       describe(`
-        A) POST /foo(0) |----/foo(x)----X
-        B) POST /foo(1)    |----/foo(2)----O
+        A) POST /foo |----/foo----X
+        B) POST /foo    |----/foo----O
       `, () => {
-        it.only("ignores A, commits B", async () => {
+        it("ignores A, does not redirect, commits B", async () => {
           let t = setup();
 
-          t.navigate(createActionLocation("/foo"));
-          t.navigate(createActionLocation("/foo"));
+          let A = t.post("/foo");
+          let B = t.post("/foo");
 
-          await t.resolveAction(0, new TransitionRedirect("/foo"));
+          await A.action.redirect("/foo");
           expect(t.handleRedirect.mock.calls.length).toBe(0);
 
-          await t.resolveAction(1, new TransitionRedirect("/foo"));
+          let BR = await B.action.redirect("/foo");
           expect(t.handleRedirect.mock.calls.length).toBe(1);
 
-          await t.resolveNav(2, "B");
-          expect(t.tm.getState().actionData).toBeUndefined();
-          expect(t.tm.getState().loaderData.foo).toBe("B");
+          await BR.loader.resolve("B");
+          expect(t.getState().location).toBe(BR.location);
+          expect(t.getState().loaderData.foo).toBe("B");
         });
       });
     });
 
-    // describe("with action refs", () => {
-    //   describe(`
-    //     POST /foo
-    //     POST /foo
-    //   `, () => {
-    //     describe(`
-    //       A) POST /foo(0) |----|----O
-    //       B) POST /foo(1)    |----|----O
-    //     `, () => {
-    //       it.only("commits A, commits B", async () => {
-    //         let t = setup();
-    //         let locationA = createActionLocation("/foo");
-    //         let locationB = createActionLocation("/foo");
-    //         t.navigate(locationA);
-    //         expect(t.tm.getState().nextLocation).toBe(locationA);
-    //         t.navigate(locationB);
-    //         expect(t.tm.getState().nextLocation).toBe(locationB);
-    //         await t.resolveAction(0, "A ACTION");
-    //         expect(t.tm.getState);
-    //         await t.resolveAction(1, "B ACTION");
-    //         await t.resolveNav(0, "B LOADER");
-    //         await t.resolveNav(0, "B LOADER");
-    //       });
-    //     });
-    //     describe(`
-    //       A) POST /foo |----|----------X
-    //       B) POST /foo    |----|----O
-    //     `, () => {
-    //       it.todo("commits B, aborts A");
-    //     });
-    //     describe(`
-    //       A) POST /foo |-----------|---O
-    //       B) POST /foo    |----|-----O
-    //     `, () => {
-    //       it.todo("commits B, commits A");
-    //     });
-    //     describe(`
-    //       A) POST /foo |-----------|---O
-    //       B) POST /foo    |----|----------X
-    //     `, () => {
-    //       it.todo("commits A, aborts B");
-    //     });
-    //   });
-    //   describe(`
-    //     POST /a > 303 /a
-    //     POST /a > 303 /a
-    //   `, () => {
-    //     describe(`
-    //       A) POST /a |----/a----O
-    //       B) POST /a    |----/a----O
-    //     `, () => {
-    //       it.todo("commits A, commits B");
-    //     });
-    //     describe(`
-    //       A) POST /a |----/a----------X
-    //       B) POST /a    |----/a----O
-    //     `, () => {
-    //       it.todo("commits B, aborts A");
-    //     });
-    //     describe(`
-    //       A) POST /a |-----------/a---O
-    //       B) POST /a    |----/a-----O
-    //     `, () => {
-    //       it.todo("commits B, commits A");
-    //     });
-    //     describe(`
-    //       A) POST /a |-----------/a---O
-    //       B) POST /a    |----/a----------X
-    //     `, () => {
-    //       it.todo("commits A, aborts B");
-    //     });
-    //   });
-    //   describe(`
-    //     @    /a
-    //     POST /b > 303 /a
-    //     POST /b > 303 /a
-    //   `, () => {
-    //     describe(`
-    //       A) POST /b(0) |----/a(2)----O
-    //       B) POST /b(1)    |----/a(3)----O
-    //     `, () => {
-    //       it.todo("commits A, commits B");
-    //     });
-    //     describe(`
-    //       A) POST /b |----/a----------X
-    //       B) POST /b    |----/a----O
-    //     `, () => {
-    //       it.todo("commits B, aborts A");
-    //     });
-    //     describe(`
-    //       A) POST /b |-----------/a---O
-    //       B) POST /b    |----/a-----O
-    //     `, () => {
-    //       it.todo("commits B, commits A");
-    //     });
-    //     describe(`
-    //       A) POST /b |-----------/a---O
-    //       B) POST /b    |----/a----------X
-    //     `, () => {
-    //       it.todo("commits A, aborts B");
-    //     });
-    //   });
-    // });
+    describe("with action refs it gets CUHRAZZZY", () => {
+      describe(`
+        POST /foo
+        POST /foo
+      `, () => {
+        describe(`
+          A) POST /foo(0) |----|----O
+          B) POST /foo(1)    |----|----O
+        `, () => {
+          it.todo("aborts a load when a newer one lands");
+          it.todo("sets pending submissions refs");
+          it.todo("overwrites resubmitting the same ref");
+
+          it.skip("commits A, commits B", async () => {
+            let t = setup();
+            let refA = { a: true };
+            let refB = { b: true };
+
+            t.navigate(createActionLocation("/foo"), refA);
+            t.navigate(createActionLocation("/foo"), refB);
+
+            await t.action.resolve(0, "A ACTION");
+            expect(t.tm.getActionDataForRef(refA)).toBe("A ACTION");
+            expect(t.getState().actionData.foo).toBeUndefined();
+            // expect(t.getState().actionData.foo).toBe("A ACTION"); // better?
+
+            await t.action.resolve(1, "B ACTION");
+            expect(t.tm.getActionDataForRef(refB)).toBe("B ACTION");
+            expect(t.getState().actionData.foo).toBeUndefined();
+            // expect(t.getState().actionData.foo).toBe("B ACTION"); // better?
+
+            await t.loader.resolve("[A]");
+            expect(t.getState().loaderData.foo).toBe("[A]");
+
+            // await t.loader.resolve("[A,B]");
+            // expect(t.getState().actionData.foo).toBe("B ACTION");
+            // expect(t.getState().loaderData.foo).toBe("[A,B]");
+          });
+        });
+
+        describe(`
+          A) POST /foo |----|----------X
+          B) POST /foo    |----|----O
+        `, () => {
+          it.todo("commits B, aborts A");
+        });
+        describe(`
+          A) POST /foo |-----------|---O
+          B) POST /foo    |----|-----O
+        `, () => {
+          it.todo("commits B, commits A");
+        });
+        describe(`
+          A) POST /foo |-----------|---O
+          B) POST /foo    |----|----------X
+        `, () => {
+          it.todo("commits A, aborts B");
+        });
+      });
+      describe(`
+        POST /foo > 303 /foo
+        POST /foo > 303 /foo
+      `, () => {
+        describe(`
+          A) POST /foo |----/foo----O
+          B) POST /foo    |----/foo----O
+        `, () => {
+          it.todo("commits A, commits B");
+        });
+        describe(`
+          A) POST /foo |----/foo----------X
+          B) POST /foo    |----/foo----O
+        `, () => {
+          it.todo("commits B, aborts A");
+        });
+        describe(`
+          A) POST /foo |-----------/foo---O
+          B) POST /foo    |----/foo-----O
+        `, () => {
+          it.todo("commits B, commits A");
+        });
+        describe(`
+          A) POST /foo |-----------/foo---O
+          B) POST /foo    |----/foo----------X
+        `, () => {
+          it.todo("commits A, aborts B");
+        });
+      });
+      describe(`
+        @    /foo
+        POST /bar > 303 /foo
+        POST /bar > 303 /foo
+      `, () => {
+        describe(`
+          A) POST /bar(0) |----/foo(2)----O
+          B) POST /bar(1)    |----/foo(3)----O
+        `, () => {
+          it.todo("commits A, commits B");
+        });
+        describe(`
+          A) POST /bar |----/foo----------X
+          B) POST /bar    |----/foo----O
+        `, () => {
+          it.todo("commits B, aborts A");
+        });
+        describe(`
+          A) POST /bar |-----------/foo---O
+          B) POST /bar    |----/foo-----O
+        `, () => {
+          it.todo("commits B, commits A");
+        });
+        describe(`
+          A) POST /bar |-----------/foo---O
+          B) POST /bar    |----/foo----------X
+        `, () => {
+          it.todo("commits A, aborts B");
+        });
+      });
+    });
   });
 });
 
