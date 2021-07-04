@@ -1,6 +1,7 @@
 import { Location } from "history";
 import {
   createTransitionManager,
+  SubmissionRef,
   SubmissionState,
   TransitionRedirect
 } from "../transition";
@@ -276,7 +277,7 @@ describe("transition manager", () => {
       // });
     });
 
-    // it.todo("delegates to the route if it should reload or not");
+    it.todo("delegates to the route if it should reload or not");
 
     describe("errors", () => {
       describe("with an error boundary in the throwing route", () => {
@@ -818,8 +819,7 @@ describe("transition manager", () => {
 
       let ref = {};
       await tm.send(createLocation("/", submission), ref);
-
-      expect(tm.getActionDataForRef(ref)).toBe(DATA);
+      expect(tm.getRefActionData(ref)).toBe(DATA);
     });
 
     it("cleans up stale action data when garbage collected", async () => {
@@ -839,11 +839,11 @@ describe("transition manager", () => {
       ref.current = {};
 
       await tm.send(createLocation("/", submission), ref.current);
-      expect(tm.getActionDataForRef(ref.current)).toBe(DATA);
-      delete ref.current; // should garbage collect? 🤞
+      expect(tm.getRefActionData(ref.current)).toBe(DATA);
+      delete ref.current; // should garbage collect 🤞
 
       await tm.send(createLocation("/"));
-      expect(tm.getActionDataForRef(ref)).toBeUndefined();
+      expect(tm.getRefActionData(ref)).toBeUndefined();
     });
   });
 
@@ -866,31 +866,31 @@ describe("transition manager", () => {
 
       let handleChange = jest.fn();
 
-      let handleRedirect = jest.fn((href: string) => {
-        lastRedirect = navigate(href);
+      let handleRedirect = jest.fn((href: string, ref?: SubmissionRef) => {
+        lastRedirect = navigate(href, ref);
       });
 
       let loader = async ({ signal }: { signal: AbortSignal }) => {
         if (signals) signal.onabort = loaderAbortHandlers.get(nextLoaderId);
-        return loaderDeferreds
-          .get(nextLoaderId)
-          .promise.then((val: any) => val);
-      };
-
-      let action = async ({ signal }: { signal: AbortSignal }) => {
-        if (signals) signal.onabort = actionAbortHandlers.get(nextActionId);
-        return actionDeferreds.get(nextActionId).promise.then((val: any) => {
-          nextLoaderId = nextActionId;
+        return loaderDeferreds.get(nextLoaderId).promise.then((val: any) => {
           return val;
         });
       };
 
-      let tm = createTestTransitionManager("/", {
+      let action = async ({ signal }: { signal: AbortSignal }) => {
+        let myId = nextActionId;
+        if (signals) signal.onabort = actionAbortHandlers.get(nextActionId);
+        return actionDeferreds.get(nextActionId).promise.then((val: any) => {
+          nextLoaderId = myId;
+          return val;
+        });
+      };
+
+      let tm = createTestTransitionManager("/foo", {
         onChange: handleChange,
         onRedirect: handleRedirect,
         loaderData: undefined,
         routes: [
-          { path: "/", id: "root", element: {} },
           { path: "/foo", id: "foo", loader, action, element: {} },
           { path: "/bar", id: "bar", loader, action, element: {} },
           { path: "/baz", id: "baz", loader, action, element: {} }
@@ -898,7 +898,8 @@ describe("transition manager", () => {
       });
 
       let get = (href: string) => navigate(href);
-      let post = (href: string) => navigate(createActionLocation(href));
+      let post = (href: string, ref?: Object) =>
+        navigate(createActionLocation(href), ref);
 
       let navigate = (location: string | Location<any>, ref?: Object) => {
         if (typeof location === "string") location = createLocation(location);
@@ -1517,116 +1518,378 @@ describe("transition manager", () => {
         POST /foo
       `, () => {
         describe(`
-          A) POST /foo(0) |----|----O
-          B) POST /foo(1)    |----|----O
+          A) POST /foo |----|[A]----O
+          B) POST /foo    |----|[A,B]----O
         `, () => {
-          it.todo("aborts a load when a newer one lands");
           it.todo("sets pending submissions refs");
           it.todo("overwrites resubmitting the same ref");
 
-          it.skip("commits A, commits B", async () => {
+          it("commits action and loader data at every step", async () => {
             let t = setup();
             let refA = { a: true };
             let refB = { b: true };
+            let originalLocation = t.getState().location;
 
-            t.navigate(createActionLocation("/foo"), refA);
-            t.navigate(createActionLocation("/foo"), refB);
+            let A = t.post("/foo", refA);
+            expect(t.getState().nextLocation).toBe(A.location);
+            let B = t.post("/foo", refB);
+            expect(t.getState().nextLocation).toBe(B.location);
 
-            await t.action.resolve(0, "A ACTION");
-            expect(t.tm.getActionDataForRef(refA)).toBe("A ACTION");
-            expect(t.getState().actionData.foo).toBeUndefined();
-            // expect(t.getState().actionData.foo).toBe("A ACTION"); // better?
+            await A.action.resolve("A ACTION");
+            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().actionData).toBe("A ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
 
-            await t.action.resolve(1, "B ACTION");
-            expect(t.tm.getActionDataForRef(refB)).toBe("B ACTION");
-            expect(t.getState().actionData.foo).toBeUndefined();
-            // expect(t.getState().actionData.foo).toBe("B ACTION"); // better?
+            await B.action.resolve("B ACTION");
+            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
 
-            await t.loader.resolve("[A]");
+            await A.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A]");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
 
-            // await t.loader.resolve("[A,B]");
-            // expect(t.getState().actionData.foo).toBe("B ACTION");
-            // expect(t.getState().loaderData.foo).toBe("[A,B]");
+            await B.loader.resolve("[A,B]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().location).toBe(B.location);
+            expect(t.getState().nextLocation).toBeUndefined();
           });
         });
 
         describe(`
-          A) POST /foo |----|----------X
-          B) POST /foo    |----|----O
+          A) POST /foo |----|[A]----------X
+          B) POST /foo    |----|[A,B]---O
         `, () => {
-          it.todo("commits B, aborts A");
+          it("commits A action, B action/loader; ignores A loader", async () => {
+            let t = setup();
+            let refA = {};
+            let refB = {};
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.action.resolve("A ACTION");
+            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().actionData).toBe("A ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.action.resolve("B ACTION");
+            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.loader.resolve("[A,B]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().location).toBe(B.location);
+            expect(t.getState().nextLocation).toBeUndefined();
+
+            await A.loader.resolve("[A]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
+            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().location).toBe(B.location);
+            expect(t.getState().nextLocation).toBeUndefined();
+          });
         });
+
         describe(`
-          A) POST /foo |-----------|---O
-          B) POST /foo    |----|-----O
+          A) POST /foo |-----------|[B,A]---O
+          B) POST /foo    |----|[B]-----O
         `, () => {
-          it.todo("commits B, commits A");
+          it("commits B, commits A", async () => {
+            let t = setup();
+            let refA = {};
+            let refB = {};
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.action.resolve("B ACTION");
+            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.action.resolve("A ACTION");
+            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.loader.resolve("[B]");
+            expect(t.getState().loaderData.foo).toBe("[B]");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.loader.resolve("[B,A]");
+            expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().nextLocation).toBeUndefined();
+            expect(t.getState().location).toBe(B.location);
+          });
         });
+
         describe(`
-          A) POST /foo |-----------|---O
-          B) POST /foo    |----|----------X
+          A) POST /foo |-----------|[B,A]---O
+          B) POST /foo    |---|[B]-------------X
         `, () => {
-          it.todo("commits A, aborts B");
+          it("commits A, aborts B", async () => {
+            let t = setup();
+            let refA = {};
+            let refB = {};
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.action.resolve("B ACTION");
+            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.action.resolve("A ACTION");
+            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.loader.resolve("[B,A]");
+            expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().location).toBe(B.location);
+            expect(t.getState().nextLocation).toBeUndefined();
+
+            await B.loader.resolve("[B]");
+            expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().location).toBe(B.location);
+            expect(t.getState().nextLocation).toBeUndefined();
+          });
         });
       });
+
       describe(`
         POST /foo > 303 /foo
         POST /foo > 303 /foo
       `, () => {
         describe(`
-          A) POST /foo |----/foo----O
-          B) POST /foo    |----/foo----O
+          A) POST /foo |-----/foo[A]------O
+          B) POST /foo    |-----/foo[A,B]----O
         `, () => {
-          it.todo("commits A, commits B");
+          it("commits A, commits B", async () => {
+            let t = setup();
+            let refA = { a: true };
+            let refB = { b: true };
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+            expect(t.tm.getPendingRefSubmission(refA)).toBeDefined();
+            expect(t.tm.getPendingRefSubmission(refA)).toBe(A.location.state);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+            expect(t.tm.getPendingRefSubmission(refB)).toBeDefined();
+
+            let AR = await A.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(AR.location);
+            expect(t.tm.getPendingRefSubmission(refA)).toBeUndefined();
+
+            let BR = await B.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(BR.location);
+            expect(t.tm.getPendingRefSubmission(refB)).toBeUndefined();
+
+            await AR.loader.resolve("[A]");
+            expect(t.getState().loaderData.foo).toBe("[A]");
+
+            await BR.loader.resolve("[A,B]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
+            expect(t.getState().location).toBe(BR.location);
+          });
         });
         describe(`
-          A) POST /foo |----/foo----------X
-          B) POST /foo    |----/foo----O
+          A) POST /foo |----/foo[A]------------X
+          B) POST /foo    |----/foo[A,B]----O
         `, () => {
-          it.todo("commits B, aborts A");
+          it("commits B, aborts A", async () => {
+            let t = setup();
+            let refA = { a: true };
+            let refB = { b: true };
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            let AR = await A.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(AR.location);
+
+            let BR = await B.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(BR.location);
+
+            await BR.loader.resolve("[A,B]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
+            expect(t.getState().location).toBe(BR.location);
+
+            await AR.loader.resolve("[A]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
+            expect(t.getState().location).toBe(BR.location);
+          });
         });
         describe(`
-          A) POST /foo |-----------/foo---O
-          B) POST /foo    |----/foo-----O
+          A) POST /foo |-----------/foo[B,A]---O
+          B) POST /foo    |----/foo[B]-----O
         `, () => {
-          it.todo("commits B, commits A");
+          it("commits B, commits A", async () => {
+            let t = setup();
+            let refA = { a: true };
+            let refB = { b: true };
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            let BR = await B.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(BR.location);
+
+            let AR = await A.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(AR.location);
+
+            await BR.loader.resolve("[B]");
+            expect(t.getState().loaderData.foo).toBe("[B]");
+            expect(t.getState().nextLocation).toBe(AR.location);
+
+            await AR.loader.resolve("[B,A]");
+            expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().location).toBe(AR.location);
+          });
         });
         describe(`
-          A) POST /foo |-----------/foo---O
-          B) POST /foo    |----/foo----------X
+          A) POST /foo |-----------/foo[B,A]---O
+          B) POST /foo    |----/foo[B]------------X
         `, () => {
-          it.todo("commits A, aborts B");
+          it("commits A, ignores B", async () => {
+            let t = setup();
+            let refA = { a: true };
+            let refB = { b: true };
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            let BR = await B.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(BR.location);
+
+            let AR = await A.action.redirect("/foo");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(AR.location);
+
+            await AR.loader.resolve("[B,A]");
+            expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().location).toBe(AR.location);
+
+            await BR.loader.resolve("[B]");
+            expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().location).toBe(AR.location);
+          });
+          describe("with signals", () => {
+            it("aborts B redirect load", async () => {
+              let t = setup({ signals: true });
+              let refA = { a: true };
+              let refB = { b: true };
+
+              let A = t.post("/foo", refA);
+              let B = t.post("/foo", refB);
+              let BR = await B.action.redirect("/foo");
+              let AR = await A.action.redirect("/foo");
+              await AR.loader.resolve("[B,A]");
+
+              expect(BR.loader.abortMock.calls.length).toBe(1);
+              expect(t.getState().loaderData.foo).toBe("[B,A]");
+              expect(t.getState().location).toBe(AR.location);
+            });
+          });
         });
       });
-      describe(`
-        @    /foo
-        POST /bar > 303 /foo
-        POST /bar > 303 /foo
-      `, () => {
+
+      describe("Loading a different URL than the page the user is looking at", () => {
         describe(`
-          A) POST /bar(0) |----/foo(2)----O
-          B) POST /bar(1)    |----/foo(3)----O
+          A) POST /foo |--X
+          B) GET  /bar    |--O
+        `, () => {
+          it.todo("aborts A, commits B");
+          it.todo("clears pending submission A");
+        });
+        describe(`
+          A) POST /foo |--|--X
+          B) GET  /bar       |----O
+        `, () => {
+          it.todo("aborts A, commits B");
+        });
+        describe(`
+          A) POST /foo |---|--X
+          B) POST /bar   |----|---O
+        `, () => {
+          it.todo("ignores A, commits B");
+        });
+        describe(`
+          A) POST /foo |-----X
+          B) POST /bar   |---|---O
+        `, () => {
+          it.todo("ignores A, commits B");
+          it.todo("clears pending submission A");
+        });
+        describe(`
+          A) POST /foo |---|----X
+          B) POST /bar       |--|---O
+        `, () => {
+          it.todo("ignores A, commits B");
+        });
+        describe(`
+          A) POST /foo |---|----O
+          B) POST /bar        |----|---O
         `, () => {
           it.todo("commits A, commits B");
-        });
-        describe(`
-          A) POST /bar |----/foo----------X
-          B) POST /bar    |----/foo----O
-        `, () => {
-          it.todo("commits B, aborts A");
-        });
-        describe(`
-          A) POST /bar |-----------/foo---O
-          B) POST /bar    |----/foo-----O
-        `, () => {
-          it.todo("commits B, commits A");
-        });
-        describe(`
-          A) POST /bar |-----------/foo---O
-          B) POST /bar    |----/foo----------X
-        `, () => {
-          it.todo("commits A, aborts B");
         });
       });
     });
