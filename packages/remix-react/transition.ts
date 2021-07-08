@@ -98,7 +98,10 @@ export type SubmissionRef = HTMLFormElement | Object;
  * in the history stack.
  */
 type ActionLocation = Location<SubmissionState>;
-type ActionRedirectLocation = Location<{ id: number; isActionRedirect: true }>;
+type ActionRedirectLocation = Location<{
+  id: number;
+  isActionRedirect: true;
+}>;
 
 export class TransitionRedirect {
   location: string;
@@ -325,12 +328,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortStaleSubmissions(id);
     abortStaleLoads(Number.MAX_SAFE_INTEGER, location);
 
-    if (ref) {
-      let nextSubmissions = new Map(state.pendingSubmissionRefs);
-      nextSubmissions.set(ref, location.state);
-      update({ pendingSubmissionRefs: nextSubmissions });
-    }
-
     let leafMatch = matches.slice(-1)[0];
     let result = await fetchAction(location, leafMatch, controller.signal);
 
@@ -340,14 +337,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     if (isRedirectResult(result)) {
       if (ref) {
-        update({ pendingSubmissionRefs: clearPendingSubmissionRef() });
+        update({
+          pendingSubmissionRefs: clearPendingSubmissionRef()
+        });
       }
       return handleRedirect(result.value, ref);
     }
 
     if (result.value instanceof Error) {
       if (ref) {
-        update({ pendingSubmissionRefs: clearPendingSubmissionRef() });
+        update({
+          pendingSubmissionRefs: clearPendingSubmissionRef()
+        });
       }
       // TODO: what do we do about submissionRef here?
       await get(location, ref, result);
@@ -441,6 +442,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
     pendingSubmissions.delete(id);
   }
 
+  function abortAllSubmissionRefs() {
+    for (let [id] of pendingSubmissions) {
+      abortStaleSubmission(id);
+    }
+  }
+
   function abortStaleSubmissions(latestId: number) {
     for (let [id, [, ref]] of pendingSubmissions) {
       if (ref) {
@@ -461,9 +468,24 @@ export function createTransitionManager(init: TransitionManagerInit) {
   async function send(location: Location, ref?: SubmissionRef) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
-    // TODO: move this into get/post so that post can update pending submission
-    // at the same time?
-    update({ nextLocation: location, nextMatches: matches });
+
+    let nextState: Partial<TransitionState> = {
+      nextLocation: location,
+      nextMatches: matches
+    };
+
+    if (ref) {
+      if (isAction(location)) {
+        let nextSubmissions = new Map(state.pendingSubmissionRefs);
+        nextSubmissions.set(ref, location.state);
+        nextState.pendingSubmissionRefs = nextSubmissions;
+      }
+    } else {
+      abortAllSubmissionRefs();
+      nextState.pendingSubmissionRefs = new Map();
+    }
+
+    update(nextState);
 
     if (isAction(location)) {
       await post(location, ref);

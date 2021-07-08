@@ -18,13 +18,39 @@ let routes = [
       {
         path: "a",
         id: "routes/a",
-        loader: async () => ({ fakeLoaderDataFor: "routes/a" }),
-        action: async () => ({ fakeActionDataFor: "routes/a" }),
+        loader: async () => ({
+          fakeLoaderDataFor: "routes/a"
+        }),
+        action: async () => ({
+          fakeActionDataFor: "routes/a"
+        }),
         element: {}
       }
     ]
   }
 ];
+
+function defer() {
+  let resolve: (val?: any) => Promise<void>;
+  let reject: (error?: Error) => Promise<void>;
+  let promise = new Promise((res, rej) => {
+    resolve = async (val: any) => {
+      res(val);
+      await (async () => promise)();
+    };
+    reject = async (error?: Error) => {
+      rej(error);
+      await (async () => promise)();
+    };
+  });
+  return { promise, resolve, reject };
+}
+
+type Deferred = ReturnType<typeof defer>;
+
+function FakeComponent() {
+  return null;
+}
 
 let fakeKey = 0;
 function createLocation(path: string, state: any = null): Location {
@@ -182,8 +208,17 @@ describe("transition manager", () => {
           onRedirect: handleRedirect,
           routes: [
             { path: "/", id: "root", element: {} },
-            { path: "/will-redirect", id: "redirect", loader, element: {} },
-            { path: "/redirect-target", id: "target", element: {} }
+            {
+              path: "/will-redirect",
+              id: "redirect",
+              loader,
+              element: {}
+            },
+            {
+              path: "/redirect-target",
+              id: "target",
+              element: {}
+            }
           ]
         });
 
@@ -317,7 +352,12 @@ describe("transition manager", () => {
           let loader = () => {
             throw new Error(ERROR_MESSAGE);
           };
-          let child = { path: "/child", id: "child", element: {}, loader };
+          let child = {
+            path: "/child",
+            id: "child",
+            element: {},
+            loader
+          };
           let parent = {
             path: "/",
             id: "parent",
@@ -326,7 +366,9 @@ describe("transition manager", () => {
             children: [child]
           };
 
-          let tm = createTestTransitionManager("/", { routes: [parent] });
+          let tm = createTestTransitionManager("/", {
+            routes: [parent]
+          });
           await tm.send(createLocation("/child"));
           let state = tm.getState();
           expect(state.errorBoundaryId).toBe("parent");
@@ -649,7 +691,11 @@ describe("transition manager", () => {
             ]
           });
 
-          await tm.send(createLocation("/parent/child", { isAction: true }));
+          await tm.send(
+            createLocation("/parent/child", {
+              isAction: true
+            })
+          );
           let state = tm.getState();
           expect(state.errorBoundaryId).toBe("root");
           expect(state.error.message).toBe(ACTION_ERROR_MESSAGE);
@@ -848,9 +894,6 @@ describe("transition manager", () => {
   });
 
   describe("navigations while pending", () => {
-    it.todo("aborts pending actions without refs");
-    it.todo("aborts pending actions with refs?");
-
     let setup = ({ signals }: { signals?: boolean } = {}) => {
       let guid = -1;
 
@@ -891,9 +934,27 @@ describe("transition manager", () => {
         onRedirect: handleRedirect,
         loaderData: undefined,
         routes: [
-          { path: "/foo", id: "foo", loader, action, element: {} },
-          { path: "/bar", id: "bar", loader, action, element: {} },
-          { path: "/baz", id: "baz", loader, action, element: {} }
+          {
+            path: "/foo",
+            id: "foo",
+            loader,
+            action,
+            element: {}
+          },
+          {
+            path: "/bar",
+            id: "bar",
+            loader,
+            action,
+            element: {}
+          },
+          {
+            path: "/baz",
+            id: "baz",
+            loader,
+            action,
+            element: {}
+          }
         ]
       });
 
@@ -1512,7 +1573,7 @@ describe("transition manager", () => {
       });
     });
 
-    describe("with action refs it gets CUHRAZZZY", () => {
+    describe("with action refs", () => {
       describe(`
         POST /foo
         POST /foo
@@ -1521,8 +1582,17 @@ describe("transition manager", () => {
           A) POST /foo |----|[A]----O
           B) POST /foo    |----|[A,B]----O
         `, () => {
-          it.todo("sets pending submissions refs");
-          it.todo("overwrites resubmitting the same ref");
+          it("overwrites resubmitting the same ref", async () => {
+            let t = setup();
+            let refA = {};
+            t.post("/foo", refA);
+            let submission = t.tm.getPendingRefSubmission(refA);
+            expect(submission.id).toBeDefined();
+
+            t.post("/foo", refA);
+            let submission2 = t.tm.getPendingRefSubmission(refA);
+            expect(submission2.id).not.toEqual(submission.id);
+          });
 
           it("commits action and loader data at every step", async () => {
             let t = setup();
@@ -1852,68 +1922,67 @@ describe("transition manager", () => {
         });
       });
 
-      describe("Loading a different URL than the page the user is looking at", () => {
+      describe("navigating without a ref after navigating with one", () => {
         describe(`
           A) POST /foo |--X
           B) GET  /bar    |--O
         `, () => {
-          it.todo("aborts A, commits B");
-          it.todo("clears pending submission A");
+          it("aborts A, commits B", async () => {
+            let t = setup({ signals: true });
+            let ref = {};
+            let A = t.post("/foo", ref);
+            let B = t.get("/bar");
+            expect(A.action.abortMock.calls.length).toBe(1);
+            await B.loader.resolve("B");
+            expect(t.getState().loaderData.bar).toBe("B");
+          });
+          it("clears pending submission A", async () => {
+            let t = setup({ signals: true });
+            let ref = {};
+            t.post("/foo", ref);
+            expect(t.tm.getPendingRefSubmission(ref)).toBeDefined();
+            t.get("/bar");
+            expect(t.tm.getPendingRefSubmission(ref)).toBeUndefined();
+          });
         });
+
         describe(`
           A) POST /foo |--|--X
           B) GET  /bar       |----O
         `, () => {
-          it.todo("aborts A, commits B");
+          it("aborts A, commits B", async () => {
+            let t = setup({ signals: true });
+            let ref = {};
+            let A = t.post("/foo", ref);
+            await A.action.resolve("A ACTION");
+            let B = t.get("/bar");
+            expect(A.loader.abortMock.calls.length).toBe(1);
+            await B.loader.resolve("B");
+            expect(t.getState().loaderData.bar).toBe("B");
+          });
         });
+
         describe(`
-          A) POST /foo |---|--X
-          B) POST /bar   |----|---O
+          A) POST /foo |--X
+          B) POST /bar    |---|---O
         `, () => {
-          it.todo("ignores A, commits B");
-        });
-        describe(`
-          A) POST /foo |-----X
-          B) POST /bar   |---|---O
-        `, () => {
-          it.todo("ignores A, commits B");
-          it.todo("clears pending submission A");
-        });
-        describe(`
-          A) POST /foo |---|----X
-          B) POST /bar       |--|---O
-        `, () => {
-          it.todo("ignores A, commits B");
-        });
-        describe(`
-          A) POST /foo |---|----O
-          B) POST /bar        |----|---O
-        `, () => {
-          it.todo("commits A, commits B");
+          it("ignores A, commits B", async () => {
+            let t = setup({ signals: true });
+            let ref = {};
+            let A = t.post("/foo", ref);
+            t.post("/bar");
+            expect(A.action.abortMock.calls.length).toBe(1);
+          });
+          it("clears pending submission A", async () => {
+            let t = setup({ signals: true });
+            let ref = {};
+            t.post("/foo", ref);
+            expect(t.tm.getPendingRefSubmission(ref)).toBeDefined();
+            t.post("/bar");
+            expect(t.tm.getPendingRefSubmission(ref)).toBeUndefined();
+          });
         });
       });
     });
   });
 });
-
-function defer() {
-  let resolve: (val?: any) => Promise<void>;
-  let reject: (error?: Error) => Promise<void>;
-  let promise = new Promise((res, rej) => {
-    resolve = async (val: any) => {
-      res(val);
-      await (async () => promise)();
-    };
-    reject = async (error?: Error) => {
-      rej(error);
-      await (async () => promise)();
-    };
-  });
-  return { promise, resolve, reject };
-}
-
-type Deferred = ReturnType<typeof defer>;
-
-function FakeComponent() {
-  return null;
-}
