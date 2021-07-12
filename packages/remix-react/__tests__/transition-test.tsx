@@ -237,7 +237,22 @@ describe("transition manager", () => {
       });
     });
 
-    it.todo("allows `null` as a valid data value");
+    it("allows `null` as a valid data value", async () => {
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          { path: "/", id: "root", element: {} },
+          {
+            path: "/test",
+            id: "test",
+            loader: () => Promise.resolve(null),
+            element: {}
+          }
+        ]
+      });
+
+      await tm.send(createLocation("/test"));
+      expect(tm.getState().loaderData.test).toBe(null);
+    });
 
     it("fetches data on new locations", async () => {
       let t = setup();

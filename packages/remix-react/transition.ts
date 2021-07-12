@@ -383,7 +383,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         newData[route.id] !== undefined
           ? newData[route.id]
           : state.loaderData[route.id];
-      if (value) {
+      if (value !== undefined) {
         loaderData[route.id] = value;
       }
     }
@@ -545,12 +545,14 @@ async function loadRouteData(
     matches,
     actionErrorResult
   );
+
   return Promise.all(
     matchesToLoad.map(async match => {
       invariant(
         match.route.loader,
         `Expected ${match.route.id} to have a loader`
       );
+
       try {
         let value = await match.route.loader({ signal });
         return { match, value };
