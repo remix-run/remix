@@ -569,6 +569,19 @@ function filterMatchesToLoad(
   matches: ClientMatch[],
   actionErrorResult?: RouteLoaderErrorResult
 ): ClientMatch[] {
+  let filterByRouteProps = (match: ClientMatch, index: number) => {
+    return match.route.loader
+      ? match.route.shouldReload
+        ? match.route.shouldReload({
+            nextLocation: location,
+            prevLocation: state.location,
+            nextMatch: match,
+            prevMatch: state.matches[index]
+          })
+        : true
+      : false;
+  };
+
   if (
     // mutation, reload for fresh data
     isAction(location) ||
@@ -578,27 +591,26 @@ function filterMatchesToLoad(
     // search affects all loaders
     location.search !== state.location.search
   ) {
-    return matches.filter(match => match.route.loader);
+    return matches.filter(filterByRouteProps);
   }
 
-  return matches.filter((match, index, arr) => {
-    if (actionErrorResult && arr.length - 1 === index) {
-      return false;
-    }
+  return matches
+    .filter((match, index, arr) => {
+      // don't load errored action route
+      if (actionErrorResult && arr.length - 1 === index) {
+        return false;
+      }
 
-    if (!match.route.loader) {
-      return false;
-    }
-
-    return (
-      // new route
-      !state.matches[index] ||
-      // existing route but params changed
-      state.matches[index].pathname !== match.pathname ||
-      // catchall param changed
-      state.matches[index].params["*"] !== match.params["*"]
-    );
-  });
+      return (
+        // new route
+        !state.matches[index] ||
+        // existing route but params changed
+        state.matches[index].pathname !== match.pathname ||
+        // catchall param changed
+        state.matches[index].params["*"] !== match.params["*"]
+      );
+    })
+    .filter(filterByRouteProps);
 }
 
 function createHref(location: Location) {

@@ -327,7 +327,76 @@ describe("transition manager", () => {
       // });
     });
 
-    it.todo("delegates to the route if it should reload or not");
+    describe("with shouldReload", () => {
+      it("delegates to the route if it should reload or not", async () => {
+        let rootLoader = jest.fn();
+        let childLoader = jest.fn(() => "CHILD");
+        let shouldReload = jest.fn(({ nextLocation }) => {
+          let params = new URLSearchParams(nextLocation.search);
+          return params.get("reload") === "1";
+        });
+        let tm = createTestTransitionManager("/", {
+          loaderData: {
+            "/": "ROOT"
+          },
+          routes: [
+            {
+              path: "/",
+              id: "root",
+              loader: rootLoader,
+              shouldReload,
+              element: {},
+              children: [
+                {
+                  path: "/child",
+                  id: "child",
+                  loader: childLoader,
+                  element: {}
+                }
+              ]
+            }
+          ]
+        });
+
+        await tm.send(createLocation("/child?reload=1"));
+        expect(rootLoader.mock.calls.length).toBe(1);
+
+        await tm.send(createLocation("/child?reload=0"));
+        expect(rootLoader.mock.calls.length).toBe(1);
+      });
+
+      it("passes prev/next match to shouldReload", async () => {
+        let loader = jest.fn(() => "PARAM");
+        let shouldReload = jest.fn(() => true);
+
+        let tm = createTestTransitionManager("/one", {
+          loaderData: {
+            "/:param": "PARAM"
+          },
+          routes: [
+            {
+              path: "/:param",
+              id: "root",
+              loader,
+              shouldReload,
+              element: {}
+            }
+          ]
+        });
+
+        await tm.send(createLocation("/two"));
+        expect(loader.mock.calls.length).toBe(1);
+        expect(shouldReload.mock.calls.length).toBe(1);
+        // @ts-ignore
+        let reloadArg = shouldReload.mock.calls[0][0] as any;
+        expect(reloadArg.prevMatch.params).toEqual({
+          param: "one"
+        });
+        expect(reloadArg.nextMatch.params).toEqual({
+          param: "two"
+        });
+      });
+    });
 
     describe("errors", () => {
       describe("with an error boundary in the throwing route", () => {

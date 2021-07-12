@@ -1,5 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
+import type { Location } from "history";
 import React from "react";
+import { RouteMatch } from "./routeMatching";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -22,6 +24,17 @@ export interface EntryRoute extends Route {
 export interface ClientRoute extends Route {
   loader?: ({ signal }: { signal: AbortSignal }) => Promise<any> | any;
   action?: ({ signal }: { signal: AbortSignal }) => Promise<any> | any;
+  shouldReload?: ({
+    nextLocation,
+    prevLocation,
+    nextMatch,
+    prevMatch
+  }: {
+    nextLocation: Location<any>;
+    prevLocation: Location<any>;
+    nextMatch: RouteMatch<ClientRoute>;
+    prevMatch: RouteMatch<ClientRoute>;
+  }) => boolean;
   ErrorBoundary?: ComponentType;
   children?: ClientRoute[];
   element: ReactNode;
