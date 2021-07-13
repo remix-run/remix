@@ -37,6 +37,7 @@ import type { RouteMatch } from "./routeMatching";
 import { createClientMatches, matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
+import { createTransitionManager } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -44,12 +45,12 @@ import { loadRouteModule } from "./routeModules";
 interface RemixEntryContextType {
   manifest: AssetsManifest;
   matches: RouteMatch<ClientRoute>[];
-  componentDidCatchEmulator: ComponentDidCatchEmulator;
-  routeData: RouteData;
+  routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
+  pendingLocation?: Location;
+  componentDidCatchEmulator: ComponentDidCatchEmulator;
   routeModules: RouteModules;
   serverHandoffString?: string;
-  pendingLocation: Location | undefined;
   clientRoutes: ClientRoute[];
   links: HTMLLinkDescriptor[];
 }
@@ -66,8 +67,8 @@ function useRemixEntryContext(): RemixEntryContextType {
 
 export function RemixEntry({
   context: entryContext,
-  action: nextAction,
-  location: nextLocation,
+  action,
+  location: historyLocation,
   navigator,
   static: staticProp = false
 }: {
@@ -79,49 +80,66 @@ export function RemixEntry({
 }) {
   let {
     manifest,
-    matches: entryMatches,
-    routeData: entryRouteData,
-    actionData: entryActionData,
+    routeData: documentLoaderData,
+    actionData: documentActionData,
     routeModules,
     serverHandoffString,
     componentDidCatchEmulator: entryComponentDidCatchEmulator
   } = entryContext;
-
-  let [state, setState] = React.useState({
-    action: nextAction,
-    location: nextLocation,
-    matches: createClientMatches(entryMatches, RemixRoute),
-    routeData: entryRouteData,
-    actionData: entryActionData,
-    componentDidCatchEmulator: entryComponentDidCatchEmulator
-  });
-
-  let [, forceUpdate] = React.useState({});
-
-  let {
-    action,
-    location,
-    matches,
-    routeData,
-    actionData,
-    componentDidCatchEmulator
-  } = state;
 
   let clientRoutes = React.useMemo(
     () => createClientRoutes(manifest.routes, RemixRoute),
     [manifest]
   );
 
+  let [, forceUpdate] = React.useState({});
+
+  let [
+    componentDidCatchEmulator,
+    setComponentDidCatchEmulator
+  ] = React.useState(entryComponentDidCatchEmulator);
+
+  let [transitionManager] = React.useState(() => {
+    return createTransitionManager({
+      routes: clientRoutes,
+      actionData: documentActionData,
+      loaderData: documentLoaderData,
+      location: historyLocation,
+      onChange: state => {
+        if (state.error) {
+          setComponentDidCatchEmulator({
+            error: state.error,
+            loaderBoundaryRouteId: state.errorBoundaryId,
+            renderBoundaryRouteId: null,
+            trackBoundaries: false
+          });
+        }
+        forceUpdate({});
+      },
+      onRedirect: () => {
+        // TODO:
+      }
+    });
+  });
+
+  let {
+    location,
+    nextLocation,
+    matches,
+    loaderData,
+    actionData
+  } = transitionManager.getState();
+
   let links = React.useMemo(() => {
     return getLinks(
       location,
       matches,
-      routeData,
+      loaderData,
       routeModules,
       manifest,
       clientRoutes
     );
-  }, [location, matches, routeData, routeModules, manifest, clientRoutes]);
+  }, [location, matches, loaderData, routeModules, manifest, clientRoutes]);
 
   // Repost a form submit if the user clicked browser refresh button
   React.useEffect(() => {
@@ -129,320 +147,64 @@ export function RemixEntry({
       let { pathname, search, hash, state } = location;
       navigator.replace({ pathname, search, hash }, state);
     }
+    // this isn't synchronization, only want to do this on mount
   }, []); // eslint-disable-line
-  // this isn't synchronization, we only want to do this on mount, so we don't
-  // include any deps in there
 
   React.useEffect(() => {
-    if (location === nextLocation) return;
-
-    let isCurrent = true;
-
-    (async () => {
-      let nextMatches = matchClientRoutes(clientRoutes, nextLocation);
-      invariant(nextMatches, `No routes match path "${nextLocation.pathname}"`);
-
-      let didRedirect = false;
-      function handleDataRedirect(
-        response: Response,
-        isActionRedirect: boolean = false
-      ) {
-        let url = new URL(
-          response.headers.get("X-Remix-Redirect")!,
-          window.location.origin
-        );
-
-        didRedirect = true;
-
-        // TODO: navigator.replace() should just handle different origins
-        if (url.origin !== window.location.origin) {
-          window.location.replace(url.href);
-        } else {
-          let state = isActionRedirect ? { isActionRedirect: true } : undefined;
-          navigator.replace(url.pathname + url.search, state);
-        }
-      }
-
-      let actionErrored: boolean = false;
-      let actionResponse: Response | undefined;
-
-      let componentDidCatchEmulator: ComponentDidCatchEmulator = {
-        trackBoundaries: false,
-        renderBoundaryRouteId: null,
-        loaderBoundaryRouteId: null,
-        error: undefined
-      };
-
-      if (isFormNavigation(nextLocation)) {
-        let leafMatch = nextMatches[nextMatches.length - 1];
-        let leafRoute = manifest.routes[leafMatch.route.id];
-
-        if (!leafRoute.hasAction) {
-          throw new Error(
-            `Route "${leafRoute.id}" does not have an action handler, but you are trying ` +
-              `to submit to it. To fix this, please add an \`action\` function to the ` +
-              `route module.`
-          );
-        }
-
-        let response = await fetchData(nextLocation, leafRoute.id);
-
-        // cleanup pending form submits
-        // FIXME: location state types again!
-        let state = nextLocation.state as FormSubmitLocationState;
-        let pendingRef = pendingSubmitRefs.get(state.id);
-
-        console.log("cleanup", state.id);
-        invariant(pendingRef, `Missing pendingRef for ${state.id}`);
-        pendingSubmitStates.delete(pendingRef);
-        pendingSubmitRefs.delete(state.id);
-
-        // YOU WERE HERE
-        // we're getting state out of sync w/ the server. need to:
-        // - clean up and update after an action so that the
-        //   pending UI can go away
-        // - need to recall loaders so we get the right data, it's off
-        //   right now if you click the slow button, then fast button,
-        //   and fast button finishes first (because we ignore)
-        // - not sure what to do ... we need to update state for the
-        //   last action to land
-        // - oooh, maybe once two forms go pending we don't refetch
-        //   loaders until they have all settled?
-        // - OR ... refetch loaders on each on when it lands
-        //   and then when the last one lands, refetch again.
-        // - wait, I think that's exactly what reloading after the last
-        //   to land means, which is fine because it's recalling
-        //   loaders, not using data from the action! Perfect!
-        forceUpdate({});
-
-        if (response instanceof Error) {
-          componentDidCatchEmulator.error = response;
-          actionErrored = true;
-        } else if (isRedirectResponse(response)) {
-          handleDataRedirect(response as Response, true);
-          // Expecting handleDataRedirect to redirect, so we don't need to worry
-          // about doing anything else in here.
-          return;
-        } else {
-          actionResponse = response;
-        }
-      }
-
-      function maybeHandleDataRedirect(response: any) {
-        if (!didRedirect) handleDataRedirect(response);
-      }
-
-      // NOTE: Keep in sync with `linksPreload.ts` data diff
-      let matchesToLoad =
-        isFormNavigation(nextLocation) ||
-        isRedirectedFormNavigation(nextLocation) ||
-        // reload all routes on search param changes
-        location.search !== nextLocation.search
-          ? nextMatches
-          : nextMatches.filter((match, index, arr) => {
-              // ignore action loader if we're rendering an action error
-              if (actionErrored && arr.length - 1 === index) {
-                return false;
-              }
-              return (
-                // new route
-                !matches[index] ||
-                // existing route but params changed
-                matches[index].pathname !== match.pathname ||
-                // catchall param changed
-                matches[index].params["*"] !== match.params["*"]
-              );
-            });
-
-      let transitionResults = await Promise.all(
-        matchesToLoad.map(async match => {
-          let routeId = match.route.id;
-          let route = manifest.routes[routeId];
-
-          // get data and module in parallel
-          let [dataResult, routeModule] = await Promise.all([
-            route.hasLoader
-              ? fetchData(nextLocation, route.id, true)
-              : undefined,
-            loadRouteModule(route, routeModules)
-          ]);
-
-          // don't waste time w/ links for routes that won't render
-          if (
-            isRedirectResponse(dataResult) ||
-            dataResult instanceof Error ||
-            routeModule == null // how?
-          ) {
-            return { routeId, dataResult, links: [] };
-          }
-
-          if (routeModule.links) {
-            await preloadBlockingLinks(
-              routeModule,
-              // clone so we don't empty the body for later code (refactor?)
-              dataResult != null ? await extractData(dataResult.clone()) : null
-            );
-          }
-
-          return { routeId, dataResult };
-        })
-      );
-
-      if (actionErrored) {
-        // figure out the deepest error boundary
-        let withBoundaries = getMatchesUpToDeepestErrorBoundary(
-          matches,
-          routeModules
-        );
-        componentDidCatchEmulator.loaderBoundaryRouteId =
-          withBoundaries[withBoundaries.length - 1].route.id;
-      }
-
-      for (let { routeId, dataResult } of transitionResults) {
-        let isExceptional /* just like you */ =
-          isRedirectResponse(dataResult) || dataResult instanceof Error;
-
-        // Rare case where an action throws an error, and then when we try to render
-        // the action's page to tell the user about the the error, a loader above
-        // the action route *also* threw an error or tried to redirect!
-        //
-        // Instead of rendering the loader error or redirecting like usual, we
-        // ignore the loader error or redirect because the action error was first
-        // and is higher priority to surface.  Perhaps the action error is the
-        // reason the loader blows up now! It happened first and is more important
-        // to address.
-        //
-        // We just give up and move on with rendering the error as deeply as we can,
-        // which is the previous iteration of this loop
-        if (actionErrored && isExceptional) {
-          break;
-        }
-
-        if (
-          // Need a comment explaining this case, I don't get it? If it's not a
-          // response or error, what the heck is it? Does this mean there's no
-          // loader at this route?
-          !(dataResult instanceof Response || dataResult instanceof Error) ||
-          // keep going if we already have an error, parent errors beat child
-          // errors, maybe one day we'll surface all of them
-          componentDidCatchEmulator.error
-        ) {
-          continue;
-        }
-
-        let routeModule = routeModules[routeId];
-
-        if (routeModule.ErrorBoundary) {
-          componentDidCatchEmulator.loaderBoundaryRouteId = routeId;
-        }
-
-        if (dataResult instanceof Error) {
-          componentDidCatchEmulator.error = dataResult;
-        } else if (isRedirectResponse(dataResult)) {
-          // TODO: I think we can `break` here since we're iterating in order
-          // and we don't care about any deeper redirects/errors?
-          maybeHandleDataRedirect(dataResult);
-        }
-      }
-
-      let newRouteData = (
-        await Promise.all(
-          transitionResults.map(async ({ routeId, dataResult }) => {
-            if (dataResult instanceof Response || dataResult instanceof Error) {
-              return [routeId, await extractData(dataResult)];
-            }
-            return [routeId, undefined];
-          })
-        )
-      ).reduce((memo, [routeId, data]) => {
-        if (data) memo[routeId] = data;
-        return memo;
-      }, {} as RouteData);
-
-      let nextRouteData = nextMatches.reduce((memo, match) => {
-        let routeId = match.route.id;
-        memo[routeId] = newRouteData[routeId] || routeData[routeId];
-        return memo;
-      }, {} as RouteData);
-
-      let actionData = actionResponse
-        ? await extractData(actionResponse)
-        : undefined;
-
-      if (
-        // if we redirected, don't setState, let the next location do it
-        // TODO: what does this mean for multiple pending forms that redirect
-        // to the same page?
-        !didRedirect ||
-        // we always setState after non-redirect actions so multiple pending
-        // forms can update the loader data cache.
-        // TODO: might not be good
-        // enough? what if the action was fast but the loaders were slow but an
-        // earlier action was slow but the loaders were fast? how do we really
-        // know which loaders should win?  I think it should be *last loaders
-        // requested should win* which doesn't necessarily mean "last action
-        // sent"
-        // what if you click the same button a lot?!
-        isFormNavigation(nextLocation) ||
-        // and for normal navigations, only use the latest GET
-        isCurrent
-      ) {
-        setState({
-          action: nextAction,
-          location: nextLocation,
-          matches: nextMatches,
-          routeData: nextRouteData,
-          actionData: actionData,
-          componentDidCatchEmulator
-        });
-      }
-    })();
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [
-    nextAction,
-    nextLocation,
-    location,
-    matches,
-    routeData,
-    entryActionData,
-    navigator,
-    manifest,
-    routeModules,
-    clientRoutes
-  ]);
-
-  let context: RemixEntryContextType = {
-    manifest,
-    matches,
-    componentDidCatchEmulator,
-    routeData,
-    actionData,
-    routeModules,
-    serverHandoffString,
-    pendingLocation: nextLocation !== location ? nextLocation : undefined,
-    clientRoutes,
-    links
-  };
+    let { location } = transitionManager.getState();
+    // only want updates, not mount effects
+    if (historyLocation === location) return;
+    transitionManager.send(historyLocation);
+  }, [transitionManager, historyLocation]);
 
   // If we tried to render and failed, and the app threw before rendering any
   // routes, get the error and pass it to the ErrorBoundary to emulate
   // `componentDidCatch`
-  let maybeServerRenderError =
+  let ssrErrorBeforeRoutesRendered =
     componentDidCatchEmulator.error &&
     componentDidCatchEmulator.renderBoundaryRouteId === null &&
     componentDidCatchEmulator.loaderBoundaryRouteId === null
       ? deserializeError(componentDidCatchEmulator.error)
       : undefined;
 
+  // function handleDataRedirect(
+  //   response: Response,
+  //   isActionRedirect: boolean = false
+  // ) {
+  //   let url = new URL(
+  //     response.headers.get("X-Remix-Redirect")!,
+  //     window.location.origin
+  //   );
+
+  //   didRedirect = true;
+
+  //   // TODO: navigator.replace() should just handle different origins
+  //   if (url.origin !== window.location.origin) {
+  //     window.location.replace(url.href);
+  //   } else {
+  //     let state = isActionRedirect ? { isActionRedirect: true } : undefined;
+  //     navigator.replace(url.pathname + url.search, state);
+  //   }
+  // }
   return (
-    <RemixEntryContext.Provider value={context}>
+    <RemixEntryContext.Provider
+      value={{
+        matches,
+        manifest,
+        componentDidCatchEmulator,
+        routeModules,
+        serverHandoffString,
+        clientRoutes,
+        links,
+        routeData: loaderData,
+        actionData,
+        pendingLocation: nextLocation
+      }}
+    >
       <RemixErrorBoundary
         location={location}
         component={RemixRootDefaultErrorBoundary}
-        error={maybeServerRenderError}
+        error={ssrErrorBeforeRoutesRendered}
       >
         <Router
           action={action}

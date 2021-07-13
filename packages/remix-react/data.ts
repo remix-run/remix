@@ -109,10 +109,6 @@ function getFetchInit(location: Location): RequestInit {
   };
 }
 
-export function isFormNavigation(location: Location): boolean {
-  return !!(
-    location.state &&
-    // FIXME: not sure how to do these types
-    (location.state as FormSubmitLocationState).isFormSubmit
-  );
+export function isFormNavigation(location: Location<any>): boolean {
+  return location.state && location.state.isAction;
 }

@@ -9,11 +9,15 @@ import invariant from "./invariant";
 
 type ClientMatch = RouteMatch<ClientRoute>;
 
+// FIXME: Put error stuff as init info too so we can initialize in an error
+// state from the server?
 export interface TransitionManagerInit {
   routes: ClientRoute[];
   location: Location;
   loaderData: RouteData;
-  actionData: RouteData;
+  actionData?: RouteData;
+  error?: Error;
+  errorBoundaryId?: null | string;
   onChange: (state: TransitionState) => void;
   onRedirect: (pathname: string, ref?: SubmissionRef) => void;
 }
@@ -44,7 +48,7 @@ export interface TransitionState {
    * always be the same value as the latest refActionData when apps are tracking
    * action data with refs.
    */
-  actionData: RouteData;
+  actionData?: RouteData;
 
   /**
    * The next matches that are being fetched.
@@ -74,7 +78,7 @@ export interface TransitionState {
    * - null: error, but no routes have a boundary, use a default
    * - string: actual id
    */
-  errorBoundaryId?: null | string;
+  errorBoundaryId: null | string;
 }
 
 export interface SubmissionState {
@@ -165,12 +169,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: init.location,
     loaderData: init.loaderData,
     actionData: init.actionData,
+    error: init.error,
+    errorBoundaryId: init.errorBoundaryId || null,
     matches,
     pendingSubmissionRefs: new Map(),
     nextMatches: undefined,
-    nextLocation: undefined,
-    error: undefined,
-    errorBoundaryId: undefined
+    nextLocation: undefined
   };
 
   function update(updates: Partial<TransitionState>) {
