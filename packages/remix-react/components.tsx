@@ -11,15 +11,8 @@ import {
   useResolvedPath
 } from "react-router-dom";
 
-import { AppData, FormSubmitLocationState, isFormNavigation } from "./data";
-import {
-  FormEncType,
-  FormMethod,
-  FormSubmit,
-  fetchData,
-  extractData,
-  isRedirectResponse
-} from "./data";
+import { AppData } from "./data";
+import { FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
 import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
 import {
@@ -28,16 +21,19 @@ import {
 } from "./errorBoundaries";
 import invariant from "./invariant";
 import type { HTMLLinkDescriptor } from "./links";
-import { getLinks, preloadBlockingLinks } from "./linksPreloading";
+import { getLinks } from "./linksPreloading";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
-import { createClientMatches, matchClientRoutes } from "./routeMatching";
+import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
-import { loadRouteModule } from "./routeModules";
-import { createTransitionManager } from "./transition";
+import {
+  createTransitionManager,
+  isAction,
+  SubmissionState
+} from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -88,8 +84,8 @@ export function RemixEntry({
   } = entryContext;
 
   let clientRoutes = React.useMemo(
-    () => createClientRoutes(manifest.routes, RemixRoute),
-    [manifest]
+    () => createClientRoutes(manifest.routes, routeModules, RemixRoute),
+    [manifest, routeModules]
   );
 
   let [, forceUpdate] = React.useState({});
@@ -105,6 +101,7 @@ export function RemixEntry({
       actionData: documentActionData,
       loaderData: documentLoaderData,
       location: historyLocation,
+      onRedirect: navigator.replace,
       onChange: state => {
         if (state.error) {
           setComponentDidCatchEmulator({
@@ -115,9 +112,6 @@ export function RemixEntry({
           });
         }
         forceUpdate({});
-      },
-      onRedirect: () => {
-        // TODO:
       }
     });
   });
@@ -130,6 +124,21 @@ export function RemixEntry({
     actionData
   } = transitionManager.getState();
 
+  React.useEffect(() => {
+    if (isAction(location)) {
+      let { pathname, search, hash, state } = location;
+      navigator.replace({ pathname, search, hash }, state);
+    }
+  }, []); // eslint-disable-line
+  ////////// ^ not synchronization, only do it on mount
+
+  // Send new location to the transition manager
+  React.useEffect(() => {
+    let { location } = transitionManager.getState();
+    if (historyLocation === location) return;
+    transitionManager.send(historyLocation);
+  }, [transitionManager, historyLocation]);
+
   let links = React.useMemo(() => {
     return getLinks(
       location,
@@ -140,22 +149,6 @@ export function RemixEntry({
       clientRoutes
     );
   }, [location, matches, loaderData, routeModules, manifest, clientRoutes]);
-
-  // Repost a form submit if the user clicked browser refresh button
-  React.useEffect(() => {
-    if (isFormNavigation(location)) {
-      let { pathname, search, hash, state } = location;
-      navigator.replace({ pathname, search, hash }, state);
-    }
-    // this isn't synchronization, only want to do this on mount
-  }, []); // eslint-disable-line
-
-  React.useEffect(() => {
-    let { location } = transitionManager.getState();
-    // only want updates, not mount effects
-    if (historyLocation === location) return;
-    transitionManager.send(historyLocation);
-  }, [transitionManager, historyLocation]);
 
   // If we tried to render and failed, and the app threw before rendering any
   // routes, get the error and pass it to the ErrorBoundary to emulate
@@ -442,6 +435,7 @@ window.__remixRouteModules = {${matches
   // avoid waterfall when importing the next route module
   let nextMatches = React.useMemo(() => {
     if (pendingLocation) {
+      // FIXME: can probably use transitionManager `nextMatches`
       let matches = matchClientRoutes(clientRoutes, pendingLocation);
       invariant(matches, `No routes match path "${pendingLocation.pathname}"`);
       return matches;
@@ -727,8 +721,8 @@ export function useSubmit(): SubmitFunction {
       }
     }
 
-    let state: FormSubmitLocationState = {
-      isFormSubmit: true,
+    let state: SubmissionState = {
+      isAction: true,
       // @ts-expect-error types don't know that FormData can be passed to URLSearchParams
       body: new URLSearchParams(formData).toString(),
       action,
@@ -737,23 +731,9 @@ export function useSubmit(): SubmitFunction {
       id: ++submitId
     };
 
-    if (options.ref) {
-      pendingSubmitRefs.set(state.id, options.ref.current);
-      pendingSubmitStates.set(options.ref.current, state);
-    }
-
     navigate(url.pathname + url.search, { replace: options.replace, state });
   };
 }
-
-// So we can look it up in usePendingFormSubmit
-let pendingSubmitStates = new Map<
-  HTMLFormElement | Object,
-  FormSubmitLocationState
->();
-
-// so we can cleanup before we set state on location changes
-let pendingSubmitRefs = new Map<number, HTMLFormElement | Object>();
 
 function isHtmlElement(object: any): object is HTMLElement {
   return object != null && typeof object.tagName === "string";
@@ -821,24 +801,29 @@ export function useActionData(ref?: React.RefObject<any>) {
  * submit a `<Form>`. This is useful for showing e.g. a pending indicator or
  * animation for some newly created/destroyed data.
  */
+export interface FormSubmit extends SubmissionState {
+  data: URLSearchParams;
+}
+
 export function usePendingFormSubmit(
   ref?: React.RefObject<any>
 ): FormSubmit | undefined {
   let pendingLocation = usePendingLocation();
 
-  let pendingSubmit = ref
-    ? pendingSubmitStates.get(ref.current)
-    : pendingLocation?.state
-    ? // FIXME: not sure how to deal with the location types
-      (pendingLocation.state as FormSubmitLocationState)
-    : undefined;
+  if (ref) {
+    throw new Error("TODO!");
+  }
 
-  return pendingSubmit
-    ? {
-        ...pendingSubmit,
-        data: new URLSearchParams(pendingSubmit.body)
-      }
-    : undefined;
+  if (!pendingLocation) {
+    return undefined;
+  }
+
+  let submission = pendingLocation.state;
+
+  return {
+    ...submission,
+    data: new URLSearchParams(submission.body)
+  };
 }
 
 /**
@@ -846,7 +831,7 @@ export function usePendingFormSubmit(
  * for showing loading indicators during route transitions from `<Link>`
  * clicks.
  */
-export function usePendingLocation(): Location | undefined {
+export function usePendingLocation(): Location<any> | undefined {
   return useRemixEntryContext().pendingLocation;
 }
 
@@ -875,36 +860,4 @@ export function LiveReload() {
       }}
     />
   );
-}
-
-function getMatchesUpToDeepestErrorBoundary(
-  matches: RouteMatch<ClientRoute>[],
-  routeModules: RouteModules
-) {
-  let deepestErrorBoundaryIndex: number = -1;
-
-  matches.forEach((match, index) => {
-    if (routeModules[match.route.id].ErrorBoundary) {
-      deepestErrorBoundaryIndex = index;
-    }
-  });
-
-  if (deepestErrorBoundaryIndex === -1) {
-    // no error boundaries in the app!
-    return [];
-  }
-
-  return matches.slice(0, deepestErrorBoundaryIndex + 1);
-}
-
-interface ActionRedirectLocationState {
-  isActionRedirect: boolean;
-}
-
-function isRedirectedFormNavigation(location: Location): boolean {
-  if (!location.state) return false;
-
-  // FIXME: don't know how to do the types here
-  let state = location.state as ActionRedirectLocationState;
-  return state.isActionRedirect;
 }

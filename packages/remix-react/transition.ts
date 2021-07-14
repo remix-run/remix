@@ -201,7 +201,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortStaleLoads(id, location);
     abortStaleSubmissions(Number.MAX_SAFE_INTEGER);
 
-    let results = await loadRouteData(
+    let results = await callLoaders(
       state,
       location,
       matches,
@@ -333,7 +333,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortStaleLoads(Number.MAX_SAFE_INTEGER, location);
 
     let leafMatch = matches.slice(-1)[0];
-    let result = await fetchAction(location, leafMatch, controller.signal);
+    let result = await callAction(location, leafMatch, controller.signal);
 
     if (isStale()) {
       return;
@@ -354,7 +354,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
           pendingSubmissionRefs: clearPendingSubmissionRef()
         });
       }
-      // TODO: what do we do about submissionRef here?
       await get(location, ref, result);
       return;
     }
@@ -536,16 +535,16 @@ export type RouteLoaderErrorResult = {
   value: Error;
 };
 
-async function loadRouteData(
+async function callLoaders(
   state: TransitionState,
-  pendingLocation: Location,
+  location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
   actionErrorResult?: RouteLoaderErrorResult
 ): Promise<RouteLoaderResult[]> {
   let matchesToLoad = filterMatchesToLoad(
     state,
-    pendingLocation,
+    location,
     matches,
     actionErrorResult
   );
@@ -558,13 +557,41 @@ async function loadRouteData(
       );
 
       try {
-        let value = await match.route.loader({ signal });
+        let value = await match.route.loader({
+          match,
+          location,
+          signal
+        });
         return { match, value };
       } catch (error) {
         return { match, value: error };
       }
     })
   );
+}
+
+async function callAction(
+  location: ActionLocation,
+  match: ClientMatch,
+  signal: AbortSignal
+): Promise<RouteLoaderResult> {
+  if (!match.route.action) {
+    throw new Error(
+      `Route "${match.route.id}" does not have an action, but you are trying ` +
+        `to submit to it. To fix this, please add an \`action\` function to the route`
+    );
+  }
+
+  try {
+    let value = await match.route.action({
+      match,
+      location,
+      signal
+    });
+    return { match, value };
+  } catch (error) {
+    return { match, value: error };
+  }
 }
 
 function filterMatchesToLoad(
@@ -630,26 +657,6 @@ function findRedirect(results: RouteLoaderResult[]): TransitionRedirect | null {
   return null;
 }
 
-async function fetchAction(
-  location: ActionLocation,
-  match: ClientMatch,
-  signal: AbortSignal
-): Promise<RouteLoaderResult> {
-  if (!match.route.action) {
-    throw new Error(
-      `Route "${match.route.id}" does not have an action, but you are trying ` +
-        `to submit to it. To fix this, please add an \`action\` function to the route`
-    );
-  }
-
-  try {
-    let value = await match.route.action({ signal });
-    return { match, value };
-  } catch (error) {
-    return { match, value: error };
-  }
-}
-
 // When moved to React Router maybe use the route objects instead of ids?
 function findError(
   results: RouteLoaderResult[],
@@ -713,10 +720,7 @@ function isRedirectResult(
   return result.value instanceof TransitionRedirect;
 }
 
-function isAction(
-  // FIXME: how do you make location state optional?
-  location: Location<any>
-): location is ActionLocation {
+export function isAction(location: Location<any>): location is ActionLocation {
   return !!location.state?.isAction;
 }
 

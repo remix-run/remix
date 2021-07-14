@@ -1,4 +1,5 @@
 import type { Location } from "history";
+import { SubmissionState } from "./transition";
 
 export type AppData = any;
 
@@ -7,19 +8,6 @@ export type FormMethod = "get" | "post" | "put" | "patch" | "delete";
 export type FormEncType =
   | "application/x-www-form-urlencoded"
   | "multipart/form-data";
-
-export interface FormSubmitLocationState {
-  action: string;
-  isFormSubmit: boolean;
-  method: string;
-  body: string;
-  encType: string;
-  id: number;
-}
-
-export interface FormSubmit extends FormSubmitLocationState {
-  data: URLSearchParams;
-}
 
 export function isErrorResponse(response: any): boolean {
   return (
@@ -36,45 +24,32 @@ export function isRedirectResponse(response: any): boolean {
 }
 
 export async function fetchData(
-  location: Location,
+  location: Location<any>,
   routeId: string,
-  // TODO: refactor, I'm just hacking this to get the behavior right
-  forceGet: boolean = false
-): Promise<Response | Error> {
+  type: "get" | "post"
+): Promise<Response> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
   url.searchParams.set("_data", routeId);
   url.searchParams.sort(); // Improves caching
 
-  let init: RequestInit = forceGet
-    ? { credentials: "same-origin" }
-    : getFetchInit(location);
+  let init: RequestInit =
+    type === "get" ? { credentials: "same-origin" } : getActionInit(location);
+  console.log({ init });
 
   let response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
-    // We discussed putting an error in the console here but decided to pass on
-    // it for now since they will already see 1) a 500 in the Network tab and
-    // 2) an error in the console when the ErrorBoundary shows up.
     let data = await response.json();
     let error = new Error(data.message);
     error.stack = data.stack;
-    return error;
+    throw error;
   }
-
-  // We discussed possibly reloading here to get the right status code from the
-  // server for the HTML page when the data loader returns a 404, but ultimately
-  // concluded it's probably better to just not have any JavaScript on the page
-  // when search bots come around to index things.
 
   return response;
 }
 
-export async function extractData(
-  response: Response | Error
-): Promise<AppData> {
-  if (response instanceof Error) return null;
-
+export async function extractData(response: Response): Promise<AppData> {
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
@@ -86,12 +61,8 @@ export async function extractData(
   return response.text();
 }
 
-function getFetchInit(location: Location): RequestInit {
-  if (!isFormNavigation(location)) {
-    return { credentials: "same-origin" };
-  }
-
-  let { encType, method, body } = location.state as FormSubmitLocationState;
+function getActionInit(location: Location<SubmissionState>): RequestInit {
+  let { encType, method, body } = location.state;
 
   if (encType !== "application/x-www-form-urlencoded") {
     throw new Error(
@@ -103,12 +74,6 @@ function getFetchInit(location: Location): RequestInit {
     method,
     body,
     credentials: "same-origin",
-    headers: {
-      "Content-Type": encType
-    }
+    headers: { "Content-Type": encType }
   };
-}
-
-export function isFormNavigation(location: Location<any>): boolean {
-  return location.state && location.state.isAction;
 }

@@ -59,7 +59,7 @@ export type RouteHandle = any;
 export async function loadRouteModule(
   route: EntryRoute,
   routeModulesCache: RouteModules
-): Promise<RouteModule | null> {
+): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
     return routeModulesCache[route.id];
   }
@@ -75,7 +75,7 @@ export async function loadRouteModule(
     // assets, the manifest path, but not the documents 😬
     window.location.reload();
     return new Promise(() => {
-      // check out of this hook cause the DJs never gonna resolve this
+      // check out of this hook cause the DJs never gonna re[s]olve this
     });
   }
 }
