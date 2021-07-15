@@ -127,7 +127,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
 
-    let data = extractData(result);
+    let data = await extractData(result);
     if (routeModule.links) await preloadBlockingLinks(routeModule, data);
     return data;
   };

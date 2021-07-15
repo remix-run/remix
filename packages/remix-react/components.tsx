@@ -103,7 +103,6 @@ export function RemixEntry({
       location: historyLocation,
       onRedirect: _navigator.replace,
       onChange: state => {
-        // FIXME: do I need to do this at all?
         setComponentDidCatchEmulator({
           error: state.error,
           loaderBoundaryRouteId: state.errorBoundaryId,
@@ -133,13 +132,15 @@ export function RemixEntry({
     actionData
   } = transitionManager.getState();
 
+  // Repost actions on initial load (refresh or pop from different document)
   React.useEffect(() => {
     if (isAction(location)) {
       let { pathname, search, hash, state } = location;
       navigator.replace({ pathname, search, hash }, state);
     }
-  }, []); // eslint-disable-line
-  ////////// ^ not synchronization, only do it on mount
+    // not synchronization, only do it on mount
+    // eslint-disable-next-line
+  }, []);
 
   // Send new location to the transition manager
   React.useEffect(() => {
