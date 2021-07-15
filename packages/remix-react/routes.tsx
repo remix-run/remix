@@ -107,7 +107,7 @@ export function createClientRoutes(
 }
 
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
-  let loader: ClientRoute["loader"] = async ({ location }) => {
+  let loader: ClientRoute["loader"] = async ({ location, signal }) => {
     if (!route.hasLoader) {
       let routeModule = await loadRouteModule(route, routeModules);
       if (routeModule.links) await preloadBlockingLinks(routeModule);
@@ -115,7 +115,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
     }
 
     let [result, routeModule] = await Promise.all([
-      fetchData(location, route.id, "get"),
+      fetchData(location, route.id, "get", signal),
       loadRouteModule(route, routeModules)
     ]);
 
@@ -138,8 +138,8 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
 function createAction(route: EntryRoute) {
   if (!route.hasAction) return undefined;
 
-  let action: ClientRoute["action"] = async ({ location }) => {
-    let result = await fetchData(location, route.id, "post");
+  let action: ClientRoute["action"] = async ({ location, signal }) => {
+    let result = await fetchData(location, route.id, "post", signal);
 
     if (result instanceof Error) throw result;
 

@@ -26,7 +26,8 @@ export function isRedirectResponse(response: any): boolean {
 export async function fetchData(
   location: Location<any>,
   routeId: string,
-  type: "get" | "post"
+  type: "get" | "post",
+  signal: AbortSignal
 ): Promise<Response | Error> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
@@ -34,7 +35,9 @@ export async function fetchData(
   url.searchParams.sort(); // Improves caching
 
   let init: RequestInit =
-    type === "get" ? { credentials: "same-origin" } : getActionInit(location);
+    type === "get"
+      ? { credentials: "same-origin", signal }
+      : getActionInit(location, signal);
 
   let response = await fetch(url.href, init);
 
@@ -60,7 +63,10 @@ export async function extractData(response: Response): Promise<AppData> {
   return response.text();
 }
 
-function getActionInit(location: Location<SubmissionState>): RequestInit {
+function getActionInit(
+  location: Location<SubmissionState>,
+  signal: AbortSignal
+): RequestInit {
   let { encType, method, body } = location.state;
 
   if (encType !== "application/x-www-form-urlencoded") {
@@ -72,6 +78,7 @@ function getActionInit(location: Location<SubmissionState>): RequestInit {
   return {
     method,
     body,
+    signal,
     credentials: "same-origin",
     headers: { "Content-Type": encType }
   };
