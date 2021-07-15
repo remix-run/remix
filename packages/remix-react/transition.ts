@@ -474,7 +474,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let nextState: Partial<TransitionState> = {
       nextLocation: location,
-      nextMatches: matches
+      nextMatches: matches,
+      error: undefined,
+      errorBoundaryId: undefined
     };
 
     if (ref) {

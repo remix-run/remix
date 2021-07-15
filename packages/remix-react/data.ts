@@ -27,7 +27,7 @@ export async function fetchData(
   location: Location<any>,
   routeId: string,
   type: "get" | "post"
-): Promise<Response> {
+): Promise<Response | Error> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
   url.searchParams.set("_data", routeId);
@@ -35,7 +35,6 @@ export async function fetchData(
 
   let init: RequestInit =
     type === "get" ? { credentials: "same-origin" } : getActionInit(location);
-  console.log({ init });
 
   let response = await fetch(url.href, init);
 
@@ -43,7 +42,7 @@ export async function fetchData(
     let data = await response.json();
     let error = new Error(data.message);
     error.stack = data.stack;
-    throw error;
+    return error;
   }
 
   return response;

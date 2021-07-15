@@ -20,8 +20,9 @@ interface Route {
 }
 
 export interface EntryRoute extends Route {
-  hasAction?: boolean;
-  hasLoader?: boolean;
+  hasAction: boolean;
+  hasLoader: boolean;
+  hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
   parentId?: string;
@@ -57,7 +58,7 @@ export interface ClientRoute extends Route {
     nextMatch: RouteMatch<ClientRoute>;
     prevMatch: RouteMatch<ClientRoute>;
   }) => boolean;
-  ErrorBoundary?: ComponentType;
+  ErrorBoundary?: any;
   children?: ClientRoute[];
   element: ReactNode;
 }
@@ -75,11 +76,8 @@ export function createClientRoute(
     id: entryRoute.id,
     path: entryRoute.path,
     loader: createLoader(entryRoute, routeModulesCache),
-    action: createAction(entryRoute)
-    // TODO: need EntryRoute to know if it has an error boundary here then can
-    // use a generic error boundary if it does, we can plan on the module
-    // existing because it's a render time thing
-    // ErrorBoundary: entryRoute.hasErrorBoundary
+    action: createAction(entryRoute),
+    ErrorBoundary: entryRoute.hasErrorBoundary
   };
 }
 
@@ -121,6 +119,11 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
       loadRouteModule(route, routeModules)
     ]);
 
+    if (result instanceof Error) {
+      if (routeModule.links) await preloadBlockingLinks(routeModule);
+      throw result;
+    }
+
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
 
@@ -137,8 +140,12 @@ function createAction(route: EntryRoute) {
 
   let action: ClientRoute["action"] = async ({ location }) => {
     let result = await fetchData(location, route.id, "post");
+
+    if (result instanceof Error) throw result;
+
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
+
     return extractData(result);
   };
 

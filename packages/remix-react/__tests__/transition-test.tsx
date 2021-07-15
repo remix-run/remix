@@ -399,6 +399,7 @@ describe("transition manager", () => {
     });
 
     describe("errors", () => {
+      it.todo("clears out the error on new locations");
       describe("with an error boundary in the throwing route", () => {
         it("uses the throwing route's error boundary", async () => {
           let ERROR_MESSAGE = "Kaboom!";

@@ -103,14 +103,13 @@ export function RemixEntry({
       location: historyLocation,
       onRedirect: navigator.replace,
       onChange: state => {
-        if (state.error) {
-          setComponentDidCatchEmulator({
-            error: state.error,
-            loaderBoundaryRouteId: state.errorBoundaryId,
-            renderBoundaryRouteId: null,
-            trackBoundaries: false
-          });
-        }
+        // FIXME: do I need to do this at all?
+        setComponentDidCatchEmulator({
+          error: state.error,
+          loaderBoundaryRouteId: state.errorBoundaryId,
+          renderBoundaryRouteId: null,
+          trackBoundaries: false
+        });
         forceUpdate({});
       }
     });
@@ -160,25 +159,6 @@ export function RemixEntry({
       ? deserializeError(componentDidCatchEmulator.error)
       : undefined;
 
-  // function handleDataRedirect(
-  //   response: Response,
-  //   isActionRedirect: boolean = false
-  // ) {
-  //   let url = new URL(
-  //     response.headers.get("X-Remix-Redirect")!,
-  //     window.location.origin
-  //   );
-
-  //   didRedirect = true;
-
-  //   // TODO: navigator.replace() should just handle different origins
-  //   if (url.origin !== window.location.origin) {
-  //     window.location.replace(url.href);
-  //   } else {
-  //     let state = isActionRedirect ? { isActionRedirect: true } : undefined;
-  //     navigator.replace(url.pathname + url.search, state);
-  //   }
-  // }
   return (
     <RemixEntryContext.Provider
       value={{
@@ -274,6 +254,7 @@ export function RemixRoute({ id }: { id: string }) {
   // can add more specific boundaries by exporting ErrorBoundary components
   // for whichever routes they please.
   //
+  // NOTE: this kind of logic will move into React Router
   if (!ErrorBoundary) {
     return (
       <RemixRouteContext.Provider value={{ data, id }} children={element} />
