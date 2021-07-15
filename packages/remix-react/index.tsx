@@ -11,8 +11,7 @@ export {
   LiveReload,
   useFormAction,
   useSubmit,
-  usePendingFormSubmit,
-  useRouteData,
+  useSubmission,
   useLoaderData,
   useActionData,
   usePendingLocation,
@@ -20,7 +19,7 @@ export {
   useMatches
 } from "./components";
 
-export type { FormMethod, FormEncType, FormSubmit } from "./data";
+export type { FormMethod, FormEncType } from "./data";
 
 export { block } from "./linksPreloading";
 

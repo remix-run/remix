@@ -49,6 +49,7 @@ interface RemixEntryContextType {
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
   links: HTMLLinkDescriptor[];
+  transitionManager: ReturnType<typeof createTransitionManager>;
 }
 
 const RemixEntryContext = React.createContext<
@@ -61,6 +62,12 @@ function useRemixEntryContext(): RemixEntryContextType {
   return context;
 }
 
+// This holds the submission refs to be able to send them to the transition
+// manager when the location comes around on navigations, when it's all built-in
+// to React Router we should be able to pass the ref to `navigate` directly
+// instead of all of this temporary storage/indirection
+let submissionRefs = new Map<number, any>();
+
 export function RemixEntry({
   context: entryContext,
   action,
@@ -70,7 +77,7 @@ export function RemixEntry({
 }: {
   context: EntryContext;
   action: Action;
-  location: Location;
+  location: Location<any>;
   navigator: Navigator;
   static?: boolean;
 }) {
@@ -146,7 +153,16 @@ export function RemixEntry({
   React.useEffect(() => {
     let { location } = transitionManager.getState();
     if (historyLocation === location) return;
-    transitionManager.send(historyLocation);
+
+    let submissionRef = isAction(historyLocation)
+      ? submissionRefs.get(historyLocation.state.id)
+      : undefined;
+
+    if (submissionRef) {
+      submissionRefs.delete(historyLocation.state.id);
+    }
+
+    transitionManager.send(historyLocation, submissionRef);
   }, [transitionManager, historyLocation]);
 
   let links = React.useMemo(() => {
@@ -182,7 +198,8 @@ export function RemixEntry({
         links,
         routeData: loaderData,
         actionData,
-        pendingLocation: nextLocation
+        pendingLocation: nextLocation,
+        transitionManager
       }}
     >
       <RemixErrorBoundary
@@ -723,6 +740,9 @@ export function useSubmit(): SubmitFunction {
       id: ++submitId
     };
 
+    if (options.ref) {
+      submissionRefs.set(state.id, options.ref);
+    }
     navigate(url.pathname + url.search, { replace: options.replace, state });
   };
 }
@@ -781,11 +801,11 @@ export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
-let useRouteData = useLoaderData;
-export { useRouteData };
-
 export function useActionData(ref?: React.RefObject<any>) {
-  return useRemixEntryContext().actionData;
+  let { transitionManager } = useRemixEntryContext();
+  return ref
+    ? transitionManager.getRefActionData(ref)
+    : transitionManager.getState().actionData;
 }
 
 /**
@@ -797,25 +817,25 @@ export interface FormSubmit extends SubmissionState {
   data: URLSearchParams;
 }
 
-export function usePendingFormSubmit(
+export function useSubmission(
   ref?: React.RefObject<any>
 ): FormSubmit | undefined {
+  let { transitionManager } = useRemixEntryContext();
   let pendingLocation = usePendingLocation();
 
   if (ref) {
-    throw new Error("TODO!");
+    let submission = transitionManager.getPendingRefSubmission(ref);
+    return submission
+      ? { ...submission, data: new URLSearchParams(submission.body) }
+      : undefined;
   }
 
-  if (!pendingLocation) {
-    return undefined;
-  }
+  if (!pendingLocation) return undefined;
 
-  let submission = pendingLocation.state;
+  let submission = isAction(pendingLocation) && pendingLocation.state;
+  if (!submission) return undefined;
 
-  return {
-    ...submission,
-    data: new URLSearchParams(submission.body)
-  };
+  return { ...submission, data: new URLSearchParams(submission.body) };
 }
 
 /**

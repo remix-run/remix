@@ -1,12 +1,6 @@
 import styles from "../styles/pending-forms.css";
 import { useEffect, useRef, useState } from "react";
-import {
-  json,
-  useLoaderData,
-  useActionData,
-  Form,
-  usePendingFormSubmit
-} from "remix";
+import { json, useLoaderData, useActionData, Form, useSubmission } from "remix";
 
 interface Task {
   id: string;
@@ -27,13 +21,13 @@ let tasks: Task[] = [
     name: "Adopt a puppy",
     complete: false,
     delay: 2000
+  },
+  {
+    id: "giveup",
+    name: "Give up",
+    complete: false,
+    delay: 1000
   }
-  // {
-  //   id: "giveup",
-  //   name: "Give up",
-  //   complete: false,
-  //   delay: 1000
-  // }
 ];
 
 export function links() {
@@ -82,19 +76,20 @@ export default function Tasks() {
 function TaskItem({ task }: { task: Task }) {
   let ref = useRef<HTMLFormElement>(null);
 
-  let thisIsPending = usePendingFormSubmit(ref);
+  let thisIsPending = useSubmission(ref);
   let actionData = useActionData(ref);
 
   let error = actionData?.id === task.id && actionData.error;
+  let showError = error && !thisIsPending;
 
   return (
-    <Form method="post" ref={ref}>
+    <Form id={task.id} method="post" ref={ref}>
       <input type="hidden" name="id" value={task.id} />
       <input type="hidden" name="complete" value={String(!task.complete)} />
       <button
         type="submit"
         data-status={
-          error ? "error" : task.complete ? "complete" : "incomplete"
+          showError ? "error" : task.complete ? "complete" : "incomplete"
         }
       >
         {task.complete ? "Mark Incomplete" : "Mark Complete"}
@@ -102,7 +97,8 @@ function TaskItem({ task }: { task: Task }) {
           <ProgressBar key={thisIsPending.id} total={task.delay} />
         )}
       </button>{" "}
-      {task.name} {error && <span style={{ color: "red" }}>{error}</span>}
+      {task.name}{" "}
+      {showError && <span style={{ color: "red" }}>Error! {error}</span>}
     </Form>
   );
 }

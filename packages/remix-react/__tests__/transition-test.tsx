@@ -146,7 +146,7 @@ describe("transition manager", () => {
       Object {
         "actionData": undefined,
         "error": undefined,
-        "errorBoundaryId": undefined,
+        "errorBoundaryId": null,
         "loaderData": Object {
           "parent": "PARENT",
         },
@@ -1671,6 +1671,7 @@ describe("transition manager", () => {
           A) POST /foo |----|[A]----O
           B) POST /foo    |----|[A,B]----O
         `, () => {
+          it.todo("aborts pending post with same ref");
           it("overwrites resubmitting the same ref", async () => {
             let t = setup();
             let refA = {};
@@ -1838,6 +1839,46 @@ describe("transition manager", () => {
 
             await B.loader.resolve("[B]");
             expect(t.getState().loaderData.foo).toBe("[B,A]");
+            expect(t.getState().location).toBe(B.location);
+            expect(t.getState().nextLocation).toBeUndefined();
+          });
+        });
+
+        describe(`
+          A) POST /foo |-----|[A]--O
+          B) POST /foo    |-----------|[A,B]--O
+        `, () => {
+          it("commits A, commits B", async () => {
+            let t = setup();
+            let refA = { a: true };
+            let refB = { b: true };
+            let originalLocation = t.getState().location;
+
+            let A = t.post("/foo", refA);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(A.location);
+
+            let B = t.post("/foo", refB);
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.action.resolve("A ACTION");
+            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await A.loader.resolve("[A]");
+            expect(t.getState().loaderData.foo).toBe("[A]");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.action.resolve("B ACTION");
+            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().location).toBe(originalLocation);
+            expect(t.getState().nextLocation).toBe(B.location);
+
+            await B.loader.resolve("[A,B]");
+            expect(t.getState().loaderData.foo).toBe("[A,B]");
             expect(t.getState().location).toBe(B.location);
             expect(t.getState().nextLocation).toBeUndefined();
           });

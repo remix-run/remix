@@ -9,7 +9,6 @@ export type {
   SubmitFunction,
   FormMethod,
   FormEncType,
-  FormSubmit,
   RemixServerProps
 } from "@remix-run/react";
 
@@ -23,13 +22,15 @@ export {
   LiveReload,
   useFormAction,
   useSubmit,
-  usePendingFormSubmit,
-  useRouteData,
+  useSubmission,
   useLoaderData,
   useActionData,
   usePendingLocation,
   useBeforeUnload,
   useMatches,
   block,
-  RemixServer
+  RemixServer,
+  // @deprecated
+  useSubmission as usePendingFormSubmit,
+  useLoaderData as useRouteData
 } from "@remix-run/react";

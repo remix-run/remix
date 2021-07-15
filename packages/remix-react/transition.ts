@@ -27,7 +27,7 @@ export interface TransitionState {
    * The current location the user sees in the browser, during a transition this
    * is the "old page"
    */
-  location: Location;
+  location: Location<any>;
 
   /**
    * The current set of route matches the user sees in the browser. During a
@@ -187,10 +187,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     ref?: SubmissionRef,
     actionErrorResult?: RouteLoaderErrorResult
   ) {
+    let id = ++currentLoadId;
     let matches = state.nextMatches;
     invariant(matches, "No matches on state");
 
-    let id = ++currentLoadId;
     let controller = new AbortController();
 
     pendingLoads.set(id, [location, ref]);
@@ -234,10 +234,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // (even if it wasn't the last one to land!)
       abortStaleRefLoads(id);
       let isLatestNavigation = location === state.nextLocation;
-      let isLastLoadStanding = pendingLoads.size === 1;
+      let isLastLoadStanding =
+        pendingSubmissions.size === 0 && pendingLoads.size === 1;
       let loaderData = makeLoaderData(results, matches);
 
       if (isLatestNavigation && isLastLoadStanding) {
+        console.log("case", 1);
         // A) POST /foo |------|-----O
         // B) POST /foo    |-------|----O
         //                              👆
@@ -254,6 +256,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           loaderData
         });
       } else if (!isLatestNavigation && isLastLoadStanding) {
+        console.log("case", 2);
         //                            👇
         // A) POST /foo |----------|---O
         // B) POST /foo    |---|-----O
@@ -271,15 +274,23 @@ export function createTransitionManager(init: TransitionManagerInit) {
           loaderData
         });
       } else if (isLatestNavigation && !isLastLoadStanding) {
+        console.log("case", 3);
         // A) POST /foo |----------|------O
         // B) POST /foo    |---|-------O
         //                             👆
         update({ loaderData });
       } else if (!isLatestNavigation && !isLastLoadStanding) {
+        console.log("case", 4);
         //                          👇
         // A) POST /foo |-----|------O
         // B) POST /foo    |------|-------O
+        //
+        //                      👇
+        // A) POST /foo |-----|--O
+        // B) POST /foo    |--------|---O
         update({ loaderData });
+      } else {
+        invariant(false, "Unexpected transition state");
       }
 
       // A) POST /foo |---------|---O
@@ -290,6 +301,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // A) POST /foo |---------|-------X
       // B) POST /foo    |---------|--O
     } else {
+      console.log("case", 6);
       // Without refs it's straightforward, every other pending load has already
       // been aborted, so the fact we're here means we're the latest all around
       let nextState: Partial<TransitionState> = {
@@ -311,10 +323,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function post(location: ActionLocation, ref?: SubmissionRef) {
+    let id = ++currentActionId;
+    console.log("POST", id, ref);
     let matches = state.nextMatches;
     invariant(matches, "No matches on state.");
 
-    let id = ++currentActionId;
     let controller = new AbortController();
 
     pendingSubmissions.set(id, [location, ref]);
@@ -329,13 +342,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     actionAbortControllers.set(id, controller);
 
-    abortStaleSubmissions(id);
+    console.log("POST", "abortStaleSubmissions");
+    abortStaleSubmissions(id, ref);
     abortStaleLoads(Number.MAX_SAFE_INTEGER, location);
 
     let leafMatch = matches.slice(-1)[0];
     let result = await callAction(location, leafMatch, controller.signal);
+    console.log("POST landed", id, ref);
 
     if (isStale()) {
+      // console.log("POST is stale", id, ref);
       return;
     }
 
@@ -345,6 +361,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           pendingSubmissionRefs: clearPendingSubmissionRef()
         });
       }
+      abortStaleSubmission(id);
       return handleRedirect(result.value, ref);
     }
 
@@ -354,6 +371,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           pendingSubmissionRefs: clearPendingSubmissionRef()
         });
       }
+      abortStaleSubmission(id);
       await get(location, ref, result);
       return;
     }
@@ -368,6 +386,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       update({ actionData: result.value });
     }
 
+    // TODO: just don't call abort controller?
+    abortStaleSubmission(id);
     await get(location, ref);
   }
 
@@ -451,9 +471,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
   }
 
-  function abortStaleSubmissions(latestId: number) {
+  function abortStaleSubmissions(latestId: number, latestRef?: any) {
     for (let [id, [, ref]] of pendingSubmissions) {
       if (ref) {
+        let isResubmission = ref === latestRef && latestId !== id;
+        if (isResubmission) abortStaleSubmission(id);
         continue;
       }
 
@@ -468,7 +490,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     init.onRedirect(redirect.location, ref);
   }
 
-  async function send(location: Location, ref?: SubmissionRef) {
+  async function send(location: Location<any>, ref?: SubmissionRef) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
 
