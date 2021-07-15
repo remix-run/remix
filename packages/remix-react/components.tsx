@@ -65,7 +65,7 @@ export function RemixEntry({
   context: entryContext,
   action,
   location: historyLocation,
-  navigator,
+  navigator: _navigator,
   static: staticProp = false
 }: {
   context: EntryContext;
@@ -101,7 +101,7 @@ export function RemixEntry({
       actionData: documentActionData,
       loaderData: documentLoaderData,
       location: historyLocation,
-      onRedirect: navigator.replace,
+      onRedirect: _navigator.replace,
       onChange: state => {
         // FIXME: do I need to do this at all?
         setComponentDidCatchEmulator({
@@ -114,6 +114,16 @@ export function RemixEntry({
       }
     });
   });
+
+  // TODO: Move this to React Router
+  let navigator: Navigator = React.useMemo(() => {
+    let push: Navigator["push"] = (to, state) => {
+      return transitionManager.getState().nextLocation
+        ? _navigator.replace(to, state)
+        : _navigator.push(to, state);
+    };
+    return { ..._navigator, push };
+  }, [_navigator, transitionManager]);
 
   let {
     location,

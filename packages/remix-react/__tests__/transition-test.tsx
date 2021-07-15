@@ -96,6 +96,10 @@ function createTestTransitionManager(
   });
 }
 
+describe("react-router", () => {
+  it.todo("replaces pending locations even on a push");
+});
+
 describe("transition manager", () => {
   let setup = () => {
     fakeKey = 0;
