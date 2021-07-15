@@ -78,18 +78,19 @@ function TaskItem({ task }: { task: Task }) {
 
   let thisIsPending = useSubmission(ref);
   let actionData = useActionData(ref);
+  let latestActionData = useActionData();
+  let data = actionData || latestActionData; // PE
 
-  let error = actionData?.id === task.id && actionData.error;
-  let showError = error && !thisIsPending;
+  let error = data?.id === task.id && data.error;
 
   return (
-    <Form id={task.id} method="post" ref={ref}>
+    <Form replace id={task.id} method="post" ref={ref}>
       <input type="hidden" name="id" value={task.id} />
       <input type="hidden" name="complete" value={String(!task.complete)} />
       <button
         type="submit"
         data-status={
-          showError ? "error" : task.complete ? "complete" : "incomplete"
+          error ? "error" : task.complete ? "complete" : "incomplete"
         }
       >
         {task.complete ? "Mark Incomplete" : "Mark Complete"}
@@ -98,7 +99,7 @@ function TaskItem({ task }: { task: Task }) {
         )}
       </button>{" "}
       {task.name}{" "}
-      {showError && <span style={{ color: "red" }}>Error! {error}</span>}
+      {error && <span style={{ color: "red" }}>Error! {error}</span>}
     </Form>
   );
 }

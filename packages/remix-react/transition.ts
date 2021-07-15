@@ -239,7 +239,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let loaderData = makeLoaderData(results, matches);
 
       if (isLatestNavigation && isLastLoadStanding) {
-        console.log("case", 1);
         // A) POST /foo |------|-----O
         // B) POST /foo    |-------|----O
         //                              👆
@@ -256,7 +255,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
           loaderData
         });
       } else if (!isLatestNavigation && isLastLoadStanding) {
-        console.log("case", 2);
         //                            👇
         // A) POST /foo |----------|---O
         // B) POST /foo    |---|-----O
@@ -274,13 +272,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
           loaderData
         });
       } else if (isLatestNavigation && !isLastLoadStanding) {
-        console.log("case", 3);
         // A) POST /foo |----------|------O
         // B) POST /foo    |---|-------O
         //                             👆
         update({ loaderData });
       } else if (!isLatestNavigation && !isLastLoadStanding) {
-        console.log("case", 4);
         //                          👇
         // A) POST /foo |-----|------O
         // B) POST /foo    |------|-------O
@@ -301,7 +297,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // A) POST /foo |---------|-------X
       // B) POST /foo    |---------|--O
     } else {
-      console.log("case", 6);
       // Without refs it's straightforward, every other pending load has already
       // been aborted, so the fact we're here means we're the latest all around
       let nextState: Partial<TransitionState> = {
@@ -324,7 +319,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   async function post(location: ActionLocation, ref?: SubmissionRef) {
     let id = ++currentActionId;
-    console.log("POST", id, ref);
     let matches = state.nextMatches;
     invariant(matches, "No matches on state.");
 
@@ -342,16 +336,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     actionAbortControllers.set(id, controller);
 
-    console.log("POST", "abortStaleSubmissions");
     abortStaleSubmissions(id, ref);
     abortStaleLoads(Number.MAX_SAFE_INTEGER, location);
 
     let leafMatch = matches.slice(-1)[0];
     let result = await callAction(location, leafMatch, controller.signal);
-    console.log("POST landed", id, ref);
 
     if (isStale()) {
-      // console.log("POST is stale", id, ref);
       return;
     }
 

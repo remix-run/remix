@@ -1,4 +1,4 @@
-import { Form, json, useActionData, useLoaderData } from "remix";
+import { Form, json, useActionData, useLoaderData, useSubmission } from "remix";
 import type { HeadersFunction, ActionFunction } from "remix";
 
 export function loader() {
@@ -23,6 +23,7 @@ export let headers: HeadersFunction = ({ actionHeaders }) => {
 export default function Actions() {
   let actionData = useActionData();
   let loaderData = useLoaderData();
+  let submission = useSubmission();
 
   return (
     <Form method="post" id="form">
@@ -31,7 +32,7 @@ export default function Actions() {
       </p>
       <p>
         <input type="text" defaultValue="stuff" name="field1" />
-        <button type="submit" id="submit">
+        <button type="submit" id="submit" disabled={!!submission}>
           Go
         </button>
       </p>
