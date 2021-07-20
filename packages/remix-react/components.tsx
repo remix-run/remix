@@ -31,7 +31,7 @@ import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 import {
   createTransitionManager,
-  isAction,
+  isSubmission,
   SubmissionState
 } from "./transition";
 
@@ -61,12 +61,6 @@ function useRemixEntryContext(): RemixEntryContextType {
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
 }
-
-// This holds the submission refs to be able to send them to the transition
-// manager when the location comes around on navigations, when it's all built-in
-// to React Router we should be able to pass the ref to `navigate` directly
-// instead of all of this temporary storage/indirection
-let submissionRefs = new Map<number, any>();
 
 export function RemixEntry({
   context: entryContext,
@@ -121,6 +115,7 @@ export function RemixEntry({
     });
   });
 
+  // Ensures pushes interrupting pending navigations use replace
   // TODO: Move this to React Router
   let navigator: Navigator = React.useMemo(() => {
     let push: Navigator["push"] = (to, state) => {
@@ -141,7 +136,7 @@ export function RemixEntry({
 
   // Repost actions on initial load (refresh or pop from different document)
   React.useEffect(() => {
-    if (isAction(location)) {
+    if (isSubmission(location)) {
       let { pathname, search, hash, state } = location;
       navigator.replace({ pathname, search, hash }, state);
     }
@@ -153,16 +148,7 @@ export function RemixEntry({
   React.useEffect(() => {
     let { location } = transitionManager.getState();
     if (historyLocation === location) return;
-
-    let submissionRef = isAction(historyLocation)
-      ? submissionRefs.get(historyLocation.state.id)
-      : undefined;
-
-    if (submissionRef) {
-      submissionRefs.delete(historyLocation.state.id);
-    }
-
-    transitionManager.send(historyLocation, submissionRef);
+    transitionManager.send(historyLocation);
   }, [transitionManager, historyLocation]);
 
   let links = React.useMemo(() => {
@@ -513,6 +499,12 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   replace?: boolean;
 
   /**
+   * Allows components to track pending submissions and action data for this
+   * form by passing the same submission key to useSubmission and useActionData.
+   */
+  submissionKey?: string;
+
+  /**
    * A function to call when the form is submitted. If you call
    * `event.preventDefault()` then this form will not do anything.
    */
@@ -534,11 +526,12 @@ export let Form = React.forwardRef<HTMLFormElement, FormProps>(
       action = ".",
       encType = "application/x-www-form-urlencoded",
       onSubmit,
+      submissionKey,
       ...props
     },
     forwardedRef
   ) => {
-    let submit = useSubmit();
+    let submit = useSubmit(submissionKey);
     let formMethod = method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action);
 
@@ -614,8 +607,6 @@ export interface SubmitOptions {
   ref?: React.RefObject<any>;
 }
 
-let submitId = 0;
-
 /**
  * Submits a HTML `<form>` to the server without reloading the page.
  */
@@ -646,11 +637,13 @@ export interface SubmitFunction {
   ): void;
 }
 
+let submissionGuid = 0;
+
 /**
  * Returns a function that may be used to programmatically submit a form (or
  * some arbitrary data) to the server.
  */
-export function useSubmit(): SubmitFunction {
+export function useSubmit(submissionKey?: string): SubmitFunction {
   let navigate = useNavigate();
   let defaultAction = useFormAction();
 
@@ -731,18 +724,16 @@ export function useSubmit(): SubmitFunction {
     }
 
     let state: SubmissionState = {
-      isAction: true,
+      isSubmission: true,
       // @ts-expect-error types don't know that FormData can be passed to URLSearchParams
       body: new URLSearchParams(formData).toString(),
       action,
       method,
       encType,
-      id: ++submitId
+      submissionKey,
+      id: ++submissionGuid
     };
 
-    if (options.ref) {
-      submissionRefs.set(state.id, options.ref);
-    }
     navigate(url.pathname + url.search, { replace: options.replace, state });
   };
 }
@@ -801,10 +792,16 @@ export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
-export function useActionData(ref?: React.RefObject<any>) {
+export function useActionData(submissionKey?: string) {
   let { transitionManager } = useRemixEntryContext();
-  return ref
-    ? transitionManager.getRefActionData(ref)
+  React.useEffect(() => {
+    if (submissionKey) {
+      return transitionManager.registerKeyedActionDataRead(submissionKey);
+    }
+  }, [submissionKey, transitionManager]);
+
+  return submissionKey
+    ? transitionManager.getState().keyedActionData[submissionKey]
     : transitionManager.getState().actionData;
 }
 
@@ -817,14 +814,15 @@ export interface FormSubmit extends SubmissionState {
   data: URLSearchParams;
 }
 
-export function useSubmission(
-  ref?: React.RefObject<any>
-): FormSubmit | undefined {
+export function useSubmission(submissionKey?: string): FormSubmit | undefined {
   let { transitionManager } = useRemixEntryContext();
   let pendingLocation = usePendingLocation();
 
-  if (ref) {
-    let submission = transitionManager.getPendingRefSubmission(ref);
+  if (submissionKey) {
+    let submission = transitionManager
+      .getState()
+      .pendingSubmissions.get(submissionKey);
+
     return submission
       ? { ...submission, data: new URLSearchParams(submission.body) }
       : undefined;
@@ -832,7 +830,7 @@ export function useSubmission(
 
   if (!pendingLocation) return undefined;
 
-  let submission = isAction(pendingLocation) && pendingLocation.state;
+  let submission = isSubmission(pendingLocation) && pendingLocation.state;
   if (!submission) return undefined;
 
   return { ...submission, data: new URLSearchParams(submission.body) };

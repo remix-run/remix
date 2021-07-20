@@ -9,17 +9,16 @@ import invariant from "./invariant";
 
 type ClientMatch = RouteMatch<ClientRoute>;
 
-// FIXME: Put error stuff as init info too so we can initialize in an error
-// state from the server?
 export interface TransitionManagerInit {
   routes: ClientRoute[];
   location: Location;
   loaderData: RouteData;
   actionData?: RouteData;
+  keyedActionData?: RouteData;
   error?: Error;
   errorBoundaryId?: null | string;
   onChange: (state: TransitionState) => void;
-  onRedirect: (pathname: string, ref?: SubmissionRef) => void;
+  onRedirect: (location: Location<any>, referrer: Location<any>) => void;
 }
 
 export interface TransitionState {
@@ -40,15 +39,21 @@ export interface TransitionState {
    * this is the "old" data, unless there are multiple pending forms, in which
    * case this may be updated as fresh data loads complete
    */
-  loaderData: RouteData;
+  loaderData: { [routeId: string]: RouteData };
 
   /**
    * This holds the singular, latest action response data to emulate browser
    * behavior of only allowing one navigation to be pending at a time. This will
-   * always be the same value as the latest refActionData when apps are tracking
-   * action data with refs.
+   * always be the same value as the latest keyedActionData when apps are tracking
+   * action data with keys.
+   * TODO: could store everything and "undefined" is a key for the latest
    */
   actionData?: RouteData;
+
+  /**
+   * Holds all the action data for submissions with keys.
+   */
+  keyedActionData: { [routeId: string]: RouteData };
 
   /**
    * The next matches that are being fetched.
@@ -56,9 +61,9 @@ export interface TransitionState {
   nextMatches?: ClientMatch[];
 
   /**
-   * Tracks all the pending form submissions by Form and useSubmit refs.
+   * Tracks all the pending submissions by submissionKey
    */
-  pendingSubmissionRefs: Map<SubmissionRef, SubmissionState>;
+  pendingSubmissions: Map<string, SubmissionState>;
 
   /**
    * The next location being loaded.
@@ -82,30 +87,38 @@ export interface TransitionState {
 }
 
 export interface SubmissionState {
-  isAction: true;
+  // TODO: change to `isSubmission`
+  isSubmission: true;
   action: string;
   method: string;
   body: string;
   encType: string;
+  submissionKey?: string;
   id: number;
 }
 
-/**
- * Used to associate a <Form> or submit() with a usePendingSubmission(ref) and
- * useActionData(ref);
- */
-export type SubmissionRef = HTMLFormElement | Object;
+export interface KeyedSubmissionState extends SubmissionState {
+  submissionKey: string;
+}
 
 /**
  * We distinguish GET from POST/PUT/PATCH/DELETE locations with location state.
  * This enables us to repost form on pop events, even across origin boundaries
  * in the history stack.
  */
-type ActionLocation = Location<SubmissionState>;
-type ActionRedirectLocation = Location<{
-  id: number;
-  isActionRedirect: true;
-}>;
+interface ActionLocation extends Location<SubmissionState> {}
+
+interface KeyedActionLocation extends Location<KeyedSubmissionState> {}
+
+interface ActionRedirectLocation
+  extends Location<{
+    isActionRedirect: true;
+  }> {}
+
+interface KeyedActionRedirectLocation
+  extends Location<{
+    isActionRedirect: true;
+  }> {}
 
 export class TransitionRedirect {
   location: string;
@@ -117,21 +130,6 @@ export class TransitionRedirect {
   }
 }
 
-/**
- * As it is named, it uh ... emulates browser location transitions with some
- * added progressive enhancement fun.
- *
- * - update actionData whenever an action lands
- * - update loaderData unless a later load has resolved already
- * - Ignore errors the same way the browser does w/o JS (new locations cancel
- *   everything about a previous location). This means only the latest
- *   location can trigger the error boundary, otherwise we'd have different
- *   results at the same location between documents and script navigation.
- *   One day I think I'd like to collect all of the errors and put them in the
- *   error boundary, any actions, any loaders, everything, but that day is not
- *   today.
- */
-
 export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
@@ -140,39 +138,25 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let currentActionId = 0;
 
   // Track them so we can abort/ignore them when fresher requests come in
-  let pendingLoads = new Map<number, [Location, SubmissionRef?]>();
-  let pendingSubmissions = new Map<number, [ActionLocation, SubmissionRef?]>();
+  let pendingLoads = new Map<number, Location>();
+  let pendingActions = new Map<number, ActionLocation>();
 
   // When loads become stale, we can actually abort them instead of just ignoring
   let loadAbortControllers = new Map<number, AbortController>();
   let actionAbortControllers = new Map<number, AbortController>();
-
-  // Persists all the action data that is assigned to a Form or useSubmit ref.
-  // - Not part of state because we don't know their lifecycle. With
-  //   pendingSubmissionRefs, we know how long we're pending and we know when to
-  //   clean up, but actionDataRefs persist after the submission and any
-  //   subsequent renders that the ref is still current. An app could get rid of a
-  //   ref outside of navigation and there's just no way for us to know.
-  // - Because it is a WeakMap, when the application loses a reference to the
-  //   ActionRef, the browser will garbage collect it and it will automatically
-  //   fall out of this map, so no need for us to clean it up anyway.
-  // - Implementors won't be able to rely on `onChange` for information here,
-  //   but instead use the imperative `getActionDataForRef` method. Good news is
-  //   the only time these are mutated are on navigations, so it should be
-  //   reliable for rendering
-  let actionDataRefs = new WeakMap<SubmissionRef, RouteData>();
 
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
 
   let state: TransitionState = {
     location: init.location,
-    loaderData: init.loaderData,
+    loaderData: init.loaderData || {},
     actionData: init.actionData,
+    keyedActionData: init.keyedActionData || {},
     error: init.error,
     errorBoundaryId: init.errorBoundaryId || null,
     matches,
-    pendingSubmissionRefs: new Map(),
+    pendingSubmissions: new Map(),
     nextMatches: undefined,
     nextLocation: undefined
   };
@@ -184,7 +168,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   async function get(
     location: Location,
-    ref?: SubmissionRef,
     actionErrorResult?: RouteLoaderErrorResult
   ) {
     let id = ++currentLoadId;
@@ -193,13 +176,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let controller = new AbortController();
 
-    pendingLoads.set(id, [location, ref]);
+    pendingLoads.set(id, location);
     let isStale = () => !pendingLoads.has(id);
 
     loadAbortControllers.set(id, controller);
 
     abortStaleLoads(id, location);
-    abortStaleSubmissions(Number.MAX_SAFE_INTEGER);
+    abortStaleSubmissions(Number.MAX_SAFE_INTEGER, location);
 
     let results = await callLoaders(
       state,
@@ -215,7 +198,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let redirect = findRedirect(results);
     if (redirect) {
-      handleRedirect(redirect);
+      handleRedirect(redirect, location);
       return;
     }
 
@@ -225,17 +208,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionErrorResult
     );
 
-    if (ref) {
-      // With refs it gets a little wild because we let earlier navigations
+    if (isKeyedSubmission(location) || isKeyedActionRedirect(location)) {
+      // With keys it gets a little wild because we let earlier navigations
       // continue so we can update the state as everything lands along the way.
       // Particularly, we use the data from the *latest load to land*, but the
       // nextLocation/nextMatches of the *latest navigation*, and finally the
       // location/matches of the latest load when nothing is pending anymore
       // (even if it wasn't the last one to land!)
-      abortStaleRefLoads(id);
+      abortStaleKeyedSubmissionLoads(id);
       let isLatestNavigation = location === state.nextLocation;
       let isLastLoadStanding =
-        pendingSubmissions.size === 0 && pendingLoads.size === 1;
+        pendingActions.size === 0 && pendingLoads.size === 1;
       let loaderData = makeLoaderData(results, matches);
 
       if (isLatestNavigation && isLastLoadStanding) {
@@ -297,7 +280,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // A) POST /foo |---------|-------X
       // B) POST /foo    |---------|--O
     } else {
-      // Without refs it's straightforward, every other pending load has already
+      // Without keys it's straightforward, every other pending load has already
       // been aborted, so the fact we're here means we're the latest all around
       let nextState: Partial<TransitionState> = {
         loaderData: makeLoaderData(results, matches),
@@ -309,7 +292,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         nextMatches: undefined
       };
 
-      if (!isAction(location)) {
+      if (!isSubmission(location)) {
         nextState.actionData = undefined;
       }
 
@@ -317,27 +300,33 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
   }
 
-  async function post(location: ActionLocation, ref?: SubmissionRef) {
+  async function post(location: ActionLocation) {
     let id = ++currentActionId;
     let matches = state.nextMatches;
     invariant(matches, "No matches on state.");
 
     let controller = new AbortController();
 
-    pendingSubmissions.set(id, [location, ref]);
-    let isStale = () => !pendingSubmissions.has(id);
+    let isStale = () => !pendingActions.has(id);
 
-    let clearPendingSubmissionRef = () => {
-      invariant(ref, "No pending ref but the code tried to clear it.");
-      let nextSubmissions = new Map(state.pendingSubmissionRefs);
-      nextSubmissions.delete(ref);
+    // TODO: double check how this works, might be better handled in `send`
+    let clearPendingKeyedSubmission = () => {
+      invariant(
+        isKeyedSubmission(location),
+        `This submission is has no submission key: ${location}`
+      );
+      let nextSubmissions = new Map(state.pendingSubmissions);
+      nextSubmissions.delete(location.state.submissionKey);
       return nextSubmissions;
     };
 
     actionAbortControllers.set(id, controller);
 
-    abortStaleSubmissions(id, ref);
+    // TODO: double check if this could be better handled in `send`
+    abortStaleSubmissions(id, location);
     abortStaleLoads(Number.MAX_SAFE_INTEGER, location);
+
+    pendingActions.set(id, location);
 
     let leafMatch = matches.slice(-1)[0];
     let result = await callAction(location, leafMatch, controller.signal);
@@ -347,39 +336,42 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isRedirectResult(result)) {
-      if (ref) {
+      if (isKeyedSubmission(location)) {
         update({
-          pendingSubmissionRefs: clearPendingSubmissionRef()
+          pendingSubmissions: clearPendingKeyedSubmission()
         });
       }
       abortStaleSubmission(id);
-      return handleRedirect(result.value, ref);
+      return handleRedirect(result.value, location);
     }
 
     if (result.value instanceof Error) {
-      if (ref) {
+      if (isKeyedSubmission(location)) {
         update({
-          pendingSubmissionRefs: clearPendingSubmissionRef()
+          pendingSubmissions: clearPendingKeyedSubmission()
         });
       }
       abortStaleSubmission(id);
-      await get(location, ref, result);
+      await get(location, result);
       return;
     }
 
-    if (ref) {
-      actionDataRefs.set(ref, result.value);
+    if (isKeyedSubmission(location)) {
       update({
         actionData: result.value,
-        pendingSubmissionRefs: clearPendingSubmissionRef()
+        keyedActionData: {
+          ...state.keyedActionData,
+          [location.state.submissionKey]: result.value
+        },
+        pendingSubmissions: clearPendingKeyedSubmission()
       });
     } else {
       update({ actionData: result.value });
     }
 
-    // TODO: just don't call abort controller?
+    // TODO: don't call abort controller of this thing that just landed
     abortStaleSubmission(id);
-    await get(location, ref);
+    await get(location);
   }
 
   function makeLoaderData(
@@ -414,7 +406,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   /**
-   * If a ref load started later and landed earlier, abort any earlier ref
+   * If a keyed load started later and landed earlier, abort any earlier keyed
    * loads.
    *
    * A) POST /foo |----|O----------X
@@ -422,7 +414,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
    * B) POST /foo    |----|O----O
    *                            ^--abort (A) now cause we know it's stale
    */
-  function abortStaleRefLoads(latestId: number) {
+  function abortStaleKeyedSubmissionLoads(latestId: number) {
     for (let [id] of pendingLoads) {
       let isStale = id < latestId;
       if (isStale) {
@@ -432,8 +424,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function abortStaleLoads(latestId: number, location: Location<any>) {
-    for (let [id, [, ref]] of pendingLoads) {
-      if (ref) {
+    let isKeyed =
+      isKeyedSubmission(location) || isKeyedActionRedirect(location);
+
+    for (let [id, location] of pendingLoads) {
+      if (isKeyed) {
         let url = location.pathname + location.search;
         let latestUrl = state.location.pathname + state.location.search;
         let isSamePageTheUserIsLookingAt = url === latestUrl;
@@ -453,19 +448,23 @@ export function createTransitionManager(init: TransitionManagerInit) {
     invariant(controller, `No abortController for submission: ${id}`);
     controller.abort();
     actionAbortControllers.delete(id);
-    pendingSubmissions.delete(id);
+    pendingActions.delete(id);
   }
 
-  function abortAllSubmissionRefs() {
-    for (let [id] of pendingSubmissions) {
+  function abortAllSubmissions() {
+    for (let [id] of pendingActions) {
       abortStaleSubmission(id);
     }
   }
 
-  function abortStaleSubmissions(latestId: number, latestRef?: any) {
-    for (let [id, [, ref]] of pendingSubmissions) {
-      if (ref) {
-        let isResubmission = ref === latestRef && latestId !== id;
+  function abortStaleSubmissions(
+    latestId: number,
+    latestLocation: Location<any>
+  ) {
+    for (let [id, location] of pendingActions) {
+      if (isKeyedSubmission(location)) {
+        let isResubmission =
+          location.state.submissionKey === latestLocation.state.submissionKey;
         if (isResubmission) abortStaleSubmission(id);
         continue;
       }
@@ -477,11 +476,55 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
   }
 
-  function handleRedirect(redirect: TransitionRedirect, ref?: SubmissionRef) {
-    init.onRedirect(redirect.location, ref);
+  function handleRedirect(
+    redirect: TransitionRedirect,
+    referrer: Location<any>
+  ) {
+    let [pathname, search] = redirect.location.split("?");
+    search ||= "";
+
+    // hacks until this is in React Router proper because we probably won't even
+    // need this `onRedirect` business anyway when it's all built-in
+    let hash = "";
+    let key = "";
+
+    if (isKeyedSubmission(referrer)) {
+      init.onRedirect(
+        {
+          pathname,
+          search,
+          hash: "",
+          key: "",
+          state: { isKeyedActionRedirect: true }
+        },
+        referrer
+      );
+    } else {
+      init.onRedirect({ pathname, search, hash, key, state: null }, referrer);
+    }
   }
 
-  async function send(location: Location<any>, ref?: SubmissionRef) {
+  let dataKeyCounts: { [submissionKey: string]: number } = {};
+
+  function registerKeyedActionDataRead(submissionKey: string) {
+    if (dataKeyCounts[submissionKey]) {
+      dataKeyCounts[submissionKey]++;
+    } else {
+      dataKeyCounts[submissionKey] = 1;
+    }
+    return () => {
+      invariant(dataKeyCounts[submissionKey], `Key ${submissionKey} not found`);
+      dataKeyCounts[submissionKey]--;
+      if (dataKeyCounts[submissionKey] === 0) {
+        delete dataKeyCounts[submissionKey];
+        // don't call update, they removed the last thing reading this, so there's
+        // no need to render (I think?)
+        delete state.keyedActionData[submissionKey];
+      }
+    };
+  }
+
+  async function send(location: Location<any>) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
 
@@ -492,23 +535,22 @@ export function createTransitionManager(init: TransitionManagerInit) {
       errorBoundaryId: undefined
     };
 
-    if (ref) {
-      if (isAction(location)) {
-        let nextSubmissions = new Map(state.pendingSubmissionRefs);
-        nextSubmissions.set(ref, location.state);
-        nextState.pendingSubmissionRefs = nextSubmissions;
-      }
-    } else {
-      abortAllSubmissionRefs();
-      nextState.pendingSubmissionRefs = new Map();
+    if (isKeyedSubmission(location)) {
+      let nextSubmissions = new Map(state.pendingSubmissions);
+      nextSubmissions.set(location.state.submissionKey, location.state);
+      nextState.pendingSubmissions = nextSubmissions;
+    } else if (!isKeyedActionRedirect(location)) {
+      abortAllSubmissions();
+      nextState.pendingSubmissions = new Map();
+      nextState.keyedActionData = {};
     }
 
     update(nextState);
 
-    if (isAction(location)) {
-      await post(location, ref);
+    if (isSubmission(location)) {
+      await post(location);
     } else {
-      await get(location, ref);
+      await get(location);
     }
   }
 
@@ -516,22 +558,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return state;
   }
 
-  function dispose() {}
-
-  function getRefActionData(ref: SubmissionRef) {
-    return actionDataRefs.get(ref);
-  }
-
-  function getPendingRefSubmission(ref: SubmissionRef) {
-    return state.pendingSubmissionRefs.get(ref);
+  function dispose() {
+    // TODO: just abort everything, doesn't matter in remix, but it will in
+    // React Router if they unmount a <Routes>
   }
 
   return {
     send,
     getState,
     dispose,
-    getRefActionData,
-    getPendingRefSubmission
+    registerKeyedActionDataRead
   };
 }
 
@@ -630,7 +666,7 @@ function filterMatchesToLoad(
 
   if (
     // mutation, reload for fresh data
-    isAction(location) ||
+    isSubmission(location) ||
     isActionRedirect(location) ||
     // clicked the same link, resubmit a GET form, reload
     createHref(location) === createHref(state.location) ||
@@ -735,8 +771,22 @@ function isRedirectResult(
   return result.value instanceof TransitionRedirect;
 }
 
-export function isAction(location: Location<any>): location is ActionLocation {
-  return !!location.state?.isAction;
+export function isSubmission(
+  location: Location<any>
+): location is ActionLocation {
+  return Boolean(location.state?.isSubmission);
+}
+
+export function isKeyedSubmission(
+  location: Location<any>
+): location is KeyedActionLocation {
+  return Boolean(location.state?.isSubmission && location.state.submissionKey);
+}
+
+export function isKeyedActionRedirect(
+  location: Location<any>
+): location is KeyedActionRedirectLocation {
+  return Boolean(location.state?.isKeyedActionRedirect);
 }
 
 function isActionRedirect(

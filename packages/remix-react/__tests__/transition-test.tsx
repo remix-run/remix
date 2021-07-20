@@ -1,7 +1,6 @@
 import { Location } from "history";
 import {
   createTransitionManager,
-  SubmissionRef,
   SubmissionState,
   TransitionRedirect
 } from "../transition";
@@ -64,19 +63,20 @@ function createLocation(path: string, state: any = null): Location {
   };
 }
 
-let submissionId = 0;
-function createActionLocation(path: string, state?: Partial<SubmissionState>) {
-  let submission: SubmissionState = Object.assign(
-    {
-      isAction: true,
-      action: path,
-      method: "post",
-      body: "gosh=dang",
-      encType: "application/x-www-form-urlencoded",
-      id: ++submissionId
-    },
-    state
-  );
+function createActionLocation(
+  path: string,
+  submissionKey?: string,
+  body?: string
+) {
+  let submission: SubmissionState = {
+    isSubmission: true,
+    action: path,
+    method: "post",
+    body: body || "gosh=dang",
+    encType: "application/x-www-form-urlencoded",
+    submissionKey,
+    id: 1
+  };
   return createLocation(path, submission);
 }
 
@@ -147,6 +147,7 @@ describe("transition manager", () => {
         "actionData": undefined,
         "error": undefined,
         "errorBoundaryId": null,
+        "keyedActionData": Object {},
         "loaderData": Object {
           "parent": "PARENT",
         },
@@ -185,7 +186,7 @@ describe("transition manager", () => {
         ],
         "nextLocation": undefined,
         "nextMatches": undefined,
-        "pendingSubmissionRefs": Map {},
+        "pendingSubmissions": Map {},
       }
     `);
   });
@@ -204,8 +205,8 @@ describe("transition manager", () => {
         let loaderDeferred = defer();
         let redirectDeferred = defer();
         let loader = () => loaderDeferred.promise.then(val => val);
-        let handleRedirect = jest.fn((href: string) => {
-          tm.send(createLocation(href)).then(() => redirectDeferred.promise);
+        let handleRedirect = jest.fn((location: Location<any>) => {
+          tm.send(location).then(() => redirectDeferred.promise);
         });
 
         let tm = createTestTransitionManager("/", {
@@ -235,7 +236,15 @@ describe("transition manager", () => {
         await redirectDeferred.resolve();
 
         expect(handleRedirect.mock.calls.length).toBe(1);
-        expect(handleRedirect.mock.calls[0][0]).toBe("/redirect-target");
+        expect(handleRedirect.mock.calls[0][0]).toMatchInlineSnapshot(`
+          Object {
+            "hash": "",
+            "key": "",
+            "pathname": "/redirect-target",
+            "search": "",
+            "state": null,
+          }
+        `);
         expect(tm.getState().nextLocation).toBeUndefined();
         expect(tm.getState().location.pathname).toBe("/redirect-target");
       });
@@ -557,7 +566,7 @@ describe("transition manager", () => {
 
     it("removes action data at new locations", async () => {
       let { tm } = setup();
-      await tm.send(createLocation("/child", { isAction: true }));
+      await tm.send(createLocation("/child", { isSubmission: true }));
       expect(tm.getState().actionData).toBe("CHILD ACTION");
 
       await tm.send(createLocation("/child"));
@@ -566,14 +575,14 @@ describe("transition manager", () => {
 
     it("calls only the leaf route action", async () => {
       let t = setup();
-      await t.tm.send(createLocation("/child", { isAction: true }));
+      await t.tm.send(createLocation("/child", { isSubmission: true }));
       expect(t.parentAction.mock.calls.length).toBe(0);
       expect(t.childAction.mock.calls.length).toBe(1);
     });
 
     it("reloads all routes after the action", async () => {
       let t = setup();
-      await t.tm.send(createLocation("/child", { isAction: true }));
+      await t.tm.send(createLocation("/child", { isSubmission: true }));
       expect(t.parentLoader.mock.calls.length).toBe(1);
       expect(t.childLoader.mock.calls.length).toBe(1);
       expect(t.getState().actionData).toMatchInlineSnapshot(`"CHILD ACTION"`);
@@ -595,9 +604,7 @@ describe("transition manager", () => {
 
       let tm = createTestTransitionManager("/", {
         onRedirect(location) {
-          tm.send(createLocation(location)).then(
-            () => redirectDeferred.promise
-          );
+          tm.send(location).then(() => redirectDeferred.promise);
         },
         routes: [
           { path: "/", id: "root", action, element: {} },
@@ -606,7 +613,7 @@ describe("transition manager", () => {
         loaderData: {}
       });
 
-      tm.send(createLocation("/", { isAction: true }));
+      tm.send(createLocation("/", { isSubmission: true }));
       await actionDeferred.resolve(new TransitionRedirect("/a"));
 
       let state = tm.getState();
@@ -637,7 +644,7 @@ describe("transition manager", () => {
         ]
       });
       expect(tm.getState().actionData).toBeUndefined();
-      tm.send(createLocation("/", { isAction: true }));
+      tm.send(createLocation("/", { isSubmission: true }));
       let VALUE = "ACTION JACKSON";
       await resolve(VALUE);
       expect(tm.getState().actionData).toBe(VALUE);
@@ -668,7 +675,7 @@ describe("transition manager", () => {
               }
             ]
           });
-          await tm.send(createLocation("/child", { isAction: true }));
+          await tm.send(createLocation("/child", { isSubmission: true }));
           let state = tm.getState();
           expect(state.errorBoundaryId).toBe("child");
           expect(state.error.message).toBe(ERROR_MESSAGE);
@@ -700,7 +707,7 @@ describe("transition manager", () => {
               }
             ]
           });
-          await tm.send(createLocation("/child", { isAction: true }));
+          await tm.send(createLocation("/child", { isSubmission: true }));
           expect(parentLoader.mock.calls.length).toBe(1);
           expect(actionRouteLoader.mock.calls.length).toBe(0);
           expect(tm.getState().loaderData).toMatchInlineSnapshot(`
@@ -735,7 +742,7 @@ describe("transition manager", () => {
               }
             ]
           });
-          await tm.send(createLocation("/child", { isAction: true }));
+          await tm.send(createLocation("/child", { isSubmission: true }));
           let state = tm.getState();
           expect(state.errorBoundaryId).toBe("parent");
           expect(state.error.message).toBe(ERROR_MESSAGE);
@@ -782,7 +789,7 @@ describe("transition manager", () => {
 
           await tm.send(
             createLocation("/parent/child", {
-              isAction: true
+              isSubmission: true
             })
           );
           let state = tm.getState();
@@ -793,17 +800,20 @@ describe("transition manager", () => {
     });
   });
 
-  describe("actions with refs", () => {
+  describe("actions with submission keys", () => {
+    const SUBMISSION_KEY = "key";
+
     let submission: SubmissionState = {
-      isAction: true,
+      isSubmission: true,
       action: "/",
       method: "post",
-      body: "name=Ryan&age=40", // geez
+      body: "name=Ryan&age=40",
       encType: "application/x-www-form-urlencoded",
+      submissionKey: SUBMISSION_KEY,
       id: 1
     };
 
-    it("tracks pending submissions by ref", async () => {
+    it("tracks pending submissions by key", async () => {
       let actionDeferred = defer();
       let tm = createTestTransitionManager("/", {
         routes: [
@@ -816,61 +826,20 @@ describe("transition manager", () => {
         ]
       });
 
-      let ref = {};
-      tm.send(createLocation("/", submission), ref);
+      tm.send(createLocation("/", submission));
 
-      expect(tm.getState().pendingSubmissionRefs.get(ref))
+      expect(tm.getState().pendingSubmissions.get(SUBMISSION_KEY))
         .toMatchInlineSnapshot(`
         Object {
           "action": "/",
           "body": "name=Ryan&age=40",
           "encType": "application/x-www-form-urlencoded",
           "id": 1,
-          "isAction": true,
+          "isSubmission": true,
           "method": "post",
+          "submissionKey": "key",
         }
       `);
-    });
-
-    it("overwrites a ref's pending submission when resubmit", async () => {
-      let actionDeferred = defer();
-
-      let ref = {};
-
-      let submission1: SubmissionState = {
-        isAction: true,
-        action: "/",
-        method: "post",
-        body: "name=Ryan&age=40", // geez
-        encType: "application/x-www-form-urlencoded",
-        id: 1
-      };
-
-      let submission2: SubmissionState = {
-        isAction: true,
-        action: "/",
-        method: "post",
-        body: "name=Ryan&age=40", // geez
-        encType: "application/x-www-form-urlencoded",
-        id: 2
-      };
-
-      let tm = createTestTransitionManager("/", {
-        routes: [
-          {
-            path: "/",
-            id: "root",
-            element: {},
-            action: () => actionDeferred.promise.then(v => v)
-          }
-        ]
-      });
-
-      tm.send(createLocation("/", submission1), ref);
-      expect(tm.getState().pendingSubmissionRefs.get(ref).id).toBe(1);
-
-      tm.send(createLocation("/", submission2), ref);
-      expect(tm.getState().pendingSubmissionRefs.get(ref).id).toBe(2);
     });
 
     it("cleans up stale submissions", async () => {
@@ -885,18 +854,15 @@ describe("transition manager", () => {
         ]
       });
 
-      let ref = {};
-      await tm.send(createLocation("/", submission), ref);
-      expect(tm.getState().pendingSubmissionRefs).toMatchInlineSnapshot(
-        `Map {}`
-      );
+      await tm.send(createLocation("/", submission));
+      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
     });
 
     it("cleans up stale submissions on redirects", async () => {
       let redirectDeferred = defer();
       let tm = createTestTransitionManager("/", {
-        onRedirect(href) {
-          tm.send(createLocation(href)).then(() => redirectDeferred.promise);
+        onRedirect(location) {
+          tm.send(location).then(() => redirectDeferred.promise);
         },
         routes: [
           {
@@ -908,18 +874,16 @@ describe("transition manager", () => {
         ]
       });
 
-      await tm.send(createLocation("/", submission), {});
+      await tm.send(createLocation("/", submission));
       await redirectDeferred.resolve();
-      expect(tm.getState().pendingSubmissionRefs).toMatchInlineSnapshot(
-        `Map {}`
-      );
+      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
     });
 
     it("cleans up stale submissions on errors", async () => {
       let redirectDeferred = defer();
       let tm = createTestTransitionManager("/", {
-        onRedirect(href) {
-          tm.send(createLocation(href)).then(() => redirectDeferred.promise);
+        onRedirect(location) {
+          tm.send(location).then(() => redirectDeferred.promise);
         },
         routes: [
           {
@@ -933,14 +897,12 @@ describe("transition manager", () => {
         ]
       });
 
-      await tm.send(createLocation("/", submission), {});
-      expect(tm.getState().pendingSubmissionRefs).toMatchInlineSnapshot(
-        `Map {}`
-      );
+      await tm.send(createLocation("/", submission));
+      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
     });
 
-    it("tracks action data by ref", async () => {
-      let DATA = "REF ACTION DATA";
+    it("tracks action data by key", async () => {
+      let DATA = "KEY ACTION DATA";
       let tm = createTestTransitionManager("/", {
         routes: [
           {
@@ -952,33 +914,8 @@ describe("transition manager", () => {
         ]
       });
 
-      let ref = {};
-      await tm.send(createLocation("/", submission), ref);
-      expect(tm.getRefActionData(ref)).toBe(DATA);
-    });
-
-    it("cleans up stale action data when garbage collected", async () => {
-      let DATA = "REF ACTION DATA";
-      let tm = createTestTransitionManager("/", {
-        routes: [
-          {
-            path: "/",
-            id: "root",
-            element: {},
-            action: () => DATA
-          }
-        ]
-      });
-
-      let ref: { current?: Object } = {};
-      ref.current = {};
-
-      await tm.send(createLocation("/", submission), ref.current);
-      expect(tm.getRefActionData(ref.current)).toBe(DATA);
-      delete ref.current; // should garbage collect 🤞
-
-      await tm.send(createLocation("/"));
-      expect(tm.getRefActionData(ref)).toBeUndefined();
+      await tm.send(createLocation("/", submission));
+      expect(tm.getState().keyedActionData[SUBMISSION_KEY]).toBe(DATA);
     });
   });
 
@@ -998,8 +935,8 @@ describe("transition manager", () => {
 
       let handleChange = jest.fn();
 
-      let handleRedirect = jest.fn((href: string, ref?: SubmissionRef) => {
-        lastRedirect = navigate(href, ref);
+      let handleRedirect = jest.fn((location: Location<any>) => {
+        lastRedirect = navigate(location);
       });
 
       let loader = async ({ signal }: { signal: AbortSignal }) => {
@@ -1048,16 +985,16 @@ describe("transition manager", () => {
       });
 
       let get = (href: string) => navigate(href);
-      let post = (href: string, ref?: Object) =>
-        navigate(createActionLocation(href), ref);
+      let post = (href: string, key?: string, body?: string) =>
+        navigate(createActionLocation(href, key, body));
 
-      let navigate = (location: string | Location<any>, ref?: Object) => {
+      let navigate = (location: string | Location<any>) => {
         if (typeof location === "string") location = createLocation(location);
         let id = ++guid;
         let loaderAbortHandler = jest.fn();
         let actionAbortHandler = jest.fn();
 
-        if (location.state?.isAction) {
+        if (location.state?.isSubmission) {
           nextActionId = id;
           actionDeferreds.set(id, defer());
           actionAbortHandlers.set(id, actionAbortHandler);
@@ -1088,7 +1025,7 @@ describe("transition manager", () => {
           return lastRedirect;
         }
 
-        tm.send(location, ref).then(() => navDeferreds.get(id).promise);
+        tm.send(location).then(() => navDeferreds.get(id).promise);
 
         return {
           location,
@@ -1131,7 +1068,7 @@ describe("transition manager", () => {
           let B = t.get("/foo");
 
           await A.loader.resolve("A");
-          expect(t.getState().loaderData).toBeUndefined();
+          expect(t.getState().loaderData).toEqual({});
 
           await B.loader.resolve("B");
           expect(t.getState().loaderData.foo).toBe("B");
@@ -1246,7 +1183,7 @@ describe("transition manager", () => {
           let B = t.get("/bar");
 
           await A.loader.resolve("A");
-          expect(t.getState().loaderData).toBeUndefined();
+          expect(t.getState().loaderData).toEqual({});
 
           await B.loader.resolve("B");
           expect(t.getState().loaderData.bar).toBe("B");
@@ -1662,7 +1599,12 @@ describe("transition manager", () => {
       });
     });
 
-    describe("with action refs", () => {
+    describe("disposeSubmission", () => {
+      it.todo("removes submission data");
+      it.todo("removes pending submission");
+    });
+
+    describe("with submission keys", () => {
       describe(`
         POST /foo
         POST /foo
@@ -1671,38 +1613,40 @@ describe("transition manager", () => {
           A) POST /foo |----|[A]----O
           B) POST /foo    |----|[A,B]----O
         `, () => {
-          it.todo("aborts pending post with same ref");
-          it("overwrites resubmitting the same ref", async () => {
-            let t = setup();
-            let refA = {};
-            t.post("/foo", refA);
-            let submission = t.tm.getPendingRefSubmission(refA);
-            expect(submission.id).toBeDefined();
+          it.todo("aborts pending post with same key");
 
-            t.post("/foo", refA);
-            let submission2 = t.tm.getPendingRefSubmission(refA);
-            expect(submission2.id).not.toEqual(submission.id);
+          it("overwrites resubmitting the same key", async () => {
+            let t = setup();
+            let keyA = "A";
+
+            t.post("/foo", keyA, "submission=one");
+            let submission1 = t.getState().pendingSubmissions.get(keyA);
+            expect(submission1.body).toBe("submission=one");
+
+            t.post("/foo", keyA, "submission=two");
+            let submission2 = t.getState().pendingSubmissions.get(keyA);
+            expect(submission2.body).toEqual("submission=two");
           });
 
           it("commits action and loader data at every step", async () => {
             let t = setup();
-            let refA = { a: true };
-            let refB = { b: true };
             let originalLocation = t.getState().location;
+            let keyA = "A";
+            let keyB = "B";
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().nextLocation).toBe(A.location);
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await A.action.resolve("A ACTION");
-            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().actionData).toBe("A ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.action.resolve("B ACTION");
-            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().actionData).toBe("B ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
@@ -1727,25 +1671,25 @@ describe("transition manager", () => {
         `, () => {
           it("commits A action, B action/loader; ignores A loader", async () => {
             let t = setup();
-            let refA = {};
-            let refB = {};
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await A.action.resolve("A ACTION");
-            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().actionData).toBe("A ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.action.resolve("B ACTION");
-            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().actionData).toBe("B ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
@@ -1770,25 +1714,25 @@ describe("transition manager", () => {
         `, () => {
           it("commits B, commits A", async () => {
             let t = setup();
-            let refA = {};
-            let refB = {};
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.action.resolve("B ACTION");
-            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await A.action.resolve("A ACTION");
-            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -1810,25 +1754,25 @@ describe("transition manager", () => {
         `, () => {
           it("commits A, aborts B", async () => {
             let t = setup();
-            let refA = {};
-            let refB = {};
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.action.resolve("B ACTION");
-            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await A.action.resolve("A ACTION");
-            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -1850,20 +1794,20 @@ describe("transition manager", () => {
         `, () => {
           it("commits A, commits B", async () => {
             let t = setup();
-            let refA = { a: true };
-            let refB = { b: true };
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await A.action.resolve("A ACTION");
-            expect(t.tm.getRefActionData(refA)).toBe("A ACTION");
+            expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -1873,7 +1817,7 @@ describe("transition manager", () => {
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.action.resolve("B ACTION");
-            expect(t.tm.getRefActionData(refB)).toBe("B ACTION");
+            expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -1895,30 +1839,32 @@ describe("transition manager", () => {
         `, () => {
           it("commits A, commits B", async () => {
             let t = setup();
-            let refA = { a: true };
-            let refB = { b: true };
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
-            expect(t.tm.getPendingRefSubmission(refA)).toBeDefined();
-            expect(t.tm.getPendingRefSubmission(refA)).toBe(A.location.state);
+            expect(t.getState().pendingSubmissions.get(keyA)).toBeDefined();
+            expect(t.getState().pendingSubmissions.get(keyA)).toBe(
+              A.location.state
+            );
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.tm.getPendingRefSubmission(refB)).toBeDefined();
+            expect(t.getState().pendingSubmissions.get(keyB)).toBeDefined();
 
             let AR = await A.action.redirect("/foo");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(AR.location);
-            expect(t.tm.getPendingRefSubmission(refA)).toBeUndefined();
+            expect(t.getState().pendingSubmissions.get(keyA)).toBeUndefined();
 
             let BR = await B.action.redirect("/foo");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(BR.location);
-            expect(t.tm.getPendingRefSubmission(refB)).toBeUndefined();
+            expect(t.getState().pendingSubmissions.get(keyB)).toBeUndefined();
 
             await AR.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A]");
@@ -1934,15 +1880,15 @@ describe("transition manager", () => {
         `, () => {
           it("commits B, aborts A", async () => {
             let t = setup();
-            let refA = { a: true };
-            let refB = { b: true };
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -1969,15 +1915,15 @@ describe("transition manager", () => {
         `, () => {
           it("commits B, commits A", async () => {
             let t = setup();
-            let refA = { a: true };
-            let refB = { b: true };
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -2004,15 +1950,15 @@ describe("transition manager", () => {
         `, () => {
           it("commits A, ignores B", async () => {
             let t = setup();
-            let refA = { a: true };
-            let refB = { b: true };
+            let keyA = "A";
+            let keyB = "B";
             let originalLocation = t.getState().location;
 
-            let A = t.post("/foo", refA);
+            let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
 
-            let B = t.post("/foo", refB);
+            let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
@@ -2035,11 +1981,11 @@ describe("transition manager", () => {
           describe("with signals", () => {
             it("aborts B redirect load", async () => {
               let t = setup({ signals: true });
-              let refA = { a: true };
-              let refB = { b: true };
+              let keyA = "A";
+              let keyB = "B";
 
-              let A = t.post("/foo", refA);
-              let B = t.post("/foo", refB);
+              let A = t.post("/foo", keyA);
+              let B = t.post("/foo", keyB);
               let BR = await B.action.redirect("/foo");
               let AR = await A.action.redirect("/foo");
               await AR.loader.resolve("[B,A]");
@@ -2052,15 +1998,15 @@ describe("transition manager", () => {
         });
       });
 
-      describe("navigating without a ref after navigating with one", () => {
+      describe("navigating without a key after navigating with one", () => {
         describe(`
           A) POST /foo |--X
           B) GET  /bar    |--O
         `, () => {
           it("aborts A, commits B", async () => {
             let t = setup({ signals: true });
-            let ref = {};
-            let A = t.post("/foo", ref);
+            let key = "A";
+            let A = t.post("/foo", key);
             let B = t.get("/bar");
             expect(A.action.abortMock.calls.length).toBe(1);
             await B.loader.resolve("B");
@@ -2068,11 +2014,11 @@ describe("transition manager", () => {
           });
           it("clears pending submission A", async () => {
             let t = setup({ signals: true });
-            let ref = {};
-            t.post("/foo", ref);
-            expect(t.tm.getPendingRefSubmission(ref)).toBeDefined();
+            let key = "A";
+            t.post("/foo", key);
+            expect(t.getState().pendingSubmissions.get(key)).toBeDefined();
             t.get("/bar");
-            expect(t.tm.getPendingRefSubmission(ref)).toBeUndefined();
+            expect(t.getState().pendingSubmissions.get(key)).toBeUndefined();
           });
         });
 
@@ -2082,8 +2028,8 @@ describe("transition manager", () => {
         `, () => {
           it("aborts A, commits B", async () => {
             let t = setup({ signals: true });
-            let ref = {};
-            let A = t.post("/foo", ref);
+            let key = "A";
+            let A = t.post("/foo", key);
             await A.action.resolve("A ACTION");
             let B = t.get("/bar");
             expect(A.loader.abortMock.calls.length).toBe(1);
@@ -2098,18 +2044,18 @@ describe("transition manager", () => {
         `, () => {
           it("ignores A, commits B", async () => {
             let t = setup({ signals: true });
-            let ref = {};
-            let A = t.post("/foo", ref);
+            let key = "A";
+            let A = t.post("/foo", key);
             t.post("/bar");
             expect(A.action.abortMock.calls.length).toBe(1);
           });
           it("clears pending submission A", async () => {
             let t = setup({ signals: true });
-            let ref = {};
-            t.post("/foo", ref);
-            expect(t.tm.getPendingRefSubmission(ref)).toBeDefined();
+            let key = "A";
+            t.post("/foo", key);
+            expect(t.getState().pendingSubmissions.get(key)).toBeDefined();
             t.post("/bar");
-            expect(t.tm.getPendingRefSubmission(ref)).toBeUndefined();
+            expect(t.getState().pendingSubmissions.get(key)).toBeUndefined();
           });
         });
       });

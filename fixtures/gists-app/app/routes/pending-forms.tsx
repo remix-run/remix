@@ -1,6 +1,13 @@
 import styles from "../styles/pending-forms.css";
-import { useEffect, useRef, useState } from "react";
-import { json, useLoaderData, useActionData, Form, useSubmission } from "remix";
+import { useEffect, useState } from "react";
+import {
+  json,
+  useLoaderData,
+  useActionData,
+  Form,
+  useSubmission,
+  Link
+} from "remix";
 
 interface Task {
   id: string;
@@ -69,37 +76,38 @@ export default function Tasks() {
       {tasks.map(task => (
         <TaskItem key={task.id} task={task} />
       ))}
+      <p>
+        <Link to="/gists">Gists</Link>
+      </p>
     </div>
   );
 }
 
 function TaskItem({ task }: { task: Task }) {
-  let ref = useRef<HTMLFormElement>(null);
-
-  let thisIsPending = useSubmission(ref);
-  let actionData = useActionData(ref);
-  let latestActionData = useActionData();
-  let data = actionData || latestActionData; // PE
-
-  let error = data?.id === task.id && data.error;
+  let submission = useSubmission(task.id);
+  let actionData = useActionData(task.id);
 
   return (
-    <Form replace id={task.id} method="post" ref={ref}>
+    <Form replace id={task.id} method="post" submissionKey={task.id}>
       <input type="hidden" name="id" value={task.id} />
       <input type="hidden" name="complete" value={String(!task.complete)} />
       <button
         type="submit"
         data-status={
-          error ? "error" : task.complete ? "complete" : "incomplete"
+          actionData?.error
+            ? "error"
+            : task.complete
+            ? "complete"
+            : "incomplete"
         }
       >
         {task.complete ? "Mark Incomplete" : "Mark Complete"}
-        {thisIsPending && (
-          <ProgressBar key={thisIsPending.id} total={task.delay} />
-        )}
+        {submission && <ProgressBar key={submission.id} total={task.delay} />}
       </button>{" "}
       {task.name}{" "}
-      {error && <span style={{ color: "red" }}>Error! {error}</span>}
+      {actionData?.error && (
+        <span style={{ color: "red" }}>Error! {actionData.error}</span>
+      )}
     </Form>
   );
 }

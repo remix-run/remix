@@ -10,10 +10,10 @@ exports[`the server HTML for the root URL is correct 1`] = `
         <li><a href=\\"/gists\\">View Some gists</a></li>
         <li><a href=\\"/gists/mjackson\\">View Michael's gists</a></li>
         <li><a href=\\"/gists/mjijackson\\">Loader Redirect</a></li>
-        <li><a href=\\"/user-gists/ryanflorence\\">Express Redirect</a></li>
         <li><a href=\\"/fart\\">Broken link</a></li>
         <li><a href=\\"/methods\\">Forms</a></li>
-        <li><a href=\\"/actions\\">actions</a></li>
+        <li><a href=\\"/actions\\">Actions</a></li>
+        <li><a href=\\"/pending-forms\\">Multiple Pending Forms</a></li>
         <li>
           <a href=\\"/loader-errors?throw\\">Loader error with no ErrorBoundary</a>
         </li>
