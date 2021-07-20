@@ -88,7 +88,7 @@ function TaskItem({ task }: { task: Task }) {
   let actionData = useActionData(task.id);
 
   return (
-    <Form replace id={task.id} method="post" submissionKey={task.id}>
+    <Form replace id={task.id} method="post">
       <input type="hidden" name="id" value={task.id} />
       <input type="hidden" name="complete" value={String(!task.complete)} />
       <button

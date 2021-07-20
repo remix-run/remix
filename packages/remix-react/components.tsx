@@ -526,17 +526,18 @@ export let Form = React.forwardRef<HTMLFormElement, FormProps>(
       action = ".",
       encType = "application/x-www-form-urlencoded",
       onSubmit,
-      submissionKey,
+      id,
       ...props
     },
     forwardedRef
   ) => {
-    let submit = useSubmit(submissionKey);
+    let submit = useSubmit(id);
     let formMethod = method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action);
 
     return (
       <form
+        id={id}
         ref={forwardedRef}
         method={formMethod}
         action={formAction}
