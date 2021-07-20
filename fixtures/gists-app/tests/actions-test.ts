@@ -121,7 +121,6 @@ describe("action", () => {
           <input type=\\"text\\" name=\\"field1\\" value=\\"stuff\\" /><button
             type=\\"submit\\"
             id=\\"submit\\"
-            disabled=\\"\\"
           >
             Go
           </button>

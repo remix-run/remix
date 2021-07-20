@@ -23,7 +23,6 @@ export let headers: HeadersFunction = ({ actionHeaders }) => {
 export default function Actions() {
   let actionData = useActionData();
   let loaderData = useLoaderData();
-  let submission = useSubmission();
 
   return (
     <Form method="post" id="form">
@@ -32,7 +31,7 @@ export default function Actions() {
       </p>
       <p>
         <input type="text" defaultValue="stuff" name="field1" />
-        <button type="submit" id="submit" disabled={!!submission}>
+        <button type="submit" id="submit">
           Go
         </button>
       </p>
