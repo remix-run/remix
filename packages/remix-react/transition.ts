@@ -1,25 +1,11 @@
-// TODO: try/catch get/post or the fetches or something!
 import type { Location } from "history";
 import type { RouteData } from "./routeData";
+import type { AppData } from "./data";
 import type { RouteMatch } from "./routeMatching";
 import type { ClientRoute } from "./routes";
 
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
-
-type ClientMatch = RouteMatch<ClientRoute>;
-
-export interface TransitionManagerInit {
-  routes: ClientRoute[];
-  location: Location;
-  loaderData: RouteData;
-  actionData?: RouteData;
-  keyedActionData?: RouteData;
-  error?: Error;
-  errorBoundaryId?: null | string;
-  onChange: (state: TransitionState) => void;
-  onRedirect: (location: Location<any>, referrer: Location<any>) => void;
-}
 
 export interface TransitionState {
   /**
@@ -39,31 +25,32 @@ export interface TransitionState {
    * this is the "old" data, unless there are multiple pending forms, in which
    * case this may be updated as fresh data loads complete
    */
-  loaderData: { [routeId: string]: RouteData };
+  loaderData: RouteData;
 
   /**
-   * This holds the singular, latest action response data to emulate browser
-   * behavior of only allowing one navigation to be pending at a time. This will
-   * always be the same value as the latest keyedActionData when apps are tracking
-   * action data with keys.
-   * TODO: could store everything and "undefined" is a key for the latest
+   * Holds the action data for the latest NormalPostSubmission
    */
-  actionData?: RouteData;
+  actionData: AppData;
 
   /**
-   * Holds all the action data for submissions with keys.
+   * Holds the action data for current KeyedPostSubmission
    */
-  keyedActionData: { [routeId: string]: RouteData };
+  keyedActionData: { [key: string]: AppData };
 
   /**
-   * The next matches that are being fetched.
+   * The next matches that are being loaded.
    */
   nextMatches?: ClientMatch[];
 
   /**
-   * Tracks all the pending submissions by submissionKey
+   * Tracks current KeyedPostSubmission and KeyedGetSubmission
    */
-  pendingSubmissions: Map<string, SubmissionState>;
+  pendingSubmissions: Map<string | undefined, GenericSubmission>;
+
+  /**
+   * Tracks the latest, non-keyed pending submission
+   */
+  pendingSubmission?: GenericSubmission;
 
   /**
    * The next location being loaded.
@@ -86,8 +73,19 @@ export interface TransitionState {
   errorBoundaryId: null | string;
 }
 
-export interface SubmissionState {
-  // TODO: change to `isSubmission`
+export interface TransitionManagerInit {
+  routes: ClientRoute[];
+  location: Location;
+  loaderData: RouteData;
+  actionData?: RouteData;
+  keyedActionData?: RouteData;
+  error?: Error;
+  errorBoundaryId?: null | string;
+  onChange: (state: TransitionState) => void;
+  onRedirect: (location: Location<any>, referrer: Location<any>) => void;
+}
+
+export interface GenericSubmission {
   isSubmission: true;
   action: string;
   method: string;
@@ -97,53 +95,143 @@ export interface SubmissionState {
   id: number;
 }
 
-export interface KeyedSubmissionState extends SubmissionState {
+export interface GenericPostSubmission extends GenericSubmission {
+  method: "POST" | "PUT" | "PATCH" | "DELETE";
+}
+
+export interface NormalPostSubmission
+  extends Omit<GenericPostSubmission, "submissionKey"> {}
+
+export interface KeyedPostSubmission extends GenericPostSubmission {
   submissionKey: string;
 }
 
-/**
- * We distinguish GET from POST/PUT/PATCH/DELETE locations with location state.
- * This enables us to repost form on pop events, even across origin boundaries
- * in the history stack.
- */
-interface ActionLocation extends Location<SubmissionState> {}
-
-interface KeyedActionLocation extends Location<KeyedSubmissionState> {}
-
-interface ActionRedirectLocation
-  extends Location<{
-    isActionRedirect: true;
-  }> {}
-
-interface KeyedActionRedirectLocation
-  extends Location<{
-    isActionRedirect: true;
-  }> {}
-
-export class TransitionRedirect {
-  location: string;
-  constructor(location: Location | string) {
-    this.location =
-      typeof location === "string"
-        ? location
-        : location.pathname + location.search;
-  }
+export interface GenericGetSubmission extends GenericSubmission {
+  method: "GET";
 }
 
+export interface KeyedGetSubmission extends GenericGetSubmission {
+  submissionKey: string;
+}
+
+export interface NormalGetSubmission
+  extends Omit<GenericGetSubmission, "submissionKey"> {}
+
+interface NormalActionRedirect {
+  isActionRedirect: true;
+}
+
+interface KeyedActionRedirect {
+  isKeyedActionRedirect: true;
+  submissionKey: string;
+}
+
+type ClientMatch = RouteMatch<ClientRoute>;
+
+type RouteLoaderResult = {
+  match: ClientMatch;
+  value: TransitionRedirect | Error | any;
+};
+
+type RouteLoaderRedirectResult = {
+  match: ClientMatch;
+  value: TransitionRedirect;
+};
+
+type RouteLoaderErrorResult = {
+  match: ClientMatch;
+  value: Error;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+export function isSubmission(
+  location: Location<any>
+): location is Location<GenericSubmission> {
+  return Boolean(location.state?.isSubmission);
+}
+
+export function isPostSubmission(
+  location: Location<any>
+): location is Location<GenericPostSubmission> {
+  return (
+    isSubmission(location) &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(location.state.method)
+  );
+}
+
+function isNormalPostSubmission(
+  location: Location<any>
+): location is Location<NormalPostSubmission> {
+  return isPostSubmission(location) && !Boolean(location.state.submissionKey);
+}
+
+function isKeyedPostSubmission(
+  location: Location<any>
+): location is Location<KeyedPostSubmission> {
+  return isPostSubmission(location) && Boolean(location.state.submissionKey);
+}
+
+function isGetSubmission(
+  location: Location<any>
+): location is Location<GenericGetSubmission> {
+  return isSubmission(location) && location.state.method === "GET";
+}
+
+function isKeyedGetSubmission(
+  location: Location<any>
+): location is Location<KeyedGetSubmission> {
+  return isGetSubmission(location) && Boolean(location.state.submissionKey);
+}
+
+function isNormalGetSubmission(
+  location: Location<any>
+): location is Location<NormalGetSubmission> {
+  return isGetSubmission(location) && !Boolean(location.state.submissionKey);
+}
+
+function isNormalActionRedirect(
+  location: Location<any>
+): location is Location<NormalActionRedirect> {
+  return Boolean(location.state?.isActionRedirect);
+}
+
+function isKeyedActionRedirect(
+  location: Location<any>
+): location is Location<KeyedActionRedirect> {
+  return Boolean(location.state?.isKeyedActionRedirect);
+}
+
+function isRedirectResult(
+  result: RouteLoaderResult
+): result is RouteLoaderRedirectResult {
+  return result.value instanceof TransitionRedirect;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
+  //// INTERNAL STATE
+
+  // Used for non-keyed navigations, get/submissions/post, doesn't matter, it's
+  // all one at a time anyway
+  let pendingNavigationController: AbortController | undefined;
+
   // We know which loads to commit and which to ignore by incrementing this ID.
   let currentLoadId = 0;
-  let currentActionId = 0;
 
-  // Track them so we can abort/ignore them when fresher requests come in
+  let pendingSubmissions = new Map<
+    string,
+    KeyedPostSubmission | KeyedGetSubmission
+  >();
+  let actionControllers = new Map<string, AbortController>();
+
+  // TODO: if location is never actually used, just use pendingLoadControllers
   let pendingLoads = new Map<number, Location>();
-  let pendingActions = new Map<number, ActionLocation>();
+  let loadControllers = new Map<number, AbortController>();
 
-  // When loads become stale, we can actually abort them instead of just ignoring
-  let loadAbortControllers = new Map<number, AbortController>();
-  let actionAbortControllers = new Map<number, AbortController>();
+  // count submission key data reads in the view to clean up when back to 0
+  let dataKeyCounts: { [submissionKey: string]: number } = {};
 
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
@@ -157,6 +245,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     errorBoundaryId: init.errorBoundaryId || null,
     matches,
     pendingSubmissions: new Map(),
+    pendingSubmission: undefined,
     nextMatches: undefined,
     nextLocation: undefined
   };
@@ -166,213 +255,447 @@ export function createTransitionManager(init: TransitionManagerInit) {
     init.onChange(state);
   }
 
-  async function get(
-    location: Location,
-    actionErrorResult?: RouteLoaderErrorResult
+  function getState() {
+    return state;
+  }
+
+  //// PUBLIC INTERFACE
+
+  async function send(location: Location<any>) {
+    let matches = matchClientRoutes(routes, location);
+    invariant(matches, "No matches found");
+
+    // <Form id> -> useSubmission(id), useActionData(id)
+    if (isKeyedPostSubmission(location)) {
+      await handleKeyedPostSubmission(location, matches);
+    }
+
+    // <Form id> action redirected -> useSubmission(id)
+    else if (isKeyedActionRedirect(location)) {
+      await handleKeyedActionRedirect(location, matches);
+    }
+
+    // <Form id method="get"/> -> useSubmission(id)
+    else if (isKeyedGetSubmission(location)) {
+      await handleKeyedGetSubmission(location, matches);
+    }
+
+    // <Form>, submit() -> useSubmission(), useActionData()
+    else if (isNormalPostSubmission(location)) {
+      await handleNormalPostSubmission(location, matches);
+    }
+
+    // Normal <Form>, submit() action redirected -> useSubmission()
+    else if (isNormalActionRedirect(location)) {
+      await handleNormalGet(location, matches);
+    }
+
+    // <Form method="get"/>, useSubmission()
+    else if (isNormalGetSubmission(location)) {
+      await handleNormalGetSubmission(location, matches);
+    }
+
+    // <Link/>, navigate()
+    else {
+      await handleNormalGet(location, matches);
+    }
+  }
+
+  function dispose() {
+    // TODO: just abort everything, doesn't matter in remix, but it will in
+    // React Router if they unmount a <Routes>
+  }
+
+  function registerKeyedActionDataRead(submissionKey: string) {
+    if (dataKeyCounts[submissionKey]) {
+      dataKeyCounts[submissionKey]++;
+    } else {
+      dataKeyCounts[submissionKey] = 1;
+    }
+    return () => {
+      invariant(dataKeyCounts[submissionKey], `Key ${submissionKey} not found`);
+      dataKeyCounts[submissionKey]--;
+      if (dataKeyCounts[submissionKey] === 0) {
+        delete dataKeyCounts[submissionKey];
+        // don't call update, they removed the last thing reading this, so there's
+        // no need to re-render (I think?)
+        delete state.keyedActionData[submissionKey];
+      }
+    };
+  }
+
+  //// IMPLEMENTATION
+
+  async function handleKeyedPostSubmission(
+    location: Location<KeyedPostSubmission>,
+    matches: ClientMatch[]
   ) {
-    let id = ++currentLoadId;
-    let matches = state.nextMatches;
-    invariant(matches, "No matches on state");
+    let key = location.state.submissionKey;
+
+    abortNormalNavigation();
+    if (pendingSubmissions.has(key)) {
+      abortSubmission(key);
+    }
+
+    pendingSubmissions.set(key, location.state);
+
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      pendingSubmission: undefined,
+      pendingSubmissions: new Map(pendingSubmissions)
+    });
 
     let controller = new AbortController();
+    actionControllers.set(key, controller);
 
+    let leafMatch = matches.slice(-1)[0];
+    let result = await callAction(location, leafMatch, controller.signal);
+
+    if (controller.signal.aborted) {
+      return;
+    }
+
+    actionControllers.delete(key);
+
+    if (isRedirectResult(result)) {
+      init.onRedirect(
+        createRedirectLocation(result.value.location, {
+          isKeyedActionRedirect: true,
+          submissionKey: key
+        }),
+        location
+      );
+      return;
+    }
+
+    update({
+      keyedActionData: {
+        ...state.keyedActionData,
+        [key]: result.value
+      }
+    });
+
+    await loadWithKey(location, matches, result);
+  }
+
+  async function handleKeyedActionRedirect(
+    location: Location<KeyedActionRedirect>,
+    matches: ClientMatch[]
+  ) {
+    update({ nextLocation: location, nextMatches: matches });
+    await loadWithKey(location, matches);
+  }
+
+  async function handleKeyedGetSubmission(
+    location: Location<KeyedGetSubmission>,
+    matches: ClientMatch[]
+  ) {
+    let key = location.state.submissionKey;
+
+    abortNormalNavigation();
+    if (pendingSubmissions.has(key)) {
+      pendingSubmissions.delete(key);
+    }
+
+    pendingSubmissions.set(key, location.state);
+
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      pendingSubmission: undefined,
+      pendingSubmissions: new Map(pendingSubmissions)
+    });
+
+    await loadWithKey(location, matches);
+  }
+
+  async function handleNormalPostSubmission(
+    location: Location<NormalPostSubmission>,
+    matches: ClientMatch[]
+  ) {
+    abortEverything();
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      pendingSubmission: location.state,
+      pendingSubmissions: new Map()
+    });
+
+    let controller = new AbortController();
+    pendingNavigationController = controller;
+
+    let leafMatch = matches.slice(-1)[0];
+    let result = await callAction(location, leafMatch, controller.signal);
+
+    if (controller.signal.aborted) {
+      return;
+    }
+
+    if (isRedirectResult(result)) {
+      init.onRedirect(
+        createRedirectLocation(result.value.location, {
+          isActionRedirect: true
+        }),
+        location
+      );
+      return;
+    }
+
+    update({ actionData: result.value });
+
+    await loadNormally(location, matches, result);
+  }
+
+  async function handleNormalGetSubmission(
+    location: Location<NormalGetSubmission>,
+    matches: ClientMatch[]
+  ) {
+    abortEverything();
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      pendingSubmission: location.state,
+      pendingSubmissions: new Map()
+    });
+    await loadNormally(location, matches);
+  }
+
+  async function handleNormalGet(location: Location, matches: ClientMatch[]) {
+    abortEverything();
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      pendingSubmission: undefined,
+      pendingSubmissions: new Map()
+    });
+    await loadNormally(location, matches);
+  }
+
+  async function loadWithKey(
+    location: Location<
+      KeyedPostSubmission | KeyedGetSubmission | KeyedActionRedirect
+    >,
+    matches: ClientMatch[],
+    actionResult?: RouteLoaderResult
+  ) {
+    let id = ++currentLoadId;
+
+    let maybeActionErrorResult =
+      actionResult && actionResult.value instanceof Error
+        ? actionResult
+        : undefined;
+
+    let controller = new AbortController();
+    loadControllers.set(id, controller);
     pendingLoads.set(id, location);
-    let isStale = () => !pendingLoads.has(id);
-
-    loadAbortControllers.set(id, controller);
-
-    abortStaleLoads(id, location);
-    abortStaleSubmissions(Number.MAX_SAFE_INTEGER, location);
 
     let results = await callLoaders(
       state,
       location,
       matches,
       controller.signal,
-      actionErrorResult
+      maybeActionErrorResult
     );
 
-    if (isStale()) {
+    if (controller.signal.aborted) {
       return;
     }
 
     let redirect = findRedirect(results);
     if (redirect) {
-      handleRedirect(redirect, location);
+      init.onRedirect(createRedirectLocation(redirect.location), location);
       return;
     }
 
-    let [error, errorBoundaryId] = findError(
+    let [error, errorBoundaryId] = findErrorAndBoundaryId(
       results,
       matches,
-      actionErrorResult
+      maybeActionErrorResult
     );
 
-    if (isKeyedSubmission(location) || isKeyedActionRedirect(location)) {
-      // With keys it gets a little wild because we let earlier navigations
-      // continue so we can update the state as everything lands along the way.
-      // Particularly, we use the data from the *latest load to land*, but the
-      // nextLocation/nextMatches of the *latest navigation*, and finally the
-      // location/matches of the latest load when nothing is pending anymore
-      // (even if it wasn't the last one to land!)
-      abortStaleKeyedSubmissionLoads(id);
-      let isLatestNavigation = location === state.nextLocation;
-      let isLastLoadStanding =
-        pendingActions.size === 0 && pendingLoads.size === 1;
-      let loaderData = makeLoaderData(results, matches);
+    abortStaleKeyLoads(id);
+    clearPendingSubmission(location.state.submissionKey);
+    clearPendingLoad(id);
 
-      if (isLatestNavigation && isLastLoadStanding) {
-        // A) POST /foo |------|-----O
-        // B) POST /foo    |-------|----O
-        //                              👆
-        // A) POST /foo |------|-------------X
-        // B) POST /foo    |-------|----O
-        //                              👆
-        update({
-          location,
-          matches,
-          nextLocation: undefined,
-          nextMatches: undefined,
-          error,
-          errorBoundaryId,
-          loaderData
-        });
-      } else if (!isLatestNavigation && isLastLoadStanding) {
-        //                            👇
-        // A) POST /foo |----------|---O
-        // B) POST /foo    |---|-----O
-        //
-        //                            👇
-        // A) POST /foo |----------|---O
-        // B) POST /foo    |---|----------X
-        update({
-          location: state.nextLocation,
-          matches: state.nextMatches,
-          nextLocation: undefined,
-          nextMatches: undefined,
-          error,
-          errorBoundaryId,
-          loaderData
-        });
-      } else if (isLatestNavigation && !isLastLoadStanding) {
-        // A) POST /foo |----------|------O
-        // B) POST /foo    |---|-------O
-        //                             👆
-        update({ loaderData });
-      } else if (!isLatestNavigation && !isLastLoadStanding) {
-        //                          👇
-        // A) POST /foo |-----|------O
-        // B) POST /foo    |------|-------O
-        //
-        //                      👇
-        // A) POST /foo |-----|--O
-        // B) POST /foo    |--------|---O
-        update({ loaderData });
-      } else {
-        invariant(false, "Unexpected transition state");
-      }
+    let loaderData = makeLoaderData(results, matches);
 
-      // A) POST /foo |---------|---O
-      // B) POST /foo    |---|---------X
-      //      should have been aborted!👆
+    let isLatestNavigation = location === state.nextLocation;
+    let isOnlyPendingLoad =
+      actionControllers.size === 0 && pendingLoads.size === 0;
 
-      //      should have been aborted!👇
-      // A) POST /foo |---------|-------X
-      // B) POST /foo    |---------|--O
-    } else {
-      // Without keys it's straightforward, every other pending load has already
-      // been aborted, so the fact we're here means we're the latest all around
-      let nextState: Partial<TransitionState> = {
-        loaderData: makeLoaderData(results, matches),
+    if (isLatestNavigation && isOnlyPendingLoad) {
+      // console.log("a");
+      // A) POST /foo |------|-----O
+      // B) POST /foo    |-------|----O
+      //                              ^
+      //
+      // A) POST /foo |------|--------X
+      // B) POST /foo    |-------|----O
+      //                              ^
+      update({
         location,
         matches,
+        nextLocation: undefined,
+        nextMatches: undefined,
+        pendingSubmission: undefined,
+        pendingSubmissions: new Map(),
         error,
         errorBoundaryId,
-        nextLocation: undefined,
-        nextMatches: undefined
-      };
-
-      if (!isSubmission(location)) {
-        nextState.actionData = undefined;
-      }
-
-      update(nextState);
-    }
-  }
-
-  async function post(location: ActionLocation) {
-    let id = ++currentActionId;
-    let matches = state.nextMatches;
-    invariant(matches, "No matches on state.");
-
-    let controller = new AbortController();
-
-    let isStale = () => !pendingActions.has(id);
-
-    // TODO: double check how this works, might be better handled in `send`
-    let clearPendingKeyedSubmission = () => {
-      invariant(
-        isKeyedSubmission(location),
-        `This submission is has no submission key: ${location}`
-      );
-      let nextSubmissions = new Map(state.pendingSubmissions);
-      nextSubmissions.delete(location.state.submissionKey);
-      return nextSubmissions;
-    };
-
-    actionAbortControllers.set(id, controller);
-
-    // TODO: double check if this could be better handled in `send`
-    abortStaleSubmissions(id, location);
-    abortStaleLoads(Number.MAX_SAFE_INTEGER, location);
-
-    pendingActions.set(id, location);
-
-    let leafMatch = matches.slice(-1)[0];
-    let result = await callAction(location, leafMatch, controller.signal);
-
-    if (isStale()) {
-      return;
-    }
-
-    if (isRedirectResult(result)) {
-      if (isKeyedSubmission(location)) {
-        update({
-          pendingSubmissions: clearPendingKeyedSubmission()
-        });
-      }
-      abortStaleSubmission(id);
-      return handleRedirect(result.value, location);
-    }
-
-    if (result.value instanceof Error) {
-      if (isKeyedSubmission(location)) {
-        update({
-          pendingSubmissions: clearPendingKeyedSubmission()
-        });
-      }
-      abortStaleSubmission(id);
-      await get(location, result);
-      return;
-    }
-
-    if (isKeyedSubmission(location)) {
+        loaderData
+      });
+    } else if (!isLatestNavigation && isOnlyPendingLoad) {
+      // console.log("b");
+      //                             v
+      // A) POST /foo |----------|---O
+      // B) POST /foo    |---|-----O
+      //
+      //                             v
+      // A) POST /foo |----------|---O
+      // B) POST /foo    |---|-------X
       update({
-        actionData: result.value,
-        keyedActionData: {
-          ...state.keyedActionData,
-          [location.state.submissionKey]: result.value
-        },
-        pendingSubmissions: clearPendingKeyedSubmission()
+        location: state.nextLocation,
+        matches: state.nextMatches,
+        nextLocation: undefined,
+        nextMatches: undefined,
+        pendingSubmission: undefined,
+        pendingSubmissions: new Map(),
+        error,
+        errorBoundaryId,
+        loaderData
+      });
+    } else if (!isOnlyPendingLoad) {
+      // console.log("c");
+      // A) POST /foo |----------|------O
+      // B) POST /foo    |---|-------O
+      //                             ^
+      //                           v
+      // A) POST /foo |-----|------O
+      // B) POST /foo    |------|--X
+      //
+      //                       v
+      // A) POST /foo |-----|--O
+      // B) POST /foo    |-----X
+      update({
+        loaderData,
+        pendingSubmissions: new Map(pendingSubmissions)
       });
     } else {
-      update({ actionData: result.value });
+      invariant(false, "Impossible `loadWithKey` case");
+    }
+  }
+
+  async function loadNormally(
+    location: Location,
+    matches: ClientMatch[],
+    actionResult?: RouteLoaderResult
+  ) {
+    let maybeActionErrorResult =
+      actionResult && actionResult.value instanceof Error
+        ? actionResult
+        : undefined;
+
+    let controller = new AbortController();
+    pendingNavigationController = controller;
+
+    let results = await callLoaders(
+      state,
+      location,
+      matches,
+      controller.signal,
+      maybeActionErrorResult
+    );
+
+    if (controller.signal.aborted) {
+      return;
     }
 
-    // TODO: don't call abort controller of this thing that just landed
-    abortStaleSubmission(id);
-    await get(location);
+    let redirect = findRedirect(results);
+    if (redirect) {
+      init.onRedirect(createRedirectLocation(redirect.location), location);
+      return;
+    }
+
+    let [error, errorBoundaryId] = findErrorAndBoundaryId(
+      results,
+      matches,
+      maybeActionErrorResult
+    );
+
+    update({
+      location,
+      matches,
+      error,
+      errorBoundaryId,
+      loaderData: makeLoaderData(results, matches),
+      actionData: actionResult ? actionResult.value : undefined,
+      nextLocation: undefined,
+      nextMatches: undefined,
+      pendingSubmission: undefined
+    });
   }
+
+  //// ABORT HANDLING
+
+  function abortEverything() {
+    abortNormalNavigation();
+    for (let [key] of pendingSubmissions) {
+      abortSubmission(key);
+    }
+    for (let [id] of pendingLoads) {
+      abortLoad(id);
+    }
+  }
+
+  function abortNormalNavigation() {
+    pendingNavigationController?.abort();
+  }
+
+  function abortLoad(id: number) {
+    let controller = loadControllers.get(id);
+    invariant(controller, `Expected keyedLoadAbortController: ${id}`);
+    controller.abort();
+    loadControllers.delete(id);
+    pendingLoads.delete(id);
+  }
+
+  function abortSubmission(key: string) {
+    let controller = actionControllers.get(key);
+    controller?.abort();
+    clearPendingSubmission(key);
+  }
+
+  function clearPendingSubmission(key: string) {
+    actionControllers.delete(key);
+    pendingSubmissions.delete(key);
+  }
+
+  function clearPendingLoad(id: number) {
+    loadControllers.delete(id);
+    pendingLoads.delete(id);
+  }
+
+  /**
+   * When a later key load resolves before an earlier one, abort the earlier
+   * load because it's data is unlikely to be as fresh.
+   *
+   * ```txt
+   *          started later v   v landed first
+   * A) POST /foo |---------|---O
+   * B) POST /foo    |---|------X
+   *                            ^ so abort this
+   *
+   * A) POST /foo |---------|-----X
+   * B) POST /foo    |---------|--O
+   * ```
+   */
+  function abortStaleKeyLoads(latestId: number) {
+    for (let [id] of pendingLoads) {
+      if (id < latestId) abortLoad(id);
+    }
+  }
+
+  //// WHATEVER
 
   function makeLoaderData(
     results: RouteLoaderResult[],
@@ -397,172 +720,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return loaderData;
   }
 
-  function abortStaleLoad(id: number) {
-    let controller = loadAbortControllers.get(id);
-    invariant(controller, `No abortController for load: ${id}`);
-    controller.abort();
-    loadAbortControllers.delete(id);
-    pendingLoads.delete(id);
-  }
-
-  /**
-   * If a keyed load started later and landed earlier, abort any earlier keyed
-   * loads.
-   *
-   * A) POST /foo |----|O----------X
-   *                       v-- don't abort (A) because it might land sooner
-   * B) POST /foo    |----|O----O
-   *                            ^--abort (A) now cause we know it's stale
-   */
-  function abortStaleKeyedSubmissionLoads(latestId: number) {
-    for (let [id] of pendingLoads) {
-      let isStale = id < latestId;
-      if (isStale) {
-        abortStaleLoad(id);
-      }
-    }
-  }
-
-  function abortStaleLoads(latestId: number, location: Location<any>) {
-    let isKeyed =
-      isKeyedSubmission(location) || isKeyedActionRedirect(location);
-
-    for (let [id, location] of pendingLoads) {
-      if (isKeyed) {
-        let url = location.pathname + location.search;
-        let latestUrl = state.location.pathname + state.location.search;
-        let isSamePageTheUserIsLookingAt = url === latestUrl;
-        if (isSamePageTheUserIsLookingAt) {
-          continue;
-        }
-      }
-      let isStale = id < latestId;
-      if (isStale) {
-        abortStaleLoad(id);
-      }
-    }
-  }
-
-  function abortStaleSubmission(id: number) {
-    let controller = actionAbortControllers.get(id);
-    invariant(controller, `No abortController for submission: ${id}`);
-    controller.abort();
-    actionAbortControllers.delete(id);
-    pendingActions.delete(id);
-  }
-
-  function abortAllSubmissions() {
-    for (let [id] of pendingActions) {
-      abortStaleSubmission(id);
-    }
-  }
-
-  function abortStaleSubmissions(
-    latestId: number,
-    latestLocation: Location<any>
-  ) {
-    for (let [id, location] of pendingActions) {
-      if (isKeyedSubmission(location)) {
-        let isResubmission =
-          location.state.submissionKey === latestLocation.state.submissionKey;
-        if (isResubmission) abortStaleSubmission(id);
-        continue;
-      }
-
-      let isStale = id < latestId;
-      if (isStale) {
-        abortStaleSubmission(id);
-      }
-    }
-  }
-
-  function handleRedirect(
-    redirect: TransitionRedirect,
-    referrer: Location<any>
-  ) {
-    let [pathname, search] = redirect.location.split("?");
-    search ||= "";
-
-    // hacks until this is in React Router proper because we probably won't even
-    // need this `onRedirect` business anyway when it's all built-in
-    let hash = "";
-    let key = "";
-
-    if (isKeyedSubmission(referrer)) {
-      init.onRedirect(
-        {
-          pathname,
-          search,
-          hash: "",
-          key: "",
-          state: { isKeyedActionRedirect: true }
-        },
-        referrer
-      );
-    } else {
-      init.onRedirect({ pathname, search, hash, key, state: null }, referrer);
-    }
-  }
-
-  let dataKeyCounts: { [submissionKey: string]: number } = {};
-
-  function registerKeyedActionDataRead(submissionKey: string) {
-    if (dataKeyCounts[submissionKey]) {
-      dataKeyCounts[submissionKey]++;
-    } else {
-      dataKeyCounts[submissionKey] = 1;
-    }
-    return () => {
-      invariant(dataKeyCounts[submissionKey], `Key ${submissionKey} not found`);
-      dataKeyCounts[submissionKey]--;
-      if (dataKeyCounts[submissionKey] === 0) {
-        delete dataKeyCounts[submissionKey];
-        // don't call update, they removed the last thing reading this, so there's
-        // no need to render (I think?)
-        delete state.keyedActionData[submissionKey];
-      }
-    };
-  }
-
-  async function send(location: Location<any>) {
-    let matches = matchClientRoutes(routes, location);
-    invariant(matches, "No matches found");
-
-    let nextState: Partial<TransitionState> = {
-      nextLocation: location,
-      nextMatches: matches,
-      error: undefined,
-      errorBoundaryId: undefined
-    };
-
-    if (isKeyedSubmission(location)) {
-      let nextSubmissions = new Map(state.pendingSubmissions);
-      nextSubmissions.set(location.state.submissionKey, location.state);
-      nextState.pendingSubmissions = nextSubmissions;
-    } else if (!isKeyedActionRedirect(location)) {
-      abortAllSubmissions();
-      nextState.pendingSubmissions = new Map();
-      nextState.keyedActionData = {};
-    }
-
-    update(nextState);
-
-    if (isSubmission(location)) {
-      await post(location);
-    } else {
-      await get(location);
-    }
-  }
-
-  function getState() {
-    return state;
-  }
-
-  function dispose() {
-    // TODO: just abort everything, doesn't matter in remix, but it will in
-    // React Router if they unmount a <Routes>
-  }
-
   return {
     send,
     getState,
@@ -570,21 +727,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     registerKeyedActionDataRead
   };
 }
-
-export type RouteLoaderResult = {
-  match: ClientMatch;
-  value: TransitionRedirect | Error | any;
-};
-
-export type RouteLoaderRedirectResult = {
-  match: ClientMatch;
-  value: TransitionRedirect;
-};
-
-export type RouteLoaderErrorResult = {
-  match: ClientMatch;
-  value: Error;
-};
 
 async function callLoaders(
   state: TransitionState,
@@ -622,7 +764,7 @@ async function callLoaders(
 }
 
 async function callAction(
-  location: ActionLocation,
+  location: Location<GenericPostSubmission>,
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<RouteLoaderResult> {
@@ -666,8 +808,8 @@ function filterMatchesToLoad(
 
   if (
     // mutation, reload for fresh data
-    isSubmission(location) ||
-    isActionRedirect(location) ||
+    isPostSubmission(location) ||
+    isNormalActionRedirect(location) ||
     // clicked the same link, resubmit a GET form, reload
     createHref(location) === createHref(state.location) ||
     // search affects all loaders
@@ -709,7 +851,7 @@ function findRedirect(results: RouteLoaderResult[]): TransitionRedirect | null {
 }
 
 // When moved to React Router maybe use the route objects instead of ids?
-function findError(
+function findErrorAndBoundaryId(
   results: RouteLoaderResult[],
   matches: ClientMatch[],
   actionErrorResult?: RouteLoaderErrorResult
@@ -765,32 +907,18 @@ function findNearestBoundary(
   return nearestBoundaryId;
 }
 
-function isRedirectResult(
-  result: RouteLoaderResult
-): result is RouteLoaderRedirectResult {
-  return result.value instanceof TransitionRedirect;
+export class TransitionRedirect {
+  location: string;
+  constructor(location: Location | string) {
+    this.location =
+      typeof location === "string"
+        ? location
+        : location.pathname + location.search;
+  }
 }
 
-export function isSubmission(
-  location: Location<any>
-): location is ActionLocation {
-  return Boolean(location.state?.isSubmission);
-}
-
-export function isKeyedSubmission(
-  location: Location<any>
-): location is KeyedActionLocation {
-  return Boolean(location.state?.isSubmission && location.state.submissionKey);
-}
-
-export function isKeyedActionRedirect(
-  location: Location<any>
-): location is KeyedActionRedirectLocation {
-  return Boolean(location.state?.isKeyedActionRedirect);
-}
-
-function isActionRedirect(
-  location: Location<any>
-): location is ActionRedirectLocation {
-  return !!location.state?.isActionRedirect;
+function createRedirectLocation(href: string, state: any = null) {
+  let [pathname, search] = href.split("?");
+  search = search ? `?${search}` : "";
+  return { pathname, search, hash: "", key: "", state };
 }

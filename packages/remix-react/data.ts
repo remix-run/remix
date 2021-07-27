@@ -1,5 +1,5 @@
 import type { Location } from "history";
-import { SubmissionState } from "./transition";
+import { GenericSubmission } from "./transition";
 
 export type AppData = any;
 
@@ -64,7 +64,7 @@ export async function extractData(response: Response): Promise<AppData> {
 }
 
 function getActionInit(
-  location: Location<SubmissionState>,
+  location: Location<GenericSubmission>,
   signal: AbortSignal
 ): RequestInit {
   let { encType, method, body } = location.state;

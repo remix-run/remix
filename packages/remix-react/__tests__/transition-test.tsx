@@ -1,9 +1,12 @@
 import { Location } from "history";
-import {
-  createTransitionManager,
-  SubmissionState,
-  TransitionRedirect
+import type {
+  GenericSubmission,
+  KeyedGetSubmission,
+  KeyedPostSubmission,
+  NormalGetSubmission
 } from "../transition";
+
+import { createTransitionManager, TransitionRedirect } from "../transition";
 import type { TransitionManagerInit } from "../transition";
 
 let routes = [
@@ -68,10 +71,10 @@ function createActionLocation(
   submissionKey?: string,
   body?: string
 ) {
-  let submission: SubmissionState = {
+  let submission: GenericSubmission = {
     isSubmission: true,
     action: path,
-    method: "post",
+    method: "POST",
     body: body || "gosh=dang",
     encType: "application/x-www-form-urlencoded",
     submissionKey,
@@ -186,6 +189,7 @@ describe("transition manager", () => {
         ],
         "nextLocation": undefined,
         "nextMatches": undefined,
+        "pendingSubmission": undefined,
         "pendingSubmissions": Map {},
       }
     `);
@@ -199,7 +203,7 @@ describe("transition manager", () => {
     expect(state.nextMatches.length).toBe(2);
   });
 
-  describe("GET navigation", () => {
+  describe("Normal GET navigations", () => {
     describe("redirects", () => {
       it("redirects", async () => {
         let loaderDeferred = defer();
@@ -527,7 +531,7 @@ describe("transition manager", () => {
     });
   });
 
-  describe("POST navigation", () => {
+  describe("Normal Submissions", () => {
     let setup = () => {
       let parentLoader = jest.fn(() => "PARENT LOADER");
       let childLoader = jest.fn(() => "CHILD LOADER");
@@ -566,7 +570,9 @@ describe("transition manager", () => {
 
     it("removes action data at new locations", async () => {
       let { tm } = setup();
-      await tm.send(createLocation("/child", { isSubmission: true }));
+      await tm.send(
+        createLocation("/child", { isSubmission: true, method: "POST" })
+      );
       expect(tm.getState().actionData).toBe("CHILD ACTION");
 
       await tm.send(createLocation("/child"));
@@ -575,14 +581,18 @@ describe("transition manager", () => {
 
     it("calls only the leaf route action", async () => {
       let t = setup();
-      await t.tm.send(createLocation("/child", { isSubmission: true }));
+      await t.tm.send(
+        createLocation("/child", { isSubmission: true, method: "POST" })
+      );
       expect(t.parentAction.mock.calls.length).toBe(0);
       expect(t.childAction.mock.calls.length).toBe(1);
     });
 
     it("reloads all routes after the action", async () => {
       let t = setup();
-      await t.tm.send(createLocation("/child", { isSubmission: true }));
+      await t.tm.send(
+        createLocation("/child", { isSubmission: true, method: "POST" })
+      );
       expect(t.parentLoader.mock.calls.length).toBe(1);
       expect(t.childLoader.mock.calls.length).toBe(1);
       expect(t.getState().actionData).toMatchInlineSnapshot(`"CHILD ACTION"`);
@@ -596,38 +606,45 @@ describe("transition manager", () => {
 
     it("loads routes after action redirect", async () => {
       let actionDeferred = defer();
-      let loaderDeferred = defer();
       let redirectDeferred = defer();
 
       let action = jest.fn(() => actionDeferred.promise.then(val => val));
-      let loader = jest.fn(() => loaderDeferred.promise.then(val => val));
+      let childLoader = jest.fn(() => "CHILD");
+      let parentLoader = jest.fn(() => "PARENT");
 
       let tm = createTestTransitionManager("/", {
         onRedirect(location) {
           tm.send(location).then(() => redirectDeferred.promise);
         },
         routes: [
-          { path: "/", id: "root", action, element: {} },
-          { path: "/a", id: "a", loader, element: {} }
+          {
+            path: "/",
+            id: "root",
+            action,
+            loader: parentLoader,
+            element: {},
+            children: [
+              { path: "/a", id: "a", loader: childLoader, element: {} }
+            ]
+          }
         ],
         loaderData: {}
       });
 
-      tm.send(createLocation("/", { isSubmission: true }));
+      tm.send(createLocation("/", { isSubmission: true, method: "POST" }));
       await actionDeferred.resolve(new TransitionRedirect("/a"));
+      await redirectDeferred.resolve();
 
       let state = tm.getState();
       expect(action.mock.calls.length).toBe(1);
-      expect(loader.mock.calls.length).toBe(1);
-      expect(state.actionData).toBeUndefined();
-      expect(state.loaderData).toMatchInlineSnapshot(`Object {}`);
-      expect(state.nextLocation.pathname).toBe("/a");
-
-      await loaderDeferred.resolve("A");
-      await redirectDeferred.resolve();
-      state = tm.getState();
-      expect(state.location.pathname).toBe("/a");
-      expect(state.loaderData.a).toBe("A");
+      expect(parentLoader.mock.calls.length).toBe(1);
+      expect(childLoader.mock.calls.length).toBe(1);
+      expect(state.loaderData).toMatchInlineSnapshot(`
+        Object {
+          "a": "CHILD",
+          "root": "PARENT",
+        }
+      `);
     });
 
     it("commits action data as soon as it lands", async () => {
@@ -644,7 +661,7 @@ describe("transition manager", () => {
         ]
       });
       expect(tm.getState().actionData).toBeUndefined();
-      tm.send(createLocation("/", { isSubmission: true }));
+      tm.send(createLocation("/", { isSubmission: true, method: "POST" }));
       let VALUE = "ACTION JACKSON";
       await resolve(VALUE);
       expect(tm.getState().actionData).toBe(VALUE);
@@ -675,7 +692,9 @@ describe("transition manager", () => {
               }
             ]
           });
-          await tm.send(createLocation("/child", { isSubmission: true }));
+          await tm.send(
+            createLocation("/child", { isSubmission: true, method: "POST" })
+          );
           let state = tm.getState();
           expect(state.errorBoundaryId).toBe("child");
           expect(state.error.message).toBe(ERROR_MESSAGE);
@@ -707,7 +726,9 @@ describe("transition manager", () => {
               }
             ]
           });
-          await tm.send(createLocation("/child", { isSubmission: true }));
+          await tm.send(
+            createLocation("/child", { isSubmission: true, method: "POST" })
+          );
           expect(parentLoader.mock.calls.length).toBe(1);
           expect(actionRouteLoader.mock.calls.length).toBe(0);
           expect(tm.getState().loaderData).toMatchInlineSnapshot(`
@@ -742,7 +763,9 @@ describe("transition manager", () => {
               }
             ]
           });
-          await tm.send(createLocation("/child", { isSubmission: true }));
+          await tm.send(
+            createLocation("/child", { isSubmission: true, method: "POST" })
+          );
           let state = tm.getState();
           expect(state.errorBoundaryId).toBe("parent");
           expect(state.error.message).toBe(ERROR_MESSAGE);
@@ -789,7 +812,8 @@ describe("transition manager", () => {
 
           await tm.send(
             createLocation("/parent/child", {
-              isSubmission: true
+              isSubmission: true,
+              method: "POST"
             })
           );
           let state = tm.getState();
@@ -803,10 +827,10 @@ describe("transition manager", () => {
   describe("actions with submission keys", () => {
     const SUBMISSION_KEY = "key";
 
-    let submission: SubmissionState = {
+    let submission: KeyedPostSubmission = {
       isSubmission: true,
       action: "/",
-      method: "post",
+      method: "POST",
       body: "name=Ryan&age=40",
       encType: "application/x-www-form-urlencoded",
       submissionKey: SUBMISSION_KEY,
@@ -836,13 +860,13 @@ describe("transition manager", () => {
           "encType": "application/x-www-form-urlencoded",
           "id": 1,
           "isSubmission": true,
-          "method": "post",
+          "method": "POST",
           "submissionKey": "key",
         }
       `);
     });
 
-    it("cleans up stale submissions", async () => {
+    it("cleans up completed submissions", async () => {
       let tm = createTestTransitionManager("/", {
         routes: [
           {
@@ -858,7 +882,7 @@ describe("transition manager", () => {
       expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
     });
 
-    it("cleans up stale submissions on redirects", async () => {
+    it("cleans up completed submissions on redirects", async () => {
       let redirectDeferred = defer();
       let tm = createTestTransitionManager("/", {
         onRedirect(location) {
@@ -1401,8 +1425,8 @@ describe("transition manager", () => {
       POST /foo
     `, () => {
       describe(`
-        A) POST /foo(0) |----|----X
-        B) POST /foo(1)    |----|----O
+        A) POST /foo |----|----X
+        B) POST /foo    |----|----O
       `, () => {
         it("ignores A, commits B", async () => {
           let t = setup();
@@ -1525,7 +1549,7 @@ describe("transition manager", () => {
             await A.action.resolve("A ACTION");
             let B = t.post("/foo");
             await B.action.resolve("B ACTION");
-            expect(A.action.abortMock.calls.length).toBe(1);
+            expect(A.action.abortMock.calls.length).toBe(0);
 
             await B.loader.resolve("B LOADER");
             expect(t.getState().location).toBe(B.location);
@@ -1636,32 +1660,38 @@ describe("transition manager", () => {
 
             let A = t.post("/foo", keyA);
             expect(t.getState().nextLocation).toBe(A.location);
+            expect(t.getState().pendingSubmission).toBeUndefined();
             let B = t.post("/foo", keyB);
             expect(t.getState().nextLocation).toBe(B.location);
+            expect(t.getState().pendingSubmission).toBeUndefined();
 
             await A.action.resolve("A ACTION");
             expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
-            expect(t.getState().actionData).toBe("A ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
+            expect(t.getState().pendingSubmission).toBeUndefined();
 
             await B.action.resolve("B ACTION");
             expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
-            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
+            expect(t.getState().pendingSubmission).toBeUndefined();
 
             await A.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A]");
-            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
+            expect(t.getState().pendingSubmission).toBeUndefined();
 
             await B.loader.resolve("[A,B]");
             expect(t.getState().loaderData.foo).toBe("[A,B]");
-            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(B.location);
             expect(t.getState().nextLocation).toBeUndefined();
+            expect(t.getState().pendingSubmission).toBeUndefined();
           });
         });
 
@@ -1684,25 +1714,25 @@ describe("transition manager", () => {
 
             await A.action.resolve("A ACTION");
             expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
-            expect(t.getState().actionData).toBe("A ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.action.resolve("B ACTION");
             expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
-            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
 
             await B.loader.resolve("[A,B]");
             expect(t.getState().loaderData.foo).toBe("[A,B]");
-            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(B.location);
             expect(t.getState().nextLocation).toBeUndefined();
 
             await A.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A,B]");
-            expect(t.getState().actionData).toBe("B ACTION");
+            expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(B.location);
             expect(t.getState().nextLocation).toBeUndefined();
           });
@@ -1750,7 +1780,7 @@ describe("transition manager", () => {
 
         describe(`
           A) POST /foo |-----------|[B,A]---O
-          B) POST /foo    |---|[B]-------------X
+          B) POST /foo    |---|[B]----------X
         `, () => {
           it("commits A, aborts B", async () => {
             let t = setup();
@@ -1859,12 +1889,16 @@ describe("transition manager", () => {
             let AR = await A.action.redirect("/foo");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(AR.location);
-            expect(t.getState().pendingSubmissions.get(keyA)).toBeUndefined();
+            expect(t.getState().pendingSubmissions.get(keyA)).toBe(
+              A.location.state
+            );
 
             let BR = await B.action.redirect("/foo");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(BR.location);
-            expect(t.getState().pendingSubmissions.get(keyB)).toBeUndefined();
+            expect(t.getState().pendingSubmissions.get(keyB)).toBe(
+              B.location.state
+            );
 
             await AR.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A]");
@@ -1944,6 +1978,7 @@ describe("transition manager", () => {
             expect(t.getState().location).toBe(AR.location);
           });
         });
+
         describe(`
           A) POST /foo |-----------/foo[B,A]---O
           B) POST /foo    |----/foo[B]------------X
@@ -1978,6 +2013,7 @@ describe("transition manager", () => {
             expect(t.getState().loaderData.foo).toBe("[B,A]");
             expect(t.getState().location).toBe(AR.location);
           });
+
           describe("with signals", () => {
             it("aborts B redirect load", async () => {
               let t = setup({ signals: true });
@@ -1996,6 +2032,11 @@ describe("transition manager", () => {
             });
           });
         });
+      });
+
+      describe("keyed navigations with uncaught errors", () => {
+        it.todo("takes the latest navigation errors, ignores all the rest");
+        it.todo("or should it bail immediately upon error?!");
       });
 
       describe("navigating without a key after navigating with one", () => {
@@ -2049,6 +2090,7 @@ describe("transition manager", () => {
             t.post("/bar");
             expect(A.action.abortMock.calls.length).toBe(1);
           });
+
           it("clears pending submission A", async () => {
             let t = setup({ signals: true });
             let key = "A";
@@ -2061,4 +2103,60 @@ describe("transition manager", () => {
       });
     });
   });
+
+  describe("submissions", () => {
+    it("tracks GET submissions", async () => {
+      let navDeferred = defer();
+
+      let tm = createTestTransitionManager("/", {
+        routes: [{ path: "/", id: "root", element: {} }]
+      });
+
+      let submission: NormalGetSubmission = {
+        isSubmission: true,
+        action: "/",
+        method: "GET",
+        body: "gosh=dang",
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      tm.send(createLocation("/", submission)).then(() => navDeferred.promise);
+      expect(tm.getState().pendingSubmission).toBe(submission);
+
+      await navDeferred.resolve();
+      expect(tm.getState().pendingSubmission).toBeUndefined();
+    });
+
+    it("tracks GET submissions by key", async () => {
+      let navDeferred = defer();
+
+      let tm = createTestTransitionManager("/", {
+        routes: [{ path: "/", id: "root", element: {} }]
+      });
+
+      let submission: KeyedGetSubmission = {
+        isSubmission: true,
+        submissionKey: "key",
+        action: "/",
+        method: "GET",
+        body: "gosh=dang",
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+
+      tm.send(createLocation("/", submission)).then(() => navDeferred.promise);
+      expect(
+        tm.getState().pendingSubmissions.get(submission.submissionKey)
+      ).toBe(submission);
+
+      await navDeferred.resolve();
+      expect(
+        tm.getState().pendingSubmissions.get(submission.submissionKey)
+      ).toBeUndefined();
+    });
+  });
 });
+
+/*
+ */

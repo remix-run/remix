@@ -16,6 +16,7 @@ button {
   width: 10rem;
   font-size: 80%;
   background: #f0f0f0 !important;
+  color: black;
 }
 
 button:active {

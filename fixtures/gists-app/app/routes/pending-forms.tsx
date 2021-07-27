@@ -1,5 +1,6 @@
 import styles from "../styles/pending-forms.css";
 import { useEffect, useState } from "react";
+import type { LoaderFunction } from "remix";
 import {
   json,
   useLoaderData,
@@ -8,6 +9,7 @@ import {
   useSubmission,
   Link
 } from "remix";
+import { useSearchParams } from "react-router-dom";
 
 interface Task {
   id: string;
@@ -41,9 +43,18 @@ export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 
-export async function loader() {
+export let loader: LoaderFunction = async ({ request }) => {
+  let searchParams = new URL(request.url).searchParams;
+
+  if (searchParams.has("q")) {
+    await new Promise(res => setTimeout(res, 1000));
+    return tasks.filter(task =>
+      task.name.toLowerCase().includes(searchParams.get("q")!.toLowerCase())
+    );
+  }
+
   return tasks;
-}
+};
 
 export async function action({ request }: { request: Request }) {
   let body = new URLSearchParams(await request.text());
@@ -71,8 +82,21 @@ export async function action({ request }: { request: Request }) {
 
 export default function Tasks() {
   let tasks = useLoaderData<Task[]>();
+  let [searchParams] = useSearchParams();
+
   return (
     <div>
+      <h2>Filter Tasks</h2>
+      <FilterForm />
+
+      <hr />
+      <h2>Tasks</h2>
+      {searchParams.has("q") && (
+        <p>
+          Filtered by search: <i>{searchParams.get("q")}</i>
+        </p>
+      )}
+
       {tasks.map(task => (
         <TaskItem key={task.id} task={task} />
       ))}
@@ -80,6 +104,21 @@ export default function Tasks() {
         <Link to="/gists">Gists</Link>
       </p>
     </div>
+  );
+}
+
+function FilterForm() {
+  let submission = useSubmission();
+
+  return (
+    <Form method="get">
+      <input type="text" name="q" /> <button type="submit">Go</button>
+      {submission ? (
+        <p>Searching for: {submission.data.get("q")}...</p>
+      ) : (
+        <p>&nbsp;</p>
+      )}
+    </Form>
   );
 }
 

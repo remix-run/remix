@@ -32,7 +32,8 @@ import type { RouteModules } from "./routeModules";
 import {
   createTransitionManager,
   isSubmission,
-  SubmissionState
+  isPostSubmission,
+  GenericSubmission
 } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -136,7 +137,7 @@ export function RemixEntry({
 
   // Repost actions on initial load (refresh or pop from different document)
   React.useEffect(() => {
-    if (isSubmission(location)) {
+    if (isPostSubmission(location)) {
       let { pathname, search, hash, state } = location;
       navigator.replace({ pathname, search, hash }, state);
     }
@@ -570,7 +571,8 @@ export let Form = React.forwardRef<HTMLFormElement, FormProps>(
  */
 export function useFormAction(action = "."): string {
   let path = useResolvedPath(action);
-  return path.pathname + path.search;
+  let location = useLocation();
+  return path.pathname + location.search;
 }
 
 export interface SubmitOptions {
@@ -724,12 +726,12 @@ export function useSubmit(submissionKey?: string): SubmitFunction {
       }
     }
 
-    let state: SubmissionState = {
+    let state: GenericSubmission = {
       isSubmission: true,
       // @ts-expect-error types don't know that FormData can be passed to URLSearchParams
       body: new URLSearchParams(formData).toString(),
       action,
-      method,
+      method: method.toUpperCase(),
       encType,
       submissionKey,
       id: ++submissionGuid
@@ -811,7 +813,7 @@ export function useActionData(submissionKey?: string) {
  * submit a `<Form>`. This is useful for showing e.g. a pending indicator or
  * animation for some newly created/destroyed data.
  */
-export interface FormSubmit extends SubmissionState {
+export interface FormSubmit extends GenericSubmission {
   data: URLSearchParams;
 }
 
@@ -831,7 +833,7 @@ export function useSubmission(submissionKey?: string): FormSubmit | undefined {
 
   if (!pendingLocation) return undefined;
 
-  let submission = isSubmission(pendingLocation) && pendingLocation.state;
+  let submission = transitionManager.getState().pendingSubmission;
   if (!submission) return undefined;
 
   return { ...submission, data: new URLSearchParams(submission.body) };
