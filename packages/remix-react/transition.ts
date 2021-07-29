@@ -227,7 +227,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let actionControllers = new Map<string, AbortController>();
 
   // TODO: if location is never actually used, just use pendingLoadControllers
-  let pendingLoads = new Map<number, Location>();
+  let pendingLoads = new Map<
+    number,
+    Location<KeyedPostSubmission | KeyedGetSubmission | KeyedActionRedirect>
+  >();
   let loadControllers = new Map<number, AbortController>();
 
   // count submission key data reads in the view to clean up when back to 0
@@ -333,9 +336,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let key = location.state.submissionKey;
 
     abortNormalNavigation();
-    if (pendingSubmissions.has(key)) {
+    if (actionControllers.has(key)) {
       abortAction(key);
+    }
+    if (pendingSubmissions.has(key)) {
       clearPendingSubmission(key);
+      abortKeyLoad(key);
     }
 
     pendingSubmissions.set(key, location.state);
@@ -656,18 +662,25 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = loadControllers.get(id);
     invariant(controller, `Expected keyedLoadAbortController: ${id}`);
     controller.abort();
-    loadControllers.delete(id);
-    pendingLoads.delete(id);
+    clearPendingLoad(id);
   }
 
   function abortAction(key: string) {
     let controller = actionControllers.get(key);
     invariant(controller, `Expected actionController for ${key}`);
     controller.abort();
+    actionControllers.delete(key);
+  }
+
+  function abortKeyLoad(key: string) {
+    for (let [id, location] of pendingLoads) {
+      if (location.state.submissionKey === key) {
+        abortLoad(id);
+      }
+    }
   }
 
   function clearPendingSubmission(key: string) {
-    actionControllers.delete(key);
     pendingSubmissions.delete(key);
   }
 

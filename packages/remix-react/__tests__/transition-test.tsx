@@ -2102,9 +2102,71 @@ describe("transition manager", () => {
         });
       });
     });
+
+    describe("interrupting the same key", () => {
+      describe(`
+        A) POST /foo(a) |--X
+        B) POST /foo(a)    |----|---O
+      `, () => {
+        it("aborts A submission", async () => {
+          let t = setup({ signals: true });
+          let key = "same";
+
+          let A = t.post("/foo", key, "which=A");
+          expect(t.getState().pendingSubmissions.get(key)).toBe(
+            A.location.state
+          );
+
+          let B = t.post("/foo", key, "which=B");
+          expect(t.getState().pendingSubmissions.get(key)).toBe(
+            B.location.state
+          );
+          expect(A.action.abortMock.calls.length).toBe(1);
+
+          await B.action.resolve("B ACTION");
+          expect(t.getState().keyedActionData[key]).toBe("B ACTION");
+
+          await B.loader.resolve("B LOADER");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().matches).toBeDefined();
+        });
+      });
+
+      describe(`
+        A) POST /foo(a) |--|--X
+        B) POST /foo(a)       |---|---O
+      `, () => {
+        it("aborts A load", async () => {
+          let t = setup({ signals: true });
+          let key = "same";
+
+          let A = t.post("/foo", key, "which=A");
+          expect(t.getState().pendingSubmissions.get(key)).toBe(
+            A.location.state
+          );
+
+          await A.action.resolve("A ACTION");
+          expect(t.getState().keyedActionData[key]).toBe("A ACTION");
+
+          console.log("> about to post B");
+          let B = t.post("/foo", key, "which=B");
+          expect(t.getState().pendingSubmissions.get(key)).toBe(
+            B.location.state
+          );
+          expect(A.loader.abortMock.calls.length).toBe(1);
+
+          await B.action.resolve("B ACTION");
+          expect(t.getState().keyedActionData[key]).toBe("B ACTION");
+
+          await B.loader.resolve("B LOADER");
+          expect(t.getState().loaderData.foo).toBe("B LOADER");
+          expect(t.getState().matches).toBeDefined();
+        });
+      });
+    });
   });
 
-  describe("submissions", () => {
+  describe("GET submissions", () => {
     it("tracks GET submissions", async () => {
       let navDeferred = defer();
 
