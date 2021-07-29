@@ -1,10 +1,10 @@
 {
   "name": "@remix-run/express",
   "description": "Express server request handler for Remix",
-  "version": "0.0.0-experimental-9938d08",
+  "version": "0.0.0-experimental-16dd601",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-9938d08"
+    "@remix-run/node": "0.0.0-experimental-16dd601"
   },
   "peerDependencies": {
     "express": "^4.17.1"
