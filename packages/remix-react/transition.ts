@@ -334,7 +334,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     abortNormalNavigation();
     if (pendingSubmissions.has(key)) {
-      abortSubmission(key);
+      abortAction(key);
+      clearPendingSubmission(key);
     }
 
     pendingSubmissions.set(key, location.state);
@@ -636,8 +637,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function abortEverything() {
     abortNormalNavigation();
+    for (let [key] of actionControllers) {
+      abortAction(key);
+    }
     for (let [key] of pendingSubmissions) {
-      abortSubmission(key);
+      clearPendingSubmission(key);
     }
     for (let [id] of pendingLoads) {
       abortLoad(id);
@@ -656,10 +660,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     pendingLoads.delete(id);
   }
 
-  function abortSubmission(key: string) {
+  function abortAction(key: string) {
     let controller = actionControllers.get(key);
-    controller?.abort();
-    clearPendingSubmission(key);
+    invariant(controller, `Expected actionController for ${key}`);
+    controller.abort();
   }
 
   function clearPendingSubmission(key: string) {
