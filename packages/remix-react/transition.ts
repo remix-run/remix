@@ -45,7 +45,7 @@ export interface TransitionState {
   /**
    * Tracks current KeyedPostSubmission and KeyedGetSubmission
    */
-  pendingSubmissions: Map<string | undefined, GenericSubmission>;
+  pendingSubmissions: Map<string, GenericSubmission>;
 
   /**
    * Tracks the latest, non-keyed pending submission

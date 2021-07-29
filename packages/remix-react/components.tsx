@@ -810,17 +810,30 @@ export function useActionData(submissionKey?: string) {
  * submit a `<Form>`. This is useful for showing e.g. a pending indicator or
  * animation for some newly created/destroyed data.
  */
-export interface FormSubmit extends GenericSubmission {
+export interface SubmissionWithData extends GenericSubmission {
   data: URLSearchParams;
 }
 
-export function useSubmissions() {
+export function useSubmissions(): Map<string, SubmissionWithData> {
   let { transitionManager } = useRemixEntryContext();
   let submissions = transitionManager.getState().pendingSubmissions;
-  return React.useMemo(() => new Map(submissions), [submissions]);
+  return React.useMemo(() => {
+    let map = new Map<string, SubmissionWithData>();
+
+    for (let [key, submission] of submissions) {
+      map.set(key, {
+        ...submission,
+        data: new URLSearchParams(submission.body)
+      });
+    }
+
+    return map;
+  }, [submissions]);
 }
 
-export function useSubmission(submissionKey?: string): FormSubmit | undefined {
+export function useSubmission(
+  submissionKey?: string
+): SubmissionWithData | undefined {
   let { transitionManager } = useRemixEntryContext();
   let pendingLocation = usePendingLocation();
 
