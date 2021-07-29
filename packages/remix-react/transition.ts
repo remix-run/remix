@@ -236,6 +236,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
   // count submission key data reads in the view to clean up when back to 0
   let dataKeyCounts: { [submissionKey: string]: number } = {};
 
+  let interruptedSubmission = false;
+
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
 
@@ -468,6 +470,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
     await loadNormally(location, matches);
   }
 
+  function flagInterruptedSubmission() {
+    if (pendingSubmissions.size > 0 || state.pendingSubmission) {
+      interruptedSubmission = true;
+    }
+  }
+
+  function resetInterruptedSubmission() {
+    interruptedSubmission = false;
+  }
+
   async function handleNormalGet(location: Location, matches: ClientMatch[]) {
     abortEverything();
     update({
@@ -502,6 +514,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       location,
       matches,
       controller.signal,
+      interruptedSubmission,
       maybeActionErrorResult
     );
 
@@ -607,8 +620,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       location,
       matches,
       controller.signal,
+      interruptedSubmission,
       maybeActionErrorResult
     );
+
+    resetInterruptedSubmission();
 
     if (controller.signal.aborted) {
       return;
@@ -642,6 +658,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   //// ABORT HANDLING
 
   function abortEverything() {
+    flagInterruptedSubmission();
     abortNormalNavigation();
     for (let [key] of actionControllers) {
       abortAction(key);
@@ -747,12 +764,14 @@ async function callLoaders(
   location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
+  interruptedSubmission: boolean,
   actionErrorResult?: RouteLoaderErrorResult
 ): Promise<RouteLoaderResult[]> {
   let matchesToLoad = filterMatchesToLoad(
     state,
     location,
     matches,
+    interruptedSubmission,
     actionErrorResult
   );
 
@@ -805,6 +824,7 @@ function filterMatchesToLoad(
   state: TransitionState,
   location: Location,
   matches: ClientMatch[],
+  interruptedSubmission: boolean,
   actionErrorResult?: RouteLoaderErrorResult
 ): ClientMatch[] {
   let filterByRouteProps = (match: ClientMatch, index: number) => {
@@ -821,6 +841,8 @@ function filterMatchesToLoad(
   };
 
   if (
+    // hopefully catch that data update from the submission
+    interruptedSubmission ||
     // mutation, reload for fresh data
     isPostSubmission(location) ||
     isNormalActionRedirect(location) ||

@@ -963,6 +963,8 @@ describe("transition manager", () => {
         lastRedirect = navigate(location);
       });
 
+      let rootLoader = jest.fn(() => "PARENT");
+
       let loader = async ({ signal }: { signal: AbortSignal }) => {
         if (signals) signal.onabort = loaderAbortHandlers.get(nextLoaderId);
         return loaderDeferreds.get(nextLoaderId).promise.then((val: any) => {
@@ -985,25 +987,33 @@ describe("transition manager", () => {
         loaderData: undefined,
         routes: [
           {
-            path: "/foo",
-            id: "foo",
-            loader,
-            action,
-            element: {}
-          },
-          {
-            path: "/bar",
-            id: "bar",
-            loader,
-            action,
-            element: {}
-          },
-          {
-            path: "/baz",
-            id: "baz",
-            loader,
-            action,
-            element: {}
+            path: "/",
+            id: "root",
+            element: {},
+            loader: rootLoader,
+            children: [
+              {
+                path: "/foo",
+                id: "foo",
+                loader,
+                action,
+                element: {}
+              },
+              {
+                path: "/bar",
+                id: "bar",
+                loader,
+                action,
+                element: {}
+              },
+              {
+                path: "/baz",
+                id: "baz",
+                loader,
+                action,
+                element: {}
+              }
+            ]
           }
         ]
       });
@@ -1073,16 +1083,43 @@ describe("transition manager", () => {
         navigate,
         getState: tm.getState,
         handleChange,
-        handleRedirect
+        handleRedirect,
+        rootLoaderMock: rootLoader.mock
       };
     };
+
+    describe("interrupting submissions with GET", () => {
+      // This is so that optimistic UI is more likely to be in sync with the
+      // real data. The submission is aborted but it still hits the server, so
+      // we want the next load to capture that if it actually completed.  We
+      // might want to await any pending actions that currently are being read
+      // from a `useSubmission` to have the best chance of not getting the UI
+      // out of sync, or even a `useCriticalSubmission()` that makes sure to
+      // await before loading the next page.
+      it("reloads all routes on GET", async () => {
+        let t = setup({ signals: true });
+        t.post("/foo");
+        let B = t.get("/bar");
+        await B.loader.resolve(null);
+        expect(t.rootLoaderMock.calls.length).toBe(1);
+      });
+
+      it("with pending keyed submission, reloads all routes", async () => {
+        let t = setup({ signals: true });
+        let key = "A";
+        t.post("/foo", key);
+        let B = t.get("/bar");
+        await B.loader.resolve(null);
+        expect(t.rootLoaderMock.calls.length).toBe(1);
+      });
+    });
 
     describe(`
       GET /foo
       GET /foo
     `, () => {
       describe(`
-        A) GET /foo |------X
+        A) GET /foo |-:---X
         B) GET /foo   |------O
       `, () => {
         it("ignores A, commits B", async () => {

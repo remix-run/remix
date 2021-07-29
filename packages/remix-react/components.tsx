@@ -31,7 +31,6 @@ import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 import {
   createTransitionManager,
-  isSubmission,
   isPostSubmission,
   GenericSubmission
 } from "./transition";
@@ -813,6 +812,12 @@ export function useActionData(submissionKey?: string) {
  */
 export interface FormSubmit extends GenericSubmission {
   data: URLSearchParams;
+}
+
+export function useSubmissions() {
+  let { transitionManager } = useRemixEntryContext();
+  let submissions = transitionManager.getState().pendingSubmissions;
+  return React.useMemo(() => new Map(submissions), [submissions]);
 }
 
 export function useSubmission(submissionKey?: string): FormSubmit | undefined {
