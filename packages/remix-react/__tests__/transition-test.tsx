@@ -2090,12 +2090,19 @@ describe("transition manager", () => {
             await B.loader.resolve("B");
             expect(t.getState().loaderData.bar).toBe("B");
           });
+
           it("clears pending submission A", async () => {
             let t = setup({ signals: true });
             let key = "A";
-            t.post("/foo", key);
-            expect(t.getState().pendingSubmissions.get(key)).toBeDefined();
-            t.get("/bar");
+            let A = t.post("/foo", key);
+            expect(t.getState().pendingSubmissions.get(key)).toBe(
+              A.location.state
+            );
+            let B = t.get("/bar");
+            expect(t.getState().pendingSubmissions.get(key)).toBe(
+              A.location.state
+            );
+            await B.loader.resolve("B");
             expect(t.getState().pendingSubmissions.get(key)).toBeUndefined();
           });
         });
@@ -2131,9 +2138,16 @@ describe("transition manager", () => {
           it("clears pending submission A", async () => {
             let t = setup({ signals: true });
             let key = "A";
-            t.post("/foo", key);
-            expect(t.getState().pendingSubmissions.get(key)).toBeDefined();
-            t.post("/bar");
+            let A = t.post("/foo", key);
+            expect(t.getState().pendingSubmissions.get(key)).toBe(
+              A.location.state
+            );
+            let B = t.post("/bar");
+            expect(t.getState().pendingSubmissions.get(key)).toBe(
+              A.location.state
+            );
+            await B.action.resolve("B ACTION");
+            await B.loader.resolve("B LOADER");
             expect(t.getState().pendingSubmissions.get(key)).toBeUndefined();
           });
         });

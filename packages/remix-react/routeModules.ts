@@ -4,8 +4,9 @@ import type { Params } from "react-router"; // TODO: import/export from react-ro
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { EntryRoute } from "./routes";
+import type { ClientRoute, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
+import { RouteMatch } from "./routeMatching";
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
@@ -17,6 +18,7 @@ export interface RouteModule {
   handle?: RouteHandle;
   links?: LinksFunction;
   meta?: MetaFunction;
+  shouldReload?: ShouldReload;
 }
 
 /**
@@ -44,6 +46,31 @@ export interface MetaFunction {
     params: Params;
     location: Location;
   }): { [name: string]: string };
+}
+
+/**
+ * During transitions Remix will optimize reloading of routes that are currently
+ * on the page by avoiding loading routes that aren't changing. However, in some
+ * cases, like form submissions or search params Remix doesn't know which routes
+ * need to be reloaded so it reloads them all to be safe.
+ *
+ * This function lets apps further optimize by returning `false` when Remix is
+ * about to reload the route. A common case is a root loader with nothing but
+ * enviornment variables: after form submissions the root probably doesn't need
+ * to be reloaded.
+ */
+export interface ShouldReload {
+  ({
+    nextLocation,
+    prevLocation,
+    nextMatch,
+    prevMatch
+  }: {
+    nextLocation: Location<any>;
+    prevLocation: Location<any>;
+    nextMatch: RouteMatch<ClientRoute>;
+    prevMatch: RouteMatch<ClientRoute>;
+  }): boolean;
 }
 
 /**

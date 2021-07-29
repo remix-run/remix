@@ -427,8 +427,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({
       nextLocation: location,
       nextMatches: matches,
-      pendingSubmission: location.state,
-      pendingSubmissions: new Map()
+      pendingSubmission: location.state
     });
 
     let controller = new AbortController();
@@ -464,8 +463,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({
       nextLocation: location,
       nextMatches: matches,
-      pendingSubmission: location.state,
-      pendingSubmissions: new Map()
+      pendingSubmission: location.state
     });
     await loadNormally(location, matches);
   }
@@ -484,9 +482,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortEverything();
     update({
       nextLocation: location,
-      nextMatches: matches,
-      pendingSubmission: undefined,
-      pendingSubmissions: new Map()
+      nextMatches: matches
     });
     await loadNormally(location, matches);
   }
@@ -651,7 +647,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionData: actionResult ? actionResult.value : undefined,
       nextLocation: undefined,
       nextMatches: undefined,
-      pendingSubmission: undefined
+      pendingSubmission: undefined,
+      pendingSubmissions: new Map()
     });
   }
 
@@ -828,16 +825,21 @@ function filterMatchesToLoad(
   actionErrorResult?: RouteLoaderErrorResult
 ): ClientMatch[] {
   let filterByRouteProps = (match: ClientMatch, index: number) => {
-    return match.route.loader
-      ? match.route.shouldReload
-        ? match.route.shouldReload({
-            nextLocation: location,
-            prevLocation: state.location,
-            nextMatch: match,
-            prevMatch: state.matches[index]
-          })
-        : true
-      : false;
+    if (!match.route.loader) {
+      return false;
+    }
+
+    let alreadyMatching = state.matches[index]?.route.id === match.route.id;
+    if (alreadyMatching && match.route.shouldReload) {
+      return match.route.shouldReload({
+        nextLocation: location,
+        prevLocation: state.location,
+        nextMatch: match,
+        prevMatch: state.matches[index]
+      });
+    }
+
+    return true;
   };
 
   if (

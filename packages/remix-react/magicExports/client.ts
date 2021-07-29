@@ -9,7 +9,8 @@ export type {
   SubmitFunction,
   FormMethod,
   FormEncType,
-  RemixServerProps
+  RemixServerProps,
+  ShouldReload
 } from "@remix-run/react";
 
 export {

@@ -3,11 +3,12 @@ import type { Location } from "history";
 import React from "react";
 
 import type { RouteMatch } from "./routeMatching";
-import type { RouteModules } from "./routeModules";
+import type { RouteModules, ShouldReload } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import { extractData, fetchData, isRedirectResponse } from "./data";
 import { TransitionRedirect } from "./transition";
 import { preloadBlockingLinks } from "./linksPreloading";
+import invariant from "./invariant";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -47,17 +48,7 @@ export interface ClientRoute extends Route {
     location: Location<any>;
     signal: AbortSignal;
   }) => Promise<any> | any;
-  shouldReload?: ({
-    nextLocation,
-    prevLocation,
-    nextMatch,
-    prevMatch
-  }: {
-    nextLocation: Location<any>;
-    prevLocation: Location<any>;
-    nextMatch: RouteMatch<ClientRoute>;
-    prevMatch: RouteMatch<ClientRoute>;
-  }) => boolean;
+  shouldReload?: ShouldReload;
   ErrorBoundary?: any;
   children?: ClientRoute[];
   element: ReactNode;
@@ -77,6 +68,7 @@ export function createClientRoute(
     path: entryRoute.path,
     loader: createLoader(entryRoute, routeModulesCache),
     action: createAction(entryRoute),
+    shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary
   };
 }
@@ -104,6 +96,19 @@ export function createClientRoutes(
       if (children.length > 0) route.children = children;
       return route;
     });
+}
+
+function createShouldReload(route: EntryRoute, routeModules: RouteModules) {
+  let shouldReload: ShouldReload = arg => {
+    let module = routeModules[route.id];
+    invariant(module, `Expected route module to be loaded for ${route.id}`);
+    if (module.shouldReload) {
+      return module.shouldReload(arg);
+    }
+    return true;
+  };
+
+  return shouldReload;
 }
 
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
