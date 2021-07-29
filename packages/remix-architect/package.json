@@ -1,10 +1,10 @@
 {
   "name": "@remix-run/architect",
   "description": "Architect server request handler for Remix",
-  "version": "0.0.0-experimental-a954279",
+  "version": "0.0.0-experimental-ad159b2",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-a954279"
+    "@remix-run/node": "0.0.0-experimental-ad159b2"
   },
   "peerDependencies": {
     "@architect/architect": "^8.3.7",
