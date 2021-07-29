@@ -525,7 +525,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionControllers.size === 0 && pendingLoads.size === 0;
 
     if (isLatestNavigation && isOnlyPendingLoad) {
-      // console.log("a");
       // A) POST /foo |------|-----O
       // B) POST /foo    |-------|----O
       //                              ^
@@ -545,7 +544,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
         loaderData
       });
     } else if (!isLatestNavigation && isOnlyPendingLoad) {
-      // console.log("b");
       //                             v
       // A) POST /foo |----------|---O
       // B) POST /foo    |---|-----O
@@ -565,7 +563,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
         loaderData
       });
     } else if (!isOnlyPendingLoad) {
-      // console.log("c");
       // A) POST /foo |----------|------O
       // B) POST /foo    |---|-------O
       //                             ^

@@ -135,15 +135,14 @@ export function RemixEntry({
     actionData
   } = transitionManager.getState();
 
-  // Repost actions on initial load (refresh or pop from different document)
   React.useEffect(() => {
+    // Repost actions on initial load (refresh or pop from different document)
     if (isPostSubmission(location)) {
       let { pathname, search, hash, state } = location;
       navigator.replace({ pathname, search, hash }, state);
     }
-    // not synchronization, only do it on mount
     // eslint-disable-next-line
-  }, []);
+  }, []); // not synchronization, only do it on mount
 
   // Send new location to the transition manager
   React.useEffect(() => {
@@ -523,22 +522,21 @@ export let Form = React.forwardRef<HTMLFormElement, FormProps>(
     {
       forceRefresh = false,
       replace = false,
+      submissionKey,
       method = "get",
       action = ".",
       encType = "application/x-www-form-urlencoded",
       onSubmit,
-      id,
       ...props
     },
     forwardedRef
   ) => {
-    let submit = useSubmit(id);
+    let submit = useSubmit(submissionKey);
     let formMethod = method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action);
 
     return (
       <form
-        id={id}
         ref={forwardedRef}
         method={formMethod}
         action={formAction}
