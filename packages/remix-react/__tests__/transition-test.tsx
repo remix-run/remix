@@ -2148,7 +2148,6 @@ describe("transition manager", () => {
           await A.action.resolve("A ACTION");
           expect(t.getState().keyedActionData[key]).toBe("A ACTION");
 
-          console.log("> about to post B");
           let B = t.post("/foo", key, "which=B");
           expect(t.getState().pendingSubmissions.get(key)).toBe(
             B.location.state
