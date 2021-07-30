@@ -792,7 +792,9 @@ export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
-export function useActionData(submissionKey?: string) {
+export function useActionData<T = AppData>(
+  submissionKey?: string
+): T | undefined {
   let { transitionManager } = useRemixEntryContext();
   React.useEffect(() => {
     if (submissionKey) {
