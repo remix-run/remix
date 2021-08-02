@@ -24,7 +24,7 @@ export type { FormMethod, FormEncType } from "./data";
 
 export { block } from "./linksPreloading";
 
-export type { ShouldReload } from "./routeModules";
+export type { ShouldReloadFunction } from "./routeModules";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";

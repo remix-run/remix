@@ -3,7 +3,7 @@ import type { Location } from "history";
 import React from "react";
 
 import type { RouteMatch } from "./routeMatching";
-import type { RouteModules, ShouldReload } from "./routeModules";
+import type { RouteModules, ShouldReloadFunction } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import { extractData, fetchData, isRedirectResponse } from "./data";
 import { TransitionRedirect } from "./transition";
@@ -48,7 +48,7 @@ export interface ClientRoute extends Route {
     location: Location<any>;
     signal: AbortSignal;
   }) => Promise<any> | any;
-  shouldReload?: ShouldReload;
+  shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
   children?: ClientRoute[];
   element: ReactNode;
@@ -99,7 +99,7 @@ export function createClientRoutes(
 }
 
 function createShouldReload(route: EntryRoute, routeModules: RouteModules) {
-  let shouldReload: ShouldReload = arg => {
+  let shouldReload: ShouldReloadFunction = arg => {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
     if (module.shouldReload) {

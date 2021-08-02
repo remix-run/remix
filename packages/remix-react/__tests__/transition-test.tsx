@@ -1,9 +1,12 @@
 import { Location } from "history";
-import type {
+import {
+  GenericGetSubmission,
   GenericSubmission,
   KeyedGetSubmission,
   KeyedPostSubmission,
-  NormalGetSubmission
+  LoadTypes,
+  NormalGetSubmission,
+  NormalPostSubmission
 } from "../transition";
 
 import { createTransitionManager, TransitionRedirect } from "../transition";
@@ -83,6 +86,23 @@ function createActionLocation(
   return createLocation(path, submission);
 }
 
+function createGetSubmission(
+  path: string,
+  submissionKey?: string,
+  body?: string
+) {
+  let submission: GenericGetSubmission = {
+    isSubmission: true,
+    action: path,
+    method: "GET",
+    body: body || "gosh=dang",
+    encType: "application/x-www-form-urlencoded",
+    submissionKey,
+    id: 1
+  };
+  return createLocation(path, submission);
+}
+
 function createTestTransitionManager(
   pathname: string,
   init?: Partial<TransitionManagerInit>
@@ -98,6 +118,153 @@ function createTestTransitionManager(
     ...init
   });
 }
+
+let setupTest = ({ signals }: { signals?: boolean } = {}) => {
+  let guid = -1;
+
+  let nextLoaderId = guid;
+  let nextActionId = guid;
+  let lastRedirect: ReturnType<typeof navigate>;
+
+  let navDeferreds = new Map<number, Deferred>();
+  let loaderDeferreds = new Map<number, Deferred>();
+  let actionDeferreds = new Map<number, Deferred>();
+  let loaderAbortHandlers = new Map<number, jest.Mock>();
+  let actionAbortHandlers = new Map<number, jest.Mock>();
+
+  let handleChange = jest.fn();
+
+  let handleRedirect = jest.fn((location: Location<any>) => {
+    lastRedirect = navigate(location);
+  });
+
+  let rootLoader = jest.fn(() => "PARENT");
+
+  let loader = async ({ signal }: { signal: AbortSignal }) => {
+    if (signals) signal.onabort = loaderAbortHandlers.get(nextLoaderId);
+    return loaderDeferreds.get(nextLoaderId).promise.then((val: any) => {
+      return val;
+    });
+  };
+
+  let action = async ({ signal }: { signal: AbortSignal }) => {
+    let myId = nextActionId;
+    if (signals) signal.onabort = actionAbortHandlers.get(nextActionId);
+    return actionDeferreds.get(nextActionId).promise.then((val: any) => {
+      nextLoaderId = myId;
+      return val;
+    });
+  };
+
+  let tm = createTestTransitionManager("/foo", {
+    onChange: handleChange,
+    onRedirect: handleRedirect,
+    loaderData: undefined,
+    routes: [
+      {
+        path: "/",
+        id: "root",
+        element: {},
+        loader: rootLoader,
+        children: [
+          {
+            path: "/foo",
+            id: "foo",
+            loader,
+            action,
+            element: {}
+          },
+          {
+            path: "/bar",
+            id: "bar",
+            loader,
+            action,
+            element: {}
+          },
+          {
+            path: "/baz",
+            id: "baz",
+            loader,
+            action,
+            element: {}
+          }
+        ]
+      }
+    ]
+  });
+
+  let get = (href: string) => navigate(href);
+  let post = (href: string, key?: string, body?: string) =>
+    navigate(createActionLocation(href, key, body));
+  let submitGet = (href: string, key?: string, body?: string) =>
+    navigate(createGetSubmission(href, key, body));
+
+  let navigate = (location: string | Location<any>) => {
+    if (typeof location === "string") location = createLocation(location);
+    let id = ++guid;
+    let loaderAbortHandler = jest.fn();
+    let actionAbortHandler = jest.fn();
+
+    if (location.state?.isSubmission && location.state.method !== "GET") {
+      nextActionId = id;
+      actionDeferreds.set(id, defer());
+      actionAbortHandlers.set(id, actionAbortHandler);
+    } else {
+      nextLoaderId = id;
+    }
+
+    navDeferreds.set(id, defer());
+    loaderDeferreds.set(id, defer());
+    loaderAbortHandlers.set(id, loaderAbortHandler);
+
+    async function resolveAction(val: any) {
+      await actionDeferreds.get(id).resolve(val);
+    }
+
+    async function resolveLoader(val: any) {
+      await loaderDeferreds.get(id).resolve(val);
+      await navDeferreds.get(id).resolve();
+    }
+
+    async function redirectAction(href: string) {
+      await resolveAction(new TransitionRedirect(href));
+      return lastRedirect;
+    }
+
+    async function redirectLoader(href: string) {
+      await resolveLoader(new TransitionRedirect(href));
+      return lastRedirect;
+    }
+
+    tm.send(location).then(() => navDeferreds.get(id).promise);
+
+    return {
+      location,
+      action: {
+        resolve: resolveAction,
+        redirect: redirectAction,
+        abortMock: actionAbortHandler.mock
+      },
+      loader: {
+        resolve: resolveLoader,
+        redirect: redirectLoader,
+        abortMock: loaderAbortHandler.mock
+      }
+    };
+  };
+
+  return {
+    tm,
+    get,
+    post,
+    submitGet,
+    navigate,
+    getState: tm.getState,
+    handleChange,
+    handleRedirect,
+    rootLoaderMock: rootLoader.mock
+  };
+};
 
 describe("react-router", () => {
   it.todo("replaces pending locations even on a push");
@@ -189,8 +356,14 @@ describe("transition manager", () => {
         ],
         "nextLocation": undefined,
         "nextMatches": undefined,
-        "pendingSubmission": undefined,
-        "pendingSubmissions": Map {},
+        "transition": Object {
+          "formData": undefined,
+          "method": undefined,
+          "nextLocation": undefined,
+          "state": "idle",
+          "type": "idle",
+        },
+        "transitions": Map {},
       }
     `);
   });
@@ -240,15 +413,9 @@ describe("transition manager", () => {
         await redirectDeferred.resolve();
 
         expect(handleRedirect.mock.calls.length).toBe(1);
-        expect(handleRedirect.mock.calls[0][0]).toMatchInlineSnapshot(`
-          Object {
-            "hash": "",
-            "key": "",
-            "pathname": "/redirect-target",
-            "search": "",
-            "state": null,
-          }
-        `);
+        expect(handleRedirect.mock.calls[0][0].pathname).toBe(
+          "/redirect-target"
+        );
         expect(tm.getState().nextLocation).toBeUndefined();
         expect(tm.getState().location.pathname).toBe("/redirect-target");
       });
@@ -406,10 +573,10 @@ describe("transition manager", () => {
         expect(shouldReload.mock.calls.length).toBe(1);
         // @ts-ignore
         let reloadArg = shouldReload.mock.calls[0][0] as any;
-        expect(reloadArg.prevMatch.params).toEqual({
+        expect(reloadArg.prevParams).toEqual({
           param: "one"
         });
-        expect(reloadArg.nextMatch.params).toEqual({
+        expect(reloadArg.nextParams).toEqual({
           param: "two"
         });
       });
@@ -822,6 +989,51 @@ describe("transition manager", () => {
         });
       });
     });
+
+    it("updates the transition's state", async () => {
+      let actionDeferred = defer();
+      let tm = createTestTransitionManager("/", {
+        routes: [
+          {
+            path: "/",
+            id: "root",
+            element: {},
+            action: () => actionDeferred.promise.then(v => v)
+          }
+        ]
+      });
+
+      let submission: NormalPostSubmission = {
+        isSubmission: true,
+        action: "/",
+        method: "POST",
+        body: "name=Ryan&age=40",
+        encType: "application/x-www-form-urlencoded",
+        id: 1
+      };
+      let location = createLocation("/", submission);
+      tm.send(location);
+
+      let transition = tm.getState().transition;
+      expect(transition.state).toBe("submitting");
+      expect(transition.nextLocation).toBe(location);
+      // @ts-expect-error
+      expect(new URLSearchParams(transition.formData).toString()).toBe(
+        submission.body
+      );
+      expect(transition.method).toBe("POST");
+
+      await actionDeferred.resolve("ACTION DATA");
+      transition = tm.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("actionReload");
+      expect(transition.nextLocation).toBe(location);
+      // @ts-expect-error
+      expect(new URLSearchParams(transition.formData).toString()).toBe(
+        submission.body
+      );
+      expect(transition.method).toBe("POST");
+    });
   });
 
   describe("actions with submission keys", () => {
@@ -837,7 +1049,7 @@ describe("transition manager", () => {
       id: 1
     };
 
-    it("tracks pending submissions by key", async () => {
+    it("tracks transitions", async () => {
       let actionDeferred = defer();
       let tm = createTestTransitionManager("/", {
         routes: [
@@ -850,20 +1062,28 @@ describe("transition manager", () => {
         ]
       });
 
-      tm.send(createLocation("/", submission));
+      let location = createLocation("/", submission);
+      tm.send(location);
 
-      expect(tm.getState().pendingSubmissions.get(SUBMISSION_KEY))
-        .toMatchInlineSnapshot(`
-        Object {
-          "action": "/",
-          "body": "name=Ryan&age=40",
-          "encType": "application/x-www-form-urlencoded",
-          "id": 1,
-          "isSubmission": true,
-          "method": "POST",
-          "submissionKey": "key",
-        }
-      `);
+      let transition = tm.getState().transitions.get(SUBMISSION_KEY);
+      expect(transition.state).toBe("submitting");
+      expect(transition.nextLocation).toBe(location);
+      // @ts-expect-error
+      expect(new URLSearchParams(transition.formData).toString()).toBe(
+        submission.body
+      );
+      expect(transition.method).toBe("POST");
+
+      await actionDeferred.resolve("ACTION DATA");
+      transition = tm.getState().transitions.get(SUBMISSION_KEY);
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("actionReload");
+      expect(transition.nextLocation).toBe(location);
+      // @ts-expect-error
+      expect(new URLSearchParams(transition.formData).toString()).toBe(
+        submission.body
+      );
+      expect(transition.method).toBe("POST");
     });
 
     it("cleans up completed submissions", async () => {
@@ -879,7 +1099,7 @@ describe("transition manager", () => {
       });
 
       await tm.send(createLocation("/", submission));
-      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+      expect(tm.getState().transitions).toMatchInlineSnapshot(`Map {}`);
     });
 
     it("cleans up completed submissions on redirects", async () => {
@@ -900,7 +1120,7 @@ describe("transition manager", () => {
 
       await tm.send(createLocation("/", submission));
       await redirectDeferred.resolve();
-      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+      expect(tm.getState().transitions).toMatchInlineSnapshot(`Map {}`);
     });
 
     it("cleans up stale submissions on errors", async () => {
@@ -922,7 +1142,7 @@ describe("transition manager", () => {
       });
 
       await tm.send(createLocation("/", submission));
-      expect(tm.getState().pendingSubmissions).toMatchInlineSnapshot(`Map {}`);
+      expect(tm.getState().transitions).toMatchInlineSnapshot(`Map {}`);
     });
 
     it("tracks action data by key", async () => {
@@ -944,150 +1164,6 @@ describe("transition manager", () => {
   });
 
   describe("navigations while pending", () => {
-    let setup = ({ signals }: { signals?: boolean } = {}) => {
-      let guid = -1;
-
-      let nextLoaderId = guid;
-      let nextActionId = guid;
-      let lastRedirect: ReturnType<typeof navigate>;
-
-      let navDeferreds = new Map<number, Deferred>();
-      let loaderDeferreds = new Map<number, Deferred>();
-      let actionDeferreds = new Map<number, Deferred>();
-      let loaderAbortHandlers = new Map<number, jest.Mock>();
-      let actionAbortHandlers = new Map<number, jest.Mock>();
-
-      let handleChange = jest.fn();
-
-      let handleRedirect = jest.fn((location: Location<any>) => {
-        lastRedirect = navigate(location);
-      });
-
-      let rootLoader = jest.fn(() => "PARENT");
-
-      let loader = async ({ signal }: { signal: AbortSignal }) => {
-        if (signals) signal.onabort = loaderAbortHandlers.get(nextLoaderId);
-        return loaderDeferreds.get(nextLoaderId).promise.then((val: any) => {
-          return val;
-        });
-      };
-
-      let action = async ({ signal }: { signal: AbortSignal }) => {
-        let myId = nextActionId;
-        if (signals) signal.onabort = actionAbortHandlers.get(nextActionId);
-        return actionDeferreds.get(nextActionId).promise.then((val: any) => {
-          nextLoaderId = myId;
-          return val;
-        });
-      };
-
-      let tm = createTestTransitionManager("/foo", {
-        onChange: handleChange,
-        onRedirect: handleRedirect,
-        loaderData: undefined,
-        routes: [
-          {
-            path: "/",
-            id: "root",
-            element: {},
-            loader: rootLoader,
-            children: [
-              {
-                path: "/foo",
-                id: "foo",
-                loader,
-                action,
-                element: {}
-              },
-              {
-                path: "/bar",
-                id: "bar",
-                loader,
-                action,
-                element: {}
-              },
-              {
-                path: "/baz",
-                id: "baz",
-                loader,
-                action,
-                element: {}
-              }
-            ]
-          }
-        ]
-      });
-
-      let get = (href: string) => navigate(href);
-      let post = (href: string, key?: string, body?: string) =>
-        navigate(createActionLocation(href, key, body));
-
-      let navigate = (location: string | Location<any>) => {
-        if (typeof location === "string") location = createLocation(location);
-        let id = ++guid;
-        let loaderAbortHandler = jest.fn();
-        let actionAbortHandler = jest.fn();
-
-        if (location.state?.isSubmission) {
-          nextActionId = id;
-          actionDeferreds.set(id, defer());
-          actionAbortHandlers.set(id, actionAbortHandler);
-        } else {
-          nextLoaderId = id;
-        }
-
-        navDeferreds.set(id, defer());
-        loaderDeferreds.set(id, defer());
-        loaderAbortHandlers.set(id, loaderAbortHandler);
-
-        async function resolveAction(val: any) {
-          await actionDeferreds.get(id).resolve(val);
-        }
-
-        async function resolveLoader(val: any) {
-          await loaderDeferreds.get(id).resolve(val);
-          await navDeferreds.get(id).resolve();
-        }
-
-        async function redirectAction(href: string) {
-          await resolveAction(new TransitionRedirect(href));
-          return lastRedirect;
-        }
-
-        async function redirectLoader(href: string) {
-          await resolveLoader(new TransitionRedirect(href));
-          return lastRedirect;
-        }
-
-        tm.send(location).then(() => navDeferreds.get(id).promise);
-
-        return {
-          location,
-          action: {
-            resolve: resolveAction,
-            redirect: redirectAction,
-            abortMock: actionAbortHandler.mock
-          },
-          loader: {
-            resolve: resolveLoader,
-            redirect: redirectLoader,
-            abortMock: loaderAbortHandler.mock
-          }
-        };
-      };
-
-      return {
-        tm,
-        get,
-        post,
-        navigate,
-        getState: tm.getState,
-        handleChange,
-        handleRedirect,
-        rootLoaderMock: rootLoader.mock
-      };
-    };
-
     describe("interrupting submissions with GET", () => {
       // This is so that optimistic UI is more likely to be in sync with the
       // real data. The submission is aborted but it still hits the server, so
@@ -1097,7 +1173,7 @@ describe("transition manager", () => {
       // out of sync, or even a `useCriticalSubmission()` that makes sure to
       // await before loading the next page.
       it("reloads all routes on GET", async () => {
-        let t = setup({ signals: true });
+        let t = setupTest({ signals: true });
         t.post("/foo");
         let B = t.get("/bar");
         await B.loader.resolve(null);
@@ -1105,7 +1181,7 @@ describe("transition manager", () => {
       });
 
       it("with pending keyed submission, reloads all routes", async () => {
-        let t = setup({ signals: true });
+        let t = setupTest({ signals: true });
         let key = "A";
         t.post("/foo", key);
         let B = t.get("/bar");
@@ -1123,7 +1199,7 @@ describe("transition manager", () => {
         B) GET /foo   |------O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/foo");
@@ -1136,7 +1212,7 @@ describe("transition manager", () => {
         });
 
         it("updates state only when necessary", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           expect(t.handleChange.mock.calls.length).toBe(1);
@@ -1152,7 +1228,7 @@ describe("transition manager", () => {
         });
 
         it("updates the correct location and nextLocation", async () => {
-          let t = setup();
+          let t = setupTest();
           let originalLocation = t.getState().location;
 
           let A = t.get("/foo");
@@ -1174,7 +1250,7 @@ describe("transition manager", () => {
 
         describe("with abort controller signals", () => {
           it("aborts A, commits B", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
 
             let A = t.get("/foo");
             let B = t.get("/foo");
@@ -1192,7 +1268,7 @@ describe("transition manager", () => {
         B) GET /foo   |------O
       `, () => {
         it("aborts A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/foo");
@@ -1207,7 +1283,7 @@ describe("transition manager", () => {
         });
 
         it("updates the correct location and nextLocation", async () => {
-          let t = setup();
+          let t = setupTest();
           let originalLocation = t.getState().location;
 
           let A = t.get("/foo");
@@ -1238,7 +1314,7 @@ describe("transition manager", () => {
         B) GET /bar    |------O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/bar");
@@ -1257,7 +1333,7 @@ describe("transition manager", () => {
         B) GET /bar    |------O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/bar");
@@ -1281,7 +1357,7 @@ describe("transition manager", () => {
         B) GET /bar   |---O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/bar");
@@ -1303,7 +1379,7 @@ describe("transition manager", () => {
         B) GET /bar   |---------------O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
           let A = t.get("/foo");
           let B = t.get("/bar");
 
@@ -1319,7 +1395,7 @@ describe("transition manager", () => {
         B) GET /bar             |--O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let AR = await A.loader.redirect("/baz");
@@ -1334,7 +1410,7 @@ describe("transition manager", () => {
         });
 
         it("sets all the right states at the right time", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           expect(t.handleChange.mock.calls.length).toBe(1);
@@ -1365,7 +1441,7 @@ describe("transition manager", () => {
         B) GET /bar          |-----O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let AR = await A.loader.redirect("/baz");
@@ -1390,7 +1466,7 @@ describe("transition manager", () => {
         B) GET /bar(1)   |---O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/bar");
@@ -1410,7 +1486,7 @@ describe("transition manager", () => {
         B) GET /bar    |------------O
       `, () => {
         it("ignores A, commits B, does not redirect", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let B = t.get("/bar");
@@ -1427,7 +1503,7 @@ describe("transition manager", () => {
         B) GET /bar         |--O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let AR = await A.loader.redirect("/bar");
@@ -1444,7 +1520,7 @@ describe("transition manager", () => {
         B) GET /bar          |-------O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.get("/foo");
           let AR = await A.loader.redirect("/bar");
@@ -1466,7 +1542,7 @@ describe("transition manager", () => {
         B) POST /foo    |----|----O
       `, () => {
         it("ignores A, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.post("/foo");
           let B = t.post("/foo");
@@ -1482,7 +1558,7 @@ describe("transition manager", () => {
 
         describe("with signals", () => {
           it("aborts A, commits B", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
 
             let A = t.post("/foo");
             let B = t.post("/foo");
@@ -1501,7 +1577,7 @@ describe("transition manager", () => {
         B) POST /foo    |----|----O
       `, () => {
         it("commits B, ignores A", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.post("/foo");
           let B = t.post("/foo");
@@ -1522,7 +1598,7 @@ describe("transition manager", () => {
         B) POST /foo    |----|-----O
       `, () => {
         it("commits B, ignores A", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.post("/foo");
           let B = t.post("/foo");
@@ -1543,7 +1619,7 @@ describe("transition manager", () => {
         B) POST /foo    |----|----------O
       `, () => {
         it("commits A, aborts B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.post("/foo");
           let B = t.post("/foo");
@@ -1564,7 +1640,7 @@ describe("transition manager", () => {
         B) POST /foo       |----|-----O
       `, () => {
         it("commits B, ignores A", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.post("/foo");
           await A.action.resolve("A ACTION");
@@ -1580,7 +1656,7 @@ describe("transition manager", () => {
 
         describe("with signals", () => {
           it("commits B, ignores A action, aborts A load", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
 
             let A = t.post("/foo");
             await A.action.resolve("A ACTION");
@@ -1600,7 +1676,7 @@ describe("transition manager", () => {
       B) GET  /bar   |-------O
     `, () => {
       it("ignores POST /foo, commits GET /bar", async () => {
-        let t = setup();
+        let t = setupTest();
 
         let A = t.post("/foo");
         let B = t.get("/bar");
@@ -1619,7 +1695,7 @@ describe("transition manager", () => {
       B) POST /bar   |--|-----O
     `, () => {
       it("ignores POST /foo, commits GET /bar", async () => {
-        let t = setup();
+        let t = setupTest();
 
         let A = t.get("/foo");
         let B = t.post("/bar");
@@ -1642,7 +1718,7 @@ describe("transition manager", () => {
         B) POST /foo    |----/foo----O
       `, () => {
         it("ignores A, does not redirect, commits B", async () => {
-          let t = setup();
+          let t = setupTest();
 
           let A = t.post("/foo");
           let B = t.post("/foo");
@@ -1677,58 +1753,58 @@ describe("transition manager", () => {
           it.todo("aborts pending post with same key");
 
           it("overwrites resubmitting the same key", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
 
             t.post("/foo", keyA, "submission=one");
-            let submission1 = t.getState().pendingSubmissions.get(keyA);
-            expect(submission1.body).toBe("submission=one");
+            let submission1 = t.getState().transitions.get(keyA);
+            expect(submission1.formData.get("submission")).toBe("one");
 
             t.post("/foo", keyA, "submission=two");
-            let submission2 = t.getState().pendingSubmissions.get(keyA);
-            expect(submission2.body).toEqual("submission=two");
+            let submission2 = t.getState().transitions.get(keyA);
+            expect(submission2.formData.get("submission")).toBe("two");
           });
 
           it("commits action and loader data at every step", async () => {
-            let t = setup();
+            let t = setupTest();
             let originalLocation = t.getState().location;
             let keyA = "A";
             let keyB = "B";
 
             let A = t.post("/foo", keyA);
             expect(t.getState().nextLocation).toBe(A.location);
-            expect(t.getState().pendingSubmission).toBeUndefined();
+            expect(t.getState().transition).toBeUndefined();
             let B = t.post("/foo", keyB);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().pendingSubmission).toBeUndefined();
+            expect(t.getState().transition).toBeUndefined();
 
             await A.action.resolve("A ACTION");
             expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().pendingSubmission).toBeUndefined();
+            expect(t.getState().transition).toBeUndefined();
 
             await B.action.resolve("B ACTION");
             expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().pendingSubmission).toBeUndefined();
+            expect(t.getState().transition).toBeUndefined();
 
             await A.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A]");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().pendingSubmission).toBeUndefined();
+            expect(t.getState().transition).toBeUndefined();
 
             await B.loader.resolve("[A,B]");
             expect(t.getState().loaderData.foo).toBe("[A,B]");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(B.location);
             expect(t.getState().nextLocation).toBeUndefined();
-            expect(t.getState().pendingSubmission).toBeUndefined();
+            expect(t.getState().transition).toBeUndefined();
           });
         });
 
@@ -1737,7 +1813,7 @@ describe("transition manager", () => {
           B) POST /foo    |----|[A,B]---O
         `, () => {
           it("commits A action, B action/loader; ignores A loader", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -1780,7 +1856,7 @@ describe("transition manager", () => {
           B) POST /foo    |----|[B]-----O
         `, () => {
           it("commits B, commits A", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -1820,7 +1896,7 @@ describe("transition manager", () => {
           B) POST /foo    |---|[B]----------X
         `, () => {
           it("commits A, aborts B", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -1860,7 +1936,7 @@ describe("transition manager", () => {
           B) POST /foo    |-----------|[A,B]--O
         `, () => {
           it("commits A, commits B", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -1905,7 +1981,7 @@ describe("transition manager", () => {
           B) POST /foo    |-----/foo[A,B]----O
         `, () => {
           it("commits A, commits B", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -1913,28 +1989,28 @@ describe("transition manager", () => {
             let A = t.post("/foo", keyA);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(A.location);
-            expect(t.getState().pendingSubmissions.get(keyA)).toBeDefined();
-            expect(t.getState().pendingSubmissions.get(keyA)).toBe(
-              A.location.state
+            expect(t.getState().transitions.get(keyA)).toBeDefined();
+            expect(t.getState().transitions.get(keyA).nextLocation).toBe(
+              A.location
             );
 
             let B = t.post("/foo", keyB);
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().pendingSubmissions.get(keyB)).toBeDefined();
+            expect(t.getState().transitions.get(keyB)).toBeDefined();
 
             let AR = await A.action.redirect("/foo");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(AR.location);
-            expect(t.getState().pendingSubmissions.get(keyA)).toBe(
-              A.location.state
+            expect(t.getState().transitions.get(keyA).nextLocation).toBe(
+              AR.location
             );
 
             let BR = await B.action.redirect("/foo");
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(BR.location);
-            expect(t.getState().pendingSubmissions.get(keyB)).toBe(
-              B.location.state
+            expect(t.getState().transitions.get(keyB).nextLocation).toBe(
+              BR.location
             );
 
             await AR.loader.resolve("[A]");
@@ -1950,7 +2026,7 @@ describe("transition manager", () => {
           B) POST /foo    |----/foo[A,B]----O
         `, () => {
           it("commits B, aborts A", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -1985,7 +2061,7 @@ describe("transition manager", () => {
           B) POST /foo    |----/foo[B]-----O
         `, () => {
           it("commits B, commits A", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -2021,7 +2097,7 @@ describe("transition manager", () => {
           B) POST /foo    |----/foo[B]------------X
         `, () => {
           it("commits A, ignores B", async () => {
-            let t = setup();
+            let t = setupTest();
             let keyA = "A";
             let keyB = "B";
             let originalLocation = t.getState().location;
@@ -2053,7 +2129,7 @@ describe("transition manager", () => {
 
           describe("with signals", () => {
             it("aborts B redirect load", async () => {
-              let t = setup({ signals: true });
+              let t = setupTest({ signals: true });
               let keyA = "A";
               let keyB = "B";
 
@@ -2082,7 +2158,7 @@ describe("transition manager", () => {
           B) GET  /bar    |--O
         `, () => {
           it("aborts A, commits B", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
             let key = "A";
             let A = t.post("/foo", key);
             let B = t.get("/bar");
@@ -2092,18 +2168,18 @@ describe("transition manager", () => {
           });
 
           it("clears pending submission A", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
             let key = "A";
             let A = t.post("/foo", key);
-            expect(t.getState().pendingSubmissions.get(key)).toBe(
-              A.location.state
+            expect(t.getState().transitions.get(key).nextLocation).toBe(
+              A.location
             );
             let B = t.get("/bar");
-            expect(t.getState().pendingSubmissions.get(key)).toBe(
-              A.location.state
+            expect(t.getState().transitions.get(key).nextLocation).toBe(
+              A.location
             );
             await B.loader.resolve("B");
-            expect(t.getState().pendingSubmissions.get(key)).toBeUndefined();
+            expect(t.getState().transitions.get(key)).toBeUndefined();
           });
         });
 
@@ -2112,7 +2188,7 @@ describe("transition manager", () => {
           B) GET  /bar       |----O
         `, () => {
           it("aborts A, commits B", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
             let key = "A";
             let A = t.post("/foo", key);
             await A.action.resolve("A ACTION");
@@ -2128,7 +2204,7 @@ describe("transition manager", () => {
           B) POST /bar    |---|---O
         `, () => {
           it("ignores A, commits B", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
             let key = "A";
             let A = t.post("/foo", key);
             t.post("/bar");
@@ -2136,19 +2212,19 @@ describe("transition manager", () => {
           });
 
           it("clears pending submission A", async () => {
-            let t = setup({ signals: true });
+            let t = setupTest({ signals: true });
             let key = "A";
             let A = t.post("/foo", key);
-            expect(t.getState().pendingSubmissions.get(key)).toBe(
-              A.location.state
+            expect(t.getState().transitions.get(key).nextLocation).toBe(
+              A.location
             );
             let B = t.post("/bar");
-            expect(t.getState().pendingSubmissions.get(key)).toBe(
-              A.location.state
+            expect(t.getState().transitions.get(key).nextLocation).toBe(
+              A.location
             );
             await B.action.resolve("B ACTION");
             await B.loader.resolve("B LOADER");
-            expect(t.getState().pendingSubmissions.get(key)).toBeUndefined();
+            expect(t.getState().transitions.get(key)).toBeUndefined();
           });
         });
       });
@@ -2160,17 +2236,17 @@ describe("transition manager", () => {
         B) POST /foo(a)    |----|---O
       `, () => {
         it("aborts A submission", async () => {
-          let t = setup({ signals: true });
+          let t = setupTest({ signals: true });
           let key = "same";
 
           let A = t.post("/foo", key, "which=A");
-          expect(t.getState().pendingSubmissions.get(key)).toBe(
-            A.location.state
+          expect(t.getState().transitions.get(key).nextLocation).toBe(
+            A.location
           );
 
           let B = t.post("/foo", key, "which=B");
-          expect(t.getState().pendingSubmissions.get(key)).toBe(
-            B.location.state
+          expect(t.getState().transitions.get(key).nextLocation).toBe(
+            B.location
           );
           expect(A.action.abortMock.calls.length).toBe(1);
 
@@ -2188,20 +2264,20 @@ describe("transition manager", () => {
         B) POST /foo(a)       |---|---O
       `, () => {
         it("aborts A load", async () => {
-          let t = setup({ signals: true });
+          let t = setupTest({ signals: true });
           let key = "same";
 
           let A = t.post("/foo", key, "which=A");
-          expect(t.getState().pendingSubmissions.get(key)).toBe(
-            A.location.state
+          expect(t.getState().transitions.get(key).nextLocation).toBe(
+            A.location
           );
 
           await A.action.resolve("A ACTION");
           expect(t.getState().keyedActionData[key]).toBe("A ACTION");
 
           let B = t.post("/foo", key, "which=B");
-          expect(t.getState().pendingSubmissions.get(key)).toBe(
-            B.location.state
+          expect(t.getState().transitions.get(key).nextLocation).toBe(
+            B.location
           );
           expect(A.loader.abortMock.calls.length).toBe(1);
 
@@ -2234,10 +2310,11 @@ describe("transition manager", () => {
       };
 
       tm.send(createLocation("/", submission)).then(() => navDeferred.promise);
-      expect(tm.getState().pendingSubmission).toBe(submission);
+      expect(tm.getState().transition).toBeDefined();
+      expect(tm.getState().transition.nextLocation.state).toBe(submission);
 
       await navDeferred.resolve();
-      expect(tm.getState().pendingSubmission).toBeUndefined();
+      expect(tm.getState().transition.state).toBe("idle");
     });
 
     it("tracks GET submissions by key", async () => {
@@ -2259,16 +2336,267 @@ describe("transition manager", () => {
 
       tm.send(createLocation("/", submission)).then(() => navDeferred.promise);
       expect(
-        tm.getState().pendingSubmissions.get(submission.submissionKey)
+        tm.getState().transitions.get(submission.submissionKey).nextLocation
+          .state
       ).toBe(submission);
 
       await navDeferred.resolve();
       expect(
-        tm.getState().pendingSubmissions.get(submission.submissionKey)
+        tm.getState().transitions.get(submission.submissionKey)
       ).toBeUndefined();
     });
   });
-});
 
-/*
- */
+  describe("Transition States", () => {
+    it("initialization", async () => {
+      let t = setupTest();
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("normal GET", async () => {
+      let t = setupTest();
+      let A = t.navigate("/foo");
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("load");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBe("GET");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.loader.resolve("A");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("normal GET + redirect", async () => {
+      let t = setupTest();
+
+      let A = t.navigate("/foo");
+      let B = await A.loader.redirect("/bar");
+
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("redirect");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBe("GET");
+      expect(transition.nextLocation).toBe(B.location);
+
+      await B.loader.resolve("B");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("normal POST", async () => {
+      let t = setupTest();
+
+      let A = t.post("/foo");
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("submitting");
+      expect(transition.type).toBe("submission");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("POST");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.action.resolve("A");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("actionReload");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("POST");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.loader.resolve("A");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("normal POST + redirect", async () => {
+      let t = setupTest();
+
+      let A = t.post("/foo");
+      let B = await A.action.redirect("/bar");
+
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("actionRedirect");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("POST");
+      expect(transition.nextLocation).toBe(B.location);
+
+      await B.loader.resolve("B");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("normal GET submission", async () => {
+      let t = setupTest();
+      let A = t.submitGet("/foo");
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("getSubmission");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("GET");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.loader.resolve("A");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("normal GET submission + redirect", async () => {
+      let t = setupTest();
+
+      let A = t.submitGet("/foo");
+      let B = await A.loader.redirect("/bar");
+
+      let transition = t.getState().transition;
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("getSubmissionRedirect");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("GET");
+      expect(transition.nextLocation).toBe(B.location);
+
+      await B.loader.resolve("B");
+      transition = t.getState().transition;
+      expect(transition.state).toBe("idle");
+      expect(transition.type).toBe("idle");
+      expect(transition.formData).toBeUndefined();
+      expect(transition.method).toBeUndefined();
+      expect(transition.nextLocation).toBeUndefined();
+    });
+
+    it("keyed GET submission", async () => {
+      let key = "key";
+      let t = setupTest();
+
+      expect(t.getState().transitions.get(key)).toBeUndefined();
+
+      let A = t.submitGet("/foo", key);
+      let transition = t.getState().transitions.get(key);
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("getSubmission");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("GET");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.loader.resolve("A");
+      transition = t.getState().transitions.get(key);
+      expect(t.getState().transitions.get(key)).toBeUndefined();
+    });
+
+    it("keyed GET submission + redirect", async () => {
+      let key = "key";
+      let t = setupTest();
+
+      let A = t.submitGet("/foo", key);
+      let B = await A.loader.redirect("/bar");
+
+      let transition = t.getState().transitions.get(key);
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("getSubmissionRedirect");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("GET");
+      expect(transition.nextLocation).toBe(B.location);
+
+      await B.loader.resolve("B");
+      expect(t.getState().transitions.get(key)).toBeUndefined();
+    });
+
+    it("keyed POST submission", async () => {
+      let key = "key";
+      let t = setupTest();
+
+      let A = t.post("/foo", key);
+      let transition = t.getState().transitions.get(key);
+      expect(transition.state).toBe("submitting");
+      expect(transition.type).toBe("submission");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("POST");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.action.resolve("A");
+      transition = t.getState().transitions.get(key);
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("actionReload");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("POST");
+      expect(transition.nextLocation).toBe(A.location);
+
+      await A.loader.resolve("A");
+      expect(t.getState().transitions.get(key)).toBeUndefined();
+    });
+
+    it("keyed POST submission + redirect", async () => {
+      let key = "key";
+      let t = setupTest();
+
+      let A = t.post("/foo", key);
+      let B = await A.action.redirect("/bar");
+
+      let transition = t.getState().transitions.get(key);
+      expect(transition.state).toBe("loading");
+      expect(transition.type).toBe("actionRedirect");
+      expect(
+        // @ts-expect-error
+        new URLSearchParams(transition.formData).toString()
+      ).toBe("gosh=dang");
+      expect(transition.method).toBe("POST");
+      expect(transition.nextLocation).toBe(B.location);
+
+      await B.loader.resolve("B");
+      expect(t.getState().transitions.get(key)).toBeUndefined();
+    });
+  });
+});

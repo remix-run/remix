@@ -10,7 +10,7 @@ export type {
   FormMethod,
   FormEncType,
   RemixServerProps,
-  ShouldReload
+  ShouldReloadFunction
 } from "@remix-run/react";
 
 export {

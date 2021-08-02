@@ -7,7 +7,7 @@ import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
 
-export interface TransitionState {
+export interface TransitionManagerState {
   /**
    * The current location the user sees in the browser, during a transition this
    * is the "old page"
@@ -45,15 +45,16 @@ export interface TransitionState {
   /**
    * Tracks current KeyedPostSubmission and KeyedGetSubmission
    */
-  pendingSubmissions: Map<string, GenericSubmission>;
+  transitions: Map<string, Transition>;
 
   /**
    * Tracks the latest, non-keyed pending submission
    */
-  pendingSubmission?: GenericSubmission;
+  transition?: Transition;
 
   /**
    * The next location being loaded.
+   * TODO: might not need this now that we are always storing a Transition
    */
   nextLocation?: Location;
 
@@ -81,9 +82,85 @@ export interface TransitionManagerInit {
   keyedActionData?: RouteData;
   error?: Error;
   errorBoundaryId?: null | string;
-  onChange: (state: TransitionState) => void;
+  onChange: (state: TransitionManagerState) => void;
   onRedirect: (location: Location<any>, referrer: Location<any>) => void;
 }
+
+export enum TransitionStates {
+  idle = "idle",
+  submitting = "submitting",
+  loading = "loading"
+}
+
+export enum LoadTypes {
+  load = "load",
+  redirect = "redirect",
+  actionReload = "actionReload",
+  actionRedirect = "actionRedirect",
+  getSubmission = "getSubmission",
+  getSubmissionRedirect = "getSubmissionRedirect"
+}
+
+interface Transitions {
+  Idle: {
+    state: TransitionStates.idle;
+    type: "idle";
+    formData: undefined;
+    method: undefined;
+    nextLocation: undefined;
+  };
+  Submitting: {
+    state: TransitionStates.submitting;
+    type: "submission";
+    formData: FormData;
+    method: "POST" | "PUT" | "PATCH" | "DELETE";
+    nextLocation: Location<GenericPostSubmission>;
+  };
+  LoadingGetSubmission: {
+    state: TransitionStates.loading;
+    type: LoadTypes.getSubmission;
+    formData: FormData;
+    method: "GET";
+    nextLocation: Location<GenericGetSubmission>;
+  };
+  LoadingGetSubmissionRedirect: {
+    state: TransitionStates.loading;
+    type: LoadTypes.getSubmissionRedirect;
+    formData: FormData;
+    method: "GET";
+    nextLocation: Location<NormalGetSubmissionRedirect>;
+  };
+  LoadingAction: {
+    state: TransitionStates.loading;
+    type: LoadTypes.actionReload;
+    formData: FormData;
+    method: GenericPostSubmission["method"];
+    nextLocation: Location<GenericPostSubmission>;
+  };
+  LoadingActionRedirect: {
+    state: TransitionStates.loading;
+    type: LoadTypes.actionRedirect;
+    formData: FormData;
+    method: GenericPostSubmission["method"];
+    nextLocation: Location<KeyedActionRedirect | NormalActionRedirect>;
+  };
+  LoadingRedirect: {
+    state: TransitionStates.loading;
+    type: LoadTypes.redirect;
+    nextLocation: Location<any>;
+    formData: undefined;
+    method: "GET";
+  };
+  Loading: {
+    state: TransitionStates.loading;
+    type: LoadTypes.load;
+    nextLocation: Location<any>;
+    formData: undefined;
+    method: "GET";
+  };
+}
+
+export type Transition = Transitions[keyof Transitions];
 
 export interface GenericSubmission {
   isSubmission: true;
@@ -117,12 +194,26 @@ export interface KeyedGetSubmission extends GenericGetSubmission {
 export interface NormalGetSubmission
   extends Omit<GenericGetSubmission, "submissionKey"> {}
 
-interface NormalActionRedirect {
+interface NormalActionRedirect
+  extends Omit<NormalPostSubmission, "isSubmission"> {
   isActionRedirect: true;
 }
 
-interface KeyedActionRedirect {
+interface KeyedActionRedirect
+  extends Omit<KeyedPostSubmission, "isSubmission"> {
   isKeyedActionRedirect: true;
+}
+
+interface NormalRedirect {
+  isRedirect: true;
+}
+
+interface NormalGetSubmissionRedirect
+  extends Omit<GenericGetSubmission, "isSubmission"> {
+  isRedirect: true;
+}
+
+interface KeyedGetSubmissionRedirect extends NormalGetSubmissionRedirect {
   submissionKey: string;
 }
 
@@ -171,7 +262,7 @@ function isKeyedPostSubmission(
   return isPostSubmission(location) && Boolean(location.state.submissionKey);
 }
 
-function isGetSubmission(
+export function isGetSubmission(
   location: Location<any>
 ): location is Location<GenericGetSubmission> {
   return isSubmission(location) && location.state.method === "GET";
@@ -201,6 +292,39 @@ function isKeyedActionRedirect(
   return Boolean(location.state?.isKeyedActionRedirect);
 }
 
+function isNormalRedirect(
+  location: Location<any>
+): location is Location<NormalRedirect> {
+  return (
+    Boolean(location.state?.isRedirect) &&
+    !Boolean(location.state?.submissionKey)
+  );
+}
+
+function isGetSubmissionRedirect(
+  location: Location<any>
+): location is Location<
+  KeyedGetSubmissionRedirect | NormalGetSubmissionRedirect
+> {
+  return location.state?.isRedirect && location.state?.method === "GET";
+}
+
+function isNormalGetSubmissionRedirect(
+  location: Location<any>
+): location is Location<NormalGetSubmissionRedirect> {
+  return (
+    isGetSubmissionRedirect(location) && !Boolean(location.state.submissionKey)
+  );
+}
+
+function isKeyedGetSubmissionRedirect(
+  location: Location<any>
+): location is Location<KeyedGetSubmissionRedirect> {
+  return (
+    isGetSubmissionRedirect(location) && Boolean(location.state.submissionKey)
+  );
+}
+
 function isRedirectResult(
   result: RouteLoaderResult
 ): result is RouteLoaderRedirectResult {
@@ -220,16 +344,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
   // We know which loads to commit and which to ignore by incrementing this ID.
   let currentLoadId = 0;
 
-  let pendingSubmissions = new Map<
-    string,
-    KeyedPostSubmission | KeyedGetSubmission
-  >();
+  let transitions = new Map<string, Transition>();
   let actionControllers = new Map<string, AbortController>();
 
-  // TODO: if location is never actually used, just use pendingLoadControllers
   let pendingLoads = new Map<
     number,
-    Location<KeyedPostSubmission | KeyedGetSubmission | KeyedActionRedirect>
+    Location<
+      | KeyedPostSubmission
+      | KeyedGetSubmission
+      | KeyedActionRedirect
+      | KeyedGetSubmissionRedirect
+    >
   >();
   let loadControllers = new Map<number, AbortController>();
 
@@ -241,7 +366,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
 
-  let state: TransitionState = {
+  let transition: Transitions["Idle"] = {
+    state: TransitionStates.idle,
+    type: "idle",
+    formData: undefined,
+    method: undefined,
+    nextLocation: undefined
+  };
+
+  let state: TransitionManagerState = {
     location: init.location,
     loaderData: init.loaderData || {},
     actionData: init.actionData,
@@ -249,13 +382,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     error: init.error,
     errorBoundaryId: init.errorBoundaryId || null,
     matches,
-    pendingSubmissions: new Map(),
-    pendingSubmission: undefined,
+    transitions: new Map(),
+    transition,
     nextMatches: undefined,
     nextLocation: undefined
   };
 
-  function update(updates: Partial<TransitionState>) {
+  function update(updates: Partial<TransitionManagerState>) {
     state = Object.assign({}, state, updates);
     init.onChange(state);
   }
@@ -285,19 +418,34 @@ export function createTransitionManager(init: TransitionManagerInit) {
       await handleKeyedGetSubmission(location, matches);
     }
 
+    // <Form method="get" submissionKey /> loader redirected
+    else if (isKeyedGetSubmissionRedirect(location)) {
+      await handleKeyedGetSubmissionRedirect(location, matches);
+    }
+
     // <Form>, submit() -> useSubmission(), useActionData()
     else if (isNormalPostSubmission(location)) {
       await handleNormalPostSubmission(location, matches);
     }
 
-    // Normal <Form>, submit() action redirected -> useSubmission()
+    // <Form>, submit() action redirected -> useSubmission()
     else if (isNormalActionRedirect(location)) {
-      await handleNormalGet(location, matches);
+      await handleNormalActionRedirect(location, matches);
     }
 
     // <Form method="get"/>, useSubmission()
     else if (isNormalGetSubmission(location)) {
       await handleNormalGetSubmission(location, matches);
+    }
+
+    // <Form method="get" /> + loader redirect
+    else if (isNormalGetSubmissionRedirect(location)) {
+      await handleNormalGetSubmissionRedirect(location, matches);
+    }
+
+    // <Link/> + loader redirect()
+    else if (isNormalRedirect(location)) {
+      await handleNormalRedirect(location, matches);
     }
 
     // <Link/>, navigate()
@@ -311,6 +459,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     // React Router if they unmount a <Routes>
   }
 
+  // TODO: maybe just clean this up on location changes too in case we set one
+  // and they never actually read it
   function registerKeyedActionDataRead(submissionKey: string) {
     if (dataKeyCounts[submissionKey]) {
       dataKeyCounts[submissionKey]++;
@@ -341,18 +491,25 @@ export function createTransitionManager(init: TransitionManagerInit) {
     if (actionControllers.has(key)) {
       abortAction(key);
     }
-    if (pendingSubmissions.has(key)) {
-      clearPendingSubmission(key);
+    if (transitions.has(key)) {
+      clearKeyedTransition(key);
       abortKeyLoad(key);
     }
 
-    pendingSubmissions.set(key, location.state);
+    let transition: Transitions["Submitting"] = {
+      state: TransitionStates.submitting,
+      type: "submission",
+      formData: makeFormData(location.state.body),
+      method: location.state.method,
+      nextLocation: location
+    };
+    transitions.set(key, transition);
 
     update({
       nextLocation: location,
       nextMatches: matches,
-      pendingSubmission: undefined,
-      pendingSubmissions: new Map(pendingSubmissions)
+      transition: undefined,
+      transitions: new Map(transitions)
     });
 
     let controller = new AbortController();
@@ -368,17 +525,34 @@ export function createTransitionManager(init: TransitionManagerInit) {
     actionControllers.delete(key);
 
     if (isRedirectResult(result)) {
+      let { submissionKey, method, body, encType, action, id } = location.state;
+      let actionRedirect: KeyedActionRedirect = {
+        isKeyedActionRedirect: true,
+        submissionKey,
+        method,
+        body,
+        encType,
+        action,
+        id
+      };
       init.onRedirect(
-        createRedirectLocation(result.value.location, {
-          isKeyedActionRedirect: true,
-          submissionKey: key
-        }),
+        createRedirectLocation(result.value.location, actionRedirect),
         location
       );
       return;
     }
 
+    let loadTransition: Transitions["LoadingAction"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.actionReload,
+      formData: transition.formData,
+      method: transition.method,
+      nextLocation: location
+    };
+    transitions.set(key, loadTransition);
+
     update({
+      transitions,
       keyedActionData: {
         ...state.keyedActionData,
         [key]: result.value
@@ -392,7 +566,43 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: Location<KeyedActionRedirect>,
     matches: ClientMatch[]
   ) {
-    update({ nextLocation: location, nextMatches: matches });
+    let transition: Transitions["LoadingActionRedirect"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.actionRedirect,
+      formData: makeFormData(location.state.body),
+      method: location.state.method,
+      nextLocation: location
+    };
+    transitions.set(location.state.submissionKey, transition);
+
+    update({
+      transitions: new Map(transitions),
+      nextLocation: location,
+      nextMatches: matches
+    });
+
+    await loadWithKey(location, matches);
+  }
+
+  async function handleKeyedGetSubmissionRedirect(
+    location: Location<KeyedGetSubmissionRedirect>,
+    matches: ClientMatch[]
+  ) {
+    let transition: Transitions["LoadingGetSubmissionRedirect"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.getSubmissionRedirect,
+      formData: makeFormData(location.state.body),
+      method: location.state.method,
+      nextLocation: location
+    };
+    transitions.set(location.state.submissionKey, transition);
+
+    update({
+      transitions: new Map(transitions),
+      nextLocation: location,
+      nextMatches: matches
+    });
+
     await loadWithKey(location, matches);
   }
 
@@ -403,17 +613,24 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let key = location.state.submissionKey;
 
     abortNormalNavigation();
-    if (pendingSubmissions.has(key)) {
-      pendingSubmissions.delete(key);
+    if (transitions.has(key)) {
+      transitions.delete(key);
     }
 
-    pendingSubmissions.set(key, location.state);
+    let transition: Transitions["LoadingGetSubmission"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.getSubmission,
+      formData: makeFormData(location.state.body),
+      method: "GET",
+      nextLocation: location
+    };
+    transitions.set(key, transition);
 
     update({
       nextLocation: location,
       nextMatches: matches,
-      pendingSubmission: undefined,
-      pendingSubmissions: new Map(pendingSubmissions)
+      transition: undefined,
+      transitions: new Map(transitions)
     });
 
     await loadWithKey(location, matches);
@@ -424,10 +641,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[]
   ) {
     abortEverything();
+
+    let transition: Transitions["Submitting"] = {
+      state: TransitionStates.submitting,
+      type: "submission",
+      formData: makeFormData(location.state.body),
+      method: location.state.method,
+      nextLocation: location
+    };
     update({
       nextLocation: location,
       nextMatches: matches,
-      pendingSubmission: location.state
+      transition
     });
 
     let controller = new AbortController();
@@ -441,16 +666,34 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isRedirectResult(result)) {
+      let { action, body, encType, id, method } = location.state;
+      let actionRedirect: NormalActionRedirect = {
+        isActionRedirect: true,
+        action,
+        body,
+        encType,
+        id,
+        method
+      };
       init.onRedirect(
-        createRedirectLocation(result.value.location, {
-          isActionRedirect: true
-        }),
+        createRedirectLocation(result.value.location, actionRedirect),
         location
       );
       return;
     }
 
-    update({ actionData: result.value });
+    let loadTransition: Transitions["LoadingAction"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.actionReload,
+      formData: transition.formData,
+      method: transition.method,
+      nextLocation: location
+    };
+
+    update({
+      transition: loadTransition,
+      actionData: result.value
+    });
 
     await loadNormally(location, matches, result);
   }
@@ -460,17 +703,124 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[]
   ) {
     abortEverything();
+
+    let transition: Transitions["LoadingGetSubmission"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.getSubmission,
+      formData: makeFormData(location.state.body),
+      method: "GET",
+      nextLocation: location
+    };
+
     update({
       nextLocation: location,
       nextMatches: matches,
-      pendingSubmission: location.state
+      transition
     });
+
+    await loadNormally(location, matches);
+  }
+
+  async function handleNormalGet(location: Location, matches: ClientMatch[]) {
+    abortEverything();
+
+    let transition: Transitions["Loading"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.load,
+      formData: undefined,
+      method: "GET",
+      nextLocation: location
+    };
+
+    update({
+      transition,
+      nextLocation: location,
+      nextMatches: matches
+    });
+
+    await loadNormally(location, matches);
+  }
+
+  async function handleNormalRedirect(
+    location: Location<NormalRedirect>,
+    matches: ClientMatch[]
+  ) {
+    abortEverything();
+
+    let transition: Transitions["LoadingRedirect"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.redirect,
+      formData: undefined,
+      method: "GET",
+      nextLocation: location
+    };
+
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      transition
+    });
+
+    await loadNormally(location, matches);
+  }
+
+  async function handleNormalGetSubmissionRedirect(
+    location: Location<NormalGetSubmissionRedirect>,
+    matches: ClientMatch[]
+  ) {
+    abortEverything();
+
+    let transition: Transitions["LoadingGetSubmissionRedirect"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.getSubmissionRedirect,
+      formData: makeFormData(location.state.body),
+      method: "GET",
+      nextLocation: location
+    };
+
+    update({
+      nextLocation: location,
+      nextMatches: matches,
+      transition
+    });
+
+    await loadNormally(location, matches);
+  }
+
+  async function handleNormalActionRedirect(
+    location: Location<NormalActionRedirect>,
+    matches: ClientMatch[]
+  ) {
+    abortEverything();
+
+    let transition: Transitions["LoadingActionRedirect"] = {
+      state: TransitionStates.loading,
+      type: LoadTypes.actionRedirect,
+      formData: makeFormData(location.state.body),
+      method: location.state.method,
+      nextLocation: location
+    };
+
+    update({
+      transition,
+      nextLocation: location,
+      nextMatches: matches
+    });
+
     await loadNormally(location, matches);
   }
 
   function flagInterruptedSubmission() {
-    if (pendingSubmissions.size > 0 || state.pendingSubmission) {
+    if (state.transition?.state === TransitionStates.submitting) {
       interruptedSubmission = true;
+      return;
+    }
+
+    for (let [, transition] of state.transitions) {
+      if (transition.state === TransitionStates.submitting) {
+        interruptedSubmission = true;
+        return;
+      }
     }
   }
 
@@ -478,18 +828,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
     interruptedSubmission = false;
   }
 
-  async function handleNormalGet(location: Location, matches: ClientMatch[]) {
-    abortEverything();
-    update({
-      nextLocation: location,
-      nextMatches: matches
-    });
-    await loadNormally(location, matches);
-  }
-
   async function loadWithKey(
     location: Location<
-      KeyedPostSubmission | KeyedGetSubmission | KeyedActionRedirect
+      | KeyedPostSubmission
+      | KeyedGetSubmission
+      | KeyedActionRedirect
+      | KeyedGetSubmissionRedirect
     >,
     matches: ClientMatch[],
     actionResult?: RouteLoaderResult
@@ -520,7 +864,28 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let redirect = findRedirect(results);
     if (redirect) {
-      init.onRedirect(createRedirectLocation(redirect.location), location);
+      if (isKeyedGetSubmission(location)) {
+        let redirectState: KeyedGetSubmissionRedirect = {
+          isRedirect: true,
+          action: location.state.action,
+          body: location.state.body,
+          encType: location.state.encType,
+          method: location.state.method,
+          submissionKey: location.state.submissionKey,
+          id: location.state.id
+        };
+        init.onRedirect(
+          createRedirectLocation(redirect.location, redirectState),
+          location
+        );
+      } else {
+        init.onRedirect(
+          createRedirectLocation(redirect.location, {
+            isRedirect: true
+          }),
+          location
+        );
+      }
       return;
     }
 
@@ -531,7 +896,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     );
 
     abortStaleKeyLoads(id);
-    clearPendingSubmission(location.state.submissionKey);
+    clearKeyedTransition(location.state.submissionKey);
     clearPendingLoad(id);
 
     let loaderData = makeLoaderData(results, matches);
@@ -553,8 +918,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
         matches,
         nextLocation: undefined,
         nextMatches: undefined,
-        pendingSubmission: undefined,
-        pendingSubmissions: new Map(),
+        transition: undefined,
+        transitions: new Map(),
         error,
         errorBoundaryId,
         loaderData
@@ -572,8 +937,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
         matches: state.nextMatches,
         nextLocation: undefined,
         nextMatches: undefined,
-        pendingSubmission: undefined,
-        pendingSubmissions: new Map(),
+        transition: undefined,
+        transitions: new Map(),
         error,
         errorBoundaryId,
         loaderData
@@ -591,7 +956,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // B) POST /foo    |-----X
       update({
         loaderData,
-        pendingSubmissions: new Map(pendingSubmissions)
+        transitions: new Map(transitions)
       });
     } else {
       invariant(false, "Impossible `loadWithKey` case");
@@ -628,7 +993,27 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let redirect = findRedirect(results);
     if (redirect) {
-      init.onRedirect(createRedirectLocation(redirect.location), location);
+      if (isGetSubmission(location)) {
+        let { action, body, encType, id, method } = location.state;
+        let redirectState: NormalGetSubmissionRedirect = {
+          isRedirect: true,
+          action,
+          body,
+          encType,
+          method,
+          id
+        };
+        init.onRedirect(
+          createRedirectLocation(redirect.location, redirectState),
+          location
+        );
+      } else {
+        let redirectState: NormalRedirect = { isRedirect: true };
+        init.onRedirect(
+          createRedirectLocation(redirect.location, redirectState),
+          location
+        );
+      }
       return;
     }
 
@@ -637,6 +1022,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches,
       maybeActionErrorResult
     );
+
+    let transition: Transitions["Idle"] = {
+      state: TransitionStates.idle,
+      type: "idle",
+      formData: undefined,
+      method: undefined,
+      nextLocation: undefined
+    };
 
     update({
       location,
@@ -647,8 +1040,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionData: actionResult ? actionResult.value : undefined,
       nextLocation: undefined,
       nextMatches: undefined,
-      pendingSubmission: undefined,
-      pendingSubmissions: new Map()
+      transition,
+      transitions: new Map()
     });
   }
 
@@ -660,8 +1053,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     for (let [key] of actionControllers) {
       abortAction(key);
     }
-    for (let [key] of pendingSubmissions) {
-      clearPendingSubmission(key);
+    for (let [key] of transitions) {
+      clearKeyedTransition(key);
     }
     for (let [id] of pendingLoads) {
       abortLoad(id);
@@ -694,8 +1087,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
   }
 
-  function clearPendingSubmission(key: string) {
-    pendingSubmissions.delete(key);
+  function clearKeyedTransition(key: string) {
+    transitions.delete(key);
   }
 
   function clearPendingLoad(id: number) {
@@ -757,7 +1150,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 }
 
 async function callLoaders(
-  state: TransitionState,
+  state: TransitionManagerState,
   location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
@@ -818,7 +1211,7 @@ async function callAction(
 }
 
 function filterMatchesToLoad(
-  state: TransitionState,
+  state: TransitionManagerState,
   location: Location,
   matches: ClientMatch[],
   interruptedSubmission: boolean,
@@ -834,8 +1227,8 @@ function filterMatchesToLoad(
       return match.route.shouldReload({
         nextLocation: location,
         prevLocation: state.location,
-        nextMatch: match,
-        prevMatch: state.matches[index]
+        nextParams: match.params,
+        prevParams: state.matches[index].params
       });
     }
 
@@ -959,4 +1352,11 @@ function createRedirectLocation(href: string, state: any = null) {
   let [pathname, search] = href.split("?");
   search = search ? `?${search}` : "";
   return { pathname, search, hash: "", key: "", state };
+}
+
+function makeFormData(urlSearchString: string): FormData {
+  let formData = new FormData();
+  let params = new URLSearchParams(urlSearchString);
+  for (let [key, value] of params) formData.append(key, value);
+  return formData;
 }

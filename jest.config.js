@@ -2,7 +2,7 @@ module.exports = {
   projects: [
     {
       displayName: "react",
-      testEnvironment: "node",
+      testEnvironment: "jsdom",
       testMatch: ["<rootDir>/packages/remix-react/**/*-test.[jt]s?(x)"],
       setupFiles: ["<rootDir>/packages/remix-react/__tests__/setupJest.js"]
     },
