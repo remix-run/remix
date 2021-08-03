@@ -18,11 +18,49 @@ import { json } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { RequestInit } from "node-fetch";
 
-async function time<R>(fn: () => Promise<R>): Promise<[number, R]> {
+type Timings = Record<
+  string,
+  Array<{
+    name: string;
+    type: string;
+    time: number;
+  }>
+>;
+
+async function time<R>({
+  name,
+  type,
+  fn,
+  timings
+}: {
+  name: string;
+  type: string;
+  fn: () => Promise<R>;
+  timings?: Timings;
+}): Promise<R> {
+  if (!timings) return fn();
+
   const start = performance.now();
   const result = await fn();
-  const duration = performance.now() - start;
-  return [duration, result];
+  type = type.replace(/ /g, "_");
+  let timingType = timings[type];
+  if (!timingType) {
+    timingType = timings[type] = [];
+  }
+  timingType.push({ name, type, time: performance.now() - start });
+  return result;
+}
+
+function getServerTimeHeader(timings: Timings) {
+  console.log({ timings });
+  return Object.entries(timings)
+    .map(([key, timingInfos]) => {
+      return timingInfos.map(
+        info => `${key};dur=${info.time};desc="${info.name}"`
+      );
+    })
+    .flat()
+    .join(",");
 }
 
 /**
@@ -57,6 +95,7 @@ async function handleDataRequest(
   routes: ServerRoute[]
 ): Promise<Response> {
   let url = new URL(request.url);
+  const timings: Timings = {};
 
   let matches = matchServerRoutes(routes, url.pathname);
   if (!matches) {
@@ -86,33 +125,36 @@ async function handleDataRequest(
   let clonedRequest = await stripDataParam(request);
 
   let response: Response;
-  let responseMS: number;
   let isAction = isActionRequest(request);
   try {
     if (isAction) {
-      let [dur, result] = await time(() =>
-        callRouteAction(
-          build,
-          routeMatch.route.id,
-          clonedRequest,
-          loadContext,
-          routeMatch.params
-        )
-      );
-      responseMS = dur;
-      response = result;
+      response = await time({
+        name: `action.${routeMatch.route.id}`,
+        type: "action",
+        timings,
+        fn: () =>
+          callRouteAction(
+            build,
+            routeMatch.route.id,
+            clonedRequest,
+            loadContext,
+            routeMatch.params
+          )
+      });
     } else {
-      let [dur, result] = await time(() =>
-        loadRouteData(
-          build,
-          routeMatch.route.id,
-          clonedRequest,
-          loadContext,
-          routeMatch.params
-        )
-      );
-      responseMS = dur;
-      response = result;
+      response = await time({
+        name: `loader.${routeMatch.route.id}`,
+        type: "loader",
+        timings,
+        fn: () =>
+          loadRouteData(
+            build,
+            routeMatch.route.id,
+            clonedRequest,
+            loadContext,
+            routeMatch.params
+          )
+      });
     }
   } catch (error: unknown) {
     return json(serializeError(error as Error), {
@@ -135,17 +177,12 @@ async function handleDataRequest(
       headers: {
         ...Object.fromEntries(response.headers),
         "X-Remix-Redirect": locationHeader!,
-        "Server-Timing": isAction
-          ? `action;dur=${responseMS}`
-          : `loader;dur=${responseMS}`
+        "Server-Timing": getServerTimeHeader(timings)
       }
     });
   }
 
-  response.headers.set(
-    "Server-Timing",
-    isAction ? `action;dur=${responseMS}` : `loader;dur=${responseMS}`
-  );
+  response.headers.set("Server-Timing", getServerTimeHeader(timings));
 
   return response;
 }
@@ -158,6 +195,7 @@ async function handleDocumentRequest(
   serverMode: ServerMode
 ): Promise<Response> {
   let url = new URL(request.url);
+  const timings: Timings = {};
 
   let matches = matchServerRoutes(routes, url.pathname);
   if (!matches) {
@@ -181,20 +219,24 @@ async function handleDocumentRequest(
   if (isActionRequest(request)) {
     let leafMatch = matches[matches.length - 1];
     try {
-      const [actionResponseMS, action] = await time(() =>
-        callRouteAction(
-          build,
-          leafMatch.route.id,
-          request.clone(),
-          loadContext,
-          leafMatch.params
-        )
-      );
-      actionResponse = action;
+      actionResponse = await time({
+        name: `action.${leafMatch.route.id}`,
+        type: "action",
+        timings,
+        fn: () =>
+          callRouteAction(
+            build,
+            leafMatch.route.id,
+            request.clone(),
+            loadContext,
+            leafMatch.params
+          )
+      });
+
       if (isRedirectResponse(actionResponse)) {
         actionResponse.headers.set(
           "Server-Timing",
-          `action;dur=${actionResponseMS}`
+          getServerTimeHeader(timings)
         );
         return actionResponse;
       }
@@ -221,16 +263,21 @@ async function handleDocumentRequest(
   // code is a little weird due to the way unhandled promise rejections are
   // handled in node. We use a .catch() handler on each promise to avoid the
   // warning, then handle errors manually afterwards.
-  let routeLoaderPromises: Promise<
-    Response | Error
-  >[] = matchesToLoad.map(match =>
-    loadRouteData(
-      build,
-      match.route.id,
-      request.clone(),
-      loadContext,
-      match.params
-    ).catch(error => error)
+  let routeLoaderPromises: Promise<Response | Error>[] = matchesToLoad.map(
+    match =>
+      time({
+        name: `loader.${match.route.id}`,
+        type: "loader",
+        timings,
+        fn: () =>
+          loadRouteData(
+            build,
+            match.route.id,
+            request.clone(),
+            loadContext,
+            match.params
+          ).catch(error => error)
+      })
   );
 
   let routeLoaderResults = await Promise.all(routeLoaderPromises);
@@ -275,6 +322,7 @@ async function handleDocumentRequest(
       componentDidCatchEmulator.error = serializeError(response);
       routeLoaderResults[index] = json(null, { status: 500 });
     } else if (isRedirectResponse(response)) {
+      response.headers.append("Server-Timing", getServerTimeHeader(timings));
       return response;
     }
   }
@@ -307,6 +355,7 @@ async function handleDocumentRequest(
     routeLoaderResponses,
     actionResponse
   );
+  headers.append("Server-Timing", getServerTimeHeader(timings));
   let entryMatches = createEntryMatches(renderableMatches, build.assets.routes);
   let routeData = await createRouteData(
     renderableMatches,

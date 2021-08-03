@@ -6,6 +6,7 @@ exports.publicBuildDirectory = "./public/build";
 exports.publicPath = "/build/";
 exports.serverBuildDirectory = "./build";
 exports.devServerPort = 8002;
+exports.serverTiming = true;
 
 // custom routes
 exports.routes = async function (defineRoutes) {
