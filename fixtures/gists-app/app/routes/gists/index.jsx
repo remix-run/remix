@@ -1,4 +1,4 @@
-import { useLoaderData } from "remix";
+import { useLoaderData, json } from "remix";
 
 let fakeGists = [
   {
@@ -23,12 +23,16 @@ export async function loader() {
   }
 
   let res = await fetch(`https://api.github.com/gists`);
-  return res.json();
+  const result = await res.json();
+  return json(result, {
+    headers: { "Server-Timing": "anything;dur=20" }
+  });
 }
 
-export function headers() {
+export function headers({ loaderHeaders }) {
   return {
-    "Cache-Control": "public, max-age=60"
+    "Cache-Control": "public, max-age=60",
+    "Server-Timing": loaderHeaders.get("Server-Timing") ?? ""
   };
 }
 

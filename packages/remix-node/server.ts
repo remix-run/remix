@@ -40,19 +40,18 @@ async function time<R>({
 }): Promise<R> {
   if (!timings) return fn();
 
-  const start = performance.now();
+  const start = Date.now();
   const result = await fn();
   type = type.replace(/ /g, "_");
   let timingType = timings[type];
   if (!timingType) {
     timingType = timings[type] = [];
   }
-  timingType.push({ name, type, time: performance.now() - start });
+  timingType.push({ name, type, time: Date.now() - start });
   return result;
 }
 
 function getServerTimeHeader(timings: Timings) {
-  console.log({ timings });
   return Object.entries(timings)
     .map(([key, timingInfos]) => {
       return timingInfos.map(
@@ -60,7 +59,7 @@ function getServerTimeHeader(timings: Timings) {
       );
     })
     .flat()
-    .join(",");
+    .join(", ");
 }
 
 /**
@@ -103,7 +102,9 @@ async function handleDataRequest(
   }
 
   let routeMatch: RouteMatch<ServerRoute>;
-  if (isActionRequest(request)) {
+  let isAction = isActionRequest(request);
+
+  if (isAction) {
     routeMatch = matches[matches.length - 1];
   } else {
     let routeId = url.searchParams.get("_data");
@@ -125,7 +126,7 @@ async function handleDataRequest(
   let clonedRequest = await stripDataParam(request);
 
   let response: Response;
-  let isAction = isActionRequest(request);
+
   try {
     if (isAction) {
       response = await time({
@@ -160,7 +161,8 @@ async function handleDataRequest(
     return json(serializeError(error as Error), {
       status: 500,
       headers: {
-        "X-Remix-Error": "unfortunately, yes"
+        "X-Remix-Error": "unfortunately, yes",
+        "Server-Timing": getServerTimeHeader(timings)
       }
     });
   }
@@ -182,7 +184,7 @@ async function handleDataRequest(
     });
   }
 
-  response.headers.set("Server-Timing", getServerTimeHeader(timings));
+  response.headers.append("Server-Timing", getServerTimeHeader(timings));
 
   return response;
 }
@@ -234,7 +236,7 @@ async function handleDocumentRequest(
       });
 
       if (isRedirectResponse(actionResponse)) {
-        actionResponse.headers.set(
+        actionResponse.headers.append(
           "Server-Timing",
           getServerTimeHeader(timings)
         );
