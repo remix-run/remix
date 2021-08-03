@@ -56,7 +56,7 @@ function getServerTimeHeader(timings: Timings) {
   return Object.entries(timings)
     .map(([key, timingInfos]) => {
       return timingInfos.map(
-        info => `${key};dur=${info.time};desc="${info.name}"`
+        info => `${key};dur=${info.time.toFixed(2)};desc="${info.name}"`
       );
     })
     .flat()
