@@ -18,6 +18,13 @@ import { json } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { RequestInit } from "node-fetch";
 
+async function time<R>(fn: () => Promise<R>): Promise<[number, R]> {
+  const start = performance.now();
+  const result = await fn();
+  const duration = performance.now() - start;
+  return [duration, result];
+}
+
 /**
  * The main request handler for a Remix server. This handler runs in the context
  * of a cloud provider's server (e.g. Express on Firebase) or locally via their
@@ -79,24 +86,36 @@ async function handleDataRequest(
   let clonedRequest = await stripDataParam(request);
 
   let response: Response;
+  let responseMS: number;
+  let isAction = isActionRequest(request);
   try {
-    response = isActionRequest(request)
-      ? await callRouteAction(
+    if (isAction) {
+      let [dur, result] = await time(() =>
+        callRouteAction(
           build,
           routeMatch.route.id,
           clonedRequest,
           loadContext,
           routeMatch.params
         )
-      : await loadRouteData(
+      );
+      responseMS = dur;
+      response = result;
+    } else {
+      let [dur, result] = await time(() =>
+        loadRouteData(
           build,
           routeMatch.route.id,
           clonedRequest,
           loadContext,
           routeMatch.params
-        );
-  } catch (error) {
-    return json(serializeError(error), {
+        )
+      );
+      responseMS = dur;
+      response = result;
+    }
+  } catch (error: unknown) {
+    return json(serializeError(error as Error), {
       status: 500,
       headers: {
         "X-Remix-Error": "unfortunately, yes"
@@ -115,10 +134,18 @@ async function handleDataRequest(
       status: 204,
       headers: {
         ...Object.fromEntries(response.headers),
-        "X-Remix-Redirect": locationHeader!
+        "X-Remix-Redirect": locationHeader!,
+        "Server-Timing": isAction
+          ? `action;dur=${responseMS}`
+          : `loader;dur=${responseMS}`
       }
     });
   }
+
+  response.headers.set(
+    "Server-Timing",
+    isAction ? `action;dur=${responseMS}` : `loader;dur=${responseMS}`
+  );
 
   return response;
 }
@@ -154,14 +181,21 @@ async function handleDocumentRequest(
   if (isActionRequest(request)) {
     let leafMatch = matches[matches.length - 1];
     try {
-      actionResponse = await callRouteAction(
-        build,
-        leafMatch.route.id,
-        request.clone(),
-        loadContext,
-        leafMatch.params
+      const [actionResponseMS, action] = await time(() =>
+        callRouteAction(
+          build,
+          leafMatch.route.id,
+          request.clone(),
+          loadContext,
+          leafMatch.params
+        )
       );
+      actionResponse = action;
       if (isRedirectResponse(actionResponse)) {
+        actionResponse.headers.set(
+          "Server-Timing",
+          `action;dur=${actionResponseMS}`
+        );
         return actionResponse;
       }
     } catch (error) {

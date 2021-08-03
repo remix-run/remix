@@ -60,6 +60,11 @@ export interface AppConfig {
    * The port number to use for the dev server. Defaults to 8002.
    */
   devServerPort?: number;
+
+  /**
+   * Enable Server Timing http headers for loaders, actions and route matching.
+   */
+  serverTiming?: boolean;
 }
 
 /**
@@ -120,6 +125,11 @@ export interface RemixConfig {
    * The port number to use for the dev (asset) server.
    */
   devServerPort: number;
+
+  /**
+   * Enable Server Timing http headers for loaders, actions and route matching.
+   */
+  serverTiming: boolean;
 }
 
 /**
@@ -220,7 +230,8 @@ export async function readConfig(
     rootDirectory,
     routes,
     serverBuildDirectory,
-    serverMode
+    serverMode,
+    serverTiming: appConfig.serverTiming || false
   };
 }
 
