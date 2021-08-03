@@ -25,6 +25,9 @@ describe("loader results", () => {
       expect(chain[0].response()!.headers().location).toEqual(
         "/gists/mjackson"
       );
+      expect(
+        chain[0].response()!.headers()["server-timing"]
+      ).not.toBeUndefined();
     });
   });
 
@@ -32,6 +35,7 @@ describe("loader results", () => {
     it("sends a not found page", async () => {
       let res = await page.goto(`${testServer}/gists/_why`);
       expect(res!.status()).toEqual(404);
+      expect(res!.headers()["server-timing"]).not.toBeUndefined();
       expect(await getHtml(page, "[data-test-id=content]")).toMatchSnapshot();
     });
   });
