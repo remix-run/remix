@@ -39,6 +39,23 @@ describe("Server-Timing Header results", () => {
         expect(timings.length).toBe(4);
       });
     });
+
+    describe("user uses exposed time function in loader", () => {
+      it("merges with framework headers", async () => {
+        let res = await page.goto(`${testServer}/gists/mine`);
+        const serverTiming = res.headers()["server-timing"];
+        expect(serverTiming).toBeDefined();
+
+        const timings = serverTiming.split(", ");
+
+        // root loader (1), gists.mine loader (2) with exposed time function (3)
+        expect(timings.length).toBe(3);
+
+        expect(serverTiming).toContain(
+          `;desc="gists-app-routes-gists-mine-jsx-loader"`
+        );
+      });
+    });
   });
 
   describe("data request", () => {
@@ -81,6 +98,28 @@ describe("Server-Timing Header results", () => {
         const serverTiming = response.headers()["server-timing"];
 
         expect(serverTiming).toContain("anything;dur=20");
+      });
+    });
+
+    describe("user uses exposed time function in loader", () => {
+      it("merges with framework headers", async () => {
+        await page.goto(`${testServer}/gists/mjackson`);
+        await reactIsHydrated(page);
+
+        let responses = collectDataResponses(page);
+
+        await page.click('a[href="/gists/mine"]');
+        await page.waitForSelector('[data-test-id="/gists/mine"]');
+
+        // gists/mine.tsx;
+        expect(responses.length).toEqual(1);
+
+        const [response] = responses;
+        const serverTiming = response.headers()["server-timing"];
+
+        expect(serverTiming).toContain(
+          `;desc="gists-app-routes-gists-mine-jsx-loader"`
+        );
       });
     });
   });

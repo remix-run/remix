@@ -1,3 +1,15 @@
+const wait = dur => new Promise(resolve => setTimeout(resolve, dur));
+
+export async function loader({ time }) {
+  const result = await time({
+    name: "gists-app-routes-gists-mine-jsx-loader",
+    fn: () => wait(1000).then(() => "some data"),
+    type: "custom"
+  });
+
+  return { result };
+}
+
 export default function Gists() {
   return (
     <div data-test-id="/gists/mine">

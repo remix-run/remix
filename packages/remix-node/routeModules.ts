@@ -6,6 +6,7 @@ import type { AppLoadContext, AppData } from "./data";
 import type { Headers, HeadersInit, Request, Response } from "./fetch";
 import type { LinkDescriptor } from "./links";
 import type { RouteData } from "./routeData";
+import { timer } from "./data";
 
 export interface RouteModules<RouteModule> {
   [routeId: string]: RouteModule;
@@ -15,10 +16,12 @@ export interface RouteModules<RouteModule> {
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (args: { request: Request; context: AppLoadContext; params: Params }):
-    | Promise<Response | string>
-    | Response
-    | string;
+  (args: {
+    request: Request;
+    context: AppLoadContext;
+    params: Params;
+    time: typeof timer;
+  }): Promise<Response | string> | Response | string;
 }
 
 /**
@@ -50,11 +53,12 @@ export interface LinksFunction {
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
-  (args: { request: Request; context: AppLoadContext; params: Params }):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: {
+    request: Request;
+    context: AppLoadContext;
+    params: Params;
+    time: typeof timer;
+  }): Promise<Response> | Response | Promise<AppData> | AppData;
 }
 
 /**

@@ -12,7 +12,8 @@ export function loader() {
   let data = {
     users: [
       { id: "ryanflorence", name: "Ryan Florence" },
-      { id: "mjackson", name: "Michael Jackson" }
+      { id: "mjackson", name: "Michael Jackson" },
+      { id: "mine", name: "Mine" }
     ]
   };
 

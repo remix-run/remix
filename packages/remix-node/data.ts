@@ -21,7 +21,8 @@ export async function loadRouteData(
   routeId: string,
   request: Request,
   context: AppLoadContext,
-  params: Params
+  params: Params,
+  time: typeof timer
 ): Promise<Response> {
   let routeModule = build.routes[routeId].module;
 
@@ -29,7 +30,7 @@ export async function loadRouteData(
     return Promise.resolve(json(null));
   }
 
-  let result = await routeModule.loader({ request, context, params });
+  let result = await routeModule.loader({ request, context, params, time });
 
   if (result === undefined) {
     throw new Error(
@@ -46,7 +47,8 @@ export async function callRouteAction(
   routeId: string,
   request: Request,
   context: AppLoadContext,
-  params: Params
+  params: Params,
+  time: typeof timer
 ): Promise<Response> {
   let routeModule = build.routes[routeId].module;
 
@@ -58,7 +60,12 @@ export async function callRouteAction(
     );
   }
 
-  let result = await routeModule.action({ request, context, params });
+  let result = await routeModule.action({
+    request,
+    context,
+    params,
+    time
+  });
 
   if (result === undefined) {
     throw new Error(
@@ -94,4 +101,40 @@ export function extractData(response: Response): Promise<AppData> {
   // - binary (audio/video) ?
 
   return response.text();
+}
+
+export type Timings = Record<
+  string,
+  Array<{ name: string; type: string; time: number }>
+>;
+
+export async function timer<Result>({
+  name,
+  type,
+  fn,
+  timings
+}: {
+  name: string;
+  type: string;
+  fn: () => Promise<Result>;
+  timings: Timings;
+}): Promise<Result> {
+  const start = Date.now();
+  const result = await fn();
+  type = type.replace(/ /g, "_");
+  let timingType = timings[type];
+  if (!timingType) timingType = timings[type] = [];
+  timingType.push({ name, type, time: Date.now() - start });
+  return result;
+}
+
+export function getServerTimeHeader(timings: Timings) {
+  return Object.entries(timings)
+    .map(([key, timingInfos]) => {
+      return timingInfos.map(
+        info => `${key};dur=${info.time.toFixed(2)};desc="${info.name}"`
+      );
+    })
+    .flat()
+    .join(", ");
 }

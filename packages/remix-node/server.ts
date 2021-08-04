@@ -1,5 +1,10 @@
-import type { AppLoadContext } from "./data";
-import { loadRouteData, callRouteAction } from "./data";
+import type { AppLoadContext, Timings } from "./data";
+import {
+  loadRouteData,
+  callRouteAction,
+  timer,
+  getServerTimeHeader
+} from "./data";
 import type { ComponentDidCatchEmulator } from "./errors";
 
 import { serializeError } from "./errors";
@@ -17,50 +22,6 @@ import { createActionData, createRouteData } from "./routeData";
 import { json } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 import { RequestInit } from "node-fetch";
-
-type Timings = Record<
-  string,
-  Array<{
-    name: string;
-    type: string;
-    time: number;
-  }>
->;
-
-async function time<R>({
-  name,
-  type,
-  fn,
-  timings
-}: {
-  name: string;
-  type: string;
-  fn: () => Promise<R>;
-  timings?: Timings;
-}): Promise<R> {
-  if (!timings) return fn();
-
-  const start = Date.now();
-  const result = await fn();
-  type = type.replace(/ /g, "_");
-  let timingType = timings[type];
-  if (!timingType) {
-    timingType = timings[type] = [];
-  }
-  timingType.push({ name, type, time: Date.now() - start });
-  return result;
-}
-
-function getServerTimeHeader(timings: Timings) {
-  return Object.entries(timings)
-    .map(([key, timingInfos]) => {
-      return timingInfos.map(
-        info => `${key};dur=${info.time.toFixed(2)};desc="${info.name}"`
-      );
-    })
-    .flat()
-    .join(", ");
-}
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -127,9 +88,20 @@ async function handleDataRequest(
 
   let response: Response;
 
+  function timeTiedToTiming<R>(
+    args: Omit<Parameters<typeof timer>[0], "timings">
+  ) {
+    return timer<R>({
+      name: args.name,
+      type: args.type,
+      timings,
+      fn: args.fn as () => Promise<R>
+    });
+  }
+
   try {
     if (isAction) {
-      response = await time({
+      response = await timer({
         name: `action.${routeMatch.route.id}`,
         type: "action",
         timings,
@@ -139,11 +111,12 @@ async function handleDataRequest(
             routeMatch.route.id,
             clonedRequest,
             loadContext,
-            routeMatch.params
+            routeMatch.params,
+            timeTiedToTiming
           )
       });
     } else {
-      response = await time({
+      response = await timer({
         name: `loader.${routeMatch.route.id}`,
         type: "loader",
         timings,
@@ -153,7 +126,8 @@ async function handleDataRequest(
             routeMatch.route.id,
             clonedRequest,
             loadContext,
-            routeMatch.params
+            routeMatch.params,
+            timeTiedToTiming
           )
       });
     }
@@ -196,6 +170,17 @@ async function handleDocumentRequest(
   let url = new URL(request.url);
   const timings: Timings = {};
 
+  function timeTiedToTiming<R>(
+    args: Omit<Parameters<typeof timer>[0], "timings">
+  ) {
+    return timer<R>({
+      name: args.name,
+      type: args.type,
+      timings,
+      fn: args.fn as () => Promise<R>
+    });
+  }
+
   let matches = matchServerRoutes(routes, url.pathname);
   if (!matches) {
     // TODO: Provide a default 404 page
@@ -218,7 +203,7 @@ async function handleDocumentRequest(
   if (isActionRequest(request)) {
     let leafMatch = matches[matches.length - 1];
     try {
-      actionResponse = await time({
+      actionResponse = await timer({
         name: `action.${leafMatch.route.id}`,
         type: "action",
         timings,
@@ -228,7 +213,8 @@ async function handleDocumentRequest(
             leafMatch.route.id,
             request.clone(),
             loadContext,
-            leafMatch.params
+            leafMatch.params,
+            timeTiedToTiming
           )
       });
 
@@ -264,7 +250,7 @@ async function handleDocumentRequest(
   // warning, then handle errors manually afterwards.
   let routeLoaderPromises: Promise<Response | Error>[] = matchesToLoad.map(
     match =>
-      time({
+      timer({
         name: `loader.${match.route.id}`,
         type: "loader",
         timings,
@@ -274,7 +260,8 @@ async function handleDocumentRequest(
             match.route.id,
             request.clone(),
             loadContext,
-            match.params
+            match.params,
+            timeTiedToTiming
           ).catch(error => error)
       })
   );
