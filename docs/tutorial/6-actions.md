@@ -9,7 +9,7 @@ We're going to be creating data here. If you've been doing web development for a
 
 - Post a plain HTML form to a Remix action, no JavaScript involved
 - Use the special Remix `<Form>` to post with JavaScript
-- Add special "loading" UI now that we have JavaScript involved with `usePendingFormSubmit`
+- Add special "loading" UI now that we have JavaScript involved with `useSubmission`
 
 The big takeaway here is that actions (and data mutations) in Remix are modeled as html form navigation. When submiting with JavaScript, Remix can make it faster and ensure the data updates appear on the entire page without a full page reload. Or, you can leave JavaScript at the door and use basic forms.
 
@@ -108,7 +108,7 @@ export let action = () => {};
 
 Alright, back to our component, let's handle the form post and create a new gist with the GitHub API:
 
-```ts [3,5,36]
+```ts [3,5,35]
 import React from "react";
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
@@ -157,28 +157,28 @@ Alright, fill out your form and give it a shot! You should see your new gist on 
 
 With a regular `<form>` we're letting the browser handle the post and the pending UI (the address bar/favicon animation). Remix has a `<Form>` component and hook to go along with it to let you progressively enhance your forms. If your budget for this feature is short, just use a `<form>` and move on with your life. If you've got the time to make a fancy user experience, with Remix you don't have to rewrite your code to do the fetch with `useEffect` and manage your own state: you can just add the fancy bits with `<Form>`.
 
-Let's update the code and add some loading indication. Note the new imports and the capital "F" `<Form>`. Now Remix is going to handle the form submit clientside with `fetch` and you get access to the serialized form data in `usePendingFormSubmit()` to build that fancy UI.
+Let's update the code and add some loading indication. Note the new imports and the capital "F" `<Form>`. Now Remix is going to handle the form submit clientside with `fetch` and you get access to the serialized form data in `useSubmission()` to build that fancy UI.
 
 ```tsx [4,11,16-22,48-67]
 import React from "react";
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
-import { Form, usePendingFormSubmit } from "remix";
+import { Form, useSubmission } from "remix";
 
 export let action: ActionFunction = async ({ request }) => {
   // ... same as before
 };
 
 export default function NewGist() {
-  let pendingForm = usePendingFormSubmit();
+  let submission = useSubmission();
 
   return (
     <>
       <h2>New Gist!</h2>
-      {pendingForm ? (
+      {submission ? (
         <div>
           <p>
-            <Loading /> Creating gist: {pendingForm.data.get("fileName")}
+            <Loading /> Creating gist: {submission.data.get("fileName")}
           </p>
         </div>
       ) : (
