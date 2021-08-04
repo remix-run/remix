@@ -16,6 +16,11 @@ exports[`loader results when a loader returns not found sends a not found page 1
             >Michael Jackson<!-- -->
           </a>
         </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists/mine\\"
+            >Mine<!-- -->
+          </a>
+        </li>
       </ul>
     </header>
     <div data-test-id=\\"/gists/$username\\">
