@@ -6,8 +6,10 @@ import {
   useLoaderData,
   useActionData,
   Form,
-  useSubmission,
-  Link
+  useTransition,
+  Link,
+  TransitionStates,
+  LoadTypes
 } from "remix";
 import { useSearchParams } from "react-router-dom";
 
@@ -66,18 +68,12 @@ export async function action({ request }: { request: Request }) {
   await new Promise(res => setTimeout(res, task.delay));
 
   if (id === "giveup") {
-    return json(
-      {
-        id,
-        error: "NEVER GIVE UP!"
-      },
-      { status: 500 }
-    );
+    return json({ error: "NEVER GIVE UP!" }, { status: 500 });
   }
 
   task.complete = complete;
 
-  return json("ok");
+  return json(task);
 }
 
 export default function Tasks() {
@@ -108,13 +104,13 @@ export default function Tasks() {
 }
 
 function FilterForm() {
-  let submission = useSubmission();
+  let transition = useTransition();
 
   return (
     <Form method="get">
       <input type="text" name="q" /> <button type="submit">Go</button>
-      {submission ? (
-        <p>Searching for: {submission.data.get("q")}...</p>
+      {transition.type === LoadTypes.getSubmission ? (
+        <p>Searching for: {transition.formData.get("q")}...</p>
       ) : (
         <p>&nbsp;</p>
       )}
@@ -123,8 +119,9 @@ function FilterForm() {
 }
 
 function TaskItem({ task }: { task: Task }) {
-  let submission = useSubmission(task.id);
+  let transition = useTransition(task.id);
   let actionData = useActionData(task.id);
+  let renderedTask = actionData && !actionData.error ? actionData : task;
 
   return (
     <Form replace submissionKey={task.id} method="post">
@@ -140,8 +137,10 @@ function TaskItem({ task }: { task: Task }) {
             : "incomplete"
         }
       >
-        {task.complete ? "Mark Incomplete" : "Mark Complete"}
-        {submission && <ProgressBar key={submission.id} total={task.delay} />}
+        {renderedTask.complete ? "Mark Incomplete" : "Mark Complete"}
+        {transition.state === TransitionStates.submitting && (
+          <ProgressBar key={transition.nextLocation.key} total={task.delay} />
+        )}
       </button>{" "}
       {task.name}{" "}
       {actionData?.error && (

@@ -23,8 +23,8 @@ export {
   LiveReload,
   useFormAction,
   useSubmit,
-  useSubmission,
-  useSubmissions,
+  useTransition,
+  useTransitions,
   useLoaderData,
   useActionData,
   usePendingLocation,
@@ -32,7 +32,9 @@ export {
   useMatches,
   block,
   RemixServer,
+  TransitionStates,
+  LoadTypes,
   // @deprecated
-  useSubmission as usePendingFormSubmit,
+  usePendingFormSubmit,
   useLoaderData as useRouteData
 } from "@remix-run/react";

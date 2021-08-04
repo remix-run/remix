@@ -11,16 +11,19 @@ export {
   LiveReload,
   useFormAction,
   useSubmit,
-  useSubmission,
-  useSubmissions,
+  useTransition,
+  useTransitions,
   useLoaderData,
   useActionData,
   usePendingLocation,
   useBeforeUnload,
-  useMatches
+  useMatches,
+  usePendingFormSubmit
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
+
+export { TransitionStates, LoadTypes } from "./transition";
 
 export { block } from "./linksPreloading";
 

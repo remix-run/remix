@@ -512,7 +512,7 @@ describe("transition manager", () => {
       // });
 
       describe("hash change", () => {
-        it.only("does not load anything", async () => {
+        it("does not load anything", async () => {
           let t = setup();
           await t.tm.send(createLocation("/p/one"));
           expect(t.parentLoader.mock.calls.length).toBe(0);
@@ -1185,7 +1185,7 @@ describe("transition manager", () => {
       // real data. The submission is aborted but it still hits the server, so
       // we want the next load to capture that if it actually completed.  We
       // might want to await any pending actions that currently are being read
-      // from a `useSubmission` to have the best chance of not getting the UI
+      // from a `useTransition` to have the best chance of not getting the UI
       // out of sync, or even a `useCriticalSubmission()` that makes sure to
       // await before loading the next page.
       it("reloads all routes on GET", async () => {

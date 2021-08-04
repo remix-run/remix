@@ -32,7 +32,14 @@ import type { RouteModules } from "./routeModules";
 import {
   createTransitionManager,
   isPostSubmission,
-  GenericSubmission
+  idleTransition,
+  isSubmission,
+  makeFormData
+} from "./transition";
+import type {
+  Transition,
+  GenericSubmission,
+  SubmissionTransition
 } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -499,7 +506,7 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
 
   /**
    * Allows components to track pending submissions and action data for this
-   * form by passing the same submission key to useSubmission and useActionData.
+   * form by passing the same submission key to useTransition and useActionData.
    */
   submissionKey?: string;
 
@@ -600,11 +607,6 @@ export interface SubmitOptions {
    * to `false`.
    */
   replace?: boolean;
-
-  /**
-   * The ref to track for `usePendingFormSubmit(ref)` and `useActionData(ref)`
-   */
-  ref?: React.RefObject<any>;
 }
 
 /**
@@ -636,8 +638,6 @@ export interface SubmitFunction {
     options?: SubmitOptions
   ): void;
 }
-
-let submissionGuid = 0;
 
 /**
  * Returns a function that may be used to programmatically submit a form (or
@@ -708,10 +708,8 @@ export function useSubmit(submissionKey?: string): SubmitFunction {
       }
     }
 
-    let url = new URL(
-      action,
-      `${window.location.protocol}//${window.location.host}`
-    );
+    let { protocol, host } = window.location;
+    let url = new URL(action, `${protocol}//${host}`);
 
     if (method.toLowerCase() === "get") {
       for (let [name, value] of formData) {
@@ -725,13 +723,12 @@ export function useSubmit(submissionKey?: string): SubmitFunction {
 
     let state: GenericSubmission = {
       isSubmission: true,
-      // @ts-expect-error types don't know that FormData can be passed to URLSearchParams
+      // @ts-expect-error
       body: new URLSearchParams(formData).toString(),
       action,
       method: method.toUpperCase(),
       encType,
-      submissionKey,
-      id: ++submissionGuid
+      submissionKey
     };
 
     navigate(url.pathname + url.search, { replace: options.replace, state });
@@ -816,54 +813,53 @@ export interface SubmissionWithData extends GenericSubmission {
   data: URLSearchParams;
 }
 
-export function useSubmissions(): Map<string, SubmissionWithData> {
+export function useTransition(submissionKey?: string): Transition {
   let { transitionManager } = useRemixEntryContext();
-  let submissions = transitionManager.getState().pendingSubmissions;
-  return React.useMemo(() => {
-    let map = new Map<string, SubmissionWithData>();
-
-    for (let [key, submission] of submissions) {
-      map.set(key, {
-        ...submission,
-        data: new URLSearchParams(submission.body)
-      });
-    }
-
-    return map;
-  }, [submissions]);
-}
-
-export function useSubmission(
-  submissionKey?: string
-): SubmissionWithData | undefined {
-  let { transitionManager } = useRemixEntryContext();
-  let pendingLocation = usePendingLocation();
+  let state = transitionManager.getState();
 
   if (submissionKey) {
-    let submission = transitionManager
-      .getState()
-      .pendingSubmissions.get(submissionKey);
-
-    return submission
-      ? { ...submission, data: new URLSearchParams(submission.body) }
-      : undefined;
+    let transition = state.transitions.get(submissionKey);
+    return transition || idleTransition;
   }
 
-  if (!pendingLocation) return undefined;
+  return state.transition;
+}
 
-  let submission = transitionManager.getState().pendingSubmission;
-  if (!submission) return undefined;
+export function useTransitions(): Map<string, SubmissionTransition> {
+  let { transitionManager } = useRemixEntryContext();
+  return transitionManager.getState().transitions;
+}
 
-  return { ...submission, data: new URLSearchParams(submission.body) };
+/**
+ * @deprecated replaced by `useTransition`
+ */
+export function usePendingFormSubmit() {
+  let { transitionManager } = useRemixEntryContext();
+  let { nextLocation } = transitionManager.getState().transition;
+
+  if (nextLocation && isSubmission(nextLocation)) {
+    let { body, encType, action, method } = nextLocation.state;
+    return {
+      data: makeFormData(body),
+      method: method.toLowerCase(),
+      encType,
+      action
+    };
+  }
+
+  return undefined;
 }
 
 /**
  * Returns the next location if a location change is pending. This is useful
  * for showing loading indicators during route transitions from `<Link>`
  * clicks.
+ *
+ * @deprecated use `useTransition().nextLocation`
  */
 export function usePendingLocation(): Location<any> | undefined {
-  return useRemixEntryContext().pendingLocation;
+  let { transitionManager } = useRemixEntryContext();
+  return transitionManager.getState().transition.nextLocation;
 }
 
 export function LiveReload() {

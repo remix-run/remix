@@ -45,7 +45,7 @@ export interface TransitionManagerState {
   /**
    * Tracks current KeyedPostSubmission and KeyedGetSubmission
    */
-  transitions: Map<string, Transition>;
+  transitions: Map<string, SubmissionTransition>;
 
   /**
    * Tracks the latest, non-keyed pending submission
@@ -101,7 +101,7 @@ export enum LoadTypes {
   getSubmissionRedirect = "getSubmissionRedirect"
 }
 
-export interface Transitions {
+export type Transitions = {
   Idle: {
     state: TransitionStates.idle;
     type: "idle";
@@ -158,7 +158,14 @@ export interface Transitions {
     formData: undefined;
     method: "GET";
   };
-}
+};
+
+export type SubmissionTransition =
+  | Transitions["Submitting"]
+  | Transitions["LoadingAction"]
+  | Transitions["LoadingActionRedirect"]
+  | Transitions["LoadingGetSubmission"]
+  | Transitions["LoadingGetSubmissionRedirect"];
 
 export type Transition = Transitions[keyof Transitions];
 
@@ -249,13 +256,13 @@ export function isPostSubmission(
   );
 }
 
-function isNormalPostSubmission(
+export function isNormalPostSubmission(
   location: Location<any>
 ): location is Location<NormalPostSubmission> {
   return isPostSubmission(location) && !Boolean(location.state.submissionKey);
 }
 
-function isKeyedPostSubmission(
+export function isKeyedPostSubmission(
   location: Location<any>
 ): location is Location<KeyedPostSubmission> {
   return isPostSubmission(location) && Boolean(location.state.submissionKey);
@@ -267,31 +274,37 @@ export function isGetSubmission(
   return isSubmission(location) && location.state.method === "GET";
 }
 
-function isKeyedGetSubmission(
+export function isKeyedGetSubmission(
   location: Location<any>
 ): location is Location<KeyedGetSubmission> {
   return isGetSubmission(location) && Boolean(location.state.submissionKey);
 }
 
-function isNormalGetSubmission(
+export function isNormalGetSubmission(
   location: Location<any>
 ): location is Location<NormalGetSubmission> {
   return isGetSubmission(location) && !Boolean(location.state.submissionKey);
 }
 
-function isNormalActionRedirect(
+export function isActionRedirect(
+  location: Location<any>
+): location is Location<NormalActionRedirect> {
+  return isNormalActionRedirect(location) || isKeyedActionRedirect(location);
+}
+
+export function isNormalActionRedirect(
   location: Location<any>
 ): location is Location<NormalActionRedirect> {
   return Boolean(location.state?.isActionRedirect);
 }
 
-function isKeyedActionRedirect(
+export function isKeyedActionRedirect(
   location: Location<any>
 ): location is Location<KeyedActionRedirect> {
   return Boolean(location.state?.isKeyedActionRedirect);
 }
 
-function isNormalRedirect(
+export function isNormalRedirect(
   location: Location<any>
 ): location is Location<NormalRedirect> {
   return (
@@ -300,7 +313,7 @@ function isNormalRedirect(
   );
 }
 
-function isGetSubmissionRedirect(
+export function isGetSubmissionRedirect(
   location: Location<any>
 ): location is Location<
   KeyedGetSubmissionRedirect | NormalGetSubmissionRedirect
@@ -308,7 +321,7 @@ function isGetSubmissionRedirect(
   return location.state?.isRedirect && location.state?.method === "GET";
 }
 
-function isNormalGetSubmissionRedirect(
+export function isNormalGetSubmissionRedirect(
   location: Location<any>
 ): location is Location<NormalGetSubmissionRedirect> {
   return (
@@ -316,18 +329,12 @@ function isNormalGetSubmissionRedirect(
   );
 }
 
-function isKeyedGetSubmissionRedirect(
+export function isKeyedGetSubmissionRedirect(
   location: Location<any>
 ): location is Location<KeyedGetSubmissionRedirect> {
   return (
     isGetSubmissionRedirect(location) && Boolean(location.state.submissionKey)
   );
-}
-
-function isRedirectResult(
-  result: RouteLoaderResult
-): result is RouteLoaderRedirectResult {
-  return result.value instanceof TransitionRedirect;
 }
 
 export let idleTransition: Transitions["Idle"] = {
@@ -351,7 +358,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   // We know which loads to commit and which to ignore by incrementing this ID.
   let currentLoadId = 0;
 
-  let transitions = new Map<string, Transition>();
+  let transitions = new Map<string, SubmissionTransition>();
   let actionControllers = new Map<string, AbortController>();
 
   let pendingLoads = new Map<
@@ -406,17 +413,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    // <Form id> -> useSubmission(id), useActionData(id)
+    // <Form id> -> useTransition(id), useActionData(id)
     if (isKeyedPostSubmission(location)) {
       await handleKeyedPostSubmission(location, matches);
     }
 
-    // <Form id> action redirected -> useSubmission(id)
+    // <Form id> action redirected -> useTransition(id)
     else if (isKeyedActionRedirect(location)) {
       await handleKeyedActionRedirect(location, matches);
     }
 
-    // <Form id method="get"/> -> useSubmission(id)
+    // <Form id method="get"/> -> useTransition(id)
     else if (isKeyedGetSubmission(location)) {
       await handleKeyedGetSubmission(location, matches);
     }
@@ -426,17 +433,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
       await handleKeyedGetSubmissionRedirect(location, matches);
     }
 
-    // <Form>, submit() -> useSubmission(), useActionData()
+    // <Form>, submit() -> useTransition(), useActionData()
     else if (isNormalPostSubmission(location)) {
       await handleNormalPostSubmission(location, matches);
     }
 
-    // <Form>, submit() action redirected -> useSubmission()
+    // <Form>, submit() action redirected -> useTransition()
     else if (isNormalActionRedirect(location)) {
       await handleNormalActionRedirect(location, matches);
     }
 
-    // <Form method="get"/>, useSubmission()
+    // <Form method="get"/>, useTransition()
     else if (isNormalGetSubmission(location)) {
       await handleNormalGetSubmission(location, matches);
     }
@@ -1352,9 +1359,15 @@ function createRedirectLocation(href: string, state: any = null) {
   return { pathname, search, hash: "", key: "", state };
 }
 
-function makeFormData(urlSearchString: string): FormData {
+export function makeFormData(urlSearchString: string): FormData {
   let formData = new FormData();
   let params = new URLSearchParams(urlSearchString);
   for (let [key, value] of params) formData.append(key, value);
   return formData;
+}
+
+function isRedirectResult(
+  result: RouteLoaderResult
+): result is RouteLoaderRedirectResult {
+  return result.value instanceof TransitionRedirect;
 }
