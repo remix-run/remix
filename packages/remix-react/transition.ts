@@ -50,7 +50,7 @@ export interface TransitionManagerState {
   /**
    * Tracks the latest, non-keyed pending submission
    */
-  transition?: Transition;
+  transition: Transition;
 
   /**
    * The next location being loaded.
@@ -101,7 +101,7 @@ export enum LoadTypes {
   getSubmissionRedirect = "getSubmissionRedirect"
 }
 
-interface Transitions {
+export interface Transitions {
   Idle: {
     state: TransitionStates.idle;
     type: "idle";
@@ -169,7 +169,6 @@ export interface GenericSubmission {
   body: string;
   encType: string;
   submissionKey?: string;
-  id: number;
 }
 
 export interface GenericPostSubmission extends GenericSubmission {
@@ -331,6 +330,14 @@ function isRedirectResult(
   return result.value instanceof TransitionRedirect;
 }
 
+export let idleTransition: Transitions["Idle"] = {
+  state: TransitionStates.idle,
+  formData: undefined,
+  method: undefined,
+  nextLocation: undefined,
+  type: "idle"
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
@@ -366,14 +373,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let matches = matchClientRoutes(routes, init.location);
   invariant(matches, "No initial route matches!");
 
-  let transition: Transitions["Idle"] = {
-    state: TransitionStates.idle,
-    type: "idle",
-    formData: undefined,
-    method: undefined,
-    nextLocation: undefined
-  };
-
   let state: TransitionManagerState = {
     location: init.location,
     loaderData: init.loaderData || {},
@@ -383,7 +382,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     errorBoundaryId: init.errorBoundaryId || null,
     matches,
     transitions: new Map(),
-    transition,
+    transition: idleTransition,
     nextMatches: undefined,
     nextLocation: undefined
   };
@@ -402,6 +401,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
   async function send(location: Location<any>) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
+
+    if (isHashChangeOnly(location)) {
+      return;
+    }
 
     // <Form id> -> useSubmission(id), useActionData(id)
     if (isKeyedPostSubmission(location)) {
@@ -508,7 +511,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({
       nextLocation: location,
       nextMatches: matches,
-      transition: undefined,
+      transition: idleTransition,
       transitions: new Map(transitions)
     });
 
@@ -525,15 +528,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
     actionControllers.delete(key);
 
     if (isRedirectResult(result)) {
-      let { submissionKey, method, body, encType, action, id } = location.state;
+      let { submissionKey, method, body, encType, action } = location.state;
       let actionRedirect: KeyedActionRedirect = {
         isKeyedActionRedirect: true,
         submissionKey,
         method,
         body,
         encType,
-        action,
-        id
+        action
       };
       init.onRedirect(
         createRedirectLocation(result.value.location, actionRedirect),
@@ -629,7 +631,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({
       nextLocation: location,
       nextMatches: matches,
-      transition: undefined,
+      transition: idleTransition,
       transitions: new Map(transitions)
     });
 
@@ -666,13 +668,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isRedirectResult(result)) {
-      let { action, body, encType, id, method } = location.state;
+      let { action, body, encType, method } = location.state;
       let actionRedirect: NormalActionRedirect = {
         isActionRedirect: true,
         action,
         body,
         encType,
-        id,
         method
       };
       init.onRedirect(
@@ -810,6 +811,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     await loadNormally(location, matches);
   }
 
+  function isHashChangeOnly(location: Location) {
+    return (
+      createHref(state.location) === createHref(location) &&
+      state.location.hash !== location.hash
+    );
+  }
+
   function flagInterruptedSubmission() {
     if (state.transition?.state === TransitionStates.submitting) {
       interruptedSubmission = true;
@@ -871,8 +879,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           body: location.state.body,
           encType: location.state.encType,
           method: location.state.method,
-          submissionKey: location.state.submissionKey,
-          id: location.state.id
+          submissionKey: location.state.submissionKey
         };
         init.onRedirect(
           createRedirectLocation(redirect.location, redirectState),
@@ -918,7 +925,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         matches,
         nextLocation: undefined,
         nextMatches: undefined,
-        transition: undefined,
+        transition: idleTransition,
         transitions: new Map(),
         error,
         errorBoundaryId,
@@ -937,7 +944,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         matches: state.nextMatches,
         nextLocation: undefined,
         nextMatches: undefined,
-        transition: undefined,
+        transition: idleTransition,
         transitions: new Map(),
         error,
         errorBoundaryId,
@@ -994,14 +1001,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let redirect = findRedirect(results);
     if (redirect) {
       if (isGetSubmission(location)) {
-        let { action, body, encType, id, method } = location.state;
+        let { action, body, encType, method } = location.state;
         let redirectState: NormalGetSubmissionRedirect = {
           isRedirect: true,
           action,
           body,
           encType,
-          method,
-          id
+          method
         };
         init.onRedirect(
           createRedirectLocation(redirect.location, redirectState),
@@ -1023,14 +1029,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let transition: Transitions["Idle"] = {
-      state: TransitionStates.idle,
-      type: "idle",
-      formData: undefined,
-      method: undefined,
-      nextLocation: undefined
-    };
-
     update({
       location,
       matches,
@@ -1040,7 +1038,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionData: actionResult ? actionResult.value : undefined,
       nextLocation: undefined,
       nextMatches: undefined,
-      transition,
+      transition: idleTransition,
       transitions: new Map()
     });
   }

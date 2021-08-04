@@ -1,13 +1,15 @@
-import { Location } from "history";
-import {
+import type { Location } from "history";
+import { parsePath } from "history";
+import type {
   GenericGetSubmission,
   GenericSubmission,
   KeyedGetSubmission,
   KeyedPostSubmission,
-  LoadTypes,
   NormalGetSubmission,
   NormalPostSubmission
 } from "../transition";
+
+import { idleTransition } from "../transition";
 
 import { createTransitionManager, TransitionRedirect } from "../transition";
 import type { TransitionManagerInit } from "../transition";
@@ -59,11 +61,12 @@ function FakeComponent() {
 
 let fakeKey = 0;
 function createLocation(path: string, state: any = null): Location {
-  let [pathname, search] = path.split("?");
+  let { pathname, search, hash } = parsePath(path);
+
   return {
-    pathname,
-    search: search ? `?${search}` : "",
-    hash: "",
+    pathname: pathname || "",
+    search: search || "",
+    hash: hash || "",
     key: String(++fakeKey),
     state
   };
@@ -80,8 +83,7 @@ function createActionLocation(
     method: "POST",
     body: body || "gosh=dang",
     encType: "application/x-www-form-urlencoded",
-    submissionKey,
-    id: 1
+    submissionKey
   };
   return createLocation(path, submission);
 }
@@ -97,8 +99,7 @@ function createGetSubmission(
     method: "GET",
     body: body || "gosh=dang",
     encType: "application/x-www-form-urlencoded",
-    submissionKey,
-    id: 1
+    submissionKey
   };
   return createLocation(path, submission);
 }
@@ -509,6 +510,23 @@ describe("transition manager", () => {
       // describe("on pop", () => {
       //   it.todo("uses cache"); // oof, not sure we want to bring this back!
       // });
+
+      describe("hash change", () => {
+        it.only("does not load anything", async () => {
+          let t = setup();
+          await t.tm.send(createLocation("/p/one"));
+          expect(t.parentLoader.mock.calls.length).toBe(0);
+          expect(t.paramLoader.mock.calls.length).toBe(1);
+
+          await t.tm.send(createLocation("/p/one#tacos"));
+          expect(t.parentLoader.mock.calls.length).toBe(0);
+          expect(t.paramLoader.mock.calls.length).toBe(1);
+
+          await t.tm.send(createLocation("/p/one#burgers"));
+          expect(t.parentLoader.mock.calls.length).toBe(0);
+          expect(t.paramLoader.mock.calls.length).toBe(1);
+        });
+      });
     });
 
     describe("with shouldReload", () => {
@@ -1008,8 +1026,7 @@ describe("transition manager", () => {
         action: "/",
         method: "POST",
         body: "name=Ryan&age=40",
-        encType: "application/x-www-form-urlencoded",
-        id: 1
+        encType: "application/x-www-form-urlencoded"
       };
       let location = createLocation("/", submission);
       tm.send(location);
@@ -1045,8 +1062,7 @@ describe("transition manager", () => {
       method: "POST",
       body: "name=Ryan&age=40",
       encType: "application/x-www-form-urlencoded",
-      submissionKey: SUBMISSION_KEY,
-      id: 1
+      submissionKey: SUBMISSION_KEY
     };
 
     it("tracks transitions", async () => {
@@ -1773,38 +1789,38 @@ describe("transition manager", () => {
 
             let A = t.post("/foo", keyA);
             expect(t.getState().nextLocation).toBe(A.location);
-            expect(t.getState().transition).toBeUndefined();
+            expect(t.getState().transition).toBe(idleTransition);
             let B = t.post("/foo", keyB);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().transition).toBeUndefined();
+            expect(t.getState().transition).toBe(idleTransition);
 
             await A.action.resolve("A ACTION");
             expect(t.getState().keyedActionData[keyA]).toBe("A ACTION");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().transition).toBeUndefined();
+            expect(t.getState().transition).toBe(idleTransition);
 
             await B.action.resolve("B ACTION");
             expect(t.getState().keyedActionData[keyB]).toBe("B ACTION");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().transition).toBeUndefined();
+            expect(t.getState().transition).toBe(idleTransition);
 
             await A.loader.resolve("[A]");
             expect(t.getState().loaderData.foo).toBe("[A]");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(originalLocation);
             expect(t.getState().nextLocation).toBe(B.location);
-            expect(t.getState().transition).toBeUndefined();
+            expect(t.getState().transition).toBe(idleTransition);
 
             await B.loader.resolve("[A,B]");
             expect(t.getState().loaderData.foo).toBe("[A,B]");
             expect(t.getState().actionData).toBeUndefined();
             expect(t.getState().location).toBe(B.location);
             expect(t.getState().nextLocation).toBeUndefined();
-            expect(t.getState().transition).toBeUndefined();
+            expect(t.getState().transition).toBe(idleTransition);
           });
         });
 
@@ -2305,8 +2321,7 @@ describe("transition manager", () => {
         action: "/",
         method: "GET",
         body: "gosh=dang",
-        encType: "application/x-www-form-urlencoded",
-        id: 1
+        encType: "application/x-www-form-urlencoded"
       };
 
       tm.send(createLocation("/", submission)).then(() => navDeferred.promise);
@@ -2330,8 +2345,7 @@ describe("transition manager", () => {
         action: "/",
         method: "GET",
         body: "gosh=dang",
-        encType: "application/x-www-form-urlencoded",
-        id: 1
+        encType: "application/x-www-form-urlencoded"
       };
 
       tm.send(createLocation("/", submission)).then(() => navDeferred.promise);
