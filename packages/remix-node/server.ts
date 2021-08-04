@@ -167,24 +167,21 @@ async function handleDataRequest(
     });
   }
 
+  response.headers.append("Server-Timing", getServerTimeHeader(timings));
+
   if (isRedirectResponse(response)) {
     // We don't have any way to prevent a fetch request from following
     // redirects. So we use the `X-Remix-Redirect` header to indicate the
     // next URL, and then "follow" the redirect manually on the client.
     let locationHeader = response.headers.get("Location");
     response.headers.delete("Location");
+    response.headers.append("X-Remix-Redirect", locationHeader!);
 
     return new Response("", {
       status: 204,
-      headers: {
-        ...Object.fromEntries(response.headers),
-        "X-Remix-Redirect": locationHeader!,
-        "Server-Timing": getServerTimeHeader(timings)
-      }
+      headers: response.headers
     });
   }
-
-  response.headers.append("Server-Timing", getServerTimeHeader(timings));
 
   return response;
 }

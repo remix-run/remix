@@ -19,13 +19,19 @@ let fakeGists = [
 
 export async function loader() {
   if (process.env.NODE_ENV !== "development") {
-    return Promise.resolve(fakeGists);
+    return json(fakeGists, {
+      headers: {
+        "Server-Timing": "anything;dur=20"
+      }
+    });
   }
 
   let res = await fetch(`https://api.github.com/gists`);
   const result = await res.json();
   return json(result, {
-    headers: { "Server-Timing": "anything;dur=20" }
+    headers: {
+      "Server-Timing": "anything;dur=20"
+    }
   });
 }
 
