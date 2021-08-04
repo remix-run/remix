@@ -119,12 +119,12 @@ export async function timer<Result>({
   fn: () => Promise<Result>;
   timings: Timings;
 }): Promise<Result> {
-  const start = Date.now();
+  const start = performance.now();
   const result = await fn();
   type = type.replace(/ /g, "_");
   let timingType = timings[type];
   if (!timingType) timingType = timings[type] = [];
-  timingType.push({ name, type, time: Date.now() - start });
+  timingType.push({ name, type, time: performance.now() - start });
   return result;
 }
 

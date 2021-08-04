@@ -37,6 +37,7 @@ describe("Server-Timing Header results", () => {
 
         // root loader, layout loader, child loader, custom server-timing
         expect(timings.length).toBe(4);
+        expect(serverTiming).toContain("anything;dur=20");
       });
     });
 
