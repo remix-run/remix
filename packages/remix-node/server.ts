@@ -38,7 +38,7 @@ export interface RequestHandler {
 export function createRequestHandler({
   build,
   mode,
-  serverTiming // TODO: Use this to enable/disable Server-Timing headers
+  serverTiming
 }: {
   build: ServerBuild;
   mode?: string;
@@ -49,15 +49,22 @@ export function createRequestHandler({
 
   return (request, loadContext = {}) =>
     isDataRequest(request)
-      ? handleDataRequest(request, loadContext, build, routes)
-      : handleDocumentRequest(request, loadContext, build, routes, serverMode);
+      ? handleDataRequest(request, loadContext, build, routes, {
+          serverMode,
+          serverTiming
+        })
+      : handleDocumentRequest(request, loadContext, build, routes, {
+          serverMode,
+          serverTiming
+        });
 }
 
 async function handleDataRequest(
   request: Request,
   loadContext: AppLoadContext,
   build: ServerBuild,
-  routes: ServerRoute[]
+  routes: ServerRoute[],
+  { serverTiming }: { serverMode: ServerMode; serverTiming?: boolean }
 ): Promise<Response> {
   let url = new URL(request.url);
   const timings: Timings = {};
@@ -94,11 +101,11 @@ async function handleDataRequest(
   let response: Response;
 
   function timeTiedToTiming<R>(
-    args: Omit<Parameters<typeof timer>[0], "timings">
+    args: Omit<Parameters<typeof timer>[0], "timings" | "type">
   ) {
     return timer<R>({
       name: args.name,
-      type: args.type,
+      type: isAction ? "action" : "loader",
       timings,
       fn: args.fn as () => Promise<R>
     });
@@ -137,16 +144,24 @@ async function handleDataRequest(
       });
     }
   } catch (error: unknown) {
-    return json(serializeError(error as Error), {
+    const errorResponse = json(serializeError(error as Error), {
       status: 500,
       headers: {
-        "X-Remix-Error": "unfortunately, yes",
-        "Server-Timing": getServerTimeHeader(timings)
+        "X-Remix-Error": "unfortunately, yes"
       }
     });
+    if (serverTiming) {
+      errorResponse.headers.append(
+        "Server-Timing",
+        getServerTimeHeader(timings)
+      );
+    }
+    return errorResponse;
   }
 
-  response.headers.append("Server-Timing", getServerTimeHeader(timings));
+  if (serverTiming) {
+    response.headers.append("Server-Timing", getServerTimeHeader(timings));
+  }
 
   if (isRedirectResponse(response)) {
     // We don't have any way to prevent a fetch request from following
@@ -155,6 +170,10 @@ async function handleDataRequest(
     let locationHeader = response.headers.get("Location");
     response.headers.delete("Location");
     response.headers.append("X-Remix-Redirect", locationHeader!);
+
+    if (serverTiming) {
+      response.headers.append("Server-Timing", getServerTimeHeader(timings));
+    }
 
     return new Response("", {
       status: 204,
@@ -170,21 +189,13 @@ async function handleDocumentRequest(
   loadContext: AppLoadContext,
   build: ServerBuild,
   routes: ServerRoute[],
-  serverMode: ServerMode
+  {
+    serverMode,
+    serverTiming
+  }: { serverMode: ServerMode; serverTiming?: boolean }
 ): Promise<Response> {
   let url = new URL(request.url);
   const timings: Timings = {};
-
-  function timeTiedToTiming<R>(
-    args: Omit<Parameters<typeof timer>[0], "timings">
-  ) {
-    return timer<R>({
-      name: args.name,
-      type: args.type,
-      timings,
-      fn: args.fn as () => Promise<R>
-    });
-  }
 
   let matches = matchServerRoutes(routes, url.pathname);
   if (!matches) {
@@ -205,7 +216,20 @@ async function handleDocumentRequest(
   let actionErrored: boolean = false;
   let actionResponse: Response | undefined;
 
-  if (isActionRequest(request)) {
+  const isAction = isActionRequest(request);
+
+  function timeTiedToTiming<R>(
+    args: Omit<Parameters<typeof timer>[0], "timings" | "type">
+  ) {
+    return timer<R>({
+      name: args.name,
+      type: isAction ? "action" : "loader",
+      timings,
+      fn: args.fn as () => Promise<R>
+    });
+  }
+
+  if (isAction) {
     let leafMatch = matches[matches.length - 1];
     try {
       actionResponse = await timer({
@@ -224,10 +248,12 @@ async function handleDocumentRequest(
       });
 
       if (isRedirectResponse(actionResponse)) {
-        actionResponse.headers.append(
-          "Server-Timing",
-          getServerTimeHeader(timings)
-        );
+        if (serverTiming) {
+          actionResponse.headers.append(
+            "Server-Timing",
+            getServerTimeHeader(timings)
+          );
+        }
         return actionResponse;
       }
     } catch (error) {
@@ -346,7 +372,11 @@ async function handleDocumentRequest(
     routeLoaderResponses,
     actionResponse
   );
-  headers.append("Server-Timing", getServerTimeHeader(timings));
+
+  if (serverTiming) {
+    headers.append("Server-Timing", getServerTimeHeader(timings));
+  }
+
   let entryMatches = createEntryMatches(renderableMatches, build.assets.routes);
   let routeData = await createRouteData(
     renderableMatches,

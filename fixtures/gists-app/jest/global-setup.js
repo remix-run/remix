@@ -42,6 +42,7 @@ async function startServer(dir) {
 }
 
 module.exports = async () => {
+  process.env.REMIX_SERVER_TIMING = "true";
   let rootDir = path.dirname(__dirname);
   await installDeps(rootDir);
   await runBuild(rootDir);

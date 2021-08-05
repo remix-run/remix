@@ -103,10 +103,7 @@ export function extractData(response: Response): Promise<AppData> {
   return response.text();
 }
 
-export type Timings = Record<
-  string,
-  Array<{ name: string; type: string; time: number }>
->;
+export type Timings = Record<string, Array<{ name: string; time: number }>>;
 
 export async function timer<Result>({
   name,
@@ -115,24 +112,23 @@ export async function timer<Result>({
   timings
 }: {
   name: string;
-  type: string;
+  type: "action" | "loader";
   fn: () => Promise<Result>;
   timings: Timings;
 }): Promise<Result> {
   const start = performance.now();
   const result = await fn();
-  type = type.replace(/ /g, "_");
   let timingType = timings[type];
   if (!timingType) timingType = timings[type] = [];
-  timingType.push({ name, type, time: performance.now() - start });
+  timingType.push({ name, time: performance.now() - start });
   return result;
 }
 
 export function getServerTimeHeader(timings: Timings) {
   return Object.entries(timings)
-    .map(([key, timingInfos]) => {
+    .map(([type, timingInfos]) => {
       return timingInfos.map(
-        info => `${key};dur=${info.time.toFixed(2)};desc="${info.name}"`
+        info => `${type};dur=${info.time.toFixed(2)};desc="${info.name}"`
       );
     })
     .flat()

@@ -9,5 +9,6 @@ function stopServer(serverProc) {
 }
 
 module.exports = async () => {
+  delete process.env.REMIX_SERVER_TIMING;
   await stopServer(global.testServerProc);
 };

@@ -3,8 +3,7 @@ const wait = dur => new Promise(resolve => setTimeout(resolve, dur));
 export async function loader({ time }) {
   const result = await time({
     name: "gists-app-routes-gists-mine-jsx-loader",
-    fn: () => wait(1000).then(() => "some data"),
-    type: "custom"
+    fn: () => wait(1000).then(() => "some data")
   });
 
   return { result };

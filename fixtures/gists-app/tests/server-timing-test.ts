@@ -13,7 +13,9 @@ describe("Server-Timing Header results", () => {
     page = await browser.newPage();
   });
 
-  afterEach(() => browser.close());
+  afterEach(() => {
+    browser.close();
+  });
 
   describe("document request", () => {
     it("has Server-Timing for all loaders", async () => {
