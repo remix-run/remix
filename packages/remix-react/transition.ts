@@ -392,7 +392,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return state;
   }
 
-  async function send(location: Location<any>) {
+  async function send(
+    location: Location<any>,
+    action: "PUSH" | "POP" | "REPLACE"
+  ) {
     let matches = matchClientRoutes(routes, location);
     invariant(matches, "No matches found");
 
@@ -400,8 +403,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
+    // User clicked back/forward, don't submit anything, nobody wants that!
+    if (action === "POP") {
+      await handleNormalGet(location, matches);
+    }
+
     // <Form submissionKey> -> useTransition(id), useActionData(id)
-    if (isKeyedPostSubmission(location)) {
+    else if (isKeyedPostSubmission(location)) {
       await handleKeyedPostSubmission(location, matches);
     }
 

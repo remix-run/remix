@@ -31,7 +31,6 @@ import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 import {
   createTransitionManager,
-  isPostSubmission,
   idleTransition,
   isSubmission,
   makeFormData
@@ -141,21 +140,12 @@ export function RemixEntry({
     actionData
   } = transitionManager.getState();
 
-  React.useEffect(() => {
-    // Repost actions on initial load (refresh or pop from different document)
-    if (isPostSubmission(location)) {
-      let { pathname, search, hash, state } = location;
-      navigator.replace({ pathname, search, hash }, state);
-    }
-    // eslint-disable-next-line
-  }, []); // not synchronization, only do it on mount
-
   // Send new location to the transition manager
   React.useEffect(() => {
     let { location } = transitionManager.getState();
     if (historyLocation === location) return;
-    transitionManager.send(historyLocation);
-  }, [transitionManager, historyLocation]);
+    transitionManager.send(historyLocation, action);
+  }, [transitionManager, historyLocation, action]);
 
   let links = React.useMemo(() => {
     return getLinks(
