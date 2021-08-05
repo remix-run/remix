@@ -22,8 +22,7 @@ Now add this to `team.tsx`, it's another quick fetch to the GitHub API and a com
 
 ```tsx
 import React from "react";
-import { Link, Outlet } from "react-router-dom";
-import { useLoaderData } from "remix";
+import { Link, Outlet, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 interface Member {
