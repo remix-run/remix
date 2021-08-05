@@ -141,7 +141,7 @@ function TaskItem({ task }: { task: Task }) {
         )}
       </button>{" "}
       {task.name}{" "}
-      {actionData?.error && (
+      {transition.state !== "submitting" && actionData?.error && (
         <span style={{ color: "red" }}>Error! {actionData.error}</span>
       )}
     </Form>

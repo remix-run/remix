@@ -30,7 +30,8 @@ export interface TransitionManagerState {
   /**
    * Holds the action data for the latest NormalPostSubmission
    */
-  actionData: AppData;
+  actionData?: AppData;
+  actionDataRouteId?: string;
 
   /**
    * Holds the action data for current KeyedPostSubmission
@@ -54,7 +55,6 @@ export interface TransitionManagerState {
 
   /**
    * The next location being loaded.
-   * TODO: might not need this now that we are always storing a Transition
    */
   nextLocation?: Location;
 
@@ -79,6 +79,7 @@ export interface TransitionManagerInit {
   location: Location;
   loaderData: RouteData;
   actionData?: RouteData;
+  actionDataRouteId?: string;
   keyedActionData?: RouteData;
   error?: Error;
   errorBoundaryId?: null | string;
@@ -369,6 +370,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: init.location,
     loaderData: init.loaderData || {},
     actionData: init.actionData,
+    actionDataRouteId: init.actionDataRouteId,
     keyedActionData: init.keyedActionData || {},
     error: init.error,
     errorBoundaryId: init.errorBoundaryId || null,
@@ -384,11 +386,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     init.onChange(state);
   }
 
+  //// PUBLIC INTERFACE
+
   function getState() {
     return state;
   }
-
-  //// PUBLIC INTERFACE
 
   async function send(location: Location<any>) {
     let matches = matchClientRoutes(routes, location);
@@ -398,7 +400,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    // <Form id> -> useTransition(id), useActionData(id)
+    // <Form submissionKey> -> useTransition(id), useActionData(id)
     if (isKeyedPostSubmission(location)) {
       await handleKeyedPostSubmission(location, matches);
     }
@@ -546,7 +548,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     transitions.set(key, loadTransition);
 
     update({
-      transitions,
+      transitions: new Map(transitions),
       keyedActionData: {
         ...state.keyedActionData,
         [key]: result.value
@@ -685,7 +687,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     update({
       transition: loadTransition,
-      actionData: result.value
+      actionData: result.value,
+      actionDataRouteId: leafMatch.route.id
     });
 
     await loadNormally(location, matches, result);
@@ -1028,6 +1031,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       errorBoundaryId,
       loaderData: makeLoaderData(results, matches),
       actionData: actionResult ? actionResult.value : undefined,
+      actionDataRouteId: actionResult
+        ? matches.slice(-1)[0].route.id
+        : undefined,
       nextLocation: undefined,
       nextMatches: undefined,
       transition: idleTransition,

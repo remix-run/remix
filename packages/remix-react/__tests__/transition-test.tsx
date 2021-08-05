@@ -316,6 +316,7 @@ describe("transition manager", () => {
     expect(t.getState()).toMatchInlineSnapshot(`
       Object {
         "actionData": undefined,
+        "actionDataRouteId": undefined,
         "error": undefined,
         "errorBoundaryId": null,
         "keyedActionData": Object {},
@@ -759,9 +760,11 @@ describe("transition manager", () => {
         createLocation("/child", { isSubmission: true, method: "POST" })
       );
       expect(tm.getState().actionData).toBe("CHILD ACTION");
+      expect(tm.getState().actionDataRouteId).toBe("child");
 
       await tm.send(createLocation("/child"));
       expect(tm.getState().actionData).toBeUndefined();
+      expect(tm.getState().actionDataRouteId).toBeUndefined();
     });
 
     it("calls only the leaf route action", async () => {

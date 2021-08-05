@@ -88,7 +88,8 @@ export function RemixEntry({
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
-    componentDidCatchEmulator: entryComponentDidCatchEmulator
+    componentDidCatchEmulator: entryComponentDidCatchEmulator,
+    matches: documentMatches
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -96,28 +97,27 @@ export function RemixEntry({
     [manifest, routeModules]
   );
 
-  let [, forceUpdate] = React.useState({});
-
-  let [
-    componentDidCatchEmulator,
-    setComponentDidCatchEmulator
-  ] = React.useState(entryComponentDidCatchEmulator);
+  let [componentDidCatchEmulator, updateWithEmulator] = React.useState(
+    entryComponentDidCatchEmulator
+  );
 
   let [transitionManager] = React.useState(() => {
     return createTransitionManager({
       routes: clientRoutes,
       actionData: documentActionData,
+      actionDataRouteId: documentActionData
+        ? documentMatches.slice(-1)[0].route.id
+        : undefined,
       loaderData: documentLoaderData,
       location: historyLocation,
       onRedirect: _navigator.replace,
       onChange: state => {
-        setComponentDidCatchEmulator({
+        updateWithEmulator({
           error: state.error,
           loaderBoundaryRouteId: state.errorBoundaryId,
           renderBoundaryRouteId: null,
           trackBoundaries: false
         });
-        forceUpdate({});
       }
     });
   });
@@ -793,15 +793,20 @@ export function useActionData<T = AppData>(
   submissionKey?: string
 ): T | undefined {
   let { transitionManager } = useRemixEntryContext();
+  let { id: routeId } = useRemixRouteContext();
+  let state = transitionManager.getState();
+
   React.useEffect(() => {
     if (submissionKey) {
       return transitionManager.registerKeyedActionDataRead(submissionKey);
     }
   }, [submissionKey, transitionManager]);
 
-  return submissionKey
-    ? transitionManager.getState().keyedActionData[submissionKey]
-    : transitionManager.getState().actionData;
+  if (submissionKey) {
+    return state.keyedActionData[submissionKey];
+  } else {
+    return state.actionDataRouteId === routeId ? state.actionData : undefined;
+  }
 }
 
 /**
