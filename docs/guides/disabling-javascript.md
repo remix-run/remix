@@ -18,14 +18,21 @@ Now open `root.tsx`, bring in `useMatches` and add this:
 
 ```tsx [2,6,8-9,21-22]
 import React from "react";
-import { Meta, Links, Scripts, useMatches } from "remix";
-import { Outlet } from "react-router-dom";
+import {
+  Meta,
+  Links,
+  Scripts,
+  Outlet,
+  useMatches,
+} from "remix";
 
 export default function App() {
   let matches = useMatches();
 
   // If at least one route wants to hydrate, this will return true
-  let includeScripts = matches.some(match => match.handle?.hydrate);
+  let includeScripts = matches.some(
+    (match) => match.handle?.hydrate
+  );
 
   // then use the flag to render scripts or not
   return (

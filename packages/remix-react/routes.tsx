@@ -10,7 +10,7 @@ import {
   isRedirectResponse
 } from "./data";
 import { CatchValue, Submission, TransitionRedirect } from "./transition";
-import { preloadBlockingLinks } from "./linksPreloading";
+import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
 
 export interface RouteManifest<Route> {
@@ -66,6 +66,7 @@ export interface ClientRoute extends Route {
   CatchBoundary?: any;
   children?: ClientRoute[];
   element: ReactNode;
+  module: string;
 }
 
 type RemixRouteComponentType = ComponentType<{ id: string }>;
@@ -80,6 +81,7 @@ export function createClientRoute(
     element: <Component id={entryRoute.id} />,
     id: entryRoute.id,
     path: entryRoute.path,
+    module: entryRoute.module,
     loader: createLoader(entryRoute, routeModulesCache),
     action: createAction(entryRoute),
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
@@ -126,35 +128,32 @@ function createShouldReload(route: EntryRoute, routeModules: RouteModules) {
   return shouldReload;
 }
 
+async function loadRouteModuleWithBlockingLinks(
+  route: EntryRoute,
+  routeModules: RouteModules
+) {
+  let routeModule = await loadRouteModule(route, routeModules);
+  await prefetchStyleLinks(routeModule);
+  return routeModule;
+}
+
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
-    if (!route.hasLoader) {
-      let routeModule = await loadRouteModule(route, routeModules);
-      if (routeModule.links) await preloadBlockingLinks(routeModule);
-      return;
-    }
-
-    let [result, routeModule] = await Promise.all([
+    let [result] = await Promise.all([
       fetchData(url, route.id, signal, submission),
-      loadRouteModule(route, routeModules)
+      loadRouteModuleWithBlockingLinks(route, routeModules)
     ]);
 
-    if (result instanceof Error) {
-      if (routeModule.links) await preloadBlockingLinks(routeModule);
-      throw result;
-    }
+    if (result instanceof Error) throw result;
 
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
 
     if (isCatchResponse(result)) {
-      if (routeModule.links) await preloadBlockingLinks(routeModule);
-
       throw new CatchValue(result.status, await extractData(result.clone()));
     }
 
     let data = await extractData(result);
-    if (routeModule.links) await preloadBlockingLinks(routeModule, data);
     return data;
   };
 

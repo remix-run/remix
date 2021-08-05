@@ -18,10 +18,9 @@ describe("data loading", () => {
 
   describe("transitioning to a new route", () => {
     it("loads data for all routes on the page", async () => {
+      let responses = Utils.collectDataResponses(page);
       await page.goto(`${testServer}/`);
       await Utils.reactIsHydrated(page);
-
-      let responses = Utils.collectDataResponses(page);
 
       await page.click('a[href="/gists"]');
       await page.waitForSelector('[data-test-id="/gists/index"]');

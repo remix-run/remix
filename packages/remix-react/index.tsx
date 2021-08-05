@@ -1,5 +1,6 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
+export { Outlet } from "react-router-dom";
 
 export type { FormProps, SubmitOptions, SubmitFunction } from "./components";
 export {
@@ -7,7 +8,9 @@ export {
   Links,
   Scripts,
   Link,
+  NavLink,
   Form,
+  PrefetchPageLinks,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -28,8 +31,6 @@ export type { FormMethod, FormEncType } from "./data";
 
 export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
-
-export { block } from "./linksPreloading";
 
 export type { ShouldReloadFunction } from "./routeModules";
 

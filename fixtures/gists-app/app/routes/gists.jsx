@@ -44,7 +44,11 @@ export default function Gists() {
         <ul>
           {users.map(user => (
             <li key={user.id}>
-              <Link to={user.id} className="text-blue-700 underline">
+              <Link
+                prefetch="intent"
+                to={user.id}
+                className="text-blue-700 underline"
+              >
                 {user.name} {locationPending && "..."}
               </Link>
             </li>

@@ -13,8 +13,7 @@ These components are to be used once inside of your root route (`root.tsx`). The
 
 ```tsx [2,10,11,15]
 import React from "react";
-import { Meta, Links, Scripts } from "remix";
-import { Outlet } from "react-router-dom";
+import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
   return (
@@ -31,6 +30,53 @@ export default function App() {
     </html>
   );
 }
+```
+
+## `<Link>`
+
+This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of clientside routing in Remix.
+
+It wraps React Router's Link with some extra behavior around resource prefetching.
+
+```tsx
+import { Link } from "remix";
+
+export default function GlobalNav() {
+  return (
+    <nav>
+      <Link to="/dashboard">Dashboard</Link>{" "}
+      <Link to="/account">Account</Link>{" "}
+      <Link to="/support">Dashboard</Link>
+    </nav>
+  );
+}
+```
+
+### `<Link prefetch>`
+
+In our effort to remove all loading states from your UI, `Link` can automatically prefetch all the resources the next page needs: JavaScript modules, stylesheets, and data. This prop controls if and when that happens.
+
+```tsx
+<Link /> // defaults to "none"
+<Link prefetch="none" />
+<Link prefetch="intent" />
+<Link prefetch="render" />
+```
+
+- **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
+- **"intent"** - Recommended if you want to prefetch. Fetches when when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
+- **"render"** - Fetches when the link is rendered.
+
+<docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
+
+Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>` tags, which provides a lot subtle benefits (like respecting HTTP cache headers, doing the work in browser idle time, using a different thread than your app, etc.) but the implementation might mess with your CSS since the link tags are rendered inside of your anchor tag. This means `a *:last-child {}` style selectors won't work. You'll need to change them to `a *:last-of-type {}` and you should be good. We will eventually get rid of this limitation.
+
+## `<Outlet>`
+
+This is simply a re-export from React Router for convenience and potential future Remix behavior. It is recommended that you import from Remix.
+
+```tsx
+import { Outlet } from "remix";
 ```
 
 ## ~~`useRouteData`~~
@@ -500,7 +546,8 @@ This tells you what the next location is going to be. Its most useful when match
 For example, this `Link` knows when it's page is loading and it's about to become active:
 
 ```tsx [7-9]
-import { Link, useResolvedPath } from "react-router-dom";
+import { useResolvedPath } from "react-router-dom";
+import { Link } from "remix";
 
 function PendingLink({ to, children }) {
   let transition = useTransition();
@@ -1861,8 +1908,7 @@ Now we can read the message in a loader.
 
 ```js
 import React from "react";
-import { Outlet } from "react-router-dom";
-import { Meta, Links, Scripts, json } from "remix";
+import { Meta, Links, Scripts, Outlet, json } from "remix";
 
 import { getSession, commitSession } from "./sessions";
 

@@ -3,8 +3,6 @@ import { useLoaderData, Link } from "remix";
 
 import redTextHref from "~/styles/redText.css";
 import blueTextHref from "~/styles/blueText.css";
-// import guitar from "img:../components/guitar.jpg?width=500&height=500";
-// import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
 
 interface User {
   name: string;
@@ -18,7 +16,7 @@ export let loader: LoaderFunction = (): User[] => {
   ];
 };
 
-export let links: LinksFunction = ({ data }: { data: any[] }) => {
+export let links: LinksFunction = () => {
   // this blocks on transitions automatically
   let styleLink = { rel: "stylesheet", href: redTextHref };
   let nonMatching = {
@@ -29,16 +27,10 @@ export let links: LinksFunction = ({ data }: { data: any[] }) => {
 
   let fails = { rel: "stylesheet", href: "/fails.css" };
 
-  // block on this image
-  // let blocker = block({ rel: "preload", as: "image", href: guitar.src });
+  // preload another page
+  let pageLink = { page: `/gists/mjackson` };
 
-  // preload gist pages, get data for the first
-  let pageLinks = data.map((user, index) => ({
-    page: `/gists/${user.id}`,
-    data: index === 0
-  }));
-
-  return [styleLink, nonMatching, fails, ...pageLinks];
+  return [styleLink, nonMatching, fails, pageLink];
 };
 
 export default function LinksPage() {
@@ -48,7 +40,9 @@ export default function LinksPage() {
       <h2>Links Page</h2>
       {users.map(user => (
         <li key={user.id}>
-          <Link to={`/gists/${user.id}`}>{user.name}</Link>
+          <Link to={`/gists/${user.id}`} prefetch="none">
+            {user.name}
+          </Link>
         </li>
       ))}
       {/*
