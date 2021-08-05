@@ -1,3 +1,5 @@
+import { performance } from "perf_hooks";
+
 import type { Params } from "react-router";
 
 import type { ServerBuild } from "./build";
