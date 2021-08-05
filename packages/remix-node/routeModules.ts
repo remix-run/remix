@@ -16,12 +16,15 @@ export interface RouteModules<RouteModule> {
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (args: {
+  (args: { 
     request: Request;
     context: AppLoadContext;
     params: Params;
     time: typeof timer;
-  }): Promise<Response | string> | Response | string;
+  }):
+    | Promise<Response | AppData>
+    | Response
+    | AppData;
 }
 
 /**

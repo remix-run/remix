@@ -17,6 +17,7 @@ export interface RouteModule {
   handle?: RouteHandle;
   links?: LinksFunction;
   meta?: MetaFunction;
+  shouldReload?: ShouldReloadFunction;
 }
 
 /**
@@ -47,6 +48,31 @@ export interface MetaFunction {
 }
 
 /**
+ * During client side transitions Remix will optimize reloading of routes that
+ * are currently on the page by avoiding loading routes that aren't changing.
+ * However, in some cases, like form submissions or search params Remix doesn't
+ * know which routes need to be reloaded so it reloads them all to be safe.
+ *
+ * This function lets apps further optimize by returning `false` when Remix is
+ * about to reload the route. A common case is a root loader with nothing but
+ * enviornment variables: after form submissions the root probably doesn't need
+ * to be reloaded.
+ */
+export interface ShouldReloadFunction {
+  ({
+    nextLocation,
+    prevLocation,
+    nextParams,
+    prevParams
+  }: {
+    nextLocation: Location<any>;
+    prevLocation: Location<any>;
+    nextParams: Params;
+    prevParams: Params;
+  }): boolean;
+}
+
+/**
  * A React component that is rendered for a route.
  */
 export type RouteComponent = ComponentType<{}>;
@@ -59,7 +85,7 @@ export type RouteHandle = any;
 export async function loadRouteModule(
   route: EntryRoute,
   routeModulesCache: RouteModules
-): Promise<RouteModule | null> {
+): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
     return routeModulesCache[route.id];
   }
@@ -75,7 +101,7 @@ export async function loadRouteModule(
     // assets, the manifest path, but not the documents 😬
     window.location.reload();
     return new Promise(() => {
-      // check out of this hook cause the DJs never gonna resolve this
+      // check out of this hook cause the DJs never gonna re[s]olve this
     });
   }
 }
