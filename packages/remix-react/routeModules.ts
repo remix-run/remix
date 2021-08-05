@@ -4,7 +4,7 @@ import type { Params } from "react-router"; // TODO: import/export from react-ro
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { EntryRoute } from "./routes";
+import type { ClientRoute, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
 import { Submission } from "./transition";
 
@@ -37,7 +37,7 @@ export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
  * the document on route transitions.
  */
 export interface LinksFunction {
-  (args: { data: AppData }): LinkDescriptor[];
+  (): LinkDescriptor[];
 }
 
 /**
@@ -85,7 +85,7 @@ export type RouteComponent = ComponentType<{}>;
 export type RouteHandle = any;
 
 export async function loadRouteModule(
-  route: EntryRoute,
+  route: EntryRoute | ClientRoute,
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {

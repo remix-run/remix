@@ -1,15 +1,23 @@
 import type { Action, Location } from "history";
-import type { FormHTMLAttributes } from "react";
+import type {
+  FocusEventHandler,
+  FormHTMLAttributes,
+  MouseEventHandler,
+  TouchEventHandler
+} from "react";
 import React from "react";
 import type { Navigator } from "react-router";
 import {
   Router,
-  Link,
+  Link as RouterLink,
+  NavLink as RouterNavLink,
   useLocation,
   useRoutes,
   useNavigate,
+  useHref,
   useResolvedPath
 } from "react-router-dom";
+import type { LinkProps, NavLinkProps } from "react-router-dom";
 
 import { AppData } from "./data";
 import { FormEncType, FormMethod } from "./data";
@@ -22,8 +30,14 @@ import {
   RemixCatchBoundary
 } from "./errorBoundaries";
 import invariant from "./invariant";
-import type { HTMLLinkDescriptor } from "./links";
-import { getLinks } from "./linksPreloading";
+import {
+  getDataLinkHrefs,
+  getModuleLinkHrefs,
+  getNewMatchesForLinks,
+  getStylesheetPrefetchLinks
+} from "./links";
+import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
+import { getLinksForMatches, isPageLinkDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
@@ -47,7 +61,6 @@ interface RemixEntryContextType {
   routeModules: RouteModules;
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
-  links: HTMLLinkDescriptor[];
   transitionManager: ReturnType<typeof createTransitionManager>;
 }
 
@@ -148,17 +161,6 @@ export function RemixEntry({
     });
   }, [transitionManager, historyLocation]);
 
-  let links = React.useMemo(() => {
-    return getLinks(
-      location,
-      matches,
-      loaderData,
-      routeModules,
-      manifest,
-      clientRoutes
-    );
-  }, [location, matches, loaderData, routeModules, manifest, clientRoutes]);
-
   // If we tried to render and failed, and the app threw before rendering any
   // routes, get the error and pass it to the ErrorBoundary to emulate
   // `componentDidCatch`
@@ -184,7 +186,6 @@ export function RemixEntry({
         routeModules,
         serverHandoffString,
         clientRoutes,
-        links,
         routeData: loaderData,
         actionData,
         transitionManager
@@ -368,18 +369,245 @@ export function RemixRoute({ id }: { id: string }) {
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
-export { Link };
+/**
+ * Defines the prefetching behavior of the link:
+ *
+ * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "render": Fetched when the link is rendered
+ * - "none": Never fetched
+ */
+type PrefetchBehavior = "intent" | "render" | "none";
+
+interface RemixLinkProps extends LinkProps {
+  prefetch?: PrefetchBehavior;
+}
+
+interface RemixNavLinkProps extends NavLinkProps {
+  prefetch?: PrefetchBehavior;
+}
+
+interface PrefetchHandlers {
+  onFocus?: FocusEventHandler<Element>;
+  onBlur?: FocusEventHandler<Element>;
+  onMouseEnter?: MouseEventHandler<Element>;
+  onMouseLeave?: MouseEventHandler<Element>;
+  onTouchStart?: TouchEventHandler<Element>;
+}
+
+function usePrefetchBehavior(
+  prefetch: PrefetchBehavior,
+  theirElementProps: PrefetchHandlers
+) {
+  let [maybePrefetch, setMaybePrefetch] = React.useState(false);
+  let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
+  let {
+    onFocus,
+    onBlur,
+    onMouseEnter,
+    onMouseLeave,
+    onTouchStart
+  } = theirElementProps;
+
+  React.useEffect(() => {
+    if (prefetch === "render") {
+      setShouldPrefetch(true);
+    }
+  }, [prefetch]);
+
+  let setIntent = () => {
+    if (prefetch === "intent") {
+      setMaybePrefetch(true);
+    }
+  };
+
+  let cancelIntent = () => {
+    if (prefetch === "intent") {
+      setMaybePrefetch(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (maybePrefetch) {
+      let id = setTimeout(() => {
+        setShouldPrefetch(true);
+      }, 100);
+      return () => {
+        clearTimeout(id);
+      };
+    }
+  }, [maybePrefetch]);
+
+  return [
+    shouldPrefetch,
+    {
+      onFocus: composeEventHandlers(onFocus, setIntent),
+      onBlur: composeEventHandlers(onBlur, cancelIntent),
+      onMouseEnter: composeEventHandlers(onMouseEnter, setIntent),
+      onMouseLeave: composeEventHandlers(onMouseLeave, cancelIntent),
+      onTouchStart: composeEventHandlers(onTouchStart, setIntent)
+    }
+  ];
+}
+
+export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
+  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+    let href = useHref(to);
+    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+      prefetch,
+      props
+    );
+    return (
+      <>
+        <RouterNavLink
+          ref={forwardedRef}
+          to={to}
+          {...prefetchHandlers}
+          {...props}
+        />
+        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+      </>
+    );
+  }
+);
+
+export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
+  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+    let href = useHref(to);
+    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+      prefetch,
+      props
+    );
+    return (
+      <>
+        <RouterLink
+          ref={forwardedRef}
+          to={to}
+          {...prefetchHandlers}
+          {...props}
+        />
+        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+      </>
+    );
+  }
+);
+
+export function composeEventHandlers<
+  EventType extends React.SyntheticEvent | Event
+>(
+  theirHandler: ((event: EventType) => any) | undefined,
+  ourHandler: (event: EventType) => any
+): (event: EventType) => any {
+  return event => {
+    theirHandler && theirHandler(event);
+    if (!event.defaultPrevented) {
+      ourHandler(event);
+    }
+  };
+}
 
 /**
  * Renders the `<link>` tags for the current routes.
  */
 export function Links() {
-  let { links } = useRemixEntryContext();
+  let { matches, routeModules, manifest } = useRemixEntryContext();
+
+  let links = React.useMemo(
+    () => getLinksForMatches(matches, routeModules, manifest),
+    [matches, routeModules, manifest]
+  );
 
   return (
     <>
-      {links.map(link => (
-        <link key={link.rel + link.href} {...link} />
+      {links.map(link =>
+        isPageLinkDescriptor(link) ? (
+          <PrefetchPageLinks key={link.page} {...link} />
+        ) : (
+          <link key={link.rel + link.href} {...link} />
+        )
+      )}
+    </>
+  );
+}
+
+export function PrefetchPageLinks({
+  page,
+  ...dataLinkProps
+}: PrefetchPageDescriptor) {
+  let { clientRoutes } = useRemixEntryContext();
+  let matches = React.useMemo(() => matchClientRoutes(clientRoutes, page), [
+    clientRoutes,
+    page
+  ]);
+
+  if (!matches) {
+    console.warn(`Tried to prefetch ${page} but no routes matched.`);
+    return null;
+  }
+
+  return (
+    <PrefetchPageLinksImpl page={page} matches={matches} {...dataLinkProps} />
+  );
+}
+
+function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
+  let { routeModules } = useRemixEntryContext();
+
+  let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
+
+  React.useEffect(() => {
+    let interrupted: boolean = false;
+
+    getStylesheetPrefetchLinks(matches, routeModules).then(links => {
+      if (!interrupted) setStyleLinks(links);
+    });
+
+    return () => {
+      interrupted = true;
+    };
+  }, [matches, routeModules]);
+
+  return styleLinks;
+}
+
+function PrefetchPageLinksImpl({
+  page,
+  matches: nextMatches,
+  ...linkProps
+}: PrefetchPageDescriptor & {
+  matches: RouteMatch<ClientRoute>[];
+}) {
+  let location = useLocation();
+  let { matches, manifest } = useRemixEntryContext();
+
+  let newMatches = React.useMemo(
+    () => getNewMatchesForLinks(page, nextMatches, matches, location),
+    [page, nextMatches, matches, location]
+  );
+
+  let dataHrefs = React.useMemo(
+    () => getDataLinkHrefs(page, newMatches, manifest),
+    [newMatches, page, manifest]
+  );
+
+  let moduleHrefs = React.useMemo(
+    () => getModuleLinkHrefs(newMatches, manifest),
+    [newMatches, manifest]
+  );
+
+  let styleLinks = usePrefetchedStylesheets(newMatches);
+
+  return (
+    <>
+      {dataHrefs.map(href => (
+        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+      ))}
+      {moduleHrefs.map(href => (
+        <link key={href} rel="modulepreload" href={href} {...linkProps} />
+      ))}
+      {styleLinks.map(link => (
+        // these don't spread `linkProps` because they are full link descriptors
+        // already with their own props
+        <link key={link.href} {...link} />
       ))}
     </>
   );
@@ -701,100 +929,103 @@ export function useSubmitImpl(key?: string): SubmitFunction {
   let defaultAction = useFormAction();
   let { transitionManager } = useRemixEntryContext();
 
-  return (target, options = {}) => {
-    let method: string;
-    let action: string;
-    let encType: string;
-    let formData: FormData;
+  return React.useCallback(
+    (target, options = {}) => {
+      let method: string;
+      let action: string;
+      let encType: string;
+      let formData: FormData;
 
-    if (isFormElement(target)) {
-      method = options.method || target.method;
-      action = options.action || target.action;
-      encType = options.encType || target.enctype;
-      formData = new FormData(target);
-    } else if (
-      isButtonElement(target) ||
-      (isInputElement(target) &&
-        (target.type === "submit" || target.type === "image"))
-    ) {
-      let form = target.form;
+      if (isFormElement(target)) {
+        method = options.method || target.method;
+        action = options.action || target.action;
+        encType = options.encType || target.enctype;
+        formData = new FormData(target);
+      } else if (
+        isButtonElement(target) ||
+        (isInputElement(target) &&
+          (target.type === "submit" || target.type === "image"))
+      ) {
+        let form = target.form;
 
-      if (form == null) {
-        throw new Error(`Cannot submit a <button> without a <form>`);
-      }
+        if (form == null) {
+          throw new Error(`Cannot submit a <button> without a <form>`);
+        }
 
-      // <button>/<input type="submit"> may override attributes of <form>
-      method = options.method || target.formMethod || form.method;
-      action = options.action || target.formAction || form.action;
-      encType = options.encType || target.formEnctype || form.enctype;
-      formData = new FormData(form);
+        // <button>/<input type="submit"> may override attributes of <form>
+        method = options.method || target.formMethod || form.method;
+        action = options.action || target.formAction || form.action;
+        encType = options.encType || target.formEnctype || form.enctype;
+        formData = new FormData(form);
 
-      // Include name + value from a <button>
-      if (target.name) {
-        formData.set(target.name, target.value);
-      }
-    } else {
-      if (isHtmlElement(target)) {
-        throw new Error(
-          `Cannot submit element that is not <form>, <button>, or ` +
-            `<input type="submit|image">`
-        );
-      }
-
-      method = options.method || "get";
-      action = options.action || defaultAction;
-      encType = options.encType || "application/x-www-form-urlencoded";
-
-      if (target instanceof FormData) {
-        formData = target;
+        // Include name + value from a <button>
+        if (target.name) {
+          formData.set(target.name, target.value);
+        }
       } else {
-        formData = new FormData();
-
-        if (target instanceof URLSearchParams) {
-          for (let [name, value] of target) {
-            formData.set(name, value);
-          }
-        } else if (target != null) {
-          for (let name of Object.keys(target)) {
-            formData.set(name, target[name]);
-          }
+        if (isHtmlElement(target)) {
+          throw new Error(
+            `Cannot submit element that is not <form>, <button>, or ` +
+              `<input type="submit|image">`
+          );
         }
-      }
-    }
 
-    let { protocol, host } = window.location;
-    let url = new URL(action, `${protocol}//${host}`);
+        method = options.method || "get";
+        action = options.action || defaultAction;
+        encType = options.encType || "application/x-www-form-urlencoded";
 
-    if (method.toLowerCase() === "get") {
-      for (let [name, value] of formData) {
-        if (typeof value === "string") {
-          url.searchParams.set(name, value);
+        if (target instanceof FormData) {
+          formData = target;
         } else {
-          throw new Error(`Cannot submit binary form data using GET`);
+          formData = new FormData();
+
+          if (target instanceof URLSearchParams) {
+            for (let [name, value] of target) {
+              formData.set(name, value);
+            }
+          } else if (target != null) {
+            for (let name of Object.keys(target)) {
+              formData.set(name, target[name]);
+            }
+          }
         }
       }
-    }
 
-    let submission: Submission = {
-      formData,
-      action: url.pathname + url.search,
-      method: method.toUpperCase(),
-      encType,
-      key: Math.random().toString(36).substr(2, 8)
-    };
+      let { protocol, host } = window.location;
+      let url = new URL(action, `${protocol}//${host}`);
 
-    if (key) {
-      transitionManager.send({
-        type: "fetcher",
-        href: submission.action,
-        submission,
-        key
-      });
-    } else {
-      setNextNavigationSubmission(submission);
-      navigate(url.pathname + url.search, { replace: options.replace });
-    }
-  };
+      if (method.toLowerCase() === "get") {
+        for (let [name, value] of formData) {
+          if (typeof value === "string") {
+            url.searchParams.set(name, value);
+          } else {
+            throw new Error(`Cannot submit binary form data using GET`);
+          }
+        }
+      }
+
+      let submission: Submission = {
+        formData,
+        action: url.pathname + url.search,
+        method: method.toUpperCase(),
+        encType,
+        key: Math.random().toString(36).substr(2, 8)
+      };
+
+      if (key) {
+        transitionManager.send({
+          type: "fetcher",
+          href: submission.action,
+          submission,
+          key
+        });
+      } else {
+        setNextNavigationSubmission(submission);
+        navigate(url.pathname + url.search, { replace: options.replace });
+      }
+    },
+    [defaultAction, key, navigate, transitionManager]
+  );
 }
 
 let nextNavigationSubmission: Submission | undefined;

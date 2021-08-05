@@ -606,11 +606,10 @@ In the case of nested routes, the meta tags are merged, so parent routes can add
 
 ## links
 
-The links function defines which `<link>` elements to add to the page when the user visits a page.
+The links function defines which `<link>` elements to add to the page when the user visits a route.
 
 ```tsx
 import type { LinksFunction } from "remix";
-import { block } from "remix";
 
 export let links: LinksFunction = () => {
   return [
@@ -624,18 +623,18 @@ export let links: LinksFunction = () => {
       href: "https://example.com/some/styles.css",
     },
     { page: "/users/123" },
-    block({
+    {
       rel: "preload",
       href: "/images/banner.jpg",
       as: "image",
-    }),
+    },
   ];
 };
 ```
 
-There are three types of link descriptors you can return:
+There are two types of link descriptors you can return:
 
-### HTMLLinkDescriptor
+### HtmlLinkDescriptor
 
 This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
 
@@ -643,7 +642,6 @@ Examples:
 
 ```tsx
 import type { LinksFunction } from "remix";
-import { block } from "remix";
 import stylesHref from "../styles/something.css";
 
 export let links: LinksFunction = () => {
@@ -686,54 +684,17 @@ export let links: LinksFunction = () => {
 };
 ```
 
-### BlockLinkDescriptor
-
-You can block `{ rel: "preload" }` HTMLLinkDescriptors on client side page transitions by wrapping them in `block(descriptor)`.
-
-```tsx
-import type { LinksFunction } from "remix";
-import { block } from "remix";
-
-export let links: LinksFunction = () => {
-  return [
-    block({
-      rel: "preload",
-      as: "image",
-      href: "/img/bunny.jpg",
-    }),
-  ];
-};
-```
-
-When the user clicks a link to this page, the transition will not complete until the image has loaded into the browser cache. This can help prevent layout shift as the user navigates around.
-
-**Note**: The image will not be fully loaded if the user's initial visit to the website is this page. There's no way for Remix to do that.
-
-**Be careful with this API**: Waiting on images or other assets will drastically slow down the transition from one route to another. Use this feature with discretion.
-
 ### PageLinkDescriptor
 
-These descriptors allow you to prefetch the resources for a page the user is _likely_ to navigate to. What do we mean by likely? Some examples:
-
-- User is on the login page, it's likely they'll end up at the dashboard after a successful login attempt, so it's a good idea to prefetch the resources for the dashboard.
-- User is on the shopping cart page, it's likely they'll end up on the checkout page next.
-- User is on an index page of a list of invoices, it's likely they'll end up on an invoice page.
-
-Let's take the login → dashboard example:
+These descriptors allow you to prefetch the resources for a page the user is likely to navigate to. While this API is useful, you might get more mileage out of `<Link prefetch="render">` instead. But if you'd like, you can get the same behavior with this API.
 
 ```js
-import type { LinksFunction } from "remix";
-
-export let links: LinksFunction = () => {
-  return [{ page: "/dashboard" }];
-};
+export function links() {
+  return [{ page: "/posts/public" }];
+}
 ```
 
-You can prefetch the data for the next page with the `data` boolean:
-
-```ts
-{ page: "/users/123", data: true }
-```
+This load up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the next routes) into the browser cache before the user even navigates there.
 
 **Be careful with this feature**. You don't want to download 10MB of JavaScript and data for pages the user probably won't ever visit.
 
