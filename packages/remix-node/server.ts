@@ -35,10 +35,15 @@ export interface RequestHandler {
 /**
  * Creates a function that serves HTTP requests.
  */
-export function createRequestHandler(
-  build: ServerBuild,
-  mode?: string
-): RequestHandler {
+export function createRequestHandler({
+  build,
+  mode,
+  serverTiming // TODO: Use this to enable/disable Server-Timing headers
+}: {
+  build: ServerBuild;
+  mode?: string;
+  serverTiming?: boolean;
+}): RequestHandler {
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 

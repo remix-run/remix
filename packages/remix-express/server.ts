@@ -33,13 +33,15 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
+  serverTiming = !!process.env.REMIX_SERVER_TIMING
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
+  serverTiming?: boolean;
 }) {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let handleRequest = createRemixRequestHandler({ build, mode, serverTiming });
 
   return async (
     req: express.Request,

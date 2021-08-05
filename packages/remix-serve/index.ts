@@ -3,7 +3,19 @@ import compression from "compression";
 import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
 
-export function createApp(buildPath: string, mode = "production") {
+export function createApp({
+  buildDir,
+  mode = process.env.NODE_ENV,
+  serverTiming
+}: {
+  buildDir: string;
+  mode?: string;
+  serverTiming?: boolean;
+}) {
+  if (mode === undefined) {
+    mode = "production";
+  }
+
   let app = express();
 
   app.use(compression());
@@ -13,11 +25,15 @@ export function createApp(buildPath: string, mode = "production") {
   app.all(
     "*",
     mode === "production"
-      ? createRequestHandler({ build: require(buildPath), mode })
+      ? createRequestHandler({ build: require(buildDir), mode, serverTiming })
       : (req, res, next) => {
           // require cache is purged in @remix-run/dev where the file watcher is
-          let build = require(buildPath);
-          return createRequestHandler({ build, mode })(req, res, next);
+          let handleRequest = createRequestHandler({
+            build: require(buildDir),
+            mode,
+            serverTiming
+          });
+          return handleRequest(req, res, next);
         }
   );
 
