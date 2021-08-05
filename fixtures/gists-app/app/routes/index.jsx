@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "remix";
 
 import Shared from "../components/Shared";
@@ -43,7 +43,9 @@ export default function Index() {
             <Link to="/links">Link preloads and stuff</Link>
           </li>
           <li>
-            <Link to="/gists">View Some gists</Link>
+            <Link to="/gists" prefetch="render">
+              View Some gists
+            </Link>
           </li>
           <li>
             <Link to="/gists/mjackson">View Michael's gists</Link>

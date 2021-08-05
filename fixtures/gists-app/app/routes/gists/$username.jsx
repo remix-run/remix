@@ -1,5 +1,5 @@
-import { useParams, Link } from "react-router-dom";
-import { useLoaderData, json, redirect } from "remix";
+import { useParams } from "react-router-dom";
+import { Link, useLoaderData, json, redirect } from "remix";
 
 let fakeGists = [
   {

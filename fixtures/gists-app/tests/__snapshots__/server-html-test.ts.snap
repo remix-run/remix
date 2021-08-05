@@ -7,7 +7,30 @@ exports[`the server HTML for the root URL is correct 1`] = `
     <nav>
       <ul>
         <li><a href=\\"/links\\">Link preloads and stuff</a></li>
-        <li><a href=\\"/gists\\">View Some gists</a></li>
+        <li>
+          <a href=\\"/gists\\">View Some gists</a
+          ><link
+            rel=\\"prefetch\\"
+            as=\\"fetch\\"
+            href=\\"/gists?_data=routes%2Fgists\\"
+          /><link
+            rel=\\"prefetch\\"
+            as=\\"fetch\\"
+            href=\\"/gists?_data=routes%2Fgists%2Findex\\"
+          /><link
+            rel=\\"modulepreload\\"
+            href=\\"/build/routes/gists-PW7O56YK.js\\"
+          /><link
+            rel=\\"modulepreload\\"
+            href=\\"/build/_shared/chunk-OOKQGUJU.js\\"
+          /><link
+            rel=\\"modulepreload\\"
+            href=\\"/build/_shared/chunk-GWKYHAC6.js\\"
+          /><link
+            rel=\\"modulepreload\\"
+            href=\\"/build/routes/gists/index-W6N62P5H.js\\"
+          />
+        </li>
         <li><a href=\\"/gists/mjackson\\">View Michael's gists</a></li>
         <li><a href=\\"/gists/mjijackson\\">Loader Redirect</a></li>
         <li><a href=\\"/fart\\">Broken link</a></li>

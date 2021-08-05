@@ -1,15 +1,23 @@
 import type { Action, Location } from "history";
-import type { FormHTMLAttributes } from "react";
+import type {
+  FocusEventHandler,
+  FormHTMLAttributes,
+  MouseEventHandler,
+  TouchEventHandler
+} from "react";
 import React from "react";
 import type { Navigator } from "react-router";
 import {
   Router,
-  Link,
+  Link as RouterLink,
+  NavLink as RouterNavLink,
   useLocation,
   useRoutes,
   useNavigate,
+  useHref,
   useResolvedPath
 } from "react-router-dom";
+import type { LinkProps, NavLinkProps } from "react-router-dom";
 
 import { AppData } from "./data";
 import { FormEncType, FormMethod } from "./data";
@@ -20,21 +28,22 @@ import {
   RemixErrorBoundary
 } from "./errorBoundaries";
 import invariant from "./invariant";
-import type { HTMLLinkDescriptor } from "./links";
-import { getLinks } from "./linksPreloading";
+import {
+  getDataLinkHrefs,
+  getModuleLinkHrefs,
+  getNewMatchesForLinks,
+  getStylesheetPrefetchLinks
+} from "./links";
+import type { HtmlinkDescriptor, PrefetchPageDescriptor } from "./links";
+import { getLinksForMatches, isPageLinkDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules } from "./routeModules";
-import {
-  createTransitionManager,
-  Fetcher,
-  IDLE_FETCHER,
-  Submission
-} from "./transition";
+import { RouteModules } from "./routeModules";
+import { createTransitionManager, Fetcher, Submission } from "./transition";
 import type { Transition } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -50,7 +59,6 @@ interface RemixEntryContextType {
   routeModules: RouteModules;
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
-  links: HTMLLinkDescriptor[];
   transitionManager: ReturnType<typeof createTransitionManager>;
 }
 
@@ -146,17 +154,6 @@ export function RemixEntry({
     });
   }, [transitionManager, historyLocation]);
 
-  let links = React.useMemo(() => {
-    return getLinks(
-      location,
-      matches,
-      loaderData,
-      routeModules,
-      manifest,
-      clientRoutes
-    );
-  }, [location, matches, loaderData, routeModules, manifest, clientRoutes]);
-
   // If we tried to render and failed, and the app threw before rendering any
   // routes, get the error and pass it to the ErrorBoundary to emulate
   // `componentDidCatch`
@@ -176,7 +173,6 @@ export function RemixEntry({
         routeModules,
         serverHandoffString,
         clientRoutes,
-        links,
         routeData: loaderData,
         actionData,
         transitionManager
@@ -313,18 +309,217 @@ export function RemixRoute({ id }: { id: string }) {
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
-export { Link };
+/**
+ * Defines the prefetching behavior of the link:
+ *
+ * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "render": Fetched when the link is rendered
+ * - "none": Never fetched
+ */
+type PrefetchBehavior = "intent" | "render" | "none";
+
+interface RemixLinkProps extends LinkProps {
+  prefetch?: PrefetchBehavior;
+}
+
+interface RemixNavLinkProps extends LinkProps {
+  prefetch?: PrefetchBehavior;
+}
+
+interface PrefetchHandlers {
+  onFocus?: FocusEventHandler<Element>;
+  onMouseEnter?: MouseEventHandler<Element>;
+  onTouchStart?: TouchEventHandler<Element>;
+}
+
+function usePrefetchBehavior(
+  prefetch: PrefetchBehavior,
+  theirElementProps: PrefetchHandlers
+) {
+  let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
+  let { onFocus, onMouseEnter, onTouchStart } = theirElementProps;
+
+  React.useEffect(() => {
+    if (prefetch === "render") {
+      setShouldPrefetch(true);
+    }
+  }, [prefetch]);
+
+  let setIntent = () => {
+    if (prefetch === "intent") {
+      setShouldPrefetch(true);
+    }
+  };
+
+  return [
+    shouldPrefetch,
+    {
+      onFocus: composeEventHandlers(onFocus, setIntent),
+      onMouseEnter: composeEventHandlers(onMouseEnter, setIntent),
+      onTouchStart: composeEventHandlers(onTouchStart, setIntent)
+    }
+  ];
+}
+
+export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
+  ({ to, prefetch = "intent", ...props }, forwardedRef) => {
+    let href = useHref(to);
+    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+      prefetch,
+      props
+    );
+    return (
+      <>
+        <RouterNavLink
+          ref={forwardedRef}
+          to={to}
+          {...prefetchHandlers}
+          {...props}
+        />
+        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+      </>
+    );
+  }
+);
+
+export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
+  ({ to, prefetch = "intent", ...props }, forwardedRef) => {
+    let href = useHref(to);
+    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+      prefetch,
+      props
+    );
+    return (
+      <>
+        <RouterLink
+          ref={forwardedRef}
+          to={to}
+          {...prefetchHandlers}
+          {...props}
+        />
+        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+      </>
+    );
+  }
+);
+
+export function composeEventHandlers<
+  EventType extends React.SyntheticEvent | Event
+>(
+  theirHandler: ((event: EventType) => any) | undefined,
+  ourHandler: (event: EventType) => any
+): (event: EventType) => any {
+  return event => {
+    theirHandler && theirHandler(event);
+    if (!event.defaultPrevented) {
+      return ourHandler(event);
+    }
+  };
+}
 
 /**
  * Renders the `<link>` tags for the current routes.
  */
 export function Links() {
-  let { links } = useRemixEntryContext();
+  let { matches, routeModules, manifest } = useRemixEntryContext();
+
+  let links = React.useMemo(
+    () => getLinksForMatches(matches, routeModules, manifest),
+    [matches, routeModules, manifest]
+  );
 
   return (
     <>
-      {links.map(link => (
-        <link key={link.rel + link.href} {...link} />
+      {links.map(link =>
+        isPageLinkDescriptor(link) ? (
+          <PrefetchPageLinks key={link.page} {...link} />
+        ) : (
+          <link key={link.rel + link.href} {...link} />
+        )
+      )}
+    </>
+  );
+}
+
+export function PrefetchPageLinks({
+  page,
+  ...dataLinkProps
+}: PrefetchPageDescriptor) {
+  let { clientRoutes } = useRemixEntryContext();
+  let matches = React.useMemo(() => matchClientRoutes(clientRoutes, page), [
+    clientRoutes,
+    page
+  ]);
+
+  if (!matches) {
+    console.warn(`Tried to prefetch ${page} but no routes matched.`);
+    return null;
+  }
+
+  return (
+    <PrefetchPageLinksImpl page={page} matches={matches} {...dataLinkProps} />
+  );
+}
+
+function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
+  let { routeModules } = useRemixEntryContext();
+
+  let [styleLinks, setStyleLinks] = React.useState<HtmlinkDescriptor[]>([]);
+
+  React.useEffect(() => {
+    let interrupted: boolean = false;
+
+    getStylesheetPrefetchLinks(matches, routeModules).then(links => {
+      if (!interrupted) setStyleLinks(links);
+    });
+
+    return () => {
+      interrupted = true;
+    };
+  }, [matches, routeModules]);
+
+  return styleLinks;
+}
+
+function PrefetchPageLinksImpl({
+  page,
+  matches: nextMatches,
+  ...linkProps
+}: PrefetchPageDescriptor & {
+  matches: RouteMatch<ClientRoute>[];
+}) {
+  let location = useLocation();
+  let { matches, manifest } = useRemixEntryContext();
+
+  let newMatches = React.useMemo(
+    () => getNewMatchesForLinks(page, nextMatches, matches, location),
+    [page, nextMatches, matches, location]
+  );
+
+  let dataHrefs = React.useMemo(
+    () => getDataLinkHrefs(page, newMatches, manifest),
+    [newMatches, page, manifest]
+  );
+
+  let moduleHrefs = React.useMemo(
+    () => getModuleLinkHrefs(newMatches, manifest),
+    [newMatches, manifest]
+  );
+
+  let styleLinks = usePrefetchedStylesheets(newMatches);
+
+  return (
+    <>
+      {dataHrefs.map(href => (
+        <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
+      ))}
+      {moduleHrefs.map(href => (
+        <link key={href} rel="modulepreload" href={href} {...linkProps} />
+      ))}
+      {styleLinks.map(link => (
+        // these don't spread `linkProps` because they are full link descriptors
+        // already with their own props
+        <link key={link.href} {...link} />
       ))}
     </>
   );

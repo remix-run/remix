@@ -13,8 +13,7 @@ These components are to be used once inside of your root route (`root.tsx`). The
 
 ```tsx [2,10,11,15]
 import React from "react";
-import { Meta, Links, Scripts } from "remix";
-import { Outlet } from "react-router-dom";
+import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
   return (
@@ -31,6 +30,48 @@ export default function App() {
     </html>
   );
 }
+```
+
+## `<Link>`
+
+This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of clientside routing in Remix.
+
+It wraps React Router's Link with some extra behavior around resource prefetching.
+
+```tsx
+import { Link } from "remix";
+
+export default function GlobalNav() {
+  return (
+    <nav>
+      <Link to="/dashboard">Dashboard</Link>{" "}
+      <Link to="/account">Account</Link>{" "}
+      <Link to="/support">Dashboard</Link>
+    </nav>
+  );
+}
+```
+
+### `<Link prefetch>`
+
+In our effort to remove all loading states from your UI, `Link` will automatically prefetch all the resources the next page needs: JavaScript modules, stylesheets, and data. This prop controls when that happens.
+
+```tsx
+<Link prefetch="intent" />
+<Link prefetch="render" />
+<Link prefetch="none" />
+```
+
+- **"intent"** - Default behavior, fetches when when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
+- **"render"** - Fetches when the link is rendered.
+- **"none"** - This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
+
+## `<Outlet>`
+
+This is simply a re-export from React Router for convenience and potential future Remix behavior. It is recommended that you import from Remix.
+
+```tsx
+import { Outlet } from "remix";
 ```
 
 ## ~~`useRouteData`~~
@@ -500,7 +541,8 @@ This tells you what the next location is going to be. Its most useful when match
 For example, this `Link` knows when it's page is loading and it's about to become active:
 
 ```tsx [7-9]
-import { Link, useResolvedPath } from "react-router-dom";
+import { useResolvedPath } from "react-router-dom";
+import { Link } from "remix";
 
 function PendingLink({ to, children }) {
   let transition = useTransition();
@@ -1857,8 +1899,7 @@ Now we can read the message in a loader.
 
 ```js
 import React from "react";
-import { Outlet } from "react-router-dom";
-import { Meta, Links, Scripts, json } from "remix";
+import { Meta, Links, Scripts, Outlet, json } from "remix";
 
 import { getSession, commitSession } from "./sessions";
 
