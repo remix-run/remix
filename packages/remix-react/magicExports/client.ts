@@ -19,7 +19,10 @@ export {
   Links,
   Scripts,
   Link,
+  NavLink,
+  Outlet,
   Form,
+  PrefetchPageLinks,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -30,7 +33,6 @@ export {
   useActionData,
   useBeforeUnload,
   useMatches,
-  block,
   RemixServer,
   // @deprecated
   usePendingLocation,
