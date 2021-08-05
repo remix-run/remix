@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Meta, Links, Scripts, useLoaderData, useMatches } from "remix";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { Link } from "remix";
 
 import normalizeHref from "@exampledev/new.css/new.css";
 import stylesHref from "./styles/app.css";
