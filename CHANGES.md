@@ -1,5 +1,12 @@
 # History of Changes
 
+## Unreleased
+
+### Bug Fixes
+
+- CLI no longer crashes on syntax errors and reports errors with location
+- Dynamic imports no longer blows up build
+
 This is a history of changes to [Remix](https://remix.run).
 
 ## 0.17.3 - Wed May 19 2021
