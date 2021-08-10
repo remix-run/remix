@@ -4,6 +4,7 @@
   "version": "0.18.0-pre.0",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
+    "@types/aws-lambda": "^8.10.82",
     "@remix-run/node": "0.18.0-pre.0"
   },
   "peerDependencies": {

@@ -1,5 +1,5 @@
 {
-  "include": ["../../types/architect__functions.d.ts", "**/*"],
+  "include": ["**/*"],
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",

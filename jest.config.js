@@ -12,15 +12,27 @@ module.exports = {
       testMatch: ["<rootDir>/packages/remix-dev/**/*-test.[jt]s?(x)"]
     },
     {
+      displayName: "node",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-node/**/*-test.[jt]s?(x)"]
+    },
+    // Node Adapters
+    {
+      displayName: "architect",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-architect/**/*-test.[jt]s?(x)"]
+    },
+    {
       displayName: "express",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-express/**/*-test.[jt]s?(x)"]
     },
     {
-      displayName: "node",
+      displayName: "vercel",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/remix-node/**/*-test.[jt]s?(x)"]
+      testMatch: ["<rootDir>/packages/remix-vercel/**/*-test.[jt]s?(x)"]
     },
+    // Fixture Apps
     {
       displayName: "gists-app",
       testEnvironment: "node",
