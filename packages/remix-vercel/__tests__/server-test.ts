@@ -1,6 +1,6 @@
-import { Response, Headers, RequestInfo, RequestInit } from "@remix-run/node";
+import { Headers, Response, RequestInfo, RequestInit } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
-// @ts-ignore soon
+// @ts-expect-error TODO: add type definition for this
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
 import listen from "test-listen";
 import fetch from "node-fetch";
@@ -14,10 +14,11 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
   typeof createRemixRequestHandler
 >;
 
-let consumeEventMock = jest.fn();
-let mockBridge = { consumeEvent: consumeEventMock };
+// TODO: add real type definition
 let server: any;
 let url: string;
+let consumeEventMock = jest.fn();
+let mockBridge = { consumeEvent: consumeEventMock };
 
 async function fetchWithProxyReq(_url: RequestInfo, opts: RequestInit = {}) {
   if (opts.body) {
@@ -34,22 +35,20 @@ async function fetchWithProxyReq(_url: RequestInfo, opts: RequestInit = {}) {
   });
 }
 
-async function createApp() {
-  server = createServerWithHelpers((req: any, res: any) => {
-    // We don't have a real app to test, but it doesn't matter. We
-    // won't ever call through to the real createRequestHandler
-    // @ts-expect-error
-    return createRequestHandler({ build: undefined })(req, res);
-  }, mockBridge);
-
-  url = await listen(server);
-}
-
-beforeEach(() => {
-  consumeEventMock.mockClear();
-});
-
 describe("vercel createRequestHandler", () => {
+  beforeEach(async () => {
+    consumeEventMock.mockClear();
+
+    server = createServerWithHelpers((req: any, res: any) => {
+      // We don't have a real app to test, but it doesn't matter. We
+      // won't ever call through to the real createRequestHandler
+      // @ts-expect-error
+      return createRequestHandler({ build: undefined })(req, res);
+    }, mockBridge);
+
+    url = await listen(server);
+  });
+
   afterEach(async () => {
     mockedCreateRequestHandler.mockReset();
     await server.close();
@@ -59,91 +58,138 @@ describe("vercel createRequestHandler", () => {
     jest.restoreAllMocks();
   });
 
-  it("handles a request", async () => {
-    mockedCreateRequestHandler.mockImplementation(() => async req => {
-      return new Response(`URL: ${new URL(req.url).pathname}`);
+  describe("basic requests", () => {
+    it("handles requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async req => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      const res = await fetchWithProxyReq(url + "/foo/bar");
+
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("URL: /foo/bar");
     });
 
-    await createApp();
+    it("handles status codes", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response("", { status: 204 });
+      });
 
-    const res = await fetchWithProxyReq(url + "/foo/bar");
+      let res = await fetchWithProxyReq(url);
 
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("URL: /foo/bar");
-  });
-
-  it("handles a request with multiple Set-Cookie headers", async () => {
-    mockedCreateRequestHandler.mockImplementation(() => async req => {
-      const headers = new Headers(req.headers);
-      headers.append("Cache-Control", "maxage=300");
-      headers.append(
-        "Set-Cookie",
-        "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax"
-      );
-      headers.append(
-        "Set-Cookie",
-        "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
-      );
-
-      return new Response("check out these headerssss", { headers });
+      expect(res.status).toBe(204);
     });
 
-    await createApp();
+    it("sets headers", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        headers.append(
+          "Set-Cookie",
+          "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        return new Response("", { headers });
+      });
 
-    const res = await fetchWithProxyReq(url + "/foo/bar");
+      let res = await fetchWithProxyReq(url);
 
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("maxage=300");
-    expect(res.headers.get("Set-Cookie")).toMatchInlineSnapshot(
-      `"__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax, __other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"`
-    );
+      expect(res.headers.get("x-time-of-year")).toBe("most wonderful");
+      expect(res.headers.get("set-cookie")).toBe(
+        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax, second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+      );
+    });
   });
 });
 
 describe("vercel createRemixHeaders", () => {
-  afterEach(() => {
-    mockedCreateRequestHandler.mockReset();
-  });
+  describe("creates fetch headers from vercel headers", () => {
+    it("handles empty headers", () => {
+      expect(createRemixHeaders({})).toMatchInlineSnapshot(`
+        Headers {
+          Symbol(map): Object {},
+        }
+      `);
+    });
 
-  afterAll(() => {
-    jest.restoreAllMocks();
-  });
+    it("handles simple headers", () => {
+      expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
+        Headers {
+          Symbol(map): Object {
+            "x-foo": Array [
+              "bar",
+            ],
+          },
+        }
+      `);
+    });
 
-  it("creates fetch headers from vercel headers", async () => {
-    expect(
-      createRemixHeaders({
-        "Cache-Control": "maxage=300"
-      })
-    ).toMatchInlineSnapshot(`
-      Headers {
-        Symbol(map): Object {
-          "Cache-Control": Array [
-            "maxage=300",
-          ],
-        },
-      }
-    `);
-  });
+    it("handles multiple headers", () => {
+      expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
+        .toMatchInlineSnapshot(`
+        Headers {
+          Symbol(map): Object {
+            "x-bar": Array [
+              "baz",
+            ],
+            "x-foo": Array [
+              "bar",
+            ],
+          },
+        }
+      `);
+    });
 
-  it.todo("handles simple headers");
-  it.todo("handles multiple headers");
-  it.todo("handles headers with multiple values");
-  it.todo("handles headers with multiple values and multiple headers");
-  it("handles multiple set-cookie headers", () => {
-    expect(
-      createRemixHeaders({
-        "Set-Cookie": ["foo=bar", "bar=baz"]
-      })
-    ).toMatchInlineSnapshot(`
-      Headers {
-        Symbol(map): Object {
-          "Set-Cookie": Array [
-            "foo=bar",
-            "bar=baz",
-          ],
-        },
-      }
-    `);
+    it("handles headers with multiple values", () => {
+      expect(createRemixHeaders({ "x-foo": "bar, baz" }))
+        .toMatchInlineSnapshot(`
+        Headers {
+          Symbol(map): Object {
+            "x-foo": Array [
+              "bar, baz",
+            ],
+          },
+        }
+      `);
+    });
+
+    it("handles headers with multiple values and multiple headers", () => {
+      expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
+        .toMatchInlineSnapshot(`
+        Headers {
+          Symbol(map): Object {
+            "x-bar": Array [
+              "baz",
+            ],
+            "x-foo": Array [
+              "bar, baz",
+            ],
+          },
+        }
+      `);
+    });
+
+    it("handles multiple set-cookie headers", () => {
+      expect(
+        createRemixHeaders({
+          "set-cookie": [
+            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
+          ]
+        })
+      ).toMatchInlineSnapshot(`
+        Headers {
+          Symbol(map): Object {
+            "set-cookie": Array [
+              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+              "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+            ],
+          },
+        }
+      `);
+    });
   });
 });
 
