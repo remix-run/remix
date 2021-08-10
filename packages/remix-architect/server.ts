@@ -77,7 +77,7 @@ export function createRemixHeaders(
 
 export function createRemixRequest(event: APIGatewayProxyEventV2): Request {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
-  let proto = event.headers["x-forwarded-proto"] || "https";
+  let proto = event.requestContext.http.protocol || "https";
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let url = new URL(event.rawPath + search, `${proto}://${host}`);
 
