@@ -67,19 +67,21 @@ export function createRequestHandler({
 export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
 ): Headers {
-  return new Headers(
-    Object.keys(requestHeaders).reduce((memo, key) => {
-      let value = requestHeaders[key];
+  let headers = new Headers();
 
-      if (typeof value === "string") {
-        memo[key] = value;
-      } else if (Array.isArray(value)) {
-        memo[key] = value.join(",");
+  for (let [key, values] of Object.entries(requestHeaders)) {
+    if (!values) break;
+
+    if (Array.isArray(values)) {
+      for (const value of values) {
+        headers.append(key, value);
       }
+    } else {
+      headers.set(key, values);
+    }
+  }
 
-      return memo;
-    }, {} as { [headerName: string]: string })
-  );
+  return headers;
 }
 
 export function createRemixRequest(req: express.Request): Request {
