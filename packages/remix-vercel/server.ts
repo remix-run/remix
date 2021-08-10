@@ -53,15 +53,12 @@ export function createRequestHandler({
   };
 }
 
-function createRemixRequest(req: NowRequest): Request {
-  let host = req.headers["x-forwarded-host"] || req.headers["host"];
-  // doesn't seem to be available on their req object!
-  let protocol = req.headers["x-forwarded-proto"] || "https";
-  let url = new URL(req.url!, `${protocol}://${host}`);
-
+export function createRemixHeaders(
+  requestHeaders: NowRequest["headers"]
+): Headers {
   let headers = new Headers();
-  for (let key in req.headers) {
-    let header = req.headers[key]!;
+  for (let key in requestHeaders) {
+    let header = requestHeaders[key]!;
     // set-cookie is an array (maybe others)
     if (Array.isArray(header)) {
       for (let value of header) {
@@ -72,9 +69,18 @@ function createRemixRequest(req: NowRequest): Request {
     }
   }
 
+  return headers;
+}
+
+export function createRemixRequest(req: NowRequest): Request {
+  let host = req.headers["x-forwarded-host"] || req.headers["host"];
+  // doesn't seem to be available on their req object!
+  let protocol = req.headers["x-forwarded-proto"] || "https";
+  let url = new URL(req.url!, `${protocol}://${host}`);
+
   let init: RequestInit = {
     method: req.method,
-    headers: headers
+    headers: createRemixHeaders(req.headers)
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {

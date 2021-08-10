@@ -10,6 +10,8 @@
     "@vercel/node": "^1.8.3"
   },
   "devDependencies": {
-    "@vercel/node": "^1.8.3"
+    "@types/test-listen": "^1.1.0",
+    "@vercel/node": "^1.8.3",
+    "test-listen": "^1.1.0"
   }
 }
