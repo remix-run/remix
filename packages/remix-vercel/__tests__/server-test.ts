@@ -41,10 +41,6 @@ function createApp() {
   return server;
 }
 
-beforeEach(() => {
-  consumeEventMock.mockClear();
-});
-
 describe("vercel createRequestHandler", () => {
   describe("basic requests", () => {
     afterEach(async () => {
