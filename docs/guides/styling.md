@@ -754,6 +754,8 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
      responseHeaders.set("Content-Type", "text/html");
 
+     responseHeaders.set("Content-Type","text/html")
+
      return new Response("<!DOCTYPE html>" + markup, {
        status: responseStatusCode,
        headers: responseHeaders,
