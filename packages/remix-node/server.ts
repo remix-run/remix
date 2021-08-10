@@ -111,12 +111,11 @@ async function handleDataRequest(
     let locationHeader = response.headers.get("Location");
     response.headers.delete("Location");
 
+    response.headers.set("X-Remix-Redirect", locationHeader!);
+
     return new Response("", {
       status: 204,
-      headers: {
-        ...Object.fromEntries(response.headers),
-        "X-Remix-Redirect": locationHeader!
-      }
+      headers: response.headers
     });
   }
 

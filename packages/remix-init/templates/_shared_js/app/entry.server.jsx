@@ -11,11 +11,10 @@ export default function handleRequest(
     <RemixServer context={remixContext} url={request.url} />
   );
 
+  responseHeaders.set("Content-Type", "text/html");
+
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
-    headers: {
-      ...Object.fromEntries(responseHeaders),
-      "Content-Type": "text/html"
-    }
+    headers: responseHeaders
   });
 }
