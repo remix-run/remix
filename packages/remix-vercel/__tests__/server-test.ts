@@ -14,8 +14,10 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
   typeof createRemixRequestHandler
 >;
 
-const consumeEventMock = jest.fn();
-const mockBridge = { consumeEvent: consumeEventMock };
+let consumeEventMock = jest.fn();
+let mockBridge = { consumeEvent: consumeEventMock };
+let server: any;
+let url: string;
 
 async function fetchWithProxyReq(_url: RequestInfo, opts: RequestInit = {}) {
   if (opts.body) {
@@ -33,21 +35,24 @@ async function fetchWithProxyReq(_url: RequestInfo, opts: RequestInit = {}) {
 }
 
 async function createApp() {
-  const server = createServerWithHelpers((req: any, res: any) => {
+  server = createServerWithHelpers((req: any, res: any) => {
     // We don't have a real app to test, but it doesn't matter. We
     // won't ever call through to the real createRequestHandler
     // @ts-expect-error
     return createRequestHandler({ build: undefined })(req, res);
   }, mockBridge);
 
-  const url = listen(server);
-
-  return url;
+  url = await listen(server);
 }
 
+beforeEach(() => {
+  consumeEventMock.mockClear();
+});
+
 describe("vercel createRequestHandler", () => {
-  afterEach(() => {
+  afterEach(async () => {
     mockedCreateRequestHandler.mockReset();
+    await server.close();
   });
 
   afterAll(() => {
@@ -59,7 +64,7 @@ describe("vercel createRequestHandler", () => {
       return new Response(`URL: ${new URL(req.url).pathname}`);
     });
 
-    const url = await createApp();
+    await createApp();
 
     const res = await fetchWithProxyReq(url + "/foo/bar");
 
@@ -83,7 +88,7 @@ describe("vercel createRequestHandler", () => {
       return new Response("check out these headerssss", { headers });
     });
 
-    const url = await createApp();
+    await createApp();
 
     const res = await fetchWithProxyReq(url + "/foo/bar");
 
