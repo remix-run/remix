@@ -2,7 +2,7 @@ import type { AppLoadContext } from "./data";
 import { loadRouteData, callRouteAction } from "./data";
 import type { ComponentDidCatchEmulator } from "./errors";
 
-import { serializeError } from "./errors";
+import { formatServerError, serializeError } from "./errors";
 import type { ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
@@ -96,7 +96,7 @@ async function handleDataRequest(
           routeMatch.params
         );
   } catch (error) {
-    return json(serializeError(error), {
+    return json(await serializeError(error), {
       status: 500,
       headers: {
         "X-Remix-Error": "unfortunately, yes"
@@ -169,7 +169,7 @@ async function handleDocumentRequest(
       let withBoundaries = getMatchesUpToDeepestErrorBoundary(matches);
       componentDidCatchEmulator.loaderBoundaryRouteId =
         withBoundaries[withBoundaries.length - 1].route.id;
-      componentDidCatchEmulator.error = serializeError(error);
+      componentDidCatchEmulator.error = await serializeError(error);
     }
   }
 
@@ -238,7 +238,7 @@ async function handleDocumentRequest(
         );
       }
 
-      componentDidCatchEmulator.error = serializeError(response);
+      componentDidCatchEmulator.error = await serializeError(response);
       routeLoaderResults[index] = json(null, { status: 500 });
     } else if (isRedirectResponse(response)) {
       return response;
@@ -305,7 +305,7 @@ async function handleDocumentRequest(
     );
   } catch (error) {
     if (serverMode !== ServerMode.Test) {
-      console.error(error);
+      console.error(await formatServerError(error));
     }
 
     statusCode = 500;
@@ -317,7 +317,7 @@ async function handleDocumentRequest(
     // tracking the `routeId` as we render because we already have an error to
     // render.
     componentDidCatchEmulator.trackBoundaries = false;
-    componentDidCatchEmulator.error = serializeError(error);
+    componentDidCatchEmulator.error = await serializeError(error);
     entryContext.serverHandoffString = createServerHandoffString(serverHandoff);
 
     try {
@@ -329,7 +329,7 @@ async function handleDocumentRequest(
       );
     } catch (error) {
       if (serverMode !== ServerMode.Test) {
-        console.error(error);
+        console.error(await formatServerError(error));
       }
 
       // Good grief folks, get your act together 😂!

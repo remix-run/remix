@@ -11,7 +11,8 @@
     "history": "^5.0.0",
     "jsesc": "^3.0.1",
     "node-fetch": "^2.6.1",
-    "react-router-dom": "^6.0.0-beta.0"
+    "react-router-dom": "^6.0.0-beta.0",
+    "source-map": "^0.7.3"
   },
   "peerDependencies": {
     "react": ">=16.8",
