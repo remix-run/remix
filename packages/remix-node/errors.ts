@@ -8,6 +8,8 @@ import { SourceMapConsumer } from "source-map";
 const ROOT = process.cwd() + "/";
 const SOURCE_PATTERN = /(?<at>\s+at.+)\((?<filename>.+):(?<line>\d+):(?<column>\d+)\)/;
 
+export const UNKNOWN_LOCATION_POSITION = "<unknonwn location>";
+
 /**
  * This thing probably warrants some explanation.
  *
@@ -120,7 +122,7 @@ export async function mapToSourceFile(
   }
 
   if (smc) {
-    const pos = getOriginalPositionFor(
+    const pos = getOriginalSourcePosition(
       smc,
       parseInt(line, 10),
       parseInt(column, 10)
@@ -130,7 +132,7 @@ export async function mapToSourceFile(
       filename = relativeFilename(pos.source);
       line = pos.line || "?";
       column = pos.column || "?";
-      at = `    at \`${getSourceContentFor(smc, pos)}\` `;
+      at = `    at \`${getSourceContentForPosition(smc, pos)}\` `;
     }
   }
 
@@ -144,7 +146,7 @@ export function relativeFilename(filename: string) {
   return filename.replace("route-module:", "").replace(ROOT, "./");
 }
 
-export function getOriginalPositionFor(
+export function getOriginalSourcePosition(
   smc: SourceMapConsumer,
   line: number,
   column: number
@@ -152,7 +154,7 @@ export function getOriginalPositionFor(
   return smc.originalPositionFor({ line, column });
 }
 
-export function getSourceContentFor(
+export function getSourceContentForPosition(
   smc: SourceMapConsumer,
   pos: NullableMappedPosition
 ) {
@@ -162,7 +164,7 @@ export function getSourceContentFor(
   }
 
   if (!src) {
-    return "<unknonwn location>";
+    return UNKNOWN_LOCATION_POSITION;
   }
 
   return src.split("\n")[pos.line! - 1].trim();
