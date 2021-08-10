@@ -2,8 +2,13 @@ import express from "express";
 import supertest from "supertest";
 import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
+import { getMockReq } from "@jest-mock/express";
 
-import { createRemixHeaders, createRequestHandler } from "../server";
+import {
+  createRemixHeaders,
+  createRemixRequest,
+  createRequestHandler
+} from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the express adapter
@@ -172,5 +177,61 @@ describe("express createRemixHeaders", () => {
         }
       `);
     });
+  });
+});
+
+describe("express createRemixRequest", () => {
+  it("creates a request with the correct headers", async () => {
+    const expressRequest = getMockReq({
+      url: "/foo/bar",
+      protocol: "http",
+      hostname: "localhost",
+      headers: {
+        "Cache-Control": "max-age=300, s-maxage=3600"
+      },
+      pipe: jest.fn()
+    });
+
+    expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
+      Request {
+        "agent": undefined,
+        "compress": true,
+        "counter": 0,
+        "follow": 20,
+        "size": 0,
+        "timeout": 0,
+        Symbol(Body internals): Object {
+          "body": null,
+          "disturbed": false,
+          "error": null,
+        },
+        Symbol(Request internals): Object {
+          "headers": Headers {
+            Symbol(map): Object {
+              "Cache-Control": Array [
+                "max-age=300, s-maxage=3600",
+              ],
+            },
+          },
+          "method": "GET",
+          "parsedURL": Url {
+            "auth": null,
+            "hash": null,
+            "host": "localhost",
+            "hostname": "localhost",
+            "href": "http://localhost/foo/bar",
+            "path": "/foo/bar",
+            "pathname": "/foo/bar",
+            "port": null,
+            "protocol": "http:",
+            "query": null,
+            "search": null,
+            "slashes": true,
+          },
+          "redirect": "follow",
+          "signal": null,
+        },
+      }
+    `);
   });
 });
