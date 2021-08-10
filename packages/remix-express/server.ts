@@ -101,8 +101,10 @@ function createRemixRequest(req: express.Request): Request {
 function sendRemixResponse(res: express.Response, response: Response): void {
   res.status(response.status);
 
-  for (let [key, value] of response.headers.entries()) {
-    res.set(key, value);
+  for (let [key, values] of Object.entries(response.headers.raw())) {
+    for (const value of values) {
+      res.append(key, value);
+    }
   }
 
   if (Buffer.isBuffer(response.body)) {

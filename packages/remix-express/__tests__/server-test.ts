@@ -3,7 +3,7 @@ import supertest from "supertest";
 
 import { createRequestHandler } from "../server";
 
-import { Response } from "@remix-run/node";
+import { Response, Headers } from "@remix-run/node";
 
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
 
@@ -65,15 +65,26 @@ describe("express createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", {
-          headers: { "X-Time-Of-Year": "most wonderful" }
-        });
+        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        headers.append(
+          "Set-Cookie",
+          "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        return new Response("", { headers });
       });
 
       let request = supertest(createApp());
       let res = await request.get("/");
 
       expect(res.headers["x-time-of-year"]).toBe("most wonderful");
+      expect(res.headers["set-cookie"]).toEqual([
+        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+        "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+      ]);
     });
   });
 });
