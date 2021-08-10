@@ -64,7 +64,7 @@ export function createRequestHandler({
   };
 }
 
-function createRemixHeaders(
+export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
 ): Headers {
   return new Headers(
@@ -82,7 +82,7 @@ function createRemixHeaders(
   );
 }
 
-function createRemixRequest(req: express.Request): Request {
+export function createRemixRequest(req: express.Request): Request {
   let origin = `${req.protocol}://${req.hostname}`;
   let url = new URL(req.url, origin);
 
