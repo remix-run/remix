@@ -46,9 +46,25 @@ export function createRequestHandler({
 
     let response = await handleRequest(request, loadContext);
 
+    let cookies: string[] = [];
+
+    // Arc/AWS API Gateway will send back set-cookies outside of response headers.
+    for (let [key, values] of Object.entries(response.headers.raw())) {
+      if (key.toLowerCase() === "set-cookie") {
+        for (let value of values) {
+          cookies.push(value);
+        }
+      }
+    }
+
+    if (cookies.length) {
+      response.headers.delete("set-cookie");
+    }
+
     return {
       statusCode: response.status,
       headers: Object.fromEntries(response.headers),
+      cookies,
       body: await response.text()
     };
   };
@@ -67,7 +83,7 @@ export function createRemixHeaders(
   }
 
   if (requestCookies) {
-    for (const cookie of requestCookies) {
+    for (let cookie of requestCookies) {
       headers.append("Cookie", cookie);
     }
   }
