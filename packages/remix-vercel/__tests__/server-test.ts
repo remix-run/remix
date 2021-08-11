@@ -271,7 +271,11 @@ describe("vercel createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "http://localhost:3000/foo/bar",
           "redirect": "follow",
+<<<<<<< HEAD
           "signal": AbortSignal {},
+=======
+          "signal": null,
+>>>>>>> 739084c6 (test(vercel): add test for createRequestHandler)
         },
       }
     `);
