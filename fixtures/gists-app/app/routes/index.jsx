@@ -21,6 +21,12 @@ export function loader() {
   return null;
 }
 
+export function headers() {
+  return {
+    "test": "value"
+  }
+}
+
 export default function Index() {
   useEffect(() => {
     console.log(clientMessage);

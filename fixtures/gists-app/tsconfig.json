@@ -6,8 +6,9 @@
     "target": "ES2020",
     "module": "ES2020",
     "strict": true,
+    "types": ["@remix-run/node"],
 
     // Remix takes care of building everything in `remix build`.
-    "noEmit": true
+    "noEmit": true,
   }
 }

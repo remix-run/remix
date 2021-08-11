@@ -1,6 +1,3 @@
-import type { ResponseInit } from "./fetch";
-import { Headers, Response } from "./fetch";
-
 /**
  * A JSON response. Converts `data` to JSON and sets the `Content-Type` header.
  */

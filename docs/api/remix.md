@@ -989,9 +989,9 @@ import { useLoaderData, json, redirect } from "remix";
 
 import { userPrefs as cookie } from "../cookies";
 
-export function loader({ request }) {
+export async function loader({ request }) {
   let value =
-    cookie.parse(request.headers.get("Cookie")) || {};
+    await cookie.parse(request.headers.get("Cookie")) || {};
   let showBanner =
     "showBanner" in value ? value.showBanner : true;
   return { showBanner };
@@ -999,7 +999,7 @@ export function loader({ request }) {
 
 export async function action({ request }) {
   let value =
-    cookie.parse(request.headers.get("Cookie")) || {};
+    await cookie.parse(request.headers.get("Cookie")) || {};
   let bodyParams = new URLSearchParams(
     await request.text()
   );
@@ -1010,7 +1010,7 @@ export async function action({ request }) {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": cookie.serialize(value),
+      "Set-Cookie": await cookie.serialize(value),
     },
   });
 }
@@ -1086,15 +1086,15 @@ let cookie = createCookie("user-prefs", {
 });
 
 // in your route module...
-export function loader({ request }) {
+export async function loader({ request }) {
   let oldCookie = request.headers.get("Cookie");
   // oldCookie may have been signed with "olds3cret", but still parses ok
-  let value = cookie.parse(oldCookie);
+  let value = await cookie.parse(oldCookie);
 
   new Response("...", {
     headers: {
       // Set-Cookie is signed with "n3wsecr3t"
-      "Set-Cookie": cookie.serialize(value),
+      "Set-Cookie": await cookie.serialize(value),
     },
   });
 }
@@ -1153,7 +1153,7 @@ The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
 ```js
-let value = cookie.parse(request.headers.get("Cookie"));
+let value = await cookie.parse(request.headers.get("Cookie"));
 ```
 
 ### `cookie.serialize()`
@@ -1163,7 +1163,7 @@ Serializes a value and combines it with this cookie's options to create a `Set-C
 ```js
 new Response("...", {
   headers: {
-    "Set-Cookie": cookie.serialize({ showBanner: true }),
+    "Set-Cookie": await cookie.serialize({ showBanner: true }),
   },
 });
 ```

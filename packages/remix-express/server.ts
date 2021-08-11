@@ -1,17 +1,16 @@
 import { PassThrough } from "stream";
-import { URL } from "url";
 import type * as express from "express";
 import type {
   AppLoadContext,
-  RequestInit,
-  Response,
-  ServerBuild
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server";
+import type {
+  Headers as NodeHeaders,
+  RequestInit as NodeRequestInit
 } from "@remix-run/node";
-import {
-  Headers,
-  Request,
-  createRequestHandler as createRemixRequestHandler
-} from "@remix-run/node";
+import { formatServerError } from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -39,7 +38,8 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (
     req: express.Request,
@@ -57,6 +57,7 @@ export function createRequestHandler({
 
       sendRemixResponse(res, response);
     } catch (error) {
+      console.error(error);
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
       next(error);
@@ -86,28 +87,31 @@ function createRemixRequest(req: express.Request): Request {
   let origin = `${req.protocol}://${req.hostname}`;
   let url = new URL(req.url, origin);
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: req.method,
-    headers: createRemixHeaders(req.headers)
+    headers: (createRemixHeaders(req.headers) as any) as NodeHeaders
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
   }
 
-  return new Request(url.toString(), init);
+  return new Request(url.toString(), (init as any) as RequestInit);
 }
 
 function sendRemixResponse(res: express.Response, response: Response): void {
   res.status(response.status);
 
-  for (let [key, value] of response.headers.entries()) {
+  for (let [
+    key,
+    value
+  ] of ((response.headers as any) as NodeHeaders).entries()) {
     res.set(key, value);
   }
 
   if (Buffer.isBuffer(response.body)) {
     res.end(response.body);
   } else {
-    response.body.pipe(res);
+    ((response.body as any) as PassThrough).pipe(res);
   }
 }

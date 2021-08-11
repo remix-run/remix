@@ -1,6 +1,5 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
-import { sign, unsign } from "cookie-signature";
 
 export type { CookieParseOptions, CookieSerializeOptions };
 
@@ -53,13 +52,16 @@ export interface Cookie {
    * Parses a raw `Cookie` header and returns the value of this cookie or
    * `null` if it's not present.
    */
-  parse(cookieHeader: string | null, options?: CookieParseOptions): any;
+  parse(
+    cookieHeader: string | null,
+    options?: CookieParseOptions
+  ): Promise<any>;
 
   /**
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  serialize(value: any, options?: CookieSerializeOptions): string;
+  serialize(value: any, options?: CookieSerializeOptions): Promise<string>;
 }
 
 /**
@@ -82,19 +84,19 @@ export function createCookie(
         ? new Date(Date.now() + options.maxAge * 1000)
         : options.expires;
     },
-    parse(cookieHeader, parseOptions) {
+    async parse(cookieHeader, parseOptions) {
       if (!cookieHeader) return null;
       let cookies = parse(cookieHeader, { ...options, ...parseOptions });
       return name in cookies
         ? cookies[name] === ""
           ? ""
-          : decodeCookieValue(cookies[name], secrets)
+          : await decodeCookieValue(cookies[name], secrets)
         : null;
     },
-    serialize(value, serializeOptions) {
+    async serialize(value, serializeOptions) {
       return serialize(
         name,
-        value === "" ? "" : encodeCookieValue(value, secrets),
+        value === "" ? "" : await encodeCookieValue(value, secrets),
         {
           ...options,
           ...serializeOptions
@@ -114,20 +116,76 @@ export function isCookie(object: any): object is Cookie {
   );
 }
 
-function encodeCookieValue(value: any, secrets: string[]): string {
+async function sign(value: string, secret: string): Promise<string> {
+  let key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256"
+    },
+    false,
+    ["sign"]
+  );
+
+  let valueUint8 = new TextEncoder().encode(value);
+
+  let signature = await crypto.subtle.sign("HMAC", key, valueUint8);
+
+  return value + "." + btoa(String.fromCharCode(...new Uint8Array(signature)));
+}
+
+function strToArry(str: string) {
+  let sig = [];
+  for (let i = 0; i < str.length; i++) {
+    sig.push(str.charCodeAt(i));
+  }
+
+  return new Uint8Array(sig);
+}
+
+async function unsign(value: string, secret: string): Promise<string | false> {
+  let str = value.slice(0, value.lastIndexOf("."));
+  let valueUint8 = new TextEncoder().encode(str);
+  let encoded = atob(value.slice(value.lastIndexOf(".") + 1));
+  let encodedUint8 = strToArry(encoded);
+
+  let key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256"
+    },
+    false,
+    ["sign", "verify"]
+  );
+
+  let valid = await crypto.subtle.verify("HMAC", key, encodedUint8, valueUint8);
+
+  return valid ? str : false;
+}
+
+async function encodeCookieValue(
+  value: any,
+  secrets: string[]
+): Promise<string> {
   let encoded = encodeData(value);
 
   if (secrets.length > 0) {
-    encoded = sign(encoded, secrets[0]);
+    encoded = await sign(encoded, secrets[0]);
   }
 
   return encoded;
 }
 
-function decodeCookieValue(value: string, secrets: string[]): any {
+async function decodeCookieValue(
+  value: string,
+  secrets: string[]
+): Promise<any> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
-      let unsignedValue = unsign(value, secret);
+      let unsignedValue = await unsign(value, secret);
       if (unsignedValue !== false) {
         return decodeData(unsignedValue);
       }
