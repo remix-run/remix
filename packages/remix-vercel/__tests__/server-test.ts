@@ -1,11 +1,17 @@
 import { Headers, Response, RequestInfo, RequestInit } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
-// @ts-expect-error TODO: add type definition for this
+import { createRequest } from "node-mocks-http";
+
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
 import listen from "test-listen";
 import fetch from "node-fetch";
 
-import { createRemixHeaders, createRequestHandler } from "../server";
+import {
+  createRemixHeaders,
+  createRemixRequest,
+  createRequestHandler
+} from "../server";
+import { VercelRequest } from "@vercel/node";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the vercel adapter
@@ -42,7 +48,6 @@ describe("vercel createRequestHandler", () => {
     server = createServerWithHelpers((req: any, res: any) => {
       // We don't have a real app to test, but it doesn't matter. We
       // won't ever call through to the real createRequestHandler
-      // @ts-expect-error
       return createRequestHandler({ build: undefined })(req, res);
     }, mockBridge);
 
@@ -198,5 +203,63 @@ describe("vercel createRemixHeaders", () => {
 });
 
 describe("vercel createRemixRequest", () => {
-  it.todo("creates a request with the correct headers");
+  it("creates a request with the correct headers", async () => {
+    var request = createRequest({
+      method: "GET",
+      url: "/foo/bar",
+      headers: {
+        "x-forwarded-host": "localhost:3000",
+        "x-forwarded-proto": "http",
+        "Cache-Control": "max-age=300, s-maxage=3600"
+      }
+    }) as VercelRequest;
+
+    expect(createRemixRequest(request)).toMatchInlineSnapshot(`
+      Request {
+        "agent": undefined,
+        "compress": true,
+        "counter": 0,
+        "follow": 20,
+        "size": 0,
+        "timeout": 0,
+        Symbol(Body internals): Object {
+          "body": null,
+          "disturbed": false,
+          "error": null,
+        },
+        Symbol(Request internals): Object {
+          "headers": Headers {
+            Symbol(map): Object {
+              "cache-control": Array [
+                "max-age=300, s-maxage=3600",
+              ],
+              "x-forwarded-host": Array [
+                "localhost:3000",
+              ],
+              "x-forwarded-proto": Array [
+                "http",
+              ],
+            },
+          },
+          "method": "GET",
+          "parsedURL": Url {
+            "auth": null,
+            "hash": null,
+            "host": "localhost:3000",
+            "hostname": "localhost",
+            "href": "http://localhost:3000/foo/bar",
+            "path": "/foo/bar",
+            "pathname": "/foo/bar",
+            "port": "3000",
+            "protocol": "http:",
+            "query": null,
+            "search": null,
+            "slashes": true,
+          },
+          "redirect": "follow",
+          "signal": null,
+        },
+      }
+    `);
+  });
 });
