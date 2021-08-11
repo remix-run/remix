@@ -10,5 +10,9 @@
   "peerDependencies": {
     "@architect/architect": "^8.3.7",
     "@architect/functions": "^3.13.9"
+  },
+  "devDependencies": {
+    "@types/lambda-tester": "^3.6.1",
+    "lambda-tester": "^4.0.1"
   }
 }

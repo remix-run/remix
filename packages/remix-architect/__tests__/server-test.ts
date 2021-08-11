@@ -1,3 +1,4 @@
+import lambdaTester from "lambda-tester";
 import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
 
@@ -6,6 +7,7 @@ import {
   createRemixRequest,
   createRequestHandler
 } from "../server";
+import { APIGatewayProxyEventV2 } from "aws-lambda";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
@@ -14,7 +16,121 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
   typeof createRemixRequestHandler
 >;
 
-describe.skip("architect createRequestHandler", () => {});
+function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
+  let now = new Date();
+  return {
+    headers: {
+      host: "localhost:3333",
+      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "upgrade-insecure-requests": "1",
+      "user-agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+      "accept-language": "en-US,en;q=0.9",
+      "accept-encoding": "gzip, deflate",
+      ...event.headers
+    },
+    isBase64Encoded: false,
+    rawPath: "/",
+    rawQueryString: "",
+    requestContext: {
+      http: {
+        method: "GET",
+        path: "/",
+        protocol: "http",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+        sourceIp: "127.0.0.1",
+        ...event.requestContext?.http
+      },
+      routeKey: "ANY /{proxy+}",
+      accountId: "accountId",
+      requestId: "requestId",
+      apiId: "apiId",
+      domainName: "id.execute-api.us-east-1.amazonaws.com",
+      domainPrefix: "id",
+      stage: "test",
+      time: now.toISOString(),
+      timeEpoch: now.getTime(),
+      ...event.requestContext
+    },
+    routeKey: "foo",
+    version: "2.0",
+    ...event
+  };
+}
+
+describe("architect createRequestHandler", () => {
+  describe("basic requests", () => {
+    afterEach(() => {
+      mockedCreateRequestHandler.mockReset();
+    });
+
+    afterAll(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("handles requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async req => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // @ts-expect-error not sure how Ryan got this not to complain in the express tests..
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawPath: "/foo/bar" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: /foo/bar");
+        });
+    });
+
+    it("handles status codes", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response("", { status: 204 });
+      });
+
+      // @ts-expect-error not sure how Ryan got this not to complain in the express tests..
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawPath: "/foo/bar" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(204);
+        });
+    });
+
+    it("sets headers", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        let headers = new Headers();
+        headers.append("X-Time-Of-Year", "most wonderful");
+        headers.append(
+          "Set-Cookie",
+          "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+
+        return new Response("", { headers });
+      });
+
+      // @ts-expect-error not sure how Ryan got this not to complain in the express tests..
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawPath: "/" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(200);
+          expect(res.headers["x-time-of-year"]).toBe("most wonderful");
+          expect(res.cookies).toEqual([
+            "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+          ]);
+        });
+    });
+  });
+});
 
 describe("architect createRemixHeaders", () => {
   describe("creates fetch headers from architect headers", () => {
@@ -87,16 +203,19 @@ describe("architect createRemixHeaders", () => {
 
     it("handles cookies", () => {
       expect(
-        createRemixHeaders({}, [
+        createRemixHeaders({ "x-something-else": "true" }, [
           "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-          "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
+          "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
         ])
       ).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
             "Cookie": Array [
               "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+            ],
+            "x-something-else": Array [
+              "true",
             ],
           },
         }
@@ -108,43 +227,11 @@ describe("architect createRemixHeaders", () => {
 describe("architect createRemixRequest", () => {
   it("creates a request with the correct headers", () => {
     expect(
-      createRemixRequest({
-        headers: {
-          host: "localhost:3333",
-          accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "upgrade-insecure-requests": "1",
-          "user-agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
-          "accept-language": "en-US,en;q=0.9",
-          "accept-encoding": "gzip, deflate"
-        },
-        isBase64Encoded: false,
-        rawPath: "/",
-        rawQueryString: "",
-        requestContext: {
-          http: {
-            method: "GET",
-            path: "/",
-            protocol: "http",
-            userAgent:
-              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
-            sourceIp: "127.0.0.1"
-          },
-          routeKey: "ANY /{proxy+}",
-          accountId: "1234567890",
-          requestId: "abcdefghijklmnopqrstuvwxyz",
-          apiId: "1234567890abcdef",
-          domainName: "localhost:3333",
-          domainPrefix: "localhost:3333",
-          stage: "prod",
-          time: "2021-08-10T19:48:50.969Z",
-          timeEpoch: 1628624930969
-        },
-        routeKey: "foo",
-        version: "2.0",
-        cookies: ["__session=value"]
-      })
+      createRemixRequest(
+        createMockEvent({
+          cookies: ["__session=value"]
+        })
+      )
     ).toMatchInlineSnapshot(`
       Request {
         "agent": undefined,
