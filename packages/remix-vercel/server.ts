@@ -93,21 +93,11 @@ export function createRemixRequest(req: NowRequest): Request {
 function sendRemixResponse(res: NowResponse, response: Response): void {
   res.status(response.status);
 
-  let arrays = new Map();
-  for (let [key, value] of response.headers.entries()) {
-    if (arrays.has(key)) {
-      let newValue = arrays.get(key).concat(value);
-      res.setHeader(key, newValue);
-      arrays.set(key, newValue);
-    } else {
-      res.setHeader(key, value);
-      arrays.set(key, [value]);
-    }
-  }
-
   if (Buffer.isBuffer(response.body)) {
-    res.end(response.body);
+    res.writeHead(response.status, response.headers.raw()).end(response.body);
   } else {
-    response.body.pipe(res);
+    res
+      .writeHead(response.status, response.headers.raw())
+      .end(response.body.pipe(res));
   }
 }

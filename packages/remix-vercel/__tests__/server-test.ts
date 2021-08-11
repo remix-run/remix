@@ -91,14 +91,18 @@ describe("vercel createRequestHandler", () => {
           "Set-Cookie",
           "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
+        headers.append(
+          "Set-Cookie",
+          "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
         return new Response("", { headers });
       });
 
       let res = await fetchWithProxyReq(url);
 
       expect(res.headers.get("x-time-of-year")).toBe("most wonderful");
-      expect(res.headers.get("set-cookie")).toBe(
-        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax, second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+      expect(res.headers.get("set-cookie")).toEqual(
+        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax, second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax, third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
       );
     });
   });
