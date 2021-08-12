@@ -1,16 +1,15 @@
-import { Headers, Response } from "@remix-run/node";
+import supertest from "supertest";
+import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
 import { createRequest } from "node-mocks-http";
-import supertest from "supertest";
-
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
+import { VercelRequest } from "@vercel/node";
 
 import {
   createRemixHeaders,
   createRemixRequest,
   createRequestHandler
 } from "../server";
-import { VercelRequest } from "@vercel/node";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the vercel adapter
@@ -33,18 +32,10 @@ function createApp() {
 }
 
 describe("vercel createRequestHandler", () => {
-  afterEach(async () => {
-    mockedCreateRequestHandler.mockReset();
-    consumeEventMock.mockClear();
-  });
-
-  afterAll(() => {
-    jest.restoreAllMocks();
-  });
-
   describe("basic requests", () => {
-    afterEach(() => {
+    afterEach(async () => {
       mockedCreateRequestHandler.mockReset();
+      consumeEventMock.mockClear();
     });
 
     afterAll(() => {
@@ -57,7 +48,6 @@ describe("vercel createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
-
       let res = await request
         .get("/foo/bar")
         .set({ "x-now-bridge-request-id": "2" });
@@ -71,10 +61,8 @@ describe("vercel createRequestHandler", () => {
         return new Response("", { status: 204 });
       });
 
-      const request = supertest(createApp());
-      const res = await request
-        .get("/")
-        .set({ "x-now-bridge-request-id": "2" });
+      let request = supertest(createApp());
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(204);
     });
@@ -98,7 +86,6 @@ describe("vercel createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
-
       let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.headers["x-time-of-year"]).toBe("most wonderful");
@@ -202,7 +189,7 @@ describe("vercel createRemixHeaders", () => {
 
 describe("vercel createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    var request = createRequest({
+    let request = createRequest({
       method: "GET",
       url: "/foo/bar",
       headers: {
