@@ -19,7 +19,7 @@ export interface GetLoadContextFunction {
 export type RequestHandler = ReturnType<typeof createRequestHandler>;
 
 /**
- * Returns a request handler for Vercel's Node.js runtime that serves the
+ * Returns a request handler for Cloudflare runtime that serves the
  * response using Remix.
  */
 export function createRequestHandler({
