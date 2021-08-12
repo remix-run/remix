@@ -11724,6 +11724,14 @@ supertest@^6.1.5:
     methods "^1.1.2"
     superagent "^6.1.0"
 
+supertest@^6.1.5:
+  version "6.1.5"
+  resolved "https://registry.yarnpkg.com/supertest/-/supertest-6.1.5.tgz#b011c8465281b30c64e9d4be4cb3808b91cd1ec0"
+  integrity sha512-Is3pFB2TxSFPohDS2tIM8h2JOMvUQwbJ9TvTfsWAm89ZZv1CF4VTLAsQz+5+5S1wOgaMqFqSpFriU15L3e2AXQ==
+  dependencies:
+    methods "^1.1.2"
+    superagent "^6.1.0"
+
 supports-color@^5.3.0:
   version "5.5.0"
   resolved "https://registry.npmjs.org/supports-color/-/supports-color-5.5.0.tgz"
@@ -11833,11 +11841,6 @@ test-exclude@^6.0.0:
     "@istanbuljs/schema" "^0.1.2"
     glob "^7.1.4"
     minimatch "^3.0.4"
-
-test-listen@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/test-listen/-/test-listen-1.1.0.tgz#2ba614d96c3bc9157469003027b42a495dd83b6a"
-  integrity sha512-OyEVi981C1sb9NX1xayfgZls3p8QTDRwp06EcgxSgd1kktaENBW8dO15i8v/7Fi15j0IYQctJzk5J+hyEBId2w==
 
 text-table@^0.2.0:
   version "0.2.0"
