@@ -29,7 +29,7 @@ export type {
   Session,
   SessionStorage,
   SessionIdStorageStrategy
-} from "@remix-run/server";
+} from "@remix-run/server-runtime";
 
 export {
   createCookie,
@@ -42,4 +42,4 @@ export {
   createSessionStorage,
   createCookieSessionStorage,
   createMemorySessionStorage
-} from "@remix-run/server";
+} from "@remix-run/server-runtime";

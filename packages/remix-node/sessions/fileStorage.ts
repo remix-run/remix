@@ -1,8 +1,8 @@
 import { promises as fsp } from "fs";
 import * as path from "path";
 
-import type { SessionStorage, SessionIdStorageStrategy } from "@remix-run/server";
-import { createSessionStorage } from "@remix-run/server";
+import type { SessionStorage, SessionIdStorageStrategy } from "@remix-run/server-runtime";
+import { createSessionStorage } from "@remix-run/server-runtime";
 
 interface FileSessionStorageOptions {
   /**

@@ -15,7 +15,7 @@ async function run() {
   // Manually run postinstall for node + react + server
   execSync("node node_modules/@remix-run/node/scripts/postinstall.js");
   execSync("node node_modules/@remix-run/react/scripts/postinstall.js");
-  execSync("node node_modules/@remix-run/server/scripts/postinstall.js");
+  execSync("node node_modules/@remix-run/server-runtime/scripts/postinstall.js");
 }
 
 run().then(

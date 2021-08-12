@@ -4,8 +4,8 @@ import type {
   AppLoadContext,
   ServerBuild,
   ServerPlatform
-} from "@remix-run/server";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server";
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
   Headers as NodeHeaders,
   RequestInit as NodeRequestInit

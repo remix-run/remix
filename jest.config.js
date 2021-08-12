@@ -20,7 +20,7 @@ module.exports = {
     {
       displayName: "server",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/remix-server/**/*-test.[jt]s?(x)"],
+      testMatch: ["<rootDir>/packages/remix-server-runtime/**/*-test.[jt]s?(x)"],
       setupFiles: ["<rootDir>/setup.ts"]
     },
     {

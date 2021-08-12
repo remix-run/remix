@@ -209,10 +209,10 @@ let remixServer = {
   external(id) {
     return isBareModuleId(id);
   },
-  input: path.resolve(__dirname, "packages/remix-server/index.ts"),
+  input: path.resolve(__dirname, "packages/remix-server-runtime/index.ts"),
   output: {
     banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/server",
+    dir: "build/node_modules/@remix-run/server-runtime",
     format: "cjs",
     preserveModules: true,
     exports: "named"
@@ -224,7 +224,7 @@ let remixServer = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-server/package.json"), {
+    copyAsset(path.resolve(__dirname, "packages/remix-server-runtime/package.json"), {
       transform(source) {
         let packageJson = {
           ...JSON.parse(source),
@@ -246,11 +246,11 @@ let remixServerMagicExports = {
   },
   input: path.resolve(
     __dirname,
-    "packages/remix-server/magicExports/server.ts"
+    "packages/remix-server-runtime/magicExports/server.ts"
   ),
   output: {
     banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/server/magicExports",
+    dir: "build/node_modules/@remix-run/server-runtime/magicExports",
     format: "cjs"
   },
   plugins: [
@@ -269,11 +269,11 @@ let remixServerMagicExportsBrowser = {
   },
   input: path.resolve(
     __dirname,
-    "packages/remix-server/magicExports/server.ts"
+    "packages/remix-server-runtime/magicExports/server.ts"
   ),
   output: {
     banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/server/magicExports/browser",
+    dir: "build/node_modules/@remix-run/server-runtime/magicExports/browser",
     format: "esm"
   },
   plugins: [
@@ -291,11 +291,11 @@ let remixServerScripts = {
     return isBareModuleId(id);
   },
   input: [
-    path.resolve(__dirname, "packages/remix-server/scripts/postinstall.ts")
+    path.resolve(__dirname, "packages/remix-server-runtime/scripts/postinstall.ts")
   ],
   output: {
     banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/server/scripts",
+    dir: "build/node_modules/@remix-run/server-runtime/scripts",
     format: "cjs"
   },
   plugins: [
@@ -437,7 +437,7 @@ function getServerConfig(name) {
 }
 
 let remixArchitect = getServerConfig("architect");
-let remixCloudflare = getServerConfig("cloudflare");
+let remixCloudflare = getServerConfig("cloudflare-workers");
 let remixExpress = getServerConfig("express");
 let remixVercel = getServerConfig("vercel");
 

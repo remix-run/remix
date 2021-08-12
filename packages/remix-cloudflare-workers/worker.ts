@@ -2,8 +2,8 @@ import type {
   AppLoadContext,
   ServerBuild,
   ServerPlatform
-} from "@remix-run/server";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server";
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
