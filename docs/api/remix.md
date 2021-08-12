@@ -558,19 +558,14 @@ import { useRouteData, json, redirect } from "remix";
 import { userPrefs as cookie } from "../cookies";
 
 export async function loader({ request }) {
-  let value =
-    await cookie.parse(request.headers.get("Cookie")) || {};
-  let showBanner =
-    "showBanner" in value ? value.showBanner : true;
+  let value = await cookie.parse(request.headers.get("Cookie")) || {};
+  let showBanner = "showBanner" in value ? value.showBanner : true;
   return { showBanner };
 }
 
 export async function action({ request }) {
-  let value =
-    await cookie.parse(request.headers.get("Cookie")) || {};
-  let bodyParams = new URLSearchParams(
-    await request.text()
-  );
+  let value = await cookie.parse(request.headers.get("Cookie")) || {};
+  let bodyParams = new URLSearchParams(await request.text());
 
   if (bodyParams.get("bannerVisibility") === "hidden") {
     value.showBanner = false;
@@ -578,8 +573,8 @@ export async function action({ request }) {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await cookie.serialize(value),
-    },
+      "Set-Cookie": await cookie.serialize(value)
+    }
   });
 }
 
@@ -662,8 +657,8 @@ export async function loader({ request }) {
   new Response("...", {
     headers: {
       // Set-Cookie is signed with "n3wsecr3t"
-      "Set-Cookie": await cookie.serialize(value),
-    },
+      "Set-Cookie": await cookie.serialize(value)
+    }
   });
 }
 ```
@@ -731,8 +726,8 @@ Serializes a value and combines it with this cookie's options to create a `Set-C
 ```js
 new Response("...", {
   headers: {
-    "Set-Cookie": await cookie.serialize({ showBanner: true }),
-  },
+    "Set-Cookie": await cookie.serialize({ showBanner: true })
+  }
 });
 ```
 
