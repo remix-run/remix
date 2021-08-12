@@ -25,8 +25,6 @@ export {
   useSubmit,
   usePendingFormSubmit,
   useRouteData,
-  useLoaderData,
-  useActionData,
   usePendingLocation,
   useBeforeUnload,
   useMatches,

@@ -18,7 +18,3 @@ export async function createRouteData(
     return memo;
   }, {} as RouteData);
 }
-
-export async function createActionData(response: Response): Promise<RouteData> {
-  return extractData(response);
-}

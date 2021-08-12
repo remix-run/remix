@@ -119,7 +119,7 @@ export let action: ActionFunction = async ({ request }) => {
   let newProject = new URLSearchParams(await request.text());
   let project = await createProject(Object.fromEntries(newProject));
 
-  return redirect(`/projects/${project.id}`);
+  return `/projects/${project.id}`;
 };
 
 export default function NewProject() {
@@ -128,6 +128,20 @@ export default function NewProject() {
 ```
 
 And that's it! Assuming `createProject` does what we want it to, that's the core functionality.
+
+## Always Return a Redirect from Actions
+
+Remix requires you to return a `redirect` from actions. We're fixing a longstanding issue with web development that browsers can't fix on their own. You've seen the alerts on websites like:
+
+> Don't click the back button or you will be charged twice!
+
+Or
+
+> Please do not click back in your browser or you will book another flight!
+
+The right thing to do is redirect from the "POST" so that when the user clicks back it goes to the page with the form, not the action that charges their credit card! Because browsers don't own the server, their only choice when the user clicks back is to repost the form.
+
+Remix forces you to redirect from actions so that this bug never makes it into your app.
 
 ## Form Validation
 
@@ -177,13 +191,13 @@ export let loader: Loader = ({ request, session }) => {
 };
 ```
 
-Now we can display the validation errors and the previous values in our UI with `useLoaderData()`.
+Now we can display the validation errors and the previous values in our UI with `useRouteData()`.
 
 Notice how we add `defaultValue` to all of our inputs. Remember, this is still a `<form>`, so it's just normal browser/server stuff happening. We're getting the values back from the server so the user doesn't have to re-type what they had.
 
 ```tsx
 export default function NewProject() {
-  let failedSubmit = useLoaderData();
+  let failedSubmit = useRouteData();
 
   return (
     <form method="post" action="/projects/new">
@@ -230,10 +244,10 @@ export default function NewProject() {
 Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch` and then give you access to the pending form information to build pending UI.
 
 ```tsx
-import { Form, useLoaderData } from "remix";
+import { Form, useRouteData } from "remix";
 
 export default function NewProject() {
-  let failedSubmit = useLoaderData();
+  let failedSubmit = useRouteData();
 
   return (
     // note the capital "F" <Form> now
@@ -249,7 +263,7 @@ HOLD UP! If all you do is change your `<form>` to `<Form>`, you made the UX a li
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `usePendingFormSubmit`. When there is a pending form submit, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method..
 
 ```tsx
-import { Form, useLoaderData, usePendingFormSubmit } from "remix";
+import { Form, useRouteData, usePendingFormSubmit } from "remix";
 
 export let loader: Loader = () => {
   // same as before
@@ -260,7 +274,7 @@ export let action: Action = () => {
 };
 
 export default function NewProject() {
-  let failedSubmit = useLoaderData();
+  let failedSubmit = useRouteData();
 
   // when the form is being processed on the server, this returns the same data
   // that was sent. When the submit is complete, this will return `undefined`.
@@ -351,7 +365,7 @@ Now we can wrap our old error messages in this new fancy component, and even tur
 
 ```tsx
 function NewProject() {
-  let failedSubmit = useLoaderData();
+  let failedSubmit = useRouteData();
   let pendingForm = usePendingFormSubmit();
 
   return (
@@ -455,7 +469,7 @@ export let action: ActionFunction = async ({ request }) => {
 };
 
 export default function Todos() {
-  let { todos } = useLoaderData();
+  let { todos } = useRouteData();
   let pendingForm = usePendingFormSubmit();
 
   let state = !pendingForm
@@ -535,7 +549,7 @@ Once that worked, we use JavaScript to submit the form by changing `<form>` to `
 
 Now that there was a stateful page with React, we added loading indicators and animation for the validation errors.
 
-From your components perspective, all that happend was the `usePendingFormSubmit` hook caused a state update when the form was submit, and then another state update when the data came back in `useLoaderData()` and `usePendingFormSubmit()` no longer returned anything. Of course, a lot more happened inside of Remix, but as far as your component is concerned that's it. Just a couple state updates. This makes it really easy to dress up any user flow involving mutations.
+From your components perspective, all that happend was the `usePendingFormSubmit` hook caused a state update when the form was submit, and then another state update when the data came back in `useRouteData()` and `usePendingFormSubmit()` no longer returned anything. Of course, a lot more happened inside of Remix, but as far as your component is concerned that's it. Just a couple state updates. This makes it really easy to dress up any user flow involving mutations.
 
 ## See also
 

@@ -23,7 +23,7 @@ Now add this to `team.tsx`, it's another quick fetch to the GitHub API and a com
 ```tsx
 import React from "react";
 import { Link, Outlet } from "react-router-dom";
-import { useLoaderData } from "remix";
+import { useRouteData } from "remix";
 import type { LoaderFunction } from "remix";
 
 interface Member {
@@ -37,7 +37,7 @@ export let loader: LoaderFunction = () => {
 };
 
 export default function Team() {
-  let data = useLoaderData<Member[]>();
+  let data = useRouteData<Member[]>();
 
   return (
     <div>
@@ -108,7 +108,7 @@ Now create another loader and component combo:
 
 ```tsx
 import React from "react";
-import { useLoaderData } from "remix";
+import { useRouteData } from "remix";
 import type { LoaderFunction } from "remix";
 
 interface User {
@@ -124,7 +124,7 @@ export let loader: LoaderFunction = ({ params }) => {
 };
 
 export default function TeamMember() {
-  let user = useLoaderData<User>();
+  let user = useRouteData<User>();
   return (
     <div>
       <h3>{user.name}</h3>
