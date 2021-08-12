@@ -2,7 +2,7 @@ import express from "express";
 import supertest from "supertest";
 import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
-import { getMockReq } from "@jest-mock/express";
+import { createRequest } from "node-mocks-http";
 
 import {
   createRemixHeaders,
@@ -188,18 +188,14 @@ describe("express createRemixHeaders", () => {
 
 describe("express createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    const expressRequest = getMockReq({
+    const expressRequest = createRequest({
       url: "/foo/bar",
+      method: "GET",
       protocol: "http",
       hostname: "localhost",
       headers: {
-        "Cache-Control": "max-age=300, s-maxage=3600"
-      },
-      pipe: jest.fn(),
-      app: {
-        settings: {
-          port: "3000"
-        }
+        "Cache-Control": "max-age=300, s-maxage=3600",
+        Host: "localhost:3000"
       }
     });
 
@@ -219,8 +215,11 @@ describe("express createRemixRequest", () => {
         Symbol(Request internals): Object {
           "headers": Headers {
             Symbol(map): Object {
-              "Cache-Control": Array [
+              "cache-control": Array [
                 "max-age=300, s-maxage=3600",
+              ],
+              "host": Array [
+                "localhost:3000",
               ],
             },
           },
