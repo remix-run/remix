@@ -1,12 +1,12 @@
 import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
+import { useRouteData } from "remix";
 
 export let loader: LoaderFunction = ({ params }) => {
   return params["*"];
 };
 
 export default function Catchall() {
-  let splat = useLoaderData();
+  let splat = useRouteData();
 
   return (
     <div>
