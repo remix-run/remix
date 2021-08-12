@@ -1174,20 +1174,6 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@remix-run/node@0.18.0-pre.0":
-  version "0.18.0-pre.0"
-  resolved "https://npm.remix.run/download/@remix-run/node/0.18.0-pre.0/16a7352e98a4201e554a5bf34797678c2270b4049d928bbe0867eb6c2a5050fb#d349f3d8153156dc91187373ade22dac37e87eeb"
-  integrity sha512-W/BSyKoCTCsCW3HNXzvGMm9rN/PDT7i8OIOlc8YLHqZ1WbDMzihY1uouWKDLGt93cb6t9ifQf6mycKqUoHX5RA==
-  dependencies:
-    "@types/cookie" "^0.4.0"
-    "@types/node-fetch" "^2.5.7"
-    cookie "^0.4.1"
-    cookie-signature "^1.1.0"
-    history "^5.0.0"
-    jsesc "^3.0.1"
-    node-fetch "^2.6.1"
-    react-router-dom "^6.0.0-beta.0"
-
 "@rollup/plugin-babel@^5.2.2":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@rollup/plugin-babel/-/plugin-babel-5.3.0.tgz#9cb1c5146ddd6a4968ad96f209c50c62f92f9879"
