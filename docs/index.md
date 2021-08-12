@@ -7,11 +7,7 @@ Welcome to Remix! We have put our heart and soul into this project. The API is p
 
 ## Getting Started
 
-- Before anything else, do the [Quickstart Tutorial](tutorial/1-installation/), it'll only take a few minutes and will introduce you to the key concepts, conventions, and APIs in Remix.
-- Skim the docs, these are the two you'll end up referencing the most:
-  - [Application Module APIs](/api/app)
-  - [Remix Package](/api/remix)
-- Check out the [Remix Philosophy](guides/philosophy)
+First things first, do the [Quickstart Tutorial](tutorial/1-installation/). After that, we recommend reading the [Remix Philosophy](guides/philosophy).
 
 ## Getting help
 

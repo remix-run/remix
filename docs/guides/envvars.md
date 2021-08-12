@@ -74,7 +74,7 @@ Instead we recommmend keeping all of your environment variables on the server (a
    }
 
    export function Root() {
-     let data = useLoaderData();
+     let data = useRouteData();
      return (
        <html lang="en">
          <head>

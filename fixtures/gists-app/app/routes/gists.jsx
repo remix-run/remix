@@ -1,5 +1,5 @@
 import { Outlet } from "react-router-dom";
-import { Link, useLoaderData, usePendingLocation, json } from "remix";
+import { Link, useRouteData, usePendingLocation, json } from "remix";
 
 import Shared from "../components/Shared";
 import stylesHref from "../styles/gists.css";
@@ -35,7 +35,7 @@ export let handle = {
 
 export default function Gists() {
   let locationPending = usePendingLocation();
-  let { users } = useLoaderData();
+  let { users } = useRouteData();
 
   return (
     <div data-test-id="/gists">

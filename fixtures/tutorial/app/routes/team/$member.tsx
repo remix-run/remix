@@ -1,5 +1,5 @@
 import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
+import { useRouteData } from "remix";
 
 interface User {
   avatar_url: string;
@@ -14,7 +14,7 @@ export let loader: LoaderFunction = ({ params }) => {
 };
 
 export default function TeamMember() {
-  let user = useLoaderData<User>();
+  let user = useRouteData<User>();
   return (
     <div>
       <h3>{user.name}</h3>
