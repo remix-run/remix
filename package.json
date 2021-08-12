@@ -20,7 +20,8 @@
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-serve",
-    "packages/remix-vercel"
+    "packages/remix-vercel",
+    "packages/remix-netlify"
   ],
   "dependencies": {
     "@babel/core": "^7.10.4",

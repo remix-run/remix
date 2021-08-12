@@ -28,6 +28,11 @@ module.exports = {
       testMatch: ["<rootDir>/packages/remix-express/**/*-test.[jt]s?(x)"]
     },
     {
+      displayName: "netlify",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-netlify/**/*-test.[jt]s?(x)"]
+    },
+    {
       displayName: "vercel",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-vercel/**/*-test.[jt]s?(x)"]

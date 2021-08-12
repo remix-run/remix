@@ -115,7 +115,7 @@ async function run(args) {
   }
 
   // Update remix-* node server versions + remix-node dep
-  for (let name of ["architect", "express", "vercel"]) {
+  for (let name of ["architect", "express", "vercel", "netlify"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/node"] = nextVersion;
