@@ -8,16 +8,11 @@ export type FormEncType =
   | "application/x-www-form-urlencoded"
   | "multipart/form-data";
 
-export interface FormSubmitLocationState {
-  action: string;
-  isFormSubmit: boolean;
+export interface FormSubmit {
   method: string;
-  body: string;
   encType: string;
-}
-
-export interface FormSubmit extends FormSubmitLocationState {
-  data: URLSearchParams;
+  data: FormData;
+  action: string;
 }
 
 export function isErrorResponse(response: any): boolean {
@@ -37,18 +32,14 @@ export function isRedirectResponse(response: any): boolean {
 export async function fetchData(
   location: Location,
   routeId: string,
-  // TODO: refactor, I'm just hacking this to get the behavior right
-  forceGet: boolean = false
+  formSubmit?: FormSubmit
 ): Promise<Response | Error> {
   let origin = window.location.origin;
   let url = new URL(location.pathname + location.search, origin);
   url.searchParams.set("_data", routeId);
   url.searchParams.sort(); // Improves caching
 
-  let init: RequestInit = forceGet
-    ? { credentials: "same-origin" }
-    : getFetchInit(location);
-
+  let init = getFetchInit(formSubmit);
   let response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
@@ -85,33 +76,24 @@ export async function extractData(
   return response.text();
 }
 
-function getFetchInit(location: Location): RequestInit {
-  if (!isFormNavigation(location)) {
+function getFetchInit(formSubmit?: FormSubmit): RequestInit {
+  if (!formSubmit) {
     return { credentials: "same-origin" };
   }
 
-  let { encType, method, body } = location.state as FormSubmitLocationState;
-
-  if (encType !== "application/x-www-form-urlencoded") {
-    throw new Error(
-      `Only "application/x-www-form-urlencoded" forms are supported right now.`
-    );
-  }
+  let body =
+    formSubmit.encType === "application/x-www-form-urlencoded"
+      ? // TODO: Patch the URLSearchParams constructor type to accept FormData
+        // @ts-ignore
+        new URLSearchParams(formSubmit.data)
+      : formSubmit.data;
 
   return {
-    method,
+    method: formSubmit.method,
     body,
     credentials: "same-origin",
     headers: {
-      "Content-Type": encType
+      "Content-Type": formSubmit.encType
     }
   };
-}
-
-export function isFormNavigation(location: Location): boolean {
-  return !!(
-    location.state &&
-    // FIXME: not sure how to do these types
-    (location.state as FormSubmitLocationState).isFormSubmit
-  );
 }

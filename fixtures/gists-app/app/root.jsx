@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Links, Scripts, useLoaderData, useMatches } from "remix";
+import { Links, Scripts, useRouteData, useMatches } from "remix";
 import { Outlet, Link } from "react-router-dom";
 
 import stylesHref from "./styles/app.css";
@@ -30,7 +30,7 @@ export default function Root() {
     window.reactIsHydrated = true;
   });
 
-  let data = useLoaderData();
+  let data = useRouteData();
   let matches = useMatches();
 
   return (
@@ -49,7 +49,7 @@ export default function Root() {
               ))}
           </ol>
         </header>
-        <div data-test-id="content" id="content">
+        <div data-test-id="content">
           <Outlet />
         </div>
         {data.enableScripts && <Scripts />}
