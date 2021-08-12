@@ -61,7 +61,7 @@ describe("action", () => {
         id=\\"form\\"
       >
         <p id=\\"action-text\\">
-          <span id=\\"action-data\\">heyooo, data from the action: stuff</span>
+          <span id=\\"action-data\\">heyooo, data from the action</span>
         </p>
         <p>
           <input type=\\"text\\" name=\\"field1\\" value=\\"stuff\\" /><button
@@ -115,7 +115,7 @@ describe("action", () => {
         id=\\"form\\"
       >
         <p id=\\"action-text\\">
-          <span id=\\"action-data\\">heyooo, data from the action: stuff</span>
+          <span id=\\"action-data\\">heyooo, data from the action</span>
         </p>
         <p>
           <input type=\\"text\\" name=\\"field1\\" value=\\"stuff\\" /><button
@@ -130,4 +130,48 @@ describe("action", () => {
       "
     `);
   });
+
+  it("reloads loaders on the page", async () => {
+    await page.goto(`${testServer}/actions`);
+    await Utils.reactIsHydrated(page);
+
+    let responses = Utils.collectDataResponses(page);
+
+    await page.click("button[type=submit]");
+    await page.waitForSelector("#action-data");
+
+    expect(responses.length).toBe(3);
+  });
+
+  it("resubmits on pop events", async () => {
+    await page.goto(`${testServer}/actions`);
+    await Utils.reactIsHydrated(page);
+
+    await page.click("button[type=submit]");
+    await page.waitForSelector("#action-data");
+
+    await page.goBack();
+    let html = await Utils.getHtml(page, "#action-text");
+    expect(html).toMatchInlineSnapshot(`
+      "<p id=\\"action-text\\">Waiting...</p>
+      "
+    `);
+
+    let responses = Utils.collectDataResponses(page);
+    await page.goForward();
+    await page.waitForSelector("#action-data");
+
+    // reposted
+    let actionReq = responses[0].request();
+    expect(actionReq.url()).toBe(
+      "http://localhost:3000/actions?_data=routes%2Factions"
+    );
+    expect(actionReq.method()).toBe("POST");
+
+    // re-called loaders
+    expect(responses.length).toBe(3);
+  });
+
+  it.todo("reposts if the user clicks refresh");
+  it.todo("reloads all loaders if action redirects");
 });

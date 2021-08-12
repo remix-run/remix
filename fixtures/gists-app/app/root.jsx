@@ -24,8 +24,6 @@ export let handle = {
   breadcrumb: () => <Link to="/">Home</Link>
 };
 
-export let shouldReload = () => false;
-
 export default function Root() {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
