@@ -12,10 +12,6 @@ export type {
   AppLoadContext,
   AppData,
   EntryContext,
-  HeadersInit,
-  RequestInfo,
-  RequestInit,
-  ResponseInit,
   LinkDescriptor,
   HTMLLinkDescriptor,
   BlockLinkDescriptor,
@@ -33,16 +29,11 @@ export type {
   Session,
   SessionStorage,
   SessionIdStorageStrategy
-} from "@remix-run/node";
+} from "@remix-run/server";
 
 export {
   createCookie,
   isCookie,
-  Headers,
-  Request,
-  Response,
-  fetch,
-  // installGlobals, // only needed by adapters
   json,
   redirect,
   // createRequestHandler, // only needed by adapters
@@ -50,6 +41,5 @@ export {
   isSession,
   createSessionStorage,
   createCookieSessionStorage,
-  createFileSessionStorage,
   createMemorySessionStorage
-} from "@remix-run/node";
+} from "@remix-run/server";

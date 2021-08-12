@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 import {
   Headers as NodeHeaders,
   Request as NodeRequest,
@@ -8,17 +10,20 @@ import {
 declare global {
   namespace NodeJS {
     interface Global {
-      Headers: typeof NodeHeaders;
-      Request: typeof NodeRequest;
-      Response: typeof NodeResponse;
-      fetch: typeof nodeFetch;
+      Headers: typeof Headers;
+      Request: typeof Request;
+      Response: typeof Response;
+      fetch: typeof fetch;
+      crypto: SubtleCrypto;
     }
   }
 }
 
 export function installGlobals() {
-  (global as NodeJS.Global).Headers = NodeHeaders;
-  (global as NodeJS.Global).Request = NodeRequest;
-  (global as NodeJS.Global).Response = NodeResponse;
-  (global as NodeJS.Global).fetch = nodeFetch;
+  ((global as unknown) as NodeJS.Global).Headers = (NodeHeaders as any) as typeof Headers;
+  ((global as unknown) as NodeJS.Global).Request = (NodeRequest as any) as typeof Request;
+  ((global as unknown) as NodeJS.Global).Response = (NodeResponse as any) as typeof Response;
+  ((global as unknown) as NodeJS.Global).fetch = (nodeFetch as any) as typeof fetch;
+  // @ts-ignore
+  ((global as unknown) as NodeJS.Global).crypto = crypto.webcrypto as any;
 }

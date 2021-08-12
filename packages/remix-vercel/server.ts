@@ -1,16 +1,16 @@
-import { URL } from "url";
+import { PassThrough } from "stream";
 import type { NowRequest, NowResponse } from "@vercel/node";
 import type {
   AppLoadContext,
-  RequestInit,
-  Response,
-  ServerBuild
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server";
+import type {
+  Headers as NodeHeaders,
+  RequestInit as NodeRequestInit
 } from "@remix-run/node";
-import {
-  Headers,
-  Request,
-  createRequestHandler as createRemixRequestHandler
-} from "@remix-run/node";
+import { formatServerError } from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -38,7 +38,8 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (req: NowRequest, res: NowResponse) => {
     let request = createRemixRequest(req);
@@ -72,23 +73,26 @@ function createRemixRequest(req: NowRequest): Request {
     }
   }
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: req.method,
-    headers: headers
+    headers: (headers as any) as NodeHeaders
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = req;
   }
 
-  return new Request(url.toString(), init);
+  return new Request(url.toString(), (init as any) as RequestInit);
 }
 
 function sendRemixResponse(res: NowResponse, response: Response): void {
   res.status(response.status);
 
   let arrays = new Map();
-  for (let [key, value] of response.headers.entries()) {
+  for (let [
+    key,
+    value
+  ] of ((response.headers as any) as NodeHeaders).entries()) {
     if (arrays.has(key)) {
       let newValue = arrays.get(key).concat(value);
       res.setHeader(key, newValue);
@@ -102,6 +106,6 @@ function sendRemixResponse(res: NowResponse, response: Response): void {
   if (Buffer.isBuffer(response.body)) {
     res.end(response.body);
   } else {
-    response.body.pipe(res);
+    ((response.body as any) as PassThrough).pipe(res);
   }
 }

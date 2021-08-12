@@ -6,6 +6,8 @@
 
 - CLI no longer crashes on syntax errors and reports errors with location
 - Dynamic imports no longer blows up build
+- Renamed @remix-run/node to @remix-run/server and abstracted node specific functionality back to the repurposed @remix-run/node
+- Made cookie parse and serialize methods async to support web crypto API
 
 This is a history of changes to [Remix](https://remix.run).
 

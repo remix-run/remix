@@ -1,13 +1,15 @@
-import { URL } from "url";
 import type {
   Request as ArcRequest,
   Response as ArcResponse
 } from "@architect/functions";
-import type { ServerBuild, AppLoadContext } from "@remix-run/node";
-import {
-  Request,
-  createRequestHandler as createRemixRequestHandler
-} from "@remix-run/node";
+import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server";
+import type { Headers as NodeHeaders } from "@remix-run/node";
+import { formatServerError } from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -35,7 +37,8 @@ export function createRequestHandler({
   getLoadContext: GetLoadContextFunction;
   mode?: string;
 }) {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (req: ArcRequest): Promise<ArcResponse> => {
     let request = createRemixRequest(req);
@@ -46,7 +49,7 @@ export function createRequestHandler({
 
     return {
       statusCode: response.status,
-      headers: Object.fromEntries(response.headers),
+      headers: Object.fromEntries((response.headers as any) as NodeHeaders),
       body: await response.text()
     };
   };

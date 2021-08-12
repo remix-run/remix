@@ -3,7 +3,6 @@ import type { ComponentType } from "react";
 import type { Params } from "react-router"; // TODO: import/export from react-router-dom
 
 import type { AppLoadContext, AppData } from "./data";
-import type { Headers, HeadersInit, Request, Response } from "./fetch";
 import type { LinkDescriptor } from "./links";
 import type { RouteData } from "./routeData";
 

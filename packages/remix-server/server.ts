@@ -2,12 +2,12 @@ import type { AppLoadContext } from "./data";
 import { loadRouteData, callRouteAction } from "./data";
 import type { ComponentDidCatchEmulator } from "./errors";
 
-import { formatServerError, serializeError } from "./errors";
 import type { ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
-import { Response, Request } from "./fetch";
+import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
+import type { ServerPlatform } from "./platform";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import { ServerMode, isServerMode } from "./mode";
@@ -16,7 +16,6 @@ import { createRoutes } from "./routes";
 import { createActionData, createRouteData } from "./routeData";
 import { json } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
-import { RequestInit } from "node-fetch";
 
 /**
  * The main request handler for a Remix server. This handler runs in the context
@@ -32,6 +31,7 @@ export interface RequestHandler {
  */
 export function createRequestHandler(
   build: ServerBuild,
+  platform: ServerPlatform,
   mode?: string
 ): RequestHandler {
   let routes = createRoutes(build.routes);
@@ -39,14 +39,22 @@ export function createRequestHandler(
 
   return (request, loadContext = {}) =>
     isDataRequest(request)
-      ? handleDataRequest(request, loadContext, build, routes)
-      : handleDocumentRequest(request, loadContext, build, routes, serverMode);
+      ? handleDataRequest(request, loadContext, build, platform, routes)
+      : handleDocumentRequest(
+          request,
+          loadContext,
+          build,
+          platform,
+          routes,
+          serverMode
+        );
 }
 
 async function handleDataRequest(
   request: Request,
   loadContext: AppLoadContext,
   build: ServerBuild,
+  platform: ServerPlatform,
   routes: ServerRoute[]
 ): Promise<Response> {
   let url = new URL(request.url);
@@ -96,7 +104,8 @@ async function handleDataRequest(
           routeMatch.params
         );
   } catch (error) {
-    return json(await serializeError(error), {
+    let formattedError = (await platform?.formatServerError?.(error)) || error;
+    return json(await serializeError(formattedError), {
       status: 500,
       headers: {
         "X-Remix-Error": "unfortunately, yes"
@@ -111,12 +120,12 @@ async function handleDataRequest(
     let locationHeader = response.headers.get("Location");
     response.headers.delete("Location");
 
+    let headers = new Headers(response.headers);
+    headers.set("X-Remix-Redirect", locationHeader!);
+
     return new Response("", {
       status: 204,
-      headers: {
-        ...Object.fromEntries(response.headers),
-        "X-Remix-Redirect": locationHeader!
-      }
+      headers
     });
   }
 
@@ -127,6 +136,7 @@ async function handleDocumentRequest(
   request: Request,
   loadContext: AppLoadContext,
   build: ServerBuild,
+  platform: ServerPlatform,
   routes: ServerRoute[],
   serverMode: ServerMode
 ): Promise<Response> {
@@ -161,15 +171,17 @@ async function handleDocumentRequest(
         loadContext,
         leafMatch.params
       );
-      if (isRedirectResponse(actionResponse)) {
+      if (actionResponse && isRedirectResponse(actionResponse)) {
         return actionResponse;
       }
     } catch (error) {
+      let formattedError =
+        (await platform?.formatServerError?.(error)) || error;
       actionErrored = true;
       let withBoundaries = getMatchesUpToDeepestErrorBoundary(matches);
       componentDidCatchEmulator.loaderBoundaryRouteId =
         withBoundaries[withBoundaries.length - 1].route.id;
-      componentDidCatchEmulator.error = await serializeError(error);
+      componentDidCatchEmulator.error = await serializeError(formattedError);
     }
   }
 
@@ -238,7 +250,10 @@ async function handleDocumentRequest(
         );
       }
 
-      componentDidCatchEmulator.error = await serializeError(response);
+      let formattedError =
+        (await platform?.formatServerError?.(response)) || response;
+
+      componentDidCatchEmulator.error = await serializeError(formattedError);
       routeLoaderResults[index] = json(null, { status: 500 });
     } else if (isRedirectResponse(response)) {
       return response;
@@ -304,8 +319,9 @@ async function handleDocumentRequest(
       entryContext
     );
   } catch (error) {
+    let formattedError = (await platform?.formatServerError?.(error)) || error;
     if (serverMode !== ServerMode.Test) {
-      console.error(await formatServerError(error));
+      console.error(formattedError);
     }
 
     statusCode = 500;
@@ -317,7 +333,7 @@ async function handleDocumentRequest(
     // tracking the `routeId` as we render because we already have an error to
     // render.
     componentDidCatchEmulator.trackBoundaries = false;
-    componentDidCatchEmulator.error = await serializeError(error);
+    componentDidCatchEmulator.error = await serializeError(formattedError);
     entryContext.serverHandoffString = createServerHandoffString(serverHandoff);
 
     try {
@@ -328,17 +344,22 @@ async function handleDocumentRequest(
         entryContext
       );
     } catch (error) {
+      let formattedError =
+        (await platform?.formatServerError?.(error)) || error;
       if (serverMode !== ServerMode.Test) {
-        console.error(await formatServerError(error));
+        console.error(formattedError);
       }
 
       // Good grief folks, get your act together 😂!
-      response = new Response(`Unexpected Server Error\n\n${error.message}`, {
-        status: 500,
-        headers: {
-          "Content-Type": "text/plain"
+      response = new Response(
+        `Unexpected Server Error\n\n${formattedError.message}`,
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "text/plain"
+          }
         }
-      });
+      );
     }
   }
 
@@ -366,14 +387,8 @@ function isRedirectResponse(response: Response): boolean {
 async function stripDataParam(og: Request) {
   let url = new URL(og.url);
   url.searchParams.delete("_data");
-  let init: RequestInit = {
-    method: og.method,
-    headers: og.headers
-  };
-  if (og.method.toLowerCase() !== "get") {
-    init.body = await og.text();
-  }
-  return new Request(url, init);
+
+  return new Request(url.toString(), og);
 }
 
 // This ensures we only load the data for the routes above an action error

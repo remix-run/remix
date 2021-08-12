@@ -4,7 +4,8 @@
   "version": "0.18.0-pre.0",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
-    "@remix-run/node": "0.18.0-pre.0"
+    "@remix-run/node": "0.18.0-pre.0",
+    "@remix-run/server": "0.18.0-pre.0"
   },
   "peerDependencies": {
     "@architect/architect": "^8.3.7",

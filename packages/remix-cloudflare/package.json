@@ -1,0 +1,12 @@
+{
+  "name": "@remix-run/cloudflare",
+  "description": "Cloudflare worker request handler for Remix",
+  "version": "0.18.0-pre.0",
+  "repository": "https://github.com/remix-run/packages",
+  "dependencies": {
+    "@remix-run/server": "0.18.0-pre.0"
+  },
+  "peerDependencies": {
+    "@cloudflare/workers-types": "^2.2.2"
+  }
+}
