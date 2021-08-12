@@ -92,8 +92,6 @@ export function createRemixHeaders(
 export function createRemixRequest(req: express.Request): NodeRequest {
   let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
-  let port = req.app.settings?.port;
-  if (port) url.port = port;
 
   let controller = new AbortController();
 
