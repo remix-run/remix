@@ -328,6 +328,7 @@ function getServerConfig(name) {
 }
 
 let remixArchitect = getServerConfig("architect");
+let remixAzure = getServerConfig("azure");
 let remixExpress = getServerConfig("express");
 let remixVercel = getServerConfig("vercel");
 
@@ -511,6 +512,7 @@ let builds = [
   remixNodeMagicExports,
   remixNodeMagicExportsBrowser,
   remixArchitect,
+  remixAzure,
   remixExpress,
   remixVercel,
   remixReact,

@@ -23,6 +23,11 @@ module.exports = {
       testMatch: ["<rootDir>/packages/remix-architect/**/*-test.[jt]s?(x)"]
     },
     {
+      displayName: "azure",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-azure/**/*-test.[jt]s?(x)"]
+    },
+    {
       displayName: "express",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-express/**/*-test.[jt]s?(x)"]

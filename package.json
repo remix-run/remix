@@ -14,6 +14,7 @@
     "packages/create-remix",
     "packages/remix",
     "packages/remix-architect",
+    "packages/remix-azure",
     "packages/remix-dev",
     "packages/remix-init",
     "packages/remix-express",
