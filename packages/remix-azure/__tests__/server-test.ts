@@ -1,3 +1,4 @@
+import { HttpRequest } from "@azure/functions";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
 
 import { createRemixHeaders, createRemixRequest } from "../server";
@@ -117,5 +118,59 @@ describe("azure createRemixHeaders", () => {
 });
 
 describe("azure createRemixRequest", () => {
-  it.todo("creates a request with the correct headers");
+  it("creates a request with the correct headers", async () => {
+    const request: HttpRequest = {
+      method: "GET",
+      url: "/foo/bar",
+      rawBody: "",
+      headers: {
+        "x-ms-original-url": "http://localhost:3000/foo/bar"
+      },
+      params: {},
+      query: {},
+      body: ""
+    };
+
+    expect(createRemixRequest(request)).toMatchInlineSnapshot(`
+      Request {
+        "agent": undefined,
+        "compress": true,
+        "counter": 0,
+        "follow": 20,
+        "size": 0,
+        "timeout": 0,
+        Symbol(Body internals): Object {
+          "body": null,
+          "disturbed": false,
+          "error": null,
+        },
+        Symbol(Request internals): Object {
+          "headers": Headers {
+            Symbol(map): Object {
+              "x-ms-original-url": Array [
+                "http://localhost:3000/foo/bar",
+              ],
+            },
+          },
+          "method": "GET",
+          "parsedURL": Url {
+            "auth": null,
+            "hash": null,
+            "host": "localhost:3000",
+            "hostname": "localhost",
+            "href": "http://localhost:3000/foo/bar",
+            "path": "/foo/bar",
+            "pathname": "/foo/bar",
+            "port": "3000",
+            "protocol": "http:",
+            "query": null,
+            "search": null,
+            "slashes": true,
+          },
+          "redirect": "follow",
+          "signal": null,
+        },
+      }
+    `);
+  });
 });
