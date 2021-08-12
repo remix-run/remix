@@ -1,5 +1,5 @@
 import type { LoaderFunction, LinksFunction } from "remix";
-import { useLoaderData } from "remix";
+import { useRouteData } from "remix";
 
 import styles from "../styles/index.css";
 
@@ -19,7 +19,7 @@ export function meta() {
 }
 
 export default function Index() {
-  let data = useLoaderData();
+  let data = useRouteData();
 
   return (
     <div style={{ textAlign: "center", padding: 20 }}>

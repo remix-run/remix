@@ -71,13 +71,6 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "action-errors-self-boundary",
           },
-          "routes/actions": Object {
-            "caseSensitive": false,
-            "file": "routes/actions.tsx",
-            "id": "routes/actions",
-            "parentId": "root",
-            "path": "actions",
-          },
           "routes/empty": Object {
             "caseSensitive": false,
             "file": "routes/empty.jsx",
@@ -147,13 +140,6 @@ describe("readConfig", () => {
             "id": "routes/methods",
             "parentId": "root",
             "path": "methods",
-          },
-          "routes/pending-forms": Object {
-            "caseSensitive": false,
-            "file": "routes/pending-forms.tsx",
-            "id": "routes/pending-forms",
-            "parentId": "root",
-            "path": "pending-forms",
           },
           "routes/prefs": Object {
             "caseSensitive": false,
