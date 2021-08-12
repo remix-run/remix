@@ -85,10 +85,8 @@ export function createRemixHeaders(
 }
 
 export function createRemixRequest(req: express.Request): Request {
-  let origin = `${req.protocol}://${req.hostname}`;
+  let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
-  let port = req.app.settings?.port;
-  if (port) url.port = port;
 
   let init: RequestInit = {
     method: req.method,
