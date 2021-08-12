@@ -1,7 +1,12 @@
-import { HttpRequest } from "@azure/functions";
+import { Context, HttpRequest } from "@azure/functions";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
+import { Response, Headers } from "@remix-run/node";
 
-import { createRemixHeaders, createRemixRequest } from "../server";
+import {
+  createRemixHeaders,
+  createRemixRequest,
+  createRequestHandler
+} from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the azure adapter
@@ -10,7 +15,13 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
   typeof createRemixRequestHandler
 >;
 
-describe.skip("azure createRequestHandler", () => {
+describe("azure createRequestHandler", () => {
+  let context: Context;
+
+  beforeEach(() => {
+    context = ({ log: jest.fn() } as unknown) as Context;
+  });
+
   describe("basic requests", () => {
     afterEach(() => {
       mockedCreateRequestHandler.mockReset();
@@ -20,7 +31,28 @@ describe.skip("azure createRequestHandler", () => {
       jest.restoreAllMocks();
     });
 
-    it.todo("handles requests");
+    it("handles requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async req => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      let mockedRequest: HttpRequest = {
+        method: "GET",
+        url: "/foo/bar",
+        rawBody: "",
+        headers: {
+          "x-ms-original-url": "http://localhost:3000/foo/bar"
+        },
+        params: {},
+        query: {},
+        body: ""
+      };
+
+      await createRequestHandler({ build: undefined })(context, mockedRequest);
+
+      expect(context.res.status).toBe(200);
+      expect(context.res.body).toBe("URL: /foo/bar");
+    });
 
     it.todo("handles status codes");
 
@@ -119,7 +151,7 @@ describe("azure createRemixHeaders", () => {
 
 describe("azure createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    const request: HttpRequest = {
+    let request: HttpRequest = {
       method: "GET",
       url: "/foo/bar",
       rawBody: "",
