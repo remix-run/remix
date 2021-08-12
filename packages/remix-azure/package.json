@@ -1,0 +1,18 @@
+{
+  "name": "@remix-run/azure",
+  "description": "Azure server request handler for Remix",
+  "version": "0.18.0-pre.0",
+  "repository": "https://github.com/remix-run/packages",
+  "dependencies": {
+    "@remix-run/node": "0.18.0-pre.0"
+  },
+  "peerDependencies": {
+    "@azure/functions": "^1.2.3"
+  },
+  "devDependencies": {
+    "@azure/functions": "^1.2.3",
+    "@types/supertest": "^2.0.10",
+    "node-mocks-http": "^1.10.1",
+    "supertest": "^6.0.1"
+  }
+}
