@@ -195,7 +195,12 @@ describe("express createRemixRequest", () => {
       headers: {
         "Cache-Control": "max-age=300, s-maxage=3600"
       },
-      pipe: jest.fn()
+      pipe: jest.fn(),
+      app: {
+        settings: {
+          port: "3000"
+        }
+      }
     });
 
     expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
@@ -223,12 +228,12 @@ describe("express createRemixRequest", () => {
           "parsedURL": Url {
             "auth": null,
             "hash": null,
-            "host": "localhost",
+            "host": "localhost:3000",
             "hostname": "localhost",
-            "href": "http://localhost/foo/bar",
+            "href": "http://localhost:3000/foo/bar",
             "path": "/foo/bar",
             "pathname": "/foo/bar",
-            "port": null,
+            "port": "3000",
             "protocol": "http:",
             "query": null,
             "search": null,
