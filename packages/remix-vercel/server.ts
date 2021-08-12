@@ -94,9 +94,11 @@ function sendRemixResponse(res: NowResponse, response: Response): void {
   res.status(response.status);
 
   if (Buffer.isBuffer(response.body)) {
-    res.writeHead(response.status, response.headers.raw()).end(response.body);
+    return res
+      .writeHead(response.status, response.headers.raw())
+      .end(response.body);
   } else {
-    res
+    return res
       .writeHead(response.status, response.headers.raw())
       .end(response.body.pipe(res));
   }

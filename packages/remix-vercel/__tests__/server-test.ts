@@ -1,10 +1,9 @@
-import { Headers, Response, RequestInfo, RequestInit } from "@remix-run/node";
+import { Headers, Response } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
 import { createRequest } from "node-mocks-http";
+import supertest from "supertest";
 
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
-import listen from "test-listen";
-import fetch from "node-fetch";
 
 import {
   createRemixHeaders,
@@ -20,43 +19,23 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
   typeof createRemixRequestHandler
 >;
 
-// TODO: add real type definition
-let server: any;
-let url: string;
 let consumeEventMock = jest.fn();
 let mockBridge = { consumeEvent: consumeEventMock };
 
-async function fetchWithProxyReq(_url: RequestInfo, opts: RequestInit = {}) {
-  if (opts.body) {
-    // eslint-disable-next-line
-    // @ts-ignore look into
-    opts = { ...opts, body: Buffer.from(opts.body) };
-  }
-
-  consumeEventMock.mockImplementationOnce(() => opts);
-
-  return fetch(_url, {
-    ...opts,
-    headers: { ...opts.headers, "x-now-bridge-request-id": "2" }
-  });
+function createApp() {
+  // TODO: get supertest args into the event
+  consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
+  let server = createServerWithHelpers(
+    createRequestHandler({ build: undefined }),
+    mockBridge
+  );
+  return server;
 }
 
 describe("vercel createRequestHandler", () => {
-  beforeEach(async () => {
-    consumeEventMock.mockClear();
-
-    server = createServerWithHelpers((req: any, res: any) => {
-      // We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
-      return createRequestHandler({ build: undefined })(req, res);
-    }, mockBridge);
-
-    url = await listen(server);
-  });
-
   afterEach(async () => {
     mockedCreateRequestHandler.mockReset();
-    await server.close();
+    consumeEventMock.mockClear();
   });
 
   afterAll(() => {
@@ -64,15 +43,27 @@ describe("vercel createRequestHandler", () => {
   });
 
   describe("basic requests", () => {
+    afterEach(() => {
+      mockedCreateRequestHandler.mockReset();
+    });
+
+    afterAll(() => {
+      jest.restoreAllMocks();
+    });
+
     it("handles requests", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async req => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      const res = await fetchWithProxyReq(url + "/foo/bar");
+      let request = supertest(createApp());
+
+      let res = await request
+        .get("/foo/bar")
+        .set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(200);
-      expect(await res.text()).toBe("URL: /foo/bar");
+      expect(res.text).toBe("URL: /foo/bar");
     });
 
     it("handles status codes", async () => {
@@ -80,7 +71,10 @@ describe("vercel createRequestHandler", () => {
         return new Response("", { status: 204 });
       });
 
-      let res = await fetchWithProxyReq(url);
+      const request = supertest(createApp());
+      const res = await request
+        .get("/")
+        .set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(204);
     });
@@ -103,12 +97,16 @@ describe("vercel createRequestHandler", () => {
         return new Response("", { headers });
       });
 
-      let res = await fetchWithProxyReq(url);
+      let request = supertest(createApp());
 
-      expect(res.headers.get("x-time-of-year")).toBe("most wonderful");
-      expect(res.headers.get("set-cookie")).toEqual(
-        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax, second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax, third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
-      );
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.headers["x-time-of-year"]).toBe("most wonderful");
+      expect(res.headers["set-cookie"]).toEqual([
+        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+        "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
+        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+      ]);
     });
   });
 });
