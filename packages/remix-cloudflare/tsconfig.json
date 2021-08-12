@@ -11,7 +11,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/@remix-run/vercel",
+    "outDir": "../../build/node_modules/@remix-run/cloudflare",
     "rootDir": "."
   }
 }
