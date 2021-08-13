@@ -11,28 +11,18 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
 >;
 
 function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
-  const { headers, multiValueHeaders = {}, ...rest } = event;
-
   return {
-    rawUrl: "/",
+    rawUrl: "http://localhost:3000/",
     rawQuery: "",
     path: "/",
     httpMethod: "GET",
-    headers: {
-      "x-forwarded-host": "localhost:3000",
-      host: "localhost:3000",
-      ...headers
-    },
-    multiValueHeaders: {
-      "x-forwarded-host": ["localhost:3000"],
-      host: ["localhost:3000"],
-      ...multiValueHeaders
-    },
+    headers: {},
+    multiValueHeaders: {},
     queryStringParameters: null,
     multiValueQueryStringParameters: null,
     body: null,
     isBase64Encoded: false,
-    ...rest
+    ...event
   };
 }
 
@@ -179,12 +169,6 @@ describe("netlify createRemixRequest", () => {
                 "__session=value",
                 "__other=value",
               ],
-              "host": Array [
-                "localhost:3000",
-              ],
-              "x-forwarded-host": Array [
-                "localhost:3000",
-              ],
             },
           },
           "method": "GET",
@@ -193,11 +177,11 @@ describe("netlify createRemixRequest", () => {
             "hash": null,
             "host": "localhost:3000",
             "hostname": "localhost",
-            "href": "https://localhost:3000/",
+            "href": "http://localhost:3000/",
             "path": "/",
             "pathname": "/",
             "port": "3000",
-            "protocol": "https:",
+            "protocol": "http:",
             "query": null,
             "search": null,
             "slashes": true,
