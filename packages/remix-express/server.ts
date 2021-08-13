@@ -70,14 +70,14 @@ export function createRemixHeaders(
   let headers = new Headers();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
-    if (!values) break;
-
-    if (Array.isArray(values)) {
-      for (const value of values) {
-        headers.append(key, value);
+    if (values) {
+      if (Array.isArray(values)) {
+        for (const value of values) {
+          headers.append(key, value);
+        }
+      } else {
+        headers.set(key, values);
       }
-    } else {
-      headers.set(key, values);
     }
   }
 
