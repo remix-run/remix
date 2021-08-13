@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "lib": ["ES2020", "WebWorker"],
-    "target": "ES2020",
+    "lib": ["ES2019", "WebWorker"],
+    "target": "ES2019",
     "types": ["@cloudflare/workers-types"],
 
     "moduleResolution": "node",

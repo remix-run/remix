@@ -1,10 +1,10 @@
 import crypto from "crypto";
 
 import {
-  Headers as NodeHeaders,
-  Request as NodeRequest,
-  Response as NodeResponse,
-  fetch as nodeFetch
+  Headers,
+  Request,
+  Response,
+  fetch
 } from "./fetch";
 
 declare global {
@@ -20,10 +20,10 @@ declare global {
 }
 
 export function installGlobals() {
-  ((global as unknown) as NodeJS.Global).Headers = (NodeHeaders as any) as typeof Headers;
-  ((global as unknown) as NodeJS.Global).Request = (NodeRequest as any) as typeof Request;
-  ((global as unknown) as NodeJS.Global).Response = (NodeResponse as any) as typeof Response;
-  ((global as unknown) as NodeJS.Global).fetch = (nodeFetch as any) as typeof fetch;
+  (global as NodeJS.Global).Headers = Headers;
+  (global as NodeJS.Global).Request = Request;
+  (global as NodeJS.Global).Response = Response;
+  (global as NodeJS.Global).fetch = fetch;
   // @ts-ignore
-  ((global as unknown) as NodeJS.Global).crypto = crypto.webcrypto as Crypto;
+  (global as NodeJS.Global).crypto = crypto.webcrypto as Crypto;
 }

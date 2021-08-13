@@ -1,13 +1,11 @@
 {
   "name": "@remix-run/node",
   "description": "Node.js platform abstractions for Remix",
-  "version": "0.18.0-pre.0",
+  "version": "0.17.5",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
+    "@remix-run/server-runtime": "0.17.5",
     "source-map": "^0.7.3"
-  },
-  "devDependencies": {
-    "@types/node": "^16.4.14"
   },
   "sideEffects": false
 }

@@ -8,7 +8,7 @@ import type {
   ServerPlatform
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { Headers as NodeHeaders } from "@remix-run/node";
+import type { Response as NodeResponse } from "@remix-run/node";
 import { formatServerError } from "@remix-run/node";
 
 /**
@@ -45,11 +45,14 @@ export function createRequestHandler({
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(req) : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = ((await handleRequest(
+      request,
+      loadContext
+    )) as unknown) as NodeResponse;
 
     return {
       statusCode: response.status,
-      headers: Object.fromEntries((response.headers as any) as NodeHeaders),
+      headers: Object.fromEntries(response.headers),
       body: await response.text()
     };
   };

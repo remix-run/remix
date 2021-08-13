@@ -6,10 +6,7 @@ import type {
   ServerPlatform
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type {
-  Headers as NodeHeaders,
-  RequestInit as NodeRequestInit
-} from "@remix-run/node";
+import type { Response as NodeResponse } from "@remix-run/node";
 import { formatServerError } from "@remix-run/node";
 
 /**
@@ -53,11 +50,13 @@ export function createRequestHandler({
           ? getLoadContext(req, res)
           : undefined;
 
-      let response = await handleRequest(request, loadContext);
+      let response = ((await handleRequest(
+        request,
+        loadContext
+      )) as unknown) as NodeResponse;
 
       sendRemixResponse(res, response);
     } catch (error) {
-      console.error(error);
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
       next(error);
@@ -87,31 +86,31 @@ function createRemixRequest(req: express.Request): Request {
   let origin = `${req.protocol}://${req.hostname}`;
   let url = new URL(req.url, origin);
 
-  let init: NodeRequestInit = {
+  let init: RequestInit = {
     method: req.method,
-    headers: (createRemixHeaders(req.headers) as any) as NodeHeaders
+    headers: createRemixHeaders(req.headers)
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
+    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 })) as any;
   }
 
-  return new Request(url.toString(), (init as any) as RequestInit);
+  return new Request(url.toString(), init);
 }
 
-function sendRemixResponse(res: express.Response, response: Response): void {
+function sendRemixResponse(
+  res: express.Response,
+  response: NodeResponse
+): void {
   res.status(response.status);
 
-  for (let [
-    key,
-    value
-  ] of ((response.headers as any) as NodeHeaders).entries()) {
+  for (let [key, value] of response.headers.entries()) {
     res.set(key, value);
   }
 
   if (Buffer.isBuffer(response.body)) {
     res.end(response.body);
   } else {
-    ((response.body as any) as PassThrough).pipe(res);
+    response.body.pipe(res);
   }
 }

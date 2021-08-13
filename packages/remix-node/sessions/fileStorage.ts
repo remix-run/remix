@@ -1,7 +1,10 @@
 import { promises as fsp } from "fs";
 import * as path from "path";
 
-import type { SessionStorage, SessionIdStorageStrategy } from "@remix-run/server-runtime";
+import type {
+  SessionStorage,
+  SessionIdStorageStrategy
+} from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 
 interface FileSessionStorageOptions {
@@ -34,7 +37,7 @@ export function createFileSessionStorage({
 
       while (true) {
         let randomBytes = new Uint8Array(8);
-        crypto.getRandomValues(randomBytes)
+        crypto.getRandomValues(randomBytes);
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions

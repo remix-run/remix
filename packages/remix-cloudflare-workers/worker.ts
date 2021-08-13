@@ -38,9 +38,6 @@ export function createRequestHandler({
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
-    return (handleRequest(
-      event.request,
-      loadContext
-    ) as any) as Promise<Response>;
+    return handleRequest(event.request, loadContext);
   };
 }

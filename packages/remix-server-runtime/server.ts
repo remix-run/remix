@@ -104,7 +104,7 @@ async function handleDataRequest(
           routeMatch.params
         );
   } catch (error) {
-    let formattedError = (await platform?.formatServerError?.(error)) || error;
+    let formattedError = (await platform.formatServerError?.(error)) || error;
     return json(await serializeError(formattedError), {
       status: 500,
       headers: {
@@ -175,7 +175,7 @@ async function handleDocumentRequest(
       }
     } catch (error) {
       let formattedError =
-        (await platform?.formatServerError?.(error)) || error;
+        (await platform.formatServerError?.(error)) || error;
       actionErrored = true;
       let withBoundaries = getMatchesUpToDeepestErrorBoundary(matches);
       componentDidCatchEmulator.loaderBoundaryRouteId =
@@ -247,7 +247,7 @@ async function handleDocumentRequest(
       }
 
       let formattedError =
-        (await platform?.formatServerError?.(response)) || response;
+        (await platform.formatServerError?.(response)) || response;
 
       componentDidCatchEmulator.error = await serializeError(formattedError);
       routeLoaderResults[index] = json(null, { status: 500 });
@@ -310,7 +310,7 @@ async function handleDocumentRequest(
       entryContext
     );
   } catch (error) {
-    let formattedError = (await platform?.formatServerError?.(error)) || error;
+    let formattedError = (await platform.formatServerError?.(error)) || error;
     if (serverMode !== ServerMode.Test) {
       console.error(formattedError);
     }
@@ -336,7 +336,7 @@ async function handleDocumentRequest(
       );
     } catch (error) {
       let formattedError =
-        (await platform?.formatServerError?.(error)) || error;
+        (await platform.formatServerError?.(error)) || error;
       if (serverMode !== ServerMode.Test) {
         console.error(formattedError);
       }
