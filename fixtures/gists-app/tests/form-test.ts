@@ -10,11 +10,13 @@ describe("form", () => {
   let browser: Browser;
   let page: Page;
   beforeEach(async () => {
-    browser = await puppeteer.launch();
+    browser = await puppeteer.launch({ headless: false });
     page = await browser.newPage();
   });
 
-  afterEach(() => browser.close());
+  afterEach(async () => {
+    await browser.close();
+  });
 
   it("posts to a loader without JavaScript", async () => {
     await disableJavaScript(page);
@@ -74,7 +76,7 @@ describe("form", () => {
     `);
 
     await page.click("button[type=submit]");
-    await page.waitForSelector("[data-test-id='post']");
+    await page.waitForSelector('[data-test-id="post"]');
 
     expect(await getHtml(page, "#results")).toMatchInlineSnapshot(`
       "<div id=\\"results\\" style=\\"opacity: 1; transition: opacity 300ms ease 50ms\\">
