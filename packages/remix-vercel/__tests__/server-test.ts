@@ -47,7 +47,8 @@ describe("vercel createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      let request = supertest(createApp());
+      let request = supertest(createApp({}));
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
       let res = await request
         .get("/foo/bar")
         .set({ "x-now-bridge-request-id": "2" });
@@ -62,6 +63,7 @@ describe("vercel createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
       let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(204);
@@ -86,6 +88,7 @@ describe("vercel createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
       let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.headers["x-time-of-year"]).toBe("most wonderful");
