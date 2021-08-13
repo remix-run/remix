@@ -14,7 +14,7 @@ declare global {
       Request: typeof Request;
       Response: typeof Response;
       fetch: typeof fetch;
-      crypto: SubtleCrypto;
+      crypto: Crypto;
     }
   }
 }
@@ -25,5 +25,5 @@ export function installGlobals() {
   ((global as unknown) as NodeJS.Global).Response = (NodeResponse as any) as typeof Response;
   ((global as unknown) as NodeJS.Global).fetch = (nodeFetch as any) as typeof fetch;
   // @ts-ignore
-  ((global as unknown) as NodeJS.Global).crypto = crypto.webcrypto as any;
+  ((global as unknown) as NodeJS.Global).crypto = crypto.webcrypto as Crypto;
 }
