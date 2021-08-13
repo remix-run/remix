@@ -288,7 +288,7 @@ async function createBrowserBuild(
     plugins: [
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-      await postcssPlugin(config)
+      await postcssPlugin(config, options.mode)
     ]
   });
 }
@@ -320,7 +320,7 @@ async function createServerBuild(
     plugins: [
       serverRouteModulesPlugin(config),
       emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
-      await postcssPlugin(config),
+      await postcssPlugin(config, options.mode),
       manualExternalsPlugin((id, importer) => {
         // assets.json is external because this build runs in parallel with the
         // browser build and it's not there yet.

@@ -5,10 +5,14 @@ import type { PartialMessage, Plugin } from "esbuild";
 import type Postcss from "postcss";
 
 import type { RemixConfig } from "../../config";
+import { BuildMode } from "../../build";
 import { getLoaderForFile } from "../loaders";
 import { fileExists } from "../utils/fs";
 
-export async function postcssPlugin(remixConfig: RemixConfig): Promise<Plugin> {
+export async function postcssPlugin(
+  remixConfig: RemixConfig,
+  mode?: BuildMode
+): Promise<Plugin> {
   return {
     name: "postcss",
     async setup(build) {
@@ -47,7 +51,14 @@ export async function postcssPlugin(remixConfig: RemixConfig): Promise<Plugin> {
           let result = await postcss(
             (config && config.plugins) || undefined
           ).process(contents, {
-            from: args.path
+            from: args.path,
+            map:
+              mode === BuildMode.Development
+                ? {
+                    inline: false,
+                    sourcesContent: true
+                  }
+                : false
           });
 
           let warnings: PartialMessage[] | undefined = undefined;
@@ -82,8 +93,14 @@ export async function postcssPlugin(remixConfig: RemixConfig): Promise<Plugin> {
             }
           }
 
+          let sourcemaps = result.map
+            ? `\n/*# sourceMappingURL=data:application/json;base64,${Buffer.from(
+                JSON.stringify(result.map.toJSON())
+              ).toString("base64")} */\n`
+            : "";
+
           return {
-            contents: result.css,
+            contents: `${result.css.toString()}${sourcemaps}`,
             loader: getLoaderForFile(args.path),
             watchFiles,
             warnings
