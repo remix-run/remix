@@ -4,7 +4,7 @@ import { createRemixHeaders, createRemixRequest } from "../server";
 import { HandlerEvent } from "@netlify/functions";
 
 // We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the architect adapter
+// puppetteer tests do), we just want to test the netlify adapter
 jest.mock("@remix-run/node/server");
 let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
   typeof createRemixRequestHandler
@@ -30,7 +30,7 @@ function createMockEvent(event: Partial<HandlerEvent> = {}) {
   };
 }
 
-describe("architect createRequestHandler", () => {
+describe("netlify createRequestHandler", () => {
   describe("basic requests", () => {
     afterEach(() => {
       mockedCreateRequestHandler.mockReset();
@@ -48,8 +48,8 @@ describe("architect createRequestHandler", () => {
   });
 });
 
-describe("architect createRemixHeaders", () => {
-  describe("creates fetch headers from architect headers", () => {
+describe("netlify createRemixHeaders", () => {
+  describe("creates fetch headers from netlify headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({}, {})).toMatchInlineSnapshot(`
         Headers {
@@ -148,7 +148,7 @@ describe("architect createRemixHeaders", () => {
   });
 });
 
-describe("architect createRemixRequest", () => {
+describe("netlify createRemixRequest", () => {
   it("creates a request with the correct headers", () => {
     expect(
       createRemixRequest(
