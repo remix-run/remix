@@ -11,7 +11,8 @@ let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunctio
 >;
 
 function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
-  const { headers, ...rest } = event;
+  const { headers, multiValueHeaders = {}, ...rest } = event;
+
   return {
     rawUrl: "/",
     rawQuery: "",
@@ -22,7 +23,11 @@ function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
       host: "localhost:3000",
       ...headers
     },
-    multiValueHeaders: {},
+    multiValueHeaders: {
+      "x-forwarded-host": ["localhost:3000"],
+      host: ["localhost:3000"],
+      ...multiValueHeaders
+    },
     queryStringParameters: null,
     multiValueQueryStringParameters: null,
     body: null,
@@ -150,10 +155,7 @@ describe("netlify createRemixRequest", () => {
       createRemixRequest(
         createMockEvent({
           multiValueHeaders: {
-            Cookie: ["__session=value"]
-          },
-          headers: {
-            Cookie: "__other=value"
+            Cookie: ["__session=value", "__other=value"]
           }
         })
       )
@@ -174,8 +176,8 @@ describe("netlify createRemixRequest", () => {
           "headers": Headers {
             Symbol(map): Object {
               "Cookie": Array [
-                "__other=value",
                 "__session=value",
+                "__other=value",
               ],
               "host": Array [
                 "localhost:3000",
