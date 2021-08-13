@@ -74,7 +74,6 @@ describe("architect createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      // @ts-expect-error not sure how Ryan got this not to complain in the express tests..
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve(res => {
@@ -88,7 +87,6 @@ describe("architect createRequestHandler", () => {
         return new Response("", { status: 204 });
       });
 
-      // @ts-expect-error not sure how Ryan got this not to complain in the express tests..
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve(res => {
@@ -116,7 +114,6 @@ describe("architect createRequestHandler", () => {
         return new Response("", { headers });
       });
 
-      // @ts-expect-error not sure how Ryan got this not to complain in the express tests..
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/" }))
         .expectResolve(res => {
