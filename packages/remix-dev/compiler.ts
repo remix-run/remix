@@ -14,6 +14,7 @@ import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders, getLoaderForFile } from "./compiler/loaders";
 import { getRouteModuleExportsCached } from "./compiler/routes";
+import { postcssPlugin } from "./compiler/plugins/postcss";
 import { writeFileSafe } from "./compiler/utils/fs";
 
 // When we build Remix, this shim file is copied directly into the output
@@ -30,25 +31,28 @@ function defaultWarningHandler(message: string, key: string) {
   warnOnce(false, message, key);
 }
 
-function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
-  if ("warnings" in failure || "errors" in failure) {
-    if (failure.warnings) {
-      let messages = esbuild.formatMessagesSync(failure.warnings, {
-        kind: "warning",
-        color: true
-      });
-      console.warn(...messages);
-    }
-
-    if (failure.errors) {
-      let messages = esbuild.formatMessagesSync(failure.errors, {
-        kind: "error",
-        color: true
-      });
-      console.error(...messages);
-    }
+function logBuildInfo(build: esbuild.BuildFailure | esbuild.BuildResult) {
+  if (build.warnings) {
+    let messages = esbuild.formatMessagesSync(build.warnings, {
+      kind: "warning",
+      color: true
+    });
+    console.warn(...messages);
   }
 
+  if (build.errors) {
+    let messages = esbuild.formatMessagesSync(build.errors, {
+      kind: "error",
+      color: true
+    });
+    console.error(...messages);
+  }
+}
+
+function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
+  if ("warnings" in failure || "errors" in failure) {
+    logBuildInfo(failure);
+  }
   console.error(failure?.message || "An unknown build error occured");
 }
 
@@ -224,9 +228,13 @@ async function buildEverything(
   return Promise.all([
     browserBuildPromise.then(async build => {
       await generateManifests(config, build.metafile!);
+      logBuildInfo(build);
       return build;
     }),
-    serverBuildPromise
+    serverBuildPromise.then(build => {
+      logBuildInfo(build);
+      return build;
+    })
   ]).catch(err => {
     options.onBuildFailure(err);
     return [undefined, undefined];
@@ -279,7 +287,8 @@ async function createBrowserBuild(
     },
     plugins: [
       browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
+      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+      await postcssPlugin(config)
     ]
   });
 }
@@ -311,6 +320,7 @@ async function createServerBuild(
     plugins: [
       serverRouteModulesPlugin(config),
       emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
+      await postcssPlugin(config),
       manualExternalsPlugin((id, importer) => {
         // assets.json is external because this build runs in parallel with the
         // browser build and it's not there yet.

@@ -1,5 +1,12 @@
-import { promises as fsp } from "fs";
+import { constants, promises as fsp } from "fs";
 import * as path from "path";
+
+export function fileExists(file: string): Promise<boolean> {
+  return fsp
+    .access(file, constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+}
 
 export async function writeFileSafe(
   file: string,

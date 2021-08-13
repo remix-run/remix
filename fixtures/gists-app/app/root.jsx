@@ -52,6 +52,9 @@ export default function Root() {
         <div data-test-id="content">
           <Outlet />
         </div>
+        <p className="import-test">
+          Styled throuh a postcss import that is resolved at compile time.
+        </p>
         {data.enableScripts && <Scripts />}
       </body>
     </html>

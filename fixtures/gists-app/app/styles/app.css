@@ -1,3 +1,5 @@
+@import "./import-test.css";
+
 /* purgecss start ignore */
 /* @tailwind base; */
 /* @tailwind components; */

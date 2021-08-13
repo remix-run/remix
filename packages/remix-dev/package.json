@@ -22,6 +22,7 @@
     "@types/lodash.debounce": "^4.0.6",
     "@types/signal-exit": "^3.0.0",
     "@types/ws": "^7.4.1",
+    "postcss": "^8.3.6",
     "semver": "^7.3.4"
   }
 }
