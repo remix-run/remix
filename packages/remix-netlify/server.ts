@@ -1,10 +1,5 @@
 import { URL } from "url";
-import type {
-  AppLoadContext,
-  RequestInit,
-  Response,
-  ServerBuild
-} from "@remix-run/node";
+import type { AppLoadContext, RequestInit, ServerBuild } from "@remix-run/node";
 import {
   Headers,
   Request,
@@ -53,7 +48,7 @@ export function createRemixRequest(event: HandlerEvent) {
 
   let init: RequestInit = {
     method: event.httpMethod,
-    headers: createRemixHeaders(event.multiValueHeaders, event.headers)
+    headers: createRemixHeaders(event.multiValueHeaders)
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -66,16 +61,11 @@ export function createRemixRequest(event: HandlerEvent) {
 }
 
 export function createRemixHeaders(
-  requestMultiValueHeaders: HandlerEvent["multiValueHeaders"],
-  requestHeaders: HandlerEvent["headers"]
+  requestHeaders: HandlerEvent["multiValueHeaders"]
 ): Headers {
   let headers = new Headers();
-  for (let key in requestHeaders) {
-    let header = requestHeaders[key]!;
-    headers.append(key, header);
-  }
 
-  for (const [key, values] of Object.entries(requestMultiValueHeaders)) {
+  for (const [key, values] of Object.entries(requestHeaders)) {
     if (values) {
       for (const value of values) {
         headers.append(key, value);

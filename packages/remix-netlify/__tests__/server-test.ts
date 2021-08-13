@@ -52,7 +52,7 @@ describe("netlify createRequestHandler", () => {
 describe("netlify createRemixHeaders", () => {
   describe("creates fetch headers from netlify headers", () => {
     it("handles empty headers", () => {
-      expect(createRemixHeaders({}, {})).toMatchInlineSnapshot(`
+      expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {},
         }
@@ -60,7 +60,7 @@ describe("netlify createRemixHeaders", () => {
     });
 
     it("handles simple headers", () => {
-      expect(createRemixHeaders({}, { "x-foo": "bar" })).toMatchInlineSnapshot(`
+      expect(createRemixHeaders({ "x-foo": ["bar"] })).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
             "x-foo": Array [
@@ -72,7 +72,7 @@ describe("netlify createRemixHeaders", () => {
     });
 
     it("handles multiple headers", () => {
-      expect(createRemixHeaders({}, { "x-foo": "bar", "x-bar": "baz" }))
+      expect(createRemixHeaders({ "x-foo": ["bar"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
@@ -88,7 +88,7 @@ describe("netlify createRemixHeaders", () => {
     });
 
     it("handles headers with multiple values", () => {
-      expect(createRemixHeaders({ "x-foo": ["bar", "baz"] }, {}))
+      expect(createRemixHeaders({ "x-foo": ["bar", "baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
@@ -102,9 +102,8 @@ describe("netlify createRemixHeaders", () => {
     });
 
     it("handles headers with multiple values and multiple headers", () => {
-      expect(
-        createRemixHeaders({ "x-foo": ["bar", "baz"] }, { "x-bar": "baz" })
-      ).toMatchInlineSnapshot(`
+      expect(createRemixHeaders({ "x-foo": ["bar", "baz"], "x-bar": ["baz"] }))
+        .toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
             "x-bar": Array [
@@ -121,17 +120,13 @@ describe("netlify createRemixHeaders", () => {
 
     it("handles cookies", () => {
       expect(
-        createRemixHeaders(
-          {
-            Cookie: [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
-            ]
-          },
-          {
-            "x-something-else": "true"
-          }
-        )
+        createRemixHeaders({
+          Cookie: [
+            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
+          ],
+          "x-something-else": ["true"]
+        })
       ).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
