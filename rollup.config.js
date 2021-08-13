@@ -205,7 +205,7 @@ let remixDevCli = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixServer = {
+let remixServerRuntime = {
   external(id) {
     return isBareModuleId(id);
   },
@@ -240,7 +240,7 @@ let remixServer = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixServerMagicExports = {
+let remixServerRuntimeMagicExports = {
   external() {
     return true;
   },
@@ -263,7 +263,7 @@ let remixServerMagicExports = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixServerMagicExportsBrowser = {
+let remixServerRuntimeMagicExportsBrowser = {
   external() {
     return true;
   },
@@ -286,7 +286,7 @@ let remixServerMagicExportsBrowser = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixServerScripts = {
+let remixServerRuntimeScripts = {
   external(id) {
     return isBareModuleId(id);
   },
@@ -616,10 +616,10 @@ let builds = [
   remixInit,
   remixDev,
   remixDevCli,
-  remixServer,
-  remixServerScripts,
-  remixServerMagicExports,
-  remixServerMagicExportsBrowser,
+  remixServerRuntime,
+  remixServerRuntimeScripts,
+  remixServerRuntimeMagicExports,
+  remixServerRuntimeMagicExportsBrowser,
   remixNode,
   remixNodeScripts,
   remixNodeMagicExports,
