@@ -76,4 +76,4 @@ $ vercel --prod
 
 For some reason the GitHub integration doesn't deploy the public folder. We're working with Vercel to figure this out.
 
-For now, [you can set up a GitHub action with this config](https://gist.github.com/mcansh/91f8effda798b41bb373351fad217070) from our friend @mcansh.
+For now, [you can set up a GitHub action with this config](https://gist.github.com/mcansh/91f8effda798b41bb373351fad217070) from our friend [@mcansh](https://github.com/mcansh).
