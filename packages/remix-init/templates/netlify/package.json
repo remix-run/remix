@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "build": "remix build"
+    "build": "remix build",
+    "dev": "remix dev"
   },
   "dependencies": {
     "@netlify/functions": "0.7.2",
