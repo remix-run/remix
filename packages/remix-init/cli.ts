@@ -16,7 +16,7 @@ run().then(
 
 async function run() {
   let answers = await inquirer.prompt<{
-    server: "remix" | "express" | "arc" | "fly" | "vercel";
+    server: "remix" | "express" | "arc" | "fly" | "vercel" | "netlify";
     lang: "ts" | "js";
     install: boolean;
   }>([
@@ -32,7 +32,7 @@ async function run() {
         { name: "Architect (AWS Lambda)", value: "arc" },
         { name: "Fly.io", value: "fly" },
         // { name: "Render", value: "render" },
-        // { name: "Netlify", value: "netlify" },
+        { name: "Netlify", value: "netlify" },
         { name: "Vercel", value: "vercel" }
         // { name: "Custom", value: "custom" }
       ]
