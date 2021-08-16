@@ -167,26 +167,6 @@ describe("vercel createRemixHeaders", () => {
         }
       `);
     });
-
-    it("handles multiple set-cookie headers", () => {
-      expect(
-        createRemixHeaders({
-          "set-cookie": [
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
-          ]
-        })
-      ).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(map): Object {
-            "set-cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
-            ],
-          },
-        }
-      `);
-    });
   });
 });
 
