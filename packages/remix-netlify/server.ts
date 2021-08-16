@@ -6,6 +6,13 @@ import {
 } from "@remix-run/node";
 import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 
+/**
+ * A function that returns the value to use as `context` in route `loader` and
+ * `action` functions.
+ *
+ * You can think of this as an escape hatch that allows you to pass
+ * environment/platform-specific values through to your loader/action.
+ */
 export interface GetLoadContextFunction {
   (event: HandlerEvent, context: HandlerContext): AppLoadContext;
 }
