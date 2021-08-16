@@ -1,6 +1,6 @@
 import { Context, HttpRequest } from "@azure/functions";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
-import { Response, Headers } from "@remix-run/node";
+import { Response } from "@remix-run/node";
 
 import {
   createRemixHeaders,
@@ -48,10 +48,13 @@ describe("azure createRequestHandler", () => {
         body: ""
       };
 
-      await createRequestHandler({ build: undefined })(context, mockedRequest);
+      const res = await createRequestHandler({ build: undefined })(
+        context,
+        mockedRequest
+      );
 
-      expect(context.res.status).toBe(200);
-      expect(context.res.body).toBe("URL: /foo/bar");
+      expect(res.status).toBe(200);
+      expect(res.body).toBe("URL: /foo/bar");
     });
 
     it.todo("handles status codes");
