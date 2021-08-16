@@ -1,4 +1,4 @@
-import {
+import type {
   AzureFunction,
   Context,
   HttpRequest,
@@ -42,30 +42,31 @@ export function createRequestHandler({
 
     let response = await handleRequest(request, loadContext);
 
-    context.res = {
+    return {
       status: response.status,
-      headers: createRemixHeaders(req.headers),
+      headers: response.headers.raw(),
       body: await response.text()
     };
   };
 }
 
-export function createRemixHeaders(requestHeaders: HttpRequestHeaders) {
+export function createRemixHeaders(
+  requestHeaders: HttpRequestHeaders
+): Headers {
   let headers = new Headers();
 
   for (let [key, value] of Object.entries(requestHeaders)) {
-    if (!value) break;
+    if (!value) continue;
     headers.set(key, value);
   }
 
   return headers;
 }
 
-export function createRemixRequest(req: HttpRequest) {
+export function createRemixRequest(req: HttpRequest): Request {
   let url = req.headers["x-ms-original-url"]!;
 
   let init: RequestInit = {
-    // TODO: why is this optional?
     method: req.method || "GET",
     headers: createRemixHeaders(req.headers)
   };
