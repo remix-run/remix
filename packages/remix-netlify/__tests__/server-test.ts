@@ -1,6 +1,12 @@
+import lambdaTester from "lambda-tester";
+import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
 
-import { createRemixHeaders, createRemixRequest } from "../server";
+import {
+  createRemixHeaders,
+  createRemixRequest,
+  createRequestHandler
+} from "../server";
 import { HandlerEvent } from "@netlify/functions";
 
 // We don't want to test that the remix server works here (that's what the
@@ -36,11 +42,69 @@ describe("netlify createRequestHandler", () => {
       jest.restoreAllMocks();
     });
 
-    it.todo("handles requests");
+    it("handles requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async req => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
 
-    it.todo("handles status codes");
+      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
+      // won't ever call through to the real createRequestHandler
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawUrl: "http://localhost:3000/foo/bar" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: /foo/bar");
+        });
+    });
 
-    it.todo("sets headers");
+    it("handles status codes", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response("", { status: 204 });
+      });
+
+      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
+      // won't ever call through to the real createRequestHandler
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(204);
+        });
+    });
+
+    it("sets headers", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        headers.append(
+          "Set-Cookie",
+          "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+
+        return new Response("", { headers });
+      });
+
+      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
+      // won't ever call through to the real createRequestHandler
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
+        .expectResolve(res => {
+          expect(res.multiValueHeaders["X-Time-Of-Year"]).toEqual([
+            "most wonderful"
+          ]);
+          expect(res.multiValueHeaders["Set-Cookie"]).toEqual([
+            "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+          ]);
+        });
+    });
   });
 });
 
