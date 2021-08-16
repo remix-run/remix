@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import type { LoaderFunction, LinksFunction } from "remix";
-import { Meta, Scripts, Links, useRouteData, useLiveReload } from "remix";
+import { LiveReload, Meta, Scripts, Links, useRouteData } from "remix";
 
 import styles from "./styles/global.css";
 
@@ -14,7 +14,6 @@ export let links: LinksFunction = () => {
 
 export default function App() {
   let data = useRouteData();
-  useLiveReload();
 
   return (
     <html lang="en">
@@ -28,6 +27,7 @@ export default function App() {
         <footer>
           <p>This page was rendered at {data.date.toLocaleString()}</p>
         </footer>
+        <LiveReload />
         <Scripts />
       </body>
     </html>

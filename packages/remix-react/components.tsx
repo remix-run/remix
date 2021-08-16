@@ -128,13 +128,13 @@ export function RemixEntry({
     componentDidCatchEmulator: entryComponentDidCatchEmulator
   } = entryContext;
 
-  let [state, setState] = React.useState({
+  let [state, setState] = React.useState(() => ({
     action: nextAction,
     location: nextLocation,
     matches: createClientMatches(entryMatches, RemixRoute),
     routeData: entryRouteData,
     componentDidCatchEmulator: entryComponentDidCatchEmulator
-  });
+  }));
 
   let {
     action,
@@ -150,6 +150,7 @@ export function RemixEntry({
   );
 
   let links = React.useMemo(() => {
+    console.log("Calculating links");
     return getLinks(
       location,
       matches,
@@ -623,7 +624,7 @@ window.__remixRouteModules = {${matches
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
-        <script src={manifest.url} />
+        <script src={manifest.url} type="module" />
         <script
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
@@ -995,21 +996,32 @@ export function LiveReload() {
     <script
       dangerouslySetInnerHTML={{
         __html: `
-          let ws = new WebSocket("ws://localhost:3001/socket");
-          ws.onmessage = message => {
-            let event = JSON.parse(message.data);
-            if (event.type === "LOG") {
-              console.log(event.message);
-            }
-            if (event.type === "RELOAD") {
-              console.log("💿 Reloading window ...");
-              window.location.reload();
-            }
-          };
-          ws.onerror = error => {
-            console.log("Remix dev asset server web socket error:");
-            console.error(error);
-          };
+          // let ws = new WebSocket("ws://localhost:3001");
+          // ws.onmessage = message => {
+          //   let event = JSON.parse(message.data);
+          //   if (event.type === "LOG") {
+          //     console.log(event.message);
+          //   }
+          //   if (event.type === "RELOAD") {
+          //     console.log("💿 Reloading window ...");
+          //     window.location.reload();
+          //   }
+          // };
+          // ws.onerror = error => {
+          //   console.log("Remix dev asset server web socket error:");
+          //   console.error(error);
+          // };
+
+          function debounce(e,t){let u;return()=>{clearTimeout(u),u=setTimeout(e,t)}}
+          {
+            const exports = {};
+            ${process.env.REACT_REFRESH_CODE}
+            exports.performReactRefresh = debounce(exports.performReactRefresh, 30);
+            window.$RefreshRuntime$ = exports;
+            window.$RefreshRuntime$.injectIntoGlobalHook(window);
+            window.$RefreshReg$ = () => {};
+            window.$RefreshSig$ = () => (type) => type;
+          }
       `
       }}
     />

@@ -29,7 +29,7 @@ export default function Index() {
   return (
     <div data-test-id="/">
       <header>
-        <h1>Cool Gists App</h1>
+        <h1>Cool Gists App 2</h1>
       </header>
       <nav>
         <ul>

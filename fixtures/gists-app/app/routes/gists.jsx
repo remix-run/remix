@@ -51,6 +51,7 @@ export default function Gists() {
           ))}
         </ul>
       </header>
+      <p><button onClick={() => window.$RefreshRuntime$.performReactRefresh()}>Do Reload!!!</button></p>
       <Outlet />
       <Shared />
     </div>

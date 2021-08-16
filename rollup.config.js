@@ -2,7 +2,15 @@ import fs from "fs";
 import path from "path";
 import babel from "@rollup/plugin-babel";
 import nodeResolve from "@rollup/plugin-node-resolve";
+import replace from "@rollup/plugin-replace";
 import copy from "rollup-plugin-copy";
+
+const reactRefreshLoc = require.resolve(
+  "react-refresh/cjs/react-refresh-runtime.development.js"
+);
+const reactRefreshCode = require("fs")
+  .readFileSync(reactRefreshLoc, { encoding: "utf-8" })
+  .replace(`process.env.NODE_ENV`, JSON.stringify("development"));
 
 function isBareModuleId(id) {
   return !id.startsWith(".") && !path.isAbsolute(id);
@@ -150,6 +158,9 @@ let remixInit = {
 /** @type {import("rollup").RollupOptions} */
 let remixDev = {
   external(id) {
+    // if (id === "esm-hmr/src/server") {
+    //   return false;
+    // }
     return isBareModuleId(id);
   },
   input: [
@@ -167,7 +178,6 @@ let remixDev = {
   plugins: [
     babel({
       babelHelpers: "bundled",
-      exclude: /node_modules/,
       extensions: [".ts"]
     }),
     nodeResolve({ extensions: [".ts"] }),
@@ -177,6 +187,10 @@ let remixDev = {
         {
           src: path.resolve(__dirname, "packages/remix-dev/compiler/shims"),
           dest: "build/node_modules/@remix-run/dev/compiler"
+        },
+        {
+          src: path.resolve(__dirname, "packages/remix-dev/compiler/plugins/hmr-runtime.ts"),
+          dest: "build/node_modules/@remix-run/dev"
         }
       ]
     })
@@ -197,7 +211,6 @@ let remixDevCli = {
   plugins: [
     babel({
       babelHelpers: "bundled",
-      exclude: /node_modules/,
       extensions: [".ts"]
     }),
     nodeResolve({ extensions: [".ts"] })
@@ -364,6 +377,12 @@ let remixReact = {
 
         return JSON.stringify(packageJson, null, 2);
       }
+    }),
+    replace({
+      values: {
+        "process.env.REACT_REFRESH_CODE": JSON.stringify(reactRefreshCode)
+      },
+      preventAssignment: false
     })
   ]
 };
@@ -409,6 +428,12 @@ let remixReactBrowser = {
       exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
     }),
+    replace({
+      values: {
+        "process.env.REACT_REFRESH_CODE": JSON.stringify(reactRefreshCode)
+      },
+      preventAssignment: false
+    }),
     nodeResolve({ extensions: [".ts", ".tsx"] })
   ]
 };
@@ -449,6 +474,12 @@ let remixReactMagicExportsBrowser = {
       babelHelpers: "bundled",
       exclude: /node_modules/,
       extensions: [".ts", ".tsx"]
+    }),
+    replace({
+      values: {
+        "process.env.REACT_REFRESH_CODE": JSON.stringify(reactRefreshCode)
+      },
+      preventAssignment: false
     })
   ]
 };

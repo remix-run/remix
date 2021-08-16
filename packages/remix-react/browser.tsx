@@ -15,12 +15,15 @@ declare global {
 
 export interface RemixBrowserProps {}
 
+let acceptCallback: (accepted: any) => void;
+
 /**
  * The entry point for a Remix app when it is rendered in the browser (in
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
+  let [,rerender] = React.useState(() => ({}));
   let historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
     historyRef.current = createBrowserHistory({ window });
@@ -45,6 +48,21 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // React knows the order and handles error boundaries normally.
   entryContext.componentDidCatchEmulator.trackBoundaries = false;
 
+  if ((import.meta as any).hot) {
+    console.log("hot", (import.meta as any).hot);
+    acceptCallback = accepted => {
+      if (accepted.manifest) {
+
+        import(accepted.manifest).then(newManifest => {
+          let oldmanifest = entryContext.manifest;
+          entryContext.manifest = window.__remixManifest = newManifest.default;
+          console.log("Reloaded manifest...", oldmanifest === window.__remixManifest);
+          rerender({});
+        });
+      }
+    };
+  }
+
   return (
     <RemixEntry
       context={entryContext}
@@ -53,4 +71,10 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       navigator={history}
     />
   );
+}
+
+if ((import.meta as any).hot) {
+  (import.meta as any).hot.accept((accepted: any) => {
+    acceptCallback?.(accepted);
+  });
 }

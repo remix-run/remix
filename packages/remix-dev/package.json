@@ -7,12 +7,16 @@
     "remix": "cli.js"
   },
   "dependencies": {
+    "@babel/core": "^7.15.0",
     "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
     "esbuild": "0.11.16",
+    "express-sse": "^0.5.3",
+    "esm-hmr": "^0.1.0",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "pretty-ms": "^7.0.1",
+    "react-refresh": "^0.10.0",
     "read-package-json-fast": "^2.0.2",
     "signal-exit": "^3.0.3",
     "ws": "^7.4.5"

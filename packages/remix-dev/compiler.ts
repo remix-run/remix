@@ -14,6 +14,7 @@ import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders, getLoaderForFile } from "./compiler/loaders";
 import { getRouteModuleExportsCached } from "./compiler/routes";
+import { reactRefreshPlugin } from "./compiler/plugins/react-refresh";
 import { writeFileSafe } from "./compiler/utils/fs";
 
 // When we build Remix, this shim file is copied directly into the output
@@ -76,7 +77,7 @@ export async function build(
 
 interface WatchOptions extends BuildOptions {
   onRebuildStart?(): void;
-  onRebuildFinish?(): void;
+  onRebuildFinish?(builders: (esbuild.BuildResult | undefined)[]): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
@@ -117,7 +118,7 @@ export async function watch(
     config = newConfig || (await readConfig(config.rootDirectory));
     if (onRebuildStart) onRebuildStart();
     let builders = await buildEverything(config, options);
-    if (onRebuildFinish) onRebuildFinish();
+    if (onRebuildFinish) onRebuildFinish(builders);
     browserBuild = builders[0];
     serverBuild = builders[1];
   }, 500);
@@ -130,7 +131,7 @@ export async function watch(
 
       try {
         [browserBuild, serverBuild] = await buildEverything(config, options);
-        if (onRebuildFinish) onRebuildFinish();
+        if (onRebuildFinish) onRebuildFinish([browserBuild, serverBuild]);
       } catch (err) {
         onBuildFailure(err);
       }
@@ -140,14 +141,20 @@ export async function watch(
     await Promise.all([
       // If we get here and can't call rebuild something went wrong and we
       // should probably blow as it's not really recoverable.
-      browserBuild.rebuild!().then(build =>
-        generateManifests(config, build.metafile!)
-      ),
-      serverBuild.rebuild!()
+      browserBuild.rebuild!().then(async build => {
+        build.metafile &&
+          (build.metafile.outputs.__metafile = {
+            entryPoint: (await generateManifests(config, build.metafile!))[0]
+          } as any);
+        browserBuild = build;
+      }),
+      serverBuild.rebuild!().then(build => {
+        serverBuild = build;
+      })
     ]).catch(err => {
       onBuildFailure(err);
     });
-    if (onRebuildFinish) onRebuildFinish();
+    if (onRebuildFinish) onRebuildFinish([browserBuild, serverBuild]);
   }, 100);
 
   let watcher = chokidar
@@ -223,7 +230,10 @@ async function buildEverything(
 
   return Promise.all([
     browserBuildPromise.then(async build => {
-      await generateManifests(config, build.metafile!);
+      build.metafile &&
+        (build.metafile.outputs.__metafile = {
+          entryPoint: (await generateManifests(config, build.metafile!))[0]
+        } as any);
       return build;
     }),
     serverBuildPromise
@@ -279,8 +289,9 @@ async function createBrowserBuild(
     },
     plugins: [
       browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
-    ]
+      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+      options.mode === BuildMode.Development && reactRefreshPlugin(config)
+    ].filter(p => !!p) as esbuild.Plugin[]
   });
 }
 
@@ -365,7 +376,7 @@ async function generateManifests(
   return Promise.all([
     writeFileSafe(
       path.join(config.assetsBuildDirectory, filename),
-      `window.__remixManifest=${JSON.stringify(assetsManifest)};`
+      `let manifest = ${JSON.stringify(assetsManifest)};window.__remixManifest=manifest;export default manifest;`
     ),
     writeFileSafe(
       path.join(config.serverBuildDirectory, "assets.json"),

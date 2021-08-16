@@ -31,6 +31,7 @@
     "@babel/preset-typescript": "^7.12.7",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-node-resolve": "^11.0.1",
+    "@rollup/plugin-replace": "^3.0.0",
     "@types/cheerio": "^0.22.22",
     "@types/jest": "^25.2.3",
     "@types/node-fetch": "^2.5.7",

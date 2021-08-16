@@ -3,3 +3,7 @@
  * will get unloaded, so don't worry so much about conflicting styles between
  * pages!
  */
+
+ body {
+   background-color: blue;
+ }
