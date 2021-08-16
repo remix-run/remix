@@ -132,7 +132,11 @@ async function sign(value: string, secret: string): Promise<string> {
 
   let signature = await crypto.subtle.sign("HMAC", key, valueUint8);
 
-  return value + "." + btoa(String.fromCharCode(...new Uint8Array(signature)));
+  return (
+    value +
+    "." +
+    btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\=+$/, "")
+  );
 }
 
 function strToArry(str: string) {
