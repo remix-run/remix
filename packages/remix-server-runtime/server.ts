@@ -84,7 +84,7 @@ async function handleDataRequest(
     routeMatch = match;
   }
 
-  let clonedRequest = await stripDataParam(request);
+  let clonedRequest = stripDataParam(request);
 
   let response: Response;
   try {
@@ -371,11 +371,10 @@ function isRedirectResponse(response: Response): boolean {
   return redirectStatusCodes.has(response.status);
 }
 
-async function stripDataParam(og: Request) {
-  let url = new URL(og.url);
+function stripDataParam(request: Request) {
+  let url = new URL(request.url);
   url.searchParams.delete("_data");
-
-  return new Request(url.toString(), og);
+  return new Request(url.toString(), request);
 }
 
 // This ensures we only load the data for the routes above an action error
