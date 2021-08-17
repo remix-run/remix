@@ -75,6 +75,9 @@ export default function Index() {
               Render error in nested route with ErrorBoundary
             </Link>
           </li>
+          <li>
+            <Link to="/multiple-set-cookies">Multiple Set Cookie Headers</Link>
+          </li>
 
           <li>
             <Link to="prefs">Preferences</Link>
