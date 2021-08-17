@@ -1,0 +1,27 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": [
+        "get",
+        "head",
+        "post",
+        "put",
+        "delete",
+        "connect",
+        "options",
+        "trace",
+        "patch"
+      ]
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "$return"
+    }
+  ],
+  "scriptFile": "./function/index.js"
+}

@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "build": "remix build",
+    "dev": "swa start ./public --run \"remix dev\" --api ."
+  },
+  "dependencies": {
+    "@remix-run/express": "*",
+    "@remix-run/node": "*"
+  },
+  "devDependencies": {
+    "@azure/functions": "^1.2.3"
+  }
+}

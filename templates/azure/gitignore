@@ -1,0 +1,5 @@
+node_modules
+
+/.cache
+/azure/function/build
+/public/build
