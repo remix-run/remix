@@ -16,11 +16,8 @@ export type {
   HTMLLinkDescriptor,
   BlockLinkDescriptor,
   PageLinkDescriptor,
-  ActionFunction,
   ErrorBoundaryComponent,
-  HeadersFunction,
   LinksFunction,
-  LoaderFunction,
   MetaFunction,
   RouteComponent,
   RouteHandle,
@@ -34,9 +31,6 @@ export type {
 export {
   createCookie,
   isCookie,
-  json,
-  redirect,
-  // createRequestHandler, // only needed by adapters
   createSession,
   isSession,
   createSessionStorage,

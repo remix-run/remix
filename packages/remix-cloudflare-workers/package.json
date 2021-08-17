@@ -8,5 +8,8 @@
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^2.2.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^2.2.2"
   }
 }
