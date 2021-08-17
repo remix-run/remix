@@ -9,7 +9,7 @@ import type {
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { Response as NodeResponse } from "@remix-run/node";
-import { formatServerError } from "@remix-run/node";
+import { Request as NodeRequest, formatServerError } from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -46,7 +46,7 @@ export function createRequestHandler({
       typeof getLoadContext === "function" ? getLoadContext(req) : undefined;
 
     let response = ((await handleRequest(
-      request,
+      (request as unknown) as Request,
       loadContext
     )) as unknown) as NodeResponse;
 
@@ -58,12 +58,12 @@ export function createRequestHandler({
   };
 }
 
-function createRemixRequest(req: ArcRequest): Request {
+function createRemixRequest(req: ArcRequest): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers.host;
   let search = req.rawQueryString.length ? "?" + req.rawQueryString : "";
   let url = new URL(req.rawPath + search, `https://${host}`);
 
-  return new Request(url.toString(), {
+  return new NodeRequest(url.toString(), {
     method: req.requestContext.http.method,
     headers: req.cookies
       ? { ...req.headers, Cookie: req.cookies.join(";") }

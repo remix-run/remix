@@ -6,8 +6,15 @@ import type {
   ServerPlatform
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { Response as NodeResponse } from "@remix-run/node";
-import { formatServerError } from "@remix-run/node";
+import type {
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse
+} from "@remix-run/node";
+import {
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  formatServerError
+} from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -51,7 +58,7 @@ export function createRequestHandler({
           : undefined;
 
       let response = ((await handleRequest(
-        request,
+        (request as unknown) as Request,
         loadContext
       )) as unknown) as NodeResponse;
 
@@ -66,8 +73,8 @@ export function createRequestHandler({
 
 function createRemixHeaders(
   requestHeaders: express.Request["headers"]
-): Headers {
-  return new Headers(
+): NodeHeaders {
+  return new NodeHeaders(
     Object.keys(requestHeaders).reduce((memo, key) => {
       let value = requestHeaders[key];
 
@@ -82,20 +89,20 @@ function createRemixHeaders(
   );
 }
 
-function createRemixRequest(req: express.Request): Request {
+function createRemixRequest(req: express.Request): NodeRequest {
   let origin = `${req.protocol}://${req.hostname}`;
   let url = new URL(req.url, origin);
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers)
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 })) as any;
+    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
   }
 
-  return new Request(url.toString(), init);
+  return new NodeRequest(url.toString(), init);
 }
 
 function sendRemixResponse(

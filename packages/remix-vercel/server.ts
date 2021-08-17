@@ -5,8 +5,15 @@ import type {
   ServerPlatform
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { Response as NodeResponse } from "@remix-run/node";
-import { formatServerError } from "@remix-run/node";
+import type {
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse
+} from "@remix-run/node";
+import {
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  formatServerError
+} from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -44,19 +51,22 @@ export function createRequestHandler({
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = (await handleRequest(request, loadContext) as unknown) as NodeResponse;
+    let response = ((await handleRequest(
+      (request as unknown) as Request,
+      loadContext
+    )) as unknown) as NodeResponse;
 
     sendRemixResponse(res, response);
   };
 }
 
-function createRemixRequest(req: VercelRequest): Request {
+function createRemixRequest(req: VercelRequest): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(req.url!, `${protocol}://${host}`);
 
-  let headers = new Headers();
+  let headers = new NodeHeaders();
   for (let key in req.headers) {
     let header = req.headers[key]!;
     // set-cookie is an array (maybe others)
@@ -69,26 +79,23 @@ function createRemixRequest(req: VercelRequest): Request {
     }
   }
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: req.method,
     headers
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req as any;
+    init.body = req;
   }
 
-  return new Request(url.toString(), init);
+  return new NodeRequest(url.toString(), init);
 }
 
 function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
   res.status(response.status);
 
   let arrays = new Map();
-  for (let [
-    key,
-    value
-  ] of response.headers.entries()) {
+  for (let [key, value] of response.headers.entries()) {
     if (arrays.has(key)) {
       let newValue = arrays.get(key).concat(value);
       res.setHeader(key, newValue);
