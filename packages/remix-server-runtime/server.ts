@@ -117,11 +117,9 @@ async function handleDataRequest(
     // We don't have any way to prevent a fetch request from following
     // redirects. So we use the `X-Remix-Redirect` header to indicate the
     // next URL, and then "follow" the redirect manually on the client.
-    let locationHeader = response.headers.get("Location");
-    response.headers.delete("Location");
-
     let headers = new Headers(response.headers);
-    headers.set("X-Remix-Redirect", locationHeader!);
+    headers.set("X-Remix-Redirect", headers.get("Location")!);
+    headers.delete("Location");
 
     return new Response("", {
       status: 204,
@@ -174,8 +172,7 @@ async function handleDocumentRequest(
         return actionResponse;
       }
     } catch (error) {
-      let formattedError =
-        (await platform.formatServerError?.(error)) || error;
+      let formattedError = (await platform.formatServerError?.(error)) || error;
       actionErrored = true;
       let withBoundaries = getMatchesUpToDeepestErrorBoundary(matches);
       componentDidCatchEmulator.loaderBoundaryRouteId =
@@ -335,8 +332,7 @@ async function handleDocumentRequest(
         entryContext
       );
     } catch (error) {
-      let formattedError =
-        (await platform.formatServerError?.(error)) || error;
+      let formattedError = (await platform.formatServerError?.(error)) || error;
       if (serverMode !== ServerMode.Test) {
         console.error(formattedError);
       }
