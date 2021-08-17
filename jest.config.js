@@ -9,19 +9,21 @@ module.exports = {
       displayName: "express",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-express/**/*-test.[jt]s?(x)"],
-      setupFiles: ["<rootDir>/jest/setup.ts"]
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
       displayName: "node",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-node/**/*-test.[jt]s?(x)"],
-      setupFiles: ["<rootDir>/jest/setup.ts"]
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
       displayName: "server",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/remix-server-runtime/**/*-test.[jt]s?(x)"],
-      setupFiles: ["<rootDir>/jest/setup.ts"]
+      testMatch: [
+        "<rootDir>/packages/remix-server-runtime/**/*-test.[jt]s?(x)"
+      ],
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
       displayName: "gists-app",
@@ -30,7 +32,7 @@ module.exports = {
       globalSetup: "<rootDir>/fixtures/gists-app/jest/global-setup.js",
       globalTeardown: "<rootDir>/fixtures/gists-app/jest/global-teardown.js",
       setupFilesAfterEnv: ["<rootDir>/fixtures/gists-app/jest/setup.js"],
-      setupFiles: ["<rootDir>/jest/setup.ts"]
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     }
   ]
 };
