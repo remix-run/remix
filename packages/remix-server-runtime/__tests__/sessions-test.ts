@@ -70,10 +70,8 @@ describe("Cookie session storage", () => {
     });
     let session = await getSession();
     session.set("user", "mjackson");
-    console.log(session.data);
     let setCookie = await commitSession(session);
     session = await getSession(getCookieFromSetCookie(setCookie));
-    console.log(session.data);
 
     expect(session.get("user")).toEqual("mjackson");
   });
