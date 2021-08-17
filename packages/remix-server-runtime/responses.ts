@@ -3,7 +3,7 @@
  */
 export function json<TResponse = Response, TResponseInit = ResponseInit>(
   data: any,
-  init: number | TResponseInit
+  init: number | TResponseInit = {} as TResponseInit
 ): TResponse {
   let responseInit: any = init;
   if (typeof init === "number") {
@@ -27,7 +27,7 @@ export function json<TResponse = Response, TResponseInit = ResponseInit>(
  */
 export function redirect<TResponse = Response, TResponseInit = ResponseInit>(
   url: string,
-  init: number | TResponseInit
+  init: number | TResponseInit = 302
 ): TResponse {
   let responseInit: any = init;
   if (typeof init === "number") {
