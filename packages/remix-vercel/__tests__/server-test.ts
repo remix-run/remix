@@ -47,7 +47,7 @@ describe("vercel createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      let request = supertest(createApp({}));
+      let request = supertest(createApp());
       // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
       let res = await request
         .get("/foo/bar")
