@@ -1,16 +1,15 @@
 {
-  "name": "@remix-run/vercel",
-  "description": "Vercel server request handler for Remix",
+  "name": "@remix-run/cloudflare-workers",
+  "description": "Cloudflare worker request handler for Remix",
   "version": "0.17.5",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
-    "@remix-run/node": "0.17.5",
     "@remix-run/server-runtime": "0.17.5"
   },
   "peerDependencies": {
-    "@vercel/node": "^1.8.3"
+    "@cloudflare/workers-types": "^2.2.2"
   },
   "devDependencies": {
-    "@vercel/node": "^1.8.3"
+    "@cloudflare/workers-types": "^2.2.2"
   }
 }
