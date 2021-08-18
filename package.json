@@ -14,6 +14,7 @@
     "packages/create-remix",
     "packages/remix",
     "packages/remix-architect",
+    "packages/remix-cloudflare-workers",
     "packages/remix-dev",
     "packages/remix-init",
     "packages/remix-express",
@@ -21,7 +22,8 @@
     "packages/remix-react",
     "packages/remix-serve",
     "packages/remix-vercel",
-    "packages/remix-netlify"
+    "packages/remix-server-runtime",
+    "packages/remix-vercel"
   ],
   "dependencies": {
     "@babel/core": "^7.10.4",

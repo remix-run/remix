@@ -1,9 +1,7 @@
+import { splitCookiesString } from "set-cookie-parser";
 import type { ServerBuild } from "./build";
-import type { Response } from "./fetch";
-import { Headers } from "./fetch";
 import type { ServerRoute } from "./routes";
 import type { RouteMatch } from "./routeMatching";
-
 export function getDocumentHeaders(
   build: ServerBuild,
   matches: RouteMatch<ServerRoute>[],
@@ -16,10 +14,7 @@ export function getDocumentHeaders(
       : new Headers();
     let headers = new Headers(
       routeModule.headers
-        ? routeModule.headers({
-            loaderHeaders,
-            parentHeaders
-          })
+        ? routeModule.headers({ loaderHeaders, parentHeaders })
         : undefined
     );
 
@@ -33,11 +28,12 @@ export function getDocumentHeaders(
 }
 
 function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {
-  for (const [key, values] of Object.entries(parentHeaders.raw())) {
-    if (key.toLowerCase() === "set-cookie") {
-      for (const value of values) {
-        childHeaders.append(key, value);
-      }
-    }
+  let parentSetCookieString = parentHeaders.get("Set-Cookie");
+
+  if (parentSetCookieString) {
+    let cookies = splitCookiesString(parentSetCookieString);
+    cookies.forEach(cookie => {
+      childHeaders.append("Set-Cookie", cookie);
+    });
   }
 }

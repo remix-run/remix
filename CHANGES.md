@@ -6,6 +6,13 @@
 
 - CLI no longer crashes on syntax errors and reports errors with location
 - Dynamic imports no longer blows up build
+- Renamed @remix-run/node to @remix-run/server-runtime and abstracted node specific functionality back to the repurposed @remix-run/node
+- Moved fileStorage session to remix-node this removes the last node specific platform modules from remix-server-runtime as far as I'm aware
+- Made cookie parse and serialize methods async to support web crypto API
+- Moved to webcrypto instead of "crypto" to support more platforms
+- Updated .npmrc to minimum required version for webcrypto API (v15)
+- Abstracted req and res types through the platform
+- Add base64 encoding primitives to node globals (atob and btoa)
 
 This is a history of changes to [Remix](https://remix.run).
 
