@@ -1,6 +1,8 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 
+import { sign, unsign } from "./cookieSigning";
+
 export type { CookieParseOptions, CookieSerializeOptions };
 
 export interface CookieSignatureOptions {
@@ -116,60 +118,6 @@ export function isCookie(object: any): object is Cookie {
   );
 }
 
-async function sign(value: string, secret: string): Promise<string> {
-  let key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    {
-      name: "HMAC",
-      hash: "SHA-256"
-    },
-    false,
-    ["sign"]
-  );
-
-  let valueUint8 = new TextEncoder().encode(value);
-
-  let signature = await crypto.subtle.sign("HMAC", key, valueUint8);
-
-  return (
-    value +
-    "." +
-    btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\=+$/, "")
-  );
-}
-
-function strToArry(str: string) {
-  let sig = [];
-  for (let i = 0; i < str.length; i++) {
-    sig.push(str.charCodeAt(i));
-  }
-
-  return new Uint8Array(sig);
-}
-
-async function unsign(value: string, secret: string): Promise<string | false> {
-  let str = value.slice(0, value.lastIndexOf("."));
-  let valueUint8 = new TextEncoder().encode(str);
-  let encoded = atob(value.slice(value.lastIndexOf(".") + 1));
-  let encodedUint8 = strToArry(encoded);
-
-  let key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    {
-      name: "HMAC",
-      hash: "SHA-256"
-    },
-    false,
-    ["sign", "verify"]
-  );
-
-  let valid = await crypto.subtle.verify("HMAC", key, encodedUint8, valueUint8);
-
-  return valid ? str : false;
-}
-
 async function encodeCookieValue(
   value: any,
   secrets: string[]
@@ -211,12 +159,4 @@ function decodeData(value: string): any {
   } catch (error) {
     return {};
   }
-}
-
-function btoa(b: string): string {
-  return Buffer.from(b, "binary").toString("base64");
-}
-
-function atob(a: string): string {
-  return Buffer.from(a, "base64").toString("binary");
 }
