@@ -22,6 +22,6 @@ Prerequisites:
 
 First, you need to follow the [instructions](https://docs.microsoft.com/en-us/azure/static-web-apps/get-started-portal?tabs=vanilla-javascript) to create a new project on Azure.
 
-Next, you'll need to add your `REMIX_TOKEN`, and your `AZURE_STATIC_WEB_APPS_TOKEN` as a GitHub project [secrets](https://docs.github.com/en/actions/reference/encrypted-secrets)
+Next, you'll need to add your `REMIX_TOKEN`, and your `AZURE_STATIC_WEB_APPS_TOKEN` as GitHub project [secrets](https://docs.github.com/en/actions/reference/encrypted-secrets)
 
 You can find your azure token in the Azure portal for your static web app under "management deployment token".
