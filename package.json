@@ -18,10 +18,10 @@
     "packages/remix-dev",
     "packages/remix-init",
     "packages/remix-express",
+    "packages/remix-netlify",
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-serve",
-    "packages/remix-vercel",
     "packages/remix-server-runtime",
     "packages/remix-vercel"
   ],
