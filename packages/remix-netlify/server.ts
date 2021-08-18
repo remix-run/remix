@@ -1,10 +1,17 @@
-import type { AppLoadContext, RequestInit, ServerBuild } from "@remix-run/node";
+import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
-  Headers,
-  Request,
-  createRequestHandler as createRemixRequestHandler
+  formatServerError,
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  Response as NodeResponse,
+  RequestInit as NodeRequestInit
 } from "@remix-run/node";
-import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -28,7 +35,8 @@ export function createRequestHandler({
   getLoadContext?: AppLoadContext;
   mode?: string;
 }): Handler {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, context) => {
     let request = createRemixRequest(event);
@@ -37,7 +45,10 @@ export function createRequestHandler({
         ? getLoadContext(event, context)
         : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = ((await handleRequest(
+      (request as unknown) as Request,
+      loadContext
+    )) as unknown) as NodeResponse;
 
     return {
       statusCode: response.status,
@@ -47,7 +58,7 @@ export function createRequestHandler({
   };
 }
 
-export function createRemixRequest(event: HandlerEvent) {
+export function createRemixRequest(event: HandlerEvent): NodeRequest {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -58,7 +69,7 @@ export function createRemixRequest(event: HandlerEvent) {
     url = new URL(rawPath, `http://${origin}`);
   }
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders)
   };
@@ -69,13 +80,13 @@ export function createRemixRequest(event: HandlerEvent) {
       : event.body;
   }
 
-  return new Request(url.toString(), init);
+  return new NodeRequest(url.toString(), init);
 }
 
 export function createRemixHeaders(
   requestHeaders: HandlerEvent["multiValueHeaders"]
-): Headers {
-  let headers = new Headers();
+): NodeHeaders {
+  let headers = new NodeHeaders();
 
   for (const [key, values] of Object.entries(requestHeaders)) {
     if (values) {
@@ -89,18 +100,25 @@ export function createRemixHeaders(
 }
 
 // `netlify dev` doesn't return the full url in the event.rawUrl, so we need to create it ourselves
-function getRawPath(event: HandlerEvent) {
+function getRawPath(event: HandlerEvent): string {
+  let rawPath = event.path;
   let searchParams = new URLSearchParams();
+
+  if (!event.multiValueQueryStringParameters) {
+    return rawPath;
+  }
+
   let paramKeys = Object.keys(event.multiValueQueryStringParameters);
   for (let key of paramKeys) {
     let values = event.multiValueQueryStringParameters[key];
+    if (!values) continue;
     for (let val of values) {
       searchParams.append(key, val);
     }
   }
+
   let rawParams = searchParams.toString();
 
-  let rawPath = event.path;
   if (rawParams) rawPath += `?${rawParams}`;
 
   return rawPath;

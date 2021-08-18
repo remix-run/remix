@@ -1,6 +1,5 @@
 import lambdaTester from "lambda-tester";
-import { Response, Headers } from "@remix-run/node";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
 import {
   createRemixHeaders,
@@ -11,7 +10,7 @@ import { HandlerEvent } from "@netlify/functions";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the netlify adapter
-jest.mock("@remix-run/node/server");
+jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
   typeof createRemixRequestHandler
 >;
