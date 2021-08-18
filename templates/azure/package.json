@@ -8,6 +8,7 @@
     "@remix-run/node": "*"
   },
   "devDependencies": {
-    "@azure/functions": "^1.2.3"
+    "@azure/functions": "^1.2.3",
+    "@azure/static-web-apps-cli": "^0.6.1"
   }
 }
