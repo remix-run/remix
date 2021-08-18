@@ -13,8 +13,9 @@
 - Updated .npmrc to minimum required version for webcrypto API (v15)
 - Abstracted req and res types through the platform
 - Add base64 encoding primitives to node globals (atob and btoa)
-- adds and improves testing around node adapters
-- fixes the ability to set multiple Set-Cookie headers
+- Adds and improves testing around node adapters
+- Fixes the ability to set multiple Set-Cookie headers
+- Adds a Netlify adapter and starter template
 
 This is a history of changes to [Remix](https://remix.run).
 
