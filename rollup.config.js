@@ -205,6 +205,109 @@ let remixDevCli = {
 };
 
 /** @type {import("rollup").RollupOptions} */
+let remixServerRuntime = {
+  external(id) {
+    return isBareModuleId(id);
+  },
+  input: path.resolve(__dirname, "packages/remix-server-runtime/index.ts"),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/server-runtime",
+    format: "cjs",
+    preserveModules: true,
+    exports: "named"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    }),
+    nodeResolve({ extensions: [".ts", ".tsx"] }),
+    copyAsset(path.resolve(__dirname, "packages/remix-server-runtime/package.json"), {
+      transform(source) {
+        let packageJson = {
+          ...JSON.parse(source),
+          scripts: {
+            postinstall: "node scripts/postinstall.js"
+          }
+        };
+
+        return JSON.stringify(packageJson, null, 2);
+      }
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
+let remixServerRuntimeMagicExports = {
+  external() {
+    return true;
+  },
+  input: path.resolve(
+    __dirname,
+    "packages/remix-server-runtime/magicExports/server.ts"
+  ),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/server-runtime/magicExports",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
+let remixServerRuntimeMagicExportsBrowser = {
+  external() {
+    return true;
+  },
+  input: path.resolve(
+    __dirname,
+    "packages/remix-server-runtime/magicExports/server.ts"
+  ),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/server-runtime/magicExports/browser",
+    format: "esm"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
+let remixServerRuntimeScripts = {
+  external(id) {
+    return isBareModuleId(id);
+  },
+  input: [
+    path.resolve(__dirname, "packages/remix-server-runtime/scripts/postinstall.ts")
+  ],
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/server-runtime/scripts",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
 let remixNode = {
   external(id) {
     return isBareModuleId(id);
@@ -244,7 +347,10 @@ let remixNodeMagicExports = {
   external() {
     return true;
   },
-  input: path.resolve(__dirname, "packages/remix-node/magicExports/server.ts"),
+  input: path.resolve(
+    __dirname,
+    "packages/remix-node/magicExports/platform.ts"
+  ),
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/@remix-run/node/magicExports",
@@ -264,7 +370,10 @@ let remixNodeMagicExportsBrowser = {
   external() {
     return true;
   },
-  input: path.resolve(__dirname, "packages/remix-node/magicExports/server.ts"),
+  input: path.resolve(
+    __dirname,
+    "packages/remix-node/magicExports/platform.ts"
+  ),
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/@remix-run/node/magicExports/browser",
@@ -328,6 +437,7 @@ function getServerConfig(name) {
 }
 
 let remixArchitect = getServerConfig("architect");
+let remixCloudflare = getServerConfig("cloudflare-workers");
 let remixExpress = getServerConfig("express");
 let remixVercel = getServerConfig("vercel");
 
@@ -506,11 +616,16 @@ let builds = [
   remixInit,
   remixDev,
   remixDevCli,
+  remixServerRuntime,
+  remixServerRuntimeScripts,
+  remixServerRuntimeMagicExports,
+  remixServerRuntimeMagicExportsBrowser,
   remixNode,
   remixNodeScripts,
   remixNodeMagicExports,
   remixNodeMagicExportsBrowser,
   remixArchitect,
+  remixCloudflare,
   remixExpress,
   remixVercel,
   remixReact,

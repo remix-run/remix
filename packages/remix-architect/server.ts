@@ -1,15 +1,21 @@
 import { URL } from "url";
-import type { ServerBuild, AppLoadContext } from "@remix-run/node";
 import {
-  Headers,
-  Request,
-  createRequestHandler as createRemixRequestHandler
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  formatServerError
 } from "@remix-run/node";
 import {
   APIGatewayProxyEventHeaders,
   APIGatewayProxyEventV2,
   APIGatewayProxyHandlerV2
 } from "aws-lambda";
+import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { Response as NodeResponse } from "@remix-run/node";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -37,14 +43,18 @@ export function createRequestHandler({
   getLoadContext: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, _context) => {
     let request = createRemixRequest(event);
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = ((await handleRequest(
+      (request as unknown) as Request,
+      loadContext
+    )) as unknown) as NodeResponse;
 
     let cookies: string[] = [];
 
@@ -73,8 +83,8 @@ export function createRequestHandler({
 export function createRemixHeaders(
   requestHeaders: APIGatewayProxyEventHeaders,
   requestCookies?: string[]
-): Headers {
-  let headers = new Headers();
+): NodeHeaders {
+  let headers = new NodeHeaders();
 
   for (let [header, value] of Object.entries(requestHeaders)) {
     if (value) {
@@ -91,13 +101,13 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(event: APIGatewayProxyEventV2): Request {
+export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let proto = event.requestContext.http.protocol || "https";
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let url = new URL(event.rawPath + search, `${proto}://${host}`);
 
-  return new Request(url.toString(), {
+  return new NodeRequest(url.toString(), {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
     body:

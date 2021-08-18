@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2019", "WebWorker"],
+    "target": "ES2019",
+    "types": ["@cloudflare/workers-types"],
+
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+
+    "declaration": true,
+    "emitDeclarationOnly": true,
+
+    "outDir": "../../build/node_modules/@remix-run/cloudflare-workers",
+    "rootDir": "."
+  }
+}
