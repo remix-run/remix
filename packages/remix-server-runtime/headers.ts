@@ -14,10 +14,7 @@ export function getDocumentHeaders(
       : new Headers();
     let headers = new Headers(
       routeModule.headers
-        ? routeModule.headers({
-            loaderHeaders,
-            parentHeaders
-          })
+        ? routeModule.headers({ loaderHeaders, parentHeaders })
         : undefined
     );
 
