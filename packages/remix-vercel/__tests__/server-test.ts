@@ -1,7 +1,9 @@
-import express from "express";
 import supertest from "supertest";
 import { Response, Headers } from "@remix-run/node";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import { createRequest } from "node-mocks-http";
+import { createServerWithHelpers } from "@vercel/node/dist/helpers";
+import { VercelRequest } from "@vercel/node";
 
 import {
   createRemixHeaders,
@@ -9,34 +11,31 @@ import {
   createRequestHandler
 } from "../server";
 
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-
 // We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the express adapter
-jest.mock("@remix-run/server-runtime/server");
+// puppetteer tests do), we just want to test the vercel adapter
+jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
   typeof createRemixRequestHandler
 >;
 
+let consumeEventMock = jest.fn();
+let mockBridge = { consumeEvent: consumeEventMock };
+
 function createApp() {
-  let app = express();
-
-  app.all(
-    "*",
-    createRequestHandler({
-      // We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
-      build: undefined
-    })
+  // TODO: get supertest args into the event
+  consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
+  let server = createServerWithHelpers(
+    createRequestHandler({ build: undefined }),
+    mockBridge
   );
-
-  return app;
+  return server;
 }
 
-describe("express createRequestHandler", () => {
+describe("vercel createRequestHandler", () => {
   describe("basic requests", () => {
-    afterEach(() => {
+    afterEach(async () => {
       mockedCreateRequestHandler.mockReset();
+      consumeEventMock.mockClear();
     });
 
     afterAll(() => {
@@ -48,12 +47,14 @@ describe("express createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      let request = supertest(createApp());
-      let res = await request.get("/foo/bar");
+      let request = supertest(createApp({}));
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request
+        .get("/foo/bar")
+        .set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(200);
       expect(res.text).toBe("URL: /foo/bar");
-      expect(res.headers["x-powered-by"]).toBe("Express");
     });
 
     it("handles status codes", async () => {
@@ -62,7 +63,8 @@ describe("express createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
-      let res = await request.get("/");
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(204);
     });
@@ -86,7 +88,8 @@ describe("express createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
-      let res = await request.get("/");
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.headers["x-time-of-year"]).toBe("most wonderful");
       expect(res.headers["set-cookie"]).toEqual([
@@ -98,8 +101,8 @@ describe("express createRequestHandler", () => {
   });
 });
 
-describe("express createRemixHeaders", () => {
-  describe("creates fetch headers from express headers", () => {
+describe("vercel createRemixHeaders", () => {
+  describe("creates fetch headers from vercel headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
@@ -187,20 +190,19 @@ describe("express createRemixHeaders", () => {
   });
 });
 
-describe("express createRemixRequest", () => {
+describe("vercel createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    const expressRequest = createRequest({
-      url: "/foo/bar",
+    let request = createRequest({
       method: "GET",
-      protocol: "http",
-      hostname: "localhost",
+      url: "/foo/bar",
       headers: {
-        "Cache-Control": "max-age=300, s-maxage=3600",
-        Host: "localhost:3000"
+        "x-forwarded-host": "localhost:3000",
+        "x-forwarded-proto": "http",
+        "Cache-Control": "max-age=300, s-maxage=3600"
       }
-    });
+    }) as VercelRequest;
 
-    expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
+    expect(createRemixRequest(request)).toMatchInlineSnapshot(`
       Request {
         "agent": undefined,
         "compress": true,
@@ -219,8 +221,11 @@ describe("express createRemixRequest", () => {
               "cache-control": Array [
                 "max-age=300, s-maxage=3600",
               ],
-              "host": Array [
+              "x-forwarded-host": Array [
                 "localhost:3000",
+              ],
+              "x-forwarded-proto": Array [
+                "http",
               ],
             },
           },

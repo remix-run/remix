@@ -60,15 +60,12 @@ export function createRequestHandler({
   };
 }
 
-function createRemixRequest(req: VercelRequest): NodeRequest {
-  let host = req.headers["x-forwarded-host"] || req.headers["host"];
-  // doesn't seem to be available on their req object!
-  let protocol = req.headers["x-forwarded-proto"] || "https";
-  let url = new URL(req.url!, `${protocol}://${host}`);
-
+export function createRemixHeaders(
+  requestHeaders: VercelRequest["headers"]
+): NodeHeaders {
   let headers = new NodeHeaders();
-  for (let key in req.headers) {
-    let header = req.headers[key]!;
+  for (let key in requestHeaders) {
+    let header = requestHeaders[key]!;
     // set-cookie is an array (maybe others)
     if (Array.isArray(header)) {
       for (let value of header) {
@@ -79,9 +76,18 @@ function createRemixRequest(req: VercelRequest): NodeRequest {
     }
   }
 
+  return headers;
+}
+
+export function createRemixRequest(req: VercelRequest): NodeRequest {
+  let host = req.headers["x-forwarded-host"] || req.headers["host"];
+  // doesn't seem to be available on their req object!
+  let protocol = req.headers["x-forwarded-proto"] || "https";
+  let url = new URL(req.url!, `${protocol}://${host}`);
+
   let init: NodeRequestInit = {
     method: req.method,
-    headers
+    headers: createRemixHeaders(req.headers)
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
@@ -92,8 +98,6 @@ function createRemixRequest(req: VercelRequest): NodeRequest {
 }
 
 function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
-  res.status(response.status);
-
   let arrays = new Map();
   for (let [key, value] of response.headers.entries()) {
     if (arrays.has(key)) {
@@ -107,8 +111,12 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
   }
 
   if (Buffer.isBuffer(response.body)) {
-    res.end(response.body);
+    return res
+      .writeHead(response.status, response.headers.raw())
+      .end(response.body);
   } else {
-    response.body.pipe(res);
+    return res
+      .writeHead(response.status, response.headers.raw())
+      .end(response.body.pipe(res));
   }
 }
