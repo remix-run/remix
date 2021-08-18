@@ -74,10 +74,13 @@ async function run() {
   }
 
   // rename dotfiles
-  await fse.move(
-    path.join(appDir, "gitignore"),
-    path.join(appDir, ".gitignore")
-  );
+  await Promise.all([
+    fse.move(path.join(appDir, "gitignore"), path.join(appDir, ".gitignore")),
+    fse.move(
+      path.join(appDir, "github-actions"),
+      path.join(appDir, ".github/workflows")
+    )
+  ]);
 
   // merge package.jsons
   let appPkg = require(path.join(sharedTemplate, "package.json"));
