@@ -1,5 +1,4 @@
 import lambdaTester from "lambda-tester";
-import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
 import {

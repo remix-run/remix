@@ -23,12 +23,14 @@ module.exports = {
     {
       displayName: "architect",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/remix-architect/**/*-test.[jt]s?(x)"]
+      testMatch: ["<rootDir>/packages/remix-architect/**/*-test.[jt]s?(x)"],
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
       displayName: "azure",
       testEnvironment: "node",
-      testMatch: ["<rootDir>/packages/remix-azure/**/*-test.[jt]s?(x)"]
+      testMatch: ["<rootDir>/packages/remix-azure/**/*-test.[jt]s?(x)"],
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
       displayName: "express",
