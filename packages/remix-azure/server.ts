@@ -4,11 +4,18 @@ import type {
   HttpRequest,
   HttpRequestHeaders
 } from "@azure/functions";
-import type { AppLoadContext, RequestInit, ServerBuild } from "@remix-run/node";
+import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
-  Headers,
-  Request,
-  createRequestHandler as createRemixRequestHandler
+  formatServerError,
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  Response as NodeResponse,
+  RequestInit as NodeRequestInit
 } from "@remix-run/node";
 
 /**
@@ -34,13 +41,17 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): AzureFunction {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
-  return async (context: Context, req: HttpRequest) => {
+  return async (_context: Context, req: HttpRequest) => {
     let request = createRemixRequest(req);
     let loadContext = getLoadContext ? getLoadContext(req) : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = ((await handleRequest(
+      (request as unknown) as Request,
+      loadContext
+    )) as unknown) as NodeResponse;
 
     return {
       status: response.status,
@@ -52,8 +63,8 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: HttpRequestHeaders
-): Headers {
-  let headers = new Headers();
+): NodeHeaders {
+  let headers = new NodeHeaders();
 
   for (let [key, value] of Object.entries(requestHeaders)) {
     if (!value) continue;
@@ -63,10 +74,10 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(req: HttpRequest): Request {
+export function createRemixRequest(req: HttpRequest): NodeRequest {
   let url = req.headers["x-ms-original-url"]!;
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: req.method || "GET",
     headers: createRemixHeaders(req.headers)
   };
@@ -75,5 +86,5 @@ export function createRemixRequest(req: HttpRequest): Request {
     init.body = req.body;
   }
 
-  return new Request(url, init);
+  return new NodeRequest(url, init);
 }
