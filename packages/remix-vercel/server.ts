@@ -1,15 +1,18 @@
-import { URL } from "url";
-import type { NowRequest, NowResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AppLoadContext,
-  RequestInit,
-  Response,
-  ServerBuild
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type {
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse
 } from "@remix-run/node";
 import {
-  Headers,
-  Request,
-  createRequestHandler as createRemixRequestHandler
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+  formatServerError
 } from "@remix-run/node";
 
 /**
@@ -20,7 +23,7 @@ import {
  * environment/platform-specific values through to your loader/action.
  */
 export interface GetLoadContextFunction {
-  (req: NowRequest, res: NowResponse): AppLoadContext;
+  (req: VercelRequest, res: VercelResponse): AppLoadContext;
 }
 
 export type RequestHandler = ReturnType<typeof createRequestHandler>;
@@ -38,25 +41,29 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let handleRequest = createRemixRequestHandler(build, mode);
+  let platform: ServerPlatform = { formatServerError };
+  let handleRequest = createRemixRequestHandler(build, platform, mode);
 
-  return async (req: NowRequest, res: NowResponse) => {
+  return async (req: VercelRequest, res: VercelResponse) => {
     let request = createRemixRequest(req);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = ((await handleRequest(
+      (request as unknown) as Request,
+      loadContext
+    )) as unknown) as NodeResponse;
 
     sendRemixResponse(res, response);
   };
 }
 
 export function createRemixHeaders(
-  requestHeaders: NowRequest["headers"]
-): Headers {
-  let headers = new Headers();
+  requestHeaders: VercelRequest["headers"]
+): NodeHeaders {
+  let headers = new NodeHeaders();
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
     // set-cookie is an array (maybe others)
@@ -72,13 +79,13 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(req: NowRequest): Request {
+export function createRemixRequest(req: VercelRequest): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(req.url!, `${protocol}://${host}`);
 
-  let init: RequestInit = {
+  let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers)
   };
@@ -87,11 +94,21 @@ export function createRemixRequest(req: NowRequest): Request {
     init.body = req;
   }
 
-  return new Request(url.toString(), init);
+  return new NodeRequest(url.toString(), init);
 }
 
-function sendRemixResponse(res: NowResponse, response: Response): void {
-  res.status(response.status);
+function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
+  let arrays = new Map();
+  for (let [key, value] of response.headers.entries()) {
+    if (arrays.has(key)) {
+      let newValue = arrays.get(key).concat(value);
+      res.setHeader(key, newValue);
+      arrays.set(key, newValue);
+    } else {
+      res.setHeader(key, value);
+      arrays.set(key, [value]);
+    }
+  }
 
   if (Buffer.isBuffer(response.body)) {
     return res

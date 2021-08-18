@@ -1,6 +1,6 @@
 import supertest from "supertest";
 import { Response, Headers } from "@remix-run/node";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node/server";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import { createRequest } from "node-mocks-http";
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
 import { VercelRequest } from "@vercel/node";
@@ -13,7 +13,7 @@ import {
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the vercel adapter
-jest.mock("@remix-run/node/server");
+jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
   typeof createRemixRequestHandler
 >;

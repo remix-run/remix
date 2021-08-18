@@ -15,12 +15,14 @@
     "packages/remix",
     "packages/remix-architect",
     "packages/remix-azure",
+    "packages/remix-cloudflare-workers",
     "packages/remix-dev",
     "packages/remix-init",
     "packages/remix-express",
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-serve",
+    "packages/remix-server-runtime",
     "packages/remix-vercel"
   ],
   "dependencies": {
