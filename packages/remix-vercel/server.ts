@@ -91,8 +91,6 @@ export function createRemixRequest(req: NowRequest): Request {
 }
 
 function sendRemixResponse(res: NowResponse, response: Response): void {
-  res.status(response.status);
-
   if (Buffer.isBuffer(response.body)) {
     return res
       .writeHead(response.status, response.headers.raw())
