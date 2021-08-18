@@ -1,10 +1,7 @@
 /**
  * A JSON response. Converts `data` to JSON and sets the `Content-Type` header.
  */
-export function json<TResponse = Response, TResponseInit = ResponseInit>(
-  data: any,
-  init: number | TResponseInit = {} as TResponseInit
-): TResponse {
+export function json(data: any, init: number | ResponseInit): Response {
   let responseInit: any = init;
   if (typeof init === "number") {
     responseInit = { status: init };
@@ -15,20 +12,20 @@ export function json<TResponse = Response, TResponseInit = ResponseInit>(
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
 
-  return (new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify(data), {
     ...responseInit,
     headers
-  }) as unknown) as TResponse;
+  });
 }
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
  * Defaults to "302 Found".
  */
-export function redirect<TResponse = Response, TResponseInit = ResponseInit>(
+export function redirect(
   url: string,
-  init: number | TResponseInit = 302
-): TResponse {
+  init: number | ResponseInit = 302
+): Response {
   let responseInit: any = init;
   if (typeof init === "number") {
     responseInit = { status: init };
@@ -39,8 +36,8 @@ export function redirect<TResponse = Response, TResponseInit = ResponseInit>(
   let headers = new Headers(responseInit.headers);
   headers.set("Location", url);
 
-  return (new Response("", {
+  return new Response("", {
     ...responseInit,
     headers
-  }) as unknown) as TResponse;
+  });
 }
