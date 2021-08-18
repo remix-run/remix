@@ -30,7 +30,9 @@ export async function postcssPlugin(
         rawConfig = await fsp.readFile(postcssConfig, "utf-8");
         config = require(require.resolve(postcssConfig));
       } catch (err) {
-        throw new Error("Failed to load your postcss.config.js file.");
+        throw new Error(
+          `Failed to load your postcss.config.js file: ${err.message}`
+        );
       }
 
       let postcss: typeof Postcss;
