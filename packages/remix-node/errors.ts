@@ -8,7 +8,7 @@ import { SourceMapConsumer } from "source-map";
 const ROOT = process.cwd() + "/";
 const SOURCE_PATTERN = /(?<at>\s+at.+)\((?<filename>.+):(?<line>\d+):(?<column>\d+)\)/;
 
-export const UNKNOWN_LOCATION_POSITION = "<unknonwn location>";
+export const UNKNOWN_LOCATION_POSITION = "<unknown location>";
 
 export async function formatServerError(error: Error): Promise<Error> {
   error.stack = await formatStackTrace(error);
