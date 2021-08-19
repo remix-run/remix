@@ -1,0 +1,15 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "rewrite": "/api/azure"
+    },
+    {
+      "route": "/index.html",
+      "rewrite": "/api/azure"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/api/azure"
+  }
+}
