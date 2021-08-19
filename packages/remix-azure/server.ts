@@ -75,7 +75,14 @@ export function createRemixHeaders(
 }
 
 export function createRemixRequest(req: HttpRequest): NodeRequest {
-  let url = req.headers["x-ms-original-url"]!;
+  let url: URL;
+  if (process.env.NODE_ENV === "production") {
+    url = new URL(req.headers["x-ms-original-url"]!);
+  } else {
+    url = new URL(req.url);
+    url.host = req.headers["host"]!;
+    url.pathname = url.pathname.replace("/api/azure", "");
+  }
 
   let init: NodeRequestInit = {
     method: req.method || "GET",
