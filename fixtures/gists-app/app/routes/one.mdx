@@ -1,0 +1,29 @@
+---
+headers:
+  cache-control: public, max-age=0, must-revalidate
+meta:
+  title: This is page one with a counter
+  description: Fantastic
+
+name: World!
+---
+
+import Counter from "../components/Counter";
+
+# Page One
+
+I am a page. Hello, {attributes.name}
+
+This is stateful:
+
+<Counter />
+
+Here's a code block.
+
+```jsx
+import React from "react";
+
+export default function PageOne() {
+  return <div>Page One</div>;
+}
+```

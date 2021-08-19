@@ -16,7 +16,7 @@ export interface RouteModule {
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
-  meta?: MetaFunction;
+  meta?: MetaFunction | { [name: string]: string };
 }
 
 /**

@@ -563,8 +563,11 @@ export function Meta() {
 
     let routeModule = routeModules[routeId];
 
-    if (typeof routeModule.meta === "function") {
-      let routeMeta = routeModule.meta({ data, parentsData, params, location });
+    if (routeModule.meta) {
+      let routeMeta =
+        typeof routeModule.meta === "function"
+          ? routeModule.meta({ data, parentsData, params, location })
+          : routeModule.meta;
       Object.assign(meta, routeMeta);
     }
 
