@@ -10,7 +10,7 @@ import * as thirdPost from "./third.md";
 let postFromModule = (mod) => {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
-    ...mod.meta
+    ...mod.attributes.meta
   };
 }
 
