@@ -16,7 +16,7 @@ export async function setup(platformArg?: string) {
     : SetupPlatform.Node;
 
   let resolveRemixPackage = (pkg: string) =>
-    path.resolve(__dirname, `../..`, pkg);
+    path.dirname(require.resolve(`@remix-run/${pkg}/package.json`));
 
   let platformPkgJson = require(path.resolve(
     resolveRemixPackage(platform),
