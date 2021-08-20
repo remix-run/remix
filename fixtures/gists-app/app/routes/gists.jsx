@@ -1,8 +1,8 @@
 import { Outlet } from "react-router-dom";
 import { Link, useRouteData, usePendingLocation, json } from "remix";
 
-import Shared from "../components/Shared";
-import stylesHref from "../styles/gists.css";
+import Shared from "~/components/Shared";
+import stylesHref from "~/styles/gists.css";
 
 export function links() {
   return [{ rel: "stylesheet", href: stylesHref }];
