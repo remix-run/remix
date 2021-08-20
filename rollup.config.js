@@ -77,26 +77,6 @@ let remix = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixMagic = {
-  external(id) {
-    return isBareModuleId(id);
-  },
-  input: path.resolve(__dirname, "packages/remix/magic.ts"),
-  output: {
-    banner: licenseBanner,
-    dir: "build/node_modules/remix",
-    format: "cjs"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts"]
-    })
-  ]
-};
-
-/** @type {import("rollup").RollupOptions} */
 let remixBrowser = {
   external() {
     return true;
@@ -235,18 +215,9 @@ let remixServerRuntime = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-server-runtime/package.json"), {
-      transform(source) {
-        let packageJson = {
-          ...JSON.parse(source),
-          scripts: {
-            postinstall: "node scripts/postinstall.js"
-          }
-        };
-
-        return JSON.stringify(packageJson, null, 2);
-      }
-    })
+    copyAsset(
+      path.resolve(__dirname, "packages/remix-server-runtime/package.json")
+    )
   ]
 };
 
@@ -297,28 +268,6 @@ let remixServerRuntimeMagicExportsBrowser = {
 };
 
 /** @type {import("rollup").RollupOptions} */
-let remixServerRuntimeScripts = {
-  external(id) {
-    return isBareModuleId(id);
-  },
-  input: [
-    path.resolve(__dirname, "packages/remix-server-runtime/scripts/postinstall.ts")
-  ],
-  output: {
-    banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/server-runtime/scripts",
-    format: "cjs"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    })
-  ]
-};
-
-/** @type {import("rollup").RollupOptions} */
 let remixNode = {
   external(id) {
     return isBareModuleId(id);
@@ -338,18 +287,7 @@ let remixNode = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-node/package.json"), {
-      transform(source) {
-        let packageJson = {
-          ...JSON.parse(source),
-          scripts: {
-            postinstall: "node scripts/postinstall.js"
-          }
-        };
-
-        return JSON.stringify(packageJson, null, 2);
-      }
-    })
+    copyAsset(path.resolve(__dirname, "packages/remix-node/package.json"))
   ]
 };
 
@@ -389,28 +327,6 @@ let remixNodeMagicExportsBrowser = {
     banner: licenseBanner,
     dir: "build/node_modules/@remix-run/node/magicExports/browser",
     format: "esm"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    })
-  ]
-};
-
-/** @type {import("rollup").RollupOptions} */
-let remixNodeScripts = {
-  external(id) {
-    return isBareModuleId(id);
-  },
-  input: [
-    path.resolve(__dirname, "packages/remix-node/scripts/postinstall.ts")
-  ],
-  output: {
-    banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/node/scripts",
-    format: "cjs"
   },
   plugins: [
     babel({
@@ -475,40 +391,7 @@ let remixReact = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-react/package.json"), {
-      transform(source) {
-        let packageJson = {
-          ...JSON.parse(source),
-          scripts: {
-            postinstall: "node scripts/postinstall.js"
-          }
-        };
-
-        return JSON.stringify(packageJson, null, 2);
-      }
-    })
-  ]
-};
-
-/** @type {import("rollup").RollupOptions[]} */
-let remixReactScripts = {
-  external(id) {
-    return isBareModuleId(id);
-  },
-  input: [
-    path.resolve(__dirname, "packages/remix-react/scripts/postinstall.ts")
-  ],
-  output: {
-    banner: licenseBanner,
-    dir: "build/node_modules/@remix-run/react/scripts",
-    format: "cjs"
-  },
-  plugins: [
-    babel({
-      babelHelpers: "bundled",
-      exclude: /node_modules/,
-      extensions: [".ts", ".tsx"]
-    })
+    copyAsset(path.resolve(__dirname, "packages/remix-react/package.json"))
   ]
 };
 
@@ -623,17 +506,14 @@ let remixServeCli = {
 let builds = [
   createRemix,
   remix,
-  remixMagic,
   remixBrowser,
   remixInit,
   remixDev,
   remixDevCli,
   remixServerRuntime,
-  remixServerRuntimeScripts,
   remixServerRuntimeMagicExports,
   remixServerRuntimeMagicExportsBrowser,
   remixNode,
-  remixNodeScripts,
   remixNodeMagicExports,
   remixNodeMagicExportsBrowser,
   remixArchitect,
@@ -642,7 +522,6 @@ let builds = [
   remixNetlify,
   remixVercel,
   remixReact,
-  remixReactScripts,
   remixReactBrowser,
   remixReactMagicExports,
   remixReactMagicExportsBrowser,

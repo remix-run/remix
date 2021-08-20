@@ -3,7 +3,7 @@
   "name": "gists-app",
   "version": "1.0.0",
   "scripts": {
-    "install_remix": "node scripts/install_remix.js",
+    "install_remix": "node scripts/install_remix.js && node node_modules/@remix-run/dev/cli.js setup",
     "prebuild": "yarn run install_remix",
     "build": "node node_modules/@remix-run/dev/cli.js build",
     "predev": "yarn run install_remix",

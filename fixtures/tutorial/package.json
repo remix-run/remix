@@ -3,7 +3,7 @@
   "name": "tutorial",
   "version": "1.0.0",
   "scripts": {
-    "install_remix": "node scripts/install_remix.js",
+    "install_remix": "node scripts/install_remix.js && node node_modules/@remix-run/dev/cli.js setup",
     "postinstall": "yarn build",
     "prebuild": "yarn run install_remix",
     "build": "node node_modules/@remix-run/dev/cli.js build",
