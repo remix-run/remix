@@ -1,0 +1,29 @@
+---
+meta:
+  title: Hello, World!
+  description: Isn't this fantastic?!?!?!
+headers:
+  Cache-Control: public, max-age=0, must-revalidate
+
+message: Hello World!
+---
+
+import Counter from "../../components/Counter";
+
+# Hello Blog!
+
+I am a MDX page. This is a message from frontmatter: {attributes.message}
+
+This is stateful:
+
+<Counter />
+
+Here's a code block.
+
+```jsx
+import React from "react";
+
+export default function PageOne() {
+  return <div>Page One</div>;
+}
+```
