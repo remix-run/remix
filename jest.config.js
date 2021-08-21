@@ -32,6 +32,12 @@ module.exports = {
       setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
+      displayName: "netlify",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-netlify/**/*-test.[jt]s?(x)"],
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
+    },
+    {
       displayName: "vercel",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-vercel/**/*-test.[jt]s?(x)"],

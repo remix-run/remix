@@ -451,6 +451,7 @@ let remixArchitect = getServerConfig("architect");
 let remixCloudflare = getServerConfig("cloudflare-workers");
 let remixExpress = getServerConfig("express");
 let remixVercel = getServerConfig("vercel");
+let remixNetlify = getServerConfig("netlify");
 
 // This CommonJS build of remix-react is for node; both for use in running our
 // server and for 3rd party tools that work with node.
@@ -638,6 +639,7 @@ let builds = [
   remixArchitect,
   remixCloudflare,
   remixExpress,
+  remixNetlify,
   remixVercel,
   remixReact,
   remixReactScripts,
