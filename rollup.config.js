@@ -179,7 +179,18 @@ let remixDev = {
           dest: "build/node_modules/@remix-run/dev/compiler"
         }
       ]
-    })
+    }),
+    // Allow dynamic imports in CJS code to allow us to utlize
+    // ESM modules as part of the compiler.
+    {
+      name: "dynamic-import-polyfill",
+      renderDynamicImport() {
+        return {
+          left: "import(",
+          right: ")"
+        };
+      }
+    }
   ]
 };
 

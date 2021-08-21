@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Links, Scripts, useRouteData, useMatches } from "remix";
+import { Links, Meta, Scripts, useRouteData, useMatches } from "remix";
 import { Outlet, Link } from "react-router-dom";
 
 import stylesHref from "./styles/app.css";
@@ -37,6 +37,7 @@ export default function Root() {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
+        <Meta />
         <Links />
       </head>
       <body className="m-4">

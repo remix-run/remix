@@ -1,8 +1,8 @@
 import type { LinksFunction, LoaderFunction } from "remix";
 import { useRouteData, Link } from "remix";
 
-import redTextHref from "../styles/redText.css";
-import blueTextHref from "../styles/blueText.css";
+import redTextHref from "~/styles/redText.css";
+import blueTextHref from "~/styles/blueText.css";
 // import guitar from "img:../components/guitar.jpg?width=500&height=500";
 // import notPreloadedGuitar from "img:../components/guitar.jpg?width=600&height=600";
 

@@ -1,7 +1,9 @@
 import { splitCookiesString } from "set-cookie-parser";
+
 import type { ServerBuild } from "./build";
 import type { ServerRoute } from "./routes";
 import type { RouteMatch } from "./routeMatching";
+
 export function getDocumentHeaders(
   build: ServerBuild,
   matches: RouteMatch<ServerRoute>[],
@@ -14,7 +16,9 @@ export function getDocumentHeaders(
       : new Headers();
     let headers = new Headers(
       routeModule.headers
-        ? routeModule.headers({ loaderHeaders, parentHeaders })
+        ? typeof routeModule.headers === "function"
+          ? routeModule.headers({ loaderHeaders, parentHeaders })
+          : routeModule.headers
         : undefined
     );
 
