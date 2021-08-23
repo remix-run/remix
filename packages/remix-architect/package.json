@@ -5,8 +5,7 @@
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
     "@types/aws-lambda": "^8.10.82",
-    "@remix-run/node": "0.17.5",
-    "@remix-run/server-runtime": "0.17.5"
+    "@remix-run/node": "0.17.5"
   },
   "peerDependencies": {
     "@architect/architect": "^8.3.7"

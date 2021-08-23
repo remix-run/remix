@@ -114,6 +114,16 @@ async function run(args) {
     );
   }
 
+  for (let name of ["cloudflare-workers"]) {
+    await updatePackageConfig(`remix-${name}`, config => {
+      config.version = nextVersion;
+      config.dependencies["@remix-run/server-runtime"] = nextVersion;
+    });
+    console.log(
+      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
+    );
+  }
+
   for (let name of ["node"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;

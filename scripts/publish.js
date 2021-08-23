@@ -28,6 +28,7 @@ async function run() {
   for (let name of [
     "dev",
     "server-runtime", // publish before platforms
+    // "cloudflare-workers",
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
