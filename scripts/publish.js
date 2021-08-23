@@ -27,6 +27,7 @@ async function run() {
   // Publish all @remix-run/* packages
   for (let name of [
     "dev",
+    "server-runtime", // publish before platforms
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
