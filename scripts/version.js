@@ -105,9 +105,19 @@ async function run(args) {
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
   // Update remix-dev, remix-init, remix-node, and remix-react versions
-  for (let name of ["dev", "init", "node", "react"]) {
+  for (let name of ["dev", "init", "server-runtime", "react"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
+    });
+    console.log(
+      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
+    );
+  }
+
+  for (let name of ["node"]) {
+    await updatePackageConfig(`remix-${name}`, config => {
+      config.version = nextVersion;
+      config.dependencies["@remix-run/server-runtime"] = nextVersion;
     });
     console.log(
       chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
