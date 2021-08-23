@@ -1,10 +1,9 @@
 {
-  "include": ["../../types/mdx-js__mdx.d.ts", "**/*"],
-  "exclude": ["__tests__/**/*"],
+  "include": ["**/*"],
+  "exclude": ["__tests__"],
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",
-    "module": "CommonJS",
 
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
@@ -13,7 +12,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/@remix-run/dev",
+    "outDir": "../../build/node_modules/@remix-run/netlify",
     "rootDir": "."
   }
 }

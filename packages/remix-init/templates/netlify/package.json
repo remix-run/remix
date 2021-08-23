@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix dev"
+  },
+  "dependencies": {
+    "@netlify/functions": "0.7.2",
+    "@remix-run/netlify": "0.17.5"
+  }
+}

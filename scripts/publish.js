@@ -31,6 +31,7 @@ async function run() {
     "architect",
     "express", // publish express before serve
     "vercel",
+    "netlify",
     "react",
     "serve",
     "init" // publish init last

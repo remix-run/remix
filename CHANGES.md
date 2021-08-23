@@ -15,6 +15,7 @@
 - Add base64 encoding primitives to node globals (atob and btoa)
 - Adds and improves testing around node adapters
 - Fixes the ability to set multiple Set-Cookie headers
+- Adds a Netlify adapter and starter template
 - Adds an Azure adapter and starter template
 
 This is a history of changes to [Remix](https://remix.run).
