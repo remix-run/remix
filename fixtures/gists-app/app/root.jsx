@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import { Links, Meta, Scripts, useRouteData, useMatches } from "remix";
 import { Outlet, Link } from "react-router-dom";
 
+import normalizeHref from "@exampledev/new.css/new.css";
 import stylesHref from "./styles/app.css";
 
 export function links() {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/@exampledev/new.css@1.1.3/new.css"
+      href: normalizeHref
     },
     { rel: "stylesheet", href: stylesHref }
   ];
