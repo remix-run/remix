@@ -6,7 +6,6 @@
   },
   "dependencies": {
     "@remix-run/express": "*",
-    "@remix-run/node": "*",
     "compression": "^1.7.4",
     "express": "^4.17.1",
     "morgan": "^1.10.0"
