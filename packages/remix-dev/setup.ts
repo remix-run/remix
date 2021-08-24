@@ -1,6 +1,14 @@
 import * as fse from "fs-extra";
 import * as path from "path";
 
+export enum SetupPlatform {
+  Node = "node"
+}
+
+export function isSetupPlatform(platform: any): platform is SetupPlatform {
+  return platform === SetupPlatform.Node;
+}
+
 export async function installMagicExports(
   dependencies: { [name: string]: string },
   filesDir: string

@@ -4,7 +4,6 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/serve": "*",
-    "@remix-run/node": "*"
+    "@remix-run/serve": "*"
   }
 }

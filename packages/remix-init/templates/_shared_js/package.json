@@ -4,6 +4,7 @@
   "description": "",
   "license": "",
   "scripts": {
+    "postinstall": "remix setup",
     "build": "remix build",
     "dev": "remix dev"
   },
