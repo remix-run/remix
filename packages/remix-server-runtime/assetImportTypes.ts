@@ -1,5 +1,3 @@
-import type { ComponentType } from "react";
-
 declare module "*.aac" {
   const asset: string;
   export default asset;
@@ -33,13 +31,19 @@ declare module "*.json" {
   export default asset;
 }
 declare module "*.md" {
-  const Component: ComponentType;
+  import type { ComponentType as MdComponentType } from "react";
+
+  const Component: MdComponentType;
   export const attributes: any;
+  export const filename: string;
   export default Component;
 }
 declare module "*.mdx" {
-  const Component: ComponentType;
+  import type { ComponentType as MdxComponentType } from "react";
+
+  const Component: MdxComponentType;
   export const attributes: any;
+  export const filename: string;
   export default Component;
 }
 declare module "*.mp3" {
