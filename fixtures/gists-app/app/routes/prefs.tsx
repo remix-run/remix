@@ -3,13 +3,13 @@ import { useRouteData, useSubmit, Form, Link, redirect } from "remix";
 
 import { userPrefsCookie } from "../cookies";
 
-function getUserPrefs(cookieHeader: string | null): any {
+async function getUserPrefs(cookieHeader: string | null): any {
   return (
-    userPrefsCookie.parse(cookieHeader) || { language: null, showBanner: true }
+    await userPrefsCookie.parse(cookieHeader) || { language: null, showBanner: true }
   );
 }
 
-function setUserPrefs(userPrefs: any): string {
+function setUserPrefs(userPrefs: any): Promise<string> {
   return userPrefsCookie.serialize(userPrefs);
 }
 
@@ -22,7 +22,7 @@ export let loader: LoaderFunction = async ({ request }) => {
 };
 
 export let action: ActionFunction = async ({ request }) => {
-  let userPrefs = getUserPrefs(request.headers.get("Cookie"));
+  let userPrefs = await getUserPrefs(request.headers.get("Cookie"));
   let formParams = new URLSearchParams(await request.text());
 
   if (formParams.has("language")) {
@@ -33,7 +33,7 @@ export let action: ActionFunction = async ({ request }) => {
 
   return redirect("/prefs", {
     headers: {
-      "Set-Cookie": setUserPrefs(userPrefs)
+      "Set-Cookie": await setUserPrefs(userPrefs)
     }
   });
 };

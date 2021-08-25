@@ -1340,6 +1340,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/cookie-signature@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.npmjs.org/@types/cookie-signature/-/cookie-signature-1.0.3.tgz#4761a0c31ad159306564a6b41a3f8b014c47eab2"
+  integrity sha512-0jpd4oizLaBybWBCew/lx4iAjjNWmCfzbspvnjoppyGEquN51BjShmPCksiH2IXLwtxQ2F/e2PkFy0LL7jpLsw==
+
 "@types/cookie@^0.4.0":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@types/cookie/-/cookie-0.4.0.tgz#14f854c0f93d326e39da6e3b6f34f7d37513d108"
@@ -3054,6 +3059,11 @@ cookie-signature@1.0.6:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/cookie-signature/-/cookie-signature-1.0.6.tgz#e303a882b342cc3ee8ca513a79999734dab3ae2c"
   integrity sha1-4wOogrNCzD7oylE6eZmXNNqzriw=
+
+cookie-signature@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.1.0.tgz#cc94974f91fb9a9c1bb485e95fc2b7f4b120aff2"
+  integrity sha512-Alvs19Vgq07eunykd3Xy2jF0/qSNv2u7KDbAek9H5liV1UMijbqFs5cycZvv5dVsvseT/U4H8/7/w8Koh35C4A==
 
 cookie@0.4.0:
   version "0.4.0"
