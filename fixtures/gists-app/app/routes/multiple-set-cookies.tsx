@@ -1,4 +1,3 @@
-import * as React from "react";
 import type {
   ActionFunction,
   LoaderFunction,
@@ -6,9 +5,8 @@ import type {
   RouteComponent
 } from "remix";
 import { redirect, json, Form } from "remix";
-import { Headers } from "@remix-run/node";
 
-let loader: LoaderFunction = async ({ request }) => {
+let loader: LoaderFunction = async () => {
   let headers = new Headers();
   headers.append("Set-Cookie", "foo=bar");
   headers.append("Set-Cookie", "bar=baz");
