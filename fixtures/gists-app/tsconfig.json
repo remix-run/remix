@@ -1,4 +1,5 @@
 {
+  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "esModuleInterop": true,
     "jsx": "react-jsx",

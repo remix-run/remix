@@ -61,8 +61,7 @@ let remix = {
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix",
-    format: "cjs",
-    preserveModules: true
+    format: "cjs"
   },
   plugins: [
     babel({
@@ -84,8 +83,7 @@ let remixBrowser = {
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix/browser",
-    format: "esm",
-    preserveModules: true
+    format: "esm"
   },
   plugins: [
     babel({
