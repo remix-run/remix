@@ -9,19 +9,18 @@ function isBareModuleId(id) {
 }
 
 /** @return {import('rollup').Plugin} */
-function copyAsset(
-  file,
-  { fileName = path.basename(file), transform = null } = {}
-) {
+function copyFile(file) {
   return {
-    name: "copy-asset",
+    name: "copy-file",
     buildStart() {
       this.addWatchFile(file);
     },
     generateBundle() {
-      let source = fs.readFileSync(file);
-      if (transform) source = transform(source);
-      this.emitFile({ type: "asset", fileName, source });
+      this.emitFile({
+        type: "asset",
+        fileName: path.basename(file),
+        source: fs.readFileSync(file)
+      });
     }
   };
 }
@@ -48,8 +47,8 @@ let createRemix = {
       extensions: [".ts"]
     }),
     nodeResolve({ extensions: [".ts"] }),
-    copyAsset(path.resolve(__dirname, "packages/create-remix/package.json")),
-    copyAsset(path.resolve(__dirname, "packages/create-remix/README.md"))
+    copyFile(path.resolve(__dirname, "packages/create-remix/package.json")),
+    copyFile(path.resolve(__dirname, "packages/create-remix/README.md"))
   ]
 };
 
@@ -62,8 +61,7 @@ let remix = {
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix",
-    format: "cjs",
-    preserveModules: true
+    format: "cjs"
   },
   plugins: [
     babel({
@@ -71,8 +69,8 @@ let remix = {
       exclude: /node_modules/,
       extensions: [".ts"]
     }),
-    copyAsset(path.resolve(__dirname, "packages/remix/package.json")),
-    copyAsset(path.resolve(__dirname, "packages/remix/README.md"))
+    copyFile(path.resolve(__dirname, "packages/remix/package.json")),
+    copyFile(path.resolve(__dirname, "packages/remix/README.md"))
   ]
 };
 
@@ -85,8 +83,7 @@ let remixBrowser = {
   output: {
     banner: licenseBanner,
     dir: "build/node_modules/remix/browser",
-    format: "esm",
-    preserveModules: true
+    format: "esm"
   },
   plugins: [
     babel({
@@ -115,7 +112,7 @@ let remixInit = {
       extensions: [".ts"]
     }),
     nodeResolve({ extensions: [".ts"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-init/package.json")),
+    copyFile(path.resolve(__dirname, "packages/remix-init/package.json")),
     copy({
       targets: [
         {
@@ -135,7 +132,8 @@ let remixDev = {
   input: [
     path.resolve(__dirname, "packages/remix-dev/cli/commands.ts"),
     path.resolve(__dirname, "packages/remix-dev/compiler.ts"),
-    path.resolve(__dirname, "packages/remix-dev/config.ts")
+    path.resolve(__dirname, "packages/remix-dev/config.ts"),
+    path.resolve(__dirname, "packages/remix-dev/index.ts")
   ],
   output: {
     banner: licenseBanner,
@@ -151,7 +149,7 @@ let remixDev = {
       extensions: [".ts"]
     }),
     nodeResolve({ extensions: [".ts"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-dev/package.json")),
+    copyFile(path.resolve(__dirname, "packages/remix-dev/package.json")),
     copy({
       targets: [
         {
@@ -215,7 +213,7 @@ let remixServerRuntime = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(
+    copyFile(
       path.resolve(__dirname, "packages/remix-server-runtime/package.json")
     )
   ]
@@ -287,7 +285,7 @@ let remixNode = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-node/package.json"))
+    copyFile(path.resolve(__dirname, "packages/remix-node/package.json"))
   ]
 };
 
@@ -358,7 +356,7 @@ function getServerConfig(name) {
         extensions: [".ts", ".tsx"]
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
-      copyAsset(path.resolve(__dirname, `packages/remix-${name}/package.json`))
+      copyFile(path.resolve(__dirname, `packages/remix-${name}/package.json`))
     ]
   };
 }
@@ -391,7 +389,7 @@ let remixReact = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-react/package.json"))
+    copyFile(path.resolve(__dirname, "packages/remix-react/package.json"))
   ]
 };
 
@@ -478,7 +476,7 @@ let remixServe = {
       extensions: [".ts", ".tsx"]
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
-    copyAsset(path.resolve(__dirname, "packages/remix-serve/package.json"))
+    copyFile(path.resolve(__dirname, "packages/remix-serve/package.json"))
   ]
 };
 

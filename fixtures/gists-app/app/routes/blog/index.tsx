@@ -1,5 +1,7 @@
+import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
 import { Link, useRouteData, usePendingLocation, json } from "remix";
 
+// @ts-expect-error
 import Shared from "../../components/Shared";
 import stylesHref from "../../styles/gists.css";
 
@@ -7,19 +9,27 @@ import * as helloPost from "./hello-world.mdx";
 import * as secondPost from "./second.md";
 import * as thirdPost from "./third.md";
 
-let postFromModule = (mod) => {
+interface Post {
+  title: string;
+  description: string;
+  slug: string;
+}
+
+type PostsData = { posts: Post[] };
+
+function postFromModule(mod: any): Post {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
     ...mod.attributes.meta
   };
 }
 
-export function loader() {
-  let data = {
+export let loader: LoaderFunction = () => {
+  let data: PostsData = {
     posts: [
       postFromModule(helloPost),
       postFromModule(secondPost),
-      postFromModule(thirdPost),
+      postFromModule(thirdPost)
     ]
   };
 
@@ -28,21 +38,21 @@ export function loader() {
       "Cache-Control": "public, max-age=60"
     }
   });
-}
+};
 
-export function links() {
+export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesHref }];
-}
+};
 
-export function headers({ loaderHeaders }) {
+export let headers: HeadersFunction = ({ loaderHeaders }) => {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
+    "Cache-Control": loaderHeaders.get("Cache-Control")!
   };
-}
+};
 
 export default function BlogPosts() {
   let locationPending = usePendingLocation();
-  let { posts } = useRouteData();
+  let { posts } = useRouteData<PostsData>();
 
   return (
     <div data-test-id="/blog">

@@ -3,9 +3,12 @@ import { useRouteData, useSubmit, Form, Link, redirect } from "remix";
 
 import { userPrefsCookie } from "../cookies";
 
-async function getUserPrefs(cookieHeader: string | null): any {
+async function getUserPrefs(cookieHeader: string | null): Promise<any> {
   return (
-    await userPrefsCookie.parse(cookieHeader) || { language: null, showBanner: true }
+    (await userPrefsCookie.parse(cookieHeader)) || {
+      language: null,
+      showBanner: true
+    }
   );
 }
 
