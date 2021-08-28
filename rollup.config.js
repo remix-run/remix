@@ -132,7 +132,8 @@ let remixDev = {
   input: [
     path.resolve(__dirname, "packages/remix-dev/cli/commands.ts"),
     path.resolve(__dirname, "packages/remix-dev/compiler.ts"),
-    path.resolve(__dirname, "packages/remix-dev/config.ts")
+    path.resolve(__dirname, "packages/remix-dev/config.ts"),
+    path.resolve(__dirname, "packages/remix-dev/index.ts")
   ],
   output: {
     banner: licenseBanner,
