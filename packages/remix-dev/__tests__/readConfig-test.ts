@@ -87,7 +87,7 @@ describe("readConfig", () => {
           },
           "routes/blog/index": Object {
             "caseSensitive": false,
-            "file": "routes/blog/index.jsx",
+            "file": "routes/blog/index.tsx",
             "id": "routes/blog/index",
             "parentId": "root",
             "path": "blog",

@@ -13,11 +13,11 @@ export interface RouteModules<RouteModule> {
 /**
  * A function that handles data mutations for a route.
  */
-export interface ActionFunction<TRequest = Request, TResponse = Response> {
-  (args: { request: TRequest; context: AppLoadContext; params: Params }):
-    | Promise<TResponse | Response>
-    | TResponse
-    | Response;
+export interface ActionFunction {
+  (args: { request: Request; context: AppLoadContext; params: Params }):
+    | Promise<Response | string>
+    | Response
+    | string;
 }
 
 /**
@@ -29,15 +29,10 @@ export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
-export interface HeadersFunction<
-  THeaders = Headers,
-  THeadersInit = HeadersInit
-> {
-  (args: {
-    actionHeaders: THeaders;
-    loaderHeaders: THeaders;
-    parentHeaders: THeaders;
-  }): THeaders | THeadersInit;
+export interface HeadersFunction {
+  (args: { loaderHeaders: Headers; parentHeaders: Headers }):
+    | Headers
+    | HeadersInit;
 }
 
 /**
@@ -51,10 +46,9 @@ export interface LinksFunction {
 /**
  * A function that loads data for a route.
  */
-export interface LoaderFunction<TRequest = Request, TResponse = Response> {
-  (args: { request: TRequest; context: AppLoadContext; params: Params }):
-    | Promise<TResponse | Response>
-    | TResponse
+export interface LoaderFunction {
+  (args: { request: Request; context: AppLoadContext; params: Params }):
+    | Promise<Response>
     | Response
     | Promise<AppData>
     | AppData;
