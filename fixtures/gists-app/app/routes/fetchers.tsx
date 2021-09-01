@@ -104,10 +104,12 @@ export default function Tasks() {
 
 function FilterForm() {
   let transition = useTransition();
+  let [searchParams] = useSearchParams();
 
   return (
     <Form method="get">
-      <input type="text" name="q" /> <button type="submit">Go</button>
+      <input type="text" name="q" defaultValue={searchParams.get("q") || ""} />{" "}
+      <button type="submit">Go</button>
       {transition.type === "loaderSubmission" ? (
         <p>Searching for: {transition.submission.formData.get("q")}...</p>
       ) : (
