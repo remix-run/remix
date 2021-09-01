@@ -150,7 +150,7 @@ describe("normal navigation", () => {
 
     let A = t.navigate.get("/bar");
     let B = await A.loader.redirect("/baz");
-    expect(t.getState().transition.type).toBe("redirect");
+    expect(t.getState().transition.type).toBe("normalRedirect");
     expect(t.getState().transition.location).toBe(B.location);
 
     await B.loader.resolve("B");
@@ -607,7 +607,7 @@ describe("transition states", () => {
     let A = t.navigate.get("/foo");
     let transition = t.getState().transition;
     expect(transition.state).toBe("loading");
-    expect(transition.type).toBe("load");
+    expect(transition.type).toBe("normalLoad");
     expect(transition.submission).toBeUndefined();
     expect(transition.location).toBe(A.location);
 
@@ -627,7 +627,7 @@ describe("transition states", () => {
 
     let transition = t.getState().transition;
     expect(transition.state).toBe("loading");
-    expect(transition.type).toBe("redirect");
+    expect(transition.type).toBe("normalRedirect");
     expect(transition.submission).toBeUndefined();
     expect(transition.location).toBe(B.location);
 
@@ -840,7 +840,7 @@ describe("fetcher states", () => {
     let A = t.fetch.get("/foo");
     let fetcher = t.getFetcher(A.key);
     expect(fetcher.state).toBe("loading");
-    expect(fetcher.type).toBe("load");
+    expect(fetcher.type).toBe("normalLoad");
 
     await A.loader.resolve("A DATA");
     fetcher = t.getFetcher(A.key);
@@ -961,7 +961,7 @@ describe("fetcher redirects", () => {
     let fetcher = t.getFetcher(A.key);
     let AR = await A.loader.redirect("/bar");
     expect(t.getFetcher(A.key)).toBe(fetcher);
-    expect(t.getState().transition.type).toBe("redirect");
+    expect(t.getState().transition.type).toBe("normalRedirect");
     expect(t.getState().transition.location).toBe(AR.location);
   });
 
@@ -971,7 +971,7 @@ describe("fetcher redirects", () => {
     let fetcher = t.getFetcher(A.key);
     let AR = await A.loader.redirect("/bar");
     expect(t.getFetcher(A.key)).toBe(fetcher);
-    expect(t.getState().transition.type).toBe("redirect");
+    expect(t.getState().transition.type).toBe("normalRedirect");
     expect(t.getState().transition.location).toBe(AR.location);
   });
 
@@ -1192,7 +1192,7 @@ describe("navigating with inflight fetchers", () => {
       let A = t.fetch.post("/foo");
       let B = t.navigate.get("/foo");
       expect(A.action.abortMock.calls.length).toBe(0);
-      expect(t.getState().transition.type).toBe("load");
+      expect(t.getState().transition.type).toBe("normalLoad");
       expect(t.getState().transition.location).toBe(B.location);
 
       await B.loader.resolve("B");

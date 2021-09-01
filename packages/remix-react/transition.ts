@@ -132,13 +132,13 @@ export type TransitionStates = {
   };
   LoadingRedirect: {
     state: "loading";
-    type: "redirect";
+    type: "normalRedirect";
     submission: undefined;
     location: Location<any>;
   };
   Loading: {
     state: "loading";
-    type: "load";
+    type: "normalLoad";
     location: Location<any>;
     submission: undefined;
   };
@@ -200,7 +200,7 @@ type FetcherStates = {
   };
   Loading: {
     state: "loading";
-    type: "load";
+    type: "normalLoad";
     submission: undefined;
     data: undefined;
   };
@@ -664,7 +664,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   ) {
     let fetcher: FetcherStates["Loading"] = {
       state: "loading",
-      type: "load",
+      type: "normalLoad",
       submission: undefined,
       data: undefined
     };
@@ -791,7 +791,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortNormalNavigation();
     let transition: TransitionStates["Loading"] = {
       state: "loading",
-      type: "load",
+      type: "normalLoad",
       submission: undefined,
       location
     };
@@ -806,7 +806,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortNormalNavigation();
     let transition: TransitionStates["LoadingRedirect"] = {
       state: "loading",
-      type: "redirect",
+      type: "normalRedirect",
       submission: undefined,
       location
     };
