@@ -408,10 +408,16 @@ You can know the state of the transition with `transition.state`, it will be one
 - **submitting** - A form has been submitted, if GET, then the route loader is being called, if POST, PUT, PATCH, DELETE, then the route action is being called.
 - **loading** - The loaders for the next routes are being called to render the next page.
 
-Normal navigations and GET form submissions transition as follows:
+Normal navigations transition as follows:
 
 ```
 idle → loading → idle
+```
+
+GET form submissions transition as follows:
+
+```
+idle → submitting → idle
 ```
 
 Form submissions with POST, PUT, PATCH, or DELETE transition as follows:
@@ -428,7 +434,7 @@ function SubmitButton() {
     : transition.state === "submitting"
     ? "Saving..."
     : transition.state === "loading"
-    ? "Loading..."
+    ? "Saved!"
     : "Go"
 
   return <button type="submit">{text}</button>;
@@ -449,17 +455,17 @@ Depending on the transition state, the types can be the following:
 
 - `state === "submitting"`
 
-  - **actionSubmission** - A form has been submitted with POST, PUT, PATCH, or DELETE, and the action is being called.
+  - **actionSubmission** - A form has been submitted with POST, PUT, PATCH, or DELETE, and the action is being called
   - **loaderSubmission** - A form has been submitted with GET and the loader is being called
 
 - `state === "loading"`
 
   - **loaderSubmissionRedirect** - A "loaderSubmission" was redirected by the loader and the next routes are being loaded
   - **actionRedirect** - An "actionSubmission" was redirected by the action and the next routes are being loaded
-  - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
-  - **fetchActionRedirect** - An action [fetcher](#usefetcher) redirected and the next routes are being loaded.
-  - **redirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded.
-  - **load** - A normal load from a normal navigation.
+  - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded
+  - **fetchActionRedirect** - An action [fetcher](#usefetcher) redirected and the next routes are being loaded
+  - **redirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded
+  - **load** - A normal load from a normal navigation
 
 ```tsx
 function SubmitButton() {
