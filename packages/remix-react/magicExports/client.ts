@@ -3,6 +3,7 @@
 // remove the ones we don't need in the browser builds.
 
 export type {
+  CaughtResponse,
   RemixBrowserProps,
   FormProps,
   SubmitOptions,
@@ -26,6 +27,7 @@ export {
   useTransition,
   useFetcher,
   useFetchers,
+  useCatch,
   useLoaderData,
   useActionData,
   useBeforeUnload,

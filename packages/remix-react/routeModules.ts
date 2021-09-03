@@ -13,6 +13,7 @@ export interface RouteModules {
 }
 
 export interface RouteModule {
+  CatchBoundary?: CatchBoundaryComponent;
   ErrorBoundary?: ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
@@ -20,6 +21,11 @@ export interface RouteModule {
   meta?: MetaFunction | { [name: string]: string };
   unstable_shouldReload?: ShouldReloadFunction;
 }
+
+/**
+ * A React component that is rendered when the server throws a Response.
+ */
+ export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.

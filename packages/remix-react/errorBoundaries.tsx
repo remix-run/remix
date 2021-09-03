@@ -1,7 +1,13 @@
 import type { Location } from "history";
-import React from "react";
+import React, { useContext } from "react";
 
-import type { ErrorBoundaryComponent } from "./routeModules";
+import type {
+  CatchBoundaryComponent,
+  ErrorBoundaryComponent
+} from "./routeModules";
+
+import type { CaughtResponse } from "./errors";
+import type { AppData } from "./data";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
@@ -103,6 +109,83 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
                 href="https://remix.run/dashboard/docs/errors"
               >
                 Error Handling in Remix
+              </a>
+              .
+            </p>
+          </div>
+        </main>
+      </body>
+    </html>
+  );
+}
+
+let RemixCatchContext = React.createContext<CaughtResponse | undefined>(
+  undefined
+);
+
+export function useCatch<T = AppData>(): CaughtResponse<T> | undefined {
+  return useContext(RemixCatchContext);
+}
+
+type RemixCatchBoundaryProps = React.PropsWithChildren<{
+  location: Location;
+  component: CatchBoundaryComponent;
+  catch?: CaughtResponse;
+}>;
+
+export function RemixCatchBoundary({
+  catch: catchVal,
+  component: Component,
+  children
+}: RemixCatchBoundaryProps) {
+  if (catchVal) {
+    return (
+      <RemixCatchContext.Provider value={catchVal}>
+        <Component />
+      </RemixCatchContext.Provider>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * When app's don't provide a root level ErrorBoundary, we default to this.
+ */
+export function RemixRootDefaultCatchBoundary() {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <title>Unhandled Thrown Response!</title>
+      </head>
+      <body>
+        <main
+          style={{
+            border: "solid 2px hsl(10, 50%, 50%)",
+            padding: "2rem"
+          }}
+        >
+          <div>
+            <h1>Unhandled Thrown Response!</h1>
+            <p>
+              If you are not the developer, please click back in your browser
+              and try again.
+            </p>
+            <p>There was an unhandled thrown response in your application.</p>
+            <p>
+              If you are the developer, consider adding your own catch boundary
+              so users don't see this page when unhandled thrown response happen
+              in production!
+            </p>
+            <p>
+              Read more about{" "}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href="https://remix.run/dashboard/docs/errors"
+              >
+                Throwing Responses in Remix
               </a>
               .
             </p>

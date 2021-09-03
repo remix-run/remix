@@ -1,5 +1,13 @@
 import { useEffect } from "react";
-import { Meta, Links, Scripts, useLoaderData, useMatches } from "remix";
+import {
+  json,
+  Meta,
+  Links,
+  Scripts,
+  useCatch,
+  useLoaderData,
+  useMatches
+} from "remix";
 import { Outlet, Link } from "react-router-dom";
 
 import normalizeHref from "@exampledev/new.css/new.css";
@@ -16,6 +24,7 @@ export function links() {
 }
 
 export function loader({ request }) {
+  // throw json(null);
   return {
     enableScripts: new URL(request.url).searchParams.get("disableJs") == null
   };
@@ -62,11 +71,42 @@ export default function Root() {
   );
 }
 
+export function CatchBoundary() {
+  let caught = useCatch();
+
+  useEffect(() => {
+    // We use this in the tests to wait for React to hydrate the page.
+    window.reactIsHydrated = true;
+  });
+
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <title>Almost Oops!</title>
+        <Links />
+      </head>
+      <body>
+        <div data-test-id="app-catch-boundary">
+          <h1>App Catch Boundary</h1>
+          <p>Status: {caught.status}</p>
+          <pre>
+            <code>{JSON.stringify(caught.data, null, 2)}</code>
+          </pre>
+        </div>
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
 export function ErrorBoundary({ error }) {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
   });
+
+  console.error(error);
 
   return (
     <html lang="en">

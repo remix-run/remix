@@ -13,5 +13,8 @@
     "react": ">=16.8",
     "react-dom": ">=16.8"
   },
+  "devDependencies": {
+    "abort-controller": "^3.0.0"
+  },
   "sideEffects": false
 }

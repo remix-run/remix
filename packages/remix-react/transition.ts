@@ -6,6 +6,11 @@ import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
 
+export interface CatchData<T = any> {
+  status: number;
+  data: T;
+}
+
 export interface TransitionManagerState {
   /**
    * The current location the user sees in the browser, during a transition this
@@ -43,6 +48,12 @@ export interface TransitionManagerState {
   transition: Transition;
 
   /**
+   * Persists thrown response loader/action data. TODO: should probably be an array
+   * and keep track of them all and pass the array to ErrorBoundary.
+   */
+  catch?: CatchData;
+
+  /**
    * Persists uncaught loader/action errors. TODO: should probably be an array
    * and keep track of them all and pass the array to ErrorBoundary.
    */
@@ -57,6 +68,15 @@ export interface TransitionManagerState {
    */
   errorBoundaryId: null | string;
 
+  /**
+   * The id of the nested ErrorBoundary in which to render the error.
+   *
+   * - undefined: no error
+   * - null: error, but no routes have a boundary, use a default
+   * - string: actual id
+   */
+  catchBoundaryId: null | string;
+
   fetchers: Map<string, Fetcher>;
 }
 
@@ -65,7 +85,9 @@ export interface TransitionManagerInit {
   location: Location;
   loaderData: RouteData;
   actionData?: RouteData;
+  catch?: CatchData;
   error?: Error;
+  catchBoundaryId?: null | string;
   errorBoundaryId?: null | string;
   onChange: (state: TransitionManagerState) => void;
   onRedirect: (to: string, state?: any) => void;
@@ -231,6 +253,15 @@ type DataErrorResult = {
   value: Error;
 };
 
+type DataCatchResult = {
+  match: ClientMatch;
+  value: CatchValue;
+};
+
+export class CatchValue {
+  constructor(public status: number, public data: any) {}
+}
+
 export type NavigationEvent = {
   type: "navigation";
   location: Location<any>;
@@ -331,7 +362,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: init.location,
     loaderData: init.loaderData || {},
     actionData: init.actionData,
+    catch: init.catch,
     error: init.error,
+    catchBoundaryId: init.catchBoundaryId || null,
     errorBoundaryId: init.errorBoundaryId || null,
     matches,
     nextMatches: undefined,
@@ -471,6 +504,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
+    if (await maybeBailOnCatch(match, key, result)) {
+      return;
+    }
+
     let loadFetcher: FetcherStates["ReloadingAction"] = {
       state: "loading",
       type: "actionReload",
@@ -482,6 +519,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({ fetchers: new Map(state.fetchers) });
 
     let maybeActionErrorResult = isErrorResult(result) ? result : undefined;
+    let maybeActionCatchResult = isCatchResult(result) ? result : undefined;
 
     let loadId = ++incrementingLoadId;
     fetchReloadIds.set(key, loadId);
@@ -500,6 +538,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matchesToLoad,
       controller.signal,
       maybeActionErrorResult,
+      maybeActionCatchResult,
       submission,
       loadFetcher
     );
@@ -527,6 +566,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
+    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+      results,
+      state.matches,
+      maybeActionCatchResult
+    );
+
     let doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
@@ -552,6 +597,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
         matches: state.nextMatches,
         error,
         errorBoundaryId,
+        catch: catchVal,
+        catchBoundaryId,
         loaderData: makeLoaderData(state, results, matchesToLoad),
         actionData:
           transition.type === "actionReload" ? state.actionData : undefined,
@@ -646,6 +693,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
+    if (await maybeBailOnCatch(match, key, result)) {
+      return;
+    }
+
     let doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
@@ -692,6 +743,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
+    if (await maybeBailOnCatch(match, key, result)) {
+      return;
+    }
+
     let doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
@@ -701,6 +756,28 @@ export function createTransitionManager(init: TransitionManagerInit) {
     state.fetchers.set(key, doneFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
+  }
+
+  async function maybeBailOnCatch(
+    match: ClientMatch,
+    key: string,
+    result: DataResult
+  ) {
+    if (isCatchResult(result)) {
+      let catchBoundaryId = findNearestCatchBoundary(match, state.matches);
+      state.fetchers.delete(key);
+      update({
+        transition: IDLE_TRANSITION,
+        fetchers: new Map(state.fetchers),
+        catch: {
+          data: result.value.data,
+          status: result.value.status
+        },
+        catchBoundaryId
+      });
+      return true;
+    }
+    return false;
   }
 
   function maybeBailOnError(
@@ -753,6 +830,20 @@ export function createTransitionManager(init: TransitionManagerInit) {
         type: "action"
       };
       init.onRedirect(result.value.location, locationState);
+      return;
+    }
+
+    if (isCatchResult(result)) {
+      let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+        [result],
+        matches,
+        result
+      );
+      update({
+        transition: IDLE_TRANSITION,
+        catch: catchVal,
+        catchBoundaryId
+      });
       return;
     }
 
@@ -885,6 +976,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let maybeActionErrorResult =
       actionResult && isErrorResult(actionResult) ? actionResult : undefined;
 
+    let maybeActionCatchResult =
+      actionResult && isCatchResult(actionResult) ? actionResult : undefined;
+
     let controller = new AbortController();
     pendingNavigationController = controller;
     navigationLoadId = ++incrementingLoadId;
@@ -895,6 +989,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches,
       controller.signal,
       maybeActionErrorResult,
+      maybeActionCatchResult,
       submission
     );
 
@@ -926,6 +1021,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
+    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+      results,
+      matches,
+      maybeActionErrorResult
+    );
+
     let abortedIds = abortStaleFetchLoads(navigationLoadId);
     if (abortedIds) {
       markFetchersDone(abortedIds);
@@ -936,6 +1037,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches,
       error,
       errorBoundaryId,
+      catch: catchVal,
+      catchBoundaryId,
       loaderData: makeLoaderData(state, results, matches),
       actionData:
         state.transition.type === "actionReload" ? state.actionData : undefined,
@@ -974,6 +1077,7 @@ async function callLoaders(
   matches: ClientMatch[],
   signal: AbortSignal,
   actionErrorResult?: DataErrorResult,
+  actionCatchResult?: DataCatchResult,
   submission?: Submission,
   fetcher?: Fetcher
 ): Promise<DataResult[]> {
@@ -982,6 +1086,7 @@ async function callLoaders(
     url,
     matches,
     actionErrorResult,
+    actionCatchResult,
     submission,
     fetcher
   );
@@ -1032,6 +1137,7 @@ function filterMatchesToLoad(
   url: URL,
   matches: ClientMatch[],
   actionErrorResult?: DataErrorResult,
+  actionCatchResult?: DataCatchResult,
   submission?: Submission,
   fetcher?: Fetcher
 ): ClientMatch[] {
@@ -1086,7 +1192,10 @@ function filterMatchesToLoad(
   return matches
     .filter((match, index, arr) => {
       // don't load errored action route
-      if (actionErrorResult && arr.length - 1 === index) {
+      if (
+        (actionErrorResult || actionCatchResult) &&
+        arr.length - 1 === index
+      ) {
         return false;
       }
 
@@ -1111,6 +1220,41 @@ function findRedirect(results: DataResult[]): TransitionRedirect | null {
     }
   }
   return null;
+}
+
+async function findCatchAndBoundaryId(
+  results: DataResult[],
+  matches: ClientMatch[],
+  actionCatchResult?: DataCatchResult
+): Promise<[CatchData, string | null] | [undefined, undefined]> {
+  let loaderCatchResult: DataCatchResult | undefined;
+
+  for (let result of results) {
+    if (isCatchResult(result)) {
+      loaderCatchResult = result;
+      break;
+    }
+  }
+
+  let extractCatchData = async (res: CatchValue) => ({
+    status: res.status,
+    data: res.data
+  });
+
+  // Weird case where action threw, and then a parent loader ALSO threw, we
+  // use the action catch but the loader's nearest boundary (cause we can't
+  // render down to the boundary the action would prefer)
+  if (actionCatchResult && loaderCatchResult) {
+    let boundaryId = findNearestCatchBoundary(loaderCatchResult.match, matches);
+    return [await extractCatchData(actionCatchResult.value), boundaryId];
+  }
+
+  if (loaderCatchResult) {
+    let boundaryId = findNearestCatchBoundary(loaderCatchResult.match, matches);
+    return [await extractCatchData(loaderCatchResult.value), boundaryId];
+  }
+
+  return [undefined, undefined];
 }
 
 function findErrorAndBoundaryId(
@@ -1146,6 +1290,25 @@ function findErrorAndBoundaryId(
   }
 
   return [undefined, undefined];
+}
+
+function findNearestCatchBoundary(
+  matchWithError: ClientMatch,
+  matches: ClientMatch[]
+): string | null {
+  let nearestBoundaryId: null | string = null;
+  for (let match of matches) {
+    if (match.route.CatchBoundary) {
+      nearestBoundaryId = match.route.id;
+    }
+
+    // only search parents (stop at throwing match)
+    if (match === matchWithError) {
+      break;
+    }
+  }
+
+  return nearestBoundaryId;
 }
 
 function findNearestBoundary(
@@ -1189,6 +1352,10 @@ function makeLoaderData(
   }
 
   return loaderData;
+}
+
+function isCatchResult(result: DataResult): result is DataCatchResult {
+  return result.value instanceof CatchValue;
 }
 
 function isErrorResult(result: DataResult) {

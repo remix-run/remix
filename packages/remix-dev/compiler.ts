@@ -427,6 +427,7 @@ export const routes = {
 type Route = RemixConfig["routes"][string];
 
 const browserSafeRouteExports: { [name: string]: boolean } = {
+  CatchBoundary: true,
   ErrorBoundary: true,
   default: true,
   handle: true,

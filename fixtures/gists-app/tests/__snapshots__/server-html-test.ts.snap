@@ -18,8 +18,18 @@ exports[`the server HTML for the root URL is correct 1`] = `
           <a href=\\"/loader-errors?throw\\">Loader error with no ErrorBoundary</a>
         </li>
         <li>
+          <a href=\\"/loader-errors?catch\\"
+            >Loader throws Response with no CatchBoundary</a
+          >
+        </li>
+        <li>
           <a href=\\"/loader-errors/nested\\"
             >Loader error in nested route with ErrorBoundary</a
+          >
+        </li>
+        <li>
+          <a href=\\"/loader-errors/nested-catch\\"
+            >Loader error in nested route with CatchBoundary</a
           >
         </li>
         <li>
