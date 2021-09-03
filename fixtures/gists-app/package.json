@@ -36,6 +36,5 @@
   },
   "browserslist": [
     "last 4 version"
-  ],
-  "sideEffects": false
+  ]
 }
