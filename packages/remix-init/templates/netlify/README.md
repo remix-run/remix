@@ -40,6 +40,7 @@ After you've done that, either open a new terminal tab or run source ~/.zshrc (o
 
 ```sh
   netlify env:set REMIX_TOKEN ${REMIX_TOKEN}
+  netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
 ```
 
 You can use this for other secrets too, like stripe tokens and database urls.
