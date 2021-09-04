@@ -36,11 +36,16 @@ After you've done that, either open a new terminal tab or run source ~/.zshrc (o
   npm i
 ```
 
-5. Lastly, you'll need to tell Netlify about your token as well:
+5. You'll need to tell Netlify to use Node 14, as at the time of writing Netlify uses Node 12 by [default](https://docs.netlify.com/functions/build-with-javascript/#runtime-settings)
+
+```sh
+  netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
+```
+
+6. Lastly, you'll need to tell Netlify about your token as well:
 
 ```sh
   netlify env:set REMIX_TOKEN ${REMIX_TOKEN}
-  netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
 ```
 
 You can use this for other secrets too, like stripe tokens and database urls.
