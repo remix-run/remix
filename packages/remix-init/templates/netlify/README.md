@@ -17,7 +17,13 @@ npm i -g netlify-cli
   netlify login
 ```
 
-3. **Important**: Netlify is going to do an `npm install` when you deploy your app. This template assumes your Remix token is available as an environment variable named `REMIX_TOKEN` for both npm installs on your computer and on Netlify. Open up your terminal rc file and add this:
+3. Create a new site:
+
+```sh
+  netlify init
+```
+
+4. **Important**: Netlify is going to do an `npm install` when you deploy your app. This template assumes your Remix token is available as an environment variable named `REMIX_TOKEN` for both npm installs on your computer and on Netlify. Open up your terminal rc file and add this:
 
 ```sh
   # .zshrc, .profile, .bash_rc, etc.
@@ -30,7 +36,7 @@ After you've done that, either open a new terminal tab or run source ~/.zshrc (o
   npm i
 ```
 
-4. Lastly, you'll need to tell Netlify about your token as well:
+5. Lastly, you'll need to tell Netlify about your token as well:
 
 ```sh
   netlify env:set REMIX_TOKEN ${REMIX_TOKEN}
