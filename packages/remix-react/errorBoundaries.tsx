@@ -18,7 +18,11 @@ export class RemixErrorBoundary extends React.Component<
   RemixErrorBoundaryProps,
   RemixErrorBoundaryState
 > {
-  state = { error: this.props.error || null, location: this.props.location };
+  constructor(props: RemixErrorBoundaryProps) {
+    super(props);
+
+    this.state = { error: props.error || null, location: props.location };
+  }
 
   static getDerivedStateFromError(error: Error) {
     return { error };
