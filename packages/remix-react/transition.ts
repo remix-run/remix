@@ -486,13 +486,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let loadId = ++incrementingLoadId;
     fetchReloadIds.set(key, loadId);
 
-    let matchesToLoad = state.matches;
-    let hrefToLoad = href;
-    if (state.transition.state !== "idle") {
-      invariant(state.nextMatches);
-      matchesToLoad = state.nextMatches;
-      hrefToLoad = createHref(state.transition.location);
-    }
+    let matchesToLoad = state.nextMatches || state.matches;
+    let hrefToLoad = createHref(state.transition.location || state.location);
 
     let results = await callLoaders(
       state,

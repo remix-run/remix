@@ -920,6 +920,19 @@ describe("fetchers", () => {
     await B.loader.resolve();
     expect(t.tm._internalFetchControllers.size).toBe(0);
   });
+
+  it("uses current page matches and URL when reloading routes after submissions", async () => {
+    let pagePathname = "/foo";
+    let t = setup({ url: pagePathname });
+    let A = t.fetch.post("/bar");
+    await A.action.resolve("ACTION");
+    await A.loader.resolve("LOADER");
+    let expectedReloadedRoute = "foo";
+    expect(t.getState().loaderData[expectedReloadedRoute]).toBe("LOADER");
+    // @ts-expect-error
+    let urlArg = t.rootLoaderMock.calls[0][0].url as URL;
+    expect(urlArg.pathname).toBe(pagePathname);
+  });
 });
 
 describe("fetcher error states", () => {
