@@ -451,7 +451,7 @@ Depending on the transition state, the types can be the following:
 
 - `state === "idle"`
 
-  - **idle** - The type is always idle when the state is idle
+  - **idle** - The type is always idle when there's not a pending navigation.
 
 - `state === "submitting"`
 
@@ -844,7 +844,11 @@ function UserAvatar({ partialUser }) {
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
 ```tsx
-// routes/cities/serach
+// routes/city-search.tsx
+export function loader({ request }) {
+  let url = new URL(request.url);
+  return searchCities(url.searchParams.get("city-query"));
+}
 ```
 
 ```tsx
@@ -856,6 +860,7 @@ function CitySearchCombobox() {
       <Combobox aria-label="Cities">
         <div>
           <ComboboxInput
+            name="city-query"
             onChange={(event) =>
               cities.submit(event.target.form)
             }
@@ -1135,8 +1140,7 @@ function SomeForm() {
   useBeforeUnload(
     React.useCallback(() => {
       localStorage.stuff = state
-    }),
-    [state]
+    }, [state])
   );
 
   // read it in when they return

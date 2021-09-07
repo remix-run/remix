@@ -786,11 +786,11 @@ export function loader({ params }) {
 }
 ```
 
-We want this loader to be called only if the project has had an update, so we can make this really simple and just say to reload if there is a submission:
+We want this loader to be called only if the project has had an update, so we can make this really simple and just say to reload if there is a non-GET submission:
 
 ```tsx
 export function unstable_shouldReload({ submission }) {
-  return Boolean(submission);
+  return submission && submission.method !== "GET";
 }
 ```
 
