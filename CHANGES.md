@@ -1,6 +1,6 @@
 # History of Changes
 
-## Unreleased
+## 0.18.0 - Thu Sep 02 2021
 
 ### Bug Fixes
 
