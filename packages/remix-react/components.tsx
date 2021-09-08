@@ -833,100 +833,103 @@ export function useSubmitImpl(key?: string): SubmitFunction {
   let defaultAction = useFormAction();
   let { transitionManager } = useRemixEntryContext();
 
-  return (target, options = {}) => {
-    let method: string;
-    let action: string;
-    let encType: string;
-    let formData: FormData;
+  return React.useCallback(
+    (target, options = {}) => {
+      let method: string;
+      let action: string;
+      let encType: string;
+      let formData: FormData;
 
-    if (isFormElement(target)) {
-      method = options.method || target.method;
-      action = options.action || target.action;
-      encType = options.encType || target.enctype;
-      formData = new FormData(target);
-    } else if (
-      isButtonElement(target) ||
-      (isInputElement(target) &&
-        (target.type === "submit" || target.type === "image"))
-    ) {
-      let form = target.form;
+      if (isFormElement(target)) {
+        method = options.method || target.method;
+        action = options.action || target.action;
+        encType = options.encType || target.enctype;
+        formData = new FormData(target);
+      } else if (
+        isButtonElement(target) ||
+        (isInputElement(target) &&
+          (target.type === "submit" || target.type === "image"))
+      ) {
+        let form = target.form;
 
-      if (form == null) {
-        throw new Error(`Cannot submit a <button> without a <form>`);
-      }
+        if (form == null) {
+          throw new Error(`Cannot submit a <button> without a <form>`);
+        }
 
-      // <button>/<input type="submit"> may override attributes of <form>
-      method = options.method || target.formMethod || form.method;
-      action = options.action || target.formAction || form.action;
-      encType = options.encType || target.formEnctype || form.enctype;
-      formData = new FormData(form);
+        // <button>/<input type="submit"> may override attributes of <form>
+        method = options.method || target.formMethod || form.method;
+        action = options.action || target.formAction || form.action;
+        encType = options.encType || target.formEnctype || form.enctype;
+        formData = new FormData(form);
 
-      // Include name + value from a <button>
-      if (target.name) {
-        formData.set(target.name, target.value);
-      }
-    } else {
-      if (isHtmlElement(target)) {
-        throw new Error(
-          `Cannot submit element that is not <form>, <button>, or ` +
-            `<input type="submit|image">`
-        );
-      }
-
-      method = options.method || "get";
-      action = options.action || defaultAction;
-      encType = options.encType || "application/x-www-form-urlencoded";
-
-      if (target instanceof FormData) {
-        formData = target;
+        // Include name + value from a <button>
+        if (target.name) {
+          formData.set(target.name, target.value);
+        }
       } else {
-        formData = new FormData();
-
-        if (target instanceof URLSearchParams) {
-          for (let [name, value] of target) {
-            formData.set(name, value);
-          }
-        } else if (target != null) {
-          for (let name of Object.keys(target)) {
-            formData.set(name, target[name]);
-          }
+        if (isHtmlElement(target)) {
+          throw new Error(
+            `Cannot submit element that is not <form>, <button>, or ` +
+              `<input type="submit|image">`
+          );
         }
-      }
-    }
 
-    let { protocol, host } = window.location;
-    let url = new URL(action, `${protocol}//${host}`);
+        method = options.method || "get";
+        action = options.action || defaultAction;
+        encType = options.encType || "application/x-www-form-urlencoded";
 
-    if (method.toLowerCase() === "get") {
-      for (let [name, value] of formData) {
-        if (typeof value === "string") {
-          url.searchParams.set(name, value);
+        if (target instanceof FormData) {
+          formData = target;
         } else {
-          throw new Error(`Cannot submit binary form data using GET`);
+          formData = new FormData();
+
+          if (target instanceof URLSearchParams) {
+            for (let [name, value] of target) {
+              formData.set(name, value);
+            }
+          } else if (target != null) {
+            for (let name of Object.keys(target)) {
+              formData.set(name, target[name]);
+            }
+          }
         }
       }
-    }
 
-    let submission: Submission = {
-      formData,
-      action: url.pathname + url.search,
-      method: method.toUpperCase(),
-      encType,
-      key: Math.random().toString(36).substr(2, 8)
-    };
+      let { protocol, host } = window.location;
+      let url = new URL(action, `${protocol}//${host}`);
 
-    if (key) {
-      transitionManager.send({
-        type: "fetcher",
-        href: submission.action,
-        submission,
-        key
-      });
-    } else {
-      setNextNavigationSubmission(submission);
-      navigate(url.pathname + url.search, { replace: options.replace });
-    }
-  };
+      if (method.toLowerCase() === "get") {
+        for (let [name, value] of formData) {
+          if (typeof value === "string") {
+            url.searchParams.set(name, value);
+          } else {
+            throw new Error(`Cannot submit binary form data using GET`);
+          }
+        }
+      }
+
+      let submission: Submission = {
+        formData,
+        action: url.pathname + url.search,
+        method: method.toUpperCase(),
+        encType,
+        key: Math.random().toString(36).substr(2, 8)
+      };
+
+      if (key) {
+        transitionManager.send({
+          type: "fetcher",
+          href: submission.action,
+          submission,
+          key
+        });
+      } else {
+        setNextNavigationSubmission(submission);
+        navigate(url.pathname + url.search, { replace: options.replace });
+      }
+    },
+    [defaultAction, key, navigate, transitionManager]
+  );
 }
 
 let nextNavigationSubmission: Submission | undefined;
