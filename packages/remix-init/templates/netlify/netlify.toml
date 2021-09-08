@@ -7,10 +7,6 @@
   publish = "public"
   port = 3000
 
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["@remix-run/react", "react", "react-dom"]
-
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/server"
