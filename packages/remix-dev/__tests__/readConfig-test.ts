@@ -106,6 +106,20 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "blog/third",
           },
+          "routes/catchall-nested/$": Object {
+            "caseSensitive": false,
+            "file": "routes/catchall-nested/$.jsx",
+            "id": "routes/catchall-nested/$",
+            "parentId": "root",
+            "path": "catchall-nested/*",
+          },
+          "routes/catchall.flat.$": Object {
+            "caseSensitive": false,
+            "file": "routes/catchall.flat.$.jsx",
+            "id": "routes/catchall.flat.$",
+            "parentId": "root",
+            "path": "catchall/flat/*",
+          },
           "routes/empty": Object {
             "caseSensitive": false,
             "file": "routes/empty.jsx",

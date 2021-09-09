@@ -64,7 +64,14 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 }
 
 function createRoutePath(routeId: string): string {
-  let path = routeId.replace(/\$/g, ":").replace(/\./g, "/");
+  let path = routeId
+    // routes/docs/$ -> routes/docs/*
+    // routes/docs.$ -> routes/docs/*
+    .replace(/(\/|\.)\$$/, "$1*")
+    // routes/$user -> routes/:user
+    .replace(/\$/g, ":")
+    // routes/not.nested -> routes/not/nested
+    .replace(/\./g, "/");
   return /\b\/?index$/.test(path) ? path.replace(/\/?index$/, "") : path;
 }
 
