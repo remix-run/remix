@@ -400,9 +400,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
         let foundMatches = matchClientRoutes(routes, location);
         invariant(foundMatches, "No matches found");
-        let { matches, isNoMatch: is404 } = foundMatches;
+        let { matches, isNoMatch } = foundMatches;
 
-        if (is404) {
+        if (isNoMatch) {
           handleNotFoundNavigation(matches);
         } else if (submission && isActionSubmission(submission)) {
           await handleActionSubmissionNavigation(location, submission, matches);

@@ -178,7 +178,7 @@ describe("shouldReload", () => {
       },
       routes: [
         {
-          path: "/",
+          path: "",
           id: "root",
           loader: rootLoader,
           shouldReload,

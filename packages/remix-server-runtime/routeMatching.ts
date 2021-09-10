@@ -18,7 +18,6 @@ export function matchServerRoutes(
   routes: ServerRoute[],
   pathname: string
 ): RouteMatchResult | null {
-  let isNoMatch = false;
   let matches = matchRoutes((routes as unknown) as RouteObject[], pathname);
 
   // If no match for user defined routes, fall back to the root route only for the CatchBoundary
@@ -28,7 +27,7 @@ export function matchServerRoutes(
   }
 
   if (!matches) return null;
-  isNoMatch = matches.length === 1;
+  let isNoMatch = matches.length === 1;
 
   return {
     matches: matches.map(match => ({
