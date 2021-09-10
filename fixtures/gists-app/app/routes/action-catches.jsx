@@ -1,7 +1,7 @@
 import { Form, json } from "remix";
 
 export function action() {
-  throw json("action catch data!", { status: 400 });
+  throw json("action catch data!", { status: 401 });
 }
 
 export default function ActionCatches() {

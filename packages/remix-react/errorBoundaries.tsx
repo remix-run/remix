@@ -183,6 +183,7 @@ export function RemixRootDefaultCatchBoundary() {
               <a
                 target="_blank"
                 rel="noreferrer"
+                // TODO: Update link to docs
                 href="https://remix.run/dashboard/docs/errors"
               >
                 Throwing Responses in Remix

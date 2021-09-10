@@ -48,14 +48,7 @@ describe("readConfig", () => {
           "root": Object {
             "file": "root.jsx",
             "id": "root",
-            "path": "/",
-          },
-          "routes/404": Object {
-            "caseSensitive": false,
-            "file": "routes/404.jsx",
-            "id": "routes/404",
-            "parentId": "root",
-            "path": "*",
+            "path": "",
           },
           "routes/action-catches": Object {
             "caseSensitive": false,

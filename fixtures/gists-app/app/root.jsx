@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import {
-  json,
   Meta,
   Links,
   Scripts,
@@ -24,7 +23,6 @@ export function links() {
 }
 
 export function loader({ request }) {
-  // throw json(null);
   return {
     enableScripts: new URL(request.url).searchParams.get("disableJs") == null
   };

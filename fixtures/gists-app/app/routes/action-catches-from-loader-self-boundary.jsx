@@ -11,7 +11,7 @@ export function action() {
  */
 export function loader({ request }) {
   if (new URL(request.url).searchParams.get("catch") != null) {
-    throw json("loader catch data!", { status: 400 });
+    throw json("loader catch data!", { status: 401 });
   }
 
   return null;

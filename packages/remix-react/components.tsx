@@ -31,12 +31,7 @@ import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
-import {
-  createTransitionManager,
-  Fetcher,
-  IDLE_FETCHER,
-  Submission
-} from "./transition";
+import { createTransitionManager, Fetcher, Submission } from "./transition";
 import type { Transition } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,6 +101,8 @@ export function RemixEntry({
       actionData: documentActionData,
       loaderData: documentLoaderData,
       location: historyLocation,
+      catch: entryComponentDidCatchEmulator.catch,
+      catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
       onChange: state => {
         setComponentDidCatchEmulator({
@@ -227,7 +224,8 @@ function Routes() {
   // TODO: Add `renderMatches` function to RR that we can use and then we don't
   // need this component, we can just `renderMatches` from RemixEntry
   let { clientRoutes } = useRemixEntryContext();
-  let element = useRoutes(clientRoutes);
+  // fallback to the root if we don't have a match
+  let element = useRoutes(clientRoutes) || (clientRoutes[0].element as any);
   return element;
 }
 
@@ -285,16 +283,15 @@ export function RemixRoute({ id }: { id: string }) {
       componentDidCatchEmulator.catchBoundaryRouteId = id;
     }
 
-    context =
-      maybeServerCaught
-        ? {
-            id,
-            get data() {
-              console.error("You cannot `useLoaderData` in a catch boundary.");
-              return undefined;
-            }
+    context = maybeServerCaught
+      ? {
+          id,
+          get data() {
+            console.error("You cannot `useLoaderData` in a catch boundary.");
+            return undefined;
           }
-        : { id, data };
+        }
+      : { id, data };
 
     element = (
       <RemixCatchBoundary
@@ -486,9 +483,12 @@ window.__remixRouteModules = {${matches
   let nextMatches = React.useMemo(() => {
     if (pendingLocation) {
       // FIXME: can probably use transitionManager `nextMatches`
-      let matches = matchClientRoutes(clientRoutes, pendingLocation);
-      invariant(matches, `No routes match path "${pendingLocation.pathname}"`);
-      return matches;
+      let foundMatches = matchClientRoutes(clientRoutes, pendingLocation);
+      invariant(
+        foundMatches,
+        `No routes match path "${pendingLocation.pathname}"`
+      );
+      return foundMatches.matches;
     }
 
     return [];
