@@ -2,6 +2,7 @@ import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
 import type { ReactElement } from "react";
 import React from "react";
+import type { Navigator } from "react-router";
 
 import { RemixEntry } from "./components";
 import type { EntryContext } from "./entry";
@@ -13,20 +14,22 @@ declare global {
   var __remixManifest: EntryContext["manifest"];
 }
 
-export interface RemixBrowserProps {}
+export interface RemixBrowserProps {
+  history?: BrowserHistory;
+}
 
 /**
  * The entry point for a Remix app when it is rendered in the browser (in
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
-export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
-  let historyRef = React.useRef<BrowserHistory>();
-  if (historyRef.current == null) {
-    historyRef.current = createBrowserHistory({ window });
-  }
+export function RemixBrowser({
+  history: _history
+}: RemixBrowserProps): ReactElement {
+  let [history] = React.useState<BrowserHistory>(() => {
+    return _history || createBrowserHistory({ window });
+  });
 
-  let history = historyRef.current;
   let [state, dispatch] = React.useReducer(
     (_: Update, update: Update) => update,
     {
@@ -35,7 +38,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
   );
 
-  React.useLayoutEffect(() => history.listen(dispatch), [history]);
+  React.useEffect(() => history.listen(dispatch), [history]);
 
   let entryContext = window.__remixContext;
   entryContext.manifest = window.__remixManifest;
