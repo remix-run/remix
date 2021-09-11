@@ -138,6 +138,19 @@ describe("normal navigation", () => {
     expect(t.rootLoaderMock.calls.length).toBe(0);
   });
 
+  it("sets all right states on hash change only", async () => {
+    let t = setup();
+    t.navigate.get("/#bar");
+    expect(t.getState().location.hash).toBe("");
+    expect(t.getState().transition.state).toBe("loading");
+    expect(t.getState().transition.location.hash).toBe("#bar");
+    // await the internal forced async state
+    await Promise.resolve();
+    expect(t.getState().location.hash).toBe("#bar");
+    expect(t.getState().transition.state).toBe("idle");
+    expect(t.getState().location.hash).toBe("#bar");
+  });
+
   it("loads new data on new routes even if there's also a hash change", async () => {
     let t = setup();
     let A = t.navigate.get("/foo#bar");
