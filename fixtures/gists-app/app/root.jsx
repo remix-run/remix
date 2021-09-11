@@ -90,7 +90,7 @@ export function CatchBoundary() {
             <div data-test-id="app-catch-boundary">
               <h1>404 Not Found</h1>
             </div>
-            {/* <Scripts /> */}
+            <Scripts />
           </body>
         </html>
       );
