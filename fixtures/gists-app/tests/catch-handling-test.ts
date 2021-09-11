@@ -23,14 +23,7 @@ describe("thrown responses", () => {
       expect(response!.status()).toBe(404);
       expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
         .toMatchInlineSnapshot(`
-        "<div data-test-id=\\"app-catch-boundary\\">
-          <h1>App Catch Boundary</h1>
-          <p>
-            Status:
-            <!-- -->404
-          </p>
-          <pre><code>null</code></pre>
-        </div>
+        "<div data-test-id=\\"app-catch-boundary\\"><h1>404 Not Found</h1></div>
         "
       `);
     });
@@ -44,13 +37,9 @@ describe("thrown responses", () => {
 
       expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
         .toMatchInlineSnapshot(`
-          "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>Status: 404</p>
-            <pre><code>null</code></pre>
-          </div>
-          "
-        `);
+        "<div data-test-id=\\"app-catch-boundary\\"><h1>404 Not Found</h1></div>
+        "
+      `);
     });
   });
 
@@ -124,11 +113,10 @@ describe("thrown responses", () => {
         );
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>
-              Status:
-              <!-- -->401
-            </p>
+            <h1>
+              401<!-- -->
+              Uh-oh!
+            </h1>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
           "
@@ -146,8 +134,7 @@ describe("thrown responses", () => {
         );
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>Status: 401</p>
+            <h1>401 Uh-oh!</h1>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
           "
@@ -180,11 +167,10 @@ describe("thrown responses", () => {
           );
           expect(html).toMatchInlineSnapshot(`
             "<div data-test-id=\\"app-catch-boundary\\">
-              <h1>App Catch Boundary</h1>
-              <p>
-                Status:
-                <!-- -->401
-              </p>
+              <h1>
+                401<!-- -->
+                Uh-oh!
+              </h1>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
             "
@@ -203,8 +189,7 @@ describe("thrown responses", () => {
           );
           expect(html).toMatchInlineSnapshot(`
             "<div data-test-id=\\"app-catch-boundary\\">
-              <h1>App Catch Boundary</h1>
-              <p>Status: 401</p>
+              <h1>401 Uh-oh!</h1>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
             "
@@ -219,11 +204,10 @@ describe("thrown responses", () => {
         expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>
-              Status:
-              <!-- -->401
-            </p>
+            <h1>
+              401<!-- -->
+              Uh-oh!
+            </h1>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "
@@ -246,8 +230,7 @@ describe("thrown responses", () => {
         expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>Status: 401</p>
+            <h1>401 Uh-oh!</h1>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "

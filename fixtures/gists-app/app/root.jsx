@@ -87,8 +87,10 @@ export function CatchBoundary() {
             <Links />
           </head>
           <body>
-            <h1>404 Not Found</h1>
-            <Scripts />
+            <div data-test-id="app-catch-boundary">
+              <h1>404 Not Found</h1>
+            </div>
+            {/* <Scripts /> */}
           </body>
         </html>
       );
@@ -103,12 +105,14 @@ export function CatchBoundary() {
             <Links />
           </head>
           <body>
-            <h1>{caught.status} Uh-oh!</h1>
-            {caught.data ? (
-              <pre>
-                <code>{JSON.stringify(caught.data, null, 2)}</code>
-              </pre>
-            ) : null}
+            <div data-test-id="app-catch-boundary">
+              <h1>{caught.status} Uh-oh!</h1>
+              {caught.data ? (
+                <pre>
+                  <code>{JSON.stringify(caught.data, null, 2)}</code>
+                </pre>
+              ) : null}
+            </div>
             <Scripts />
           </body>
         </html>
