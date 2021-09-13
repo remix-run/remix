@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import {
-  json,
   Meta,
   Links,
   Scripts,
@@ -24,7 +23,6 @@ export function links() {
 }
 
 export function loader({ request }) {
-  // throw json(null);
   return {
     enableScripts: new URL(request.url).searchParams.get("disableJs") == null
   };
@@ -79,25 +77,47 @@ export function CatchBoundary() {
     window.reactIsHydrated = true;
   });
 
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <title>Almost Oops!</title>
-        <Links />
-      </head>
-      <body>
-        <div data-test-id="app-catch-boundary">
-          <h1>App Catch Boundary</h1>
-          <p>Status: {caught.status}</p>
-          <pre>
-            <code>{JSON.stringify(caught.data, null, 2)}</code>
-          </pre>
-        </div>
-        <Scripts />
-      </body>
-    </html>
-  );
+  switch (caught.status) {
+    case 404:
+      return (
+        <html lang="en">
+          <head>
+            <meta charSet="utf-8" />
+            <title>404 Not Found</title>
+            <Links />
+          </head>
+          <body>
+            <div data-test-id="app-catch-boundary">
+              <h1>404 Not Found</h1>
+            </div>
+            <Scripts />
+          </body>
+        </html>
+      );
+    default:
+      console.warn("Unexpected catch", caught);
+
+      return (
+        <html lang="en">
+          <head>
+            <meta charSet="utf-8" />
+            <title>{caught.status} Uh-oh!</title>
+            <Links />
+          </head>
+          <body>
+            <div data-test-id="app-catch-boundary">
+              <h1>{caught.status} Uh-oh!</h1>
+              {caught.data ? (
+                <pre>
+                  <code>{JSON.stringify(caught.data, null, 2)}</code>
+                </pre>
+              ) : null}
+            </div>
+            <Scripts />
+          </body>
+        </html>
+      );
+  }
 }
 
 export function ErrorBoundary({ error }) {

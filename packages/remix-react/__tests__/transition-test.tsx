@@ -178,12 +178,18 @@ describe("shouldReload", () => {
       },
       routes: [
         {
-          path: "/",
+          path: "",
           id: "root",
           loader: rootLoader,
           shouldReload,
           element: {},
           children: [
+            {
+              path: "/",
+              id: "index",
+              action: () => null,
+              element: {}
+            },
             {
               path: "/child",
               id: "child",
@@ -228,6 +234,80 @@ describe("shouldReload", () => {
         },
         "url": "http://localhost/child",
       }
+    `);
+  });
+});
+
+describe("no route match", () => {
+  it("transitions to root catch", async () => {
+    let t = setup();
+    let A = t.navigate.get("/not-found");
+    let state = t.getState();
+    expect(state.catchBoundaryId).toBe("root");
+    expect(state.catch).toEqual({ data: null, status: 404 });
+    expect(state.matches).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "params": Object {},
+          "pathname": "/",
+          "route": Object {
+            "CatchBoundary": [Function],
+            "ErrorBoundary": [Function],
+            "children": Array [
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "index",
+                "loader": [MockFunction],
+                "path": "/",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "foo",
+                "loader": [MockFunction],
+                "path": "/foo",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "bar",
+                "loader": [MockFunction],
+                "path": "/bar",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "baz",
+                "loader": [MockFunction],
+                "path": "/baz",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "param",
+                "loader": [MockFunction],
+                "path": "/p/:param",
+              },
+            ],
+            "element": Object {},
+            "id": "root",
+            "loader": [MockFunction],
+            "path": "",
+          },
+        },
+        Object {
+          "params": Object {},
+          "pathname": "/",
+          "route": Object {
+            "action": [MockFunction],
+            "element": Object {},
+            "id": "index",
+            "loader": [MockFunction],
+            "path": "/",
+          },
+        },
+      ]
     `);
   });
 });
@@ -301,16 +381,23 @@ describe("errors on navigation", () => {
       let tm = createTestTransitionManager("/", {
         routes: [
           {
-            path: "/",
-            id: "parent",
+            path: "",
+            id: "root",
             element: {},
             children: [
               {
-                path: "/child",
-                id: "child",
+                path: "/",
+                id: "parent",
                 element: {},
-                ErrorBoundary: FakeComponent,
-                loader
+                children: [
+                  {
+                    path: "/child",
+                    id: "child",
+                    element: {},
+                    ErrorBoundary: FakeComponent,
+                    loader
+                  }
+                ]
               }
             ]
           }
@@ -1560,13 +1647,20 @@ let setup = ({ url } = { url: "/" }) => {
 
   let routes = [
     {
-      path: "/",
+      path: "",
       id: "root",
       element: {},
       ErrorBoundary: FakeComponent,
       CatchBoundary: FakeComponent,
       loader: rootLoader,
       children: [
+        {
+          path: "/",
+          id: "index",
+          loader: createLoader(),
+          action: createAction(),
+          element: {}
+        },
         {
           path: "/foo",
           id: "foo",

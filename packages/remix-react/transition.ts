@@ -355,8 +355,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let navigationLoadId = -1;
   let fetchReloadIds = new Map<string, number>();
 
-  let matches = matchClientRoutes(routes, init.location);
-  invariant(matches, "No initial route matches!");
+  let foundMatches = matchClientRoutes(routes, init.location);
+  invariant(foundMatches, "No initial route matches!");
+  let { matches } = foundMatches;
 
   let state: TransitionManagerState = {
     location: init.location,
@@ -397,11 +398,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
         let { location, submission } = event;
         if (isHashChangeOnly(location)) return;
 
-        let matches = matchClientRoutes(routes, location);
-        invariant(matches, "No matches found");
+        let foundMatches = matchClientRoutes(routes, location);
+        invariant(foundMatches, "No matches found");
+        let { matches, isNoMatch } = foundMatches;
 
-        // <Form method="post | put | delete | patch">
-        if (submission && isActionSubmission(submission)) {
+        if (isNoMatch) {
+          handleNotFoundNavigation(matches);
+        } else if (submission && isActionSubmission(submission)) {
           await handleActionSubmissionNavigation(location, submission, matches);
         }
         // <Form method="get"/>
@@ -436,8 +439,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       case "fetcher": {
         let { key, submission, href } = event;
 
-        let matches = matchClientRoutes(routes, href);
-        invariant(matches, "No matches found");
+        let foundMatches = matchClientRoutes(routes, href);
+        invariant(foundMatches, "No matches found");
+        let { matches } = foundMatches;
         let match = matches.slice(-1)[0];
 
         if (fetchControllers.has(key)) abortFetcher(key);
@@ -796,6 +800,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return true;
     }
     return false;
+  }
+
+  function handleNotFoundNavigation(matches: RouteMatch<ClientRoute>[]) {
+    let catchBoundaryId = findNearestCatchBoundary(matches[0], matches);
+    update({
+      transition: IDLE_TRANSITION,
+      catch: {
+        data: null,
+        status: 404
+      },
+      catchBoundaryId
+    });
   }
 
   async function handleActionSubmissionNavigation(
@@ -1174,6 +1190,11 @@ function filterMatchesToLoad(
 
     return true;
   };
+
+  let isInRootCatchBoundary = state.matches.length === 1;
+  if (isInRootCatchBoundary) {
+    return matches.filter(match => !!match.route.loader);
+  }
 
   if (fetcher?.type === "actionReload") {
     return matches.filter(filterByRouteProps);

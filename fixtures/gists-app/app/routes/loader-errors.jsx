@@ -7,7 +7,7 @@ export function loader({ request }) {
     throw new Error("I am a loader error!");
   }
   if (params.has("catch")) {
-    throw json("catch data!", { status: 400 });
+    throw json("catch data!", { status: 401 });
   }
   return null;
 }

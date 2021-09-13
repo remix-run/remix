@@ -59,10 +59,11 @@ async function handleDataRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
-  let matches = matchServerRoutes(routes, url.pathname);
-  if (!matches) {
+  let foundMatches = matchServerRoutes(routes, url.pathname);
+  if (!foundMatches) {
     return jsonError(`No route matches URL "${url.pathname}"`, 404);
   }
+  let { matches } = foundMatches;
 
   let routeMatch: RouteMatch<ServerRoute>;
   if (isActionRequest(request)) {
@@ -103,7 +104,7 @@ async function handleDataRequest(
           loadContext,
           routeMatch.params
         );
-  } catch (error) {
+  } catch (error: any) {
     let formattedError = (await platform.formatServerError?.(error)) || error;
     return json(await serializeError(formattedError), {
       status: 500,
@@ -140,14 +141,15 @@ async function handleDocumentRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
-  let matches = matchServerRoutes(routes, url.pathname);
-  if (!matches) {
+  let foundMatches = matchServerRoutes(routes, url.pathname);
+  if (!foundMatches) {
     // TODO: Provide a default 404 page
     throw new Error(
-      `There is no route that matches ${url.pathname}. Please add ` +
-        `a routes/404.js file`
+      `There is no route that matches ${url.pathname}. Please add a root.jsx`
     );
   }
+
+  let { matches, isNoMatch } = foundMatches;
 
   let componentDidCatchEmulator: ComponentDidCatchEmulator = {
     trackBoundaries: true,
@@ -162,7 +164,18 @@ async function handleDocumentRequest(
   let actionState: "" | "caught" | "error" = "";
   let actionResponse: Response | undefined;
 
-  if (isActionRequest(request)) {
+  if (isNoMatch) {
+    componentDidCatchEmulator.trackCatchBoundaries = false;
+    let withBoundaries = getMatchesUpToDeepestCatchBoundary(matches);
+    componentDidCatchEmulator.catchBoundaryRouteId =
+      withBoundaries.length > 0
+        ? withBoundaries[withBoundaries.length - 1].route.id
+        : null;
+    componentDidCatchEmulator.catch = {
+      status: 404,
+      data: null
+    };
+  } else if (isActionRequest(request)) {
     let leafMatch = matches[matches.length - 1];
     try {
       actionResponse = await callRouteAction(
@@ -175,7 +188,7 @@ async function handleDocumentRequest(
       if (isRedirectResponse(actionResponse)) {
         return actionResponse;
       }
-    } catch (error) {
+    } catch (error: any) {
       let formattedError = (await platform.formatServerError?.(error)) || error;
       actionState = "error";
       let withBoundaries = getMatchesUpToDeepestErrorBoundary(matches);
@@ -197,7 +210,8 @@ async function handleDocumentRequest(
     };
   }
 
-  let matchesToLoad = matches;
+  // If we did not match a route, there is no need to call any loaders
+  let matchesToLoad = isNoMatch ? [] : matches;
   switch (actionState) {
     case "caught":
       matchesToLoad = getMatchesUpToDeepestCatchBoundary(
@@ -312,7 +326,7 @@ async function handleDocumentRequest(
       ? actionResponse.status
       : notOkResponse
       ? notOkResponse.status
-      : matches[matches.length - 1].route.id === "routes/404"
+      : isNoMatch
       ? 404
       : 200;
 
@@ -361,7 +375,7 @@ async function handleDocumentRequest(
       headers,
       entryContext
     );
-  } catch (error) {
+  } catch (error: any) {
     let formattedError = (await platform.formatServerError?.(error)) || error;
     if (serverMode !== ServerMode.Test) {
       console.error(formattedError);
@@ -386,7 +400,7 @@ async function handleDocumentRequest(
         headers,
         entryContext
       );
-    } catch (error) {
+    } catch (error: any) {
       let formattedError = (await platform.formatServerError?.(error)) || error;
       if (serverMode !== ServerMode.Test) {
         console.error(formattedError);

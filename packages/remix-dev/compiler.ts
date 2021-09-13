@@ -132,7 +132,7 @@ export async function watch(
       try {
         [browserBuild, serverBuild] = await buildEverything(config, options);
         if (onRebuildFinish) onRebuildFinish();
-      } catch (err) {
+      } catch (err: any) {
         onBuildFailure(err);
       }
       return;
@@ -472,7 +472,7 @@ function browserRouteModulesPlugin(
             exports = (
               await getRouteModuleExportsCached(config, route.id)
             ).filter(ex => !!browserSafeRouteExports[ex]);
-          } catch (error) {
+          } catch (error: any) {
             return {
               errors: [
                 {

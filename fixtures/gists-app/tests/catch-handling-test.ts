@@ -16,6 +16,33 @@ describe("thrown responses", () => {
 
   afterEach(() => browser.close());
 
+  describe("no route matches", () => {
+    it("renders root catch boundary without javascript", async () => {
+      await Utils.disableJavaScript(page);
+      let response = await page.goto(`${testServer}/route-does-not-exist`);
+      expect(response!.status()).toBe(404);
+      expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
+        .toMatchInlineSnapshot(`
+        "<div data-test-id=\\"app-catch-boundary\\"><h1>404 Not Found</h1></div>
+        "
+      `);
+    });
+
+    it("renders root catch boundary with javascript", async () => {
+      await page.goto(`${testServer}/`);
+      await Utils.reactIsHydrated(page);
+
+      await page.click('a[href="/fart"]');
+      await page.waitForSelector('[data-test-id="app-catch-boundary"]');
+
+      expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
+        .toMatchInlineSnapshot(`
+        "<div data-test-id=\\"app-catch-boundary\\"><h1>404 Not Found</h1></div>
+        "
+      `);
+    });
+  });
+
   describe("an action threw a response", () => {
     describe("in an action with a catch boundary", () => {
       it("renders the catch boundary without JavaScript", async () => {
@@ -27,7 +54,7 @@ describe("thrown responses", () => {
           page.waitForNavigation()
         ]);
 
-        expect(response2!.status()).toBe(400);
+        expect(response2!.status()).toBe(401);
 
         let html = await Utils.getHtml(
           page,
@@ -38,7 +65,7 @@ describe("thrown responses", () => {
             <h1>Action Catches Self Boundary</h1>
             <p>
               Status:
-              <!-- -->400
+              <!-- -->401
             </p>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
@@ -60,7 +87,7 @@ describe("thrown responses", () => {
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"/action-catches-self-boundary\\">
             <h1>Action Catches Self Boundary</h1>
-            <p>Status: 400</p>
+            <p>Status: 401</p>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
           "
@@ -78,7 +105,7 @@ describe("thrown responses", () => {
           page.waitForNavigation()
         ]);
 
-        expect(response2!.status()).toBe(400);
+        expect(response2!.status()).toBe(401);
 
         let html = await Utils.getHtml(
           page,
@@ -86,11 +113,10 @@ describe("thrown responses", () => {
         );
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>
-              Status:
-              <!-- -->400
-            </p>
+            <h1>
+              401<!-- -->
+              Uh-oh!
+            </h1>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
           "
@@ -108,8 +134,7 @@ describe("thrown responses", () => {
         );
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>Status: 400</p>
+            <h1>401 Uh-oh!</h1>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
           "
@@ -134,7 +159,7 @@ describe("thrown responses", () => {
             page.waitForNavigation()
           ]);
 
-          expect(response2!.status()).toBe(400);
+          expect(response2!.status()).toBe(401);
 
           let html = await Utils.getHtml(
             page,
@@ -142,11 +167,10 @@ describe("thrown responses", () => {
           );
           expect(html).toMatchInlineSnapshot(`
             "<div data-test-id=\\"app-catch-boundary\\">
-              <h1>App Catch Boundary</h1>
-              <p>
-                Status:
-                <!-- -->400
-              </p>
+              <h1>
+                401<!-- -->
+                Uh-oh!
+              </h1>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
             "
@@ -165,8 +189,7 @@ describe("thrown responses", () => {
           );
           expect(html).toMatchInlineSnapshot(`
             "<div data-test-id=\\"app-catch-boundary\\">
-              <h1>App Catch Boundary</h1>
-              <p>Status: 400</p>
+              <h1>401 Uh-oh!</h1>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
             "
@@ -177,15 +200,14 @@ describe("thrown responses", () => {
       it("renders the root CatchBoundary on document requests", async () => {
         await Utils.disableJavaScript(page);
         let response = await page.goto(`${testServer}/loader-errors?catch`);
-        expect(response!.status()).toBe(400);
+        expect(response!.status()).toBe(401);
         expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>
-              Status:
-              <!-- -->400
-            </p>
+            <h1>
+              401<!-- -->
+              Uh-oh!
+            </h1>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "
@@ -204,12 +226,11 @@ describe("thrown responses", () => {
         await page.click('a[href="/loader-errors?catch"]');
         await page.waitForSelector('[data-test-id="app-catch-boundary"]');
 
-        expect(responses[0].status()).toBe(400);
+        expect(responses[0].status()).toBe(401);
         expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>App Catch Boundary</h1>
-            <p>Status: 400</p>
+            <h1>401 Uh-oh!</h1>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "
@@ -230,7 +251,7 @@ describe("thrown responses", () => {
             page.waitForNavigation()
           ]);
 
-          expect(response2!.status()).toBe(400);
+          expect(response2!.status()).toBe(401);
 
           let html = await Utils.getHtml(
             page,
@@ -241,7 +262,7 @@ describe("thrown responses", () => {
               <h1>Action Catches Self Boundary</h1>
               <p>
                 Status:
-                <!-- -->400
+                <!-- -->401
               </p>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
@@ -266,7 +287,7 @@ describe("thrown responses", () => {
           expect(html).toMatchInlineSnapshot(`
             "<div data-test-id=\\"/action-catches-from-loader-self-boundary\\">
               <h1>Action Catches Self Boundary</h1>
-              <p>Status: 400</p>
+              <p>Status: 401</p>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
             "
@@ -279,7 +300,7 @@ describe("thrown responses", () => {
         let response = await page.goto(
           `${testServer}/loader-errors/nested-catch`
         );
-        expect(response!.status()).toBe(400);
+        expect(response!.status()).toBe(401);
         expect(
           await Utils.getHtml(
             page,
@@ -288,13 +309,14 @@ describe("thrown responses", () => {
         ).toMatchInlineSnapshot(`
           "<div data-test-id=\\"/loader-errors/nested-catch\\">
             <h2>Nested Catch Boundary</h2>
+            <a href=\\"/loader-errors/nested-catch?authed=true\\">Login</a>
             <p>
               There was an expected error at this specific route. The parent still renders
               cause it was fine, but this one threw an expected response.
             </p>
             <p>
               Status:
-              <!-- -->400
+              <!-- -->401
             </p>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
@@ -316,7 +338,7 @@ describe("thrown responses", () => {
           '[data-test-id="/loader-errors/nested-catch"]'
         );
 
-        expect(responses[0].status()).toBe(400);
+        expect(responses[0].status()).toBe(401);
         expect(
           await Utils.getHtml(
             page,
@@ -325,11 +347,12 @@ describe("thrown responses", () => {
         ).toMatchInlineSnapshot(`
           "<div data-test-id=\\"/loader-errors/nested-catch\\">
             <h2>Nested Catch Boundary</h2>
+            <a href=\\"/loader-errors/nested-catch?authed=true\\">Login</a>
             <p>
               There was an expected error at this specific route. The parent still renders
               cause it was fine, but this one threw an expected response.
             </p>
-            <p>Status: 400</p>
+            <p>Status: 401</p>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "
