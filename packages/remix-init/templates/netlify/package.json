@@ -1,10 +1,14 @@
 {
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev"
+    "dev": "remix dev",
+    "dev:netlify": "cross-env NODE_ENV=development netlify dev"
   },
   "dependencies": {
     "@netlify/functions": "0.7.2",
     "@remix-run/netlify": "0.17.5"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }

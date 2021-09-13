@@ -396,7 +396,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     switch (event.type) {
       case "navigation": {
         let { location, submission } = event;
-        if (isHashChangeOnly(location)) return;
 
         let foundMatches = matchClientRoutes(routes, location);
         invariant(foundMatches, "No matches found");
@@ -404,7 +403,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
         if (isNoMatch) {
           handleNotFoundNavigation(matches);
-        } else if (submission && isActionSubmission(submission)) {
+        } else if (isHashChangeOnly(location)) {
+          await handleHashChange(location, matches);
+        }
+        // <Form method="post | put | delete | patch">
+        else if (submission && isActionSubmission(submission)) {
           await handleActionSubmissionNavigation(location, submission, matches);
         }
         // <Form method="get"/>
@@ -528,13 +531,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let loadId = ++incrementingLoadId;
     fetchReloadIds.set(key, loadId);
 
-    let matchesToLoad = state.matches;
-    let hrefToLoad = href;
-    if (state.transition.state !== "idle") {
-      invariant(state.nextMatches);
-      matchesToLoad = state.nextMatches;
-      hrefToLoad = createHref(state.transition.location);
-    }
+    let matchesToLoad = state.nextMatches || state.matches;
+    let hrefToLoad = createHref(state.transition.location || state.location);
 
     let results = await callLoaders(
       state,
@@ -892,6 +890,27 @@ export function createTransitionManager(init: TransitionManagerInit) {
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches, submission);
+  }
+
+  async function handleHashChange(location: Location, matches: ClientMatch[]) {
+    abortNormalNavigation();
+    let transition: TransitionStates["Loading"] = {
+      state: "loading",
+      type: "normalLoad",
+      submission: undefined,
+      location
+    };
+    update({ transition, nextMatches: matches });
+    // Force async so UI code doesn't have to special case hash changes not
+    // skipping the pending state (like scroll restoration gets really
+    // complicated without the pending state, maybe we can figure something else
+    // out later, but this works great.)
+    await Promise.resolve();
+    update({
+      location,
+      matches,
+      transition: IDLE_TRANSITION
+    });
   }
 
   async function handleLoad(location: Location, matches: ClientMatch[]) {
