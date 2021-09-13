@@ -29,12 +29,7 @@ import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
-import {
-  createTransitionManager,
-  Fetcher,
-  IDLE_FETCHER,
-  Submission
-} from "./transition";
+import { createTransitionManager, Fetcher, Submission } from "./transition";
 import type { Transition } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -826,7 +821,7 @@ function createFetcherForm(fetchKey: string) {
 
 let fetcherId = 0;
 
-type FetcherWithComponents = Fetcher & {
+type FetcherWithComponents<TData> = Fetcher<TData> & {
   Form: ReturnType<typeof createFetcherForm>;
   submit: ReturnType<typeof useSubmitImpl>;
   load: (href: string) => void;
@@ -836,7 +831,7 @@ type FetcherWithComponents = Fetcher & {
  * Interacts with route loaders and actions without causing a navigation. Great
  * for any interaction that stays on the same page.
  */
-export function useFetcher(): FetcherWithComponents {
+export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   let { transitionManager } = useRemixEntryContext();
 
   let [key] = React.useState(() => String(++fetcherId));
@@ -846,7 +841,7 @@ export function useFetcher(): FetcherWithComponents {
   });
   let submit = useSubmitImpl(key);
 
-  let fetcher = transitionManager.getFetcher(key);
+  let fetcher = transitionManager.getFetcher<TData>(key);
 
   let fetcherWithComponents = React.useMemo(
     () => ({

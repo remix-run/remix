@@ -173,7 +173,7 @@ export type Redirects = {
 };
 
 // TODO: keep data around on resubmission?
-type FetcherStates = {
+type FetcherStates<TData = any> = {
   Idle: {
     state: "idle";
     type: "init";
@@ -196,7 +196,7 @@ type FetcherStates = {
     state: "loading";
     type: "actionReload";
     submission: ActionSubmission;
-    data: any;
+    data: TData;
   };
   Loading: {
     state: "loading";
@@ -208,11 +208,11 @@ type FetcherStates = {
     state: "idle";
     type: "done";
     submission: undefined;
-    data: any;
+    data: TData;
   };
 };
 
-export type Fetcher = FetcherStates[keyof FetcherStates];
+export type Fetcher<TData = any> = FetcherStates<TData>[keyof FetcherStates<TData>];
 
 type ClientMatch = RouteMatch<ClientRoute>;
 
@@ -348,7 +348,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return state;
   }
 
-  function getFetcher(key: string): Fetcher {
+  function getFetcher<TData = any>(key: string): Fetcher<TData> {
     return state.fetchers.get(key) || IDLE_FETCHER;
   }
 

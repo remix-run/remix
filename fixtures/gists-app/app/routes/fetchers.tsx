@@ -4,7 +4,6 @@ import type { LoaderFunction } from "remix";
 import {
   json,
   useLoaderData,
-  useActionData,
   useFetcher,
   Form,
   useTransition,
@@ -56,6 +55,12 @@ export let loader: LoaderFunction = async ({ request }) => {
 
   return tasks;
 };
+
+type ActionResult =
+  | Task
+  | {
+      error: string;
+    };
 
 export async function action({ request }: { request: Request }) {
   let body = new URLSearchParams(await request.text());
@@ -120,10 +125,10 @@ function FilterForm() {
 }
 
 function TaskItem({ task }: { task: Task }) {
-  let toggleComplete = useFetcher();
+  let toggleComplete = useFetcher<ActionResult>();
 
   let renderedTask =
-    toggleComplete.type === "done" && !toggleComplete.data.error
+    toggleComplete.type === "done" && !("error" in toggleComplete.data)
       ? toggleComplete.data
       : task;
 
@@ -134,7 +139,7 @@ function TaskItem({ task }: { task: Task }) {
       <button
         type="submit"
         data-status={
-          toggleComplete.data?.error
+          toggleComplete.data && "error" in toggleComplete.data
             ? "error"
             : task.complete
             ? "complete"
@@ -147,7 +152,7 @@ function TaskItem({ task }: { task: Task }) {
         )}
       </button>{" "}
       {task.name}{" "}
-      {toggleComplete.type === "done" && toggleComplete.data.error && (
+      {toggleComplete.type === "done" && "error" in toggleComplete.data && (
         <span style={{ color: "red" }}>Error! {toggleComplete.data.error}</span>
       )}
     </toggleComplete.Form>
