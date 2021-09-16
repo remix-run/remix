@@ -1,5 +1,15 @@
 # History of Changes
 
+## Unreleased
+
+### Improvements
+
+- Added CatchBoundary export to route modules. This is the codepath taken when a loader or action throws a Response instance
+
+### Breaking Changes
+
+- Removed routes/404 file in favor of root CatchBoudnary export
+
 ## 0.18.0 - Thu Sep 02 2021
 
 ### Bug Fixes
