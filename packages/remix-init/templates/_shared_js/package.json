@@ -12,7 +12,7 @@
     "@remix-run/react": "*",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "react-router-dom": "^6.0.0-beta.0",
+    "react-router-dom": "6.0.0-beta.0",
     "remix": "*"
   },
   "devDependencies": {
