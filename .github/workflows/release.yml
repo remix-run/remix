@@ -1,13 +1,13 @@
 name: release
-
 on:
-  push:
-    tags:
-      - v*
+  release:
+    types: [published]
 
 jobs:
   build:
+    if: github.repository === 'remix-run/remix'
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
 
