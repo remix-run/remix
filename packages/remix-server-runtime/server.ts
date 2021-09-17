@@ -59,11 +59,10 @@ async function handleDataRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
-  let foundMatches = matchServerRoutes(routes, url.pathname);
-  if (!foundMatches) {
+  let matches = matchServerRoutes(routes, url.pathname);
+  if (!matches) {
     return jsonError(`No route matches URL "${url.pathname}"`, 404);
   }
-  let { matches } = foundMatches;
 
   let routeMatch: RouteMatch<ServerRoute>;
   if (isActionRequest(request)) {
@@ -141,15 +140,21 @@ async function handleDocumentRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
-  let foundMatches = matchServerRoutes(routes, url.pathname);
-  if (!foundMatches) {
-    // TODO: Provide a default 404 page
-    throw new Error(
-      `There is no route that matches ${url.pathname}. Please add a root.jsx`
-    );
-  }
+  let matches = matchServerRoutes(routes, url.pathname);
+  let isNoMatch = false;
 
-  let { matches, isNoMatch } = foundMatches;
+  if (!matches) {
+    // If we do not match a user-provided-route, fall back to the root
+    // to allow the CatchBoundary to take over
+    isNoMatch = true;
+    matches = [
+      {
+        params: {},
+        pathname: "/",
+        route: routes[0]
+      }
+    ];
+  }
 
   let componentDidCatchEmulator: ComponentDidCatchEmulator = {
     trackBoundaries: true,

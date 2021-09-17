@@ -355,9 +355,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let navigationLoadId = -1;
   let fetchReloadIds = new Map<string, number>();
 
-  let foundMatches = matchClientRoutes(routes, init.location);
-  invariant(foundMatches, "No initial route matches!");
-  let { matches } = foundMatches;
+  let matches = matchClientRoutes(routes, init.location);
+
+  if (!matches) {
+    // If we do not match a user-provided-route, fall back to the root
+    // to allow the CatchBoundary to take over
+    matches = [
+      {
+        params: {},
+        pathname: "/",
+        route: routes[0]
+      }
+    ];
+  }
 
   let state: TransitionManagerState = {
     location: init.location,
@@ -397,11 +407,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
       case "navigation": {
         let { location, submission } = event;
 
-        let foundMatches = matchClientRoutes(routes, location);
-        invariant(foundMatches, "No matches found");
-        let { matches, isNoMatch } = foundMatches;
+        let matches = matchClientRoutes(routes, location);
 
-        if (isNoMatch) {
+        if (!matches) {
+          matches = [
+            {
+              params: {},
+              pathname: "/",
+              route: routes[0]
+            }
+          ];
           handleNotFoundNavigation(matches);
         } else if (isHashChangeOnly(location)) {
           await handleHashChange(location, matches);
@@ -442,9 +457,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       case "fetcher": {
         let { key, submission, href } = event;
 
-        let foundMatches = matchClientRoutes(routes, href);
-        invariant(foundMatches, "No matches found");
-        let { matches } = foundMatches;
+        let matches = matchClientRoutes(routes, href);
+        invariant(matches, "No matches found");
         let match = matches.slice(-1)[0];
 
         if (fetchControllers.has(key)) abortFetcher(key);

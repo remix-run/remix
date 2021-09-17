@@ -9,32 +9,17 @@ export interface RouteMatch<Route> {
   route: Route;
 }
 
-export interface RouteMatchResult {
-  matches: RouteMatch<ServerRoute>[];
-  isNoMatch: boolean;
-}
-
 export function matchServerRoutes(
   routes: ServerRoute[],
   pathname: string
-): RouteMatchResult | null {
+): RouteMatch<ServerRoute>[] | null {
   let matches = matchRoutes((routes as unknown) as RouteObject[], pathname);
 
-  // If no match for user defined routes, fall back to the root route only for the CatchBoundary
-  if (!matches) {
-    matches = matchRoutes((routes as unknown) as RouteObject[], "");
-    matches?.splice(1);
-  }
-
   if (!matches) return null;
-  let isNoMatch = matches.length === 1;
 
-  return {
-    matches: matches.map(match => ({
-      params: match.params,
-      pathname: match.pathname,
-      route: (match.route as unknown) as ServerRoute
-    })),
-    isNoMatch
-  };
+  return matches.map(match => ({
+    params: match.params,
+    pathname: match.pathname,
+    route: (match.route as unknown) as ServerRoute
+  }));
 }

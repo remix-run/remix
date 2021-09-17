@@ -164,12 +164,11 @@ function getPageLinkDescriptors(
 ): HTMLLinkDescriptor[] {
   let [pathname, search = ""] = descriptor.page.split("?");
 
-  let foundMatches = matchClientRoutes(clientRoutes, pathname);
-  if (!foundMatches) {
+  let nextMatches = matchClientRoutes(clientRoutes, pathname);
+  if (!nextMatches) {
     console.warn(`No routes match ${descriptor.page}, ignoring page prefetch.`);
     return [];
   }
-  let nextMatches = foundMatches.matches;
 
   let links = [getPageScripts(descriptor, nextMatches, manifest)];
 

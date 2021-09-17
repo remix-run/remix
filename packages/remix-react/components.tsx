@@ -483,12 +483,12 @@ window.__remixRouteModules = {${matches
   let nextMatches = React.useMemo(() => {
     if (pendingLocation) {
       // FIXME: can probably use transitionManager `nextMatches`
-      let foundMatches = matchClientRoutes(clientRoutes, pendingLocation);
+      let matches = matchClientRoutes(clientRoutes, pendingLocation);
       invariant(
-        foundMatches,
+        matches,
         `No routes match path "${pendingLocation.pathname}"`
       );
-      return foundMatches.matches;
+      return matches;
     }
 
     return [];
