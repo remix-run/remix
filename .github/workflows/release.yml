@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    if: github.repository === 'remix-run/remix'
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
 
     steps:
