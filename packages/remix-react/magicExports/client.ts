@@ -10,7 +10,8 @@ export type {
   FormMethod,
   FormEncType,
   RemixServerProps,
-  ShouldReloadFunction
+  ShouldReloadFunction,
+  ThrownResponse
 } from "@remix-run/react";
 
 export {
@@ -26,6 +27,7 @@ export {
   useTransition,
   useFetcher,
   useFetchers,
+  useCatch,
   useLoaderData,
   useActionData,
   useBeforeUnload,

@@ -383,6 +383,106 @@ export default function Something() {
 
 The initial server render will get a 500 for this page, and client side transitions will get it also.
 
+### Throwing Response Instances
+
+Along with returning responses, you can also throw WebAPI Response objects from your loaders allowing you to break through the call stack and show an alternate UI with contextual data through the `CatchBoundary`.
+
+Here is a full example showing how you can create utility functions that throw responses to avoid "callback hell" in your loader.
+
+app/db.ts
+
+```ts
+import { json } from "remix";
+import type { ThrownResponse } from "remix";
+
+export type InvoiceNotFoundResponse = ThrownResponse<
+  404,
+  string
+>;
+
+export function getInvoice(id, user) {
+  let invoice = db.invoice.find({ where: { id } });
+  if (invoice === null) {
+    throw json("Not Found", { status: 404 });
+  }
+  return invoice;
+}
+```
+
+app/http.ts
+
+```ts
+import { redirect } from "remix";
+import { getSession } from "./session";
+
+function requireUserSession(request) {
+  let session = await getSession(
+    request.headers.get("cookie")
+  );
+  if (!session) {
+    // can throw our helpers like `redirect` and `json` because they
+    // return responses.
+    throw redirect("/login", 302);
+  }
+  return session.get("user");
+}
+```
+
+app/routes/invoice/$invoiceId.tsx
+
+```js
+import { useCatch, useLoaderData } from "remix";
+import type { ThrownResponse } from "remix";
+
+import { requireUserSession } from "~/http";
+import { getInvoice } from "~/db";
+import type { Invoice, InvoiceNotFoundResponse } from "~/db";
+
+type InvoiceCatchData = {
+  invoiceOwnerEmail: string;
+};
+
+type ThrownResponses = InvoiceNotFoundResponse | ThrownResponse<401, InvoiceCatchData>;
+
+export let loader = async ({ request, params }) => {
+  let user = await requireUserSession(request);
+  let invoice: Invoice = getInvoice(params.invoiceId);
+
+  if (!invoice.userIds.includes(user.id)) {
+    let data: InvoiceCatchData = { invoiceOwnerEmail: invoice.owner.email };
+    throw new json(data, { status: 401 });
+  }
+
+  return invoice;
+};
+
+export default function InvoiceRoute() {
+  let invoice = useLoaderData<Invoice>();
+  return <InvoiceView invoice={invoice} />;
+}
+
+export function CatchBoundary() {
+  // this returns { status, data }
+  let caught = useCatch<ThrownResponses>();
+
+  switch (caught.status) {
+    case 401:
+      return (
+        <div>
+          <p>You don't have access to this invoice.</p>
+          <p>Contact {invoiceCatch.data.invoiceOwnerEmail} to get access</p>
+        </div>
+      );
+    case 404:
+      return <div>Invoice not found!</div>;
+  }
+
+  // You could also `throw new Error("Unknown status in catch boundary")`.
+  // This will be caught by the closest `ErrorBoundary`.
+  return <div>Something went wrong: {invoiceCatch.status}</div>;
+}
+```
+
 ## action
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the deepest matching route action is called before the loaders page.
@@ -637,6 +737,34 @@ You can prefetch the data for the next page with the `data` boolean:
 
 **Be careful with this feature**. You don't want to download 10MB of JavaScript and data for pages the user probably won't ever visit.
 
+## CatchBoundary
+
+A `CatchBoundary` is a React component that renders whenever an action or loader throws a `Response`.
+
+**Note:** We use the word "catch" to represent the codepath taken when a `Response` type is thrown; you thought about bailing from the "happy path". This is different from an uncaught error you did not expect to occur.
+
+A Remix `CatchBoundary` component works just like a route component, but instead of `useLoaderData` you have access to `useCatch`. When a response is thrown in an action or loader, the `CatchBoundary` will be rendered in it's place, nested inside parent routes.
+
+A `CatchBoundary` component has access to the status code and thrown response data through `useCatch`.
+
+```tsx
+import { useCatch } from "remix";
+
+export function CatchBoundary() {
+  let caught = useCatch();
+
+  return (
+    <div>
+      <h1>Caught</h1>
+      <p>Status: {caught.status}</p>
+      <pre>
+        <code>{JSON.stringify(caught.data, null, 2)}</code>
+      </pre>
+    </div>
+  );
+}
+```
+
 ## ErrorBoundary
 
 An `ErrorBoundary` is a React component that renders whenever there is an error anywhere on the route, either during rendering or during data loading.
@@ -647,7 +775,7 @@ A Remix `ErrorBoundary` component works just like normal React [error boundaries
 
 An `ErrorBoundary` component receives one prop: the `error` that occurred.
 
-```ts
+```tsx
 export function ErrorBoundary({ error }) {
   return (
     <div>

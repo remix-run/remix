@@ -6,7 +6,11 @@ import {
   TransitionManagerInit
 } from "../transition";
 import { parsePath } from "history";
-import { createTransitionManager, TransitionRedirect } from "../transition";
+import {
+  CatchValue,
+  createTransitionManager,
+  TransitionRedirect
+} from "../transition";
 
 describe("init", () => {
   it("initializes with initial values", async () => {
@@ -25,6 +29,8 @@ describe("init", () => {
         "actionData": Object {
           "root": "ACTION DATA",
         },
+        "catch": undefined,
+        "catchBoundaryId": null,
         "error": [Error: lol],
         "errorBoundaryId": "root",
         "fetchers": Map {},
@@ -185,12 +191,18 @@ describe("shouldReload", () => {
       },
       routes: [
         {
-          path: "/",
+          path: "",
           id: "root",
           loader: rootLoader,
           shouldReload,
           element: {},
           children: [
+            {
+              path: "/",
+              id: "index",
+              action: () => null,
+              element: {}
+            },
             {
               path: "/child",
               id: "child",
@@ -235,6 +247,76 @@ describe("shouldReload", () => {
         },
         "url": "http://localhost/child",
       }
+    `);
+  });
+});
+
+describe("no route match", () => {
+  it("transitions to root catch", async () => {
+    let t = setup();
+    let A = t.navigate.get("/not-found");
+    let state = t.getState();
+    expect(t.getState().location.hash).toBe("");
+    expect(t.getState().transition.state).toBe("loading");
+
+    // await the internal forced async state
+    await Promise.resolve();
+
+    state = t.getState();
+    expect(state.catchBoundaryId).toBe("root");
+    expect(state.catch).toEqual({ data: null, status: 404 });
+    expect(state.matches).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "params": Object {},
+          "pathname": "",
+          "route": Object {
+            "CatchBoundary": [Function],
+            "ErrorBoundary": [Function],
+            "children": Array [
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "index",
+                "loader": [MockFunction],
+                "path": "/",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "foo",
+                "loader": [MockFunction],
+                "path": "/foo",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "bar",
+                "loader": [MockFunction],
+                "path": "/bar",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "baz",
+                "loader": [MockFunction],
+                "path": "/baz",
+              },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "id": "param",
+                "loader": [MockFunction],
+                "path": "/p/:param",
+              },
+            ],
+            "element": Object {},
+            "id": "root",
+            "loader": [MockFunction],
+            "path": "",
+          },
+        },
+      ]
     `);
   });
 });
@@ -308,16 +390,23 @@ describe("errors on navigation", () => {
       let tm = createTestTransitionManager("/", {
         routes: [
           {
-            path: "/",
-            id: "parent",
+            path: "",
+            id: "root",
             element: {},
             children: [
               {
-                path: "/child",
-                id: "child",
+                path: "/",
+                id: "parent",
                 element: {},
-                ErrorBoundary: FakeComponent,
-                loader
+                children: [
+                  {
+                    path: "/child",
+                    id: "child",
+                    element: {},
+                    ErrorBoundary: FakeComponent,
+                    loader
+                  }
+                ]
               }
             ]
           }
@@ -948,6 +1037,38 @@ describe("fetchers", () => {
   });
 });
 
+describe("fetcher catch states", () => {
+  test("loader fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let A = t.fetch.get("/foo");
+    await A.loader.catch();
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher).toBe(IDLE_FETCHER);
+    expect(t.getState().catch).toBeDefined();
+    expect(t.getState().catchBoundaryId).toBe(t.routes[0].id);
+  });
+
+  test("loader submission fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let A = t.fetch.submitGet("/foo");
+    await A.loader.catch();
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher).toBe(IDLE_FETCHER);
+    expect(t.getState().catch).toBeDefined();
+    expect(t.getState().catchBoundaryId).toBe(t.routes[0].id);
+  });
+
+  test("action fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let A = t.fetch.post("/foo");
+    await A.action.catch();
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher).toBe(IDLE_FETCHER);
+    expect(t.getState().catch).toBeDefined();
+    expect(t.getState().catchBoundaryId).toBe(t.routes[0].id);
+  });
+});
+
 describe("fetcher error states", () => {
   test("loader fetch", async () => {
     let t = setup({ url: "/foo" });
@@ -1143,6 +1264,45 @@ describe("multiple fetcher action reloads", () => {
 
       await B.loader.resolve("A,B");
       expect(t.getState().loaderData.foo).toBe("A,B");
+    });
+  });
+
+  describe(`
+    A) POST /foo |----🧤
+    B) POST /foo   |--X
+  `, () => {
+    it("catches A, persists boundary for B", async () => {
+      let t = setup({ url: "/foo" });
+      let A = t.fetch.post("/foo");
+      let B = t.fetch.post("/foo");
+
+      await A.action.catch();
+      let catchVal = t.getState().catch;
+      expect(catchVal).toBeDefined();
+      expect(t.getState().catchBoundaryId).toBe(t.routes[0].id);
+
+      await B.action.resolve();
+      expect(t.getState().catch).toBe(catchVal);
+      expect(t.getState().catchBoundaryId).toBe(t.routes[0].id);
+    });
+  });
+
+  describe(`
+    A) POST /foo |----[A]-|
+    B) POST /foo   |------🧤
+  `, () => {
+    it("commits A, catches B", async () => {
+      let t = setup({ url: "/foo" });
+      let A = t.fetch.post("/foo");
+      let B = t.fetch.post("/foo");
+
+      await A.action.resolve();
+      await A.loader.resolve("A");
+      expect(t.getState().loaderData.foo).toBe("A");
+
+      await B.action.catch();
+      expect(t.getState().catch).toBeDefined();
+      expect(t.getState().catchBoundaryId).toBe(t.routes[0].id);
     });
   });
 
@@ -1509,12 +1669,20 @@ let setup = ({ url } = { url: "/" }) => {
 
   let routes = [
     {
-      path: "/",
+      path: "",
       id: "root",
       element: {},
       ErrorBoundary: FakeComponent,
+      CatchBoundary: FakeComponent,
       loader: rootLoader,
       children: [
+        {
+          path: "/",
+          id: "index",
+          loader: createLoader(),
+          action: createAction(),
+          element: {}
+        },
         {
           path: "/foo",
           id: "foo",
@@ -1650,8 +1818,18 @@ let setup = ({ url } = { url: "/" }) => {
       await awaitChange();
     }
 
+    async function throwLoaderCatch() {
+      await loaderDeferreds.get(id).resolve(new CatchValue(400, null));
+      await awaitChange();
+    }
+
     async function throwLoaderError() {
       await loaderDeferreds.get(id).resolve(new Error("Kaboom!"));
+      await awaitChange();
+    }
+
+    async function throwActionCatch() {
+      await actionDeferreds.get(id).resolve(new CatchValue(400, null));
       await awaitChange();
     }
 
@@ -1685,12 +1863,14 @@ let setup = ({ url } = { url: "/" }) => {
         resolve: resolveAction,
         redirect: redirectAction,
         abortMock: actionAbortHandler.mock,
+        catch: throwActionCatch,
         throw: throwActionError
       },
       loader: {
         resolve: resolveLoader,
         redirect: redirectLoader,
         abortMock: loaderAbortHandler.mock,
+        catch: throwLoaderCatch,
         throw: throwLoaderError
       }
     };

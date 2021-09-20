@@ -69,8 +69,18 @@ export default function Index() {
             </Link>
           </li>
           <li>
+            <Link to="/loader-errors?catch">
+              Loader throws Response with no CatchBoundary
+            </Link>
+          </li>
+          <li>
             <Link to="/loader-errors/nested">
               Loader error in nested route with ErrorBoundary
+            </Link>
+          </li>
+          <li>
+            <Link to="/loader-errors/nested-catch">
+              Loader error in nested route with CatchBoundary
             </Link>
           </li>
 

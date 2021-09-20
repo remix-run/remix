@@ -20,6 +20,14 @@ export let headers: HeadersFunction = ({ actionHeaders }) => {
   };
 };
 
+export function CatchBoundary() {
+  return <h1>Actions Catch Boundary</h1>;
+}
+
+export function ErrorBoundary() {
+  return <h1>Actions Error Boundary</h1>;
+}
+
 export default function Actions() {
   let actionData = useActionData();
   let loaderData = useLoaderData();

@@ -17,7 +17,9 @@ import type { EntryContext, AssetsManifest } from "./entry";
 import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
-  RemixErrorBoundary
+  RemixErrorBoundary,
+  RemixRootDefaultCatchBoundary,
+  RemixCatchBoundary
 } from "./errorBoundaries";
 import invariant from "./invariant";
 import type { HTMLLinkDescriptor } from "./links";
@@ -99,13 +101,18 @@ export function RemixEntry({
       actionData: documentActionData,
       loaderData: documentLoaderData,
       location: historyLocation,
+      catch: entryComponentDidCatchEmulator.catch,
+      catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
       onChange: state => {
         setComponentDidCatchEmulator({
+          catch: state.catch,
           error: state.error,
+          catchBoundaryRouteId: state.catchBoundaryId,
           loaderBoundaryRouteId: state.errorBoundaryId,
           renderBoundaryRouteId: null,
-          trackBoundaries: false
+          trackBoundaries: false,
+          trackCatchBoundaries: false
         });
         forceUpdate({});
       }
@@ -162,6 +169,12 @@ export function RemixEntry({
       ? deserializeError(componentDidCatchEmulator.error)
       : undefined;
 
+  let ssrCatchBeforeRoutesRendered =
+    componentDidCatchEmulator.catch &&
+    componentDidCatchEmulator.catchBoundaryRouteId === null
+      ? componentDidCatchEmulator.catch
+      : undefined;
+
   return (
     <RemixEntryContext.Provider
       value={{
@@ -182,14 +195,20 @@ export function RemixEntry({
         component={RemixRootDefaultErrorBoundary}
         error={ssrErrorBeforeRoutesRendered}
       >
-        <Router
-          action={action}
+        <RemixCatchBoundary
           location={location}
-          navigator={navigator}
-          static={staticProp}
+          component={RemixRootDefaultCatchBoundary}
+          catch={ssrCatchBeforeRoutesRendered}
         >
-          <Routes />
-        </Router>
+          <Router
+            action={action}
+            location={location}
+            navigator={navigator}
+            static={staticProp}
+          >
+            <Routes />
+          </Router>
+        </RemixCatchBoundary>
       </RemixErrorBoundary>
     </RemixEntryContext.Provider>
   );
@@ -205,7 +224,8 @@ function Routes() {
   // TODO: Add `renderMatches` function to RR that we can use and then we don't
   // need this component, we can just `renderMatches` from RemixEntry
   let { clientRoutes } = useRemixEntryContext();
-  let element = useRoutes(clientRoutes);
+  // fallback to the root if we don't have a match
+  let element = useRoutes(clientRoutes) || (clientRoutes[0].element as any);
   return element;
 }
 
@@ -242,8 +262,47 @@ export function RemixRoute({ id }: { id: string }) {
   } = useRemixEntryContext();
 
   let data = routeData[id];
-  let { default: Component, ErrorBoundary } = routeModules[id];
+  let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
   let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
+
+  let context: RemixRouteContextType = { data, id };
+
+  if (CatchBoundary) {
+    // If we tried to render and failed, and this route threw the error, find it
+    // and pass it to the ErrorBoundary to emulate `componentDidCatch`
+    let maybeServerCaught =
+      componentDidCatchEmulator.catch &&
+      componentDidCatchEmulator.catchBoundaryRouteId === id
+        ? componentDidCatchEmulator.catch
+        : undefined;
+
+    // This needs to run after we check for the error from a previous render,
+    // otherwise we will incorrectly render this boundary for a loader error
+    // deeper in the tree.
+    if (componentDidCatchEmulator.trackCatchBoundaries) {
+      componentDidCatchEmulator.catchBoundaryRouteId = id;
+    }
+
+    context = maybeServerCaught
+      ? {
+          id,
+          get data() {
+            console.error("You cannot `useLoaderData` in a catch boundary.");
+            return undefined;
+          }
+        }
+      : { id, data };
+
+    element = (
+      <RemixCatchBoundary
+        location={location}
+        component={CatchBoundary}
+        catch={maybeServerCaught}
+      >
+        {element}
+      </RemixCatchBoundary>
+    );
+  }
 
   // Only wrap in error boundary if the route defined one, otherwise let the
   // error bubble to the parent boundary. We could default to using error
@@ -258,42 +317,35 @@ export function RemixRoute({ id }: { id: string }) {
   // for whichever routes they please.
   //
   // NOTE: this kind of logic will move into React Router
-  if (!ErrorBoundary) {
-    return (
-      <RemixRouteContext.Provider value={{ data, id }} children={element} />
-    );
-  }
 
-  // If we tried to render and failed, and this route threw the error, find it
-  // and pass it to the ErrorBoundary to emulate `componentDidCatch`
-  let maybeServerRenderError =
-    componentDidCatchEmulator.error &&
-    (componentDidCatchEmulator.renderBoundaryRouteId === id ||
-      componentDidCatchEmulator.loaderBoundaryRouteId === id)
-      ? deserializeError(componentDidCatchEmulator.error)
-      : undefined;
+  if (ErrorBoundary) {
+    // If we tried to render and failed, and this route threw the error, find it
+    // and pass it to the ErrorBoundary to emulate `componentDidCatch`
+    let maybeServerRenderError =
+      componentDidCatchEmulator.error &&
+      (componentDidCatchEmulator.renderBoundaryRouteId === id ||
+        componentDidCatchEmulator.loaderBoundaryRouteId === id)
+        ? deserializeError(componentDidCatchEmulator.error)
+        : undefined;
 
-  // This needs to run after we check for the error from a previous render,
-  // otherwise we will incorrectly render this boundary for a loader error
-  // deeper in the tree.
-  if (componentDidCatchEmulator.trackBoundaries) {
-    componentDidCatchEmulator.renderBoundaryRouteId = id;
-  }
+    // This needs to run after we check for the error from a previous render,
+    // otherwise we will incorrectly render this boundary for a loader error
+    // deeper in the tree.
+    if (componentDidCatchEmulator.trackBoundaries) {
+      componentDidCatchEmulator.renderBoundaryRouteId = id;
+    }
 
-  let context = maybeServerRenderError
-    ? {
-        id,
-        get data() {
-          console.error("You cannot `useLoaderData` in an error boundary.");
-          return undefined;
+    context = maybeServerRenderError
+      ? {
+          id,
+          get data() {
+            console.error("You cannot `useLoaderData` in an error boundary.");
+            return undefined;
+          }
         }
-      }
-    : { id, data };
+      : { id, data };
 
-  // It's important for the route context to be above the error boundary so that
-  // a call to `useRouteData` doesn't accidentally get the parents route's data.
-  return (
-    <RemixRouteContext.Provider value={context}>
+    element = (
       <RemixErrorBoundary
         location={location}
         component={ErrorBoundary}
@@ -301,6 +353,14 @@ export function RemixRoute({ id }: { id: string }) {
       >
         {element}
       </RemixErrorBoundary>
+    );
+  }
+
+  // It's important for the route context to be above the error boundary so that
+  // a call to `useRouteData` doesn't accidentally get the parents route's data.
+  return (
+    <RemixRouteContext.Provider value={context}>
+      {element}
     </RemixRouteContext.Provider>
   );
 }

@@ -9,6 +9,13 @@ export type FormEncType =
   | "application/x-www-form-urlencoded"
   | "multipart/form-data";
 
+export function isCatchResponse(response: any): boolean {
+  return (
+    response instanceof Response &&
+    response.headers.get("X-Remix-Catch") != null
+  );
+}
+
 export function isErrorResponse(response: any): boolean {
   return (
     response instanceof Response &&

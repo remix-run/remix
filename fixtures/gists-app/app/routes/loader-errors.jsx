@@ -1,9 +1,13 @@
+import { json } from "remix";
 import { Outlet } from "react-router-dom";
 
 export function loader({ request }) {
   let params = new URL(request.url).searchParams;
   if (params.has("throw")) {
     throw new Error("I am a loader error!");
+  }
+  if (params.has("catch")) {
+    throw json("catch data!", { status: 401 });
   }
   return null;
 }

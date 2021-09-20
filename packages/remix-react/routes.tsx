@@ -3,8 +3,13 @@ import React from "react";
 
 import type { RouteModules, ShouldReloadFunction } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
-import { extractData, fetchData, isRedirectResponse } from "./data";
-import { Submission, TransitionRedirect } from "./transition";
+import {
+  extractData,
+  fetchData,
+  isCatchResponse,
+  isRedirectResponse
+} from "./data";
+import { CatchValue, Submission, TransitionRedirect } from "./transition";
 import { preloadBlockingLinks } from "./linksPreloading";
 import invariant from "./invariant";
 
@@ -21,6 +26,7 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
+  hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
@@ -57,6 +63,7 @@ export interface ClientRoute extends Route {
   action?: RouteDataFunction;
   shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
+  CatchBoundary?: any;
   children?: ClientRoute[];
   element: ReactNode;
 }
@@ -76,7 +83,8 @@ export function createClientRoute(
     loader: createLoader(entryRoute, routeModulesCache),
     action: createAction(entryRoute),
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
-    ErrorBoundary: entryRoute.hasErrorBoundary
+    ErrorBoundary: entryRoute.hasErrorBoundary,
+    CatchBoundary: entryRoute.hasCatchBoundary
   };
 }
 
@@ -139,6 +147,12 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
 
+    if (isCatchResponse(result)) {
+      if (routeModule.links) await preloadBlockingLinks(routeModule);
+
+      throw new CatchValue(result.status, await extractData(result.clone()));
+    }
+
     let data = await extractData(result);
     if (routeModule.links) await preloadBlockingLinks(routeModule, data);
     return data;
@@ -153,7 +167,13 @@ function createAction(route: EntryRoute) {
   let action: ClientRoute["action"] = async ({ url, signal, submission }) => {
     let result = await fetchData(url, route.id, signal, submission);
 
-    if (result instanceof Error) throw result;
+    if (result instanceof Error) {
+      throw result;
+    }
+
+    if (isCatchResponse(result)) {
+      throw new CatchValue(result.status, await extractData(result.clone()));
+    }
 
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;

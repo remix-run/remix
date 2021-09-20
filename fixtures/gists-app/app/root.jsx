@@ -1,5 +1,12 @@
 import { useEffect } from "react";
-import { Meta, Links, Scripts, useLoaderData, useMatches } from "remix";
+import {
+  Meta,
+  Links,
+  Scripts,
+  useCatch,
+  useLoaderData,
+  useMatches
+} from "remix";
 import { Outlet, Link } from "react-router-dom";
 
 import normalizeHref from "@exampledev/new.css/new.css";
@@ -62,11 +69,64 @@ export default function Root() {
   );
 }
 
+export function CatchBoundary() {
+  let caught = useCatch();
+
+  useEffect(() => {
+    // We use this in the tests to wait for React to hydrate the page.
+    window.reactIsHydrated = true;
+  });
+
+  switch (caught.status) {
+    case 404:
+      return (
+        <html lang="en">
+          <head>
+            <meta charSet="utf-8" />
+            <title>404 Not Found</title>
+            <Links />
+          </head>
+          <body>
+            <div data-test-id="app-catch-boundary">
+              <h1>404 Not Found</h1>
+            </div>
+            <Scripts />
+          </body>
+        </html>
+      );
+    default:
+      console.warn("Unexpected catch", caught);
+
+      return (
+        <html lang="en">
+          <head>
+            <meta charSet="utf-8" />
+            <title>{caught.status} Uh-oh!</title>
+            <Links />
+          </head>
+          <body>
+            <div data-test-id="app-catch-boundary">
+              <h1>{caught.status} Uh-oh!</h1>
+              {caught.data ? (
+                <pre>
+                  <code>{JSON.stringify(caught.data, null, 2)}</code>
+                </pre>
+              ) : null}
+            </div>
+            <Scripts />
+          </body>
+        </html>
+      );
+  }
+}
+
 export function ErrorBoundary({ error }) {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
   });
+
+  console.error(error);
 
   return (
     <html lang="en">
