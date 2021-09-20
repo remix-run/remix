@@ -484,10 +484,7 @@ window.__remixRouteModules = {${matches
     if (pendingLocation) {
       // FIXME: can probably use transitionManager `nextMatches`
       let matches = matchClientRoutes(clientRoutes, pendingLocation);
-      invariant(
-        matches,
-        `No routes match path "${pendingLocation.pathname}"`
-      );
+      invariant(matches, `No routes match path "${pendingLocation.pathname}"`);
       return matches;
     }
 

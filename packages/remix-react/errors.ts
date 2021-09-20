@@ -2,7 +2,7 @@ import type { AppData } from "./data";
 
 export interface ComponentDidCatchEmulator {
   error?: SerializedError;
-  catch?: CaughtResponse;
+  catch?: ThrownResponse;
   catchBoundaryRouteId: string | null;
   loaderBoundaryRouteId: string | null;
   // `null` means the app layout threw before any routes rendered
@@ -11,9 +11,12 @@ export interface ComponentDidCatchEmulator {
   trackCatchBoundaries: boolean;
 }
 
-export interface CaughtResponse<T = AppData> {
-  status: number;
-  data: T;
+export interface ThrownResponse<
+  Status extends number = number,
+  Data = AppData
+> {
+  status: Status;
+  data: Data;
 }
 
 export interface SerializedError {

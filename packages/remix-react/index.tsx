@@ -26,7 +26,7 @@ export {
 
 export type { FormMethod, FormEncType } from "./data";
 
-export type { CaughtResponse } from "./errors";
+export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
 
 export { block } from "./linksPreloading";

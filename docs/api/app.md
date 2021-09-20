@@ -392,10 +392,18 @@ Here is a full example showing how you can create utility functions that throw r
 app/db.ts
 
 ```ts
+import { json } from "remix";
+import type { ThrownResponse } from "remix";
+
+export type InvoiceNotFoundResponse = ThrownResponse<
+  404,
+  string
+>;
+
 export function getInvoice(id, user) {
   let invoice = db.invoice.find({ where: { id } });
   if (invoice === null) {
-    throw new Response("Not Found", { status: 404 });
+    throw json("Not Found", { status: 404 });
   }
   return invoice;
 }
@@ -424,23 +432,17 @@ app/routes/invoice/$invoiceId.tsx
 
 ```js
 import { useCatch, useLoaderData } from "remix";
+import type { ThrownResponse } from "remix";
+
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
-import type { Invoice } from "~/db";
+import type { Invoice, InvoiceNotFoundResponse } from "~/db";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;
 };
 
-type InvoiceCatch =
-  | {
-      status: 404;
-      data: undefined;
-    }
-  | {
-      status: 401;
-      data: InvoiceCatchData;
-    };
+type ThrownResponses = InvoiceNotFoundResponse | ThrownResponse<401, InvoiceCatchData>;
 
 export let loader = async ({ request, params }) => {
   let user = await requireUserSession(request);
@@ -461,19 +463,18 @@ export default function InvoiceRoute() {
 
 export function CatchBoundary() {
   // this returns { status, data }
-  let invoiceCatch = useCatch<InvoiceCatch>();
+  let caught = useCatch<ThrownResponses>();
 
-  if (invoiceCatch.status === 404) {
-    return <div>Invoice not found!</div>;
-  }
-
-  if (invoiceCatch.status === 401) {
-    return (
-      <div>
-        <p>You don't have access to this invoice.</p>
-        <p>Contact {invoiceCatch.data.invoiceOwnerEmail} to get access</p>
-      </div>
-    );
+  switch (caught.status) {
+    case 401:
+      return (
+        <div>
+          <p>You don't have access to this invoice.</p>
+          <p>Contact {invoiceCatch.data.invoiceOwnerEmail} to get access</p>
+        </div>
+      );
+    case 404:
+      return <div>Invoice not found!</div>;
   }
 
   // You could also `throw new Error("Unknown status in catch boundary")`.

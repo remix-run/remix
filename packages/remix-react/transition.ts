@@ -363,7 +363,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches = [
       {
         params: {},
-        pathname: "/",
+        pathname: "",
         route: routes[0]
       }
     ];
@@ -413,7 +413,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           matches = [
             {
               params: {},
-              pathname: "/",
+              pathname: "",
               route: routes[0]
             }
           ];

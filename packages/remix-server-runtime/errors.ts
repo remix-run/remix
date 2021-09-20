@@ -42,7 +42,7 @@
 
 export interface ComponentDidCatchEmulator {
   error?: SerializedError;
-  catch?: CaughtResponse;
+  catch?: ThrownResponse;
   catchBoundaryRouteId: string | null;
   loaderBoundaryRouteId: string | null;
   // `null` means the app layout threw before any routes rendered
@@ -51,7 +51,7 @@ export interface ComponentDidCatchEmulator {
   trackCatchBoundaries: boolean;
 }
 
-export interface CaughtResponse<T = any> {
+export interface ThrownResponse<T = any> {
   status: number;
   data: T;
 }

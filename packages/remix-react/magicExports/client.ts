@@ -3,7 +3,6 @@
 // remove the ones we don't need in the browser builds.
 
 export type {
-  CaughtResponse,
   RemixBrowserProps,
   FormProps,
   SubmitOptions,
@@ -11,7 +10,8 @@ export type {
   FormMethod,
   FormEncType,
   RemixServerProps,
-  ShouldReloadFunction
+  ShouldReloadFunction,
+  ThrownResponse
 } from "@remix-run/react";
 
 export {

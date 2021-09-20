@@ -6,7 +6,7 @@ import type {
   ErrorBoundaryComponent
 } from "./routeModules";
 
-import type { CaughtResponse } from "./errors";
+import type { ThrownResponse } from "./errors";
 import type { AppData } from "./data";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
@@ -123,18 +123,18 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   );
 }
 
-let RemixCatchContext = React.createContext<CaughtResponse | undefined>(
+let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
   undefined
 );
 
-export function useCatch<T = AppData>(): CaughtResponse<T> | undefined {
-  return useContext(RemixCatchContext);
+export function useCatch<Result extends ThrownResponse = ThrownResponse>(): Result {
+  return useContext(RemixCatchContext) as Result;
 }
 
 type RemixCatchBoundaryProps = React.PropsWithChildren<{
   location: Location;
   component: CatchBoundaryComponent;
-  catch?: CaughtResponse;
+  catch?: ThrownResponse;
 }>;
 
 export function RemixCatchBoundary({

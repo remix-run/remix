@@ -14,7 +14,6 @@ export function matchServerRoutes(
   pathname: string
 ): RouteMatch<ServerRoute>[] | null {
   let matches = matchRoutes((routes as unknown) as RouteObject[], pathname);
-
   if (!matches) return null;
 
   return matches.map(match => ({
