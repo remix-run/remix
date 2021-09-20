@@ -417,7 +417,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
               route: routes[0]
             }
           ];
-          handleNotFoundNavigation(matches);
+          await handleNotFoundNavigation(location, matches);
         } else if (isHashChangeOnly(location)) {
           await handleHashChange(location, matches);
         }
@@ -814,15 +814,35 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return false;
   }
 
-  function handleNotFoundNavigation(matches: RouteMatch<ClientRoute>[]) {
+  async function handleNotFoundNavigation(
+    location: Location,
+    matches: RouteMatch<ClientRoute>[]
+  ) {
+    abortNormalNavigation();
+    let transition: TransitionStates["Loading"] = {
+      state: "loading",
+      type: "normalLoad",
+      submission: undefined,
+      location
+    };
+    update({ transition, nextMatches: matches });
+
+    // Force async so UI code doesn't have to special not found route changes not
+    // skipping the pending state (like scroll restoration gets really
+    // complicated without the pending state, maybe we can figure something else
+    // out later, but this works great.)
+    await Promise.resolve();
+
     let catchBoundaryId = findNearestCatchBoundary(matches[0], matches);
     update({
-      transition: IDLE_TRANSITION,
+      location,
+      matches,
       catch: {
         data: null,
         status: 404
       },
-      catchBoundaryId
+      catchBoundaryId,
+      transition: IDLE_TRANSITION
     });
   }
 

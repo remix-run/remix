@@ -256,13 +256,20 @@ describe("no route match", () => {
     let t = setup();
     let A = t.navigate.get("/not-found");
     let state = t.getState();
+    expect(t.getState().location.hash).toBe("");
+    expect(t.getState().transition.state).toBe("loading");
+
+    // await the internal forced async state
+    await Promise.resolve();
+
+    state = t.getState();
     expect(state.catchBoundaryId).toBe("root");
     expect(state.catch).toEqual({ data: null, status: 404 });
     expect(state.matches).toMatchInlineSnapshot(`
       Array [
         Object {
           "params": Object {},
-          "pathname": "/",
+          "pathname": "",
           "route": Object {
             "CatchBoundary": [Function],
             "ErrorBoundary": [Function],
@@ -307,17 +314,6 @@ describe("no route match", () => {
             "id": "root",
             "loader": [MockFunction],
             "path": "",
-          },
-        },
-        Object {
-          "params": Object {},
-          "pathname": "/",
-          "route": Object {
-            "action": [MockFunction],
-            "element": Object {},
-            "id": "index",
-            "loader": [MockFunction],
-            "path": "/",
           },
         },
       ]
