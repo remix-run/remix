@@ -615,9 +615,17 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
  * Resolves a `<form action>` path relative to the current route.
  */
 export function useFormAction(action = "."): string {
+  let { id } = useRemixRouteContext();
   let path = useResolvedPath(action);
-  let location = useLocation();
-  return path.pathname + location.search;
+  let search = path.search;
+
+  let isIndexRoute = id.endsWith("/index");
+
+  if (isIndexRoute && action === ".") {
+    search = "?index";
+  }
+
+  return path.pathname + search;
 }
 
 export interface SubmitOptions {
