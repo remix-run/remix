@@ -1,24 +1,41 @@
 const fsp = require("fs").promises;
 const path = require("path");
 
-exports.appDirectory = "./app";
-exports.publicBuildDirectory = "./public/build";
-exports.publicPath = "/build/";
-exports.serverBuildDirectory = "./build";
-exports.devServerPort = 8002;
+/**
+ * @type {import("@remix-run/dev/config").AppConfig}
+ */
+module.exports = {
+  appDirectory: "./app",
+  publicBuildDirectory: "./public/build",
+  publicPath: "/build/",
+  serverBuildDirectory: "./build",
+  devServerPort: 8002,
 
-// custom routes
-exports.routes = async function (defineRoutes) {
-  let pages = await fsp.readdir(path.join(__dirname, "app", "pages"));
+  mdx: async filename => {
+    const [rehypeHighlight, remarkToc] = await Promise.all([
+      import("rehype-highlight").then(mod => mod.default),
+      import("remark-toc").then(mod => mod.default)
+    ]);
 
-  return defineRoutes(route => {
-    // create some custom routes from the pages/ dir
-    for (let page of pages) {
-      // skip MDX pages for now...
-      if (page.endsWith(".mdx")) continue;
+    return {
+      remarkPlugins: [remarkToc],
+      rehypePlugins: [rehypeHighlight]
+    };
+  },
 
-      let slug = page.replace(/\.[a-z]+$/, "");
-      route(`/page/${slug}`, `pages/${page}`);
-    }
-  });
+  // custom routes
+  routes: async defineRoutes => {
+    let pages = await fsp.readdir(path.join(__dirname, "app", "pages"));
+
+    return defineRoutes(route => {
+      // create some custom routes from the pages/ dir
+      for (let page of pages) {
+        // skip MDX pages for now...
+        if (page.endsWith(".mdx")) continue;
+
+        let slug = page.replace(/\.[a-z]+$/, "");
+        route(`/page/${slug}`, `pages/${page}`);
+      }
+    });
+  }
 };

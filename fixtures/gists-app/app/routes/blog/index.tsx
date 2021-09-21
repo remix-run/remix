@@ -1,8 +1,6 @@
 import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
 import { Link, useRouteData, usePendingLocation, json } from "remix";
 
-// @ts-expect-error
-import Shared from "../../components/Shared";
 import stylesHref from "../../styles/gists.css";
 
 import * as helloPost from "./hello-world.mdx";
@@ -56,7 +54,7 @@ export default function BlogPosts() {
 
   return (
     <div data-test-id="/blog">
-      <header>
+      <main>
         <h1>Blog Posts</h1>
         <ul>
           {posts.map(post => (
@@ -67,8 +65,7 @@ export default function BlogPosts() {
             </li>
           ))}
         </ul>
-      </header>
-      <Shared />
+      </main>
     </div>
   );
 }
