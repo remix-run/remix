@@ -37,7 +37,9 @@ export function createCloudflareKVSessionStorage({
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions
         // with existing ids when creating new sessions, which speeds things up.
-        let id = Buffer.from(randomBytes).toString("hex");
+        let id = [...randomBytes]
+          .map(x => x.toString(16).padStart(2, "0"))
+          .join("");
 
         if (await kv.get(id, "json")) {
           continue;
