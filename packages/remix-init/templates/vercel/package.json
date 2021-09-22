@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "postinstall": "remix setup",
     "dev": "remix dev",
     "start": "vercel dev"
   },

@@ -335,6 +335,53 @@ let remixNodeMagicExportsBrowser = {
   ]
 };
 
+/** @type {import("rollup").RollupOptions} */
+let remixCloudflareMagicExports = {
+  external() {
+    return true;
+  },
+  input: path.resolve(
+    __dirname,
+    "packages/remix-cloudflare-workers/magicExports/platform.ts"
+  ),
+  output: {
+    banner: licenseBanner,
+    dir: "build/node_modules/@remix-run/cloudflare-workers/magicExports",
+    format: "cjs"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
+/** @type {import("rollup").RollupOptions} */
+let remixCloudflareMagicExportsBrowser = {
+  external() {
+    return true;
+  },
+  input: path.resolve(
+    __dirname,
+    "packages/remix-cloudflare-workers/magicExports/platform.ts"
+  ),
+  output: {
+    banner: licenseBanner,
+    dir:
+      "build/node_modules/@remix-run/cloudflare-workers/magicExports/browser",
+    format: "esm"
+  },
+  plugins: [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"]
+    })
+  ]
+};
+
 /** @return {import("rollup").RollupOptions} */
 function getServerConfig(name) {
   return {
@@ -516,6 +563,8 @@ let builds = [
   remixNodeMagicExportsBrowser,
   remixArchitect,
   remixCloudflare,
+  remixCloudflareMagicExports,
+  remixCloudflareMagicExportsBrowser,
   remixExpress,
   remixNetlify,
   remixVercel,

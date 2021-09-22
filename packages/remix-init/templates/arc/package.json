@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "postinstall": "remix setup",
     "build": "remix build",
     "dev": "remix dev",
     "start": "arc sandbox"
