@@ -4,7 +4,7 @@ import type {
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 
-interface KVSessionStorageStorageOptions {
+interface KVSessionStorageOptions {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
@@ -26,7 +26,7 @@ interface KVSessionStorageStorageOptions {
 export function createCloudflareKVSessionStorage({
   cookie,
   kv
-}: KVSessionStorageStorageOptions): SessionStorage {
+}: KVSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

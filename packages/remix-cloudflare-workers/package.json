@@ -4,6 +4,7 @@
   "version": "0.18.2",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.1.3",
     "@remix-run/server-runtime": "0.18.2"
   },
   "peerDependencies": {
