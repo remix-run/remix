@@ -95,6 +95,8 @@ async function run() {
     Object.assign(appPkg[key], serverPkg[key]);
   });
 
+  appPkg.main = serverPkg.main;
+
   // add current versions of remix deps
   let pkg = require(path.join(__dirname, "package.json"));
   ["dependencies", "devDependencies"].forEach(pkgKey => {
