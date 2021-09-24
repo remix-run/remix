@@ -1,5 +1,5 @@
 {
-  "exclude": ["__tests__/**/*", "templates"],
+  "exclude": ["__tests__", "templates"],
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",
