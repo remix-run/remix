@@ -1,11 +1,13 @@
-import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
+import type {
+  HeadersFunction,
+  LinksFunction,
+  LoaderFunction,
+  MdxGlobImport,
+  MdxModule
+} from "remix";
 import { Link, useRouteData, usePendingLocation, json } from "remix";
 
 import stylesHref from "../../styles/gists.css";
-
-import * as helloPost from "./hello-world.mdx";
-import * as secondPost from "./second.md";
-import * as thirdPost from "./third.md";
 
 interface Post {
   title: string;
@@ -15,20 +17,18 @@ interface Post {
 
 type PostsData = { posts: Post[] };
 
-function postFromModule(mod: any): Post {
+function postFromModule(mod: MdxModule): Post {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
     ...mod.attributes.meta
   };
 }
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
+  let postsMod: MdxGlobImport = require("./*.mdx");
+
   let data: PostsData = {
-    posts: [
-      postFromModule(helloPost),
-      postFromModule(secondPost),
-      postFromModule(thirdPost)
-    ]
+    posts: postsMod.default.map(post => postFromModule(post))
   };
 
   return json(data, {

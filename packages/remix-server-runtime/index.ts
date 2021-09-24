@@ -20,6 +20,8 @@ export type {
   PageLinkDescriptor
 } from "./links";
 
+export type { MdxGlobModule, MdxModule } from "./mdx";
+
 export type { ServerPlatform } from "./platform";
 
 export type {

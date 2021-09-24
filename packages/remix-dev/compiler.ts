@@ -2,6 +2,7 @@ import { promises as fsp } from "fs";
 import * as path from "path";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
+import importGlobPlugin from "esbuild-plugin-import-glob";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 
@@ -280,6 +281,7 @@ async function createBrowserBuild(
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
     plugins: [
+      importGlobPlugin(),
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
@@ -313,6 +315,7 @@ async function createServerBuild(
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
     plugins: [
+      importGlobPlugin(),
       mdxPlugin(config),
       serverRouteModulesPlugin(config),
       emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
