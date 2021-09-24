@@ -123,14 +123,14 @@ describe("readConfig", () => {
           },
           "routes/blog/second": Object {
             "caseSensitive": false,
-            "file": "routes/blog/second.md",
+            "file": "routes/blog/second.mdx",
             "id": "routes/blog/second",
             "parentId": "routes/blog",
             "path": "second",
           },
           "routes/blog/third": Object {
             "caseSensitive": false,
-            "file": "routes/blog/third.md",
+            "file": "routes/blog/third.mdx",
             "id": "routes/blog/third",
             "parentId": "routes/blog",
             "path": "third",
