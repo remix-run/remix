@@ -2,12 +2,11 @@
   "main": "dist/worker.js",
   "scripts": {
     "postinstall": "remix setup cloudflare-workers",
-    "build:remix": "remix build",
     "build:worker": "esbuild --bundle --sourcemap --outdir=dist ./worker",
-    "build": "npm run build:remix && npm run build:worker",
-    "dev": "miniflare --watch --debug",
-    "start": "miniflare",
-    "deploy": "wrangler publish"
+    "build": "remix build",
+    "dev": "remix watch",
+    "start": "miniflare --watch",
+    "deploy": "npm run build && wrangler publish"
   },
   "dependencies": {
     "@remix-run/cloudflare-workers": "*"

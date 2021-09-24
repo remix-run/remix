@@ -11,8 +11,6 @@ import type {
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
-import { installGlobals } from "./globals";
-
 /**
  * A function that returns the value to use as `context` in route `loader` and
  * `action` functions.
@@ -73,9 +71,19 @@ export async function handleAsset(event: FetchEvent) {
   }
 }
 
-export function createEventHandler(build: any) {
+export function createEventHandler({
+  build,
+  getLoadContext,
+  mode
+}: {
+  build: ServerBuild;
+  getLoadContext?: GetLoadContextFunction;
+  mode?: string;
+}) {
   const handleRequest = createRequestHandler({
-    build
+    build,
+    getLoadContext,
+    mode
   });
 
   const handleEvent = async (event: FetchEvent) => {

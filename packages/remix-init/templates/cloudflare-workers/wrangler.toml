@@ -11,8 +11,8 @@ bucket = "./public"
 entry-point = "."
 
 [build]
-command = "npm run build"
-watch_dir = "app"
+command = "npm run build:worker"
+watch_dir = "build"
 
 [build.upload]
 format="service-worker"

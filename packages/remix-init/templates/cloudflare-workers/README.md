@@ -5,32 +5,27 @@
 
 ## Development
 
-From your terminal:
+You will be running two processes during development when using Vercel as your server.
+
+- Your Miniflare server in one (miniflare is a local environment for Cloudflare Workers)
+- The Remix development server in another
 
 ```sh
-npm run dev:cloudflare
+# in one tab (starts remix dev server)
+$ npm run dev
+
+# in another (starts miniflare server)
+$ npm start
 ```
 
-This will build your app and start a local miniflare instance, rebuilding assets on file changes.
+Open up [http://127.0.0.1:8787](http://127.0.0.1:8787) and you should be ready to go!
 
-### Using Wrangler
-
-This project is configured out of the box to work with Wrangler commands such as:
-
-```sh
-wranger dev
-```
-
-and
-
-```sh
-wranger preview
-```
+If you'd rather run everything in a single tab, you can look at [concurrently](https://npm.im/concurrently) or similar tools to run both processes in one tab.
 
 ## Deployment
 
 Use wrangler to build and deploy your application to Cloudflare Workers:
 
 ```sh
-wrangler publish
+npm run deploy
 ```
