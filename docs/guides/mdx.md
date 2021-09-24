@@ -88,9 +88,13 @@ import { Link } from "react-router-dom";
 // Import all your posts from the app/routes/posts directory. Since these are
 // regular route modules, they will all be available for individual viewing
 // at /posts/a, for example.
-import * as postA from "./posts/a.mdx";
-import * as postB from "./posts/b.md";
-import * as postC from "./posts/c.md";
+import posts from "./posts/*.mdx";
+
+// The above glob ("*") import can be thought of as being transformed into
+// import * as postA from "./posts/a.mdx";
+// import * as postB from "./posts/b.md";
+// import * as postC from "./posts/c.md";
+// const posts = [postA, postB, postC];
 
 function postFromModule(mod) {
   return {
@@ -104,11 +108,7 @@ export function loader() {
   // Referencing the posts here instead of in the Index component down below
   // lets us avoid bundling the actual posts themselves in the bundle for the
   // index page.
-  return [
-    postFromModule(postA),
-    postFromModule(postB),
-    postFromModule(postC)
-  ];
+  return posts.map(post => postfromModule(post));
 }
 
 export default function Index() {
@@ -126,6 +126,8 @@ export default function Index() {
   );
 }
 ```
+
+Be careful not to reference glob imports outside of server side code (loader and action). If you reference the glob import in your client side code, your bundle size could grow very fast.
 
 ## Advanced Configuration
 
