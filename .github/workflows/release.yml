@@ -1,5 +1,7 @@
 name: release
 on:
+  push:
+    tags: v0.0.0-experimental*
   release:
     types: [published]
 
