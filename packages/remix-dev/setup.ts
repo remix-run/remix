@@ -13,7 +13,7 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
   let remixPkgJsonFile: string;
   try {
     remixPkgJsonFile = resolvePackageJsonFile("remix");
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === "MODULE_NOT_FOUND") {
       console.error(
         `Missing the "remix" package. Please run \`npm install remix\` before \`remix setup\`.`

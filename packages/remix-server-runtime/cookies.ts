@@ -127,7 +127,7 @@ async function encodeCookieValue(
   let encoded = encodeData(value);
 
   if (secrets.length > 0) {
-    // @ts-expect-error
+    // @ts-ignore
     encoded = await sign(encoded, secrets[0]);
   }
 
@@ -140,7 +140,7 @@ async function decodeCookieValue(
 ): Promise<any> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
-      // @ts-expect-error
+      // @ts-ignore
       let unsignedValue = await unsign(value, secret);
       if (unsignedValue !== false) {
         return decodeData(unsignedValue);

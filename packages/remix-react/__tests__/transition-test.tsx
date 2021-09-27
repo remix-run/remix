@@ -15,7 +15,9 @@ import {
 describe("init", () => {
   it("initializes with initial values", async () => {
     let tm = createTransitionManager({
-      routes: [{ element: {}, id: "root", path: "/", ErrorBoundary: {} }],
+      routes: [
+        { element: {}, id: "root", path: "/", ErrorBoundary: {}, module: "" }
+      ],
       location: createLocation("/"),
       loaderData: { root: "LOADER DATA" },
       actionData: { root: "ACTION DATA" },
@@ -52,6 +54,7 @@ describe("init", () => {
               "ErrorBoundary": Object {},
               "element": Object {},
               "id": "root",
+              "module": "",
               "path": "/",
             },
           },
@@ -196,19 +199,22 @@ describe("shouldReload", () => {
           loader: rootLoader,
           shouldReload,
           element: {},
+          module: "",
           children: [
             {
               path: "/",
               id: "index",
               action: () => null,
-              element: {}
+              element: {},
+              module: ""
             },
             {
               path: "/child",
               id: "child",
               loader: childLoader,
               action: () => null,
-              element: {}
+              element: {},
+              module: ""
             }
           ]
         }
@@ -279,6 +285,7 @@ describe("no route match", () => {
                 "element": Object {},
                 "id": "index",
                 "loader": [MockFunction],
+                "module": "",
                 "path": "/",
               },
               Object {
@@ -286,6 +293,7 @@ describe("no route match", () => {
                 "element": Object {},
                 "id": "foo",
                 "loader": [MockFunction],
+                "module": "",
                 "path": "/foo",
               },
               Object {
@@ -293,6 +301,7 @@ describe("no route match", () => {
                 "element": Object {},
                 "id": "bar",
                 "loader": [MockFunction],
+                "module": "",
                 "path": "/bar",
               },
               Object {
@@ -300,6 +309,7 @@ describe("no route match", () => {
                 "element": Object {},
                 "id": "baz",
                 "loader": [MockFunction],
+                "module": "",
                 "path": "/baz",
               },
               Object {
@@ -307,12 +317,14 @@ describe("no route match", () => {
                 "element": Object {},
                 "id": "param",
                 "loader": [MockFunction],
+                "module": "",
                 "path": "/p/:param",
               },
             ],
             "element": Object {},
             "id": "root",
             "loader": [MockFunction],
+            "module": "",
             "path": "",
           },
         },
@@ -334,11 +346,13 @@ describe("errors on navigation", () => {
             path: "/",
             id: "parent",
             element: {},
+            module: "",
             children: [
               {
                 path: "/child",
                 id: "child",
                 element: {},
+                module: "",
                 ErrorBoundary: FakeComponent,
                 loader
               }
@@ -363,12 +377,14 @@ describe("errors on navigation", () => {
         path: "/child",
         id: "child",
         element: {},
+        module: "",
         loader
       };
       let parent = {
         path: "/",
         id: "parent",
         element: {},
+        module: "",
         ErrorBoundary: FakeComponent,
         children: [child]
       };
@@ -393,16 +409,19 @@ describe("errors on navigation", () => {
             path: "",
             id: "root",
             element: {},
+            module: "",
             children: [
               {
                 path: "/",
                 id: "parent",
                 element: {},
+                module: "",
                 children: [
                   {
                     path: "/child",
                     id: "child",
                     element: {},
+                    module: "",
                     ErrorBoundary: FakeComponent,
                     loader
                   }
@@ -442,19 +461,22 @@ describe("errors on navigation", () => {
           path: "/",
           id: "a",
           element: {},
+          module: "",
           loader: loaderA,
           children: [
             {
               path: "/b",
               id: "b",
               element: {},
+              module: "",
               loader: loaderB,
               ErrorBoundary: FakeComponent,
               children: [
                 {
-                  path: "/c",
+                  path: "/b/c",
                   id: "c",
                   element: {},
+                  module: "",
                   loader: loaderC
                 }
               ]
@@ -546,11 +568,13 @@ describe("action errors", () => {
             path: "/",
             id: "parent",
             element: {},
+            module: "",
             children: [
               {
                 path: "/child",
                 id: "child",
                 element: {},
+                module: "",
                 ErrorBoundary: FakeComponent,
                 action
               }
@@ -581,12 +605,14 @@ describe("action errors", () => {
             path: "/",
             id: "parent",
             element: {},
+            module: "",
             loader: parentLoader,
             children: [
               {
                 path: "/child",
                 id: "child",
                 element: {},
+                module: "",
                 ErrorBoundary: FakeComponent,
                 action
               }
@@ -621,12 +647,14 @@ describe("action errors", () => {
             path: "/",
             id: "parent",
             element: {},
+            module: "",
             ErrorBoundary: FakeComponent,
             children: [
               {
                 path: "/child",
                 id: "child",
                 element: {},
+                module: "",
                 action
               }
             ]
@@ -660,18 +688,21 @@ describe("action errors", () => {
             path: "/",
             id: "root",
             element: {},
+            module: "",
             ErrorBoundary: FakeComponent,
             children: [
               {
                 path: "/parent",
                 id: "parent",
                 element: {},
+                module: "",
                 loader: parentLoader,
                 children: [
                   {
-                    path: "/child",
+                    path: "/parent/child",
                     id: "child",
                     element: {},
+                    module: "",
                     action,
                     ErrorBoundary: FakeComponent
                   }
@@ -1672,6 +1703,7 @@ let setup = ({ url } = { url: "/" }) => {
       path: "",
       id: "root",
       element: {},
+      module: "",
       ErrorBoundary: FakeComponent,
       CatchBoundary: FakeComponent,
       loader: rootLoader,
@@ -1681,35 +1713,40 @@ let setup = ({ url } = { url: "/" }) => {
           id: "index",
           loader: createLoader(),
           action: createAction(),
-          element: {}
+          element: {},
+          module: ""
         },
         {
           path: "/foo",
           id: "foo",
           loader: createLoader(),
           action: createAction(),
-          element: {}
+          element: {},
+          module: ""
         },
         {
           path: "/bar",
           id: "bar",
           loader: createLoader(),
           action: createAction(),
-          element: {}
+          element: {},
+          module: ""
         },
         {
           path: "/baz",
           id: "baz",
           loader: createLoader(),
           action: createAction(),
-          element: {}
+          element: {},
+          module: ""
         },
         {
           path: "/p/:param",
           id: "param",
           loader: createLoader(),
           action: createAction(),
-          element: {}
+          element: {},
+          module: ""
         }
       ]
     }

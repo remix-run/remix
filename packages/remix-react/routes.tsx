@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import React from "react";
+import type { Params } from "react-router"
 
 import type { RouteModules, ShouldReloadFunction } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
@@ -38,7 +39,7 @@ export type RouteDataFunction = {
     /**
      * Parsed params from the route path
      */
-    params: { [param: string]: string };
+    params: Params;
 
     /**
      * The url to be loaded, resolved to the matched route.
