@@ -16,7 +16,7 @@ run().then(
 
 async function run() {
   let answers = await inquirer.prompt<{
-    server: "remix" | "express" | "arc" | "fly" | "vercel" | "netlify";
+    server: "remix" | "express" | "arc" | "fly" | "vercel" | "netlify" | "cloudflare-workers";
     lang: "ts" | "js";
     install: boolean;
   }>([
@@ -33,7 +33,8 @@ async function run() {
         { name: "Fly.io", value: "fly" },
         // { name: "Render", value: "render" },
         { name: "Netlify", value: "netlify" },
-        { name: "Vercel", value: "vercel" }
+        { name: "Vercel", value: "vercel" },
+        { name: "Cloudflare Workers", value: "cloudflare-workers" }
         // { name: "Custom", value: "custom" }
       ]
     },
@@ -72,6 +73,15 @@ async function run() {
     await fse.copy(serverTemplate, appDir, { overwrite: true });
   }
 
+  let serverLangTemplate = path.resolve(
+    __dirname,
+    "templates",
+    `${answers.server}_${answers.lang}`
+  );
+  if (fse.existsSync(serverLangTemplate)) {
+    await fse.copy(serverLangTemplate, appDir, { overwrite: true });
+  }
+
   // rename dotfiles
   await fse.move(
     path.join(appDir, "gitignore"),
@@ -84,6 +94,8 @@ async function run() {
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
   });
+
+  appPkg.main = serverPkg.main;
 
   // add current versions of remix deps
   let pkg = require(path.join(__dirname, "package.json"));

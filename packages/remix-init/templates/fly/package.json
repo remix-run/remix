@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "postinstall": "remix setup node",
     "build": "remix build",
     "dev": "remix run",
     "deploy": "flyctl deploy --build-arg REMIX_TOKEN=${REMIX_TOKEN}",

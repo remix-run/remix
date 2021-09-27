@@ -1198,13 +1198,13 @@ export function usePendingLocation(): Location<any> | undefined {
   return transitionManager.getState().transition.location;
 }
 
-export function LiveReload() {
+export function LiveReload({ port = 8002 }: { port?: number }) {
   if (process.env.NODE_ENV !== "development") return null;
   return (
     <script
       dangerouslySetInnerHTML={{
         __html: `
-          let ws = new WebSocket("ws://localhost:3001/socket");
+          let ws = new WebSocket("ws://localhost:${port}/socket");
           ws.onmessage = message => {
             let event = JSON.parse(message.data);
             if (event.type === "LOG") {

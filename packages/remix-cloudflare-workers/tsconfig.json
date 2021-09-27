@@ -1,4 +1,5 @@
 {
+  "include": ["**/*.ts"],
   "compilerOptions": {
     "lib": ["ES2019", "WebWorker"],
     "target": "ES2019",
@@ -12,6 +13,10 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/cloudflare-workers",
-    "rootDir": "."
+    "rootDir": ".",
+
+    // Avoid naming conflicts between history and react-router-dom relying on
+    // lib.dom.d.ts Window and this being a WebWorker env.
+    "skipLibCheck": true
   }
 }
