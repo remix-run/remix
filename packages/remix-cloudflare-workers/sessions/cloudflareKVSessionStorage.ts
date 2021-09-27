@@ -18,10 +18,10 @@ interface KVSessionStorageOptions {
 }
 
 /**
- * Creates a SessionStorage that stores session data on a filesystem.
+ * Creates a SessionStorage that stores session data in the Clouldflare KV Store.
  *
  * The advantage of using this instead of cookie session storage is that
- * files may contain much more data than cookies.
+ * KV Store may contain much more data than cookies.
  */
 export function createCloudflareKVSessionStorage({
   cookie,
