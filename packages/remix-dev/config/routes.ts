@@ -8,7 +8,12 @@ export interface ConfigRoute {
   /**
    * The path this route uses to match on the URL pathname.
    */
-  path: string;
+  path?: string;
+
+  /**
+   * Should be `true` if it is an index route. This disallows child routes.
+   */
+   index?: boolean;
 
   /**
    * Should be `true` if the `path` is case-sensitive. Defaults to `false`.
@@ -69,7 +74,7 @@ export interface DefineRouteFunction {
     /**
      * The path this route uses to match the URL pathname.
      */
-    path: string,
+    path: string | undefined,
 
     /**
      * The path to the file that exports the React component rendered by this
@@ -128,7 +133,8 @@ export function defineRoutes(
     }
 
     let route: ConfigRoute = {
-      path: path || "/",
+      path: path === "/" ? undefined : path,
+      index: path === "/",
       caseSensitive: !!options.caseSensitive,
       id: createRouteId(file),
       parentId:

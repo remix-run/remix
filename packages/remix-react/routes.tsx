@@ -22,6 +22,7 @@ interface Route {
   caseSensitive?: boolean;
   id: string;
   path: string;
+  index: boolean;
 }
 
 export interface EntryRoute extends Route {
@@ -82,6 +83,7 @@ export function createClientRoute(
     element: <Component id={entryRoute.id} />,
     id: entryRoute.id,
     path: entryRoute.path,
+    index: entryRoute.index,
     module: entryRoute.module,
     loader: createLoader(entryRoute, routeModulesCache),
     action: createAction(entryRoute),
