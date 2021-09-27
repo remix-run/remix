@@ -9,7 +9,6 @@ import {
 import { Outlet } from "react-router-dom";
 
 import stylesUrl from "./styles/global.css";
-import styles404Url from "./styles/404.css";
 
 export function links() {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -19,18 +18,18 @@ export function loader() {
   return { date: new Date() };
 }
 
-function Document({ children }) {
+function Document({ children, title }) {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <link rel="icon" href="/favicon.png" type="image/png" />
+        {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
       </head>
       <body>
         {children}
-
         <Scripts />
         {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>
@@ -54,39 +53,23 @@ export function CatchBoundary() {
   let caught = useCatch();
 
   switch (caught.status) {
+    case 401:
+      return (
+        <Document title="401 Unauthorized">
+          <h1>401 Unauthorized</h1>
+        </Document>
+      );
+
     case 404:
       return (
-        <html lang="en">
-          <head>
-            <meta charSet="utf-8" />
-            <title>404 Not Found</title>
-            <link rel="stylesheet" href={styles404Url} />
-            <Links />
-          </head>
-          <body>
-            <h1>404 Not Found</h1>
-          </body>
-        </html>
+        <Document title="404 Not Found">
+          <h1>404 Not Found</h1>
+        </Document>
       );
-    default:
-      console.warn("Unexpected catch", caught);
 
-      return (
-        <html lang="en">
-          <head>
-            <meta charSet="utf-8" />
-            <title>{caught.status} Uh-oh!</title>
-            <Links />
-          </head>
-          <body>
-            <h1>{caught.status} Uh-oh!</h1>
-            {caught.data ? (
-              <pre>
-                <code>{JSON.stringify(caught.data, null, 2)}</code>
-              </pre>
-            ) : null}
-          </body>
-        </html>
+    default:
+      throw new Error(
+        `Unexpected caught response with status: ${caught.status}`
       );
   }
 }
@@ -94,7 +77,7 @@ export function CatchBoundary() {
 export function ErrorBoundary({ error }) {
   console.error(error);
   return (
-    <Document>
+    <Document title="Uh-oh!">
       <h1>App Error</h1>
       <pre>{error.message}</pre>
       <p>
