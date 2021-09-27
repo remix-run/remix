@@ -7415,7 +7415,7 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz#e691d4a8e9c789365655539ab372762b0efb54f0"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-router-dom@^6.0.0-beta.5:
+react-router-dom@6.0.0-beta.5:
   version "6.0.0-beta.5"
   resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.0.0-beta.5.tgz#7364ae41326ed7eb640c3da601ed9192be92f65e"
   integrity sha512-l4LaL0WHiPUaLfVSMjZiGbV6uitfHTQWYVfHtmCo8dabhjTZ3gIKbAKGQVieZqi1avFVqj+s3i0Ul1ZalLr8Bw==
