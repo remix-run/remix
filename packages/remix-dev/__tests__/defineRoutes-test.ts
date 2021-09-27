@@ -14,7 +14,7 @@ describe("defineRoutes", () => {
     expect(routes).toMatchInlineSnapshot(`
       Object {
         "routes/home": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "routes/home.js",
           "id": "routes/home",
           "index": true,
@@ -22,31 +22,31 @@ describe("defineRoutes", () => {
           "path": undefined,
         },
         "routes/inbox": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "routes/inbox.js",
           "id": "routes/inbox",
-          "index": false,
+          "index": undefined,
           "parentId": undefined,
           "path": "inbox",
         },
         "routes/inbox/$messageId": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "routes/inbox/$messageId.js",
           "id": "routes/inbox/$messageId",
-          "index": false,
+          "index": undefined,
           "parentId": "routes/inbox",
           "path": ":messageId",
         },
         "routes/inbox/archive": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "routes/inbox/archive.js",
           "id": "routes/inbox/archive",
-          "index": false,
+          "index": undefined,
           "parentId": "routes/inbox",
           "path": "archive",
         },
         "routes/inbox/index": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "routes/inbox/index.js",
           "id": "routes/inbox/index",
           "index": true,
@@ -69,18 +69,18 @@ describe("defineRoutes", () => {
     expect(routes).toMatchInlineSnapshot(`
       Object {
         "one": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "one.md",
           "id": "one",
-          "index": false,
+          "index": undefined,
           "parentId": undefined,
           "path": "one",
         },
         "two": Object {
-          "caseSensitive": false,
+          "caseSensitive": undefined,
           "file": "two.md",
           "id": "two",
-          "index": false,
+          "index": undefined,
           "parentId": undefined,
           "path": "two",
         },

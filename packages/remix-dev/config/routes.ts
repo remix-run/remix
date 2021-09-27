@@ -134,8 +134,8 @@ export function defineRoutes(
 
     let route: ConfigRoute = {
       path: path === "/" ? undefined : path,
-      index: path === "/",
-      caseSensitive: !!options.caseSensitive,
+      index: path === "/" ? true : undefined,
+      caseSensitive: options.caseSensitive ? true : undefined,
       id: createRouteId(file),
       parentId:
         parentRoutes.length > 0

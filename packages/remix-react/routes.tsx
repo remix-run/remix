@@ -22,7 +22,7 @@ interface Route {
   caseSensitive?: boolean;
   id: string;
   path: string;
-  index: boolean;
+  index?: boolean;
 }
 
 export interface EntryRoute extends Route {
