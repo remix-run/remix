@@ -1,1 +1,1 @@
-Copyright © 2021 React Training LLC. All rights reserved.
+Copyright © 2021 Remix Software Inc. All rights reserved.
