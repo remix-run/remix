@@ -36,6 +36,11 @@ module.exports = {
         let slug = page.replace(/\.[a-z]+$/, "");
         route(`/page/${slug}`, `pages/${page}`);
       }
+
+      route("programatic", "pages/test.jsx", () => {
+        // route("/test", "routes/blog/index.tsx", { index: true });
+        route(":messageId", "pages/child.jsx");
+      });
     });
   }
 };

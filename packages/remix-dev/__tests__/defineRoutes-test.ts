@@ -5,7 +5,7 @@ describe("defineRoutes", () => {
     let routes = defineRoutes(route => {
       route("/", "routes/home.js");
       route("inbox", "routes/inbox.js", () => {
-        route("/", "routes/inbox/index.js");
+        route("/", "routes/inbox/index.js", { index: true });
         route(":messageId", "routes/inbox/$messageId.js");
         route("archive", "routes/inbox/archive.js");
       });
@@ -17,9 +17,9 @@ describe("defineRoutes", () => {
           "caseSensitive": undefined,
           "file": "routes/home.js",
           "id": "routes/home",
-          "index": true,
+          "index": undefined,
           "parentId": undefined,
-          "path": undefined,
+          "path": "/",
         },
         "routes/inbox": Object {
           "caseSensitive": undefined,
@@ -51,7 +51,7 @@ describe("defineRoutes", () => {
           "id": "routes/inbox/index",
           "index": true,
           "parentId": "routes/inbox",
-          "path": undefined,
+          "path": "/",
         },
       }
     `);

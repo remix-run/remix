@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import type { RouteManifest, DefineRouteFunction } from "./routes";
-import { defineRoutes, createRouteId } from "./routes";
+import { defineRoutes, createRouteId, normalizeSlashes } from "./routes";
 
 const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
 
@@ -50,33 +50,46 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 
     for (let routeId of childRouteIds) {
       let routePath: string | undefined = createRoutePath(
-        routeId.slice((parentId || "routes").length + 1)
+        routeId.slice("routes".length)
       );
 
       if (routeId.endsWith("/index")) {
-        routePath = "/";
-      }
+        let invalidChildRoutes = routeIds.filter(
+          id => findParentRouteId(routeIds, id) === routeId
+        );
 
-      defineRoute(routePath, files[routeId], () => {
-        defineNestedRoutes(defineRoute, routeId);
-      });
+        if (invalidChildRoutes.length > 0) {
+          throw new Error(
+            `Child routes are not allowed in index routes. Please remove child routes of ${routeId}`
+          );
+        }
+
+        defineRoute(routePath, files[routeId], {
+          index: true
+        });
+      } else {
+        defineRoute(routePath, files[routeId], () => {
+          defineNestedRoutes(defineRoute, routeId);
+        });
+      }
     }
   }
 
   return defineRoutes(defineNestedRoutes);
 }
 
-function createRoutePath(routeId: string): string {
-  let path = routeId
-    // routes/$ -> routes/*
-    // routes/nested/$.tsx (with a "routes/nested.tsx" layout)
+// TODO: Cleanup and write some tests for this function
+export function createRoutePath(routeId: string): string {
+  let path = normalizeSlashes(routeId)
+    // /$ -> /*
+    // /nested/$.tsx (with a "/nested.tsx" layout)
     .replace(/^\$$/, "*")
-    // routes/docs.$ -> routes/docs/*
-    // routes/docs/$ -> routes/docs/*
+    // /docs.$ -> /docs/*
+    // /docs/$ -> /docs/*
     .replace(/(\/|\.)\$$/, "/*")
-    // routes/$user -> routes/:user
+    // /$user -> /:user
     .replace(/\$/g, ":")
-    // routes/not.nested -> routes/not/nested
+    // /not.nested -> /not/nested
     .replace(/\./g, "/");
   return /\b\/?index$/.test(path) ? path.replace(/\/?index$/, "") : path;
 }

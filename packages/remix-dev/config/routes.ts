@@ -13,7 +13,7 @@ export interface ConfigRoute {
   /**
    * Should be `true` if it is an index route. This disallows child routes.
    */
-   index?: boolean;
+  index?: boolean;
 
   /**
    * Should be `true` if the `path` is case-sensitive. Defaults to `false`.
@@ -49,6 +49,11 @@ export interface DefineRouteOptions {
    * `false`.
    */
   caseSensitive?: boolean;
+
+  /**
+   * Should be `true` if this is an index route that does not allow child routes.
+   */
+  index?: boolean;
 }
 
 interface DefineRouteChildren {
@@ -133,8 +138,8 @@ export function defineRoutes(
     }
 
     let route: ConfigRoute = {
-      path: path === "/" ? undefined : path,
-      index: path === "/" ? true : undefined,
+      path,
+      index: options.index ? true : undefined,
       caseSensitive: options.caseSensitive ? true : undefined,
       id: createRouteId(file),
       parentId:
@@ -164,7 +169,7 @@ export function createRouteId(file: string) {
   return normalizeSlashes(stripFileExtension(file));
 }
 
-function normalizeSlashes(file: string) {
+export function normalizeSlashes(file: string) {
   return file.split(path.win32.sep).join("/");
 }
 
