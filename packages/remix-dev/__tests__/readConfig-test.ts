@@ -32,6 +32,14 @@ describe("readConfig", () => {
         "publicPath": "/build/",
         "rootDirectory": Any<String>,
         "routes": Object {
+          "pages/child": Object {
+            "caseSensitive": undefined,
+            "file": "pages/child.jsx",
+            "id": "pages/child",
+            "index": undefined,
+            "parentId": "pages/test",
+            "path": ":messageId",
+          },
           "pages/four": Object {
             "caseSensitive": undefined,
             "file": "pages/four.jsx",
@@ -39,6 +47,14 @@ describe("readConfig", () => {
             "index": undefined,
             "parentId": "root",
             "path": "/page/four",
+          },
+          "pages/test": Object {
+            "caseSensitive": undefined,
+            "file": "pages/test.jsx",
+            "id": "pages/test",
+            "index": undefined,
+            "parentId": "root",
+            "path": "programatic",
           },
           "pages/three": Object {
             "caseSensitive": undefined,
