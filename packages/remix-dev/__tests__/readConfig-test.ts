@@ -75,7 +75,7 @@ describe("readConfig", () => {
             "id": "routes/action-catches",
             "index": undefined,
             "parentId": "root",
-            "path": "/action-catches",
+            "path": "action-catches",
           },
           "routes/action-catches-from-loader": Object {
             "caseSensitive": undefined,
@@ -83,7 +83,7 @@ describe("readConfig", () => {
             "id": "routes/action-catches-from-loader",
             "index": undefined,
             "parentId": "root",
-            "path": "/action-catches-from-loader",
+            "path": "action-catches-from-loader",
           },
           "routes/action-catches-from-loader-self-boundary": Object {
             "caseSensitive": undefined,
@@ -91,7 +91,7 @@ describe("readConfig", () => {
             "id": "routes/action-catches-from-loader-self-boundary",
             "index": undefined,
             "parentId": "root",
-            "path": "/action-catches-from-loader-self-boundary",
+            "path": "action-catches-from-loader-self-boundary",
           },
           "routes/action-catches-self-boundary": Object {
             "caseSensitive": undefined,
@@ -99,7 +99,7 @@ describe("readConfig", () => {
             "id": "routes/action-catches-self-boundary",
             "index": undefined,
             "parentId": "root",
-            "path": "/action-catches-self-boundary",
+            "path": "action-catches-self-boundary",
           },
           "routes/action-errors": Object {
             "caseSensitive": undefined,
@@ -107,7 +107,7 @@ describe("readConfig", () => {
             "id": "routes/action-errors",
             "index": undefined,
             "parentId": "root",
-            "path": "/action-errors",
+            "path": "action-errors",
           },
           "routes/action-errors-self-boundary": Object {
             "caseSensitive": undefined,
@@ -115,7 +115,7 @@ describe("readConfig", () => {
             "id": "routes/action-errors-self-boundary",
             "index": undefined,
             "parentId": "root",
-            "path": "/action-errors-self-boundary",
+            "path": "action-errors-self-boundary",
           },
           "routes/actions": Object {
             "caseSensitive": undefined,
@@ -123,7 +123,7 @@ describe("readConfig", () => {
             "id": "routes/actions",
             "index": undefined,
             "parentId": "root",
-            "path": "/actions",
+            "path": "actions",
           },
           "routes/blog": Object {
             "caseSensitive": undefined,
@@ -131,7 +131,7 @@ describe("readConfig", () => {
             "id": "routes/blog",
             "index": undefined,
             "parentId": "root",
-            "path": "/blog",
+            "path": "blog",
           },
           "routes/blog/hello-world": Object {
             "caseSensitive": undefined,
@@ -139,7 +139,7 @@ describe("readConfig", () => {
             "id": "routes/blog/hello-world",
             "index": undefined,
             "parentId": "routes/blog",
-            "path": "/blog/hello-world",
+            "path": "hello-world",
           },
           "routes/blog/index": Object {
             "caseSensitive": undefined,
@@ -147,7 +147,7 @@ describe("readConfig", () => {
             "id": "routes/blog/index",
             "index": true,
             "parentId": "routes/blog",
-            "path": "/blog",
+            "path": undefined,
           },
           "routes/blog/second": Object {
             "caseSensitive": undefined,
@@ -155,7 +155,7 @@ describe("readConfig", () => {
             "id": "routes/blog/second",
             "index": undefined,
             "parentId": "routes/blog",
-            "path": "/blog/second",
+            "path": "second",
           },
           "routes/blog/third": Object {
             "caseSensitive": undefined,
@@ -163,7 +163,7 @@ describe("readConfig", () => {
             "id": "routes/blog/third",
             "index": undefined,
             "parentId": "routes/blog",
-            "path": "/blog/third",
+            "path": "third",
           },
           "routes/catchall-nested": Object {
             "caseSensitive": undefined,
@@ -171,7 +171,7 @@ describe("readConfig", () => {
             "id": "routes/catchall-nested",
             "index": undefined,
             "parentId": "root",
-            "path": "/catchall-nested",
+            "path": "catchall-nested",
           },
           "routes/catchall-nested-no-layout/$": Object {
             "caseSensitive": undefined,
@@ -179,7 +179,7 @@ describe("readConfig", () => {
             "id": "routes/catchall-nested-no-layout/$",
             "index": undefined,
             "parentId": "root",
-            "path": "/catchall-nested-no-layout/*",
+            "path": "catchall-nested-no-layout/*",
           },
           "routes/catchall-nested/$": Object {
             "caseSensitive": undefined,
@@ -187,7 +187,7 @@ describe("readConfig", () => {
             "id": "routes/catchall-nested/$",
             "index": undefined,
             "parentId": "routes/catchall-nested",
-            "path": "/catchall-nested/*",
+            "path": "*",
           },
           "routes/catchall.flat.$": Object {
             "caseSensitive": undefined,
@@ -195,7 +195,7 @@ describe("readConfig", () => {
             "id": "routes/catchall.flat.$",
             "index": undefined,
             "parentId": "root",
-            "path": "/catchall/flat/*",
+            "path": "catchall/flat/*",
           },
           "routes/empty": Object {
             "caseSensitive": undefined,
@@ -203,7 +203,7 @@ describe("readConfig", () => {
             "id": "routes/empty",
             "index": undefined,
             "parentId": "root",
-            "path": "/empty",
+            "path": "empty",
           },
           "routes/fetchers": Object {
             "caseSensitive": undefined,
@@ -211,7 +211,7 @@ describe("readConfig", () => {
             "id": "routes/fetchers",
             "index": undefined,
             "parentId": "root",
-            "path": "/fetchers",
+            "path": "fetchers",
           },
           "routes/gists": Object {
             "caseSensitive": undefined,
@@ -219,7 +219,7 @@ describe("readConfig", () => {
             "id": "routes/gists",
             "index": undefined,
             "parentId": "root",
-            "path": "/gists",
+            "path": "gists",
           },
           "routes/gists.mine": Object {
             "caseSensitive": undefined,
@@ -227,7 +227,7 @@ describe("readConfig", () => {
             "id": "routes/gists.mine",
             "index": undefined,
             "parentId": "root",
-            "path": "/gists/mine",
+            "path": "gists/mine",
           },
           "routes/gists/$username": Object {
             "caseSensitive": undefined,
@@ -235,7 +235,7 @@ describe("readConfig", () => {
             "id": "routes/gists/$username",
             "index": undefined,
             "parentId": "routes/gists",
-            "path": "/gists/:username",
+            "path": ":username",
           },
           "routes/gists/index": Object {
             "caseSensitive": undefined,
@@ -243,7 +243,7 @@ describe("readConfig", () => {
             "id": "routes/gists/index",
             "index": true,
             "parentId": "routes/gists",
-            "path": "/gists",
+            "path": undefined,
           },
           "routes/index": Object {
             "caseSensitive": undefined,
@@ -251,7 +251,7 @@ describe("readConfig", () => {
             "id": "routes/index",
             "index": true,
             "parentId": "root",
-            "path": "",
+            "path": undefined,
           },
           "routes/links": Object {
             "caseSensitive": undefined,
@@ -259,7 +259,7 @@ describe("readConfig", () => {
             "id": "routes/links",
             "index": undefined,
             "parentId": "root",
-            "path": "/links",
+            "path": "links",
           },
           "routes/loader-errors": Object {
             "caseSensitive": undefined,
@@ -267,7 +267,7 @@ describe("readConfig", () => {
             "id": "routes/loader-errors",
             "index": undefined,
             "parentId": "root",
-            "path": "/loader-errors",
+            "path": "loader-errors",
           },
           "routes/loader-errors/nested": Object {
             "caseSensitive": undefined,
@@ -275,7 +275,7 @@ describe("readConfig", () => {
             "id": "routes/loader-errors/nested",
             "index": undefined,
             "parentId": "routes/loader-errors",
-            "path": "/loader-errors/nested",
+            "path": "nested",
           },
           "routes/loader-errors/nested-catch": Object {
             "caseSensitive": undefined,
@@ -283,7 +283,7 @@ describe("readConfig", () => {
             "id": "routes/loader-errors/nested-catch",
             "index": undefined,
             "parentId": "routes/loader-errors",
-            "path": "/loader-errors/nested-catch",
+            "path": "nested-catch",
           },
           "routes/methods": Object {
             "caseSensitive": undefined,
@@ -291,7 +291,7 @@ describe("readConfig", () => {
             "id": "routes/methods",
             "index": undefined,
             "parentId": "root",
-            "path": "/methods",
+            "path": "methods",
           },
           "routes/multiple-set-cookies": Object {
             "caseSensitive": undefined,
@@ -299,7 +299,7 @@ describe("readConfig", () => {
             "id": "routes/multiple-set-cookies",
             "index": undefined,
             "parentId": "root",
-            "path": "/multiple-set-cookies",
+            "path": "multiple-set-cookies",
           },
           "routes/nested-forms": Object {
             "caseSensitive": undefined,
@@ -307,7 +307,7 @@ describe("readConfig", () => {
             "id": "routes/nested-forms",
             "index": undefined,
             "parentId": "root",
-            "path": "/nested-forms",
+            "path": "nested-forms",
           },
           "routes/nested-forms/nested": Object {
             "caseSensitive": undefined,
@@ -315,7 +315,7 @@ describe("readConfig", () => {
             "id": "routes/nested-forms/nested",
             "index": undefined,
             "parentId": "routes/nested-forms",
-            "path": "/nested-forms/nested",
+            "path": "nested",
           },
           "routes/nested-forms/nested/index": Object {
             "caseSensitive": undefined,
@@ -323,7 +323,7 @@ describe("readConfig", () => {
             "id": "routes/nested-forms/nested/index",
             "index": true,
             "parentId": "routes/nested-forms/nested",
-            "path": "/nested-forms/nested",
+            "path": undefined,
           },
           "routes/one": Object {
             "caseSensitive": undefined,
@@ -331,7 +331,7 @@ describe("readConfig", () => {
             "id": "routes/one",
             "index": undefined,
             "parentId": "root",
-            "path": "/one",
+            "path": "one",
           },
           "routes/prefs": Object {
             "caseSensitive": undefined,
@@ -339,7 +339,7 @@ describe("readConfig", () => {
             "id": "routes/prefs",
             "index": undefined,
             "parentId": "root",
-            "path": "/prefs",
+            "path": "prefs",
           },
           "routes/render-errors": Object {
             "caseSensitive": undefined,
@@ -347,7 +347,7 @@ describe("readConfig", () => {
             "id": "routes/render-errors",
             "index": undefined,
             "parentId": "root",
-            "path": "/render-errors",
+            "path": "render-errors",
           },
           "routes/render-errors/nested": Object {
             "caseSensitive": undefined,
@@ -355,7 +355,7 @@ describe("readConfig", () => {
             "id": "routes/render-errors/nested",
             "index": undefined,
             "parentId": "routes/render-errors",
-            "path": "/render-errors/nested",
+            "path": "nested",
           },
           "routes/two": Object {
             "caseSensitive": undefined,
@@ -363,7 +363,7 @@ describe("readConfig", () => {
             "id": "routes/two",
             "index": undefined,
             "parentId": "root",
-            "path": "/two",
+            "path": "two",
           },
         },
         "serverBuildDirectory": Any<String>,

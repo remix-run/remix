@@ -138,7 +138,7 @@ export function defineRoutes(
     }
 
     let route: ConfigRoute = {
-      path,
+      path: path ? path : undefined,
       index: options.index ? true : undefined,
       caseSensitive: options.caseSensitive ? true : undefined,
       id: createRouteId(file),

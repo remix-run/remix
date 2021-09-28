@@ -50,7 +50,7 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 
     for (let routeId of childRouteIds) {
       let routePath: string | undefined = createRoutePath(
-        routeId.slice("routes".length)
+        routeId.slice((parentId || "routes").length + 1)
       );
 
       if (routeId.endsWith("/index")) {
@@ -79,17 +79,17 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 }
 
 // TODO: Cleanup and write some tests for this function
-export function createRoutePath(routeId: string): string {
-  let path = normalizeSlashes(routeId)
-    // /$ -> /*
-    // /nested/$.tsx (with a "/nested.tsx" layout)
+export function createRoutePath(partialRouteId: string): string {
+  let path = normalizeSlashes(partialRouteId)
+    // routes/$ -> routes/*
+    // routes/nested/$.tsx (with a "routes/nested.tsx" layout)
     .replace(/^\$$/, "*")
-    // /docs.$ -> /docs/*
-    // /docs/$ -> /docs/*
+    // routes/docs.$ -> routes/docs/*
+    // routes/docs/$ -> routes/docs/*
     .replace(/(\/|\.)\$$/, "/*")
-    // /$user -> /:user
+    // routes/$user -> routes/:user
     .replace(/\$/g, ":")
-    // /not.nested -> /not/nested
+    // routes/not.nested -> routes/not/nested
     .replace(/\./g, "/");
   return /\b\/?index$/.test(path) ? path.replace(/\/?index$/, "") : path;
 }
