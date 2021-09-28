@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import React from "react";
+import type { Params } from "react-router"
 
 import type { RouteModules, ShouldReloadFunction } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
@@ -21,6 +22,7 @@ interface Route {
   caseSensitive?: boolean;
   id: string;
   path: string;
+  index?: boolean;
 }
 
 export interface EntryRoute extends Route {
@@ -38,7 +40,7 @@ export type RouteDataFunction = {
     /**
      * Parsed params from the route path
      */
-    params: { [param: string]: string };
+    params: Params;
 
     /**
      * The url to be loaded, resolved to the matched route.
@@ -81,6 +83,7 @@ export function createClientRoute(
     element: <Component id={entryRoute.id} />,
     id: entryRoute.id,
     path: entryRoute.path,
+    index: entryRoute.index,
     module: entryRoute.module,
     loader: createLoader(entryRoute, routeModulesCache),
     action: createAction(entryRoute),

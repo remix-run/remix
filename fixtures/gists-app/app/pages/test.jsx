@@ -1,9 +1,9 @@
 import { Outlet } from "react-router-dom";
 
-export default function Comp() {
+export default function Test() {
   return (
     <div>
-      <h1>Catchall nested layout</h1>
+      <h1>Shell</h1>
       <Outlet />
     </div>
   );

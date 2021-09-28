@@ -21,11 +21,13 @@
     "history": "^5.0.0",
     "morgan": "^1.10.0",
     "postcss-nested": "^5.0.3",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-router-dom": "6.0.0-beta.0"
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router-dom": "6.0.0-beta.5"
   },
   "devDependencies": {
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
     "autoprefixer": "^10.2.4",
     "cssnano": "^4.1.10",
     "fs-extra": "^10.0.0",
