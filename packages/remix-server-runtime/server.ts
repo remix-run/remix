@@ -477,7 +477,7 @@ function isActionRequest(request: Request): boolean {
 
 function isValidDocumentRequest(request: Request): boolean {
   let method = request.method.toLowerCase();
-  return method === "get" || isActionRequest(request);
+  return method === "get" || method === "head" || isActionRequest(request);
 }
 
 function isHeadRequest(request: Request): boolean {
