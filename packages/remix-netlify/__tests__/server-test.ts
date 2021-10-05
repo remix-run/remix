@@ -56,6 +56,20 @@ describe("netlify createRequestHandler", () => {
         });
     });
 
+    it("handles null body", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response(null, { status: 200 });
+      });
+
+      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
+      // won't ever call through to the real createRequestHandler
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(200);
+        });
+    });
+
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
         return new Response("", { status: 204 });

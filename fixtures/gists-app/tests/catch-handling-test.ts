@@ -43,6 +43,29 @@ describe("thrown responses", () => {
     });
   });
 
+  describe("invalid request method", () => {
+    it("renders root catch boundary without javascript", async () => {
+      await Utils.disableJavaScript(page, request => {
+        request.continue({
+          method: "OPTIONS"
+        });
+      });
+
+      let response = await page.goto(`${testServer}/`, {});
+      expect(response!.status()).toBe(405);
+      expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
+        .toMatchInlineSnapshot(`
+        "<div data-test-id=\\"app-catch-boundary\\">
+          <h1>
+            405<!-- -->
+            Uh-oh!
+          </h1>
+        </div>
+        "
+      `);
+    });
+  });
+
   describe("an action threw a response", () => {
     describe("in an action with a catch boundary", () => {
       it("renders the catch boundary without JavaScript", async () => {

@@ -37,8 +37,8 @@ export function createRequestHandler(
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
-  return (request, loadContext = {}) =>
-    isDataRequest(request)
+  return async (request, loadContext = {}) => {
+    let response = await (isDataRequest(request)
       ? handleDataRequest(request, loadContext, build, platform, routes)
       : handleDocumentRequest(
           request,
@@ -47,7 +47,18 @@ export function createRequestHandler(
           platform,
           routes,
           serverMode
-        );
+        ));
+
+    if (isHeadRequest(request)) {
+      return new Response(null, {
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText
+      });
+    }
+
+    return response;
+  };
 }
 
 async function handleDataRequest(
@@ -147,13 +158,14 @@ async function handleDocumentRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
+  let requestState: false | "no-match" | "invalid-request" =
+    isValidDocumentRequest(request) ? false : "invalid-request";
   let matches = matchServerRoutes(routes, url.pathname);
-  let isNoMatch = false;
 
   if (!matches) {
     // If we do not match a user-provided-route, fall back to the root
     // to allow the CatchBoundary to take over
-    isNoMatch = true;
+    requestState = "no-match";
     matches = [
       {
         params: {},
@@ -177,7 +189,7 @@ async function handleDocumentRequest(
   let actionResponse: Response | undefined;
   let actionRouteId: string | undefined;
 
-  if (isNoMatch) {
+  if (requestState) {
     componentDidCatchEmulator.trackCatchBoundaries = false;
     let withBoundaries = getMatchesUpToDeepestBoundary(
       matches,
@@ -188,7 +200,7 @@ async function handleDocumentRequest(
         ? withBoundaries[withBoundaries.length - 1].route.id
         : null;
     componentDidCatchEmulator.catch = {
-      status: 404,
+      status: requestState === "no-match" ? 404 : 405,
       data: null
     };
   } else if (isActionRequest(request)) {
@@ -238,7 +250,7 @@ async function handleDocumentRequest(
   }
 
   // If we did not match a route, there is no need to call any loaders
-  let matchesToLoad = isNoMatch ? [] : matches;
+  let matchesToLoad = requestState === "no-match" ? [] : matches;
   switch (actionState) {
     case "caught":
       matchesToLoad = getMatchesUpToDeepestBoundary(
@@ -266,16 +278,15 @@ async function handleDocumentRequest(
   // code is a little weird due to the way unhandled promise rejections are
   // handled in node. We use a .catch() handler on each promise to avoid the
   // warning, then handle errors manually afterwards.
-  let routeLoaderPromises: Promise<
-    Response | Error
-  >[] = matchesToLoad.map(match =>
-    loadRouteData(
-      build,
-      match.route.id,
-      request.clone(),
-      loadContext,
-      match.params
-    ).catch(error => error)
+  let routeLoaderPromises: Promise<Response | Error>[] = matchesToLoad.map(
+    match =>
+      loadRouteData(
+        build,
+        match.route.id,
+        request.clone(),
+        loadContext,
+        match.params
+      ).catch(error => error)
   );
 
   let routeLoaderResults = await Promise.all(routeLoaderPromises);
@@ -349,11 +360,13 @@ async function handleDocumentRequest(
   );
 
   let statusCode =
-    actionState === "error"
+    requestState === "invalid-request"
+      ? 405
+      : actionState === "error"
       ? 500
       : notOkResponse
       ? notOkResponse.status
-      : isNoMatch
+      : requestState === "no-match"
       ? 404
       : 200;
 
@@ -453,7 +466,22 @@ function jsonError(error: string, status = 403): Response {
 }
 
 function isActionRequest(request: Request): boolean {
-  return request.method.toLowerCase() !== "get";
+  let method = request.method.toLowerCase();
+  return (
+    method === "post" ||
+    method === "put" ||
+    method === "patch" ||
+    method === "delete"
+  );
+}
+
+function isValidDocumentRequest(request: Request): boolean {
+  let method = request.method.toLowerCase();
+  return method === "get" || isActionRequest(request);
+}
+
+function isHeadRequest(request: Request): boolean {
+  return request.method.toLowerCase() === "head";
 }
 
 function isDataRequest(request: Request): boolean {

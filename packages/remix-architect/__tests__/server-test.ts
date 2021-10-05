@@ -1,20 +1,17 @@
 import lambdaTester from "lambda-tester";
-import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
-import {
-  createRemixHeaders,
-  createRemixRequest,
-  createRequestHandler
-} from "../server";
+import { createRequestHandler } from "..";
+import { createRemixHeaders, createRemixRequest } from "../server";
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
-  typeof createRemixRequestHandler
->;
+let mockedCreateRequestHandler =
+  createRemixRequestHandler as jest.MockedFunction<
+    typeof createRemixRequestHandler
+  >;
 
 function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
   let now = new Date();
@@ -79,6 +76,18 @@ describe("architect createRequestHandler", () => {
         .expectResolve(res => {
           expect(res.statusCode).toBe(200);
           expect(res.body).toBe("URL: /foo/bar");
+        });
+    });
+
+    it("handles null body", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response(null, { status: 200 });
+      });
+
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawPath: "/foo/bar" }))
+        .expectResolve(res => {
+          expect(res.statusCode).toBe(200);
         });
     });
 

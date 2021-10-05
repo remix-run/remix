@@ -1,5 +1,4 @@
 import supertest from "supertest";
-import { Response, Headers } from "@remix-run/node";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import { createRequest } from "node-mocks-http";
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
@@ -47,7 +46,7 @@ describe("vercel createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      let request = supertest(createApp({}));
+      let request = supertest(createApp());
       // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
       let res = await request
         .get("/foo/bar")
@@ -55,6 +54,18 @@ describe("vercel createRequestHandler", () => {
 
       expect(res.status).toBe(200);
       expect(res.text).toBe("URL: /foo/bar");
+    });
+
+    it("handles null body", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response(null, { status: 200 });
+      });
+
+      let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.status).toBe(200);
     });
 
     it("handles status codes", async () => {
