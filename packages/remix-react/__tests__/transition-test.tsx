@@ -270,7 +270,11 @@ describe("no route match", () => {
 
     state = t.getState();
     expect(state.catchBoundaryId).toBe("root");
-    expect(state.catch).toEqual({ data: null, status: 404 });
+    expect(state.catch).toEqual({
+      data: null,
+      status: 404,
+      statusText: "Not Found"
+    });
     expect(state.matches).toMatchInlineSnapshot(`
       Array [
         Object {
@@ -1856,7 +1860,9 @@ let setup = ({ url } = { url: "/" }) => {
     }
 
     async function throwLoaderCatch() {
-      await loaderDeferreds.get(id).resolve(new CatchValue(400, null));
+      await loaderDeferreds
+        .get(id)
+        .resolve(new CatchValue(400, "Bad Request", null));
       await awaitChange();
     }
 
@@ -1866,7 +1872,9 @@ let setup = ({ url } = { url: "/" }) => {
     }
 
     async function throwActionCatch() {
-      await actionDeferreds.get(id).resolve(new CatchValue(400, null));
+      await actionDeferreds
+        .get(id)
+        .resolve(new CatchValue(400, "Bad Request", null));
       await awaitChange();
     }
 

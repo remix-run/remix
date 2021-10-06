@@ -8,6 +8,7 @@ import invariant from "./invariant";
 
 export interface CatchData<T = any> {
   status: number;
+  statusText: string;
   data: T;
 }
 
@@ -259,7 +260,11 @@ type DataCatchResult = {
 };
 
 export class CatchValue {
-  constructor(public status: number, public data: any) {}
+  constructor(
+    public status: number,
+    public statusText: string,
+    public data: any
+  ) {}
 }
 
 export type NavigationEvent = {
@@ -787,7 +792,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
         fetchers: new Map(state.fetchers),
         catch: {
           data: result.value.data,
-          status: result.value.status
+          status: result.value.status,
+          statusText: result.value.statusText
         },
         catchBoundaryId
       });
@@ -839,7 +845,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches,
       catch: {
         data: null,
-        status: 404
+        status: 404,
+        statusText: "Not Found"
       },
       catchBoundaryId,
       transition: IDLE_TRANSITION
@@ -1332,6 +1339,7 @@ async function findCatchAndBoundaryId(
 
   let extractCatchData = async (res: CatchValue) => ({
     status: res.status,
+    statusText: res.statusText,
     data: res.data
   });
 
