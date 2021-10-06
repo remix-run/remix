@@ -1,8 +1,11 @@
 import lambdaTester from "lambda-tester";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
-import { createRequestHandler } from "..";
-import { createRemixHeaders, createRemixRequest } from "../server";
+import {
+  createRequestHandler,
+  createRemixHeaders,
+  createRemixRequest
+} from "../server";
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 
 // We don't want to test that the remix server works here (that's what the
@@ -71,7 +74,7 @@ describe("architect createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined }))
+      await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve(res => {
           expect(res.statusCode).toBe(200);
@@ -84,7 +87,7 @@ describe("architect createRequestHandler", () => {
         return new Response(null, { status: 200 });
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined }))
+      await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve(res => {
           expect(res.statusCode).toBe(200);
@@ -96,7 +99,7 @@ describe("architect createRequestHandler", () => {
         return new Response("", { status: 204 });
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined }))
+      await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve(res => {
           expect(res.statusCode).toBe(204);
@@ -123,7 +126,7 @@ describe("architect createRequestHandler", () => {
         return new Response("", { headers });
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined }))
+      await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/" }))
         .expectResolve(res => {
           expect(res.statusCode).toBe(200);
