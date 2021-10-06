@@ -68,11 +68,8 @@ async function handleDataRequest(
   platform: ServerPlatform,
   routes: ServerRoute[]
 ): Promise<Response> {
-  if (!isValidRequest(request)) {
-    return json(null, {
-      status: 405,
-      headers: { "X-Remix-Catch": "yes" }
-    });
+  if (!isValidRequestMethod(request)) {
+    return jsonError(`Invalid request method "${request.method}"`, 405);
   }
 
   let url = new URL(request.url);
@@ -165,18 +162,19 @@ async function handleDocumentRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
-  let requestState: false | "no-match" | "invalid-request" = isValidRequest(
-    request
-  )
-    ? false
-    : "invalid-request";
-  let matches = matchServerRoutes(routes, url.pathname);
+  let requestState: "ok" | "no-match" | "invalid-request" =
+    isValidRequestMethod(request) ? "ok" : "invalid-request";
+  let matches =
+    requestState === "ok" ? matchServerRoutes(routes, url.pathname) : null;
 
   if (!matches) {
     // If we do not match a user-provided-route, fall back to the root
     // to allow the CatchBoundary to take over while maintining invalid
     // request state if already set
-    requestState = requestState || "no-match";
+    if (requestState === "ok") {
+      requestState = "no-match";
+    }
+
     matches = [
       {
         params: {},
@@ -196,11 +194,11 @@ async function handleDocumentRequest(
     catch: undefined
   };
 
-  let responseState: "" | "caught" | "error" = "";
+  let responseState: "ok" | "caught" | "error" = "ok";
   let actionResponse: Response | undefined;
   let actionRouteId: string | undefined;
 
-  if (requestState) {
+  if (requestState !== "ok") {
     responseState = "caught";
     componentDidCatchEmulator.trackCatchBoundaries = false;
     let withBoundaries = getMatchesUpToDeepestBoundary(
@@ -214,7 +212,7 @@ async function handleDocumentRequest(
     componentDidCatchEmulator.catch = {
       status: requestState === "no-match" ? 404 : 405,
       statusText:
-        requestState === "no-match" ? "Not Fount" : "Method Not Allowed",
+        requestState === "no-match" ? "Not Found" : "Method Not Allowed",
       data: null
     };
   } else if (isActionRequest(request)) {
@@ -265,7 +263,7 @@ async function handleDocumentRequest(
   }
 
   // If we did not match a route, there is no need to call any loaders
-  let matchesToLoad = requestState === "no-match" ? [] : matches;
+  let matchesToLoad = requestState !== "ok" ? [] : matches;
   switch (responseState) {
     case "caught":
       matchesToLoad = getMatchesUpToDeepestBoundary(
@@ -376,10 +374,10 @@ async function handleDocumentRequest(
   );
 
   let statusCode =
-    requestState === "invalid-request"
-      ? 405
-      : requestState === "no-match"
+    requestState === "no-match"
       ? 404
+      : requestState === "invalid-request"
+      ? 405
       : responseState === "error"
       ? 500
       : notOkResponse
@@ -491,7 +489,7 @@ function isActionRequest(request: Request): boolean {
   );
 }
 
-function isValidRequest(request: Request): boolean {
+function isValidRequestMethod(request: Request): boolean {
   return (
     request.method.toLowerCase() === "get" ||
     isHeadRequest(request) ||
