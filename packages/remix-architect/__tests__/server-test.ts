@@ -1,4 +1,5 @@
 import lambdaTester from "lambda-tester";
+import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
 import {
@@ -6,15 +7,13 @@ import {
   createRemixHeaders,
   createRemixRequest
 } from "../server";
-import { APIGatewayProxyEventV2 } from "aws-lambda";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler =
-  createRemixRequestHandler as jest.MockedFunction<
-    typeof createRemixRequestHandler
-  >;
+let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
+  typeof createRemixRequestHandler
+>;
 
 function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
   let now = new Date();
