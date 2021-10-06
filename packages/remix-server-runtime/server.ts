@@ -68,6 +68,13 @@ async function handleDataRequest(
   platform: ServerPlatform,
   routes: ServerRoute[]
 ): Promise<Response> {
+  if (!isValidRequest(request)) {
+    return json(null, {
+      status: 405,
+      headers: { "X-Remix-Catch": "yes" }
+    });
+  }
+
   let url = new URL(request.url);
 
   let matches = matchServerRoutes(routes, url.pathname);
@@ -158,14 +165,18 @@ async function handleDocumentRequest(
 ): Promise<Response> {
   let url = new URL(request.url);
 
-  let requestState: false | "no-match" | "invalid-request" =
-    isValidDocumentRequest(request) ? false : "invalid-request";
+  let requestState: false | "no-match" | "invalid-request" = isValidRequest(
+    request
+  )
+    ? false
+    : "invalid-request";
   let matches = matchServerRoutes(routes, url.pathname);
 
   if (!matches) {
     // If we do not match a user-provided-route, fall back to the root
-    // to allow the CatchBoundary to take over
-    requestState = "no-match";
+    // to allow the CatchBoundary to take over while maintining invalid
+    // request state if already set
+    requestState = requestState || "no-match";
     matches = [
       {
         params: {},
@@ -185,11 +196,12 @@ async function handleDocumentRequest(
     catch: undefined
   };
 
-  let actionState: "" | "caught" | "error" = "";
+  let responseState: "" | "caught" | "error" = "";
   let actionResponse: Response | undefined;
   let actionRouteId: string | undefined;
 
   if (requestState) {
+    responseState = "caught";
     componentDidCatchEmulator.trackCatchBoundaries = false;
     let withBoundaries = getMatchesUpToDeepestBoundary(
       matches,
@@ -201,6 +213,8 @@ async function handleDocumentRequest(
         : null;
     componentDidCatchEmulator.catch = {
       status: requestState === "no-match" ? 404 : 405,
+      statusText:
+        requestState === "no-match" ? "Not Fount" : "Method Not Allowed",
       data: null
     };
   } else if (isActionRequest(request)) {
@@ -223,7 +237,7 @@ async function handleDocumentRequest(
       }
     } catch (error: any) {
       let formattedError = (await platform.formatServerError?.(error)) || error;
-      actionState = "error";
+      responseState = "error";
       let withBoundaries = getMatchesUpToDeepestBoundary(
         matches,
         "ErrorBoundary"
@@ -235,7 +249,7 @@ async function handleDocumentRequest(
   }
 
   if (actionResponse && isCatchResponse(actionResponse)) {
-    actionState = "caught";
+    responseState = "caught";
     let withBoundaries = getMatchesUpToDeepestBoundary(
       matches,
       "CatchBoundary"
@@ -245,13 +259,14 @@ async function handleDocumentRequest(
       withBoundaries[withBoundaries.length - 1].route.id;
     componentDidCatchEmulator.catch = {
       status: actionResponse.status,
+      statusText: actionResponse.statusText,
       data: await extractData(actionResponse.clone())
     };
   }
 
   // If we did not match a route, there is no need to call any loaders
   let matchesToLoad = requestState === "no-match" ? [] : matches;
-  switch (actionState) {
+  switch (responseState) {
     case "caught":
       matchesToLoad = getMatchesUpToDeepestBoundary(
         // get rid of the action, we don't want to call it's loader either
@@ -307,9 +322,9 @@ async function handleDocumentRequest(
     // We just give up and move on with rendering the error as deeply as we can,
     // which is the previous iteration of this loop
     if (
-      (actionState === "error" &&
+      (responseState === "error" &&
         (response instanceof Error || isRedirectResponse(response))) ||
-      (actionState === "caught" && isCatchResponse(response))
+      (responseState === "caught" && isCatchResponse(response))
     ) {
       break;
     }
@@ -344,6 +359,7 @@ async function handleDocumentRequest(
       componentDidCatchEmulator.trackCatchBoundaries = false;
       componentDidCatchEmulator.catch = {
         status: response.status,
+        statusText: response.statusText,
         data: await extractData(response.clone())
       };
       routeLoaderResults[index] = json(null, { status: response.status });
@@ -362,12 +378,12 @@ async function handleDocumentRequest(
   let statusCode =
     requestState === "invalid-request"
       ? 405
-      : actionState === "error"
+      : requestState === "no-match"
+      ? 404
+      : responseState === "error"
       ? 500
       : notOkResponse
       ? notOkResponse.status
-      : requestState === "no-match"
-      ? 404
       : 200;
 
   let renderableMatches = getRenderableMatches(
@@ -475,9 +491,12 @@ function isActionRequest(request: Request): boolean {
   );
 }
 
-function isValidDocumentRequest(request: Request): boolean {
-  let method = request.method.toLowerCase();
-  return method === "get" || method === "head" || isActionRequest(request);
+function isValidRequest(request: Request): boolean {
+  return (
+    request.method.toLowerCase() === "get" ||
+    isHeadRequest(request) ||
+    isActionRequest(request)
+  );
 }
 
 function isHeadRequest(request: Request): boolean {

@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import React from "react";
-import type { Params } from "react-router"
+import type { Params } from "react-router";
 
 import type { RouteModules, ShouldReloadFunction } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
@@ -153,7 +153,11 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
     if (redirect) return redirect;
 
     if (isCatchResponse(result)) {
-      throw new CatchValue(result.status, await extractData(result.clone()));
+      throw new CatchValue(
+        result.status,
+        result.statusText,
+        await extractData(result.clone())
+      );
     }
 
     let data = await extractData(result);
@@ -174,7 +178,11 @@ function createAction(route: EntryRoute) {
     }
 
     if (isCatchResponse(result)) {
-      throw new CatchValue(result.status, await extractData(result.clone()));
+      throw new CatchValue(
+        result.status,
+        result.statusText,
+        await extractData(result.clone())
+      );
     }
 
     let redirect = await checkRedirect(result);

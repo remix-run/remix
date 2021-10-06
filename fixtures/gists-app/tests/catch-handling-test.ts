@@ -58,8 +58,82 @@ describe("thrown responses", () => {
         "<div data-test-id=\\"app-catch-boundary\\">
           <h1>
             405<!-- -->
-            Uh-oh!
+            <!-- -->Method Not Allowed
           </h1>
+        </div>
+        "
+      `);
+    });
+
+    it("renders nested catch boundary without javascript", async () => {
+      await Utils.disableJavaScript(page, request => {
+        request.continue({
+          method: "OPTIONS"
+        });
+      });
+
+      let response = await page.goto(
+        `${testServer}/loader-errors/nested-catch`,
+        {}
+      );
+      expect(response!.status()).toBe(405);
+      expect(
+        await Utils.getHtml(
+          page,
+          '[data-test-id="/loader-errors/nested-catch"]'
+        )
+      ).toMatchInlineSnapshot(`
+        "<div data-test-id=\\"/loader-errors/nested-catch\\">
+          <h2>Nested Catch Boundary</h2>
+          <a href=\\"/loader-errors/nested-catch?authed=true\\">Login</a>
+          <p>
+            There was an expected error at this specific route. The parent still renders
+            cause it was fine, but this one threw an expected response.
+          </p>
+          <p>
+            Status:
+            <!-- -->405<!-- -->
+            <!-- -->Method Not Allowed
+          </p>
+          <pre><code>null</code></pre>
+        </div>
+        "
+      `);
+    });
+
+    it("renders nested catch boundary with javascript", async () => {
+      await page.setRequestInterception(true);
+      page.on("request", request => {
+        if (request.url().endsWith("nested-catch"))
+          request.continue({
+            method: "OPTIONS"
+          });
+        else request.continue();
+      });
+
+      await page.goto(`${testServer}/`);
+      await Utils.reactIsHydrated(page);
+
+      await page.click('a[href="/loader-errors/nested-catch"]');
+      await page.waitForSelector(
+        '[data-test-id="/loader-errors/nested-catch"]'
+      );
+
+      expect(
+        await Utils.getHtml(
+          page,
+          '[data-test-id="/loader-errors/nested-catch"]'
+        )
+      ).toMatchInlineSnapshot(`
+        "<div data-test-id=\\"/loader-errors/nested-catch\\">
+          <h2>Nested Catch Boundary</h2>
+          <a href=\\"/loader-errors/nested-catch?authed=true\\">Login</a>
+          <p>
+            There was an expected error at this specific route. The parent still renders
+            cause it was fine, but this one threw an expected response.
+          </p>
+          <p>Status: 405 Method Not Allowed</p>
+          <pre><code>null</code></pre>
         </div>
         "
       `);
@@ -138,7 +212,7 @@ describe("thrown responses", () => {
           "<div data-test-id=\\"app-catch-boundary\\">
             <h1>
               401<!-- -->
-              Uh-oh!
+              <!-- -->Unauthorized
             </h1>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
@@ -157,7 +231,7 @@ describe("thrown responses", () => {
         );
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>401 Uh-oh!</h1>
+            <h1>401 Unauthorized</h1>
             <pre><code>\\"action catch data!\\"</code></pre>
           </div>
           "
@@ -192,7 +266,7 @@ describe("thrown responses", () => {
             "<div data-test-id=\\"app-catch-boundary\\">
               <h1>
                 401<!-- -->
-                Uh-oh!
+                <!-- -->Unauthorized
               </h1>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
@@ -212,7 +286,7 @@ describe("thrown responses", () => {
           );
           expect(html).toMatchInlineSnapshot(`
             "<div data-test-id=\\"app-catch-boundary\\">
-              <h1>401 Uh-oh!</h1>
+              <h1>401 Unauthorized</h1>
               <pre><code>\\"loader catch data!\\"</code></pre>
             </div>
             "
@@ -229,7 +303,7 @@ describe("thrown responses", () => {
           "<div data-test-id=\\"app-catch-boundary\\">
             <h1>
               401<!-- -->
-              Uh-oh!
+              <!-- -->Unauthorized
             </h1>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
@@ -253,7 +327,7 @@ describe("thrown responses", () => {
         expect(await Utils.getHtml(page, '[data-test-id="app-catch-boundary"]'))
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-catch-boundary\\">
-            <h1>401 Uh-oh!</h1>
+            <h1>401 Unauthorized</h1>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "
@@ -339,7 +413,8 @@ describe("thrown responses", () => {
             </p>
             <p>
               Status:
-              <!-- -->401
+              <!-- -->401<!-- -->
+              <!-- -->Unauthorized
             </p>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
@@ -375,7 +450,7 @@ describe("thrown responses", () => {
               There was an expected error at this specific route. The parent still renders
               cause it was fine, but this one threw an expected response.
             </p>
-            <p>Status: 401</p>
+            <p>Status: 401 Unauthorized</p>
             <pre><code>\\"catch data!\\"</code></pre>
           </div>
           "
