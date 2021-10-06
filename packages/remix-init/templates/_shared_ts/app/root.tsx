@@ -61,16 +61,12 @@ export function CatchBoundary() {
 
   switch (caught.status) {
     case 401:
-      return (
-        <Document title="401 Unauthorized">
-          <h1>401 Unauthorized</h1>
-        </Document>
-      );
-
     case 404:
       return (
-        <Document title="404 Not Found">
-          <h1>404 Not Found</h1>
+        <Document title={`${caught.status} ${caught.statusText}`}>
+          <h1>
+            {caught.status} {caught.statusText}
+          </h1>
         </Document>
       );
 
