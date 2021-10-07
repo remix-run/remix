@@ -1,4 +1,4 @@
-import { LinksFunction } from "remix";
+import type { LinksFunction } from "remix";
 import { Link, Outlet } from "react-router-dom";
 
 // @ts-expect-error

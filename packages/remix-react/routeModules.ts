@@ -6,7 +6,7 @@ import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { ClientRoute, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
-import { Submission } from "./transition";
+import type { Submission } from "./transition";
 
 export interface RouteModules {
   [routeId: string]: RouteModule;

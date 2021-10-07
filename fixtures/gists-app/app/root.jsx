@@ -9,8 +9,8 @@ import {
   Link
 } from "remix";
 import { Outlet } from "react-router-dom";
-
 import normalizeHref from "@exampledev/new.css/new.css";
+
 import stylesHref from "./styles/app.css";
 
 export function links() {

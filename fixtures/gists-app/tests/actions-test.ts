@@ -1,5 +1,6 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
+
 import * as Utils from "./utils";
 
 const testPort = 3000;

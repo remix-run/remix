@@ -1,4 +1,3 @@
-import styles from "../styles/pending-forms.css";
 import { useEffect, useState } from "react";
 import type { LoaderFunction } from "remix";
 import {
@@ -10,6 +9,8 @@ import {
   Link
 } from "remix";
 import { useSearchParams } from "react-router-dom";
+
+import styles from "../styles/pending-forms.css";
 
 interface Task {
   id: string;

@@ -1,10 +1,13 @@
 // import type { Location } from "history";
+import type { Location} from "history";
+import { parsePath } from "history";
+
 import type { AssetsManifest } from "./entry";
 import type { ClientRoute } from "./routes";
 import type { RouteMatch } from "./routeMatching";
 // import { matchClientRoutes } from "./routeMatching";
-import { RouteModules, RouteModule, loadRouteModule } from "./routeModules";
-import { Location, parsePath } from "history";
+import type { RouteModules, RouteModule} from "./routeModules";
+import { loadRouteModule } from "./routeModules";
 
 /**
  * Represents a `<link>` element.

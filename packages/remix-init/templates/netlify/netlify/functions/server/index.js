@@ -1,5 +1,4 @@
 const path = require("path");
-
 const { createRequestHandler } = require("@remix-run/netlify");
 
 const BUILD_DIR = path.join(process.cwd(), "netlify");

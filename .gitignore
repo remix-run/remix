@@ -7,3 +7,5 @@ yarn-error.log
 /MICHAEL_TODOS.md
 /fixtures/cloudflare
 /fixtures/test
+
+.eslintcache

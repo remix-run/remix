@@ -19,8 +19,8 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 
-import { AppData } from "./data";
-import { FormEncType, FormMethod } from "./data";
+import type { AppData } from "./data";
+import type { FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
 import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
 import {
@@ -45,8 +45,8 @@ import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
-import { createTransitionManager, Fetcher, Submission } from "./transition";
-import type { Transition } from "./transition";
+import { createTransitionManager } from "./transition";
+import type { Transition , Fetcher, Submission } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
