@@ -5,7 +5,6 @@ import type {
   CatchBoundaryComponent,
   ErrorBoundaryComponent
 } from "./routeModules";
-
 import type { ThrownResponse } from "./errors";
 import type { AppData } from "./data";
 

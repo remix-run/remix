@@ -3,7 +3,6 @@ import {
   MethodNotAllowedError,
   NotFoundError
 } from "@cloudflare/kv-asset-handler";
-
 import type {
   AppLoadContext,
   ServerBuild,

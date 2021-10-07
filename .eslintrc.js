@@ -1,6 +1,10 @@
 module.exports = {
   extends: ["plugin:import/typescript"],
   parser: "@typescript-eslint/parser",
+  parserOptions: {
+    sourceType: "module",
+    ecmaVersion: 2018
+  },
   plugins: ["@typescript-eslint", "import"],
   settings: {
     "import/resolver": {
@@ -8,6 +12,18 @@ module.exports = {
     }
   },
   rules: {
-    "@typescript-eslint/consistent-type-imports": "error"
+    "@typescript-eslint/consistent-type-imports": "error",
+    "import/order": [
+      "error",
+      {
+        "newlines-between": "always",
+        groups: [
+          "builtin",
+          ["external", "internal"],
+          "parent",
+          ["sibling", "index"]
+        ]
+      }
+    ]
   }
 };

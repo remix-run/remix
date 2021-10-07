@@ -1,4 +1,6 @@
 import type { Location, State } from "history";
+import { parsePath } from "history";
+
 import type {
   Submission,
   TransitionManagerInit
@@ -7,7 +9,6 @@ import {
   IDLE_FETCHER,
   IDLE_TRANSITION
 } from "../transition";
-import { parsePath } from "history";
 import {
   CatchValue,
   createTransitionManager,

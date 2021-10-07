@@ -1,8 +1,8 @@
 import type { Location } from "history";
+
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { ClientRoute } from "./routes";
-
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
 
