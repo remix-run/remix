@@ -46,7 +46,7 @@ import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 import { createTransitionManager } from "./transition";
-import type { Transition , Fetcher, Submission } from "./transition";
+import type { Transition, Fetcher, Submission } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -378,11 +378,11 @@ export function RemixRoute({ id }: { id: string }) {
  */
 type PrefetchBehavior = "intent" | "render" | "none";
 
-interface RemixLinkProps extends LinkProps {
+export interface RemixLinkProps extends LinkProps {
   prefetch?: PrefetchBehavior;
 }
 
-interface RemixNavLinkProps extends NavLinkProps {
+export interface RemixNavLinkProps extends NavLinkProps {
   prefetch?: PrefetchBehavior;
 }
 

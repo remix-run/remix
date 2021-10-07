@@ -2,7 +2,13 @@ export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export { Outlet } from "react-router-dom";
 
-export type { FormProps, SubmitOptions, SubmitFunction } from "./components";
+export type {
+  FormProps,
+  SubmitOptions,
+  SubmitFunction,
+  RemixNavLinkProps as NavLinkProps,
+  RemixLinkProps as LinkProps
+} from "./components";
 export {
   Meta,
   Links,
