@@ -39,6 +39,7 @@ function Document({ children, title }) {
 
 export default function App() {
   let data = useLoaderData();
+
   return (
     <Document>
       <Outlet />
@@ -72,6 +73,7 @@ export function CatchBoundary() {
 
 export function ErrorBoundary({ error }) {
   console.error(error);
+
   return (
     <Document title="Uh-oh!">
       <h1>App Error</h1>

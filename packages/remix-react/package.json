@@ -7,7 +7,7 @@
   "browser": "browser/index.js",
   "dependencies": {
     "history": "^5.0.0",
-    "react-router-dom": "6.0.0-beta.5"
+    "react-router-dom": "6.0.0-beta.6"
   },
   "peerDependencies": {
     "react": ">=16.8",

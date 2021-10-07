@@ -7604,17 +7604,17 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz#e691d4a8e9c789365655539ab372762b0efb54f0"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-router-dom@6.0.0-beta.5:
-  version "6.0.0-beta.5"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.0.0-beta.5.tgz#7364ae41326ed7eb640c3da601ed9192be92f65e"
-  integrity sha512-l4LaL0WHiPUaLfVSMjZiGbV6uitfHTQWYVfHtmCo8dabhjTZ3gIKbAKGQVieZqi1avFVqj+s3i0Ul1ZalLr8Bw==
+react-router-dom@6.0.0-beta.6:
+  version "6.0.0-beta.6"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.0.0-beta.6.tgz#326c39382674c337b27f5d183026cdbab6373034"
+  integrity sha512-8pca4/YgQi+azEoY4KtfQMuhkIgRurmqa+mBXIICZRp71nPQX/x1lAnTw6Q2/J5dFu2rIRx1V+HA4hZ1AV0x2Q==
   dependencies:
-    react-router "6.0.0-beta.5"
+    react-router "6.0.0-beta.6"
 
-react-router@6.0.0-beta.5:
-  version "6.0.0-beta.5"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.0.0-beta.5.tgz#f86700a6a627b81cdb87e4b1cab7c20f75e230bc"
-  integrity sha512-czEOOTV0uAcK1U05EJXkCgL2X53jipBzmHAcWZ9SnKUBnLSNIxc/sdkcPNwdb99U4x8TzZyDY5BqVGGwif42qg==
+react-router@6.0.0-beta.6:
+  version "6.0.0-beta.6"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.0.0-beta.6.tgz#147e8313d3ce5b4a53b8fc1dae6f20664f5df69a"
+  integrity sha512-wuwkFWb464LwWcGuO75kYfzWPE9f5Wgj9/cRVVh8kh/IjOIDpM+8nYCs11ukMJwnwT+3pIps9t/lB9Hnk67zpw==
 
 react@^17.0.2:
   version "17.0.2"
