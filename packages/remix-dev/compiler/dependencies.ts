@@ -1,5 +1,4 @@
 import * as path from "path";
-
 // @ts-expect-error
 import readPackageJson from "read-package-json-fast";
 

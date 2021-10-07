@@ -1,14 +1,8 @@
 import type { Location, State } from "history";
 import { parsePath } from "history";
 
-import type {
-  Submission,
-  TransitionManagerInit
-} from "../transition";
-import {
-  IDLE_FETCHER,
-  IDLE_TRANSITION
-} from "../transition";
+import type { Submission, TransitionManagerInit } from "../transition";
+import { IDLE_FETCHER, IDLE_TRANSITION } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
@@ -263,7 +257,6 @@ describe("shouldReload", () => {
 describe("no route match", () => {
   it("transitions to root catch", async () => {
     let t = setup();
-    let A = t.navigate.get("/not-found");
     let state = t.getState();
     expect(t.getState().location.hash).toBe("");
     expect(t.getState().transition.state).toBe("loading");
