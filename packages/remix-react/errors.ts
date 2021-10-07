@@ -16,6 +16,7 @@ export interface ThrownResponse<
   Data = AppData
 > {
   status: Status;
+  statusText: string;
   data: Data;
 }
 

@@ -107,7 +107,7 @@ export function CatchBoundary() {
           </head>
           <body>
             <div data-test-id="app-catch-boundary">
-              <h1>{caught.status} Uh-oh!</h1>
+              <h1>{caught.status} {caught.statusText}</h1>
               {caught.data ? (
                 <pre>
                   <code>{JSON.stringify(caught.data, null, 2)}</code>

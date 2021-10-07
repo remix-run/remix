@@ -462,7 +462,7 @@ export default function InvoiceRoute() {
 }
 
 export function CatchBoundary() {
-  // this returns { status, data }
+  // this returns { status, statusText, data }
   let caught = useCatch<ThrownResponses>();
 
   switch (caught.status) {
@@ -479,7 +479,7 @@ export function CatchBoundary() {
 
   // You could also `throw new Error("Unknown status in catch boundary")`.
   // This will be caught by the closest `ErrorBoundary`.
-  return <div>Something went wrong: {invoiceCatch.status}</div>;
+  return <div>Something went wrong: {invoiceCatch.status} {invoiceCatch.statusText}</div>;
 }
 ```
 

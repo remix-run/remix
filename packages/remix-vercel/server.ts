@@ -51,10 +51,10 @@ export function createRequestHandler({
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = ((await handleRequest(
-      (request as unknown) as Request,
+    let response = (await handleRequest(
+      request as unknown as Request,
       loadContext
-    )) as unknown) as NodeResponse;
+    )) as unknown as NodeResponse;
 
     sendRemixResponse(res, response);
   };
@@ -110,13 +110,13 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
     }
   }
 
+  res.writeHead(response.status, response.headers.raw());
+
   if (Buffer.isBuffer(response.body)) {
-    return res
-      .writeHead(response.status, response.headers.raw())
-      .end(response.body);
-  } else {
-    return res
-      .writeHead(response.status, response.headers.raw())
-      .end(response.body.pipe(res));
+    return res.end(response.body);
+  } else if (response.body?.pipe) {
+    return res.end(response.body.pipe(res));
   }
+
+  return res.end();
 }
