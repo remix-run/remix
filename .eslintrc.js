@@ -1,5 +1,5 @@
 module.exports = {
-  extends: ["plugin:import/typescript"],
+  extends: ["react-app", "plugin:import/typescript"],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     sourceType: "module",

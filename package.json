@@ -53,11 +53,13 @@
     "chalk": "^4.1.0",
     "cheerio": "^1.0.0-rc.3",
     "eslint": "7.32.0",
-    "eslint-config-react-app": "^6.0.0",
+    "eslint-config-react-app": "6.0.0",
+    "eslint-import-resolver-typescript": "2.5.0",
+    "eslint-plugin-flowtype": "6.1.0",
     "eslint-plugin-import": "2.24.2",
-    "eslint-plugin-jsx-a11y": "^6.4.1",
-    "eslint-plugin-react": "^7.26.1",
-    "eslint-plugin-react-hooks": "^4.2.0",
+    "eslint-plugin-jsx-a11y": "6.4.1",
+    "eslint-plugin-react": "7.26.1",
+    "eslint-plugin-react-hooks": "4.2.0",
     "express": "^4.17.1",
     "glob": "^7.1.6",
     "history": "^5.0.0",
@@ -76,14 +78,9 @@
     "typescript": "^4.2.3",
     "unified": "^9.2.0"
   },
-  "eslintConfig": {
-    "extends": "react-app"
-  },
   "prettier": {
     "arrowParens": "avoid",
     "trailingComma": "none"
   },
-  "devDependencies": {
-    "eslint-import-resolver-typescript": "2.5.0"
-  }
+  "devDependencies": {}
 }
