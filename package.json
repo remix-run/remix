@@ -9,7 +9,8 @@
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
-    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx ."
+    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx .",
+    "prepare": "husky install"
   },
   "workspaces": [
     "packages/create-remix",
@@ -63,8 +64,10 @@
     "express": "^4.17.1",
     "glob": "^7.1.6",
     "history": "^5.0.0",
+    "husky": "7.0.2",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",
+    "lint-staged": "11.2.0",
     "meow": "^7.1.1",
     "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
@@ -81,5 +84,12 @@
   "prettier": {
     "arrowParens": "avoid",
     "trailingComma": "none"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": "prettier --write"
   }
 }
