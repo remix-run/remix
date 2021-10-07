@@ -4,12 +4,14 @@ import type {
   ServerPlatform
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type {
+  Response as NodeResponse,
+  RequestInit as NodeRequestInit
+} from "@remix-run/node";
 import {
   formatServerError,
   Headers as NodeHeaders,
-  Request as NodeRequest,
-  Response as NodeResponse,
-  RequestInit as NodeRequestInit
+  Request as NodeRequest
 } from "@remix-run/node";
 import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 

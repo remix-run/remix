@@ -6,7 +6,7 @@ import {
   createRemixRequest,
   createRequestHandler
 } from "../server";
-import { HandlerEvent } from "@netlify/functions";
+import type { HandlerEvent } from "@netlify/functions";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the netlify adapter

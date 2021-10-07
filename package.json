@@ -8,7 +8,8 @@
     "publish": "node ./scripts/publish.js",
     "test": "jest",
     "version": "node ./scripts/version.js",
-    "watch": "rollup -c -w"
+    "watch": "rollup -c -w",
+    "lint": "eslint --ext .tsx,.ts,.js ."
   },
   "workspaces": [
     "packages/create-remix",
@@ -45,16 +46,16 @@
     "@types/semver": "^7.3.4",
     "@types/ssri": "^7.1.0",
     "@typescript-eslint/eslint-plugin": "^4.8.2",
-    "@typescript-eslint/parser": "^4.8.2",
+    "@typescript-eslint/parser": "4.33.0",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
     "babel-eslint": "10.x",
     "chalk": "^4.1.0",
     "cheerio": "^1.0.0-rc.3",
-    "eslint": "^7.14.0",
+    "eslint": "7.32.0",
     "eslint-config-react-app": "^6.0.0",
     "eslint-plugin-flowtype": "^5.2.0",
-    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-import": "2.24.2",
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.21.5",
     "eslint-plugin-react-hooks": "^4.2.0",
@@ -82,5 +83,8 @@
   "prettier": {
     "arrowParens": "avoid",
     "trailingComma": "none"
+  },
+  "devDependencies": {
+    "eslint-import-resolver-typescript": "2.5.0"
   }
 }

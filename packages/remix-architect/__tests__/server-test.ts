@@ -7,7 +7,7 @@ import {
   createRemixRequest,
   createRequestHandler
 } from "../server";
-import { APIGatewayProxyEventV2 } from "aws-lambda";
+import type { APIGatewayProxyEventV2 } from "aws-lambda";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter

@@ -4,7 +4,7 @@ import {
   Request as NodeRequest,
   formatServerError
 } from "@remix-run/node";
-import {
+import type {
   APIGatewayProxyEventHeaders,
   APIGatewayProxyEventV2,
   APIGatewayProxyHandlerV2

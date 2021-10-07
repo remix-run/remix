@@ -10,7 +10,8 @@ import {
   isCatchResponse,
   isRedirectResponse
 } from "./data";
-import { CatchValue, Submission, TransitionRedirect } from "./transition";
+import type { Submission} from "./transition";
+import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
 

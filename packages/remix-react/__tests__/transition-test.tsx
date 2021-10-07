@@ -1,9 +1,11 @@
 import type { Location, State } from "history";
-import {
-  IDLE_FETCHER,
-  IDLE_TRANSITION,
+import type {
   Submission,
   TransitionManagerInit
+} from "../transition";
+import {
+  IDLE_FETCHER,
+  IDLE_TRANSITION
 } from "../transition";
 import { parsePath } from "history";
 import {

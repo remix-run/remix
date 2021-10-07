@@ -1,5 +1,5 @@
 import invariant from "./invariant";
-import { Submission } from "./transition";
+import type { Submission } from "./transition";
 
 export type AppData = any;
 
