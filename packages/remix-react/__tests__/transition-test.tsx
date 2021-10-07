@@ -257,6 +257,7 @@ describe("shouldReload", () => {
 describe("no route match", () => {
   it("transitions to root catch", async () => {
     let t = setup();
+    t.navigate.get("/not-found");
     let state = t.getState();
     expect(t.getState().location.hash).toBe("");
     expect(t.getState().transition.state).toBe("loading");
