@@ -23,6 +23,7 @@ function postFromModule(mod: any): Post {
 }
 
 export let loader: LoaderFunction = () => {
+  console.log({ HERE: "HERE!!!!" });
   let data: PostsData = {
     posts: [
       postFromModule(helloPost),
@@ -50,6 +51,7 @@ export let headers: HeadersFunction = ({ loaderHeaders }) => {
 
 export default function BlogPosts() {
   let locationPending = usePendingLocation();
+  console.log({ useRouteData: useRouteData<PostsData>() });
   let { posts } = useRouteData<PostsData>();
 
   return (

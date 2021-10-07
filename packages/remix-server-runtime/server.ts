@@ -266,16 +266,15 @@ async function handleDocumentRequest(
   // code is a little weird due to the way unhandled promise rejections are
   // handled in node. We use a .catch() handler on each promise to avoid the
   // warning, then handle errors manually afterwards.
-  let routeLoaderPromises: Promise<
-    Response | Error
-  >[] = matchesToLoad.map(match =>
-    loadRouteData(
-      build,
-      match.route.id,
-      request.clone(),
-      loadContext,
-      match.params
-    ).catch(error => error)
+  let routeLoaderPromises: Promise<Response | Error>[] = matchesToLoad.map(
+    match =>
+      loadRouteData(
+        build,
+        match.route.id,
+        request.clone(),
+        loadContext,
+        match.params
+      ).catch(error => error)
   );
 
   let routeLoaderResults = await Promise.all(routeLoaderPromises);
