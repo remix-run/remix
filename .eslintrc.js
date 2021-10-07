@@ -19,10 +19,10 @@ module.exports = {
       {
         "newlines-between": "always",
         groups: [
-   		["builtin", "external", "internal"],
-		["parent", "sibling", "index"]
-    	]
+          ["builtin", "external", "internal"],
+          ["parent", "sibling", "index"]
+        ]
       }
     ]
   }
-}
+};
