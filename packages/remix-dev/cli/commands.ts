@@ -1,5 +1,4 @@
 import * as path from "path";
-
 import * as fse from "fs-extra";
 import signalExit from "signal-exit";
 import prettyMs from "pretty-ms";

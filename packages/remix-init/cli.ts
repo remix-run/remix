@@ -1,6 +1,5 @@
 import * as path from "path";
 import { execSync } from "child_process";
-
 import fse from "fs-extra";
 import inquirer from "inquirer";
 import semver from "semver";

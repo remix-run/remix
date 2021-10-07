@@ -9,7 +9,7 @@
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
-    "lint": "eslint --ext .tsx,.ts,.js ."
+    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx ."
   },
   "workspaces": [
     "packages/create-remix",

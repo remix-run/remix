@@ -1,5 +1,4 @@
 import path from "path";
-
 import type { RollupOutput } from "rollup";
 
 import { BuildMode, BuildTarget } from "../build";

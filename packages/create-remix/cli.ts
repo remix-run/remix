@@ -1,7 +1,6 @@
 import * as path from "path";
 import { execSync } from "child_process";
 import { homedir } from "os";
-
 import chalkAnimation from "chalk-animation";
 import fse from "fs-extra";
 import semver from "semver";

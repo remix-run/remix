@@ -2,7 +2,6 @@ import childProcess from "child_process";
 import fs from "fs";
 import path from "path";
 import util from "util";
-
 import semver from "semver";
 
 const execFile = util.promisify(childProcess.execFile);
