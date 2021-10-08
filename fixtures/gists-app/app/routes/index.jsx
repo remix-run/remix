@@ -123,6 +123,9 @@ export default function Index() {
               Catchall without layout splat
             </Link>
           </li>
+          <li>
+            <Link to="/with-layout">Route with _layout</Link>
+          </li>
         </ul>
       </nav>
       <Shared />
