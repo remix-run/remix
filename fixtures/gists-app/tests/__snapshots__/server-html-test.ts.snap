@@ -58,6 +58,7 @@ exports[`the server HTML for the root URL is correct 1`] = `
             >Catchall without layout splat</a
           >
         </li>
+        <li><a href=\\"/with-layout\\">Route with _layout</a></li>
       </ul>
     </nav>
     <div><p>Shared</p></div>
