@@ -42,6 +42,22 @@ exports[`the server HTML for the root URL is correct 1`] = `
         </li>
         <li><a href=\\"/multiple-set-cookies\\">Multiple Set Cookie Headers</a></li>
         <li><a href=\\"/prefs\\">Preferences</a></li>
+        <li><a href=\\"/catchall/flat\\">Catchall flat</a></li>
+        <li><a href=\\"/catchall/flat/sub\\">Catchall flat subroute</a></li>
+        <li>
+          <a href=\\"/catchall-nested\\"
+            >Catchall with layout index takes precedence</a
+          >
+        </li>
+        <li><a href=\\"/catchall-nested/sub\\">Catchall with layout splat</a></li>
+        <li>
+          <a href=\\"/catchall-nested-no-layout\\">Catchall without layout</a>
+        </li>
+        <li>
+          <a href=\\"/catchall-nested-no-layout/sub\\"
+            >Catchall without layout splat</a
+          >
+        </li>
       </ul>
     </nav>
     <div><p>Shared</p></div>

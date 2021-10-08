@@ -101,6 +101,28 @@ export default function Index() {
           <li>
             <Link to="prefs">Preferences</Link>
           </li>
+          <li>
+            <Link to="/catchall/flat">Catchall flat</Link>
+          </li>
+          <li>
+            <Link to="/catchall/flat/sub">Catchall flat subroute</Link>
+          </li>
+          <li>
+            <Link to="/catchall-nested">
+              Catchall with layout index takes precedence
+            </Link>
+          </li>
+          <li>
+            <Link to="/catchall-nested/sub">Catchall with layout splat</Link>
+          </li>
+          <li>
+            <Link to="/catchall-nested-no-layout">Catchall without layout</Link>
+          </li>
+          <li>
+            <Link to="/catchall-nested-no-layout/sub">
+              Catchall without layout splat
+            </Link>
+          </li>
         </ul>
       </nav>
       <Shared />
