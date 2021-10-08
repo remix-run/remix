@@ -11,7 +11,9 @@ export type {
   FormEncType,
   RemixServerProps,
   ShouldReloadFunction,
-  ThrownResponse
+  ThrownResponse,
+  LinkProps,
+  NavLinkProps
 } from "@remix-run/react";
 
 export {

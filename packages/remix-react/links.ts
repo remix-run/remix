@@ -1,12 +1,12 @@
 // import type { Location } from "history";
-import type { Location} from "history";
+import type { Location } from "history";
 import { parsePath } from "history";
 
 import type { AssetsManifest } from "./entry";
 import type { ClientRoute } from "./routes";
 import type { RouteMatch } from "./routeMatching";
 // import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, RouteModule} from "./routeModules";
+import type { RouteModules, RouteModule } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 
 /**
@@ -298,30 +298,34 @@ export function getDataLinkHrefs(
   manifest: AssetsManifest
 ): string[] {
   let path = parsePathPatch(page);
-  return matches
-    .filter(match => manifest.routes[match.route.id].hasLoader)
-    .map(match => {
-      let { pathname, search } = path;
-      let searchParams = new URLSearchParams(search);
-      searchParams.append("_data", match.route.id);
-      return `${pathname}?${searchParams}`;
-    });
+  return dedupeHrefs(
+    matches
+      .filter(match => manifest.routes[match.route.id].hasLoader)
+      .map(match => {
+        let { pathname, search } = path;
+        let searchParams = new URLSearchParams(search);
+        searchParams.append("_data", match.route.id);
+        return `${pathname}?${searchParams}`;
+      })
+  );
 }
 
 export function getModuleLinkHrefs(
   matches: RouteMatch<ClientRoute>[],
   manifestPatch: AssetsManifest
 ): string[] {
-  return matches
-    .map(match => {
-      let route = manifestPatch.routes[match.route.id];
-      let hrefs = [route.module];
-      if (route.imports) {
-        hrefs = hrefs.concat(route.imports);
-      }
-      return hrefs;
-    })
-    .flat(1);
+  return dedupeHrefs(
+    matches
+      .map(match => {
+        let route = manifestPatch.routes[match.route.id];
+        let hrefs = [route.module];
+        if (route.imports) {
+          hrefs = hrefs.concat(route.imports);
+        }
+        return hrefs;
+      })
+      .flat(1)
+  );
 }
 
 // The `<Script>` will render rel=modulepreload for the current page, we don't
@@ -331,18 +335,24 @@ function getCurrentPageModulePreloadHrefs(
   matches: RouteMatch<ClientRoute>[],
   manifest: AssetsManifest
 ): string[] {
-  return matches
-    .map(match => {
-      let route = manifest.routes[match.route.id];
-      let hrefs = [route.module];
+  return dedupeHrefs(
+    matches
+      .map(match => {
+        let route = manifest.routes[match.route.id];
+        let hrefs = [route.module];
 
-      if (route.imports) {
-        hrefs = hrefs.concat(route.imports);
-      }
+        if (route.imports) {
+          hrefs = hrefs.concat(route.imports);
+        }
 
-      return hrefs;
-    })
-    .flat(1);
+        return hrefs;
+      })
+      .flat(1)
+  );
+}
+
+function dedupeHrefs(hrefs: string[]): string[] {
+  return [...new Set(hrefs)];
 }
 
 export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {

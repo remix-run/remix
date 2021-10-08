@@ -1,6 +1,6 @@
 # History of Changes
 
-## Unreleased
+## 0.19.0 - Fri Oct 08 2021
 
 ### Improvements
 
