@@ -10,7 +10,7 @@ import {
   isCatchResponse,
   isRedirectResponse
 } from "./data";
-import type { Submission} from "./transition";
+import type { Submission } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
@@ -19,13 +19,15 @@ export interface RouteManifest<Route> {
   [routeId: string]: Route;
 }
 
+// NOTE: make sure to change the Route in server-runtime if you change this
 interface Route {
   caseSensitive?: boolean;
   id: string;
-  path: string;
+  path?: string;
   index?: boolean;
 }
 
+// NOTE: make sure to change the EntryRoute in server-runtime if you change this
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
