@@ -145,26 +145,30 @@ async function loadRouteModuleWithBlockingLinks(
 
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
-    let [result] = await Promise.all([
-      fetchData(url, route.id, signal, submission),
-      loadRouteModuleWithBlockingLinks(route, routeModules)
-    ]);
+    if (route.hasLoader) {
+      let [result] = await Promise.all([
+        fetchData(url, route.id, signal, submission),
+        loadRouteModuleWithBlockingLinks(route, routeModules)
+      ]);
 
-    if (result instanceof Error) throw result;
+      if (result instanceof Error) throw result;
 
-    let redirect = await checkRedirect(result);
-    if (redirect) return redirect;
+      let redirect = await checkRedirect(result);
+      if (redirect) return redirect;
 
-    if (isCatchResponse(result)) {
-      throw new CatchValue(
-        result.status,
-        result.statusText,
-        await extractData(result.clone())
-      );
+      if (isCatchResponse(result)) {
+        throw new CatchValue(
+          result.status,
+          result.statusText,
+          await extractData(result.clone())
+        );
+      }
+
+      let data = await extractData(result);
+      return data;
+    } else {
+      await loadRouteModuleWithBlockingLinks(route, routeModules);
     }
-
-    let data = await extractData(result);
-    return data;
   };
 
   return loader;
