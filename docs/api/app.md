@@ -109,7 +109,9 @@ There are a few conventions that Remix uses you should be aware of.
 
   Params can be nested routes, just create a folder with the `$` in it.
 
-- **`routes/404.tsx`**: When a URL can't be matched to a route, Remix uses this file to render a 404 page. We don't like this convention because "/404" should be a valid URL (maybe you're showing the best BBQ in Atlanta!). This is what we've got right now though. This will probably.
+- **`routes/files/$.js`**: To add a "splat" path (some people call this a "catchall") name the file simply `$.js`. It will create a route path pattern like `files/*`. You can also use this along with dot file names: `routes/files.$.js`.
+
+- **`routes/__some-layout/some-path.js`**: Prefixing a folder with `__` will create a "layout route". Layout routes are routes that don't add anything to the URL for matching, but do add nested components in the tree for layouts. Make sure to also have `__some-layout.js` as well. For example, all of your marketing pages could share a layout in the route tree with `routes/__marketing.js` as the layout and then all of the child routes go in `routes/__marketing/products.js` and `routes/__marketing/buy.js`. The `__marketing.js` route won't add any segments to the URL, but it will render when it's child routes match.
 
 # entry.client.js
 
