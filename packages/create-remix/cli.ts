@@ -140,7 +140,7 @@ function getNpxCommand(script: string): string {
   let version = execSync("npm --version").toString().trim();
   let major = semver.major(version);
 
-  if (major === 7) {
+  if (major >= 7) {
     return `npx --yes --quiet ${script}`;
   } else if (major === 6) {
     return `npx --quiet ${script}`;
