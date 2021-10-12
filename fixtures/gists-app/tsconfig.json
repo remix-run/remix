@@ -6,9 +6,10 @@
     "moduleResolution": "node",
     "target": "ES2020",
     "module": "ES2020",
+    "baseUrl": ".",
     "strict": true,
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["app/*"]
     },
 
     // Remix takes care of building everything in `remix build`.
