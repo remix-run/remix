@@ -97,7 +97,7 @@ When a layout route's URL is matched exactly, the "index" route will render into
 
 ## Defining a child route with params
 
-In the Team component we linked to each member of the team, let's go add the route to display their information. Make a file named `routes/team/$member.tsx`. If you're doing it from the terminal you may need to escape the \$, but text editors usually handle this just fine.
+In the Team component we linked to each member of the team, let's go add the route to display their information. Make a file named `app/routes/team/$member.tsx`. If you're doing it from the terminal you may need to escape the \$, but text editors usually handle this just fine.
 
 ```bash
 touch app/routes/team/$member.tsx
@@ -149,7 +149,7 @@ export default function TeamMember() {
 }
 ```
 
-Note that Remix parses the params from the url (the `$member` portion of `routes/team/$member`) and passes them to the loader.
+Note that Remix parses the params from the url (the `$member` portion of `app/routes/team/$member.tsx`) and passes them to the loader.
 
 You should be able to visit http://localhost:3000/team, click the members, and watch the data update.
 

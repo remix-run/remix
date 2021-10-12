@@ -19,17 +19,17 @@ It's a nested layout tree. In Remix, we call every one of these layouts a "route
 
 ## Defining nested routes
 
-Nested folders create nested URLs. So if you put something in `routes/invoices/$id.js` that creates a URL like "/invoices/123". The URL maps identically to the file system. But there's more--nested routes in the file system create nested layouts in the UI. Let's check it out in our example app.
+Nested folders create nested URLs. So if you put something in `app/routes/invoices/$id.js` that creates a URL like "/invoices/123". The URL maps identically to the file system. But there's more--nested routes in the file system create nested layouts in the UI. Let's check it out in our example app.
 
 TODO: ADD THE ANIMATED EXAMPLE
 
 The root layout of this UI is "App.js" and it matches up with the domain name in the URL. This isn't a route yet, this is just the layout, it renders all the time, wrapping the entire UI. It holds the top nav with the links to "Invoices | Projects | Customers".
 
-The next segment of the URL, and our next layout, is a file in `routes/invoices.js`. This controls the invoices on the left and wraps the details/activity views. This is our first layout route that matched the URL.
+The next segment of the URL, and our next layout, is a file in `app/routes/invoices.js`. This controls the invoices on the left and wraps the details/activity views. This is our first layout route that matched the URL.
 
-The nesting gets deeper as we look at the `routes/invoices/$id.js` component. This is another layout route that renders the Invoice number and links to the "Details | Activity" pages.
+The nesting gets deeper as we look at the `app/routes/invoices/$id.js` component. This is another layout route that renders the Invoice number and links to the "Details | Activity" pages.
 
-And finally, our final route, `routes/invoices/$id/activity.js`. Sometime we call these routes that aren't layouts "leaf routes".
+And finally, our final route, `app/routes/invoices/$id/activity.js`. Sometime we call these routes that aren't layouts "leaf routes".
 
 ## What it means
 
@@ -74,9 +74,9 @@ The component tree would be:
 
 ## Nested URLs without nesting layouts
 
-If you want to add slashes to the URL, but not create a layout hierarchy, use `.` in the file name instead of putting the file into folders. For example, if you wanted the URL `/invoices/new` but didn't want it to be wrapped in the `routes/invoices.js` layout, don't put it in the `routes/invoices/new.js`, make a file named `routes/invoices.new.js`. The `.` will be changed to a `/` in the url.
+If you want to add slashes to the URL, but not create a layout hierarchy, use `.` in the file name instead of putting the file into folders. For example, if you wanted the URL `/invoices/new` but didn't want it to be wrapped in the `app/routes/invoices.js` layout, don't put it in the `app/routes/invoices/new.js`, make a file named `app/routes/invoices.new.js`. The `.` will be changed to a `/` in the url.
 
-If we created the file `routes/invoices.new.js` the component tree looks like this:
+If we created the file `app/routes/invoices.new.js` the component tree looks like this:
 
 ```tsx
 <App>
@@ -84,7 +84,7 @@ If we created the file `routes/invoices.new.js` the component tree looks like th
 </App>
 ```
 
-If we created the file `routes/invoices/new.js`, the component tree looks like this:
+If we created the file `app/routes/invoices/new.js`, the component tree looks like this:
 
 ```tsx
 <App>
@@ -98,11 +98,11 @@ Nested files = nested urls + nested layouts.
 
 Flat files = nested urls + no layouts.
 
-You can introduce nesting or non-nesting at any level of your routes, like `routes/invoices/$id.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`.
+You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices/$id.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`.
 
 ## Review
 
-Assuming the following `routes/` directory:
+Assuming the following `app/routes/` directory:
 
 ```
 ├── 404.js

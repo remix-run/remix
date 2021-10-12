@@ -12,15 +12,15 @@ Using the route module `links` API, we can solve these problems easily.
 
 ## Adding styles to our gists routes
 
-Go ahead and add the stylesheets `styles/team.css` and `styles/team.$member.css` and add whatever styles you want. The file names aren't important.
+Go ahead and add the stylesheets `app/styles/team.css` and `app/styles/team.$member.css` and add whatever styles you want. The file names aren't important.
 
-Now open up `routes/team.tsx` and add this:
+Now open up `app/routes/team.tsx` and add this:
 
 ```tsx [1,2]
 import type { LinksFunction } from "remix";
 import styles from "../styles/team.css";
 
-let links: LinksFunction = () => {
+export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: styles }];
 };
 ```
@@ -29,14 +29,14 @@ Remix will emit that asset to your browser build directory and fingerprint the f
 
 The `links` export tells Remix which `<link>` tags to add to the document when this page is active (and which to remove when its not). Combining these two features we can add any stylesheets we want when this route is active, and automatically remove them when it's not.
 
-Now go do the same in `routes/team/$member.tsx`:
+Now go do the same in `app/routes/team/$member.tsx`:
 
 ```tsx [3,5-7]
 import type { LinksFunction } from "remix";
 
 import styles from "../../styles/team.$member.css";
 
-let links: LinksFunction = () => {
+export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: styles }];
 };
 ```
