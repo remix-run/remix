@@ -29,7 +29,7 @@ Enough chat, let's go!
 
 ```sh
 cd my-remix-app
-remix run
+remix dev
 ```
 
 Your new website should be up at [http://localhost:3000](http://localhost:3000).

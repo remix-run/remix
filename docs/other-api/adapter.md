@@ -26,7 +26,9 @@ Each adapter has the same API. In the future we may have helpers specific to the
 Creates a request handler for your server to serve the app. This is the ultimate entry point of your Remix application.
 
 ```ts
-const { createRequestHandler } = require("@remix-run/{adapter}");
+const {
+  createRequestHandler,
+} = require("@remix-run/{adapter}");
 createRequestHandler({ build, getLoadContext });
 ```
 
@@ -34,7 +36,9 @@ Here's a full example with express:
 
 ```ts [2, 9-20]
 const express = require("express");
-const { createRequestHandler } = require("@remix-run/express");
+const {
+  createRequestHandler,
+} = require("@remix-run/express");
 
 let app = express();
 
@@ -42,7 +46,7 @@ let app = express();
 app.all(
   "*",
   createRequestHandler({
-    // `remix build` and `remix run` output files to a build directory, you need
+    // `remix build` and `remix dev` output files to a build directory, you need
     // to pass that build to the request handler
     build: require("./build"),
 
@@ -51,7 +55,7 @@ app.all(
     // and your server
     getLoadContext(req, res) {
       return {};
-    }
+    },
   })
 );
 ```
@@ -59,8 +63,12 @@ app.all(
 Here's an example with Architect (AWS).
 
 ```ts
-const { createRequestHandler } = require("@remix-run/architect");
-exports.handler = createRequestHandler({ build: require("./build") });
+const {
+  createRequestHandler,
+} = require("@remix-run/architect");
+exports.handler = createRequestHandler({
+  build: require("./build"),
+});
 ```
 
 ## Starter Templates

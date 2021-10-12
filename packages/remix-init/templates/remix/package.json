@@ -1,7 +1,7 @@
 {
   "scripts": {
     "postinstall": "remix setup node",
-    "dev": "remix run",
+    "dev": "remix dev",
     "start": "remix-serve build"
   },
   "dependencies": {
