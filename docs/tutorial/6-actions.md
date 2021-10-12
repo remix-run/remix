@@ -183,7 +183,7 @@ export default function NewGist() {
         <div>
           <p>
             <Loading /> Creating gist:{" "}
-            {transtion.submission.formData.get("fileName")}
+            {transition.submission.formData.get("fileName")}
           </p>
         </div>
       ) : (

@@ -439,7 +439,7 @@ import { useTransition } from "remix";
 function SomeComponent() {
   let transition = useTransition();
   transition.state;
-  transtion.type;
+  transition.type;
   transition.submission;
   transition.location;
 }
