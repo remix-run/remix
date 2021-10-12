@@ -7,11 +7,8 @@ Idiomatic Remix apps can be deployed anywhere because Remix adapt's the server's
 - `@remix-run/express`
 - `@remix-run/architect`
 - `@remix-run/vercel`
-
-We will be adding a few more eventually:
-
-- `@remix-run/cf-workers`
 - `@remix-run/netlify`
+- `@remix-run/cf-workers`
 
 These adapters are imported into your server's entry and is not used inside of your Remix app itself.
 
@@ -26,7 +23,9 @@ Each adapter has the same API. In the future we may have helpers specific to the
 Creates a request handler for your server to serve the app. This is the ultimate entry point of your Remix application.
 
 ```ts
-const { createRequestHandler } = require("@remix-run/{adapter}");
+const {
+  createRequestHandler,
+} = require("@remix-run/{adapter}");
 createRequestHandler({ build, getLoadContext });
 ```
 
@@ -34,7 +33,9 @@ Here's a full example with express:
 
 ```ts [2, 9-20]
 const express = require("express");
-const { createRequestHandler } = require("@remix-run/express");
+const {
+  createRequestHandler,
+} = require("@remix-run/express");
 
 let app = express();
 
@@ -51,16 +52,114 @@ app.all(
     // and your server
     getLoadContext(req, res) {
       return {};
-    }
+    },
   })
 );
 ```
 
-Here's an example with Architect (AWS).
+Here's an example with Architect (AWS):
 
 ```ts
-const { createRequestHandler } = require("@remix-run/architect");
-exports.handler = createRequestHandler({ build: require("./build") });
+const {
+  createRequestHandler,
+} = require("@remix-run/architect");
+exports.handler = createRequestHandler({
+  build: require("./build"),
+});
 ```
 
-## Starter Templates
+Here's an example with Vercel:
+
+```ts
+const {
+  createRequestHandler,
+} = require("@remix-run/vercel");
+module.exports = createRequestHandler({
+  build: require("./build"),
+});
+```
+
+Here's an example with Netlify:
+
+```ts
+const path = require("path");
+const {
+  createRequestHandler,
+} = require("@remix-run/netlify");
+
+const BUILD_DIR = path.join(process.cwd(), "netlify");
+
+function purgeRequireCache() {
+  // purge require cache on requests for "server side HMR" this won't let
+  // you have in-memory objects between requests in development,
+  // netlify typically does this for you, but we've found it to be hit or
+  // miss and some times requires you to refresh the page after it auto reloads
+  // or even have to restart your server
+  for (let key in require.cache) {
+    if (key.startsWith(BUILD_DIR)) {
+      delete require.cache[key];
+    }
+  }
+}
+
+exports.handler =
+  process.env.NODE_ENV === "production"
+    ? createRequestHandler({ build: require("./build") })
+    : (event, context) => {
+        purgeRequireCache();
+        return createRequestHandler({
+          build: require("./build"),
+        })(event, context);
+      };
+```
+
+Here's an example with the simplified Cloudflare Workers API:
+
+```ts
+import { createEventHandler } from "@remix-run/cloudflare-workers";
+
+import * as build from "../build";
+
+addEventListener("fetch", createEventHandler({ build }));
+```
+
+Here's an example with the lower level Cloudflare Workers API:
+
+```ts
+import {
+  createRequestHandler,
+  handleAsset,
+} from "@remix-run/cloudflare-workers";
+
+import * as build from "../build";
+
+const handleRequest = createRequestHandler({ build });
+
+const handleEvent = async (event: FetchEvent) => {
+  let response = await handleAsset(event, build);
+
+  if (!response) {
+    response = await handleRequest(event);
+  }
+
+  return response;
+};
+
+addEventListener("fetch", (event) => {
+  try {
+    event.respondWith(handleEvent(event));
+  } catch (e: any) {
+    if (process.env.NODE_ENV === "development") {
+      event.respondWith(
+        new Response(e.message || e.toString(), {
+          status: 500,
+        })
+      );
+    }
+
+    event.respondWith(
+      new Response("Internal Error", { status: 500 })
+    );
+  }
+});
+```
