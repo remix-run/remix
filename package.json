@@ -3,7 +3,7 @@
   "name": "remix-monorepo",
   "scripts": {
     "clean": "git clean -fdX .",
-    "build": "rollup -c && tsc -b && node ./scripts/license.js",
+    "build": "rollup -c && tsc -b",
     "license": "node ./scripts/license.js",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
