@@ -126,10 +126,7 @@ addEventListener("fetch", createEventHandler({ build }));
 Here's an example with the lower level Cloudflare Workers API:
 
 ```ts
-import {
-  createRequestHandler,
-  handleAsset,
-} from "@remix-run/cloudflare-workers";
+import { createRequestHandler handleAsset } from "@remix-run/cloudflare-workers";
 
 import * as build from "../build";
 
@@ -152,7 +149,7 @@ addEventListener("fetch", (event) => {
     if (process.env.NODE_ENV === "development") {
       event.respondWith(
         new Response(e.message || e.toString(), {
-          status: 500,
+          status: 500
         })
       );
     }
