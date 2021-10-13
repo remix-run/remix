@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- Removed `*.json` module type to allow TS to auto-type `.json` imports
+
 ### Breaking Changes
 
 - Several users felt that the `remix dev` command did not behave as expected. The CLI command `remix dev` has been changed to `remix watch`, and `remix run` has been changed to `remix dev` to hopefully make the CLI a bit more intuitive. Please note that `remix dev` requires that `@remix-run/serve` is installed as a dependency, just as `remix run` did before.
