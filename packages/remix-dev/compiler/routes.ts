@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as esbuild from "esbuild";
+import type { TsConfigJson } from "type-fest";
 
 import * as cache from "../cache";
 import type { RemixConfig } from "../config";
@@ -10,6 +11,7 @@ type CachedRouteExports = { hash: string; exports: string[] };
 
 export async function getRouteModuleExportsCached(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   routeId: string
 ): Promise<string[]> {
   let file = path.resolve(config.appDirectory, config.routes[routeId].file);
@@ -24,7 +26,7 @@ export async function getRouteModuleExportsCached(
   }
 
   if (!cached || cached.hash !== hash) {
-    let exports = await getRouteModuleExports(config, routeId);
+    let exports = await getRouteModuleExports(config, tsconfig, routeId);
     cached = { hash, exports };
     try {
       await cache.putJson(config.cacheDirectory, key, cached);
@@ -43,6 +45,7 @@ export async function getRouteModuleExportsCached(
 
 export async function getRouteModuleExports(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   routeId: string
 ): Promise<string[]> {
   let result = await esbuild.build({
@@ -54,7 +57,7 @@ export async function getRouteModuleExports(
     metafile: true,
     write: false,
     logLevel: "silent",
-    plugins: [mdxPlugin(config)]
+    plugins: [mdxPlugin(config, tsconfig)]
   });
   let metafile = result.metafile!;
 

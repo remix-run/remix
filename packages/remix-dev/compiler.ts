@@ -4,7 +4,6 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
-import { readFile } from "tsconfig";
 import type { TsConfigJson } from "type-fest";
 
 import { BuildMode, BuildTarget } from "./build";
@@ -62,6 +61,7 @@ interface BuildOptions extends Partial<BuildConfig> {
 
 export async function build(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   {
     mode = BuildMode.Production,
     target = BuildTarget.Node14,
@@ -69,7 +69,7 @@ export async function build(
     onBuildFailure = defaultBuildFailureHandler
   }: BuildOptions = {}
 ): Promise<void> {
-  await buildEverything(config, {
+  await buildEverything(config, tsconfig, {
     mode,
     target,
     onWarning,
@@ -87,6 +87,7 @@ interface WatchOptions extends BuildOptions {
 
 export async function watch(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   {
     mode = BuildMode.Development,
     target = BuildTarget.Node14,
@@ -106,7 +107,11 @@ export async function watch(
     onWarning,
     incremental: true
   };
-  let [browserBuild, serverBuild] = await buildEverything(config, options);
+  let [browserBuild, serverBuild] = await buildEverything(
+    config,
+    tsconfig,
+    options
+  );
 
   async function disposeBuilders() {
     await Promise.all([
@@ -119,7 +124,7 @@ export async function watch(
     await disposeBuilders();
     config = newConfig || (await readConfig(config.rootDirectory));
     if (onRebuildStart) onRebuildStart();
-    let builders = await buildEverything(config, options);
+    let builders = await buildEverything(config, tsconfig, options);
     if (onRebuildFinish) onRebuildFinish();
     browserBuild = builders[0];
     serverBuild = builders[1];
@@ -132,7 +137,11 @@ export async function watch(
       await disposeBuilders();
 
       try {
-        [browserBuild, serverBuild] = await buildEverything(config, options);
+        [browserBuild, serverBuild] = await buildEverything(
+          config,
+          tsconfig,
+          options
+        );
         if (onRebuildFinish) onRebuildFinish();
       } catch (err: any) {
         onBuildFailure(err);
@@ -144,7 +153,7 @@ export async function watch(
       // If we get here and can't call rebuild something went wrong and we
       // should probably blow as it's not really recoverable.
       browserBuild.rebuild!().then(build =>
-        generateManifests(config, build.metafile!)
+        generateManifests(config, tsconfig, build.metafile!)
       ),
       serverBuild.rebuild!()
     ]).catch(err => {
@@ -211,6 +220,7 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 async function buildEverything(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   // TODO:
@@ -221,12 +231,12 @@ async function buildEverything(
   // builds serially so we can inline the asset manifest into the server build
   // in a single JavaScript file.
 
-  let browserBuildPromise = createBrowserBuild(config, options);
-  let serverBuildPromise = createServerBuild(config, options);
+  let browserBuildPromise = createBrowserBuild(config, tsconfig, options);
+  let serverBuildPromise = createServerBuild(config, tsconfig, options);
 
   return Promise.all([
     browserBuildPromise.then(async build => {
-      await generateManifests(config, build.metafile!);
+      await generateManifests(config, tsconfig, build.metafile!);
       return build;
     }),
     serverBuildPromise
@@ -238,6 +248,7 @@ async function buildEverything(
 
 async function createBrowserBuild(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   // For the browser build, exclude node built-ins that don't have a
@@ -257,21 +268,6 @@ async function createBrowserBuild(
     // that we don't want to run in the browser (i.e. action & loader).
     entryPoints[id] =
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
-  }
-
-  let tsconfig: TsConfigJson | undefined;
-
-  try {
-    tsconfig = await readFile(path.join(config.rootDirectory, "tsconfig.json"));
-  } catch (error) {
-    // no tsconfig? how about a jsconfig?
-    try {
-      tsconfig = await readFile(
-        path.join(config.rootDirectory, "jsconfig.json")
-      );
-    } catch (error) {
-      // :|
-    }
   }
 
   return esbuild.build({
@@ -298,7 +294,7 @@ async function createBrowserBuild(
     },
     plugins: [
       mdxPlugin(config, tsconfig),
-      browserRouteModulesPlugin(config, /\?browser$/),
+      browserRouteModulesPlugin(config, tsconfig, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
   });
@@ -306,24 +302,10 @@ async function createBrowserBuild(
 
 async function createServerBuild(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
-
-  let tsconfig: TsConfigJson | undefined;
-
-  try {
-    tsconfig = await readFile(path.join(config.rootDirectory, "tsconfig.json"));
-  } catch (error) {
-    // no tsconfig? how about a jsconfig?
-    try {
-      tsconfig = await readFile(
-        path.join(config.rootDirectory, "jsconfig.json")
-      );
-    } catch (error) {
-      // :|
-    }
-  }
 
   return esbuild.build({
     stdin: {
@@ -406,9 +388,10 @@ function getNpmPackageName(id: string): string {
 
 async function generateManifests(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   metafile: esbuild.Metafile
 ): Promise<string[]> {
-  let assetsManifest = await createAssetsManifest(config, metafile);
+  let assetsManifest = await createAssetsManifest(config, tsconfig, metafile);
 
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
   assetsManifest.url = config.publicPath + filename;
@@ -485,6 +468,7 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
  */
 function browserRouteModulesPlugin(
   config: RemixConfig,
+  tsconfig: TsConfigJson | undefined,
   suffixMatcher: RegExp
 ): esbuild.Plugin {
   return {
@@ -513,7 +497,7 @@ function browserRouteModulesPlugin(
           let exports;
           try {
             exports = (
-              await getRouteModuleExportsCached(config, route.id)
+              await getRouteModuleExportsCached(config, tsconfig, route.id)
             ).filter(ex => !!browserSafeRouteExports[ex]);
           } catch (error: any) {
             return {

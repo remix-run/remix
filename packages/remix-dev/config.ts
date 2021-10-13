@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
+import { readFile } from "tsconfig";
+import type { TsConfigJson } from "type-fest";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -262,4 +264,26 @@ function findEntry(dir: string, basename: string): string | undefined {
   }
 
   return undefined;
+}
+
+export async function readTSConfig(
+  remixRoot?: string
+): Promise<TsConfigJson | undefined> {
+  if (!remixRoot) {
+    remixRoot = process.env.REMIX_ROOT || process.cwd();
+  }
+
+  let tsconfig: TsConfigJson | undefined;
+  try {
+    tsconfig = await readFile(path.join(remixRoot, "tsconfig.json"));
+  } catch (error) {
+    // no tsconfig? how about a jsconfig?
+    try {
+      tsconfig = await readFile(path.join(remixRoot, "jsconfig.json"));
+    } catch (error) {
+      // :|
+    }
+  }
+
+  return tsconfig;
 }
