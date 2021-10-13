@@ -25,15 +25,15 @@ export function mdxPlugin(
             tsconfig.compilerOptions.paths
           )) {
             // tsconfig aliases end in a `*`, so we need to remove it
-            let aliasPath = alias.slice(0, -1);
+            let aliasPath = alias.replace(/\*$/, "");
             let aliasRegexp = new RegExp(`^${aliasPath}`);
             if (aliasRegexp.test(args.path)) {
               // TODO: support multiple path aliases...
-              let aliasPath = paths[0];
+              let aliasActualPath = paths[0].replace(/\*$/, "");
               return {
                 path: path.resolve(
                   config.rootDirectory,
-                  aliasPath.slice(0, -1),
+                  aliasActualPath,
                   args.path.replace(aliasRegexp, "")
                 ),
                 namespace: "mdx"
