@@ -249,7 +249,9 @@ async function createBrowserBuild(
 
   if (fakeBuiltins.length > 0) {
     console.error(
-      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove it before continuing.`
+      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
+        ", "
+      )} before continuing.`
     );
     process.exit(1);
   }
