@@ -1,3 +1,4 @@
+import type { Options as KvAssetHandlerOptions } from "@cloudflare/kv-asset-handler";
 import {
   getAssetFromKV,
   MethodNotAllowedError,
@@ -47,17 +48,38 @@ export function createRequestHandler({
   };
 }
 
-export async function handleAsset(event: FetchEvent) {
+export async function handleAsset(
+  event: FetchEvent,
+  build: ServerBuild,
+  options?: Partial<KvAssetHandlerOptions>
+) {
   try {
     if (process.env.NODE_ENV === "development") {
       return await getAssetFromKV(event, {
         cacheControl: {
           bypassCache: true
-        }
+        },
+        ...options
       });
     }
 
-    return await getAssetFromKV(event);
+    let cacheControl = {};
+    let url = new URL(event.request.url);
+    let assetpath = build.assets.url.split("/").slice(0, -1).join("/");
+    let requestpath = url.pathname.split("/").slice(0, -1).join("/");
+
+    if (requestpath.startsWith(assetpath)) {
+      cacheControl = {
+        bypassCache: false,
+        edgeTTL: 31536000,
+        browserTTL: 31536000
+      };
+    }
+
+    return await getAssetFromKV(event, {
+      cacheControl,
+      ...options
+    });
   } catch (error) {
     if (
       error instanceof MethodNotAllowedError ||
@@ -86,7 +108,7 @@ export function createEventHandler({
   });
 
   const handleEvent = async (event: FetchEvent) => {
-    let response = await handleAsset(event);
+    let response = await handleAsset(event, build);
 
     if (!response) {
       response = await handleRequest(event);
