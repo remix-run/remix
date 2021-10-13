@@ -9,7 +9,7 @@ import { getLoaderForFile } from "../loaders";
 
 export function mdxPlugin(
   config: RemixConfig,
-  tsconfig: TsConfigJson
+  tsconfig: TsConfigJson | undefined
 ): esbuild.Plugin {
   return {
     name: "remix-mdx",
@@ -20,7 +20,7 @@ export function mdxPlugin(
       ]);
 
       build.onResolve({ filter: /\.mdx?$/ }, args => {
-        if (tsconfig.compilerOptions?.paths) {
+        if (tsconfig?.compilerOptions?.paths) {
           for (const [alias, paths] of Object.entries(
             tsconfig.compilerOptions.paths
           )) {

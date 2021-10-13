@@ -259,9 +259,20 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  let tsconfig: TsConfigJson = await readFile(
-    path.join(config.rootDirectory, "tsconfig.json")
-  );
+  let tsconfig: TsConfigJson | undefined;
+
+  try {
+    tsconfig = await readFile(path.join(config.rootDirectory, "tsconfig.json"));
+  } catch (error) {
+    // no tsconfig? how about a jsconfig?
+    try {
+      tsconfig = await readFile(
+        path.join(config.rootDirectory, "jsconfig.json")
+      );
+    } catch (error) {
+      // :|
+    }
+  }
 
   return esbuild.build({
     entryPoints,
@@ -299,9 +310,20 @@ async function createServerBuild(
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
 
-  let tsconfig: TsConfigJson = await readFile(
-    path.join(config.rootDirectory, "tsconfig.json")
-  );
+  let tsconfig: TsConfigJson | undefined;
+
+  try {
+    tsconfig = await readFile(path.join(config.rootDirectory, "tsconfig.json"));
+  } catch (error) {
+    // no tsconfig? how about a jsconfig?
+    try {
+      tsconfig = await readFile(
+        path.join(config.rootDirectory, "jsconfig.json")
+      );
+    } catch (error) {
+      // :|
+    }
+  }
 
   return esbuild.build({
     stdin: {
@@ -361,8 +383,11 @@ async function createServerBuild(
   });
 }
 
-function isBareModuleId(id: string, tsconfg: TsConfigJson): boolean {
-  let paths = tsconfg.compilerOptions?.paths ?? [];
+function isBareModuleId(
+  id: string,
+  tsconfg: TsConfigJson | undefined
+): boolean {
+  let paths = tsconfg?.compilerOptions?.paths ?? [];
   let starlessPaths = Object.keys(paths).filter(key => key.slice(0, -1));
 
   return (
