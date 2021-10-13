@@ -126,7 +126,7 @@ addEventListener("fetch", createEventHandler({ build }));
 Here's an example with the lower level Cloudflare Workers API:
 
 ```ts
-import { createRequestHandler handleAsset } from "@remix-run/cloudflare-workers";
+import { createRequestHandler, handleAsset } from "@remix-run/cloudflare-workers";
 
 import * as build from "../build";
 
