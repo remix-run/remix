@@ -4,11 +4,14 @@
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "moduleResolution": "node",
+    "allowJs": true,
     "target": "ES2020",
     "module": "ES2020",
     "baseUrl": ".",
     "strict": true,
     "paths": {
+      "@/*": ["app/components/*"],
+      "#/*": ["app/routes/blog/*"],
       "~/*": ["app/*"]
     },
 

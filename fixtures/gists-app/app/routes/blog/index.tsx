@@ -1,9 +1,9 @@
 import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
 import { Link, useRouteData, usePendingLocation, json } from "remix";
 
-import * as helloPost from "./hello-world.mdx";
 import * as thirdPost from "./third.md";
 
+import * as helloPost from "#/hello-world.mdx";
 import stylesHref from "~/styles/gists.css";
 import * as secondPost from "~/routes/blog/second.md";
 

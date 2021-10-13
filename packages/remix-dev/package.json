@@ -18,6 +18,8 @@
     "remark-frontmatter": "^4.0.0",
     "remark-mdx-frontmatter": "^1.0.1",
     "signal-exit": "^3.0.3",
+    "tsconfig": "^7.0.0",
+    "type-fest": "^2.5.0",
     "ws": "^7.4.5",
     "xdm": "^2.0.0"
   },

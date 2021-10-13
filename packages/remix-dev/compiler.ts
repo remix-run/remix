@@ -4,6 +4,8 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
+import { readFile } from "tsconfig";
+import type { TsConfigJson } from "type-fest";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -257,6 +259,10 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
+  let tsconfig: TsConfigJson = await readFile(
+    path.join(config.rootDirectory, "tsconfig.json")
+  );
+
   return esbuild.build({
     entryPoints,
     outdir: config.assetsBuildDirectory,
@@ -280,7 +286,7 @@ async function createBrowserBuild(
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
     plugins: [
-      mdxPlugin(config),
+      mdxPlugin(config, tsconfig),
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
@@ -292,6 +298,10 @@ async function createServerBuild(
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
+
+  let tsconfig: TsConfigJson = await readFile(
+    path.join(config.rootDirectory, "tsconfig.json")
+  );
 
   return esbuild.build({
     stdin: {
@@ -313,7 +323,7 @@ async function createServerBuild(
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
     plugins: [
-      mdxPlugin(config),
+      mdxPlugin(config, tsconfig),
       serverRouteModulesPlugin(config),
       emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
       manualExternalsPlugin((id, importer) => {
@@ -323,7 +333,7 @@ async function createServerBuild(
 
         // Mark all bare imports as external. They will be require()'d at
         // runtime from node_modules.
-        if (isBareModuleId(id)) {
+        if (isBareModuleId(id, tsconfig)) {
           let packageName = getNpmPackageName(id);
           if (
             !/\bnode_modules\b/.test(importer) &&
@@ -351,8 +361,15 @@ async function createServerBuild(
   });
 }
 
-function isBareModuleId(id: string): boolean {
-  return !id.startsWith(".") && !id.startsWith("~") && !path.isAbsolute(id);
+function isBareModuleId(id: string, tsconfg: TsConfigJson): boolean {
+  let paths = tsconfg.compilerOptions?.paths ?? [];
+  let starlessPaths = Object.keys(paths).filter(key => key.slice(0, -1));
+
+  return (
+    !id.startsWith(".") &&
+    starlessPaths.some(alias => id.startsWith(alias)) &&
+    !path.isAbsolute(id)
+  );
 }
 
 function getNpmPackageName(id: string): string {

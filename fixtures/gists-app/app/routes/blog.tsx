@@ -1,14 +1,12 @@
 import type { LinksFunction } from "remix";
 import { Link, Outlet } from "react-router-dom";
 
-// @ts-expect-error
-import Shared from "~/components/Shared";
+import Shared from "@/Shared";
 
 export let links: LinksFunction = () => [
   {
     rel: "stylesheet",
-    href:
-      "https://unpkg.com/@highlightjs/cdn-assets@11.2.0/styles/a11y-dark.min.css"
+    href: "https://unpkg.com/@highlightjs/cdn-assets@11.2.0/styles/a11y-dark.min.css"
   }
 ];
 

@@ -2,11 +2,15 @@ import { promises as fsp } from "fs";
 import * as path from "path";
 import type * as esbuild from "esbuild";
 import { remarkMdxFrontmatter } from "remark-mdx-frontmatter";
+import type { TsConfigJson } from "type-fest";
 
 import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
 
-export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
+export function mdxPlugin(
+  config: RemixConfig,
+  tsconfig: TsConfigJson
+): esbuild.Plugin {
   return {
     name: "remix-mdx",
     async setup(build) {
@@ -16,10 +20,31 @@ export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
       ]);
 
       build.onResolve({ filter: /\.mdx?$/ }, args => {
+        if (tsconfig.compilerOptions?.paths) {
+          for (const [alias, paths] of Object.entries(
+            tsconfig.compilerOptions.paths
+          )) {
+            // tsconfig aliases end in a `*`, so we need to remove it
+            let aliasPath = alias.slice(0, -1);
+            let aliasRegexp = new RegExp(`^${aliasPath}`);
+            if (aliasRegexp.test(args.path)) {
+              // TODO: support multiple path aliases...
+              let aliasPath = paths[0];
+              return {
+                path: path.resolve(
+                  config.rootDirectory,
+                  aliasPath.slice(0, -1),
+                  args.path.replace(aliasRegexp, "")
+                ),
+                namespace: "mdx"
+              };
+            }
+          }
+        }
+
+        // no aliases matched, use the path as is
         return {
-          path: args.path.startsWith("~/")
-            ? path.resolve(config.appDirectory, args.path.replace(/^~\//, ""))
-            : path.resolve(args.resolveDir, args.path),
+          path: path.resolve(args.resolveDir, args.path),
           namespace: "mdx"
         };
       });
