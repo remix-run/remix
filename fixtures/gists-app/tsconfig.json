@@ -11,7 +11,7 @@
     "strict": true,
     "paths": {
       "@/*": ["app/components/*"],
-      "#/*": ["app/routes/blog/*"],
+      "#/*": ["app/routes/gists/*", "app/routes/blog/*"],
       "~/*": ["app/*"]
     },
 

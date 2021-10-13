@@ -1,4 +1,5 @@
 import { promises as fsp } from "fs";
+import fs from "fs";
 import * as path from "path";
 import type * as esbuild from "esbuild";
 import { remarkMdxFrontmatter } from "remark-mdx-frontmatter";
@@ -6,6 +7,64 @@ import type { TsConfigJson } from "type-fest";
 
 import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
+
+function resolvePath({
+  alias,
+  aliasPaths,
+  config,
+  filepath
+}: {
+  /**
+   * seems self explainatory
+   */
+  config: RemixConfig;
+  /**
+   * The filepath, `args.path`.
+   */
+  filepath: string;
+  /**
+   * the path alias actual paths from tsconfig.compilerOptions.paths
+   */
+  aliasPaths: string[];
+  /**
+   * the path alias from tsconfig.compilerOptions.paths
+   */
+  alias: string;
+}): string | undefined {
+  // we have no aliases, let's bounce
+  if (!aliasPaths) {
+    return undefined;
+  }
+
+  // tsconfig aliases end in a `*`, so we need to remove it
+  let aliasPath = alias.replace(/\*$/, "");
+  let aliasRegexp = new RegExp(`^${aliasPath}`);
+
+  // path isn't an alias, let's bounce
+  if (!aliasRegexp.test(filepath)) return undefined;
+
+  let aliasActualPath = aliasPaths[0].replace(/\*$/, "");
+
+  let maybePath = path.resolve(
+    config.rootDirectory,
+    aliasActualPath,
+    filepath.replace(aliasRegexp, "")
+  );
+
+  // check if the file exists at path
+  if (fs.existsSync(maybePath)) {
+    // we exist, let's return it
+    return maybePath;
+  }
+
+  // we dont exist, let's try again
+  return resolvePath({
+    alias,
+    aliasPaths: aliasPaths.slice(1),
+    config,
+    filepath
+  });
+}
 
 export function mdxPlugin(
   config: RemixConfig,
@@ -24,20 +83,15 @@ export function mdxPlugin(
           for (const [alias, paths] of Object.entries(
             tsconfig.compilerOptions.paths
           )) {
-            // tsconfig aliases end in a `*`, so we need to remove it
-            let aliasPath = alias.replace(/\*$/, "");
-            let aliasRegexp = new RegExp(`^${aliasPath}`);
-            if (aliasRegexp.test(args.path)) {
-              // TODO: support multiple path aliases...
-              let aliasActualPath = paths[0].replace(/\*$/, "");
-              return {
-                path: path.resolve(
-                  config.rootDirectory,
-                  aliasActualPath,
-                  args.path.replace(aliasRegexp, "")
-                ),
-                namespace: "mdx"
-              };
+            let path = resolvePath({
+              alias,
+              aliasPaths: paths,
+              config,
+              filepath: args.path
+            });
+
+            if (path) {
+              return { path, namespace: "mdx" };
             }
           }
         }
