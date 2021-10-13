@@ -50,10 +50,7 @@ export async function watch(
     typeof remixRootOrConfig === "object"
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
-  let tsconfig =
-    typeof remixRootOrConfig === "object"
-      ? await readTSConfig(remixRootOrConfig.rootDirectory)
-      : await readTSConfig(remixRootOrConfig);
+  let tsconfig = await readTSConfig(config.rootDirectory);
 
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string; [key: string]: any }) {
