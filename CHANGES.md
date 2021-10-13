@@ -1,5 +1,11 @@
 # History of Changes
 
+## Unreleased
+
+### Improvements
+
+- Removed `*.json` module type to allow TS to auto-type `.json` imports
+
 ## 0.19.0 - Fri Oct 08 2021
 
 ### Improvements
