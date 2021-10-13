@@ -43,7 +43,7 @@ let app = express();
 app.all(
   "*",
   createRequestHandler({
-    // `remix build` and `remix run` output files to a build directory, you need
+    // `remix build` and `remix dev` output files to a build directory, you need
     // to pass that build to the request handler
     build: require("./build"),
 
