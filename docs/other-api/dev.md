@@ -28,18 +28,18 @@ Builds your app for production with our new [esbuild](https://esbuild.github.io)
 $ remix build
 ```
 
-### `remix dev`
+### `remix watch`
 
 Watches your application files and builds your app for development when files change with our new esbuild-based compiler.
 
 ```sh
-$ remix dev
+$ remix watch
 ```
 
-## `remix run`
+## `remix dev`
 
-Same as `dev` but also boots the [Remix app server](../serve/) in development mode.
+Same as `watch` but also boots the [Remix app server](../serve/) in development mode.
 
 ```sh
-$ remix run
+$ remix dev
 ```

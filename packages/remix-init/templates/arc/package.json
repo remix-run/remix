@@ -2,7 +2,7 @@
   "scripts": {
     "postinstall": "remix setup node",
     "build": "remix build",
-    "dev": "remix dev",
+    "dev": "remix watch",
     "start": "arc sandbox"
   },
   "dependencies": {
