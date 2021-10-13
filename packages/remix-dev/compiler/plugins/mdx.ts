@@ -15,7 +15,7 @@ function resolvePath({
   filepath
 }: {
   /**
-   * seems self explainatory
+   * seems self explanatory
    */
   config: RemixConfig;
   /**
