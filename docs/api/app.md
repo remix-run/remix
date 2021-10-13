@@ -93,13 +93,13 @@ There are a few conventions that Remix uses you should be aware of.
 
 - **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes: you can export a `loader`, `action`, etc.
 - **`app/routes/*.{js,jsx,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
-- **`app/routes/{folder}/*.js`**: Folders inside of routes will create nested URLs.
-- **`app/routes/{folder}` with `app/routes/{folder}.js`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
-- **Dots in route filesnames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `routes/some.long.url.tsx` will create the URL `/some/long/url`.
-- **`app/routes/index.js`**: Routes named "index" will render when the parent layout route's path is matched exactly.
+- **`app/routes/{folder}/*.tsx`**: Folders inside of routes will create nested URLs.
+- **`app/routes/{folder}` with `app/routes/{folder}.tsx`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
+- **Dots in route filesnames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
+- **`app/routes/index.tsx`**: Routes named "index" will render when the parent layout route's path is matched exactly.
 - **`$param`**: The dollar sign denotes a dynamic segment of the URL. It will be parsed and passed to your loaders and routes.
 
-  For example: `routes/users/$userId.tsx` will match the following URLs: `users/123` and `users/abc` but not `users/123/abc` because that has too many segments. See the <Link to="../routing">routing guide</Link> for more information.
+  For example: `app/routes/users/$userId.tsx` will match the following URLs: `users/123` and `users/abc` but not `users/123/abc` because that has too many segments. See the <Link to="../routing">routing guide</Link> for more information.
 
   Some CLIs require you to escape the \$ when creating files:
 
@@ -109,13 +109,13 @@ There are a few conventions that Remix uses you should be aware of.
 
   Params can be nested routes, just create a folder with the `$` in it.
 
-- **`routes/files/$.js`**: To add a "splat" path (some people call this a "catchall") name the file simply `$.js`. It will create a route path pattern like `files/*`. You can also use this along with dot file names: `routes/files.$.js`.
+- **`app/routes/files/$.tsx`**: To add a "splat" path (some people call this a "catchall") name the file simply `$.tsx`. It will create a route path pattern like `files/*`. You can also use this along with dot file names: `app/routes/files.$.tsx`.
 
-- **`routes/__some-layout/some-path.js`**: Prefixing a folder with `__` will create a "layout route". Layout routes are routes that don't add anything to the URL for matching, but do add nested components in the tree for layouts. Make sure to also have `__some-layout.js` as well. For example, all of your marketing pages could share a layout in the route tree with `routes/__marketing.js` as the layout and then all of the child routes go in `routes/__marketing/products.js` and `routes/__marketing/buy.js`. The `__marketing.js` route won't add any segments to the URL, but it will render when it's child routes match.
+- **`app/routes/__some-layout/some-path.tsx`**: Prefixing a folder with `__` will create a "layout route". Layout routes are routes that don't add anything to the URL for matching, but do add nested components in the tree for layouts. Make sure to also have `__some-layout.tsx` as well. For example, all of your marketing pages could share a layout in the route tree with `app/routes/__marketing.tsx` as the layout and then all of the child routes go in `app/routes/__marketing/products.tsx` and `app/routes/__marketing/buy.tsx`. The `__marketing.tsx` route won't add any segments to the URL, but it will render when it's child routes match.
 
-# entry.client.js
+# entry.client.tsx
 
-Remix uses `app/entry.client.js` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
+Remix uses `app/entry.client.tsx` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
 
 Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module](../entry.server).
 
@@ -130,9 +130,9 @@ ReactDOM.hydrate(<Remix />, document);
 
 As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup thing likes `window.history.scrollRestoration`, etc.
 
-# entry.server.js
+# entry.server.tsx
 
-Remix uses `app/entry.server.js` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
+Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
 
 This module should render the markup for the current page using a `<Remix>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
 
@@ -220,11 +220,11 @@ Because `prisma` is only used in the loader it will be removed from the browser 
 
 ### Loader arg: params
 
-Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.js` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
+Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
 ```js
 // if the user visits /invoices/123
-export let loader: Loader = ({ params }) => {
+export let loader: LoaderFunction = ({ params }) => {
   params.invoiceId; // "123"
 };
 ```
@@ -237,7 +237,7 @@ You can also use this to read URL [URLSearchParams](https://developer.mozilla.or
 
 ```js
 // say the user is at /some/route?foo=bar
-export let loader: Loader = ({ request }) => {
+export let loader: LoaderFunction = ({ request }) => {
   let url = new URL(request.url);
   let foo = url.searchParams.get("foo");
 };
@@ -268,8 +268,8 @@ app.all(
 And then your loader can access it.
 
 ```ts
-// data/some-loader.js
-export let loader: Loader = ({ context }) => {
+// routes/some-route.tsx
+export let loader: LoaderFunction = ({ context }) => {
   let { req } = context.req;
   // read a cookie
   req.cookies.session;
@@ -298,7 +298,7 @@ You can return Web API Response objects from your loaders. Here's a pretty basic
 // some fake database, not part of remix
 import db from "../db";
 
-export let loader: Loader = async () => {
+export let loader: LoaderFunction = async () => {
   let users = await db.query("users");
 
   let body = JSON.stringify(users);
@@ -317,7 +317,7 @@ Normally you'd use the `json` helper from your [environment](../environments).
 import db from "../db";
 import { json } from "remix";
 
-export let loader: Loader = async () => {
+export let loader: LoaderFunction = async () => {
   let users = await db.query("users");
   return json(users);
 };
@@ -353,7 +353,7 @@ export let loader = async () => {
 This is also useful for 500 error handling. You don't need to render a different page, instead, handle the error, send the data, and send a 500 response to the app.
 
 ```js [6-12]
-export let loader: Loader = async () => {
+export let loader: LoaderFunction = async () => {
   try {
     let stuff = await something();
     return json(stuff);
@@ -537,11 +537,11 @@ Note: `loaderHeaders` is an instance of the [Web Fetch API]("../fetch") `Headers
 Because Remix has nested routes, there's a battle of the headers to be won when nested routes match. In this case, the deepest route wins. Consider these files in the routes directory:
 
 ```
-├── users.js
+├── users.tsx
 └── users
-    ├── $userId.js
+    ├── $userId.tsx
     └── $userId
-        └── profile.js
+        └── profile.tsx
 ```
 
 If we are looking at `/users/123/profile` then three routes are rendering:
@@ -554,9 +554,9 @@ If we are looking at `/users/123/profile` then three routes are rendering:
 </Users>
 ```
 
-If all three define `headers`, the deepest module wins, in this case `profile.js`.
+If all three define `headers`, the deepest module wins, in this case `profile.tsx`.
 
-We don't want surprise headers in your responses, so it's your job to merge them if you'd like. Remix passes in the `parentHeaders` to your `headers` function. So `users.js` headers get passed to `$userId.js`, and then `$userId.js` headers are passed to `profile.js` headers.
+We don't want surprise headers in your responses, so it's your job to merge them if you'd like. Remix passes in the `parentHeaders` to your `headers` function. So `users.tsx` headers get passed to `$userId.tsx`, and then `$userId.tsx` headers are passed to `profile.tsx` headers.
 
 That is all to say that Remix has given you a very large gun with which to shoot your foot. You need to be careful not to send a `Cache-Control` from a child route module that is more aggressive than a parent route. Here's some code that picks the least aggressive caching in these cases:
 
@@ -830,8 +830,8 @@ Another common case is when you've got nested routes and a child component has a
 Consider these routes:
 
 ```
-└── $projectId.js
-    └── activity.js
+└── $projectId.tsx
+    └── activity.tsx
 ```
 
 And lets say the UI looks something like this:
@@ -851,7 +851,7 @@ And lets say the UI looks something like this:
 └──────────────────────────────┘
 ```
 
-The `$activity.js` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
 export function loader({ request, params }) {
@@ -867,9 +867,9 @@ export function loader({ request, params }) {
 }
 ```
 
-This is great for the activity route, but Remix doesn't know if the parent loader, `$projectId.js` _also_ cares about the search params. That's why Remix does the safest thing and reloads all the routes on the page when the search params change.
+This is great for the activity route, but Remix doesn't know if the parent loader, `$projectId.tsx` _also_ cares about the search params. That's why Remix does the safest thing and reloads all the routes on the page when the search params change.
 
-In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.js` doesn't use the search params. Consider that our loader for `$projectId.js` looks something like this:
+In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
 export function loader({ params }) {

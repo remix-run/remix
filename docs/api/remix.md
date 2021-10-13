@@ -376,9 +376,8 @@ const oneMinute = 60_000;
 
 function useSessionTimeout(initialTimeout) {
   let submit = useSubmit();
-  let [sessionTimeout, setSessionTimeout] = useState(
-    initialTimeout
-  );
+  let [sessionTimeout, setSessionTimeout] =
+    useState(initialTimeout);
 
   let handleTimeout = useCallback(() => {
     submit(null, { method: "post", action: "/logout" });
@@ -440,7 +439,7 @@ import { useTransition } from "remix";
 function SomeComponent() {
   let transition = useTransition();
   transition.state;
-  transtion.type;
+  transition.type;
   transition.submission;
   transition.location;
 }
@@ -970,7 +969,7 @@ function Task({ task }) {
   let toggle = useFetcher();
   let checked = toggle.submission
     ? // use the optimistic version
-      Boolean(toggle.formData.get("complete"))
+      Boolean(toggle.submission.formData.get("complete"))
     : // use the normal version
       task.complete;
 
@@ -1568,26 +1567,23 @@ This is an example of a cookie session storage:
 // app/sessions.js
 import { createCookieSessionStorage } from "remix";
 
-let {
-  getSession,
-  commitSession,
-  destroySession,
-} = createCookieSessionStorage({
-  // a Cookie from `createCookie` or the CookieOptions to create one
-  cookie: {
-    name: "__session",
+let { getSession, commitSession, destroySession } =
+  createCookieSessionStorage({
+    // a Cookie from `createCookie` or the CookieOptions to create one
+    cookie: {
+      name: "__session",
 
-    // all of these are optional
-    domain: "remix.run",
-    expires: new Date(Date.now() + 60),
-    httpOnly: true,
-    maxAge: 60,
-    path: "/",
-    sameSite: "lax",
-    secrets: ["s3cret1"],
-    secure: true,
-  },
-});
+      // all of these are optional
+      domain: "remix.run",
+      expires: new Date(Date.now() + 60),
+      httpOnly: true,
+      maxAge: 60,
+      path: "/",
+      sameSite: "lax",
+      secrets: ["s3cret1"],
+      secure: true,
+    },
+  });
 
 export { getSession, commitSession, destroySession };
 ```
@@ -1734,18 +1730,15 @@ function createDatabaseSessionStorage({
 And then you can use it like this:
 
 ```js
-let {
-  getSession,
-  commitSession,
-  destroySession,
-} = createDatabaseSessionStorage({
-  host: "localhost",
-  port: 1234,
-  cookie: {
-    name: "__session",
-    sameSite: "lax",
-  },
-});
+let { getSession, commitSession, destroySession } =
+  createDatabaseSessionStorage({
+    host: "localhost",
+    port: 1234,
+    cookie: {
+      name: "__session",
+      sameSite: "lax",
+    },
+  });
 ```
 
 The `expires` argument to `readData` and `updateData` is the same `Date` at which the cookie itself expires and is no longer valid. You can use this information to automatically purge the session record from your database to save on space, or to ensure that you do not otherwise return any data for old, expired cookies.
@@ -1761,18 +1754,15 @@ The downside is that you have to `commitSession` in almost every loader and acti
 ```js
 import { createCookieSessionStorage } from "remix";
 
-let {
-  getSession,
-  commitSession,
-  destroySession,
-} = createCookieSessionStorage({
-  // a Cookie from `createCookie` or the same CookieOptions to create one
-  cookie: {
-    name: "__session",
-    secrets: ["r3m1xr0ck5"],
-    sameSite: "lax",
-  },
-});
+let { getSession, commitSession, destroySession } =
+  createCookieSessionStorage({
+    // a Cookie from `createCookie` or the same CookieOptions to create one
+    cookie: {
+      name: "__session",
+      secrets: ["r3m1xr0ck5"],
+      sameSite: "lax",
+    },
+  });
 ```
 
 ## `createFileSessionStorage`
@@ -1796,16 +1786,13 @@ let sessionCookie = createCookie("__session", {
   sameSite: true,
 });
 
-let {
-  getSession,
-  commitSession,
-  destroySession,
-} = createFileSessionStorage({
-  // The root directory where you want to store the files.
-  // Make sure it's writable!
-  dir: "/app/sessions",
-  cookie: sessionCookie,
-});
+let { getSession, commitSession, destroySession } =
+  createFileSessionStorage({
+    // The root directory where you want to store the files.
+    // Make sure it's writable!
+    dir: "/app/sessions",
+    cookie: sessionCookie,
+  });
 
 export { getSession, commitSession, destroySession };
 ```
@@ -1829,16 +1816,13 @@ let sessionCookie = createCookie("__session", {
   sameSite: true,
 });
 
-let {
-  getSession,
-  commitSession,
-  destroySession,
-} = createFileSessionStorage({
-  // The root directory where you want to store the files.
-  // Make sure it's writable!
-  dir: "/app/sessions",
-  cookie: sessionCookie,
-});
+let { getSession, commitSession, destroySession } =
+  createFileSessionStorage({
+    // The root directory where you want to store the files.
+    // Make sure it's writable!
+    dir: "/app/sessions",
+    cookie: sessionCookie,
+  });
 
 export { getSession, commitSession, destroySession };
 ```

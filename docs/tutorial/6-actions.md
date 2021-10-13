@@ -113,7 +113,7 @@ import React from "react";
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
-let action: Action = async ({ request }) => {
+let action: ActionFunction = async ({ request }) => {
   // Very important or else it won't work :)
   let token = "insert your github token here";
   // in a real world scenario you'd want this token to be
@@ -183,7 +183,7 @@ export default function NewGist() {
         <div>
           <p>
             <Loading /> Creating gist:{" "}
-            {transtion.formData.get("fileName")}
+            {transition.submission.formData.get("fileName")}
           </p>
         </div>
       ) : (
