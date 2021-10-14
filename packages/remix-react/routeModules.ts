@@ -18,14 +18,14 @@ export interface RouteModule {
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
-  meta?: MetaFunction | { [name: string]: string };
+  meta?: MetaFunction | MetaDescriptor;
   unstable_shouldReload?: ShouldReloadFunction;
 }
 
 /**
  * A React component that is rendered when the server throws a Response.
  */
- export type CatchBoundaryComponent = ComponentType<{}>;
+export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
@@ -51,7 +51,17 @@ export interface MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-  }): { [name: string]: string };
+  }): MetaDescriptor;
+}
+
+/**
+ * A name/content pair used to render `<meta>` tags in a meta function for a
+ * route. The value can be either a string, which will render a single `<meta>`
+ * tag, or an array of strings that will rendser multiple tags with the same
+ * `name` attribute.
+ */
+export interface MetaDescriptor {
+  [name: string]: string | string[];
 }
 
 /**
