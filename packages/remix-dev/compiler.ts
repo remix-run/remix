@@ -370,11 +370,13 @@ function isBareModuleId(
   tsconfg: TsConfigJson | undefined
 ): boolean {
   let paths = tsconfg?.compilerOptions?.paths ?? [];
-  let starlessPaths = Object.keys(paths).filter(key => key.slice(0, -1));
+  let starlessPaths = Object.keys(paths).map(
+    key => new RegExp(`^${key.replace(/\*$/, "")}`)
+  );
 
   return (
     !id.startsWith(".") &&
-    starlessPaths.some(alias => id.startsWith(alias)) &&
+    starlessPaths.some(alias => alias.test(id)) &&
     !path.isAbsolute(id)
   );
 }
