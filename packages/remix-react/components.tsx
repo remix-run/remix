@@ -44,10 +44,9 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules } from "./routeModules";
+import type { RouteModules, MetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
-import type { MetaDescriptor } from "./routeModules";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
