@@ -41,6 +41,9 @@ if (cli.flags.version) {
 }
 
 switch (cli.input[0]) {
+  case "routes":
+    commands.routes(cli.input[1]);
+    break;
   case "build":
     commands.build(cli.input[1], process.env.NODE_ENV);
     break;
