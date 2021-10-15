@@ -38,7 +38,8 @@ export async function build(
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
   modeArg?: string,
-  onRebuildStart?: () => void
+  onRebuildStart?: () => void,
+  onRebuildFinish?: () => void
 ): Promise<void> {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   console.log(`Watching Remix app in ${mode} mode...`);
@@ -75,6 +76,7 @@ export async function watch(
         log("Rebuilding...");
       },
       onRebuildFinish() {
+        onRebuildFinish && onRebuildFinish();
         log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
         broadcast({ type: "RELOAD" });
       },
