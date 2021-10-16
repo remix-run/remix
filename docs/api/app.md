@@ -136,11 +136,16 @@ Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering o
 
 This module should render the markup for the current page using a `<Remix>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
 
+You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occured.
+
 Here's a basic example:
 
 ```tsx
 import ReactDOMServer from "react-dom/server";
-import type { EntryContext } from "remix";
+import type {
+  EntryContext,
+  HandleDataRequestFunction,
+} from "remix";
 import { RemixServer } from "remix";
 
 export default function handleRequest(
@@ -160,6 +165,16 @@ export default function handleRequest(
     headers: responseHeaders
   });
 }
+
+// this is an optional export
+export let handleDataRequest: HandleDataRequestFunction = (
+  response: Response,
+  // same args that get passed to the action or loader that was called
+  { request, params, context }
+) => {
+  response.headers.set("x-custom", "yay!");
+  return response;
+};
 ```
 
 # Route Module API

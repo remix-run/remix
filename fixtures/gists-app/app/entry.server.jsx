@@ -18,3 +18,8 @@ export default function handleRequest(
     headers: responseHeaders
   });
 }
+
+export function handleDataRequest(response) {
+  response.headers.set("x-hdr", "yes");
+  return response;
+}
