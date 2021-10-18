@@ -12,7 +12,7 @@ entry-point = "."
 
 [build]
 command = "npm run build:worker"
-watch_dir = "build"
+watch_dir = "build/index.js"
 
 [build.upload]
 format="service-worker"
