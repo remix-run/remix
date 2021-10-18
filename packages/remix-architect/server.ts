@@ -51,10 +51,10 @@ export function createRequestHandler({
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
-    let response = ((await handleRequest(
-      (request as unknown) as Request,
+    let response = (await handleRequest(
+      request as unknown as Request,
       loadContext
-    )) as unknown) as NodeResponse;
+    )) as unknown as NodeResponse;
 
     let cookies: string[] = [];
 
@@ -103,9 +103,8 @@ export function createRemixHeaders(
 
 export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
-  let proto = event.requestContext.http.protocol || "https";
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
-  let url = new URL(event.rawPath + search, `${proto}://${host}`);
+  let url = new URL(event.rawPath + search, `https://${host}`);
 
   return new NodeRequest(url.toString(), {
     method: event.requestContext.http.method,
