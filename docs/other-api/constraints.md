@@ -151,7 +151,7 @@ Here are a few really common use cases:
 
 ```ts
 export let loader = ({ request }) => {
-  return requireUser(request, user => {
+  return requireUser(request, (user) => {
     return json(user);
   });
 };
@@ -162,8 +162,8 @@ You can combine them together too:
 ```ts
 export let loader = ({ request }) => {
   return removeTrailingSlash(request.url, () => {
-    return withSession(request, session => {
-      return requireUser(session, user => {
+    return withSession(request, (session) => {
+      return requireUser(session, (user) => {
         return json(user);
       });
     });
@@ -199,7 +199,7 @@ export function removeTrailingSlash(request, next) {
   let url = new URL(request.url);
   if (url.pathname.endsWith("/")) {
     return redirect(request.url.slice(0, -1), {
-      status: 308
+      status: 308,
     });
   }
   return next();
@@ -215,14 +215,21 @@ This type of function is a lot easier to author than the kind that don't work wi
 This helper allows loaders and actions to skip all the request/response cookie header boilerplate, and ensures the session is always committed.
 
 ```js filename=withSession.js
-import { Response, json, createCookieSessionStorage } from "remix";
+import {
+  Response,
+  json,
+  createCookieSessionStorage,
+} from "remix";
 
-let { getSession, commitSession, destroySession } = createCookieSessionStorage({
-  cookie: { name: "__session" }
-});
+let { getSession, commitSession, destroySession } =
+  createCookieSessionStorage({
+    cookie: { name: "__session" },
+  });
 
 export async function withSession(request, next) {
-  let session = await getSession(request.headers.get("Cookie"));
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
 
   // pass the session to the loader/action and let it handle the response
   let response = await next(session);
@@ -233,7 +240,10 @@ export async function withSession(request, next) {
   }
 
   // commit the session automatically
-  response.headers.append("Set-Cookie", await commitSession(session));
+  response.headers.append(
+    "Set-Cookie",
+    await commitSession(session)
+  );
 
   return response;
 }
@@ -245,14 +255,17 @@ Maybe seeing how this would be used will help:
 
 ```js filename=routes/some-route.js
 export let action = async ({ request }) => {
-  return withSession(request, session => {
-    session.flash("message", "Functional Composition is Fun! (ctional)");
+  return withSession(request, (session) => {
+    session.flash(
+      "message",
+      "Functional Composition is Fun! (ctional)"
+    );
     return redirect("/this/same/page");
   });
 };
 
 export let loader = async ({ request }) => {
-  return withSession(request, session => {
+  return withSession(request, (session) => {
     return json({ message: session.get("message") });
   });
 };
@@ -332,7 +345,8 @@ import { loadStripe } from "@stripe/stripe-js";
 
 let stripe;
 async function getStripe() {
-  return (stripe = stripe || (await loadStripe(window.ENV.stripe)));
+  return (stripe =
+    stripe || (await loadStripe(window.ENV.stripe)));
 }
 
 export async function redirectToStripeCheckout(sessionId) {
@@ -350,9 +364,11 @@ Another common case is code that calls browser-only APIs while rendering. When s
 
 ```js bad lines=2
 function useLocalStorage(key) {
-  let [state, setState] = useState(localStorage.getItem(key));
+  let [state, setState] = useState(
+    localStorage.getItem(key)
+  );
 
-  let setWithLocalStorage = nextState => {
+  let setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 
@@ -370,7 +386,7 @@ function useLocalStorage(key) {
     setState(localStorage.getItem(key));
   }, []);
 
-  let setWithLocalStorage = nextState => {
+  let setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 

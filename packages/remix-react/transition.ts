@@ -235,7 +235,8 @@ type FetcherStates<TData = any> = {
   };
 };
 
-export type Fetcher<TData = any> = FetcherStates<TData>[keyof FetcherStates<TData>];
+export type Fetcher<TData = any> =
+  FetcherStates<TData>[keyof FetcherStates<TData>];
 
 type ClientMatch = RouteMatch<ClientRoute>;
 

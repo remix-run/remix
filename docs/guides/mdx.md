@@ -72,7 +72,10 @@ When you `import` a `.mdx` file, the exports of the module are:
 - **filename**: The basename of the source file (e.g. "first-post.mdx")
 
 ```tsx
-import Component, { attributes, filename } from "./first-post.mdx";
+import Component, {
+  attributes,
+  filename,
+} from "./first-post.mdx";
 ```
 
 ## Example Blog Usage
@@ -95,7 +98,7 @@ import * as postC from "./posts/c.md";
 function postFromModule(mod) {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
-    ...mod.attributes.meta
+    ...mod.attributes.meta,
   };
 }
 
@@ -107,7 +110,7 @@ export function loader() {
   return [
     postFromModule(postA),
     postFromModule(postB),
-    postFromModule(postC)
+    postFromModule(postC),
   ];
 }
 
@@ -116,7 +119,7 @@ export default function Index() {
 
   return (
     <ul>
-      {posts.map(post => (
+      {posts.map((post) => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
           {post.description && <p>{post.description}</p>}
@@ -132,18 +135,20 @@ export default function Index() {
 If you wish to configure your own remark plugins you can do so through the `remix.config.js`'s `mdx` export:
 
 ```js
-const { remarkMdxFrontmatter } = require("remark-mdx-frontmatter");
+const {
+  remarkMdxFrontmatter,
+} = require("remark-mdx-frontmatter");
 
 // can be an sync / async function or an object
-exports.mdx = async filename => {
+exports.mdx = async (filename) => {
   const [rehypeHighlight, remarkToc] = await Promise.all([
-    import("rehype-highlight").then(mod => mod.default),
-    import("remark-toc").then(mod => mod.default)
+    import("rehype-highlight").then((mod) => mod.default),
+    import("remark-toc").then((mod) => mod.default),
   ]);
 
   return {
     remarkPlugins: [remarkToc],
-    rehypePlugins: [rehypeHighlight]
+    rehypePlugins: [rehypeHighlight],
   };
 };
 ```

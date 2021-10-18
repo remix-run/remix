@@ -10,7 +10,8 @@
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "format": "prettier --ignore-path .eslintignore --write ./"
   },
   "workspaces": [
     "packages/create-remix",

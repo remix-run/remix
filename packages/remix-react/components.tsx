@@ -103,10 +103,8 @@ export function RemixEntry({
 
   let [, forceUpdate] = React.useState({});
 
-  let [
-    componentDidCatchEmulator,
-    setComponentDidCatchEmulator
-  ] = React.useState(entryComponentDidCatchEmulator);
+  let [componentDidCatchEmulator, setComponentDidCatchEmulator] =
+    React.useState(entryComponentDidCatchEmulator);
 
   let [transitionManager] = React.useState(() => {
     return createTransitionManager({
@@ -143,12 +141,8 @@ export function RemixEntry({
     return { ..._navigator, push };
   }, [_navigator, transitionManager]);
 
-  let {
-    location,
-    matches,
-    loaderData,
-    actionData
-  } = transitionManager.getState();
+  let { location, matches, loaderData, actionData } =
+    transitionManager.getState();
 
   // Send new location to the transition manager
   React.useEffect(() => {
@@ -256,11 +250,8 @@ function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
 
 export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
-  let {
-    routeData,
-    routeModules,
-    componentDidCatchEmulator
-  } = useRemixEntryContext();
+  let { routeData, routeModules, componentDidCatchEmulator } =
+    useRemixEntryContext();
 
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
@@ -400,13 +391,8 @@ function usePrefetchBehavior(
 ) {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
-  let {
-    onFocus,
-    onBlur,
-    onMouseEnter,
-    onMouseLeave,
-    onTouchStart
-  } = theirElementProps;
+  let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
+    theirElementProps;
 
   React.useEffect(() => {
     if (prefetch === "render") {
@@ -534,10 +520,10 @@ export function PrefetchPageLinks({
   ...dataLinkProps
 }: PrefetchPageDescriptor) {
   let { clientRoutes } = useRemixEntryContext();
-  let matches = React.useMemo(() => matchClientRoutes(clientRoutes, page), [
-    clientRoutes,
-    page
-  ]);
+  let matches = React.useMemo(
+    () => matchClientRoutes(clientRoutes, page),
+    [clientRoutes, page]
+  );
 
   if (!matches) {
     console.warn(`Tried to prefetch ${page} but no routes matched.`);

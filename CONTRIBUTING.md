@@ -1,7 +1,7 @@
 Remix is a commercial project developed by React Training LLC.
 
 We do not ask for contributions from our subscribers. After all, that's what
-you're paying *us* for. 😅
+you're paying _us_ for. 😅
 
 However, if there is something that you'd like to contribute, whether it's a bug
 fix to scratch your own itch or a typo that you just can't overlook in the docs,
