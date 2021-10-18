@@ -151,7 +151,7 @@ Here are a few really common use cases:
 
 ```ts
 export let loader = ({ request }) => {
-  return requireUser(request, (user) => {
+  return requireUser(request, user => {
     return json(user);
   });
 };
@@ -162,8 +162,8 @@ You can combine them together too:
 ```ts
 export let loader = ({ request }) => {
   return removeTrailingSlash(request.url, () => {
-    return withSession(request, (session) => {
-      return requireUser(session, (user) => {
+    return withSession(request, session => {
+      return requireUser(session, user => {
         return json(user);
       });
     });
@@ -199,7 +199,7 @@ export function removeTrailingSlash(request, next) {
   let url = new URL(request.url);
   if (url.pathname.endsWith("/")) {
     return redirect(request.url.slice(0, -1), {
-      status: 308,
+      status: 308
     });
   }
   return next();
@@ -218,12 +218,12 @@ This helper allows loaders and actions to skip all the request/response cookie h
 import {
   Response,
   json,
-  createCookieSessionStorage,
+  createCookieSessionStorage
 } from "remix";
 
 let { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
-    cookie: { name: "__session" },
+    cookie: { name: "__session" }
   });
 
 export async function withSession(request, next) {
@@ -255,7 +255,7 @@ Maybe seeing how this would be used will help:
 
 ```js filename=routes/some-route.js
 export let action = async ({ request }) => {
-  return withSession(request, (session) => {
+  return withSession(request, session => {
     session.flash(
       "message",
       "Functional Composition is Fun! (ctional)"
@@ -265,7 +265,7 @@ export let action = async ({ request }) => {
 };
 
 export let loader = async ({ request }) => {
-  return withSession(request, (session) => {
+  return withSession(request, session => {
     return json({ message: session.get("message") });
   });
 };
@@ -368,7 +368,7 @@ function useLocalStorage(key) {
     localStorage.getItem(key)
   );
 
-  let setWithLocalStorage = (nextState) => {
+  let setWithLocalStorage = nextState => {
     setState(nextState);
   };
 
@@ -386,7 +386,7 @@ function useLocalStorage(key) {
     setState(localStorage.getItem(key));
   }, []);
 
-  let setWithLocalStorage = (nextState) => {
+  let setWithLocalStorage = nextState => {
     setState(nextState);
   };
 

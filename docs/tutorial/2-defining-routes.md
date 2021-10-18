@@ -44,7 +44,7 @@ From your route component, export a `meta` function. From there, return an objec
 export function meta() {
   return {
     title: "Public Gists",
-    description: "View the latest gists from the public",
+    description: "View the latest gists from the public"
   };
 }
 

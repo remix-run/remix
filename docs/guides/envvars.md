@@ -40,8 +40,8 @@ Instead we recommmend keeping all of your environment variables on the server (a
      return {
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-         FAUNA_DB_URL: process.env.FAUNA_DB_URL,
-       },
+         FAUNA_DB_URL: process.env.FAUNA_DB_URL
+       }
      };
    }
 
@@ -68,8 +68,8 @@ Instead we recommmend keeping all of your environment variables on the server (a
      return {
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-         FAUNA_DB_URL: process.env.FAUNA_DB_URL,
-       },
+         FAUNA_DB_URL: process.env.FAUNA_DB_URL
+       }
      };
    }
 
@@ -87,7 +87,7 @@ Instead we recommmend keeping all of your environment variables on the server (a
              dangerouslySetInnerHTML={{
                __html: `window.ENV = ${JSON.stringify(
                  data.ENV
-               )}`,
+               )}`
              }}
            />
            <Scripts />

@@ -29,8 +29,8 @@ export let links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css",
-    },
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+    }
   ];
 };
 ```
@@ -75,8 +75,8 @@ Here's a quick guide to getting it set up. We encourage you to read the official
     module.exports = {
       plugins: {
         tailwindcss: {},
-        autoprefixer: {},
-      },
+        autoprefixer: {}
+      }
     };
     ```
 
@@ -88,14 +88,14 @@ Here's a quick guide to getting it set up. We encourage you to read the official
         "./app/**/*.tsx",
         "./app/**/*.jsx",
         "./app/**/*.js",
-        "./app/**/*.ts",
+        "./app/**/*.ts"
       ],
       darkMode: false, // or 'media' or 'class'
       theme: {
-        extend: {},
+        extend: {}
       },
       variants: {},
-      plugins: [],
+      plugins: []
     };
     ```
 
@@ -232,7 +232,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
 
      return new Response("<!DOCTYPE html>" + markup, {
        status: responseStatusCode,
-       headers: responseHeaders,
+       headers: responseHeaders
      });
    }
    ```

@@ -136,12 +136,12 @@ let action: ActionFunction = async ({ request }) => {
     body: JSON.stringify({
       description: "Created from Remix Form!",
       public: true,
-      files: { [fileName]: { content } },
+      files: { [fileName]: { content } }
     }),
     headers: {
       "Content-Type": "application/json",
-      Authorization: `token ${token}`,
-    },
+      Authorization: `token ${token}`
+    }
   });
 
   // redirect out of here to go see our new gist!

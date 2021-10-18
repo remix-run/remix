@@ -64,8 +64,8 @@ return new Response(JSON.stringify({ teapot: true }), {
   status: 418,
   headers: {
     "Content-Type": "application/json",
-    "Cache-Control": "max-age=3600",
-  },
+    "Cache-Control": "max-age=3600"
+  }
 });
 ```
 
@@ -144,7 +144,7 @@ Like headers, meta tags pretty much always depend on data too, so Remix passes t
 export function meta({ data }) {
   return {
     title: "Public Gists",
-    description: `View the latest ${data.length} gists from the public`,
+    description: `View the latest ${data.length} gists from the public`
   };
 }
 ```
