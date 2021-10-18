@@ -631,12 +631,23 @@ export function Meta() {
     <>
       {Object.keys(meta).map(name => {
         let value = meta[name];
+        // Open Graph tags use the `property` attribute, while other meta tags
+        // use `name`. See https://ogp.me/
+        let isOpenGraphTag = name.startsWith("og:");
         return name === "title" ? (
           <title key="title">{meta[name]}</title>
         ) : Array.isArray(value) ? (
-          value.map(val => renderMeta(name, val, true))
+          value.map(content =>
+            isOpenGraphTag ? (
+              <meta key={name + content} property={name} content={content} />
+            ) : (
+              <meta key={name + content} name={name} content={content} />
+            )
+          )
+        ) : isOpenGraphTag ? (
+          <meta key={name} property={name} content={value} />
         ) : (
-          renderMeta(name, value)
+          <meta key={name} name={name} content={value} />
         );
       })}
     </>
@@ -1207,27 +1218,6 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
           };
       `
       }}
-    />
-  );
-}
-
-function renderMeta(
-  name: string,
-  content: string,
-  concatKey?: boolean
-): React.ReactElement {
-  return name.startsWith("og:") ? (
-    // Open Graph protocol - https://ogp.me/
-    <meta
-      key={concatKey ? "".concat(name, "-", content) : name}
-      property={name}
-      content={content}
-    />
-  ) : (
-    <meta
-      key={concatKey ? "".concat(name, "-", content) : name}
-      name={name}
-      content={content}
     />
   );
 }
