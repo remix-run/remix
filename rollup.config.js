@@ -52,8 +52,18 @@ function createRemix() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
+            {
+              src: `${SOURCE_DIR}/package.json`,
+              dest: OUTPUT_DIR
+            },
+            {
+              src: `${SOURCE_DIR}/README.md`,
+              dest: OUTPUT_DIR
+            },
+            {
+              src: `${SOURCE_DIR}/templates/*`,
+              dest: `${OUTPUT_DIR}/templates`
+            }
           ]
         })
       ]
@@ -107,51 +117,6 @@ function remix() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"]
-        })
-      ]
-    }
-  ];
-}
-
-/** @type {import("rollup").RollupOptions[]} */
-function remixInit() {
-  let SOURCE_DIR = "packages/remix-init";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/init";
-  let version = getVersion(SOURCE_DIR);
-
-  return [
-    {
-      external() {
-        return true;
-      },
-      input: `${SOURCE_DIR}/cli.ts`,
-      output: {
-        banner: executableBanner + createBanner("@remix-run/init", version),
-        dir: OUTPUT_DIR,
-        format: "cjs"
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts"]
-        }),
-        nodeResolve({ extensions: [".ts"] }),
-        copy({
-          targets: [
-            {
-              src: `${SOURCE_DIR}/package.json`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/README.md`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/templates/*`,
-              dest: `${OUTPUT_DIR}/templates`
-            }
-          ]
         })
       ]
     }
@@ -677,7 +642,6 @@ export default function rollup(options) {
   let builds = [
     ...createRemix(options),
     ...remix(options),
-    ...remixInit(options),
     ...remixDev(options),
     ...remixServerRuntime(options),
     ...remixNode(options),

@@ -10,7 +10,7 @@ module.exports = {
   overrides: [
     {
       files: [
-        "packages/remix-init/templates/cloudflare-workers/**/*.js",
+        "packages/create-remix/templates/cloudflare-workers/**/*.js",
         "packages/remix-cloudflare-workers/**/*.ts"
       ],
       rules: {
