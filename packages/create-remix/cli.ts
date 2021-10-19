@@ -15,11 +15,6 @@ const help = `
   If <dir> is not provided up front you will be prompted for it.
 
   Flags:
-    --auth              Your Remix license key. May be provided up front to avoid
-                        a prompt later if the script is not able to automatically
-                        detect it on this machine. Defaults to using the value of
-                        the REMIX_TOKEN environment variable or the auth token in
-                        $HOME/.npmrc
     --tag               The version tag of Remix to use, may also be a specific
                         version. Defaults to "latest"
     --help, -h          Show this help message
