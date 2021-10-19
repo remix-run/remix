@@ -10,6 +10,7 @@
 
     "declaration": true,
     "emitDeclarationOnly": true,
+    "resolveJsonModule": true,
 
     "outDir": "../../build/node_modules/create-remix",
     "rootDir": "."

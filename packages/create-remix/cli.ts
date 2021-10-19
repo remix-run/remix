@@ -3,9 +3,10 @@ import { execSync } from "child_process";
 import { homedir } from "os";
 import chalkAnimation from "chalk-animation";
 import fse from "fs-extra";
-import semver from "semver";
 import inquirer from "inquirer";
 import meow from "meow";
+
+import pkgJSON from "./package.json";
 
 const help = `
   Usage:
@@ -171,13 +172,10 @@ async function run() {
   appPkg.main = serverPkg.main;
 
   // add current versions of remix deps
-  let pkg = require(path.join(__dirname, "package.json"));
   ["dependencies", "devDependencies"].forEach(pkgKey => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
-        appPkg[pkgKey][key] = semver.prerelease(pkg.version)
-          ? pkg.version // pin prerelease versions
-          : `^${pkg.version}`;
+        appPkg[pkgKey][key] = `^${pkgJSON.version}`;
       }
     }
   });
