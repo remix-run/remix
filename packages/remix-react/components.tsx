@@ -44,7 +44,7 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules } from "./routeModules";
+import type { RouteModules, MetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
@@ -606,7 +606,7 @@ export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: { [name: string]: string } = {};
+  let meta: MetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
@@ -629,16 +629,27 @@ export function Meta() {
 
   return (
     <>
-      {Object.keys(meta).map(name =>
-        name === "title" ? (
+      {Object.keys(meta).map(name => {
+        let value = meta[name];
+        // Open Graph tags use the `property` attribute, while other meta tags
+        // use `name`. See https://ogp.me/
+        let isOpenGraphTag = name.startsWith("og:");
+        return name === "title" ? (
           <title key="title">{meta[name]}</title>
-        ) : name.startsWith("og:") ? (
-          // Open Graph protocol - https://ogp.me/
-          <meta key={name} property={name} content={meta[name]} />
+        ) : Array.isArray(value) ? (
+          value.map(content =>
+            isOpenGraphTag ? (
+              <meta key={name + content} property={name} content={content} />
+            ) : (
+              <meta key={name + content} name={name} content={content} />
+            )
+          )
+        ) : isOpenGraphTag ? (
+          <meta key={name} property={name} content={value} />
         ) : (
-          <meta key={name} name={name} content={meta[name]} />
-        )
-      )}
+          <meta key={name} name={name} content={value} />
+        );
+      })}
     </>
   );
 }
