@@ -107,7 +107,8 @@ async function run() {
 
   // Create the app directory
   let relativeAppDir = path.relative(process.cwd(), appDir);
-  if (relativeAppDir !== "") {
+  let appDirIsCurrentDir = relativeAppDir === "";
+  if (!appDirIsCurrentDir) {
     if (fse.existsSync(appDir)) {
       console.log(
         `️🚨 Oops, "${relativeAppDir}" already exists. Please try again with a different directory.`
@@ -191,12 +192,18 @@ async function run() {
     execSync("npm install", { stdio: "inherit" });
   }
 
-  console.log(
-    `💿 That's it! \`cd\` into "${path.relative(
-      process.cwd(),
-      appDir
-    )}" and check the README for development and deploy instructions!`
-  );
+  if (appDirIsCurrentDir) {
+    console.log(
+      `💿 That's it! Check the README for development and deploy instructions!`
+    );
+  } else {
+    console.log(
+      `💿 That's it! \`cd\` into "${path.relative(
+        process.cwd(),
+        appDir
+      )}" and check the README for development and deploy instructions!`
+    );
+  }
 }
 
 async function hasHomeNpmAuthToken(): Promise<boolean> {
