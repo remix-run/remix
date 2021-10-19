@@ -26,6 +26,9 @@ const flags: AnyFlags = {
   version: {
     type: "boolean",
     alias: "v"
+  },
+  format: {
+    type: "string"
   }
 };
 
@@ -42,7 +45,7 @@ if (cli.flags.version) {
 
 switch (cli.input[0]) {
   case "routes":
-    commands.routes(cli.input[1]);
+    commands.routes(cli.input[1], cli.flags.format as string);
     break;
   case "build":
     commands.build(cli.input[1], process.env.NODE_ENV);
