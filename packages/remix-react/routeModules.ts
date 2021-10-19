@@ -25,7 +25,7 @@ export interface RouteModule {
 /**
  * A React component that is rendered when the server throws a Response.
  */
- export type CatchBoundaryComponent = ComponentType<{}>;
+export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.

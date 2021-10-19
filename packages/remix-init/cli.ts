@@ -16,7 +16,14 @@ run().then(
 
 async function run() {
   let answers = await inquirer.prompt<{
-    server: "remix" | "express" | "arc" | "fly" | "vercel" | "netlify" | "cloudflare-workers";
+    server:
+      | "remix"
+      | "express"
+      | "arc"
+      | "fly"
+      | "vercel"
+      | "netlify"
+      | "cloudflare-workers";
     lang: "ts" | "js";
     install: boolean;
   }>([

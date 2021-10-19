@@ -205,7 +205,10 @@ Here's some sample code to show how you might use Styled Components with Remix:
      renderToString(
        sheet.collectStyles(
          <StylesContext.Provider value={null}>
-           <RemixServer context={remixContext} url={request.url} />
+           <RemixServer
+             context={remixContext}
+             url={request.url}
+           />
          </StylesContext.Provider>
        )
      );
@@ -218,11 +221,14 @@ Here's some sample code to show how you might use Styled Components with Remix:
      // make sure to pass them to `<StylesContext.Provider value>`
      let markup = ReactDOMServer.renderToString(
        <StylesContext.Provider value={styles}>
-         <RemixServer context={remixContext} url={request.url} />
+         <RemixServer
+           context={remixContext}
+           url={request.url}
+         />
        </StylesContext.Provider>
      );
 
-     responseHeaders.set("Content-Type", "text/html")
+     responseHeaders.set("Content-Type", "text/html");
 
      return new Response("<!DOCTYPE html>" + markup, {
        status: responseStatusCode,

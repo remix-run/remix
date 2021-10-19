@@ -169,7 +169,7 @@ import { redirect } from "remix";
 
 export let action: ActionFunction = async ({
   request,
-  session,
+  session
 }) => {
   let newProject = new URLSearchParams(
     await request.text()
@@ -284,7 +284,7 @@ import {
   redirect,
   useActionData,
   Form,
-  useTransition,
+  useTransition
 } from "remix";
 
 // ...
@@ -380,7 +380,7 @@ function ValidationMessage({ errorMessage, isPending }) {
         opacity: show ? 1 : 0,
         height: show ? "1em" : 0,
         color: "red",
-        transition: "all 300ms ease-in-out",
+        transition: "all 300ms ease-in-out"
       }}
     >
       {errorMessage}
@@ -415,7 +415,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.name
                   ? "red"
-                  : "",
+                  : ""
               }}
             />
           </label>
@@ -442,7 +442,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.description
                   ? "red"
-                  : "",
+                  : ""
               }}
             />
           </label>

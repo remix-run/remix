@@ -47,10 +47,10 @@ export function createRequestHandler({
         ? getLoadContext(event, context)
         : undefined;
 
-    let response = ((await handleRequest(
-      (request as unknown) as Request,
+    let response = (await handleRequest(
+      request as unknown as Request,
       loadContext
-    )) as unknown) as NodeResponse;
+    )) as unknown as NodeResponse;
 
     return {
       statusCode: response.status,

@@ -17,10 +17,10 @@ module.exports = {
   publicPath: "/build/",
   serverBuildDirectory: "build",
   routes(defineRoutes) {
-    return defineRoute((route) => {
+    return defineRoute(route => {
       route("/somewhere/cool/*", "catchall.tsx");
     });
-  },
+  }
 };
 ```
 
@@ -157,7 +157,7 @@ export default function handleRequest(
 
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
-    headers: responseHeaders,
+    headers: responseHeaders
   });
 }
 ```
@@ -208,7 +208,7 @@ export default function Users() {
   let data = useLoaderData();
   return (
     <ul>
-      {data.map((user) => (
+      {data.map(user => (
         <li>{user.name}</li>
       ))}
     </ul>
@@ -251,7 +251,7 @@ Say your express server (or your serverless function handler) looks something li
 
 ```js
 const {
-  createRequestHandler,
+  createRequestHandler
 } = require("@remix-run/express");
 
 app.all(
@@ -260,7 +260,7 @@ app.all(
     getLoaderContext(req, res) {
       // this becomes the loader context
       return { req, res };
-    },
+    }
   })
 );
 ```
@@ -305,8 +305,8 @@ export let loader: LoaderFunction = async () => {
 
   return new Response(body, {
     headers: {
-      "Content-Type": "application/json",
-    },
+      "Content-Type": "application/json"
+    }
   });
 };
 ```
@@ -361,7 +361,7 @@ export let loader: LoaderFunction = async () => {
     return json(
       {
         error: true,
-        message: error.message,
+        message: error.message
       },
       { status: 500 }
     );
@@ -502,7 +502,7 @@ export let action = async ({ params, request }) => {
 
   let update = await prisma.post.update({
     where: { id: params.postId },
-    data: Object.fromEntries(data),
+    data: Object.fromEntries(data)
   });
 
   return redirect(`/posts/${params.postId}`);
@@ -517,7 +517,7 @@ Each route can define it's own HTTP headers. One of the most important headers i
 export function headers({ loaderHeaders, parentHeaders }) {
   return {
     "X-Stretchy-Pants": "its for fun",
-    "Cache-Control": "max-age=300, s-maxage=3600",
+    "Cache-Control": "max-age=300, s-maxage=3600"
   };
 }
 ```
@@ -527,7 +527,7 @@ Usually your data is a better indicator of your cache duration than your route m
 ```tsx
 export function headers({ loaderHeaders }) {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control"),
+    "Cache-Control": loaderHeaders.get("Cache-Control")
   };
 }
 ```
@@ -579,7 +579,7 @@ export function headers({ loaderHeaders, parentHeaders }) {
   );
 
   return {
-    "Cache-Control": `max-age=${maxAge}`,
+    "Cache-Control": `max-age=${maxAge}`
   };
 }
 ```
@@ -597,7 +597,7 @@ export let meta: MetaFunction = () => {
   return {
     title: "Something cool",
     description:
-      "This becomes the nice preview on search results.",
+      "This becomes the nice preview on search results."
   };
 };
 ```
@@ -618,18 +618,18 @@ export let links: LinksFunction = () => {
     {
       rel: "icon",
       href: "/favicon.png",
-      type: "image/png",
+      type: "image/png"
     },
     {
       rel: "stylesheet",
-      href: "https://example.com/some/styles.css",
+      href: "https://example.com/some/styles.css"
     },
     { page: "/users/123" },
     {
       rel: "preload",
       href: "/images/banner.jpg",
-      as: "image",
-    },
+      as: "image"
+    }
   ];
 };
 ```
@@ -652,14 +652,14 @@ export let links: LinksFunction = () => {
     {
       rel: "icon",
       href: "/favicon.png",
-      type: "image/png",
+      type: "image/png"
     },
 
     // add an external stylesheet
     {
       rel: "stylesheet",
       href: "https://example.com/some/styles.css",
-      crossOrigin: "true",
+      crossOrigin: "true"
     },
 
     // add a local stylesheet, remix will fingerprint the file name for
@@ -672,7 +672,7 @@ export let links: LinksFunction = () => {
     {
       rel: "prefetch",
       as: "image",
-      href: "/img/bunny.jpg",
+      href: "/img/bunny.jpg"
     },
 
     // only prefetch it if they're on a bigger screen
@@ -680,8 +680,8 @@ export let links: LinksFunction = () => {
       rel: "prefetch",
       as: "image",
       href: "/img/bunny.jpg",
-      media: "(min-width: 1000px)",
-    },
+      media: "(min-width: 1000px)"
+    }
   ];
 };
 ```
@@ -757,7 +757,7 @@ Exporting a handle allows you to create application conventions with the `useMat
 
 ```js
 export let handle = {
-  its: "all yours",
+  its: "all yours"
 };
 ```
 
@@ -785,7 +785,7 @@ export let unstable_shouldReload: ShouldReloadFunction = ({
   url,
 
   // the previous URL used to render this page
-  prevUrl,
+  prevUrl
 }) => false; // or `true`;
 ```
 
@@ -813,8 +813,8 @@ export let loader = () => {
   return {
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
-      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-    },
+      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY
+    }
   };
 };
 
@@ -860,9 +860,9 @@ export function loader({ request, params }) {
     where: {
       projectId: params.projectId,
       name: {
-        contains: url.searchParams.get("search"),
-      },
-    },
+        contains: url.searchParams.get("search")
+      }
+    }
   });
 }
 ```
@@ -894,7 +894,7 @@ You may want to get more granular and reload only for submissions to this projec
 ```tsx
 export function unstable_shouldReload({
   params,
-  submission,
+  submission
 }) {
   return (
     submission &&

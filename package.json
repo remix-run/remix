@@ -10,6 +10,7 @@
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx .",
+    "format": "prettier --ignore-path .eslintignore --write ./",
     "prepare": "husky install"
   },
   "workspaces": [
@@ -80,10 +81,6 @@
     "semver": "^7.3.4",
     "typescript": "^4.2.3",
     "unified": "^9.2.0"
-  },
-  "prettier": {
-    "arrowParens": "avoid",
-    "trailingComma": "none"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
