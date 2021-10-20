@@ -157,7 +157,7 @@ Alright, fill out your form and give it a shot! You should see your new gist on 
 
 ## Upgrading to `<Form>` and pending UI states
 
-With a regular `<form>` we're letting the browser handle the post and the pending UI (the address bar/favicon animation). Remix has a `<Form>` component and hook to go along with it to let you progressively enhance your forms. If your budget for this feature is short, just use a `<form>` (or rather, `<Form forceRefresh>` is the preferred way), let the browser handle it, and move on with your life.
+With a regular `<form>` we're letting the browser handle the post and the pending UI (the address bar/favicon animation). Remix has a `<Form>` component and hook to go along with it to let you progressively enhance your forms. If your budget for this feature is short, just use a `<form>` (or rather, `<Form reloadDocument>` is the preferred way), let the browser handle it, and move on with your life.
 
 If you've got the time to make a fancy user experience, with Remix you don't have to rewrite your code to do the fetch with `useEffect` and manage your own state: you can just add the fancy bits with `<Form>`.
 

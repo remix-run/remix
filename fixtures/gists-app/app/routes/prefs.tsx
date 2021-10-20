@@ -60,7 +60,7 @@ export default function UserPrefs() {
   function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
     // Do a full document load:
     // Note: Does not include the button's name+value :( Better to just
-    // use <Form forceRefresh> and no <button onClick>
+    // use <Form reloadDocument> and no <button onClick>
     // event.currentTarget.form.submit();
 
     // Do a client-side transition:

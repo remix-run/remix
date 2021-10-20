@@ -766,7 +766,7 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Forces a full document navigation instead of a fetch.
    */
-  forceRefresh?: boolean;
+  reloadDocument?: boolean;
 
   /**
    * Replaces the current entry in the browser history stack when the form
@@ -799,7 +799,7 @@ interface FormImplProps extends FormProps {
 export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   (
     {
-      forceRefresh = false,
+      reloadDocument = false,
       replace = false,
       method = "get",
       action = ".",
@@ -821,7 +821,7 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
         action={formAction}
         encType={encType}
         onSubmit={
-          forceRefresh
+          reloadDocument
             ? undefined
             : event => {
                 onSubmit && onSubmit(event);

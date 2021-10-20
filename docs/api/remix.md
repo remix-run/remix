@@ -161,12 +161,12 @@ Instructs the form to replace the current entry in the history stack, instead of
 
 <docs-warning>This has no effect without JavaScript on the page.</docs-warning>
 
-### `<Form forceRefresh>`
+### `<Form reloadDocument>`
 
 If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page.
 
 ```tsx
-<Form forceRefresh />
+<Form reloadDocument />
 ```
 
 <docs-info>This is recommended over <code>&lt;form></code></docs-info>
@@ -271,7 +271,7 @@ export default function Signup() {
 
 ### Notes about resubmissions
 
-When using `<Form>` (instead of `<form>` or `<Form forceRefresh>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
+When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
 
 <docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
 
@@ -316,7 +316,7 @@ Now the user can click back without resubmitting the form.
 Usually your actions will either return validation issues or redirect, and then you're data and your user's are safe no matter how the form is submitted. But to go into further detail, if you're using:
 
 - `<form>`
-- `<Form forceRefresh>`
+- `<Form reloadDocument>`
 - You're not rendering `<Scripts/>`
 - The user has JavaScript disabled
 
