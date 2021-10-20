@@ -11,9 +11,10 @@ import {
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the netlify adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
-  typeof createRemixRequestHandler
->;
+let mockedCreateRequestHandler =
+  createRemixRequestHandler as jest.MockedFunction<
+    typeof createRemixRequestHandler
+  >;
 
 function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
   return {

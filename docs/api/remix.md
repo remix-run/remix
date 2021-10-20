@@ -518,7 +518,7 @@ function SubmitButton() {
 
   let loadTexts = {
     actionRedirect: "Data saved, redirecting...",
-    actionReload: "Data saved, reloading fresh data...",
+    actionReload: "Data saved, reloading fresh data..."
   };
 
   let text =
@@ -799,7 +799,7 @@ export function NewsletterForm({
   Form,
   data,
   state,
-  type,
+  type
 }) {
   // refactor a bit in here, just read from props instead of useFetcher
 }
@@ -838,7 +838,7 @@ function useMarkAsRead({ articleId, userId }) {
       { userId },
       {
         method: "POST",
-        action: "/article/${articleID}/mark-as-read",
+        action: "/article/${articleID}/mark-as-read"
       }
     );
   });
@@ -907,7 +907,7 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="city-query"
-            onChange={(event) =>
+            onChange={event =>
               cities.submit(event.target.form)
             }
           />
@@ -920,7 +920,7 @@ function CitySearchCombobox() {
               <p>Failed to load cities :(</p>
             ) : cities.data.length ? (
               <ComboboxList>
-                {cities.data.map((city) => (
+                {cities.data.map(city => (
                   <ComboboxOption
                     key={city.id}
                     value={city.name}
@@ -983,7 +983,7 @@ function Task({ task }) {
         <input
           type="checkbox"
           checked={checked}
-          onChange={(e) => toggle.submit(e.target.form)}
+          onChange={e => toggle.submit(e.target.form)}
         />
       </label>
     </toggle.Form>
@@ -1078,7 +1078,7 @@ let matches = useMatches();
 [
   { pathname, data, params, handle }, // root route
   { pathname, data, params, handle }, // layout route
-  { pathname, data, params, handle }, // child route
+  { pathname, data, params, handle } // child route
   // etc.
 ];
 ```
@@ -1100,7 +1100,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
    ```tsx
    // routes/parent.tsx
    export let handle = {
-     breadcrumb: () => <Link to="/parent">Some Route</Link>,
+     breadcrumb: () => <Link to="/parent">Some Route</Link>
    };
    ```
 
@@ -1111,7 +1111,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
    export let handle = {
      breadcrumb: () => (
        <Link to="/parent/child">Child Route</Link>
-     ),
+     )
    };
    ```
 
@@ -1123,7 +1123,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
      Links,
      Scripts,
      useLoaderData,
-     useMatches,
+     useMatches
    } from "remix";
 
    export default function Root() {
@@ -1141,7 +1141,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
                {matches
                  // skip routes that don't have a breadcrumb
                  .filter(
-                   (match) =>
+                   match =>
                      match.handle && match.handle.breadcrumb
                  )
                  // render breadcrumbs!
@@ -1219,8 +1219,8 @@ export let loader: LoaderFunction = () => {
   // Instead of this:
   return new Response(JSON.stringify({ any: "thing" }), {
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
-    },
+      "Content-Type": "application/json; charset=utf-8"
+    }
   });
 };
 ```
@@ -1234,8 +1234,8 @@ export let loader: LoaderFunction = () => {
     {
       status: 418,
       headers: {
-        "Cache-Control": "no-store",
-      },
+        "Cache-Control": "no-store"
+      }
     }
   );
 };
@@ -1272,15 +1272,15 @@ You can also send a `ResponseInit` to set headers, like committing a session.
 ```ts
 redirect(path, {
   headers: {
-    "Set-Cookie": await commitSession(session),
-  },
+    "Set-Cookie": await commitSession(session)
+  }
 });
 
 redirect(path, {
   status: 302,
   headers: {
-    "Set-Cookie": await commitSession(session),
-  },
+    "Set-Cookie": await commitSession(session)
+  }
 });
 ```
 
@@ -1294,8 +1294,8 @@ return redirect("/else/where", 303);
 return new Response("", {
   status: 303,
   headers: {
-    Location: "/else/where",
-  },
+    Location: "/else/where"
+  }
 });
 ```
 
@@ -1320,7 +1320,7 @@ First, create a cookie:
 import { createCookie } from "remix";
 
 export let userPrefs = createCookie("user-prefs", {
-  maxAge: 604_800, // one week
+  maxAge: 604_800 // one week
 });
 ```
 
@@ -1358,8 +1358,8 @@ export async function action({ request }) {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await cookie.serialize(value),
-    },
+      "Set-Cookie": await cookie.serialize(value)
+    }
   });
 }
 
@@ -1399,7 +1399,7 @@ let cookie = createCookie("user-prefs", {
   httpOnly: true,
   secure: true,
   expires: new Date(Date.now() + 60),
-  maxAge: 60,
+  maxAge: 60
 });
 
 // You can either use the defaults:
@@ -1419,7 +1419,7 @@ To sign a cookie, provide one or more `secrets` when you first create the cookie
 
 ```js
 let cookie = createCookie("user-prefs", {
-  secrets: ["s3cret1"],
+  secrets: ["s3cret1"]
 });
 ```
 
@@ -1430,7 +1430,7 @@ Secrets may be rotated by adding new secrets to the front of the `secrets` array
 ```js
 // app/cookies.js
 let cookie = createCookie("user-prefs", {
-  secrets: ["n3wsecr3t", "olds3cret"],
+  secrets: ["n3wsecr3t", "olds3cret"]
 });
 
 // in your route module...
@@ -1442,8 +1442,8 @@ export async function loader({ request }) {
   new Response("...", {
     headers: {
       // Set-Cookie is signed with "n3wsecr3t"
-      "Set-Cookie": await cookie.serialize(value),
-    },
+      "Set-Cookie": await cookie.serialize(value)
+    }
   });
 }
 ```
@@ -1464,7 +1464,7 @@ let cookie = createCookie("cookie-name", {
   path: "/",
   sameSite: "lax",
   secrets: ["s3cret1"],
-  secure: true,
+  secure: true
 });
 ```
 
@@ -1514,9 +1514,9 @@ Serializes a value and combines it with this cookie's options to create a `Set-C
 new Response("...", {
   headers: {
     "Set-Cookie": await cookie.serialize({
-      showBanner: true,
-    }),
-  },
+      showBanner: true
+    })
+  }
 });
 ```
 
@@ -1529,7 +1529,7 @@ let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
 cookie = createCookie("user-prefs", {
-  secrets: ["soopersekrit"],
+  secrets: ["soopersekrit"]
 });
 console.log(cookie.isSigned); // true
 ```
@@ -1540,7 +1540,7 @@ The `Date` on which this cookie expires. Note that if a cookie has both `maxAge`
 
 ```js
 let cookie = createCookie("user-prefs", {
-  expires: new Date("2021-01-01"),
+  expires: new Date("2021-01-01")
 });
 
 console.log(cookie.expires); // "2020-01-01T00:00:00.000Z"
@@ -1581,8 +1581,8 @@ let { getSession, commitSession, destroySession } =
       path: "/",
       sameSite: "lax",
       secrets: ["s3cret1"],
-      secure: true,
-    },
+      secure: true
+    }
   });
 
 export { getSession, commitSession, destroySession };
@@ -1614,8 +1614,8 @@ export async function loader({ request }) {
 
   return json(data, {
     headers: {
-      "Set-Cookie": await commitSession(session),
-    },
+      "Set-Cookie": await commitSession(session)
+    }
   });
 }
 
@@ -1638,8 +1638,8 @@ export async function action({ request }) {
     // Redirect back to the login page with errors.
     return redirect("/login", {
       headers: {
-        "Set-Cookie": await commitSession(session),
-      },
+        "Set-Cookie": await commitSession(session)
+      }
     });
   }
 
@@ -1648,8 +1648,8 @@ export async function action({ request }) {
   // Login succeeded, send them to the home page.
   return redirect("/", {
     headers: {
-      "Set-Cookie": await commitSession(session),
-    },
+      "Set-Cookie": await commitSession(session)
+    }
   });
 }
 
@@ -1700,7 +1700,7 @@ import { createSessionStorage } from "remix";
 function createDatabaseSessionStorage({
   cookie,
   host,
-  port,
+  port
 }) {
   // Configure your database client...
   let db = createDatabaseClient(host, port);
@@ -1722,7 +1722,7 @@ function createDatabaseSessionStorage({
     },
     async deleteData(id) {
       await db.delete(id);
-    },
+    }
   });
 }
 ```
@@ -1736,8 +1736,8 @@ let { getSession, commitSession, destroySession } =
     port: 1234,
     cookie: {
       name: "__session",
-      sameSite: "lax",
-    },
+      sameSite: "lax"
+    }
   });
 ```
 
@@ -1760,8 +1760,8 @@ let { getSession, commitSession, destroySession } =
     cookie: {
       name: "__session",
       secrets: ["r3m1xr0ck5"],
-      sameSite: "lax",
-    },
+      sameSite: "lax"
+    }
   });
 ```
 
@@ -1777,13 +1777,13 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage,
+  createFileSessionStorage
 } from "remix";
 
 // In this example the Cookie is created separately.
 let sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true,
+  sameSite: true
 });
 
 let { getSession, commitSession, destroySession } =
@@ -1791,7 +1791,7 @@ let { getSession, commitSession, destroySession } =
     // The root directory where you want to store the files.
     // Make sure it's writable!
     dir: "/app/sessions",
-    cookie: sessionCookie,
+    cookie: sessionCookie
   });
 
 export { getSession, commitSession, destroySession };
@@ -1807,13 +1807,13 @@ This storage keeps all the cookie information in your server's memory.
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage,
+  createFileSessionStorage
 } from "remix";
 
 // In this example the Cookie is created separately.
 let sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true,
+  sameSite: true
 });
 
 let { getSession, commitSession, destroySession } =
@@ -1821,7 +1821,7 @@ let { getSession, commitSession, destroySession } =
     // The root directory where you want to store the files.
     // Make sure it's writable!
     dir: "/app/sessions",
-    cookie: sessionCookie,
+    cookie: sessionCookie
   });
 
 export { getSession, commitSession, destroySession };
@@ -1880,8 +1880,8 @@ export async function action({ request, params }) {
 
   return redirect("/dashboard", {
     headers: {
-      "Set-Cookie": await commitSession(session),
-    },
+      "Set-Cookie": await commitSession(session)
+    }
   });
 }
 ```
@@ -1907,8 +1907,8 @@ export async function loader({ request }) {
     {
       headers: {
         // only necessary with cookieSesionStorage
-        "Set-Cookie": await commitSession(session),
-      },
+        "Set-Cookie": await commitSession(session)
+      }
     }
   );
 }
@@ -1953,8 +1953,8 @@ session.unset("name");
 ```js
 return json(data, {
   headers: {
-    "Set-Cookie": await commitSession(session),
-  },
+    "Set-Cookie": await commitSession(session)
+  }
 });
 ```
 
@@ -1966,6 +1966,6 @@ import type {
   LoaderFunction,
   MetaFunction,
   LinksFunction,
-  ShouldReloadFunction,
+  ShouldReloadFunction
 } from "remix";
 ```

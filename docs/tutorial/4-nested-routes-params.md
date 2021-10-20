@@ -44,7 +44,7 @@ export default function Team() {
     <div>
       <h2>Team</h2>
       <ul>
-        {data.map((member) => (
+        {data.map(member => (
           <li key={member.id}>
             <Link to={member.login}>{member.login}</Link>
           </li>

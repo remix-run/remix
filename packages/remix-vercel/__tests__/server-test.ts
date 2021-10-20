@@ -13,9 +13,10 @@ import {
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the vercel adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
-  typeof createRemixRequestHandler
->;
+let mockedCreateRequestHandler =
+  createRemixRequestHandler as jest.MockedFunction<
+    typeof createRemixRequestHandler
+  >;
 
 let consumeEventMock = jest.fn();
 let mockBridge = { consumeEvent: consumeEventMock };

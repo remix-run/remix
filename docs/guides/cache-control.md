@@ -50,7 +50,11 @@ First, your data usually knows better what the cache control should be than your
 Open up `app/routes/gists.ts` and update your headers function like so:
 
 ```tsx
-export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
+export function headers({
+  loaderHeaders
+}: {
+  loaderHeaders: Headers;
+}) {
   return {
     "Cache-Control": loaderHeaders.get("Cache-Control")
   };
