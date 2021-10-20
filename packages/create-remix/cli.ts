@@ -33,7 +33,6 @@ async function run() {
   let { input, flags, showHelp, showVersion } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
-      tag: { type: "string", default: "latest" },
       version: { type: "boolean", default: false, alias: "v" }
     }
   });
