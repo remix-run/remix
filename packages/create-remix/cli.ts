@@ -117,12 +117,8 @@ async function run() {
   }
 
   // Make sure npm registry is configured
-  if (await hasHomeNpmRegistry()) {
-    console.log("💿 Detected Remix Registry in ~/.npmrc");
-  } else {
-    await writeLocalNpmrc(appDir);
-    console.log("💿 Created local .npmrc with Remix Registry");
-  }
+  await writeLocalNpmrc(appDir);
+  console.log("💿 Created local .npmrc with Remix Registry");
 
   // copy the shared template
   let sharedTemplate = path.resolve(
@@ -193,15 +189,6 @@ async function run() {
       )}" and check the README for development and deploy instructions!`
     );
   }
-}
-
-async function hasHomeNpmRegistry(): Promise<boolean> {
-  let npmrcFile = path.resolve(homedir(), ".npmrc");
-  if (fse.existsSync(npmrcFile)) {
-    let npmrc = (await fse.readFile(npmrcFile)).toString();
-    return /@remix-run:registry=https:\/\/npm.remix.run/.test(npmrc);
-  }
-  return false;
 }
 
 async function writeLocalNpmrc(dir: string): Promise<void> {
