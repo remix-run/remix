@@ -6,7 +6,7 @@ import fse from "fs-extra";
 import inquirer from "inquirer";
 import meow from "meow";
 
-import pkgJSON from "./package.json";
+import cliPkgJson from "./package.json";
 
 const help = `
   Usage:
@@ -166,7 +166,7 @@ async function run() {
   ["dependencies", "devDependencies"].forEach(pkgKey => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
-        appPkg[pkgKey][key] = `^${pkgJSON.version}`;
+        appPkg[pkgKey][key] = `^${cliPkgJson.version}`;
       }
     }
   });
