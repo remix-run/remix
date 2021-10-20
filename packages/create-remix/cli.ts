@@ -10,7 +10,6 @@ import pkgJSON from "./package.json";
 
 const help = `
   Usage:
-    $ npm init remix -- [flags...] [<dir>]
     $ npx create-remix [flags...] [<dir>]
 
   If <dir> is not provided up front you will be prompted for it.

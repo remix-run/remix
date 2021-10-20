@@ -6,7 +6,7 @@ websites with React.
 To get started, open a new shell and run:
 
 ```sh
-$ npm init remix
+$ npx create-remix@latest
 ```
 
 Then follow the prompts you see in your terminal.

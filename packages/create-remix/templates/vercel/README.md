@@ -44,7 +44,7 @@ If you'd rather run everything in a single tab, you can look at [concurrently](h
 
 You will need to add your npmrc with your Remix token to your server's environment:
 
-When you ran `npm init remix`, we probably created an npmrc in your home directory. Go take a look, it should look something like this:
+When you ran `npx create-remix@latest`, we probably created an npmrc in your home directory. Go take a look, it should look something like this:
 
 ```
 //npm.remix.run/:_authToken={your-token}
