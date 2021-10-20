@@ -15,8 +15,6 @@ const help = `
   If <dir> is not provided up front you will be prompted for it.
 
   Flags:
-    --tag               The version tag of Remix to use, may also be a specific
-                        version. Defaults to "latest"
     --help, -h          Show this help message
     --version, -v       Show the version of this script
 `;
