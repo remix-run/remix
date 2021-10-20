@@ -119,17 +119,12 @@ async function run() {
     }
   }
 
-  // Make sure npm auth is configured
-  if (process.env.REMIX_TOKEN) {
-    console.log("💿 Detected REMIX_TOKEN on env, using local .npmrc");
-    await writeEnvNpmrc(appDir);
+  // Make sure npm registry is configured
+  if (await hasHomeNpmRegistry()) {
+    console.log("💿 Detected Remix Registry in ~/.npmrc");
   } else {
-    if (await hasHomeNpmAuthToken()) {
-      console.log("💿 Detected Remix Registry in ~/.npmrc");
-    } else {
-      await writeHomeNpmrc();
-      console.log(`💿 Wrote Remix Registry to ~/.npmrc`);
-    }
+    await writeLocalNpmrc(appDir);
+    console.log("💿 Created local .npmrc with Remix Registry");
   }
 
   // copy the shared template
@@ -203,7 +198,7 @@ async function run() {
   }
 }
 
-async function hasHomeNpmAuthToken(): Promise<boolean> {
+async function hasHomeNpmRegistry(): Promise<boolean> {
   let npmrcFile = path.resolve(homedir(), ".npmrc");
   if (fse.existsSync(npmrcFile)) {
     let npmrc = (await fse.readFile(npmrcFile)).toString();
@@ -212,19 +207,7 @@ async function hasHomeNpmAuthToken(): Promise<boolean> {
   return false;
 }
 
-async function writeHomeNpmrc(): Promise<void> {
-  let npmrc = `
-@remix-run:registry=https://npm.remix.run
-`;
-  let npmrcFile = path.resolve(homedir(), ".npmrc");
-  if (fse.existsSync(npmrcFile)) {
-    let existing = await fse.readFile(npmrcFile);
-    npmrc = `${existing}${npmrc}`;
-  }
-  return fse.writeFile(npmrcFile, npmrc.trim());
-}
-
-async function writeEnvNpmrc(dir: string): Promise<void> {
+async function writeLocalNpmrc(dir: string): Promise<void> {
   let npmrc = `
 @remix-run:registry=https://npm.remix.run
 `;
