@@ -31,7 +31,18 @@ export let action: ActionFunction = async ({ request }) => {
 
   let session = await getSession(request.headers.get("Cookie"));
   let bodyParams = new URLSearchParams(await request.text());
-  let body = Object.fromEntries(bodyParams);
+  let body = Array.from(bodyParams.entries()).reduce<
+    Record<string, string | string[]>
+  >((p, [k, v]) => {
+    if (typeof p[k] === "undefined") {
+      p[k] = v;
+    } else if (Array.isArray(p[k])) {
+      (p[k] as string[]).push(v);
+    } else {
+      p[k] = [p[k] as string, v];
+    }
+    return p;
+  }, {});
 
   session.flash("body", JSON.stringify(body));
 
@@ -99,6 +110,29 @@ export default function Methods() {
           </label>
         </p>
         <p>
+          Multiple
+          <br />
+          <label>
+            A:{" "}
+            <input
+              defaultChecked={true}
+              type="checkbox"
+              name="multiple[]"
+              defaultValue="a"
+            />
+          </label>
+          <br />
+          <label>
+            B:{" "}
+            <input
+              defaultChecked={true}
+              type="checkbox"
+              name="multiple[]"
+              defaultValue="b"
+            />
+          </label>
+        </p>
+        <p>
           <label>
             <input type="checkbox" name="slow" /> Go slow
           </label>
@@ -129,7 +163,7 @@ export default function Methods() {
             {Object.keys(data.body).map(key => (
               <div key={key}>
                 <dt>{key}</dt>
-                <dd>{data.body[key]}</dd>
+                <dd>{JSON.stringify(data.body[key])}</dd>
               </div>
             ))}
           </dl>

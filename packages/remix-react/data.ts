@@ -85,7 +85,7 @@ function getActionInit(
       typeof value === "string",
       "File inputs are not supported right now"
     );
-    body.set(key, value);
+    body.append(key, value);
   }
 
   return {
