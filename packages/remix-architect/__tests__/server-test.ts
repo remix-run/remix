@@ -36,7 +36,7 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
       http: {
         method: "GET",
         path: "/",
-        protocol: "http",
+        protocol: "HTTP/1.1",
         userAgent:
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
         sourceIp: "127.0.0.1",
@@ -286,11 +286,11 @@ describe("architect createRemixRequest", () => {
             "hash": null,
             "host": "localhost:3333",
             "hostname": "localhost",
-            "href": "http://localhost:3333/",
+            "href": "https://localhost:3333/",
             "path": "/",
             "pathname": "/",
             "port": "3333",
-            "protocol": "http:",
+            "protocol": "https:",
             "query": null,
             "search": null,
             "slashes": true,
