@@ -60,8 +60,6 @@ export function mdxPlugin(
 
         let directories = getDirectories(config.rootDirectory);
 
-        console.log(directories);
-
         const resolver = ResolverFactory.createResolver({
           alias: tsconfigAliases,
           useSyncFileSystemCalls: true,
@@ -80,19 +78,10 @@ export function mdxPlugin(
           ]
         });
 
-        let result;
-        resolver.resolve(
+        let result = resolver.resolveSync(
           {},
           config.rootDirectory,
-          path.basename(args.path, path.extname(args.path)),
-          {},
-          (error, res) => {
-            if (error) {
-              console.error(error);
-            } else {
-              result = res;
-            }
-          }
+          path.basename(args.path, path.extname(args.path))
         );
 
         return {
