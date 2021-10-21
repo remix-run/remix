@@ -35,11 +35,13 @@ async function run() {
     "vercel",
     "netlify",
     "react",
-    "serve",
-    "init" // publish init last
+    "serve"
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
+
+  // Publish create-remix
+  publish(path.join(buildDir, "create-remix"), tag);
 
   // Publish remix package
   publish(path.join(buildDir, "remix"), tag);

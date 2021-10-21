@@ -19,7 +19,6 @@
     "packages/remix-architect",
     "packages/remix-cloudflare-workers",
     "packages/remix-dev",
-    "packages/remix-init",
     "packages/remix-express",
     "packages/remix-netlify",
     "packages/remix-node",

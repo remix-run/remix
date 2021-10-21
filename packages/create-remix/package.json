@@ -1,8 +1,9 @@
 {
   "name": "create-remix",
-  "version": "1.0.2",
+  "version": "0.19.3",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
+  "repository": "https://github.com/remix-run/packages",
   "bin": {
     "create-remix": "cli.js"
   },

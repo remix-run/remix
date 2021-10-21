@@ -20,7 +20,7 @@ Let's get started! Here's what you'll need:
 Open up your terminal and type this:
 
 ```sh
-npm init remix
+npx create-remix@latest
 ```
 
 When it asks which server you want to use, pick "Remix App Server" for this tutorial. You'll notice that there are a lot of options, so you can deploy to any server you want.

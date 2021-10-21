@@ -3,35 +3,18 @@ import { execSync } from "child_process";
 import { homedir } from "os";
 import chalkAnimation from "chalk-animation";
 import fse from "fs-extra";
-import semver from "semver";
 import inquirer from "inquirer";
 import meow from "meow";
 
-/*
-IMPORTANT: DO NOT MAKE CHANGES to this script unless absolutely necessary!
-
-`npm init remix` and `npx create-remix` both aggressively cache scripts, which
-means that in order to run the latest version of this script they need to use
-`npx create-remix@latest`. There is no way to specify the script version with
-`npm init remix`. So the best user experience is to just never update this
-script so we don't have to tell users to purge their cached versions of it.
-*/
+import cliPkgJson from "./package.json";
 
 const help = `
   Usage:
-    $ npm init remix -- [flags...] [<dir>]
     $ npx create-remix [flags...] [<dir>]
 
   If <dir> is not provided up front you will be prompted for it.
 
   Flags:
-    --auth              Your Remix license key. May be provided up front to avoid
-                        a prompt later if the script is not able to automatically
-                        detect it on this machine. Defaults to using the value of
-                        the REMIX_TOKEN environment variable or the auth token in
-                        $HOME/.npmrc
-    --tag               The version tag of Remix to use, may also be a specific
-                        version. Defaults to "latest"
     --help, -h          Show this help message
     --version, -v       Show the version of this script
 `;
@@ -49,9 +32,7 @@ run().then(
 async function run() {
   let { input, flags, showHelp, showVersion } = meow(help, {
     flags: {
-      auth: { type: "string" },
       help: { type: "boolean", default: false, alias: "h" },
-      tag: { type: "string", default: "latest" },
       version: { type: "boolean", default: false, alias: "v" }
     }
   });
@@ -83,100 +64,146 @@ async function run() {
         ).dir
   );
 
-  // Create the app directory
-  if (fse.existsSync(appDir)) {
-    console.log(
-      `️🚨 Oops, "${path.relative(
-        process.cwd(),
-        appDir
-      )}" already exists. Please try again with a different directory.`
-    );
-    process.exit(1);
-  } else {
-    await fse.mkdir(appDir);
-  }
+  let answers = await inquirer.prompt<{
+    server: Server;
+    lang: "ts" | "js";
+    install: boolean;
+  }>([
+    {
+      name: "server",
+      type: "list",
+      message:
+        "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
+      loop: false,
+      choices: [
+        { name: "Remix App Server", value: "remix" },
+        { name: "Express Server", value: "express" },
+        { name: "Architect (AWS Lambda)", value: "arc" },
+        { name: "Fly.io", value: "fly" },
+        { name: "Netlify", value: "netlify" },
+        { name: "Vercel", value: "vercel" },
+        { name: "Cloudflare Workers", value: "cloudflare-workers" }
+      ]
+    },
+    {
+      name: "lang",
+      type: "list",
+      message: "TypeScript or JavaScript?",
+      choices: [
+        { name: "TypeScript", value: "ts" },
+        { name: "JavaScript", value: "js" }
+      ]
+    },
+    {
+      name: "install",
+      type: "confirm",
+      message: "Do you want me to run `npm install`?",
+      default: true
+    }
+  ]);
 
-  // Make sure npm auth is configured
-  if (process.env.REMIX_TOKEN) {
-    console.log("💿 Detected REMIX_TOKEN on env, using local .npmrc");
-    await writeEnvNpmrc(appDir);
-  } else {
-    if (await hasHomeNpmAuthToken()) {
-      console.log("💿 Detected Remix license in ~/.npmrc");
-    } else {
-      await writeHomeNpmrc(
-        (
-          await inquirer.prompt([
-            {
-              type: "input",
-              name: "key",
-              message:
-                "What is your Remix license key (https://remix.run/dashboard)?"
-            }
-          ])
-        ).key
-      );
+  // Create the app directory
+  let relativeAppDir = path.relative(process.cwd(), appDir);
+  let appDirIsCurrentDir = relativeAppDir === "";
+  if (!appDirIsCurrentDir) {
+    if (fse.existsSync(appDir)) {
       console.log(
-        `💿 Wrote Remix token to ~/.npmrc. You won't need to provide that next time.`
+        `️🚨 Oops, "${relativeAppDir}" already exists. Please try again with a different directory.`
       );
+      process.exit(1);
+    } else {
+      await fse.mkdir(appDir);
     }
   }
 
-  // Finish up with @remix-run/init at the right version
-  execSync(getNpxCommand(`@remix-run/init@${flags.tag}`), {
-    stdio: "inherit",
-    cwd: appDir
+  // Make sure npm registry is configured
+  await writeLocalNpmrc(appDir);
+  console.log("💿 Created local .npmrc with Remix Registry");
+
+  // copy the shared template
+  let sharedTemplate = path.resolve(
+    __dirname,
+    "templates",
+    `_shared_${answers.lang}`
+  );
+  await fse.copy(sharedTemplate, appDir);
+
+  // copy the server template
+  let serverTemplate = path.resolve(__dirname, "templates", answers.server);
+  if (fse.existsSync(serverTemplate)) {
+    await fse.copy(serverTemplate, appDir, { overwrite: true });
+  }
+
+  let serverLangTemplate = path.resolve(
+    __dirname,
+    "templates",
+    `${answers.server}_${answers.lang}`
+  );
+  if (fse.existsSync(serverLangTemplate)) {
+    await fse.copy(serverLangTemplate, appDir, { overwrite: true });
+  }
+
+  // rename dotfiles
+  await fse.move(
+    path.join(appDir, "gitignore"),
+    path.join(appDir, ".gitignore")
+  );
+
+  // merge package.jsons
+  let appPkg = require(path.join(sharedTemplate, "package.json"));
+  let serverPkg = require(path.join(serverTemplate, "package.json"));
+  ["dependencies", "devDependencies", "scripts"].forEach(key => {
+    Object.assign(appPkg[key], serverPkg[key]);
   });
 
-  console.log(
-    `💿 That's it! \`cd\` into "${path.relative(
-      process.cwd(),
-      appDir
-    )}" and check the README for development and deploy instructions!`
+  appPkg.main = serverPkg.main;
+
+  // add current versions of remix deps
+  ["dependencies", "devDependencies"].forEach(pkgKey => {
+    for (let key in appPkg[pkgKey]) {
+      if (appPkg[pkgKey][key] === "*") {
+        appPkg[pkgKey][key] = `^${cliPkgJson.version}`;
+      }
+    }
+  });
+
+  // write package.json
+  await fse.writeFile(
+    path.join(appDir, "package.json"),
+    JSON.stringify(appPkg, null, 2)
   );
-}
 
-function getNpxCommand(script: string): string {
-  let version = execSync("npm --version").toString().trim();
-  let major = semver.major(version);
-
-  if (major >= 7) {
-    return `npx --yes --quiet ${script}`;
-  } else if (major === 6) {
-    return `npx --quiet ${script}`;
+  if (answers.install) {
+    execSync("npm install", { stdio: "inherit" });
   }
 
-  console.error(`npm < version 6 is not supported (you're using ${version})`);
-  process.exit(1);
-}
-
-async function hasHomeNpmAuthToken(): Promise<boolean> {
-  let npmrcFile = path.resolve(homedir(), ".npmrc");
-  if (fse.existsSync(npmrcFile)) {
-    let npmrc = (await fse.readFile(npmrcFile)).toString();
-    return /\/\/npm\.remix\.run\/:_authToken=/.test(npmrc);
+  if (appDirIsCurrentDir) {
+    console.log(
+      `💿 That's it! Check the README for development and deploy instructions!`
+    );
+  } else {
+    console.log(
+      `💿 That's it! \`cd\` into "${path.relative(
+        process.cwd(),
+        appDir
+      )}" and check the README for development and deploy instructions!`
+    );
   }
-  return false;
 }
 
-async function writeHomeNpmrc(token: string): Promise<void> {
+async function writeLocalNpmrc(dir: string): Promise<void> {
   let npmrc = `
-//npm.remix.run/:_authToken=${token}
-@remix-run:registry=https://npm.remix.run
-`;
-  let npmrcFile = path.resolve(homedir(), ".npmrc");
-  if (fse.existsSync(npmrcFile)) {
-    let existing = await fse.readFile(npmrcFile);
-    npmrc = `${existing}${npmrc}`;
-  }
-  return fse.writeFile(npmrcFile, npmrc.trim());
-}
-
-async function writeEnvNpmrc(dir: string): Promise<void> {
-  let npmrc = `
-//npm.remix.run/:_authToken=\${REMIX_TOKEN}
 @remix-run:registry=https://npm.remix.run
 `;
   let npmrcFile = path.resolve(dir, ".npmrc");
   return fse.writeFile(npmrcFile, npmrc.trim());
 }
+
+type Server =
+  | "arc"
+  | "cloudflare-workers"
+  | "express"
+  | "fly"
+  | "netlify"
+  | "remix"
+  | "vercel";

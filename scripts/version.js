@@ -103,8 +103,8 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
-  // Update remix-dev, remix-init, remix-node, and remix-react versions
-  for (let name of ["dev", "init", "server-runtime", "react"]) {
+  // Update remix-dev, remix-server-runtime, and remix-react versions
+  for (let name of ["dev", "server-runtime", "react"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
     });
@@ -113,17 +113,8 @@ async function run(args) {
     );
   }
 
-  for (let name of ["cloudflare-workers"]) {
-    await updatePackageConfig(`remix-${name}`, config => {
-      config.version = nextVersion;
-      config.dependencies["@remix-run/server-runtime"] = nextVersion;
-    });
-    console.log(
-      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
-    );
-  }
-
-  for (let name of ["node"]) {
+  // Update remix-cloudflare-workers and remix-node versions + server-runtime dep
+  for (let name of ["cloudflare-workers", "node"]) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/server-runtime"] = nextVersion;
@@ -143,6 +134,12 @@ async function run(args) {
       chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
     );
   }
+
+  // Update create-remix version
+  await updatePackageConfig("create-remix", config => {
+    config.version = nextVersion;
+  });
+  console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
 
   // Update remix-serve version + remix-express dep
   await updatePackageConfig("remix-serve", config => {

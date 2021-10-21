@@ -1,7 +1,8 @@
 {
+  "exclude": ["__tests__", "templates"],
   "compilerOptions": {
-    "lib": ["ES2020"],
-    "target": "ES2020",
+    "lib": ["ES2019"],
+    "target": "ES2019",
 
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
@@ -9,6 +10,7 @@
 
     "declaration": true,
     "emitDeclarationOnly": true,
+    "resolveJsonModule": true,
 
     "outDir": "../../build/node_modules/create-remix",
     "rootDir": "."

@@ -7,7 +7,6 @@
     { "path": "packages/remix-cloudflare-workers" },
     { "path": "packages/remix-dev" },
     { "path": "packages/remix-express" },
-    { "path": "packages/remix-init" },
     { "path": "packages/remix-netlify" },
     { "path": "packages/remix-node" },
     { "path": "packages/remix-react" },

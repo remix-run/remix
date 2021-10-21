@@ -12,7 +12,7 @@ Idiomatic Remix apps can be deployed anywhere because Remix adapt's the server's
 
 These adapters are imported into your server's entry and is not used inside of your Remix app itself.
 
-If you intialized your app with `npm init remix` with something other than the built-in Remix App Server, you will note a `server/index.js` file that imports and uses one of these adapters.
+If you initialized your app with `npx create-remix@latest` with something other than the built-in Remix App Server, you will note a `server/index.js` file that imports and uses one of these adapters.
 
 <docs-info>If you're using the built-in Remix App Server, you don't interact with this API</docs-info>
 

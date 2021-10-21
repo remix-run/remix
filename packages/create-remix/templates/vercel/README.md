@@ -11,7 +11,7 @@ First you'll need the [Vercel CLI](https://vercel.com/docs/cli):
 npm i -g vercel
 ```
 
-Before you can run the app in development, you need link this project to a new Vercel project on your account.
+Before you can run the app in development, you need to link this project to a new Vercel project on your account.
 
 **It is important that you use a new project. If you try to link this project to an existing project (like a Next.js site) you will have problems.**
 
@@ -19,7 +19,7 @@ Before you can run the app in development, you need link this project to a new V
 $ vercel link
 ```
 
-Follow the prompts, and when its done you should be able to get started.
+Follow the prompts, and when it's done you should be able to get started.
 
 ## Development
 
@@ -41,27 +41,6 @@ Open up [http://localhost:3000](http://localhost:3000) and you should be ready t
 If you'd rather run everything in a single tab, you can look at [concurrently](https://npm.im/concurrently) or similar tools to run both processes in one tab.
 
 ## Deploying
-
-You will need to add your npmrc with your Remix token to your server's environment:
-
-When you ran `npm init remix`, we probably created an npmrc in your home directory. Go take a look, it should look something like this:
-
-```
-//npm.remix.run/:_authToken={your-token}
-@remix-run:registry=https://npm.remix.run
-```
-
-If it looks something like that, then you can run these commands to add your npmrc from the command line:
-
-```bash
-$ vercel env add plain NPM_RC development < ~/.npmrc
-$ vercel env add plain NPM_RC preview < ~/.npmrc
-$ vercel env add plain NPM_RC production < ~/.npmrc
-```
-
-You can also add this environment variable in your vercel project dashboard.
-
-Once that's done you can deploy!
 
 ```sh
 $ npm run build
