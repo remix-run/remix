@@ -43,15 +43,19 @@ describe("form", () => {
         <dl data-test-id=\\"post\\">
           <div>
             <dt>selectedMethod</dt>
-            <dd>post</dd>
+            <dd>\\"post\\"</dd>
           </div>
           <div>
             <dt>selectedEnctype</dt>
-            <dd>application/x-www-form-urlencoded</dd>
+            <dd>\\"application/x-www-form-urlencoded\\"</dd>
           </div>
           <div>
             <dt>userInput</dt>
-            <dd>whatever</dd>
+            <dd>\\"whatever\\"</dd>
+          </div>
+          <div>
+            <dt>multiple[]</dt>
+            <dd>[\\"a\\",\\"b\\"]</dd>
           </div>
         </dl>
       </div>
@@ -81,15 +85,19 @@ describe("form", () => {
         <dl data-test-id=\\"post\\">
           <div>
             <dt>selectedMethod</dt>
-            <dd>post</dd>
+            <dd>\\"post\\"</dd>
           </div>
           <div>
             <dt>selectedEnctype</dt>
-            <dd>application/x-www-form-urlencoded</dd>
+            <dd>\\"application/x-www-form-urlencoded\\"</dd>
           </div>
           <div>
             <dt>userInput</dt>
-            <dd>whatever</dd>
+            <dd>\\"whatever\\"</dd>
+          </div>
+          <div>
+            <dt>multiple[]</dt>
+            <dd>[\\"a\\",\\"b\\"]</dd>
           </div>
         </dl>
       </div>
