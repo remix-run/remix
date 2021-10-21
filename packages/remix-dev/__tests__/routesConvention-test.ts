@@ -12,7 +12,7 @@ describe("createRoutePath", () => {
       ["flat.sub", "flat/sub"],
       ["nested/index", "nested"],
       ["flat.index", "flat"],
-      ["index", ""]
+      ["index", undefined]
     ];
 
     for (let [input, expected] of tests) {
