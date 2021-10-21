@@ -13,7 +13,7 @@ module.exports = {
     },
     {
       name: "Remix",
-      script: "node node_modules/@remix-run/dev/cli.js dev",
+      script: "node node_modules/@remix-run/dev/cli.js watch",
       ignore_watch: ["."],
       env: {
         NODE_ENV: "development"

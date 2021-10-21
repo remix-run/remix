@@ -9,7 +9,9 @@
     "predev": "yarn run install_remix",
     "dev": "pm2-dev pm2.config.js",
     "prestart": "yarn run install_remix",
-    "start": "node server.js"
+    "start": "node server.js",
+    "preroutes": "yarn run install_remix",
+    "routes": "node node_modules/@remix-run/dev/cli.js routes"
   },
   "dependencies": {
     "@exampledev/new.css": "^1.1.3",
