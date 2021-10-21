@@ -9,6 +9,7 @@
   "dependencies": {
     "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
+    "enhanced-resolve": "5.8.3",
     "esbuild": "0.11.16",
     "fs-extra": "^10.0.0",
     "lodash.debounce": "^4.0.8",

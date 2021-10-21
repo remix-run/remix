@@ -4,66 +4,41 @@ import * as path from "path";
 import type * as esbuild from "esbuild";
 import { remarkMdxFrontmatter } from "remark-mdx-frontmatter";
 import type { TsConfigJson } from "type-fest";
+import { ResolverFactory, CachedInputFileSystem } from "enhanced-resolve";
 
 import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
 
-function resolvePath({
-  alias,
-  aliasPaths,
-  config,
-  filepath
-}: {
-  /**
-   * seems self explanatory
-   */
-  config: RemixConfig;
-  /**
-   * The filepath, `args.path`.
-   */
-  filepath: string;
-  /**
-   * the path alias actual paths from tsconfig.compilerOptions.paths
-   */
-  aliasPaths: string[];
-  /**
-   * the path alias from tsconfig.compilerOptions.paths
-   */
-  alias: string;
-}): string | undefined {
-  // we have no aliases, let's bounce
-  if (!aliasPaths) {
-    return undefined;
+let ignore = ["node_modules", ".cache", ".vscode", "public", "build"];
+
+function getDirectories(source: string, directories: string[] = []): string[] {
+  let currentDirectories = fs
+    .readdirSync(source, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .filter(dirent => !ignore.includes(dirent.name))
+    .map(dirent => path.join(source, dirent.name));
+
+  for (const directory of currentDirectories) {
+    directories.push(directory);
+    getDirectories(directory, directories);
   }
 
-  // tsconfig aliases end in a `*`, so we need to remove it
-  let aliasPath = alias.replace(/\*$/, "");
-  let aliasRegexp = new RegExp(`^${aliasPath}`);
+  return directories;
+}
 
-  // path isn't an alias, let's bounce
-  if (!aliasRegexp.test(filepath)) return undefined;
+function convertTsConfigAliasesToEnhancedResolvedAliases(
+  aliases?: Record<string, string[]>
+): Record<string, string> {
+  if (!aliases) return {};
+  return Object.entries(aliases).reduce((acc, [alias, paths]) => {
+    let properAlias = alias.endsWith("/*") ? alias.slice(0, -1) : alias;
+    let properPaths = paths.map(p => (p.endsWith("/*") ? p.slice(0, -1) : p));
 
-  let aliasActualPath = aliasPaths[0].replace(/\*$/, "");
-
-  let maybePath = path.resolve(
-    config.rootDirectory,
-    aliasActualPath,
-    filepath.replace(aliasRegexp, "")
-  );
-
-  // check if the file exists at path
-  if (fs.existsSync(maybePath)) {
-    // we exist, let's return it
-    return maybePath;
-  }
-
-  // we dont exist, let's try again
-  return resolvePath({
-    alias,
-    aliasPaths: aliasPaths.slice(1),
-    config,
-    filepath
-  });
+    return {
+      ...acc,
+      [properAlias]: properPaths
+    };
+  }, {});
 }
 
 export function mdxPlugin(
@@ -79,26 +54,49 @@ export function mdxPlugin(
       ]);
 
       build.onResolve({ filter: /\.mdx?$/ }, args => {
-        if (tsconfig?.compilerOptions?.paths) {
-          for (const [alias, paths] of Object.entries(
-            tsconfig.compilerOptions.paths
-          )) {
-            let path = resolvePath({
-              alias,
-              aliasPaths: paths,
-              config,
-              filepath: args.path
-            });
+        let tsconfigAliases = convertTsConfigAliasesToEnhancedResolvedAliases(
+          tsconfig?.compilerOptions?.paths
+        );
 
-            if (path) {
-              return { path, namespace: "mdx" };
+        let directories = getDirectories(config.rootDirectory);
+
+        console.log(directories);
+
+        const resolver = ResolverFactory.createResolver({
+          alias: tsconfigAliases,
+          useSyncFileSystemCalls: true,
+          modules: ["node_modules", ...directories],
+          fileSystem: new CachedInputFileSystem(fs),
+          preferAbsolute: true,
+          extensions: [
+            ".js",
+            ".json",
+            ".node",
+            ".jsx",
+            ".ts",
+            ".tsx",
+            ".mdx",
+            ".md"
+          ]
+        });
+
+        let result;
+        resolver.resolve(
+          {},
+          config.rootDirectory,
+          path.basename(args.path, path.extname(args.path)),
+          {},
+          (error, res) => {
+            if (error) {
+              console.error(error);
+            } else {
+              result = res;
             }
           }
-        }
+        );
 
-        // no aliases matched, use the path as is
         return {
-          path: path.resolve(args.resolveDir, args.path),
+          path: result,
           namespace: "mdx"
         };
       });

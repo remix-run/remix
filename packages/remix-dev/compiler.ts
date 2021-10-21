@@ -337,9 +337,15 @@ async function createServerBuild(
 
         // Mark all bare imports as external. They will be require()'d at
         // runtime from node_modules.
-        if (isBareModuleId(id, tsconfig)) {
+        if (isBareModuleId(id)) {
           let packageName = getNpmPackageName(id);
+          let paths = tsconfig?.compilerOptions?.paths ?? {};
+          let starlessPaths = Object.keys(paths).map(
+            key => new RegExp(`^${key.replace(/\*$/, "")}`)
+          );
+
           if (
+            !starlessPaths.some(regex => regex.test(id)) &&
             !/\bnode_modules\b/.test(importer) &&
             !nodeBuiltins.includes(packageName) &&
             !dependencies.includes(packageName)
@@ -365,20 +371,8 @@ async function createServerBuild(
   });
 }
 
-function isBareModuleId(
-  id: string,
-  tsconfg: TsConfigJson | undefined
-): boolean {
-  let paths = tsconfg?.compilerOptions?.paths ?? [];
-  let starlessPaths = Object.keys(paths).map(
-    key => new RegExp(`^${key.replace(/\*$/, "")}`)
-  );
-
-  return (
-    !id.startsWith(".") &&
-    starlessPaths.some(alias => alias.test(id)) &&
-    !path.isAbsolute(id)
-  );
+function isBareModuleId(id: string): boolean {
+  return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
 function getNpmPackageName(id: string): string {
