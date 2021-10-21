@@ -84,8 +84,16 @@ export function mdxPlugin(
           path.basename(args.path, path.extname(args.path))
         );
 
+        if (result) {
+          return {
+            path: result,
+            namespace: "mdx"
+          };
+        }
+
+        // resolver couldnt find file, send it through as is
         return {
-          path: result,
+          path: path.resolve(args.resolveDir, args.path),
           namespace: "mdx"
         };
       });
