@@ -151,11 +151,6 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * The absolute path to the tsconfig (or jsconfig) file
-   */
-  tsconfigFile?: string;
-
-  /**
    * The actual tsconfig object
    */
   tsconfig?: TsConfigJson;
@@ -268,7 +263,6 @@ export async function readConfig(
     serverBuildDirectory,
     serverMode,
     mdx: appConfig.mdx,
-    tsconfigFile,
     tsconfig
   };
 }

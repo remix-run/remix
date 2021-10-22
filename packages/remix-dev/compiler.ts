@@ -276,7 +276,6 @@ async function createBrowserBuild(
     chunkNames: "_shared/[name]-[hash]",
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
-    tsconfig: config.tsconfigFile,
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
@@ -313,7 +312,6 @@ async function createServerBuild(
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
-    tsconfig: config.tsconfigFile,
     plugins: [
       mdxPlugin(config),
       serverRouteModulesPlugin(config),

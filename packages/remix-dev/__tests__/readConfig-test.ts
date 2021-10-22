@@ -393,6 +393,36 @@ describe("readConfig", () => {
         },
         "serverBuildDirectory": Any<String>,
         "serverMode": "production",
+        "tsconfig": Object {
+          "compilerOptions": Object {
+            "allowJs": true,
+            "baseUrl": ".",
+            "esModuleInterop": true,
+            "jsx": "react-jsx",
+            "module": "ES2020",
+            "moduleResolution": "node",
+            "noEmit": true,
+            "paths": Object {
+              "#/*": Array [
+                "app/routes/gists/*",
+                "app/routes/blog/*",
+              ],
+              "@/*": Array [
+                "app/components/*",
+              ],
+              "~/*": Array [
+                "app/*",
+              ],
+            },
+            "strict": true,
+            "target": "ES2020",
+          },
+          "include": Array [
+            "remix.env.d.ts",
+            "**/*.ts",
+            "**/*.tsx",
+          ],
+        },
       }
     `
     );
