@@ -126,6 +126,9 @@ export default function Index() {
           <li>
             <Link to="/with-layout">Route with _layout</Link>
           </li>
+          <li>
+            <Link to="/blog">Blog</Link>
+          </li>
         </ul>
       </nav>
       <Shared />
