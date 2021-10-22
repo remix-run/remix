@@ -1,6 +1,5 @@
 import * as path from "path";
 import type * as esbuild from "esbuild";
-import type { TsConfigJson } from "type-fest";
 
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
@@ -36,7 +35,6 @@ interface AssetsManifest {
 
 export async function createAssetsManifest(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   metafile: esbuild.Metafile
 ): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
@@ -86,11 +84,7 @@ export async function createAssetsManifest(
     } else if (output.entryPoint.startsWith("browser-route-module:")) {
       let route = routesByFile.get(entryPointFile);
       invariant(route, `Cannot get route for entry point ${output.entryPoint}`);
-      let sourceExports = await getRouteModuleExportsCached(
-        config,
-        tsconfig,
-        route.id
-      );
+      let sourceExports = await getRouteModuleExportsCached(config, route.id);
       routes[route.id] = {
         id: route.id,
         parentId: route.parentId,

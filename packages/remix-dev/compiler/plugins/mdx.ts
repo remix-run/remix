@@ -3,7 +3,6 @@ import fs from "fs";
 import * as path from "path";
 import type * as esbuild from "esbuild";
 import { remarkMdxFrontmatter } from "remark-mdx-frontmatter";
-import type { TsConfigJson } from "type-fest";
 
 import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
@@ -66,10 +65,9 @@ function resolvePath({
   });
 }
 
-export function mdxPlugin(
-  config: RemixConfig,
-  tsconfig: TsConfigJson | undefined
-): esbuild.Plugin {
+export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
+  let tsconfig = config.tsconfig;
+
   return {
     name: "remix-mdx",
     async setup(build) {

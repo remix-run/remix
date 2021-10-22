@@ -7,7 +7,6 @@ import WebSocket from "ws";
 import { BuildMode, isBuildMode } from "../build";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
-import { readTSConfig } from "../config";
 import { readConfig } from "../config";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
 
@@ -31,8 +30,7 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  let tsconfig = await readTSConfig(remixRoot);
-  await compiler.build(config, tsconfig, { mode: mode });
+  await compiler.build(config, { mode: mode });
 
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
@@ -50,7 +48,6 @@ export async function watch(
     typeof remixRootOrConfig === "object"
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
-  let tsconfig = await readTSConfig(config.rootDirectory);
 
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string; [key: string]: any }) {
@@ -70,7 +67,7 @@ export async function watch(
   }
 
   signalExit(
-    await compiler.watch(config, tsconfig, {
+    await compiler.watch(config, {
       mode,
       onRebuildStart() {
         start = Date.now();

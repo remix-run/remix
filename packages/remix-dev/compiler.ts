@@ -4,7 +4,6 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
-import type { TsConfigJson } from "type-fest";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -61,7 +60,6 @@ interface BuildOptions extends Partial<BuildConfig> {
 
 export async function build(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   {
     mode = BuildMode.Production,
     target = BuildTarget.Node14,
@@ -69,7 +67,7 @@ export async function build(
     onBuildFailure = defaultBuildFailureHandler
   }: BuildOptions = {}
 ): Promise<void> {
-  await buildEverything(config, tsconfig, {
+  await buildEverything(config, {
     mode,
     target,
     onWarning,
@@ -87,7 +85,6 @@ interface WatchOptions extends BuildOptions {
 
 export async function watch(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   {
     mode = BuildMode.Development,
     target = BuildTarget.Node14,
@@ -107,11 +104,7 @@ export async function watch(
     onWarning,
     incremental: true
   };
-  let [browserBuild, serverBuild] = await buildEverything(
-    config,
-    tsconfig,
-    options
-  );
+  let [browserBuild, serverBuild] = await buildEverything(config, options);
 
   async function disposeBuilders() {
     await Promise.all([
@@ -124,7 +117,7 @@ export async function watch(
     await disposeBuilders();
     config = newConfig || (await readConfig(config.rootDirectory));
     if (onRebuildStart) onRebuildStart();
-    let builders = await buildEverything(config, tsconfig, options);
+    let builders = await buildEverything(config, options);
     if (onRebuildFinish) onRebuildFinish();
     browserBuild = builders[0];
     serverBuild = builders[1];
@@ -137,11 +130,7 @@ export async function watch(
       await disposeBuilders();
 
       try {
-        [browserBuild, serverBuild] = await buildEverything(
-          config,
-          tsconfig,
-          options
-        );
+        [browserBuild, serverBuild] = await buildEverything(config, options);
         if (onRebuildFinish) onRebuildFinish();
       } catch (err: any) {
         onBuildFailure(err);
@@ -153,7 +142,7 @@ export async function watch(
       // If we get here and can't call rebuild something went wrong and we
       // should probably blow as it's not really recoverable.
       browserBuild.rebuild!().then(build =>
-        generateManifests(config, tsconfig, build.metafile!)
+        generateManifests(config, build.metafile!)
       ),
       serverBuild.rebuild!()
     ]).catch(err => {
@@ -220,7 +209,6 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 async function buildEverything(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   // TODO:
@@ -231,12 +219,12 @@ async function buildEverything(
   // builds serially so we can inline the asset manifest into the server build
   // in a single JavaScript file.
 
-  let browserBuildPromise = createBrowserBuild(config, tsconfig, options);
-  let serverBuildPromise = createServerBuild(config, tsconfig, options);
+  let browserBuildPromise = createBrowserBuild(config, options);
+  let serverBuildPromise = createServerBuild(config, options);
 
   return Promise.all([
     browserBuildPromise.then(async build => {
-      await generateManifests(config, tsconfig, build.metafile!);
+      await generateManifests(config, build.metafile!);
       return build;
     }),
     serverBuildPromise
@@ -248,7 +236,6 @@ async function buildEverything(
 
 async function createBrowserBuild(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   // For the browser build, exclude node built-ins that don't have a
@@ -289,12 +276,13 @@ async function createBrowserBuild(
     chunkNames: "_shared/[name]-[hash]",
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
+    tsconfig: config.tsconfigFile,
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
     plugins: [
-      mdxPlugin(config, tsconfig),
-      browserRouteModulesPlugin(config, tsconfig, /\?browser$/),
+      mdxPlugin(config),
+      browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
   });
@@ -302,7 +290,6 @@ async function createBrowserBuild(
 
 async function createServerBuild(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
@@ -326,8 +313,9 @@ async function createServerBuild(
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
+    tsconfig: config.tsconfigFile,
     plugins: [
-      mdxPlugin(config, tsconfig),
+      mdxPlugin(config),
       serverRouteModulesPlugin(config),
       emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
       manualExternalsPlugin((id, importer) => {
@@ -337,11 +325,18 @@ async function createServerBuild(
 
         // Mark all bare imports as external. They will be require()'d at
         // runtime from node_modules.
-        if (isBareModuleId(id, tsconfig)) {
+        if (isBareModuleId(id)) {
           let packageName = getNpmPackageName(id);
+
+          let paths = config.tsconfig?.compilerOptions?.paths ?? {};
+          let starlessPaths = Object.keys(paths).map(
+            key => new RegExp(`^${key.replace(/\*$/, "")}`)
+          );
+
           if (
             !/\bnode_modules\b/.test(importer) &&
             !nodeBuiltins.includes(packageName) &&
+            !starlessPaths.some(re => re.test(packageName)) &&
             !dependencies.includes(packageName)
           ) {
             options.onWarning(
@@ -365,20 +360,8 @@ async function createServerBuild(
   });
 }
 
-function isBareModuleId(
-  id: string,
-  tsconfg: TsConfigJson | undefined
-): boolean {
-  let paths = tsconfg?.compilerOptions?.paths ?? [];
-  let starlessPaths = Object.keys(paths).map(
-    key => new RegExp(`^${key.replace(/\*$/, "")}`)
-  );
-
-  return (
-    !id.startsWith(".") &&
-    starlessPaths.some(alias => alias.test(id)) &&
-    !path.isAbsolute(id)
-  );
+function isBareModuleId(id: string): boolean {
+  return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
 function getNpmPackageName(id: string): string {
@@ -390,10 +373,9 @@ function getNpmPackageName(id: string): string {
 
 async function generateManifests(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   metafile: esbuild.Metafile
 ): Promise<string[]> {
-  let assetsManifest = await createAssetsManifest(config, tsconfig, metafile);
+  let assetsManifest = await createAssetsManifest(config, metafile);
 
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
   assetsManifest.url = config.publicPath + filename;
@@ -470,7 +452,6 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
  */
 function browserRouteModulesPlugin(
   config: RemixConfig,
-  tsconfig: TsConfigJson | undefined,
   suffixMatcher: RegExp
 ): esbuild.Plugin {
   return {
@@ -499,7 +480,7 @@ function browserRouteModulesPlugin(
           let exports;
           try {
             exports = (
-              await getRouteModuleExportsCached(config, tsconfig, route.id)
+              await getRouteModuleExportsCached(config, route.id)
             ).filter(ex => !!browserSafeRouteExports[ex]);
           } catch (error: any) {
             return {

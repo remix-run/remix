@@ -77,6 +77,11 @@ export interface AppConfig {
   devServerBroadcastDelay?: number;
 
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * The directory you keep your tsconfig, usually the root of the project or app.
+   */
+  tsconfigDirectory?: string;
 }
 
 /**
@@ -144,6 +149,16 @@ export interface RemixConfig {
   devServerBroadcastDelay: number;
 
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * The absolute path to the tsconfig (or jsconfig) file
+   */
+  tsconfigFile?: string;
+
+  /**
+   * The actual tsconfig object
+   */
+  tsconfig?: TsConfigJson;
 }
 
 /**
@@ -193,6 +208,11 @@ export async function readConfig(
   if (!entryServerFile) {
     throw new Error(`Missing "entry.server" file in ${appDirectory}`);
   }
+
+  let tsconfigFile = await getTSConfig(
+    appConfig.tsconfigDirectory || rootDirectory
+  );
+  let tsconfig = tsconfigFile ? await readFile(tsconfigFile) : undefined;
 
   let serverBuildDirectory = path.resolve(
     rootDirectory,
@@ -247,7 +267,9 @@ export async function readConfig(
     routes,
     serverBuildDirectory,
     serverMode,
-    mdx: appConfig.mdx
+    mdx: appConfig.mdx,
+    tsconfigFile,
+    tsconfig
   };
 }
 
@@ -266,24 +288,28 @@ function findEntry(dir: string, basename: string): string | undefined {
   return undefined;
 }
 
-export async function readTSConfig(
+export async function getTSConfig(
   remixRoot?: string
-): Promise<TsConfigJson | undefined> {
+): Promise<string | undefined> {
   if (!remixRoot) {
     remixRoot = process.env.REMIX_ROOT || process.cwd();
   }
 
-  let tsconfig: TsConfigJson | undefined;
+  let tsconfigPath: string | undefined;
   try {
-    tsconfig = await readFile(path.join(remixRoot, "tsconfig.json"));
-  } catch (error) {
+    tsconfigPath = path.join(remixRoot, "tsconfig.json");
+    if (fs.existsSync(tsconfigPath)) {
+      return tsconfigPath;
+    }
+  } catch (error: unknown) {
     // no tsconfig? how about a jsconfig?
     try {
-      tsconfig = await readFile(path.join(remixRoot, "jsconfig.json"));
-    } catch (error) {
-      // :|
+      tsconfigPath = path.join(remixRoot, "jsconfig.json");
+      if (fs.existsSync(tsconfigPath)) {
+        return tsconfigPath;
+      }
+    } catch (error: unknown) {
+      // dang
     }
   }
-
-  return tsconfig;
 }
