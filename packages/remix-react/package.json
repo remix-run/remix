@@ -6,12 +6,12 @@
   "main": "index.js",
   "browser": "browser/index.js",
   "dependencies": {
-    "history": "^5.0.0",
-    "react-router-dom": "6.0.0-beta.6"
+    "history": "^5.0.0"
   },
   "peerDependencies": {
     "react": ">=16.8",
-    "react-dom": ">=16.8"
+    "react-dom": ">=16.8",
+    "react-router-dom": "6.0.0-beta.8"
   },
   "devDependencies": {
     "abort-controller": "^3.0.0"
