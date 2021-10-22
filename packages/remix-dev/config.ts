@@ -207,6 +207,8 @@ export async function readConfig(
   let tsconfigFile = await getTSConfig(
     appConfig.tsconfigDirectory || rootDirectory
   );
+  console.log({ tsconfigFile });
+
   let tsconfig = tsconfigFile ? await readFile(tsconfigFile) : undefined;
 
   let serverBuildDirectory = path.resolve(
@@ -283,27 +285,25 @@ function findEntry(dir: string, basename: string): string | undefined {
 }
 
 export async function getTSConfig(
-  remixRoot?: string
+  tsconfigDirectory: string
 ): Promise<string | undefined> {
-  if (!remixRoot) {
-    remixRoot = process.env.REMIX_ROOT || process.cwd();
-  }
-
   let tsconfigPath: string | undefined;
+
   try {
-    tsconfigPath = path.join(remixRoot, "tsconfig.json");
-    if (fs.existsSync(tsconfigPath)) {
-      return tsconfigPath;
-    }
+    let tmp = path.join(tsconfigDirectory, "tsconfig.json");
+    await fs.promises.stat(tmp);
+
+    tsconfigPath = tmp;
   } catch (error: unknown) {
     // no tsconfig? how about a jsconfig?
     try {
-      tsconfigPath = path.join(remixRoot, "jsconfig.json");
-      if (fs.existsSync(tsconfigPath)) {
-        return tsconfigPath;
-      }
+      let tmp = path.join(tsconfigDirectory, "jsconfig.json");
+      await fs.promises.stat(tmp);
+      tsconfigPath = tmp;
     } catch (error: unknown) {
-      // dang
+      // do nothing
     }
   }
+
+  return tsconfigPath;
 }

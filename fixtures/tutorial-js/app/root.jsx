@@ -1,14 +1,13 @@
 import { Outlet } from "react-router-dom";
-import type { LoaderFunction, LinksFunction } from "remix";
 import { Meta, Scripts, Links, useLoaderData, LiveReload } from "remix";
 
-import styles from "./styles/global.css";
+import styles from "~/styles/global.css";
 
-export let loader: LoaderFunction = async () => {
+export let loader = async () => {
   return { date: new Date() };
 };
 
-export let links: LinksFunction = () => {
+export let links = () => {
   return [{ rel: "stylesheet", href: styles }];
 };
 
