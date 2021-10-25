@@ -33,7 +33,7 @@ export let handle = {
   breadcrumb: () => <Link to="/">Home</Link>
 };
 
-export let shouldReload = () => false;
+export let unstable_shouldReload = () => false;
 
 export default function Root() {
   useEffect(() => {
