@@ -131,4 +131,12 @@ describe("action", () => {
       "
     `);
   });
+
+  it("can redirect on client for thrown responses in actions", async () => {
+    await page.goto(`${testServer}/redirects/login`);
+    await Utils.reactIsHydrated(page);
+
+    await page.click("button[type=submit]");
+    await page.waitForSelector("[data-testid='done'");
+  });
 });
