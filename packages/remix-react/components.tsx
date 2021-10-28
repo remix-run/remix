@@ -101,10 +101,9 @@ export function RemixEntry({
     [manifest, routeModules]
   );
 
-  let [, forceUpdate] = React.useState({});
-
-  let [componentDidCatchEmulator, setComponentDidCatchEmulator] =
-    React.useState(entryComponentDidCatchEmulator);
+  let [clientState, setClientState] = React.useState(
+    entryComponentDidCatchEmulator
+  );
 
   let [transitionManager] = React.useState(() => {
     return createTransitionManager({
@@ -116,7 +115,7 @@ export function RemixEntry({
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
       onChange: state => {
-        setComponentDidCatchEmulator({
+        setClientState({
           catch: state.catch,
           error: state.error,
           catchBoundaryRouteId: state.catchBoundaryId,
@@ -125,7 +124,6 @@ export function RemixEntry({
           trackBoundaries: false,
           trackCatchBoundaries: false
         });
-        forceUpdate({});
       }
     });
   });
@@ -151,24 +149,24 @@ export function RemixEntry({
     transitionManager.send({
       type: "navigation",
       location: historyLocation,
-      submission: consumeNextNavigationSubmission()
+      submission: consumeNextNavigationSubmission(),
+      action
     });
-  }, [transitionManager, historyLocation]);
+  }, [transitionManager, historyLocation, action]);
 
   // If we tried to render and failed, and the app threw before rendering any
   // routes, get the error and pass it to the ErrorBoundary to emulate
   // `componentDidCatch`
   let ssrErrorBeforeRoutesRendered =
-    componentDidCatchEmulator.error &&
-    componentDidCatchEmulator.renderBoundaryRouteId === null &&
-    componentDidCatchEmulator.loaderBoundaryRouteId === null
-      ? deserializeError(componentDidCatchEmulator.error)
+    clientState.error &&
+    clientState.renderBoundaryRouteId === null &&
+    clientState.loaderBoundaryRouteId === null
+      ? deserializeError(clientState.error)
       : undefined;
 
   let ssrCatchBeforeRoutesRendered =
-    componentDidCatchEmulator.catch &&
-    componentDidCatchEmulator.catchBoundaryRouteId === null
-      ? componentDidCatchEmulator.catch
+    clientState.catch && clientState.catchBoundaryRouteId === null
+      ? clientState.catch
       : undefined;
 
   return (
@@ -176,7 +174,7 @@ export function RemixEntry({
       value={{
         matches,
         manifest,
-        componentDidCatchEmulator,
+        componentDidCatchEmulator: clientState,
         routeModules,
         serverHandoffString,
         clientRoutes,
