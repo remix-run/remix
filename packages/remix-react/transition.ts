@@ -1,3 +1,4 @@
+import { Action } from "history";
 import type { Location } from "history";
 
 import type { RouteData } from "./routeData";
@@ -270,6 +271,7 @@ export class CatchValue {
 
 export type NavigationEvent = {
   type: "navigation";
+  action: Action;
   location: Location<any>;
   submission?: Submission;
 };
@@ -411,7 +413,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   async function send(event: DataEvent): Promise<void> {
     switch (event.type) {
       case "navigation": {
-        let { location, submission } = event;
+        let { action, location, submission } = event;
 
         let matches = matchClientRoutes(routes, location);
 
@@ -424,8 +426,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
             }
           ];
           await handleNotFoundNavigation(location, matches);
-        } else if (isHashChangeOnly(location)) {
+        } else if (!submission && isHashChangeOnly(location)) {
           await handleHashChange(location, matches);
+        }
+        // back/forward button, treat all as normal navigation
+        else if (action === Action.Pop) {
+          await handleLoad(location, matches);
         }
         // <Form method="post | put | delete | patch">
         else if (submission && isActionSubmission(submission)) {
@@ -470,7 +476,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         if (fetchControllers.has(key)) abortFetcher(key);
 
         if (submission && isActionSubmission(submission)) {
-          await handleActionFetchSubmission(href, key, submission, match);
+          await handleActionFetchSubmission(key, submission, match);
         } else if (submission && isLoaderSubmission(submission)) {
           await handleLoaderFetchSubmission(href, key, submission, match);
         } else {
@@ -495,7 +501,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleActionFetchSubmission(
-    href: string,
     key: string,
     submission: ActionSubmission,
     match: ClientMatch
@@ -996,7 +1001,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortNormalNavigation();
     invariant(
       state.transition.type === "loaderSubmission",
-      `Unexpected transition: ${state.transition}`
+      `Unexpected transition: ${JSON.stringify(state.transition)}`
     );
     let { submission } = state.transition;
     let transition: TransitionStates["LoadingLoaderSubmissionRedirect"] = {
@@ -1031,7 +1036,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortNormalNavigation();
     invariant(
       state.transition.type === "actionSubmission",
-      `Unexpected transition: ${state.transition}`
+      `Unexpected transition: ${JSON.stringify(state.transition)}`
     );
     let { submission } = state.transition;
     let transition: TransitionStates["LoadingActionRedirect"] = {
