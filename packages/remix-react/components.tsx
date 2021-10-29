@@ -563,24 +563,29 @@ function PrefetchPageLinksImpl({
   let location = useLocation();
   let { matches, manifest } = useRemixEntryContext();
 
-  let newMatches = React.useMemo(
-    () => getNewMatchesForLinks(page, nextMatches, matches, location),
+  let newMatchesForData = React.useMemo(
+    () => getNewMatchesForLinks(page, nextMatches, matches, location, "data"),
+    [page, nextMatches, matches, location]
+  );
+
+  let newMatchesForAssets = React.useMemo(
+    () => getNewMatchesForLinks(page, nextMatches, matches, location, "assets"),
     [page, nextMatches, matches, location]
   );
 
   let dataHrefs = React.useMemo(
-    () => getDataLinkHrefs(page, newMatches, manifest),
-    [newMatches, page, manifest]
+    () => getDataLinkHrefs(page, newMatchesForData, manifest),
+    [newMatchesForData, page, manifest]
   );
 
   let moduleHrefs = React.useMemo(
-    () => getModuleLinkHrefs(newMatches, manifest),
-    [newMatches, manifest]
+    () => getModuleLinkHrefs(newMatchesForAssets, manifest),
+    [newMatchesForAssets, manifest]
   );
 
   // needs to be a hook with async behavior because we need the modules, not
   // just the manifest like the other links in here.
-  let styleLinks = usePrefetchedStylesheets(newMatches);
+  let styleLinks = usePrefetchedStylesheets(newMatchesForAssets);
 
   return (
     <>

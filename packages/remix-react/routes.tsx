@@ -72,6 +72,7 @@ export interface ClientRoute extends Route {
   children?: ClientRoute[];
   element: ReactNode;
   module: string;
+  hasLoader: boolean;
 }
 
 type RemixRouteComponentType = ComponentType<{ id: string }>;
@@ -92,7 +93,8 @@ export function createClientRoute(
     action: createAction(entryRoute),
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary,
-    CatchBoundary: entryRoute.hasCatchBoundary
+    CatchBoundary: entryRoute.hasCatchBoundary,
+    hasLoader: entryRoute.hasLoader
   };
 }
 

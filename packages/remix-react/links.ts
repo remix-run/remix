@@ -266,28 +266,65 @@ export async function getStylesheetPrefetchLinks(
     .map(({ rel, ...attrs }) => ({ rel: "prefetch", as: "style", ...attrs }));
 }
 
+// This is ridiculously identical to transition.ts `filterMatchesToLoad`
 export function getNewMatchesForLinks(
   page: string,
   nextMatches: RouteMatch<ClientRoute>[],
   currentMatches: RouteMatch<ClientRoute>[],
-  location: Location
+  location: Location,
+  mode: "data" | "assets"
 ): RouteMatch<ClientRoute>[] {
   let path = parsePathPatch(page);
+
+  let isNew = (match: RouteMatch<ClientRoute>, index: number) => {
+    if (!currentMatches[index]) return true;
+    return match.route.id !== currentMatches[index].route.id;
+  };
+
+  let matchPathChanged = (match: RouteMatch<ClientRoute>, index: number) => {
+    return (
+      // param change, /users/123 -> /users/456
+      currentMatches[index].pathname !== match.pathname ||
+      // splat param changed, which is not present in match.path
+      // e.g. /files/images/avatar.jpg -> files/finances.xls
+      (currentMatches[index].route.path?.endsWith("*") &&
+        currentMatches[index].params["*"] !== match.params["*"])
+    );
+  };
 
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
   let newMatches =
-    location.search !== path.search
-      ? nextMatches
-      : nextMatches.filter(
-          (nextMatch, index) =>
-            // new route
-            !currentMatches[index] ||
-            // existing route but params changed
-            currentMatches[index].pathname !== nextMatch.pathname ||
-            // catchall param changed
-            currentMatches[index].params["*"] !== nextMatch.params["*"]
-        );
+    mode === "data" && location.search !== path.search
+      ? // this is really similar to stuff in transition.ts, maybe somebody smarter
+        // than me (or in less of a hurry) can share some of it. You're the best.
+        nextMatches.filter((match, index) => {
+          if (!match.route.hasLoader) {
+            return false;
+          }
+
+          if (isNew(match, index) || matchPathChanged(match, index)) {
+            return true;
+          }
+
+          if (match.route.shouldReload) {
+            return match.route.shouldReload({
+              params: match.params,
+              prevUrl: new URL(
+                location.pathname + location.search + location.hash,
+                window.origin
+              ),
+              url: new URL(page, window.origin)
+            });
+          }
+          return true;
+        })
+      : nextMatches.filter((match, index) => {
+          return (
+            match.route.hasLoader &&
+            (isNew(match, index) || matchPathChanged(match, index))
+          );
+        });
 
   return newMatches;
 }

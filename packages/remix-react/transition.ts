@@ -1268,7 +1268,8 @@ function filterMatchesToLoad(
       state.matches[index].pathname !== match.pathname ||
       // splat param changed, which is not present in match.path
       // e.g. /files/images/avatar.jpg -> files/finances.xls
-      state.matches[index].params["*"] !== match.params["*"]
+      (state.matches[index].route.path?.endsWith("*") &&
+        state.matches[index].params["*"] !== match.params["*"])
     );
   };
 
@@ -1310,30 +1311,7 @@ function filterMatchesToLoad(
     // search affects all loaders
     url.searchParams.toString() !== state.location.search
   ) {
-    return matches.filter((match, index) => {
-      if (!match.route.loader) {
-        return false;
-      }
-
-      // you don't get a choice when you're new or your params changed
-      if (isNew(match, index) || matchPathChanged(match, index)) {
-        return true;
-      }
-
-      // but if you were already on the page and your path didn't change, apps
-      // get a chance to optimize
-      if (match.route.shouldReload) {
-        let prevUrl = createUrl(createHref(state.location));
-        return match.route.shouldReload({
-          prevUrl,
-          url,
-          submission,
-          params: match.params
-        });
-      }
-
-      return true;
-    });
+    return matches.filter(filterByRouteProps);
   }
 
   return matches.filter((match, index, arr) => {
