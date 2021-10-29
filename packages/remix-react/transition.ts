@@ -1255,13 +1255,19 @@ function filterMatchesToLoad(
   fetcher?: Fetcher
 ): ClientMatch[] {
   let isNew = (match: ClientMatch, index: number) => {
+    // [a] -> [a, b]
     if (!state.matches[index]) return true;
+
+    // [a, b] -> [a, c]
     return match.route.id !== state.matches[index].route.id;
   };
 
-  let pathChanged = (match: ClientMatch, index: number) => {
+  let matchPathChanged = (match: ClientMatch, index: number) => {
     return (
+      // param change, /users/123 -> /users/456
       state.matches[index].pathname !== match.pathname ||
+      // splat param changed, which is not present in match.path
+      // e.g. /files/images/avatar.jpg -> files/finances.xls
       state.matches[index].params["*"] !== match.params["*"]
     );
   };
@@ -1271,7 +1277,7 @@ function filterMatchesToLoad(
       return false;
     }
 
-    if (isNew(match, index) || pathChanged(match, index)) {
+    if (isNew(match, index) || matchPathChanged(match, index)) {
       return true;
     }
 
@@ -1304,23 +1310,43 @@ function filterMatchesToLoad(
     // search affects all loaders
     url.searchParams.toString() !== state.location.search
   ) {
-    return matches.filter(filterByRouteProps);
-  }
-
-  return matches
-    .filter((match, index, arr) => {
-      // don't load errored action route
-      if (
-        (actionErrorResult || actionCatchResult) &&
-        arr.length - 1 === index
-      ) {
+    return matches.filter((match, index) => {
+      if (!match.route.loader) {
         return false;
       }
 
-      let doIt = isNew(match, index) || pathChanged(match, index);
-      return doIt;
-    })
-    .filter(filterByRouteProps);
+      // you don't get a choice when you're new or your params changed
+      if (isNew(match, index) || matchPathChanged(match, index)) {
+        return true;
+      }
+
+      // but if you were already on the page and your path didn't change, apps
+      // get a chance to optimize
+      if (match.route.shouldReload) {
+        let prevUrl = createUrl(createHref(state.location));
+        return match.route.shouldReload({
+          prevUrl,
+          url,
+          submission,
+          params: match.params
+        });
+      }
+
+      return true;
+    });
+  }
+
+  return matches.filter((match, index, arr) => {
+    // don't load errored action route
+    if ((actionErrorResult || actionCatchResult) && arr.length - 1 === index) {
+      return false;
+    }
+
+    return (
+      match.route.loader &&
+      (isNew(match, index) || matchPathChanged(match, index))
+    );
+  });
 }
 
 function isRedirectResult(result: DataResult): result is DataRedirectResult {

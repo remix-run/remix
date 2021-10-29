@@ -578,6 +578,8 @@ function PrefetchPageLinksImpl({
     [newMatches, manifest]
   );
 
+  // needs to be a hook with async behavior because we need the modules, not
+  // just the manifest like the other links in here.
   let styleLinks = usePrefetchedStylesheets(newMatches);
 
   return (
