@@ -1,5 +1,5 @@
+import { Action, parsePath } from "history";
 import type { Location, State } from "history";
-import { parsePath } from "history";
 
 import type { Submission, TransitionManagerInit } from "../transition";
 import { IDLE_FETCHER, IDLE_TRANSITION } from "../transition";
@@ -220,20 +220,23 @@ describe("shouldReload", () => {
 
     await tm.send({
       type: "navigation",
-      location: createLocation("/child?reload=1")
+      location: createLocation("/child?reload=1"),
+      action: Action.Push
     });
     expect(rootLoader.mock.calls.length).toBe(1);
 
     await tm.send({
       type: "navigation",
-      location: createLocation("/child?reload=0")
+      location: createLocation("/child?reload=0"),
+      action: Action.Push
     });
     expect(rootLoader.mock.calls.length).toBe(1);
 
     await tm.send({
       type: "navigation",
       location: createLocation("/child"),
-      submission: createActionSubmission("/child")
+      submission: createActionSubmission("/child"),
+      action: Action.Push
     });
 
     let args = shouldReload.mock.calls[2][0];
@@ -361,7 +364,11 @@ describe("errors on navigation", () => {
           }
         ]
       });
-      await tm.send({ type: "navigation", location: createLocation("/child") });
+      await tm.send({
+        type: "navigation",
+        location: createLocation("/child"),
+        action: Action.Push
+      });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("child");
       expect(state.error.message).toBe(ERROR_MESSAGE);
@@ -393,7 +400,11 @@ describe("errors on navigation", () => {
       let tm = createTestTransitionManager("/", {
         routes: [parent]
       });
-      await tm.send({ type: "navigation", location: createLocation("/child") });
+      await tm.send({
+        type: "navigation",
+        location: createLocation("/child"),
+        action: Action.Push
+      });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("parent");
       expect(state.error.message).toBe(ERROR_MESSAGE);
@@ -433,11 +444,19 @@ describe("errors on navigation", () => {
         ]
       });
 
-      await tm.send({ type: "navigation", location: createLocation("/child") });
+      await tm.send({
+        type: "navigation",
+        location: createLocation("/child"),
+        action: Action.Push
+      });
       expect(tm.getState().errorBoundaryId).toBeDefined();
       expect(tm.getState().error).toBeDefined();
 
-      await tm.send({ type: "navigation", location: createLocation("/") });
+      await tm.send({
+        type: "navigation",
+        location: createLocation("/"),
+        action: Action.Push
+      });
       expect(tm.getState().errorBoundaryId).toBeUndefined();
       expect(tm.getState().error).toBeUndefined();
     });
@@ -486,7 +505,11 @@ describe("errors on navigation", () => {
         }
       ]
     });
-    await tm.send({ type: "navigation", location: createLocation("/b/c") });
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/b/c"),
+      action: Action.Push
+    });
     let state = tm.getState();
     expect(state.loaderData).toMatchInlineSnapshot(`
       Object {
@@ -498,7 +521,44 @@ describe("errors on navigation", () => {
   });
 });
 
+describe("POP navigations after action redirect", () => {
+  it("does a normal load when backing into an action redirect", async () => {
+    let t = setup();
+    let A = t.navigate.post("/foo");
+    let B = await A.action.redirect("/bar");
+    await B.loader.resolve(null);
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+
+    let C = t.navigate.get("/baz");
+    await C.loader.resolve(null);
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+
+    let D = t.navigate.pop(B.location);
+    await D.loader.resolve("D LOADER");
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "bar": "D LOADER",
+        "root": "ROOT",
+      }
+    `);
+  });
+});
+
 describe("submission navigations", () => {
+  it("reloads all routes when a loader during an actionReload redirects", async () => {
+    let t = setup();
+    let A = t.navigate.post("/foo");
+    expect(t.rootLoaderMock.calls.length).toBe(0);
+
+    await A.action.resolve(null);
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+
+    let B = await A.loader.redirect("/bar");
+    await B.loader.resolve("B LOADER");
+    expect(t.rootLoaderMock.calls.length).toBe(2);
+  });
+
   it("commits action data as soon as it lands", async () => {
     let t = setup();
 
@@ -586,7 +646,8 @@ describe("action errors", () => {
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
-        submission: createActionSubmission("/child")
+        submission: createActionSubmission("/child"),
+        action: Action.Push
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("child");
@@ -624,7 +685,8 @@ describe("action errors", () => {
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
-        submission: createActionSubmission("/child")
+        submission: createActionSubmission("/child"),
+        action: Action.Push
       });
       expect(parentLoader.mock.calls.length).toBe(1);
       expect(actionRouteLoader.mock.calls.length).toBe(0);
@@ -665,7 +727,8 @@ describe("action errors", () => {
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
-        submission: createActionSubmission("/child")
+        submission: createActionSubmission("/child"),
+        action: Action.Push
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("parent");
@@ -717,7 +780,8 @@ describe("action errors", () => {
       await tm.send({
         type: "navigation",
         location: createLocation("/parent/child"),
-        submission: createActionSubmission("/parent/child")
+        submission: createActionSubmission("/parent/child"),
+        action: Action.Push
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("root");
@@ -1760,7 +1824,11 @@ let setup = ({ url } = { url: "/" }) => {
     routes
   });
 
-  let navigate_ = (location: Location | string, submission?: Submission) => {
+  let navigate_ = (
+    location: Location | string,
+    submission?: Submission,
+    action?: Action
+  ) => {
     if (typeof location === "string") location = createLocation(location);
 
     let id = ++guid;
@@ -1800,9 +1868,12 @@ let setup = ({ url } = { url: "/" }) => {
       return lastRedirect;
     }
 
-    tm.send({ type: "navigation", location, submission }).then(
-      () => onChangeDeferreds.get(id).promise
-    );
+    tm.send({
+      type: "navigation",
+      location,
+      submission,
+      action: action || Action.Push
+    }).then(() => onChangeDeferreds.get(id).promise);
 
     return {
       location,
@@ -1820,6 +1891,7 @@ let setup = ({ url } = { url: "/" }) => {
   };
 
   let navigate = {
+    pop: (location: Location) => navigate_(location, undefined, Action.Pop),
     get: (href: string) => navigate_(href),
     post: (href: string, body?: string) =>
       navigate_(href, createActionSubmission(href, body)),
