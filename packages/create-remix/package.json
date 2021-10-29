@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "repository": "https://github.com/remix-run/packages",

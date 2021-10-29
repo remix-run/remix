@@ -1,10 +1,10 @@
 {
   "name": "@remix-run/netlify",
   "description": "Netlify server request handler for Remix",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {
-    "@remix-run/node": "0.20.0"
+    "@remix-run/node": "0.20.1"
   },
   "peerDependencies": {
     "@netlify/functions": "^0.7.2"
