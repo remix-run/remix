@@ -1,6 +1,5 @@
 import * as path from "path";
 import { execSync } from "child_process";
-import { homedir } from "os";
 import chalkAnimation from "chalk-animation";
 import fse from "fs-extra";
 import inquirer from "inquirer";
@@ -48,7 +47,7 @@ async function run() {
   console.log();
 
   // Figure out the app directory
-  let appDir = path.resolve(
+  let projectDir = path.resolve(
     process.cwd(),
     input.length > 0
       ? input[0]
@@ -103,21 +102,21 @@ async function run() {
   ]);
 
   // Create the app directory
-  let relativeAppDir = path.relative(process.cwd(), appDir);
-  let appDirIsCurrentDir = relativeAppDir === "";
-  if (!appDirIsCurrentDir) {
-    if (fse.existsSync(appDir)) {
+  let relativeProjectDir = path.relative(process.cwd(), projectDir);
+  let projectDirIsCurrentDir = relativeProjectDir === "";
+  if (!projectDirIsCurrentDir) {
+    if (fse.existsSync(projectDir)) {
       console.log(
-        `️🚨 Oops, "${relativeAppDir}" already exists. Please try again with a different directory.`
+        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
       process.exit(1);
     } else {
-      await fse.mkdir(appDir);
+      await fse.mkdir(projectDir);
     }
   }
 
   // Make sure npm registry is configured
-  await writeLocalNpmrc(appDir);
+  await writeLocalNpmrc(projectDir);
   console.log("💿 Created local .npmrc with Remix Registry");
 
   // copy the shared template
@@ -126,12 +125,12 @@ async function run() {
     "templates",
     `_shared_${answers.lang}`
   );
-  await fse.copy(sharedTemplate, appDir);
+  await fse.copy(sharedTemplate, projectDir);
 
   // copy the server template
   let serverTemplate = path.resolve(__dirname, "templates", answers.server);
   if (fse.existsSync(serverTemplate)) {
-    await fse.copy(serverTemplate, appDir, { overwrite: true });
+    await fse.copy(serverTemplate, projectDir, { overwrite: true });
   }
 
   let serverLangTemplate = path.resolve(
@@ -140,13 +139,13 @@ async function run() {
     `${answers.server}_${answers.lang}`
   );
   if (fse.existsSync(serverLangTemplate)) {
-    await fse.copy(serverLangTemplate, appDir, { overwrite: true });
+    await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
   }
 
   // rename dotfiles
   await fse.move(
-    path.join(appDir, "gitignore"),
-    path.join(appDir, ".gitignore")
+    path.join(projectDir, "gitignore"),
+    path.join(projectDir, ".gitignore")
   );
 
   // merge package.jsons
@@ -169,15 +168,15 @@ async function run() {
 
   // write package.json
   await fse.writeFile(
-    path.join(appDir, "package.json"),
+    path.join(projectDir, "package.json"),
     JSON.stringify(appPkg, null, 2)
   );
 
   if (answers.install) {
-    execSync("npm install", { stdio: "inherit" });
+    execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 
-  if (appDirIsCurrentDir) {
+  if (projectDirIsCurrentDir) {
     console.log(
       `💿 That's it! Check the README for development and deploy instructions!`
     );
@@ -185,7 +184,7 @@ async function run() {
     console.log(
       `💿 That's it! \`cd\` into "${path.relative(
         process.cwd(),
-        appDir
+        projectDir
       )}" and check the README for development and deploy instructions!`
     );
   }
