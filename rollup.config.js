@@ -166,7 +166,7 @@ function remixDev() {
             },
             {
               src: `${SOURCE_DIR}/compiler/shims`,
-              dest: `${OUTPUT_DIR}/dev/compiler`
+              dest: `${OUTPUT_DIR}/compiler`
             }
           ]
         }),
