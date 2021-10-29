@@ -39,4 +39,4 @@ jobs:
         run: yarn build
 
       - name: Test
-        run: jest
+        run: yarn test
