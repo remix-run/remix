@@ -69,6 +69,7 @@
     "jsonfile": "^6.0.1",
     "lint-staged": "11.2.0",
     "meow": "^7.1.1",
+    "mock-stdin": "^1.0.0",
     "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
     "puppeteer": "^9.1.1",
