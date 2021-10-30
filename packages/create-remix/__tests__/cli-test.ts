@@ -40,7 +40,7 @@ describe("create-remix cli", () => {
     async function answerPrompts() {
       // Where would you like to create your app?
       io.send("./poop");
-      await delay(10);
+      await delay(50);
 
       // Where do you want to deploy? Choose Remix if you're unsure, it's easy
       // to change deployment targets. (Use arrow keys)
@@ -52,23 +52,28 @@ describe("create-remix cli", () => {
       //     Vercel
       //     Cloudflare Workers
       io.send(keys.enter); // Selects 'Remix App Server'
-      await delay(10);
+      await delay(50);
 
       // TypeScript or JavaScript? (Use arrow keys)
       //   ❯ TypeScript
       //     JavaScript
       io.send(keys.enter); // Selects 'TypeScript'
-      await delay(10);
+      await delay(50);
 
       // Do you want me to run `npm install`? (Y/n)
       io.send("n");
       io.send(keys.enter);
-      await delay(10);
+      await delay(50);
     }
 
+    // I'd expect `answerPrompts` to move the process from execFile along
+    // quickly enough to complete the test before the timeout, but that isn't
+    // currently happening and the test times out. Unsure if there's a better
+    // way to simulate user input than using mock-stdin. I could also mock
+    // inquirer.prompt but this approach seems like a little safer guarantee.
     let [{ stdout }] = await Promise.all([
       execFile("node", [createRemix]),
-      delay(10).then(answerPrompts)
+      delay(50).then(answerPrompts)
     ]);
 
     expect(stdout.trim()).toBe(`
