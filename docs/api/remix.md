@@ -368,7 +368,7 @@ function UserPreferences() {
 
 This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity.
 
-```tsx [2,7,13]
+```tsx [2,7,12]
 import { useCallback, useEffect, useState } from "react";
 import { useSubmit } from "remix";
 
