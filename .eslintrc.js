@@ -12,6 +12,12 @@ module.exports = {
       rules: {
         "no-restricted-globals": "off"
       }
+    },
+    {
+      files: ["fixtures/gists-app/jest/**/*.js"],
+      env: {
+        "jest/globals": true
+      }
     }
   ],
   rules: {
