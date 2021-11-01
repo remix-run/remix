@@ -175,7 +175,7 @@ module.exports = {
     // jsx-a11y
     // https://github.com/evcohen/eslint-plugin-jsx-a11y/tree/master/docs/rules
     "jsx-a11y/alt-text": WARN,
-    "jsx-a11y/anchor-has-content": [WARN, { components: ["Link"] }],
+    "jsx-a11y/anchor-has-content": [WARN, { components: ["Link", "NavLink"] }],
     "jsx-a11y/anchor-is-valid": [WARN, { aspects: ["noHref", "invalidHref"] }],
     "jsx-a11y/aria-activedescendant-has-tabindex": WARN,
     "jsx-a11y/aria-props": WARN,
