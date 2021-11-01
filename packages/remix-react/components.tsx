@@ -659,11 +659,27 @@ export function Meta() {
   );
 }
 
+type ScriptProps = Omit<
+  React.HTMLProps<HTMLScriptElement>,
+  | "children"
+  | "async"
+  | "defer"
+  | "src"
+  | "type"
+  | "noModule"
+  | "dangerouslySetInnerHTML"
+  | "suppressHydrationWarning"
+>;
+
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
  * additional routes are loaded later as needed.
+ *
+ * @param props Additional properties to add to each script tag that is rendered.
+ * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
+ * property if provided.
  */
-export function Scripts() {
+export function Scripts(props: ScriptProps) {
   let {
     manifest,
     matches,
@@ -692,15 +708,17 @@ window.__remixRouteModules = {${matches
     return (
       <>
         <script
+          {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
-        <script src={manifest.url} />
+        <script {...props} src={manifest.url} />
         <script
+          {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
-        <script src={manifest.entry.module} type="module" />
+        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -734,7 +752,12 @@ window.__remixRouteModules = {${matches
   return (
     <>
       {dedupe(preloads).map(path => (
-        <link key={path} rel="modulepreload" href={path} />
+        <link
+          key={path}
+          rel="modulepreload"
+          href={path}
+          crossOrigin={props.crossOrigin}
+        />
       ))}
       {initialScripts}
     </>
