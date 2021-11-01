@@ -32,6 +32,8 @@ export default function App() {
 }
 ```
 
+You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hosting your static assets on a different server than your app, or `<Script nonce={nonce}/>` for certain content security policies.
+
 ## `<Link>`
 
 This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of clientside routing in Remix.
