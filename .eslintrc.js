@@ -1,12 +1,8 @@
 module.exports = {
-  extends: ["react-app", "plugin:import/typescript"],
-  parser: "@typescript-eslint/parser",
-  plugins: ["@typescript-eslint", "import"],
-  settings: {
-    "import/resolver": {
-      typescript: {}
-    }
-  },
+  extends: [
+    require.resolve("./packages/remix-eslint-config/index.js"),
+    require.resolve("./packages/remix-eslint-config/jest.js")
+  ],
   overrides: [
     {
       files: [
@@ -20,7 +16,6 @@ module.exports = {
   ],
   rules: {
     "@typescript-eslint/consistent-type-imports": "error",
-
     "import/order": [
       "error",
       {
