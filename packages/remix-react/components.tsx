@@ -676,7 +676,7 @@ type ScriptProps = Omit<
  * additional routes are loaded later as needed.
  *
  * @param props Additional properties to add to each script tag that is rendered.
- * In addition to scripts, \<link rel="modulepreload"> tags recieve the crossOrigin
+ * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
  * property if provided.
  */
 export function Scripts(props: ScriptProps) {
