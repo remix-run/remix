@@ -839,8 +839,9 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     forwardedRef
   ) => {
     let submit = useSubmitImpl(fetchKey);
-    let formMethod = method.toLowerCase() === "get" ? "get" : "post";
-    let formAction = useFormAction(action);
+    let formMethod: FormMethod =
+      method.toLowerCase() === "get" ? "get" : "post";
+    let formAction = useFormAction(action, formMethod);
 
     return (
       <form
@@ -864,18 +865,30 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   }
 );
 
+function isActionRequestMethod(method: string): boolean {
+  method = method.toLowerCase();
+  return (
+    method === "post" ||
+    method === "put" ||
+    method === "patch" ||
+    method === "delete"
+  );
+}
+
 /**
  * Resolves a `<form action>` path relative to the current route.
  */
-export function useFormAction(action = "."): string {
+export function useFormAction(
+  action = ".",
+  method: FormMethod = "get"
+): string {
   let { id } = useRemixRouteContext();
   let path = useResolvedPath(action);
   let search = path.search;
-
   let isIndexRoute = id.endsWith("/index");
 
-  if (isIndexRoute && action === ".") {
-    search = "?index";
+  if (action === "." && isIndexRoute && isActionRequestMethod(method)) {
+    search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
   return path.pathname + search;
