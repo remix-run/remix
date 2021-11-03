@@ -2,7 +2,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
+  CreateRequestHandlerOptions
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
@@ -33,16 +34,24 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
  * response using Remix.
  */
 export function createRequestHandler({
+  beforeRequest,
+  beforeResponse,
   build,
   getLoadContext,
   mode = process.env.NODE_ENV
-}: {
+}: Omit<CreateRequestHandlerOptions, "platform"> & {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
   let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler({
+    beforeRequest,
+    beforeResponse,
+    build,
+    platform,
+    mode
+  });
 
   return async (req: VercelRequest, res: VercelResponse) => {
     let request = createRemixRequest(req);

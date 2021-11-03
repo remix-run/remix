@@ -12,7 +12,8 @@ import type {
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
+  CreateRequestHandlerOptions
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { Response as NodeResponse } from "@remix-run/node";
@@ -35,16 +36,22 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
  * Remix.
  */
 export function createRequestHandler({
+  beforeRequest,
+  beforeResponse,
   build,
   getLoadContext,
   mode = process.env.NODE_ENV
-}: {
-  build: ServerBuild;
+}: Omit<CreateRequestHandlerOptions, "platform"> & {
   getLoadContext: GetLoadContextFunction;
-  mode?: string;
 }): APIGatewayProxyHandlerV2 {
   let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler({
+    beforeRequest,
+    beforeResponse,
+    build,
+    platform,
+    mode
+  });
 
   return async (event, _context) => {
     let request = createRemixRequest(event);

@@ -23,7 +23,7 @@ describe("loaders", () => {
       entry: { module: {} }
     } as unknown as ServerBuild;
 
-    let handler = createRequestHandler(build, {});
+    let handler = createRequestHandler({ build });
 
     let request = new Request(
       "http://example.com/random?_data=routes/random&foo=bar",
@@ -61,7 +61,7 @@ describe("loaders", () => {
       entry: { module: {} }
     } as unknown as ServerBuild;
 
-    let handler = createRequestHandler(build, {});
+    let handler = createRequestHandler({ build });
 
     let request = new Request(
       "http://example.com/random?_data=routes/random&foo=bar",
@@ -95,7 +95,7 @@ describe("loaders", () => {
       entry: { module: {} }
     } as unknown as ServerBuild;
 
-    let handler = createRequestHandler(build, {});
+    let handler = createRequestHandler({ build });
 
     let request = new Request(
       "http://example.com/random?_data=routes/random&index&foo=bar",
@@ -129,7 +129,7 @@ describe("loaders", () => {
       entry: { module: {} }
     } as unknown as ServerBuild;
 
-    let handler = createRequestHandler(build, {});
+    let handler = createRequestHandler({ build });
 
     let request = new Request(
       "http://example.com/random?_data=routes/random&index&foo=bar&index=test",

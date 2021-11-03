@@ -1,7 +1,8 @@
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
+  CreateRequestHandlerOptions
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
@@ -29,16 +30,22 @@ export interface GetLoadContextFunction {
 export type RequestHandler = ReturnType<typeof createRequestHandler>;
 
 export function createRequestHandler({
+  beforeRequest,
+  beforeResponse,
   build,
   getLoadContext,
   mode = process.env.NODE_ENV
-}: {
-  build: ServerBuild;
+}: Omit<CreateRequestHandlerOptions, "platform"> & {
   getLoadContext?: AppLoadContext;
-  mode?: string;
 }): Handler {
   let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler({
+    beforeRequest,
+    beforeResponse,
+    build,
+    platform,
+    mode
+  });
 
   return async (event, context) => {
     let request = createRemixRequest(event);

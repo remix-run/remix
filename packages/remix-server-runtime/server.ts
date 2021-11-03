@@ -1,5 +1,5 @@
 import type { AppLoadContext } from "./data";
-import { extractData, isCatchResponse } from "./data";
+import { extractData, isCatchResponse, isResponse } from "./data";
 import { loadRouteData, callRouteAction, isRedirectResponse } from "./data";
 import type { ComponentDidCatchEmulator } from "./errors";
 import type { ServerBuild } from "./build";
@@ -26,18 +26,46 @@ export interface RequestHandler {
   (request: Request, loadContext?: AppLoadContext): Promise<Response>;
 }
 
+export interface BeforeRequestFunction {
+  (args: { request: Request }): Promise<Request> | Request;
+}
+
+export interface BeforeResponseFunction {
+  (args: { request: Request; response: Response }):
+    | Promise<Response>
+    | Response;
+}
+
+export interface CreateRequestHandlerOptions {
+  build: ServerBuild;
+  mode?: string;
+  platform?: ServerPlatform;
+  beforeRequest?: BeforeRequestFunction;
+  beforeResponse?: BeforeResponseFunction;
+}
+
 /**
  * Creates a function that serves HTTP requests.
  */
 export function createRequestHandler(
-  build: ServerBuild,
-  platform: ServerPlatform,
-  mode?: string
+  options: CreateRequestHandlerOptions
 ): RequestHandler {
+  let { beforeRequest, beforeResponse, build, mode, platform } = options;
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
   return async (request, loadContext = {}) => {
+    if (beforeRequest) {
+      try {
+        request = await beforeRequest({ request });
+      } catch (error) {
+        if (isResponse(error)) {
+          return error;
+        }
+        throw error;
+      }
+    }
+
     let response = await (isDataRequest(request)
       ? handleDataRequest(request, loadContext, build, platform, routes)
       : handleDocumentRequest(
@@ -50,11 +78,15 @@ export function createRequestHandler(
         ));
 
     if (isHeadRequest(request)) {
-      return new Response(null, {
+      response = new Response(null, {
         headers: response.headers,
         status: response.status,
         statusText: response.statusText
       });
+    }
+
+    if (beforeResponse) {
+      response = await beforeResponse({ request, response });
     }
 
     return response;
@@ -65,7 +97,7 @@ async function handleDataRequest(
   request: Request,
   loadContext: AppLoadContext,
   build: ServerBuild,
-  platform: ServerPlatform,
+  platform: ServerPlatform | undefined,
   routes: ServerRoute[]
 ): Promise<Response> {
   if (!isValidRequestMethod(request)) {
@@ -126,7 +158,7 @@ async function handleDataRequest(
           routeMatch.params
         );
   } catch (error: any) {
-    let formattedError = (await platform.formatServerError?.(error)) || error;
+    let formattedError = (await platform?.formatServerError?.(error)) || error;
     response = json(await serializeError(formattedError), {
       status: 500,
       headers: {
@@ -165,7 +197,7 @@ async function handleDocumentRequest(
   request: Request,
   loadContext: AppLoadContext,
   build: ServerBuild,
-  platform: ServerPlatform,
+  platform: ServerPlatform | undefined,
   routes: ServerRoute[],
   serverMode: ServerMode
 ): Promise<Response> {
@@ -245,7 +277,8 @@ async function handleDocumentRequest(
         return actionResponse;
       }
     } catch (error: any) {
-      let formattedError = (await platform.formatServerError?.(error)) || error;
+      let formattedError =
+        (await platform?.formatServerError?.(error)) || error;
       responseState = "error";
       let withBoundaries = getMatchesUpToDeepestBoundary(
         matches,
@@ -358,7 +391,7 @@ async function handleDocumentRequest(
       }
 
       let formattedError =
-        (await platform.formatServerError?.(response)) || response;
+        (await platform?.formatServerError?.(response)) || response;
 
       componentDidCatchEmulator.error = await serializeError(formattedError);
       routeLoaderResults[index] = json(null, { status: 500 });
@@ -440,7 +473,7 @@ async function handleDocumentRequest(
       entryContext
     );
   } catch (error: any) {
-    let formattedError = (await platform.formatServerError?.(error)) || error;
+    let formattedError = (await platform?.formatServerError?.(error)) || error;
     if (serverMode !== ServerMode.Test) {
       console.error(formattedError);
     }
@@ -465,7 +498,8 @@ async function handleDocumentRequest(
         entryContext
       );
     } catch (error: any) {
-      let formattedError = (await platform.formatServerError?.(error)) || error;
+      let formattedError =
+        (await platform?.formatServerError?.(error)) || error;
       if (serverMode !== ServerMode.Test) {
         console.error(formattedError);
       }

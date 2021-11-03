@@ -7,7 +7,8 @@ import {
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
+  CreateRequestHandlerOptions
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
@@ -29,16 +30,20 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
  * Remix SSR response.
  */
 export function createRequestHandler({
+  beforeRequest,
+  beforeResponse,
   build,
   getLoadContext,
   mode
-}: {
-  build: ServerBuild;
+}: Omit<CreateRequestHandlerOptions, "platform"> & {
   getLoadContext?: GetLoadContextFunction;
-  mode?: string;
 }) {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler({
+    beforeRequest,
+    beforeResponse,
+    build,
+    mode
+  });
 
   return (event: FetchEvent) => {
     let loadContext =
@@ -93,15 +98,17 @@ export async function handleAsset(
 }
 
 export function createEventHandler({
+  beforeRequest,
+  beforeResponse,
   build,
   getLoadContext,
   mode
-}: {
-  build: ServerBuild;
+}: Omit<CreateRequestHandlerOptions, "platform"> & {
   getLoadContext?: GetLoadContextFunction;
-  mode?: string;
 }) {
   const handleRequest = createRequestHandler({
+    beforeRequest,
+    beforeResponse,
     build,
     getLoadContext,
     mode

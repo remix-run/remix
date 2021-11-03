@@ -97,7 +97,7 @@ export function isCatchResponse(value: any) {
   return isResponse(value) && value.headers.get("X-Remix-Catch") != null;
 }
 
-function isResponse(value: any): value is Response {
+export function isResponse(value: any): value is Response {
   return (
     value != null &&
     typeof value.status === "number" &&

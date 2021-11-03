@@ -41,7 +41,12 @@ export type {
 
 export { json, redirect } from "./responses";
 
-export type { RequestHandler } from "./server";
+export type {
+  BeforeRequestFunction,
+  BeforeResponseFunction,
+  CreateRequestHandlerOptions,
+  RequestHandler
+} from "./server";
 export { createRequestHandler } from "./server";
 
 export type {

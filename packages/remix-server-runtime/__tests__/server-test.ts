@@ -51,7 +51,7 @@ describe("server", () => {
     ];
     for (let [method, to] of allowThrough) {
       it(`allows through ${method} request to ${to}`, async () => {
-        let handler = createRequestHandler(build, {});
+        let handler = createRequestHandler({ build });
         let response = await handler(
           new Request(`http://localhost:3000${to}`, {
             method
@@ -63,7 +63,7 @@ describe("server", () => {
     }
 
     it("strips body for HEAD requests", async () => {
-      let handler = createRequestHandler(build, {});
+      let handler = createRequestHandler({ build });
       let response = await handler(
         new Request("http://localhost:3000/", {
           method: "HEAD"
