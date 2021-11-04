@@ -1557,8 +1557,9 @@ In Remix, sessions are managed on a per-route basis (rather than something like 
 Remix comes with several pre-built session storage options for common scenarios and one to create your own:
 
 - `createCookieSessionStorage`
-- `createFileSessionStorage`
 - `createMemorySessionStorage`
+- `createFileSessionStorage` (node)
+- `createCloudflareKVSessionStorage` (cloudflare-workers)
 - custom storage with `createSessionStorage`
 
 ## Using Sessions
@@ -1767,7 +1768,37 @@ let { getSession, commitSession, destroySession } =
   });
 ```
 
-## `createFileSessionStorage`
+## `createMemorySessionStorage`
+
+This storage keeps all the cookie information in your server's memory.
+
+<docs-error>This should only be used in development. Use one of the other methods in production.</docs-error>
+
+```js
+// app/sessions.js
+import {
+  createCookie,
+  createFileSessionStorage
+} from "remix";
+
+// In this example the Cookie is created separately.
+let sessionCookie = createCookie("__session", {
+  secrets: ["r3m1xr0ck5"],
+  sameSite: true
+});
+
+let { getSession, commitSession, destroySession } =
+  createFileSessionStorage({
+    // The root directory where you want to store the files.
+    // Make sure it's writable!
+    dir: "/app/sessions",
+    cookie: sessionCookie
+  });
+
+export { getSession, commitSession, destroySession };
+```
+
+## `createFileSessionStorage` (node)
 
 For file-backed sessions, use `createFileSessionStorage()`. File session storage requires a file system, but this should be readily available on most cloud providers that run express, maybe with some extra configuration.
 
@@ -1799,17 +1830,17 @@ let { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## `createMemorySessionStorage`
+## `createCloudflareKVSessionStorage` (cloudflare-workers)
 
-This storage keeps all the cookie information in your server's memory.
+For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
 
-<docs-error>This should only be used in development. Use one of the other methods in production.</docs-error>
+The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globaly replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage
+  createCloudflareKVSessionStorage
 } from "remix";
 
 // In this example the Cookie is created separately.
@@ -1819,10 +1850,9 @@ let sessionCookie = createCookie("__session", {
 });
 
 let { getSession, commitSession, destroySession } =
-  createFileSessionStorage({
-    // The root directory where you want to store the files.
-    // Make sure it's writable!
-    dir: "/app/sessions",
+  createCloudflareKVSessionStorage({
+    // The KV Namespace where you want to store sessions
+    kv: YOUR_NAMESPACE,
     cookie: sessionCookie
   });
 
