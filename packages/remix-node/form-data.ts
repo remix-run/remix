@@ -1,15 +1,17 @@
 export class RemixFormData implements FormData {
   private _params: URLSearchParams;
 
-  constructor(body: string) {
+  constructor(body?: string) {
     this._params = new URLSearchParams(body);
   }
-
   append(name: string, value: string | Blob, fileName?: string): void {
-    throw new Error("formData.append is not supported on the server.");
+    if (typeof value !== "string") {
+      throw new Error("formData.append can only accept a string");
+    }
+    this._params.append(name, value);
   }
   delete(name: string): void {
-    throw new Error("formData.delete is not supported on the server.");
+    this._params.delete(name);
   }
   get(name: string): FormDataEntryValue | null {
     return this._params.get(name);
@@ -21,7 +23,10 @@ export class RemixFormData implements FormData {
     return this._params.has(name);
   }
   set(name: string, value: string | Blob, fileName?: string): void {
-    throw new Error("formData.set is not supported on the server.");
+    if (typeof value !== "string") {
+      throw new Error("formData.set can only accept a string");
+    }
+    this._params.set(name, value);
   }
   forEach(
     callbackfn: (
@@ -32,5 +37,17 @@ export class RemixFormData implements FormData {
     thisArg?: any
   ): void {
     this._params.forEach(callbackfn, thisArg);
+  }
+  entries(): IterableIterator<[string, FormDataEntryValue]> {
+    return this._params.entries();
+  }
+  keys(): IterableIterator<string> {
+    return this._params.keys();
+  }
+  values(): IterableIterator<FormDataEntryValue> {
+    return this._params.values();
+  }
+  *[Symbol.iterator](): IterableIterator<[string, FormDataEntryValue]> {
+    yield* this._params;
   }
 }
