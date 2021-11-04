@@ -508,7 +508,7 @@ They have the the very same API as loaders, the only difference is when they are
 
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
-```jsx
+```tsx
 export async function loader() {
   return fakeGetTodos();
 }
