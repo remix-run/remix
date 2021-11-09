@@ -129,13 +129,22 @@ For an in-depth look at mutations with form, check out the [Mutations](../../gui
 
 ### `<Form action>`
 
-The form action is optional. If omitted, the current route will handle the action. You may want to post to a different route.
+Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes colocating your component, your data reads, and your data writes a snap.
+
+If you need to post to a different route, then add an action prop:
 
 ```js
-<Form action="/projects/new" />
+<Form action="/projects/new" method="post" />
 ```
 
-This would call the action for a route found at `app/routes/projects/new.tsx`.
+When a POST is made to a URL, multiple routes in your route hierarchy will match the URL. Unlike a GET to loaders, where all of them are called to build the UI, _only one action is called_. The route called will be the deepest matching route, unless the deepest matching route is an "index route". In this case, it will post to the parent route of the index route (because they share the same URL).
+
+If you want to post to an index route use `?index` in the action: `<Form action="/accounts?index" method="post" />`
+
+| action url        | route action               |
+| ----------------- | -------------------------- |
+| `/accounts?index` | `routes/accounts/index.js` |
+| `/accounts`       | `routes/accounts.js`       |
 
 ### `<Form method>`
 
@@ -370,7 +379,7 @@ function UserPreferences() {
 
 This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity.
 
-```tsx [2,7,13]
+```tsx [2,7,12]
 import { useCallback, useEffect, useState } from "react";
 import { useSubmit } from "remix";
 
