@@ -19,7 +19,8 @@ export function links() {
       rel: "stylesheet",
       href: normalizeHref
     },
-    { rel: "stylesheet", href: stylesHref }
+    { rel: "stylesheet", href: stylesHref },
+    { rel: "stylesheet", href: "/resources/theme-css" }
   ];
 }
 

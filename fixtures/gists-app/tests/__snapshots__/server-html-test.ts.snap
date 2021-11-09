@@ -59,6 +59,7 @@ exports[`the server HTML for the root URL is correct 1`] = `
           >
         </li>
         <li><a href=\\"/with-layout\\">Route with _layout</a></li>
+        <li><a href=\\"/resources\\">Resource routes</a></li>
       </ul>
     </nav>
     <div><p>Shared</p></div>

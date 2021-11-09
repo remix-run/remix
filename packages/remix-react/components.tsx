@@ -242,7 +242,8 @@ function useRemixRouteContext(): RemixRouteContextType {
 
 function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
   throw new Error(
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.`
+    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
+      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
   );
 }
 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link } from "remix";
+import { Link, Form } from "remix";
 
 import Shared from "../components/Shared";
 // import Guitar from "../components/Guitar";
@@ -125,6 +125,9 @@ export default function Index() {
           </li>
           <li>
             <Link to="/with-layout">Route with _layout</Link>
+          </li>
+          <li>
+            <Link to="/resources">Resource routes</Link>
           </li>
         </ul>
       </nav>
