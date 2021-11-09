@@ -1,0 +1,20 @@
+---
+title: "@remix-run/node"
+---
+
+This contains utilities and polyfils for Node.js.
+
+<docs-info>Most of the time you will never be importing from this package directly as it's used internally by adapters such as `@remix-run/express`.</docs-info>
+
+## Polyfills
+
+Since Remix relies on browser API's such as fetch that are not natively available in Node.js you may find that your unit tests fail without these globals when runing with tools such as Jest.
+
+Your testing framework should provide you with a hook or location to polyfill globals / mock out API's; here you can add the following line to install the globals that Remix relies on:
+
+```ts
+import { installGlobals } from "@remix-run/node";
+
+// This installs globals such as "fetch", "Response", "Request" and "Headers.
+installGlobals();
+```
