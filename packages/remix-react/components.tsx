@@ -83,7 +83,7 @@ export function RemixEntry({
 }: {
   context: EntryContext;
   action: Action;
-  location: Location<any>;
+  location: Location;
   navigator: Navigator;
   static?: boolean;
 }) {
@@ -194,7 +194,7 @@ export function RemixEntry({
           catch={ssrCatchBeforeRoutesRendered}
         >
           <Router
-            action={action}
+            navigationType={action}
             location={location}
             navigator={navigator}
             static={staticProp}
@@ -1232,7 +1232,7 @@ export function usePendingFormSubmit() {
  *
  * @deprecated use `useTransition().location`
  */
-export function usePendingLocation(): Location<any> | undefined {
+export function usePendingLocation(): Location | undefined {
   let { transitionManager } = useRemixEntryContext();
   return transitionManager.getState().transition.location;
 }
