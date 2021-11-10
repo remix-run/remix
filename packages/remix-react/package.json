@@ -5,13 +5,11 @@
   "repository": "https://github.com/remix-run/packages",
   "main": "index.js",
   "browser": "browser/index.js",
-  "dependencies": {
-    "history": "^5.0.0"
-  },
   "peerDependencies": {
+    "history": "^5.1.0",
     "react": ">=16.8",
     "react-dom": ">=16.8",
-    "react-router-dom": "6.0.0-beta.8"
+    "react-router-dom": "^6.0.2"
   },
   "devDependencies": {
     "abort-controller": "^3.0.0"

@@ -18,7 +18,7 @@ export interface TransitionManagerState {
    * The current location the user sees in the browser, during a transition this
    * is the "old page"
    */
-  location: Location<any>;
+  location: Location;
 
   /**
    * The current set of route matches the user sees in the browser. During a
@@ -134,7 +134,7 @@ export type TransitionStates = {
     state: "loading";
     type: "loaderSubmissionRedirect";
     submission: LoaderSubmission;
-    location: Location<Redirects["LoaderSubmission"]>;
+    location: Location;
   };
   LoadingAction: {
     state: "loading";
@@ -146,24 +146,24 @@ export type TransitionStates = {
     state: "loading";
     type: "actionRedirect";
     submission: ActionSubmission;
-    location: Location<Redirects["Action"]>;
+    location: Location;
   };
   LoadingFetchActionRedirect: {
     state: "loading";
     type: "fetchActionRedirect";
     submission: undefined;
-    location: Location<any>;
+    location: Location;
   };
   LoadingRedirect: {
     state: "loading";
     type: "normalRedirect";
     submission: undefined;
-    location: Location<any>;
+    location: Location;
   };
   Loading: {
     state: "loading";
     type: "normalLoad";
-    location: Location<any>;
+    location: Location;
     submission: undefined;
   };
 };
@@ -272,7 +272,7 @@ export class CatchValue {
 export type NavigationEvent = {
   type: "navigation";
   action: Action;
-  location: Location<any>;
+  location: Location;
   submission?: Submission;
 };
 
@@ -298,33 +298,25 @@ function isLoaderSubmission(
   return submission.method === "GET";
 }
 
-function isRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects[keyof Redirects]> {
+function isRedirectLocation(location: Location): location is Location {
   return Boolean(location.state) && location.state.isRedirect;
 }
 
-function isLoaderRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects["Loader"]> {
+function isLoaderRedirectLocation(location: Location): location is Location {
   return isRedirectLocation(location) && location.state.type === "loader";
 }
 
-function isActionRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects["Action"]> {
+function isActionRedirectLocation(location: Location): location is Location {
   return isRedirectLocation(location) && location.state.type === "action";
 }
 
-function isFetchActionRedirect(
-  location: Location<any>
-): location is Location<Redirects["FetchAction"]> {
+function isFetchActionRedirect(location: Location): location is Location {
   return isRedirectLocation(location) && location.state.type === "fetchAction";
 }
 
 function isLoaderSubmissionRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects["LoaderSubmission"]> {
+  location: Location
+): location is Location {
   return (
     isRedirectLocation(location) && location.state.type === "loaderSubmission"
   );
@@ -980,7 +972,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleLoaderRedirect(
-    location: Location<Redirects["Loader"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -995,7 +987,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleLoaderSubmissionRedirect(
-    location: Location<Redirects["LoaderSubmission"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -1015,7 +1007,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleFetchActionRedirect(
-    location: Location<Redirects["FetchAction"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -1030,7 +1022,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleActionRedirect(
-    location: Location<Redirects["Action"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
