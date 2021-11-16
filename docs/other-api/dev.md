@@ -2,6 +2,8 @@
 title: "@remix-run/dev"
 ---
 
+# Dev Package
+
 This contains the Remix compiler and CLI. Make sure it is in your package.json `devDependencies` so it doesn't get deployed to your server.
 
 <docs-info>We have recently removed the legacy Rollup based compiler and have fully made the switch to esbuild. This means the old compiler is deprecated, so please upgrade ASAP :) We hope you enjoy the 30-100x speed improvements to be had with the new toolchains.</docs-info>

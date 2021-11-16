@@ -3,6 +3,8 @@ title: MDX
 description: Remix makes integrating MDX into your project a breeze with built in routes and "import" support.
 ---
 
+# MDX
+
 While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX](https://mdxjs.com/) (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
 Remix supports using MDX in two ways:

@@ -3,6 +3,8 @@ title: Loading Data
 order: 3
 ---
 
+# Loading Data
+
 Page data in Remix comes from a "loader" defined inside of your Route Module. While they live in the same file as the React Component, these loaders are only ever run server side. This means you can write sever side code right next to your component, like a direct connection to your database. Remix will remove the server-side code from the browser bundle, so you don't have to worry about it causing problems in the browser (if you ever suspect there's a problem, read [Module Constraints](../../other-api/constraints/)).
 
 ## Your First Loader

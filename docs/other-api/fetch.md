@@ -2,6 +2,8 @@
 title: Web Fetch API
 ---
 
+# Web Fetch API
+
 When browsers added `window.fetch`, they also add three other objects: `Headers`, `Request`, and `Response`. Remix is built upon this API.
 
 When you do this:

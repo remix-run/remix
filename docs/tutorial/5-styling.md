@@ -3,6 +3,8 @@ title: Styling
 order: 5
 ---
 
+# Styling
+
 Two of the hardest parts of CSS have always been:
 
 - Writing styles that don't apply to unintended elements and

@@ -1,13 +1,15 @@
 ---
-title: Remix Package
+title: remix
 order: 2
 ---
 
+# Remix Package
+
 This package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.
 
-# Components and Hooks
+## Components and Hooks
 
-## `Meta`, `Links`, `Scripts`
+### `Meta`, `Links`, `Scripts`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
@@ -34,7 +36,7 @@ export default function App() {
 
 You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hosting your static assets on a different server than your app, or `<Script nonce={nonce}/>` for certain content security policies.
 
-## `<Link>`
+### `<Link>`
 
 This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of clientside routing in Remix.
 
@@ -54,7 +56,7 @@ export default function GlobalNav() {
 }
 ```
 
-### `<Link prefetch>`
+#### `<Link prefetch>`
 
 In our effort to remove all loading states from your UI, `Link` can automatically prefetch all the resources the next page needs: JavaScript modules, stylesheets, and data. This prop controls if and when that happens.
 
@@ -73,7 +75,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>` tags, which provides a lot subtle benefits (like respecting HTTP cache headers, doing the work in browser idle time, using a different thread than your app, etc.) but the implementation might mess with your CSS since the link tags are rendered inside of your anchor tag. This means `a *:last-child {}` style selectors won't work. You'll need to change them to `a *:last-of-type {}` and you should be good. We will eventually get rid of this limitation.
 
-## `<Outlet>`
+### `<Outlet>`
 
 This is simply a re-export from React Router for convenience and potential future Remix behavior. It is recommended that you import from Remix.
 
@@ -81,11 +83,11 @@ This is simply a re-export from React Router for convenience and potential futur
 import { Outlet } from "remix";
 ```
 
-## ~~`useRouteData`~~
+### ~~`useRouteData`~~
 
 <docs-warning>Deprecated, use <a href="#useLoaderData">useLoaderData</a></docs-warning>
 
-## `useLoaderData`
+### `useLoaderData`
 
 This hook returns the JSON parsed data from your route data loader.
 
@@ -103,7 +105,7 @@ export default function Invoices() {
 }
 ```
 
-## `<Form>`
+### `<Form>`
 
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
@@ -127,7 +129,7 @@ function NewEvent() {
 
 For an in-depth look at mutations with form, check out the [Mutations](../../guides/mutations/) page.
 
-### `<Form action>`
+#### `<Form action>`
 
 Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes colocating your component, your data reads, and your data writes a snap.
 
@@ -146,7 +148,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 | `/accounts?index` | `routes/accounts/index.js` |
 | `/accounts`       | `routes/accounts.js`       |
 
-### `<Form method>`
+#### `<Form method>`
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
@@ -158,11 +160,11 @@ Native `<form>` only supports get and post, so if you want your form to work wit
 
 Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" method="delete" />`. If you always include JavaScript, you don't need to worry about this.
 
-### `<Form encType>`
+#### `<Form encType>`
 
 Defaults to `application/x-www-urlencoded`, which is also the only supported value right now.
 
-### `<Form replace>`
+#### `<Form replace>`
 
 ```tsx
 <Form replace />
@@ -172,7 +174,7 @@ Instructs the form to replace the current entry in the history stack, instead of
 
 <docs-warning>This has no effect without JavaScript on the page.</docs-warning>
 
-### `<Form reloadDocument>`
+#### `<Form reloadDocument>`
 
 If true, it will submit the form with the browser instead of JavaScript, even if JavaScript is on the page.
 
@@ -193,7 +195,7 @@ See also:
 - [`useActionData`](#usetransition)
 - [`useSubmit`](#usesubmit)
 
-## `useActionData`
+### `useActionData`
 
 This hook returns the JSON parsed data from your route action. If there has been no submsision at the current location it returns undefined.
 
@@ -280,7 +282,7 @@ export default function Signup() {
 }
 ```
 
-### Notes about resubmissions
+#### Notes about resubmissions
 
 When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
 
@@ -340,7 +342,7 @@ See also:
 - [`action`](../app/#action)
 - [`useTransition`](#usetransition)
 
-## `useFormAction`
+### `useFormAction`
 
 Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
 
@@ -353,7 +355,7 @@ Resolves the value of a `<form action>` attribute using React Router's relative 
 </button>
 ```
 
-## `useSubmit`
+### `useSubmit`
 
 Returns the function that may be used to submit a `<form>` (or some raw `FormData`) to the server using the same process that `<Form>` uses internally `onSubmit`. If you're familiar with React Router's `useNavigate`, you can think about this as the same thing but for `<Form>` instead of `<Link>`.
 
@@ -425,15 +427,15 @@ function AdminPage() {
 }
 ```
 
-## ~`usePendingLocation`~
+### ~`usePendingLocation`~
 
 <docs-warning>Deprecated, use <a href="#usetransition"><code>useTransition().location</code></a></docs-warning>
 
-## ~~`usePendingFormSubmit`~~
+### ~~`usePendingFormSubmit`~~
 
 <docs-warning>Deprecated, use <a href="#usetransition">useTransition().submission</a></docs-warning>
 
-## `useTransition`
+### `useTransition`
 
 This hook tells you everything you need to know about a page transition to build pending navigation indicators and optimistic UI on data mutations. Things like:
 
@@ -456,7 +458,7 @@ function SomeComponent() {
 }
 ```
 
-### `transition.state`
+#### `transition.state`
 
 You can know the state of the transition with `transition.state`, it will be one of:
 
@@ -497,7 +499,7 @@ function SubmitButton() {
 }
 ```
 
-### `transition.type`
+#### `transition.type`
 
 Most pending UI only cares about `transition.state`, but the transition can tell you even more information on `transition.type`.
 
@@ -543,13 +545,13 @@ function SubmitButton() {
 }
 ```
 
-### `transition.submission`
+#### `transition.submission`
 
 Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object.
 
 TODO: Example
 
-### `transition.location`
+#### `transition.location`
 
 This tells you what the next location is going to be. Its most useful when matching against the next URL for custom links and hooks.
 
@@ -579,7 +581,7 @@ function PendingLink({ to, children }) {
 
 Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
 
-## `useFetcher`
+### `useFetcher`
 
 This hook will call loaders and actions without navigating. It's similar to `useFetch()` wrappers found in many React apps but with extra behavior specific to Remix (like capturing data updates automatically across the whole page).
 
@@ -619,7 +621,7 @@ Notes about how it works:
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
-### `fetcher.state`
+#### `fetcher.state`
 
 You can know the state of the fetcher with `fetcher.state`, it will be one of:
 
@@ -627,7 +629,7 @@ You can know the state of the fetcher with `fetcher.state`, it will be one of:
 - **submitting** - A form has been submitted. If the method is GET then the route loader is being called, if POST, PUT, PATCH, or DELETE then the route action is being called.
 - **loading** - The loaders for the routes are being reloaded after an action submission completed.
 
-### `fetcher.type`
+#### `fetcher.type`
 
 This is the type of state the fetcher is in. It's like `fetcher.state` but more granular. Depending on the fetcher's state, the types can be the following:
 
@@ -646,13 +648,13 @@ This is the type of state the fetcher is in. It's like `fetcher.state` but more 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
   - **load** - A route's loader is being called without a submission (`fetcher.load()`)
 
-### `fetcher.submission`
+#### `fetcher.submission`
 
 When using `<fetcher.Form>` or `fetcher.submit()`, the form submission is available to build optimistic UI.
 
 It is not available when the fetcher state is "idle" or "loading".
 
-### `fetcher.data`
+#### `fetcher.data`
 
 When using `<fetcher.Form>` or `fetcher.submit()`, the action or loader's response is stored here.
 
@@ -660,7 +662,7 @@ In the case of action submissions, the data is available even before the routes 
 
 It is not available when the fetcher state is "submitting". If you need it around when the same form is resubmit, you'll need to persist it to your own React state.
 
-### `fetcher.Form`
+#### `fetcher.Form`
 
 Just like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
 
@@ -675,7 +677,7 @@ function SomeComp() {
 }
 ```
 
-### `fetcher.submit()`
+#### `fetcher.submit()`
 
 Just like `useSubmit` except it doesn't cause a navigation.
 
@@ -684,7 +686,7 @@ let fetcher = useFetcher();
 fetcher.submit({ some: "values" }, { method: "post" });
 ```
 
-### `fetcher.load()`
+#### `fetcher.load()`
 
 Loads data from a route loader.
 
@@ -694,7 +696,7 @@ fetcher.load("/some/route");
 fetcher.data; // the data from the loader
 ```
 
-### Examples
+#### Examples
 
 **Newsletter Signup Form**
 
@@ -949,7 +951,7 @@ function CitySearchCombobox() {
 }
 ```
 
-## `useFetchers`
+### `useFetchers`
 
 Returns an array of all inflight fetchers.
 
@@ -1075,7 +1077,7 @@ function ProjectTaskCount({ project }) {
 }
 ```
 
-## `useMatches`
+### `useMatches`
 
 Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
 
@@ -1177,7 +1179,7 @@ Another common use case is [enabling JavaScript for some routes and not others](
 
 Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
 
-## `useBeforeUnload`
+### `useBeforeUnload`
 
 This hook is just a helper around `window.onbeforeunload`.
 
@@ -1213,9 +1215,9 @@ function SomeForm() {
 }
 ```
 
-# HTTP Helpers
+## HTTP Helpers
 
-## `json`
+### `json`
 
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
@@ -1252,7 +1254,7 @@ export let loader: LoaderFunction = () => {
 };
 ```
 
-## `redirect`
+### `redirect`
 
 This is shortcut for sending 30x responses.
 
@@ -1310,13 +1312,13 @@ return new Response("", {
 });
 ```
 
-# Cookies
+## Cookies
 
 A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions](#sessions)), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
-## Using cookies
+### Using cookies
 
 While you may create these cookies manually, it is more common to use a [session storage](#sessions).
 
@@ -1397,7 +1399,7 @@ export default function Home() {
 }
 ```
 
-## Cookie attributes
+### Cookie attributes
 
 Cookies have [several attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
@@ -1422,7 +1424,7 @@ cookie.serialize(userPrefs, { sameSite: "strict" });
 
 Please read [more info about these attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) to get a better understanding of what they do.
 
-## Signing cookies
+### Signing cookies
 
 It is possible to sign a cookie to automatically verify its contents when it is received. Since it's relatively easy to spoof HTTP headers, this is a good idea for any information that you do not want someone to be able to fake, like authentication information (see [sessions](../sessions)).
 
@@ -1459,7 +1461,7 @@ export async function loader({ request }) {
 }
 ```
 
-## `createCookie`
+### `createCookie`
 
 Creates a logical container for managing a browser cookie from there server.
 
@@ -1481,7 +1483,7 @@ let cookie = createCookie("cookie-name", {
 
 To learn more about each attribute, please see the [MDN Set-Cookie docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes).
 
-## `isCookie`
+### `isCookie`
 
 Returns `true` if an object is a Remix cookie container.
 
@@ -1492,7 +1494,7 @@ console.log(isCookie(cookie));
 // true
 ```
 
-## Cookie API
+### Cookie API
 
 A cookie container is returned from `createCookie` and has handful of properties and methods.
 
@@ -1503,11 +1505,11 @@ cookie.parse();
 // etc.
 ```
 
-### `cookie.name`
+#### `cookie.name`
 
 The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 
-### `cookie.parse()`
+#### `cookie.parse()`
 
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
@@ -1517,7 +1519,7 @@ let value = await cookie.parse(
 );
 ```
 
-### `cookie.serialize()`
+#### `cookie.serialize()`
 
 Serializes a value and combines it with this cookie's options to create a `Set-Cookie` header, suitable for use in an outgoing `Response`.
 
@@ -1531,7 +1533,7 @@ new Response("...", {
 });
 ```
 
-### `cookie.isSigned`
+#### `cookie.isSigned`
 
 Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 
@@ -1545,7 +1547,7 @@ cookie = createCookie("user-prefs", {
 console.log(cookie.isSigned); // true
 ```
 
-### `cookie.expires`
+#### `cookie.expires`
 
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
@@ -1557,7 +1559,7 @@ let cookie = createCookie("user-prefs", {
 console.log(cookie.expires); // "2020-01-01T00:00:00.000Z"
 ```
 
-# Sessions
+## Sessions
 
 Sessions are an important part of websites that allow the server to identify requests coming from the same person, especially when it comes to server-side form validation or when JavaScript is not on the page. Sessions are a fundamental building block of many sites that let users "log in", including social, e-commerce, business, and educational websites.
 
@@ -1571,7 +1573,7 @@ Remix comes with several pre-built session storage options for common scenarios 
 - `createCloudflareKVSessionStorage` (cloudflare-workers)
 - custom storage with `createSessionStorage`
 
-## Using Sessions
+### Using Sessions
 
 This is an example of a cookie session storage:
 
@@ -1688,19 +1690,19 @@ export default function Login() {
 }
 ```
 
-## Session Gotchas
+### Session Gotchas
 
 Because of nested routes, multiple loaders can be called to construct a single page. When using `session.flash()` or `session.unset()`, you need to be sure no other loaders in the request are going to want to read that, otherwise you'll get race conditions. Typically if you're using flash, you'll want to have a single loader read it, if another loader wants a flash message, use a different key for that loader.
 
-## `createSession`
+### `createSession`
 
 TODO:
 
-## `isSession`
+### `isSession`
 
 TODO:
 
-## `createSessionStorage`
+### `createSessionStorage`
 
 Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (or options for creating a cookie, see [cookies](#cookies)) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
 
@@ -1755,7 +1757,7 @@ let { getSession, commitSession, destroySession } =
 
 The `expires` argument to `readData` and `updateData` is the same `Date` at which the cookie itself expires and is no longer valid. You can use this information to automatically purge the session record from your database to save on space, or to ensure that you do not otherwise return any data for old, expired cookies.
 
-## `createCookieSessionStorage`
+### `createCookieSessionStorage`
 
 For purely cookie-based sessions (where the session data itself is stored in the session cookie with the browser, see [cookies](../cookies)) you can use `createCookieSessionStorage()`.
 
@@ -1777,7 +1779,7 @@ let { getSession, commitSession, destroySession } =
   });
 ```
 
-## `createMemorySessionStorage`
+### `createMemorySessionStorage`
 
 This storage keeps all the cookie information in your server's memory.
 
@@ -1807,7 +1809,7 @@ let { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## `createFileSessionStorage` (node)
+### `createFileSessionStorage` (node)
 
 For file-backed sessions, use `createFileSessionStorage()`. File session storage requires a file system, but this should be readily available on most cloud providers that run express, maybe with some extra configuration.
 
@@ -1839,7 +1841,7 @@ let { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## `createCloudflareKVSessionStorage` (cloudflare-workers)
+### `createCloudflareKVSessionStorage` (cloudflare-workers)
 
 For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
 
@@ -1868,7 +1870,7 @@ let { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-## Session API
+### Session API
 
 After retrieving a session with `getSession`, the session object returned has a handful of methods and properties:
 
@@ -1883,7 +1885,7 @@ export async function action({ request }) {
 }
 ```
 
-### `session.has(key)`
+#### `session.has(key)`
 
 Returns `true` if the session has a variable with the given `name`.
 
@@ -1891,7 +1893,7 @@ Returns `true` if the session has a variable with the given `name`.
 session.has("userId");
 ```
 
-### `session.set(key, value)`
+#### `session.set(key, value)`
 
 Sets a session value for use in subsequent requests:
 
@@ -1899,7 +1901,7 @@ Sets a session value for use in subsequent requests:
 session.set("userId", "1234");
 ```
 
-### `session.flash(key, value)`
+#### `session.flash(key, value)`
 
 Sets a session value that will be unset the first time it is read. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
@@ -1973,7 +1975,7 @@ export default function App() {
 }
 ```
 
-### `session.get()`
+#### `session.get()`
 
 Accesses a session value from a previous request:
 
@@ -1981,7 +1983,7 @@ Accesses a session value from a previous request:
 session.get("name");
 ```
 
-### `session.unset()`
+#### `session.unset()`
 
 Removes a value from the session.
 
@@ -1999,7 +2001,7 @@ return json(data, {
 });
 ```
 
-# Types
+## Types
 
 ```ts
 import type {
