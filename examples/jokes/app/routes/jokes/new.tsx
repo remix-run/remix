@@ -1,7 +1,14 @@
-import * as React from "react";
-import { useActionData, Form, redirect } from "remix";
-
-import { prisma } from "~/utils/prisma.server";
+import {
+  json,
+  useLoaderData,
+  useActionData,
+  useCatch,
+  Link,
+  Form,
+  redirect,
+} from "remix";
+import { useParams } from "react-router-dom";
+import { jokes } from "../../jokes";
 
 function validateJokeContent(content) {
   if (content?.length < 4) return `That joke is too short`;
@@ -15,6 +22,7 @@ export let action = async ({ request }) => {
   let requestText = await request.text();
   let form = new URLSearchParams(requestText);
   let joke = {
+    id: Math.random().toString(32).slice(2),
     content: form.get("content"),
     name: form.get("name"),
   };
@@ -22,17 +30,14 @@ export let action = async ({ request }) => {
     content: validateJokeContent(joke.content),
     name: validateJokeName(joke.name),
   };
-  if (Object.values(errors).some(Boolean)) {
-    return {
-      errors,
-      joke,
-    };
-  }
-  const { id } = await prisma.jokes.create({ data: { joke } });
-  return redirect(`/jokes/${id}`);
+  if (Object.values(errors).some(Boolean)) return { errors, joke };
+
+  jokes.unshift(joke);
+  return redirect(`/jokes/${joke.id}`);
 };
 
 export default function JokeScreen() {
+  let data = useLoaderData();
   let actionData = useActionData();
   let [formValues, setFormValues] = React.useState(
     actionData?.joke ?? {
