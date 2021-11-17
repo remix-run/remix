@@ -6,10 +6,9 @@ import { db } from "~/utils/db.server";
 type LoaderData = { randomJoke: Joke };
 
 export let loader = async () => {
-  // TODO: figure out if we can get a random joke via the query rather than
-  // grabing them all from the db and randomly picking one
-  let jokes = await db.joke.findMany();
-  let randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
+  const count = await db.joke.count();
+  const randomRowNumber = Math.floor(Math.random() * count);
+  let [randomJoke] = await db.joke.findMany({ take: 1, skip: randomRowNumber });
   let data: LoaderData = { randomJoke };
   return json(data);
 };
