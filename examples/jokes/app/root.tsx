@@ -49,6 +49,7 @@ export default function App() {
           </li>
         </ul>
       </nav>
+      <h1>Remix Jokes</h1>
       <Outlet />
     </Document>
   );
