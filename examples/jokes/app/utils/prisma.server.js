@@ -1,10 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-
-let prisma: PrismaClient;
-
-declare global {
-  var db: PrismaClient;
-}
+let prisma;
 
 // this is needed because in development we don't want to restart
 // the server with every change, but we want to make sure we don't
@@ -17,6 +12,7 @@ if (process.env.NODE_ENV === "production") {
     global.db = new PrismaClient();
     global.db.$connect();
   }
+
   prisma = global.db;
 }
 

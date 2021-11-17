@@ -4,8 +4,8 @@ let prisma = new PrismaClient();
 async function seed() {
   let kody = await prisma.user.create({
     data: {
-      isAdmin: true,
       username: "kody",
+      // "twixrox" with 10 salt rounds
       passwordHash:
         "$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u",
     },

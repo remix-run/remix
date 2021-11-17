@@ -1,20 +1,17 @@
-import { Link, LinksFunction } from "remix";
+import { Link } from "remix";
 import { Meta, Links, Scripts, LiveReload, useCatch } from "remix";
 import { Outlet } from "react-router-dom";
-
 import stylesUrl from "./styles/global.css";
-
-export let links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: stylesUrl }];
+export let links = () => {
+  return [
+    {
+      rel: "stylesheet",
+      href: stylesUrl,
+    },
+  ];
 };
 
-function Document({
-  children,
-  title,
-}: {
-  children: React.ReactNode;
-  title?: string;
-}) {
+function Document({ children, title }) {
   return (
     <html lang="en">
       <head>
@@ -42,10 +39,10 @@ export default function App() {
             <Link to="/">Home</Link>
           </li>
           <li>
-            <Link to="/about">About</Link>
+            <Link to="/jokes">Jokes</Link>
           </li>
           <li>
-            <Link to="/jokes">Jokes</Link>
+            <Link to="/login">Login</Link>
           </li>
         </ul>
       </nav>
@@ -54,7 +51,6 @@ export default function App() {
     </Document>
   );
 }
-
 export function CatchBoundary() {
   let caught = useCatch();
 
@@ -75,10 +71,8 @@ export function CatchBoundary() {
       );
   }
 }
-
-export function ErrorBoundary({ error }: { error: Error }) {
+export function ErrorBoundary({ error }) {
   console.error(error);
-
   return (
     <Document title="Uh-oh!">
       <h1>App Error</h1>

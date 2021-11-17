@@ -1,36 +1,24 @@
 import { useActionData, Form, redirect } from "remix";
-import type { ActionFunction } from "remix";
-import { z } from "zod";
 
-import { login, LoginForm } from "~/utils/user.server";
+import { login } from "~/utils/user.server";
 
-let ActionError = z.union([
-  z.undefined(),
-  z.object({
-    formErrors: z.array(z.string()),
-    fieldErrors: z.object({
-      username: z.array(z.string()).optional(),
-      password: z.array(z.string()).optional(),
-    }),
-  }),
-]);
-
-export let action: ActionFunction = async ({ request }) => {
-  const form = await request.formData();
-  const loginCredentials = LoginForm.safeParse({
-    // loginType: form.get("loginType"),
+export let action = async ({ request }) => {
+  let form = await request.formData();
+  let loginCredentials = {
+    loginType: form.get("loginType"),
     username: form.get("username"),
     password: form.get("password"),
-  });
+  };
+
   if (!loginCredentials.success) {
     return loginCredentials.error.flatten();
   }
-  await login(loginCredentials.data);
-  return redirect("/me");
-};
 
+  await login(loginCredentials.data);
+  return redirect("/");
+};
 export default function Login() {
-  const actionData = ActionError.parse(useActionData());
+  let actionData = useActionData();
   return (
     <div>
       <h2>Login</h2>

@@ -1,8 +1,0 @@
-{
-  "rules": {
-    // redeclaring is useful for zod's z.infer stuff
-    "@typescript-eslint/no-redeclare": "off",
-
-    "import/order": "off"
-  }
-}

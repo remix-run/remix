@@ -17,8 +17,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "6.0.2",
-    "remix": "^0.21.0",
-    "zod": "^3.11.6"
+    "remix": "^0.21.0"
   },
   "devDependencies": {
     "@remix-run/dev": "^0.21.0",
