@@ -2,6 +2,8 @@
 title: Module Constraints
 ---
 
+# Module Constraints
+
 In order for Remix to run your app in both the server and browser environments, your application modules and third party dependencies need to be careful about **module side effects**.
 
 - **Server-only code** - Remix will remove server-only code but it can't if you have module side effects that use server-only code.

@@ -2,6 +2,8 @@
 title: Philosophy
 ---
 
+# Philosophy
+
 We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and ecommerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front-end and the backend of a web project.
 
 The Remix philosophy can be summed up in four points:
@@ -44,7 +46,3 @@ This one is more for us. We've been educators for the 5 years before Remix. Our 
 The APIs Remix provides makes it convenient to use the fundamental Browser/HTTP/JavaScript, but those technologies are not hidden from you.
 
 For example, getting CSS on specific layouts in your app is done with a route module method named `links`, where you return an array of objects with the values of an HTML `<link>` tag. We abstract enough to optimize the performance of your app (they're objects so we can dedupe them, preload them) without hiding the underlying technology. Learn how to prefetch assets in Remix with `links` and you've learned how to prefetch assets in any website.
-
----
-
-Remix is unlike anything you've used before. Now get out of here and start building better websites!

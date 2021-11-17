@@ -83,7 +83,7 @@ export function RemixEntry({
 }: {
   context: EntryContext;
   action: Action;
-  location: Location<any>;
+  location: Location;
   navigator: Navigator;
   static?: boolean;
 }) {
@@ -194,7 +194,7 @@ export function RemixEntry({
           catch={ssrCatchBeforeRoutesRendered}
         >
           <Router
-            action={action}
+            navigationType={action}
             location={location}
             navigator={navigator}
             static={staticProp}
@@ -242,7 +242,8 @@ function useRemixRouteContext(): RemixRouteContextType {
 
 function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
   throw new Error(
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.`
+    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
+      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
   );
 }
 
@@ -659,11 +660,27 @@ export function Meta() {
   );
 }
 
+type ScriptProps = Omit<
+  React.HTMLProps<HTMLScriptElement>,
+  | "children"
+  | "async"
+  | "defer"
+  | "src"
+  | "type"
+  | "noModule"
+  | "dangerouslySetInnerHTML"
+  | "suppressHydrationWarning"
+>;
+
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
  * additional routes are loaded later as needed.
+ *
+ * @param props Additional properties to add to each script tag that is rendered.
+ * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
+ * property if provided.
  */
-export function Scripts() {
+export function Scripts(props: ScriptProps) {
   let {
     manifest,
     matches,
@@ -692,15 +709,17 @@ window.__remixRouteModules = {${matches
     return (
       <>
         <script
+          {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
-        <script src={manifest.url} />
+        <script {...props} src={manifest.url} />
         <script
+          {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
-        <script src={manifest.entry.module} type="module" />
+        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -734,7 +753,12 @@ window.__remixRouteModules = {${matches
   return (
     <>
       {dedupe(preloads).map(path => (
-        <link key={path} rel="modulepreload" href={path} />
+        <link
+          key={path}
+          rel="modulepreload"
+          href={path}
+          crossOrigin={props.crossOrigin}
+        />
       ))}
       {initialScripts}
     </>
@@ -816,8 +840,9 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     forwardedRef
   ) => {
     let submit = useSubmitImpl(fetchKey);
-    let formMethod = method.toLowerCase() === "get" ? "get" : "post";
-    let formAction = useFormAction(action);
+    let formMethod: FormMethod =
+      method.toLowerCase() === "get" ? "get" : "post";
+    let formAction = useFormAction(action, formMethod);
 
     return (
       <form
@@ -841,18 +866,30 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   }
 );
 
+function isActionRequestMethod(method: string): boolean {
+  method = method.toLowerCase();
+  return (
+    method === "post" ||
+    method === "put" ||
+    method === "patch" ||
+    method === "delete"
+  );
+}
+
 /**
  * Resolves a `<form action>` path relative to the current route.
  */
-export function useFormAction(action = "."): string {
+export function useFormAction(
+  action = ".",
+  method: FormMethod = "get"
+): string {
   let { id } = useRemixRouteContext();
   let path = useResolvedPath(action);
   let search = path.search;
-
   let isIndexRoute = id.endsWith("/index");
 
-  if (isIndexRoute && action === ".") {
-    search = "?index";
+  if (action === "." && isIndexRoute && isActionRequestMethod(method)) {
+    search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
   return path.pathname + search;
@@ -1195,7 +1232,7 @@ export function usePendingFormSubmit() {
  *
  * @deprecated use `useTransition().location`
  */
-export function usePendingLocation(): Location<any> | undefined {
+export function usePendingLocation(): Location | undefined {
   let { transitionManager } = useRemixEntryContext();
   return transitionManager.getState().transition.location;
 }

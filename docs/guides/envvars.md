@@ -2,6 +2,8 @@
 title: Environment Variables
 ---
 
+# Environment Variables
+
 Remix does not do anything directly with environment variables, but there are some patterns we find useful that we'll share in this guide.
 
 Environment Variables are values that live on the server that your application can use. You may be familiar with the ubiquitous `NODE_ENV`. Your deployment server probably automatically sets that to "production".

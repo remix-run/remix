@@ -3,6 +3,8 @@ title: Defining Routes
 order: 2
 ---
 
+# Defining Routes
+
 Routes in remix can be defined two ways: by a filename convention inside of the "app/routes" directory or manually with the `routes` function in `remix.config.js`. For this getting started guide we'll just cover the conventional files, but check out the [Routing Guide](../guides/routing) to learn more about manual routes.
 
 ## Creating your first route

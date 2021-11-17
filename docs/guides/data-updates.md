@@ -1,8 +1,10 @@
 ---
-title: Data Mutations with Actions
+title: Data Updates
 ---
 
-Data mutations in Remix are built on top of two fundamental web APIs: `<form>` and HTTP. We then use progressive enhancement to enable optimistic UI, loading indicators, and validation feedback--but the programming model is still built on HTML forms.
+# Data Updates
+
+Data updates (some people call these mutations) in Remix are built on top of two fundamental web APIs: `<form>` and HTTP. We then use progressive enhancement to enable optimistic UI, loading indicators, and validation feedback--but the programming model is still built on HTML forms.
 
 When the user submits a form, Remix will:
 

@@ -1,6 +1,8 @@
 ---
-title: "@remix-run/serve"
+title: Remix App Server
 ---
+
+# Remix App Server
 
 While you can bring your own server, Remix ships with a built-in, production ready application server.
 

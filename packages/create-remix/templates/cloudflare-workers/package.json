@@ -2,7 +2,7 @@
   "main": "dist/worker.js",
   "scripts": {
     "postinstall": "remix setup cloudflare-workers",
-    "build:worker": "esbuild --define:process.env.NODE_ENV='\"production\"' --bundle --sourcemap --outdir=dist ./worker",
+    "build:worker": "esbuild --define:process.env.NODE_ENV='\"production\"' --minify --bundle --sourcemap --outdir=dist ./worker",
     "build": "remix build",
     "dev": "remix watch",
     "dev:worker": "esbuild --define:process.env.NODE_ENV='\"development\"' --bundle --sourcemap --outdir=dist ./worker",
@@ -15,6 +15,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^2.2.2",
     "esbuild": "^0.13.0",
-    "miniflare": "^1.4.1"
+    "miniflare": "2.0.0-next.3"
   }
 }

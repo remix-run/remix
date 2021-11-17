@@ -4,6 +4,8 @@ description: Get started with Remix, first step is installing.
 order: 1
 ---
 
+# Installation
+
 Let's get started! Here's what you'll need:
 
 ## Prereqs

@@ -6,8 +6,9 @@ export function loader() {
 }
 
 export let action: ActionFunction = async ({ request }) => {
-  let body = new URLSearchParams(await request.text());
-  return json(`heyooo, data from the action: ${body.get("field1")}`, {
+  let formData = await request.formData();
+
+  return json(`heyooo, data from the action: ${formData.get("field1")}`, {
     headers: {
       "x-test": "works"
     }
