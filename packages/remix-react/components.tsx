@@ -672,15 +672,25 @@ type ScriptProps = Omit<
   | "suppressHydrationWarning"
 >;
 
+export const Scripts =
+  typeof document === "undefined" ? ServerScripts : ClientScripts;
+
 /**
- * Renders the `<script>` tags needed for the initial render. Bundles for
- * additional routes are loaded later as needed.
+ * Browser implementation of <Scripts>, which does nothing.
+ */
+function ClientScripts(props: ScriptProps) {
+  return null;
+}
+
+/**
+ * Server implementation of <Scripts>, which renders the `<script>` tags needed
+ * for the initial render. Bundles for additional routes are loaded later as needed.
  *
  * @param props Additional properties to add to each script tag that is rendered.
  * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
  * property if provided.
  */
-export function Scripts(props: ScriptProps) {
+function ServerScripts(props: ScriptProps) {
   let {
     manifest,
     matches,
@@ -690,6 +700,8 @@ export function Scripts(props: ScriptProps) {
   } = useRemixEntryContext();
 
   let initialScripts = React.useMemo(() => {
+    // if (typeof document !== 'undefined') return null;
+
     let contextScript = serverHandoffString
       ? `window.__remixContext = ${serverHandoffString};`
       : "";
