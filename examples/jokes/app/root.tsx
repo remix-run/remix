@@ -1,11 +1,32 @@
-import { Link, LinksFunction } from "remix";
-import { Meta, Links, Scripts, LiveReload, useCatch } from "remix";
+import {
+  Form,
+  useLoaderData,
+  Link,
+  Meta,
+  Links,
+  Scripts,
+  LiveReload,
+  useCatch,
+} from "remix";
+import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
 import { Outlet } from "react-router-dom";
-
+import type { User } from "@prisma/client";
 import stylesUrl from "./styles/global.css";
+import { getUser, logout } from "./utils/session.server";
 
 export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+type LoaderData = { user: User | null };
+
+export let loader: LoaderFunction = async ({ request }) => {
+  const user = await getUser(request);
+  return { user };
+};
+
+export let action: ActionFunction = async ({ request }) => {
+  return logout(request);
 };
 
 function Document({
@@ -34,6 +55,7 @@ function Document({
 }
 
 export default function App() {
+  let data = useLoaderData<LoaderData>();
   return (
     <Document>
       <nav>
@@ -42,10 +64,16 @@ export default function App() {
             <Link to="/">Home</Link>
           </li>
           <li>
-            <Link to="/about">About</Link>
+            <Link to="/jokes">Jokes</Link>
           </li>
           <li>
-            <Link to="/jokes">Jokes</Link>
+            {data.user ? (
+              <Form method="post">
+                <button type="submit">Logout</button>
+              </Form>
+            ) : (
+              <Link to="/login">Login</Link>
+            )}
           </li>
         </ul>
       </nav>

@@ -1,18 +1,21 @@
 import { useLoaderData, Link, json } from "remix";
-import { jokes, Joke } from "../../jokes";
-import { z } from "zod";
+import type { Joke } from "@prisma/client";
 
-let LoaderData = z.object({ randomJoke: Joke });
-type LoaderData = z.infer<typeof LoaderData>;
+import { db } from "~/utils/db.server";
 
-export let loader = () => {
+type LoaderData = { randomJoke: Joke };
+
+export let loader = async () => {
+  // TODO: figure out if we can get a random joke via the query rather than
+  // grabing them all from the db and randomly picking one
+  let jokes = await db.joke.findMany();
   let randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
   let data: LoaderData = { randomJoke };
   return json(data);
 };
 
 export default function JokesDefaultScreen() {
-  let data = LoaderData.parse(useLoaderData());
+  let data = useLoaderData<LoaderData>();
 
   return (
     <div>

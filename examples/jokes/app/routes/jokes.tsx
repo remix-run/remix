@@ -1,22 +1,21 @@
-import { Outlet, useLoaderData, Link, json, LoaderFunction } from "remix";
-import { jokes } from "../jokes";
-import { z } from "zod";
+import type { LoaderFunction } from "remix";
+import { Outlet, useLoaderData, Link, json } from "remix";
+import { db } from "~/utils/db.server";
 
-let LoaderData = z.object({
-  jokeListItems: z.array(z.object({ id: z.string(), name: z.string() })),
-});
-type LoaderData = z.infer<typeof LoaderData>;
+type LoaderData = { jokeListItems: Array<{ id: string; name: string }> };
 
-export let loader: LoaderFunction = () => {
-  let jokeListItems = jokes
-    .map((j) => ({ id: j.id, name: j.name }))
-    .slice(0, 5);
+export let loader: LoaderFunction = async () => {
+  let jokeListItems = await db.joke.findMany({
+    take: 5,
+    select: { id: true, name: true },
+  });
+
   let data: LoaderData = { jokeListItems };
   return json(data);
 };
 
 export default function JokesScreen() {
-  let data = LoaderData.parse(useLoaderData());
+  let data = useLoaderData<LoaderData>();
 
   return (
     <div>

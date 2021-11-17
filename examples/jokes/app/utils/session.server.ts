@@ -1,68 +1,80 @@
-import { createCookieSessionStorage } from "remix";
-import { prisma } from "./prisma.server";
+import * as bcrypt from "bcrypt";
+import { createCookieSessionStorage, redirect } from "remix";
+
+import { db } from "./db.server";
+
+export type LoginForm = {
+  username: string;
+  password: string;
+};
+
+export async function register({ username, password }: LoginForm) {
+  let passwordHash = await bcrypt.hash(password, 10);
+  return db.user.create({
+    data: { username, passwordHash },
+  });
+}
+
+export async function login({ username, password }: LoginForm) {
+  const user = await db.user.findUnique({ where: { username } });
+  if (!user) return null;
+  const isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
+  if (!isCorrectPassword) return null;
+  return user;
+}
 
 let sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
-  throw new Error("SESSION_SECRET must be st");
+  throw new Error("SESSION_SECRET must be set");
 }
-let sessionExpirationTime = 1000 * 60 * 60 * 24 * 30;
 
-let sessionStorage = createCookieSessionStorage({
+let { getSession, commitSession, destroySession } = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
     secure: true,
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
-    maxAge: sessionExpirationTime / 1000,
+    maxAge: 60 * 60 * 24 * 30,
     httpOnly: true,
   },
 });
 
-async function getSession(request: Request) {
-  let sessionIdKey = "__session_id__";
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-  const getSessionId = () => session.get(sessionIdKey);
-  const unsetSessionId = () => session.unset(sessionIdKey);
-  const setSessionId = (value: string) => session.set(sessionIdKey, value);
-
-  return {
-    commit: sessionStorage.commitSession(session),
-    getUser: async () => {
-      const sessionId = getSessionId();
-      if (!sessionId) return null;
-
-      return prisma.session
-        .findFirst({ where: { id: sessionId } })
-        .catch((error: unknown) => {
-          unsetSessionId();
-          console.error(`Failure getting user from session ID:`, error);
-          return null;
-        });
-    },
-    signIn: async (userId: string) => {
-      const userSession = await prisma.session.create({
-        data: {
-          userId,
-          expirationDate: new Date(Date.now() + sessionExpirationTime),
-        },
-      });
-      setSessionId(userSession.id);
-    },
-    signOut: () => {
-      const sessionId = session.get(sessionIdKey);
-      if (sessionId) {
-        unsetSessionId();
-        prisma.session
-          .delete({ where: { id: sessionId } })
-          .catch((error: unknown) => {
-            console.error(`Failure deleting user session: `, error);
-          });
-      }
-    },
-  };
+export function getUserSession(request: Request) {
+  return getSession(request.headers.get("Cookie"));
 }
 
-export { getSession };
+export async function getUser(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (typeof userId !== "string") return null;
+
+  return db.user
+    .findUnique({ where: { id: userId } })
+    .catch(() => Promise.reject(logout(request)));
+}
+
+export async function requireUser(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!session.has("userId")) throw redirect("/login");
+
+  return db.user
+    .findUnique({ where: { id: userId } })
+    .catch(() => Promise.reject(logout(request)));
+}
+
+export async function logout(request: Request) {
+  let session = await getSession(request.headers.get("Cookie"));
+  return redirect("/login", {
+    headers: { "Set-Cookie": await destroySession(session) },
+  });
+}
+
+export async function createUserSession(userId: string, redirectTo: string) {
+  let session = await getSession();
+  session.set("userId", userId);
+  return redirect(redirectTo, {
+    headers: { "Set-Cookie": await commitSession(session) },
+  });
+}

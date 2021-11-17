@@ -1,43 +1,43 @@
-import {
-  json,
-  useLoaderData,
-  useActionData,
-  useCatch,
-  Link,
-  Form,
-  redirect,
-} from "remix";
-import { useParams } from "react-router-dom";
-import { jokes } from "../../jokes";
+import * as React from "react";
 
-function validateJokeContent(content) {
-  if (content?.length < 4) return `That joke is too short`;
+import type { ActionFunction } from "remix";
+import { useActionData, Form, redirect } from "remix";
+import { db } from "~/utils/db.server";
+import type { Joke } from "@prisma/client";
+import { getUser } from "~/utils/session.server";
+
+function validateJokeContent(content: unknown) {
+  if (typeof content !== "string" || content.length < 4) {
+    return `That joke is too short`;
+  }
 }
 
-function validateJokeName(name) {
-  if (name?.length < 2) return `That joke's name is too short`;
+function validateJokeName(name: unknown) {
+  if (typeof name !== "string" || name.length < 2) {
+    return `That joke's name is too short`;
+  }
 }
 
-export let action = async ({ request }) => {
-  let requestText = await request.text();
-  let form = new URLSearchParams(requestText);
-  let joke = {
-    id: Math.random().toString(32).slice(2),
-    content: form.get("content"),
-    name: form.get("name"),
-  };
+type JokeData = Pick<Joke, "content" | "name" | "jokesterId">;
+
+export let action: ActionFunction = async ({ request }) => {
+  const user = await getUser(request);
+  if (!user) return redirect("/login");
+
+  let { name, content } = Object.fromEntries(await request.formData());
+
   let errors = {
-    content: validateJokeContent(joke.content),
-    name: validateJokeName(joke.name),
+    content: validateJokeContent(content),
+    name: validateJokeName(name),
   };
-  if (Object.values(errors).some(Boolean)) return { errors, joke };
+  let jokeData = { name, content, jokesterId: user.id } as JokeData;
+  if (Object.values(errors).some(Boolean)) return { errors, joke: jokeData };
 
-  jokes.unshift(joke);
+  let joke = await db.joke.create({ data: jokeData });
   return redirect(`/jokes/${joke.id}`);
 };
 
 export default function JokeScreen() {
-  let data = useLoaderData();
   let actionData = useActionData();
   let [formValues, setFormValues] = React.useState(
     actionData?.joke ?? {
@@ -50,25 +50,30 @@ export default function JokeScreen() {
   return (
     <div>
       <p>Add your own hilarious joke</p>
-      <Form
-        method="post"
-        onChange={(e) =>
-          setFormValues({
-            name: e.currentTarget.elements.name.value,
-            content: e.currentTarget.elements.content.value,
-          })
-        }
-      >
+      <Form method="post">
         <div>
           <label>
-            Name: <input defaultValue={formValues.name} name="name" />
+            Name:{" "}
+            <input
+              defaultValue={formValues.name}
+              name="name"
+              onChange={(e) =>
+                setFormValues({ ...formValues, name: e.currentTarget.value })
+              }
+            />
           </label>
           {nameError ? <div role="alert">{nameError}</div> : null}
         </div>
         <div>
           <label>
             Content:{" "}
-            <textarea defaultValue={formValues.content} name="content" />
+            <textarea
+              defaultValue={formValues.content}
+              name="content"
+              onChange={(e) =>
+                setFormValues({ ...formValues, content: e.currentTarget.value })
+              }
+            />
           </label>
           {contentError ? <div role="alert">{contentError}</div> : null}
         </div>

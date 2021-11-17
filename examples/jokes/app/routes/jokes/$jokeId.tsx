@@ -1,42 +1,30 @@
-import {
-  json,
-  useLoaderData,
-  useCatch,
-  Link,
-  Form,
-  redirect,
-  LoaderFunction,
-  ActionFunction,
-} from "remix";
+import type { LoaderFunction, ActionFunction } from "remix";
+import { json, useLoaderData, useCatch, Link, Form, redirect } from "remix";
 import { useParams } from "react-router-dom";
-import { Joke, jokes } from "../../jokes";
-import { z } from "zod";
+import type { Joke } from "@prisma/client";
+import { db } from "~/utils/db.server";
 
-let LoaderData = z.object({ joke: Joke });
-type LoaderData = z.infer<typeof LoaderData>;
+type LoaderData = { joke: Joke };
 
-export let loader: LoaderFunction = ({ params }) => {
-  const { jokeId } = z.object({ jokeId: z.string() }).parse(params);
-  let joke = jokes.find((j) => j.id === jokeId);
+export let loader: LoaderFunction = async ({ params }) => {
+  let joke = await db.joke.findUnique({ where: { id: params.jokeId } });
   if (!joke) {
-    throw new Response("", { status: 404 });
+    throw new Response("What a joke! Not found.", { status: 404 });
   }
   let data: LoaderData = { joke };
   return json(data);
 };
 
-export let action: ActionFunction = ({ request, params }) => {
+export let action: ActionFunction = async ({ request, params }) => {
   if (request.method === "DELETE") {
-    jokes.splice(
-      jokes.findIndex((j) => j.id === params.jokeId),
-      1
-    );
+    await db.joke.delete({ where: { id: params.jokeId } });
     return redirect("/jokes");
   }
 };
 
 export default function JokeScreen() {
-  let data = LoaderData.parse(useLoaderData());
+  let data = useLoaderData<LoaderData>();
+
   return (
     <div>
       <p>Here's your hilarious joke</p>

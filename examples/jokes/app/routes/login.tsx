@@ -1,43 +1,80 @@
-import { useActionData, Form, redirect } from "remix";
+import { useActionData, Form } from "remix";
 import type { ActionFunction } from "remix";
-import { z } from "zod";
 
-import { login, LoginForm } from "~/utils/user.server";
+import { login, createUserSession, register } from "~/utils/session.server";
+import { db } from "~/utils/db.server";
 
-let ActionError = z.union([
-  z.undefined(),
-  z.object({
-    formErrors: z.array(z.string()),
-    fieldErrors: z.object({
-      username: z.array(z.string()).optional(),
-      password: z.array(z.string()).optional(),
-    }),
-  }),
-]);
-
-export let action: ActionFunction = async ({ request }) => {
-  const form = await request.formData();
-  const loginCredentials = LoginForm.safeParse({
-    // loginType: form.get("loginType"),
-    username: form.get("username"),
-    password: form.get("password"),
-  });
-  if (!loginCredentials.success) {
-    return loginCredentials.error.flatten();
+function validateUsername(username: unknown) {
+  if (typeof username !== "string" || username.length < 3) {
+    return `Usernames must be at least 3 characters long`;
   }
-  await login(loginCredentials.data);
-  return redirect("/me");
+}
+
+function validatePassword(password: unknown) {
+  if (typeof password !== "string" || password.length < 6) {
+    return `Passwords must be at least 6 characters long`;
+  }
+}
+
+type ActionData = {
+  formError?: string;
+  fieldErrors?: { username: string | undefined; password: string | undefined };
+};
+
+export let action: ActionFunction = async ({
+  request,
+}): Promise<Response | ActionData> => {
+  let { loginType, username, password } = Object.fromEntries(
+    await request.formData()
+  );
+  if (typeof username !== "string" || typeof password !== "string") {
+    return { formError: `Form not submitted correctly.` };
+  }
+
+  let fieldErrors = {
+    username: validateUsername(username),
+    password: validatePassword(password),
+  };
+  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors };
+
+  switch (loginType) {
+    case "login": {
+      const user = await login({ username, password });
+      if (!user) {
+        return {
+          formError: `Username/Password combination is incorrect`,
+        };
+      }
+      return createUserSession(user.id, "/");
+    }
+    case "register": {
+      let userExists = await db.user.findFirst({ where: { username } });
+      if (userExists) {
+        return { formError: `User with username ${username} already exists` };
+      }
+      const user = await register({ username, password });
+      if (!user) {
+        return {
+          formError: `Something went wrong trying to create a new user.`,
+        };
+      }
+      return createUserSession(user.id, "/");
+    }
+    default: {
+      return { formError: `Login type invalid` };
+    }
+  }
 };
 
 export default function Login() {
-  const actionData = ActionError.parse(useActionData());
+  const actionData = useActionData<ActionData | undefined>();
   return (
     <div>
       <h2>Login</h2>
       <Form
         method="post"
         aria-describedby={
-          actionData?.formErrors.length ? "form-error-messages" : undefined
+          actionData?.formError ? "form-error-message" : undefined
         }
       >
         <div>
@@ -54,12 +91,12 @@ export default function Login() {
           <input
             id="username-input"
             name="username"
-            aria-labelledby={
-              actionData?.fieldErrors.username ? "username-error" : undefined
+            aria-describedby={
+              actionData?.fieldErrors?.username ? "username-error" : undefined
             }
           />
-          {actionData?.fieldErrors.username ? (
-            <p>{actionData?.fieldErrors.username}</p>
+          {actionData?.fieldErrors?.username ? (
+            <p role="alert">{actionData?.fieldErrors.username}</p>
           ) : null}
         </div>
         <div>
@@ -68,18 +105,18 @@ export default function Login() {
             id="password-input"
             name="password"
             type="password"
-            aria-labelledby={
-              actionData?.fieldErrors.password ? "password-error" : undefined
+            aria-describedby={
+              actionData?.fieldErrors?.password ? "password-error" : undefined
             }
           />
-          {actionData?.fieldErrors.password ? (
-            <p>{actionData?.fieldErrors.password}</p>
+          {actionData?.fieldErrors?.password ? (
+            <p role="alert">{actionData?.fieldErrors.password}</p>
           ) : null}
         </div>
-        <div id="form-error-messages">
-          {actionData?.formErrors.map((error) => (
-            <div key={error}>{error}</div>
-          ))}
+        <div id="form-error-message">
+          {actionData?.formError ? (
+            <p role="alert">{actionData?.formError}</p>
+          ) : null}
         </div>
         <button type="submit">Submit</button>
       </Form>
