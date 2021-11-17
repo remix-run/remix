@@ -3,6 +3,9 @@
   "name": "remix-app-template",
   "description": "",
   "license": "",
+  "prisma": {
+    "seed": "node --require esbuild-register prisma/seed.ts"
+  },
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",

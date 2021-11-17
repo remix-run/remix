@@ -44,6 +44,20 @@ export function getUserSession(request: Request) {
   return getSession(request.headers.get("Cookie"));
 }
 
+export async function getUserId(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!userId || typeof userId !== "string") return null;
+  return userId;
+}
+
+export async function requireUserId(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!userId || typeof userId !== "string") throw redirect("/login");
+  return userId;
+}
+
 export async function getUser(request: Request) {
   let session = await getUserSession(request);
   let userId = session.get("userId");

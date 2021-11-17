@@ -1,6 +1,5 @@
 import { useActionData, Form } from "remix";
 import type { ActionFunction } from "remix";
-
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 
@@ -19,6 +18,7 @@ function validatePassword(password: unknown) {
 type ActionData = {
   formError?: string;
   fieldErrors?: { username: string | undefined; password: string | undefined };
+  fields?: { loginType: string; username: string; password: string };
 };
 
 export let action: ActionFunction = async ({
@@ -27,21 +27,27 @@ export let action: ActionFunction = async ({
   let { loginType, username, password } = Object.fromEntries(
     await request.formData()
   );
-  if (typeof username !== "string" || typeof password !== "string") {
+  if (
+    typeof loginType !== "string" ||
+    typeof username !== "string" ||
+    typeof password !== "string"
+  ) {
     return { formError: `Form not submitted correctly.` };
   }
 
+  let fields = { loginType, username, password };
   let fieldErrors = {
     username: validateUsername(username),
     password: validatePassword(password),
   };
-  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors };
+  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, fields };
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
         return {
+          fields,
           formError: `Username/Password combination is incorrect`,
         };
       }
@@ -50,18 +56,22 @@ export let action: ActionFunction = async ({
     case "register": {
       let userExists = await db.user.findFirst({ where: { username } });
       if (userExists) {
-        return { formError: `User with username ${username} already exists` };
+        return {
+          fields,
+          formError: `User with username ${username} already exists`,
+        };
       }
       const user = await register({ username, password });
       if (!user) {
         return {
+          fields,
           formError: `Something went wrong trying to create a new user.`,
         };
       }
       return createUserSession(user.id, "/");
     }
     default: {
-      return { formError: `Login type invalid` };
+      return { fields, formError: `Login type invalid` };
     }
   }
 };
@@ -79,11 +89,25 @@ export default function Login() {
       >
         <div>
           <label>
-            <input type="radio" name="loginType" value="login" defaultChecked />{" "}
+            <input
+              type="radio"
+              name="loginType"
+              value="login"
+              defaultChecked={
+                !actionData?.fields?.loginType ||
+                actionData?.fields?.loginType === "login"
+              }
+            />{" "}
             Login
           </label>
           <label>
-            <input type="radio" name="loginType" value="register" /> Register
+            <input
+              type="radio"
+              name="loginType"
+              value="register"
+              defaultChecked={actionData?.fields?.loginType === "register"}
+            />{" "}
+            Register
           </label>
         </div>
         <div>
@@ -91,6 +115,7 @@ export default function Login() {
           <input
             id="username-input"
             name="username"
+            defaultValue={actionData?.fields?.username}
             aria-describedby={
               actionData?.fieldErrors?.username ? "username-error" : undefined
             }
@@ -104,6 +129,7 @@ export default function Login() {
           <input
             id="password-input"
             name="password"
+            defaultValue={actionData?.fields?.password}
             type="password"
             aria-describedby={
               actionData?.fieldErrors?.password ? "password-error" : undefined

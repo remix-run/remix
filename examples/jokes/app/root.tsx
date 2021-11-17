@@ -40,7 +40,6 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -66,17 +65,21 @@ export default function App() {
           <li>
             <Link to="/jokes">Jokes</Link>
           </li>
-          <li>
-            {data.user ? (
-              <Form method="post">
-                <button type="submit">Logout</button>
-              </Form>
-            ) : (
+          {!data.user ? (
+            <li>
               <Link to="/login">Login</Link>
-            )}
-          </li>
+            </li>
+          ) : null}
         </ul>
       </nav>
+      {data.user ? (
+        <>
+          {`Hi ${data.user.username}`}
+          <Form method="post">
+            <button type="submit">Logout</button>
+          </Form>
+        </>
+      ) : null}
       <h1>Remix Jokes</h1>
       <Outlet />
     </Document>

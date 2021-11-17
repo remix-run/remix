@@ -1,10 +1,7 @@
-import * as React from "react";
-
 import type { ActionFunction } from "remix";
 import { useActionData, Form, redirect } from "remix";
 import { db } from "~/utils/db.server";
-import type { Joke } from "@prisma/client";
-import { getUser } from "~/utils/session.server";
+import { requireUserId } from "~/utils/session.server";
 
 function validateJokeContent(content: unknown) {
   if (typeof content !== "string" || content.length < 4) {
@@ -18,35 +15,39 @@ function validateJokeName(name: unknown) {
   }
 }
 
-type JokeData = Pick<Joke, "content" | "name" | "jokesterId">;
+type ActionData = {
+  formError?: string;
+  fieldErrors?: { name: string | undefined; content: string | undefined };
+  fields?: {
+    name: string;
+    content: string;
+  };
+};
 
-export let action: ActionFunction = async ({ request }) => {
-  const user = await getUser(request);
-  if (!user) return redirect("/login");
+export let action: ActionFunction = async ({
+  request,
+}): Promise<Response | ActionData> => {
+  const userId = await requireUserId(request);
 
   let { name, content } = Object.fromEntries(await request.formData());
+  if (typeof name !== "string" || typeof content !== "string") {
+    return { formError: `Form not submitted correctly.` };
+  }
 
-  let errors = {
-    content: validateJokeContent(content),
+  let fieldErrors = {
     name: validateJokeName(name),
+    content: validateJokeContent(content),
   };
-  let jokeData = { name, content, jokesterId: user.id } as JokeData;
-  if (Object.values(errors).some(Boolean)) return { errors, joke: jokeData };
+  let fields = { name, content };
+  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, fields };
 
-  let joke = await db.joke.create({ data: jokeData });
+  let joke = await db.joke.create({ data: { ...fields, jokesterId: userId } });
   return redirect(`/jokes/${joke.id}`);
 };
 
 export default function JokeScreen() {
-  let actionData = useActionData();
-  let [formValues, setFormValues] = React.useState(
-    actionData?.joke ?? {
-      name: "",
-      content: "",
-    }
-  );
-  let nameError = validateJokeName(formValues.name);
-  let contentError = validateJokeContent(formValues.content);
+  let actionData = useActionData<ActionData | undefined>();
+
   return (
     <div>
       <p>Add your own hilarious joke</p>
@@ -55,27 +56,32 @@ export default function JokeScreen() {
           <label>
             Name:{" "}
             <input
-              defaultValue={formValues.name}
+              defaultValue={actionData?.fields?.name}
               name="name"
-              onChange={(e) =>
-                setFormValues({ ...formValues, name: e.currentTarget.value })
+              aria-describedby={
+                actionData?.fieldErrors?.name ? "name-error" : undefined
               }
             />
           </label>
-          {nameError ? <div role="alert">{nameError}</div> : null}
+          {actionData?.fieldErrors?.name ? (
+            <p role="alert" id="name-error">
+              {actionData?.fieldErrors?.name}
+            </p>
+          ) : null}
         </div>
         <div>
           <label>
             Content:{" "}
             <textarea
-              defaultValue={formValues.content}
+              defaultValue={actionData?.fields?.content}
               name="content"
-              onChange={(e) =>
-                setFormValues({ ...formValues, content: e.currentTarget.value })
-              }
             />
           </label>
-          {contentError ? <div role="alert">{contentError}</div> : null}
+          {actionData?.fieldErrors?.content ? (
+            <p role="alert" id="content-error">
+              {actionData?.fieldErrors?.content}
+            </p>
+          ) : null}
         </div>
         <button type="submit">Add</button>
       </Form>
