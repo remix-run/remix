@@ -3,9 +3,12 @@ import fs from "fs-extra";
 import path from "path";
 import util from "util";
 import semver from "semver";
-import { stdin } from "mock-stdin";
+import stripAnsi from "strip-ansi";
+
+const DEFAULT_APP_NAME = "my-remix-app";
 
 const execFile = util.promisify(childProcess.execFile);
+const spawn = childProcess.spawn;
 
 const keys = {
   up: "\x1B\x5B\x41",
@@ -20,83 +23,78 @@ const createRemix = path.resolve(
 );
 
 describe("create-remix cli", () => {
-  let io: ReturnType<typeof stdin>;
-  beforeAll(async () => {
-    if (!fs.existsSync(createRemix)) {
-      throw new Error(`Cannot run Remix CLI tests without building Remix`);
-    }
-    io = stdin();
-    // Bump timeout. This should be sufficient.
-    jest.setTimeout(50 * 1000);
-  });
+  if (!fs.existsSync(createRemix)) {
+    throw new Error(`Cannot run Remix CLI tests without building Remix`);
+  }
 
-  afterAll(() => {
-    jest.setTimeout(5 * 1000);
-    io.restore();
-  });
+  it("guides the user through the process", async done => {
+    let cli = spawn("node", [createRemix], {});
+    let promptCount = 0;
+    let previousPrompt: string;
 
-  // NOTE: This test is timing out, unsure why :(
-  it("creates the app", async done => {
-    async function answerPrompts() {
-      // Where would you like to create your app?
-      io.send("./poop");
-      await delay(50);
+    cli.stdout.on("data", async data => {
+      let prompt = cleanPrompt(data);
+      if (
+        !prompt ||
+        prompt === "R E M I X" ||
+        isSamePrompt(prompt, previousPrompt)
+      ) {
+        return;
+      }
 
-      // Where do you want to deploy? Choose Remix if you're unsure, it's easy
-      // to change deployment targets. (Use arrow keys)
-      //   ❯ Remix App Server
-      //     Express Server
-      //     Architect (AWS Lambda)
-      //     Fly.io
-      //     Netlify
-      //     Vercel
-      //     Cloudflare Workers
-      io.send(keys.enter); // Selects 'Remix App Server'
-      await delay(50);
+      promptCount++;
 
-      // TypeScript or JavaScript? (Use arrow keys)
-      //   ❯ TypeScript
-      //     JavaScript
-      io.send(keys.enter); // Selects 'TypeScript'
-      await delay(50);
+      switch (promptCount) {
+        case 1:
+          expect(prompt).toEqual(
+            "💿 Welcome to Remix! Let's get you set up with a new project."
+          );
+          break;
+        case 2:
+          expect(prompt).toEqual(
+            `? Where would you like to create your app? (./${DEFAULT_APP_NAME})`
+          );
+          cli.stdin.write(keys.enter);
+          break;
 
-      // Do you want me to run `npm install`? (Y/n)
-      io.send("n");
-      io.send(keys.enter);
-      await delay(50);
-    }
+        case 3:
+          expect(getPromptChoices(prompt)).toEqual([
+            "Remix App Server",
+            "Express Server",
+            "Architect (AWS Lambda)",
+            "Fly.io",
+            "Netlify",
+            "Vercel",
+            "Cloudflare Workers"
+          ]);
+          cli.stdin.write(keys.enter);
+          break;
 
-    // I'd expect `answerPrompts` to move the process from execFile along
-    // quickly enough to complete the test before the timeout, but that isn't
-    // currently happening and the test times out. Unsure if there's a better
-    // way to simulate user input than using mock-stdin. I could also mock
-    // inquirer.prompt but this approach seems like a little safer guarantee.
-    let [{ stdout }] = await Promise.all([
-      execFile("node", [createRemix]),
-      delay(50).then(answerPrompts)
-    ]);
+        case 4:
+          expect(getPromptChoices(prompt)).toEqual([
+            "TypeScript",
+            "JavaScript"
+          ]);
+          cli.stdin.write(keys.enter);
+          break;
 
-    expect(stdout.trim()).toBe(`
-💿 Created local .npmrc with Remix Registry
-💿 That's it! \`cd\` into "poop" and check the README for development and deploy instructions!
-`);
+        case 5:
+          expect(prompt).toEqual(
+            "? Do you want me to run `npm install`? (Y/n)"
+          );
+          cli.stdin.write("n");
 
-    // clean up
-    await fs.remove(path.join(process.cwd(), "poop"));
-    done();
-  });
+          // At this point the CLI will create directories and all that fun stuff
+          // TODO: We should actually test this stuff too, kinda a big deal
+          cli.kill("SIGINT");
+          break;
+      }
 
-  describe("the --help flag", () => {
-    it("prints help info", async () => {
-      let { stdout } = await execFile("node", [createRemix, "--help"]);
-      expect(stdout).toMatchInlineSnapshot(getHelp());
+      previousPrompt = prompt;
     });
-  });
 
-  describe("the -h flag", () => {
-    it("prints help info", async () => {
-      let { stdout } = await execFile("node", [createRemix, "-h"]);
-      expect(stdout).toMatchInlineSnapshot(getHelp());
+    cli.on("exit", () => {
+      done();
     });
   });
 
@@ -113,28 +111,79 @@ describe("create-remix cli", () => {
       expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
+
+  describe("the --help flag", () => {
+    it("prints help info", async () => {
+      let { stdout } = await execFile("node", [createRemix, "--help"]);
+
+      expect(stdout).toMatchInlineSnapshot(`
+        "
+          Create a new Remix app
+
+          Usage:
+            $ npx create-remix [flags...] [<dir>]
+
+          If <dir> is not provided up front you will be prompted for it.
+
+          Flags:
+            --help, -h          Show this help message
+            --version, -v       Show the version of this script
+
+        "
+      `);
+    });
+  });
+
+  describe("the -h flag", () => {
+    it("prints help info", async () => {
+      let { stdout } = await execFile("node", [createRemix, "-h"]);
+      expect(stdout).toMatchInlineSnapshot(`
+        "
+          Create a new Remix app
+
+          Usage:
+            $ npx create-remix [flags...] [<dir>]
+
+          If <dir> is not provided up front you will be prompted for it.
+
+          Flags:
+            --help, -h          Show this help message
+            --version, -v       Show the version of this script
+
+        "
+      `);
+    });
+  });
 });
 
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+// These utils are a bit gnarly but they help me deal with the weirdness of node
+// process stdout data formatting and inquirer. They're gross but make the tests
+// easier to read than inlining everything IMO. Would be thrilled to delete them tho.
+function cleanPrompt<T extends { toString(): string }>(data: T): string {
+  return stripAnsi(data.toString())
+    .trim()
+    .split("\n")
+    .map(s => s.replace(/\s+$/, ""))
+    .join("\n");
 }
 
-// moved this down here b/c formatting of the long template string screws up
-// syntax highlighting of everything after it for some reason :/
-function getHelp(): string {
-  return `
-    "
-      Create a new Remix app
+function getPromptChoices(prompt: string) {
+  return prompt
+    .slice(prompt.indexOf("❯") + 2)
+    .split("\n")
+    .map(s => s.trim());
+}
 
-      Usage:
-        $ npx create-remix [flags...] [<dir>]
+function isSamePrompt(
+  currentPrompt: string,
+  previousPrompt: string | undefined
+) {
+  if (previousPrompt === undefined) {
+    return false;
+  }
 
-      If <dir> is not provided up front you will be prompted for it.
+  let promptStart = previousPrompt.split("\n")[0];
+  promptStart = promptStart.slice(0, promptStart.lastIndexOf("("));
 
-      Flags:
-        --help, -h          Show this help message
-        --version, -v       Show the version of this script
-
-    "
-  `;
+  return currentPrompt.startsWith(promptStart);
 }
