@@ -2,6 +2,8 @@
 title: Styling
 ---
 
+# Styling
+
 There are a few popular ways to style your markup in the React community. The following have direct support in Remix:
 
 - Remote Stylesheets

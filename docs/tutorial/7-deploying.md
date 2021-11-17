@@ -3,6 +3,8 @@ title: Deploying
 order: 7
 ---
 
+# Deploying
+
 Remix can be deployed to any JavaScript runtime through "adapters". We maintain a few adapters of popular hosts, but in the future we'll have a guide on how you can build your own adapters for any JavaScript server.
 
 ## Adapters

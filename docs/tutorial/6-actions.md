@@ -3,6 +3,8 @@ title: Actions and Data Updates
 order: 6
 ---
 
+# Actions and Data Updates
+
 It's time to get serious. This step in the tutorial is one of the things that makes Remix really unique so we hope you'll take the time to follow along completely.
 
 We're going to be creating data here. If you've been doing web development for a decade or more, this is going to feel very familiar. If you're a little newer, you're going to be blown away by how easy it used to be, and how easy it is again with Remix. In summary we will:

@@ -3,6 +3,8 @@ title: Nested Routes and Params
 order: 4
 ---
 
+# Nested Routes and Params
+
 Nested routes and layouts are a critical idea to understand in Remix, so we're going to build some UI with nested routes and data fetching.
 
 We'll fetch a list of users for navigation, and then fetch their gists below it.

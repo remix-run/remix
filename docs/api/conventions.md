@@ -1,11 +1,13 @@
 ---
-title: Application Module APIs
+title: Conventions
 order: 1
 ---
 
+# Conventions
+
 A lot of Remix API isn't imported from `remix`, but are instead conventions and exports from your application modules.
 
-# remix.config.js
+## remix.config.js
 
 When remix first starts up, it reads your config file, you need to make sure this file is deployed to your server as it's read when the server starts.
 
@@ -24,7 +26,7 @@ module.exports = {
 };
 ```
 
-## appDirectory
+### appDirectory
 
 The path to the `app` directory, relative to remix.config.js. Defaults to "app".
 
@@ -36,7 +38,7 @@ exports.appDirectory = "./app";
 exports.appDirectory = "./elsewhere";
 ```
 
-## routes
+### routes
 
 A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`. Both sets of routes will be merged.
@@ -63,33 +65,33 @@ exports.routes = async (defineRoutes) => {
 }
 ```
 
-## browserBuildDirectory
+### browserBuildDirectory
 
 The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
 
-## publicPath
+### publicPath
 
 The URL prefix of the browser build with a trailing slash. Defaults to "/build/". This is the path the browser will use to find assets.
 
-## serverBuildDirectory
+### serverBuildDirectory
 
 The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
 
-## devServerPort
+### devServerPort
 
 The port number to use for the dev server. Defaults to 8002.
 
-# File Name Conventions
+## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.
 
-## Special Files
+### Special Files
 
 - **`remix.config.js`**: Remix uses this file to know how to build your app for production and run it in development. This file is required.
 - **`app/entry.server.{js,tsx}`**: This is your entry into the server rendering piece of Remix. This file is required.
 - **`app/entry.client.{js,tsx}`**: This is your entry into the browser rendering/hydration piece of Remix. This file is required.
 
-## Route Filenames
+### Route Filenames
 
 - **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes: you can export a `loader`, `action`, etc.
 - **`app/routes/*.{js,jsx,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
@@ -113,7 +115,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 - **`app/routes/__some-layout/some-path.tsx`**: Prefixing a folder with `__` will create a "layout route". Layout routes are routes that don't add anything to the URL for matching, but do add nested components in the tree for layouts. Make sure to also have `__some-layout.tsx` as well. For example, all of your marketing pages could share a layout in the route tree with `app/routes/__marketing.tsx` as the layout and then all of the child routes go in `app/routes/__marketing/products.tsx` and `app/routes/__marketing/buy.tsx`. The `__marketing.tsx` route won't add any segments to the URL, but it will render when it's child routes match.
 
-# entry.client.tsx
+## entry.client.tsx
 
 Remix uses `app/entry.client.tsx` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
 
@@ -130,7 +132,7 @@ ReactDOM.hydrate(<Remix />, document);
 
 As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup thing likes `window.history.scrollRestoration`, etc.
 
-# entry.server.tsx
+## entry.server.tsx
 
 Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
 
@@ -177,13 +179,13 @@ export let handleDataRequest: HandleDataRequestFunction = (
 };
 ```
 
-# Route Module API
+## Route Module API
 
 A route in Remix is mostly a React component, with a couple extra exports.
 
 It's important to read [Route Module Constraints](../constraints/).
 
-## Component
+### Component
 
 The only required export of a route module is a React component. When the URL matches, the component will be rendered.
 
@@ -198,7 +200,7 @@ export default function SomeRouteComponent() {
 }
 ```
 
-## loader
+### loader
 
 Each route can define a loader function that will be called before rendering to provide data to the route.
 
@@ -233,7 +235,7 @@ export default function Users() {
 
 Because `prisma` is only used in the loader it will be removed from the browser bundle.
 
-### Loader arg: params
+#### Loader arg: params
 
 Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
@@ -244,7 +246,7 @@ export let loader: LoaderFunction = ({ params }) => {
 };
 ```
 
-### Loader arg: request
+#### Loader arg: request
 
 This is a [Web API Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) instance with information about the request. You can read the MDN docs to see all of it's properties.
 
@@ -258,7 +260,7 @@ export let loader: LoaderFunction = ({ request }) => {
 };
 ```
 
-### Loader arg: context
+#### Loader arg: context
 
 This is the context you passed in to your deployment wrapper's `getLoaderContext()` function. It's a way to bridge the gap between the platform's request/response API with your remix app.
 
@@ -291,7 +293,7 @@ export let loader: LoaderFunction = ({ context }) => {
 };
 ```
 
-### Returning objects
+#### Returning objects
 
 You can return plain JavaScript objects from your loaders that will be made available to your [route modules]("../route-module").
 
@@ -305,7 +307,7 @@ export let loader = async () => {
 };
 ```
 
-### Returning Response Instances
+#### Returning Response Instances
 
 You can return Web API Response objects from your loaders. Here's a pretty basic JSON response:
 
@@ -348,7 +350,7 @@ See also:
 - (`headers`)["#headers"]
 - [MDN Response Docs](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
-### Response Status Codes in Loaders
+#### Response Status Codes in Loaders
 
 Loaders can return Responses with status codes. This is very useful for "not found" data making it's way all the way down to the browser's UI with a real 404 status code, 500s, etc.
 
@@ -400,7 +402,7 @@ export default function Something() {
 
 The initial server render will get a 500 for this page, and client side transitions will get it also.
 
-### Throwing Response Instances
+#### Throwing Response Instances
 
 Along with returning responses, you can also throw WebAPI Response objects from your loaders allowing you to break through the call stack and show an alternate UI with contextual data through the `CatchBoundary`.
 
@@ -500,7 +502,7 @@ export function CatchBoundary() {
 }
 ```
 
-## action
+### action
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the matching route action is called before the loaders page.
 
@@ -550,7 +552,7 @@ See also:
 - [`<Form>`](../remix/#form)
 - [`<Form action>`](../remix/#form-action)
 
-## headers
+### headers
 
 Each route can define it's own HTTP headers. One of the most important headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
@@ -627,7 +629,7 @@ export function headers({ loaderHeaders, parentHeaders }) {
 
 All that said, you can avoid this entire problem by _not defining headers in layout routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your layout routes, you will never have to worry about merging headers.
 
-## meta
+### meta
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
@@ -647,7 +649,7 @@ Title is a special case and will render a `<title>` tag, the rest render `<meta 
 
 In the case of nested routes, the meta tags are merged, so parent routes can add meta tags with the child routes needing to copy them.
 
-## links
+### links
 
 The links function defines which `<link>` elements to add to the page when the user visits a route.
 
@@ -677,7 +679,7 @@ export let links: LinksFunction = () => {
 
 There are two types of link descriptors you can return:
 
-### HtmlLinkDescriptor
+#### HtmlLinkDescriptor
 
 This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
 
@@ -727,7 +729,7 @@ export let links: LinksFunction = () => {
 };
 ```
 
-### PageLinkDescriptor
+#### PageLinkDescriptor
 
 These descriptors allow you to prefetch the resources for a page the user is likely to navigate to. While this API is useful, you might get more mileage out of `<Link prefetch="render">` instead. But if you'd like, you can get the same behavior with this API.
 
@@ -741,7 +743,7 @@ This load up the JavaScript modules, loader data, and the stylesheets (defined i
 
 **Be careful with this feature**. You don't want to download 10MB of JavaScript and data for pages the user probably won't ever visit.
 
-## CatchBoundary
+### CatchBoundary
 
 A `CatchBoundary` is a React component that renders whenever an action or loader throws a `Response`.
 
@@ -769,7 +771,7 @@ export function CatchBoundary() {
 }
 ```
 
-## ErrorBoundary
+### ErrorBoundary
 
 An `ErrorBoundary` is a React component that renders whenever there is an error anywhere on the route, either during rendering or during data loading.
 
@@ -792,7 +794,7 @@ export function ErrorBoundary({ error }) {
 }
 ```
 
-## handle
+### handle
 
 Exporting a handle allows you to create application conventions with the `useMatches()` hook. You can put whatever values you want on it:
 
@@ -804,7 +806,7 @@ export let handle = {
 
 This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](../remix/#usematches) for more information.
 
-## unstable_shouldReload
+### unstable_shouldReload
 
 <docs-warning>This API is unstable, we're confident in the use cases it solves but aren't sure about the API yet, it may change in the future.</docs-warning>
 
@@ -845,7 +847,7 @@ Otherwise Remix will reload the route and you have no choice:
 
 Here are a couple of common use-cases:
 
-### Never reloading the root
+#### Never reloading the root
 
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
@@ -864,7 +866,7 @@ export let unstable_shouldReload = () => false;
 
 With this in place, Remix will no longer make a request to your root loader for any reason, not after form submissions, not after search param changes, etc.
 
-### Ignoring search params
+#### Ignoring search params
 
 Another common case is when you've got nested routes and a child component has a feature that uses the search params in the URL, like a search page or some tabs with state you want to keep in the search params.
 
@@ -946,7 +948,7 @@ export function unstable_shouldReload({
 
 You need to be very careful here, though. That project (or its nested relationships) may be updated by other actions and your app will get out of sync if you don't also consider them.
 
-# Asset URL Imports
+## Asset URL Imports
 
 Any files inside the `app` folder can be imported into your modules. Remix will:
 

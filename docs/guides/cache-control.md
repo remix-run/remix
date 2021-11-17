@@ -3,6 +3,8 @@ title: Cache-Control
 disabled: true
 ---
 
+# Cache Control
+
 ## In Routes Modules
 
 Each route can also define its http headers. This is mostly important for http caching. Remix doesn't rely on building your website into static files to be uploaded to a CDN for performance, instead we rely on cache headers. The end result of either approach is the same: a static document on a CDN. [Check out this video for more information on that](https://youtu.be/bfLFHp7Sbkg).
