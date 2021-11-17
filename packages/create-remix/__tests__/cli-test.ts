@@ -23,9 +23,12 @@ const createRemix = path.resolve(
 );
 
 describe("create-remix cli", () => {
-  if (!fs.existsSync(createRemix)) {
-    throw new Error(`Cannot run Remix CLI tests without building Remix`);
-  }
+  beforeAll(() => {
+    if (!fs.existsSync(createRemix)) {
+      // TODO: Consider runnuing the build here instead of throwing
+      throw new Error(`Cannot run Remix CLI tests without building Remix`);
+    }
+  });
 
   it("guides the user through the process", async done => {
     let cli = spawn("node", [createRemix], {});
@@ -58,6 +61,8 @@ describe("create-remix cli", () => {
           break;
 
         case 3:
+          // Where do you want to deploy? Choose Remix if you're unsure, it's
+          // easy to change deployment targets.
           expect(getPromptChoices(prompt)).toEqual([
             "Remix App Server",
             "Express Server",
@@ -71,6 +76,7 @@ describe("create-remix cli", () => {
           break;
 
         case 4:
+          // TypeScript or JavaScript?
           expect(getPromptChoices(prompt)).toEqual([
             "TypeScript",
             "JavaScript"
