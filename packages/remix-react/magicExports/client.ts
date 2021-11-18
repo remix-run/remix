@@ -37,9 +37,5 @@ export {
   useActionData,
   useBeforeUnload,
   useMatches,
-  RemixServer,
-  // @deprecated
-  usePendingLocation,
-  usePendingFormSubmit,
-  useRouteData
+  RemixServer
 } from "@remix-run/react";

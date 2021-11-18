@@ -1,5 +1,13 @@
 # History of Changes
 
+## Unreleased
+
+### Breaking Changes
+
+- Removed `useRouteData` in favor of `useLoaderData`
+- Removed `usePendingLocation` in favor of `useTransition().location`
+- Removed `usePendingFormSubmit` in favor of `useTransition().submission`
+
 ## 0.20.0 - Fri Oct 29 2021
 
 ### Improvements
@@ -265,7 +273,7 @@ This is a history of changes to [Remix](https://remix.run).
 - Removed `global-loader`, changed to a normal `export function loader(){}` on `root.ts` route.
 - Removed `<Remix ErrorBoundary>`, changed to a normal `export function ErrorBoundary(){}` on `root.ts` route.
 - Removed `<Remix children={<App/>}>`, rename `App.ts` to `app/root.ts`
-- Removed `useGlobalData` hook, use `useRouteData` in `root.ts`.
+- Removed `useGlobalData` hook, use `useLoaderData` in `root.ts`.
 - Removed `<Routes />`, use React Router `<Outlet/>` in `root.ts`
 - Removed `parseFormBody` helper. Use `new URLSearchParams(await request.text())` or (future) `await request.formData()` instead.
 
@@ -434,7 +442,7 @@ This is a history of changes to [Remix](https://remix.run).
 
 - Renamed `data` directory back to `loaders`
 - Return data directly (instead of `useState` tuple) from `useGlobalData` and
-  `useRouteData`
+  `useLoaderData`
 - Default to `NODE_ENV=development` in `remix build`
 
 ## 0.4.1 - Mon Oct 19 2020
