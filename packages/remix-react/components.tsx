@@ -673,7 +673,7 @@ type ScriptProps = Omit<
 >;
 
 export const Scripts =
-  typeof document === "undefined" ? ServerScripts : ClientScripts;
+  typeof window === "undefined" ? ServerScripts : ClientScripts;
 
 /**
  * Browser implementation of <Scripts>, which does nothing.
