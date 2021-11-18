@@ -4,6 +4,7 @@ import {
   Links,
   Scripts,
   useLoaderData,
+  ScrollRestoration,
   LiveReload,
   useCatch
 } from "remix";
@@ -36,6 +37,7 @@ function Document({
       </head>
       <body>
         {children}
+        <ScrollRestoration />
         <Scripts />
         {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>

@@ -165,6 +165,24 @@ See also:
 - [`useActionData`][useactiondata]
 - [`useSubmit`][usesubmit]
 
+### `<ScrollRestoration>`
+
+This component will emulate the browser's scroll restoration on location changes. Hopefully you never notice this component at all!
+
+It must be the last element on the page, right before the `<Scripts/>` tag:
+
+```tsx [4,5]
+<html>
+  <body>
+    {/* ... */}
+    <ScrollRestoration />
+    <Scripts />
+  </body>
+</html>
+```
+
+In order to avoid (usually) the client side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
+
 ### `useLoaderData`
 
 This hook returns the JSON parsed data from your route loader function.

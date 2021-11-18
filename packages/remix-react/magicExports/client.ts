@@ -26,6 +26,7 @@ export {
   Outlet,
   Form,
   PrefetchPageLinks,
+  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
