@@ -9,9 +9,9 @@ In order for Remix to run your app in both the server and browser environments, 
 - **Server-only code** - Remix will remove server-only code but it can't if you have module side effects that use server-only code.
 - **Browser-only code** - Remix renders on the server so your modules can't have module side effects or first-rendering logic that call browser-only APIs
 
-## Removing Server-Only Code in Browser Bundles
+## Server Code Pruning
 
-The Remix compiler can automatically remove server code from the browser bundles. Our strategy is actually pretty straightforward, but requires you to follow some rules.
+The Remix compiler will automatically remove server code from the browser bundles. Our strategy is actually pretty straightforward, but requires you to follow some rules.
 
 1. It creates a "proxy" module in front of your route module
 2. The proxy module only imports the browser specific exports
@@ -139,29 +139,68 @@ export default function Posts() {
 
 This is no longer a module side effect (runs when the module is imported), but rather a side effect of the loader (runs when the loader is called). The compiler will now remove both the loader _and the prisma import_ because it isn't used anywhere else in the module.
 
-### Higher Order Functions in Loaders
+### Higher Order Functions
 
-Higher order functions are an effective composition strategy. However, if you use them to _create_ a loader or action, your app can break because the creation of the function is a module side-effect. To use higher order functions within the constraints of Remix they need to be _inside_ the loader.
+Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
 
-Here are a few really common use cases:
+```js bad filename=app/http.js
+import { redirect } from "remix";
 
-- Automatically getting and committing sessions
-- Enforcing trailing slashes
-- Requiring user authentication
+export function removeTrailingSlash(loader) {
+  return function (arg) {
+    let { request } = arg;
+    let url = new URL(request.url);
+    if (url.pathname.endsWith("/")) {
+      return redirect(request.url.slice(0, -1), {
+        status: 308
+      });
+    }
+    return loader(arg);
+  };
+}
+```
 
-<docs-info>You can use higher order functions in route modules if they are <i>inside the loader</i>, not outside in the module scope</docs-info>
+And then try to use it like this:
 
-```ts
+```js bad filename=app/root.js
+import { removeTrailingSlash } from "~/http";
+
+export let loader = removeTrailingSlash(({ request }) => {
+  return { some: "data" };
+});
+```
+
+You can probably now see that this is a module side effect so the compiler can't prune out the `removeTrailingSlash` code.
+
+This type of abstraction is introduced to try to return a response early. Since you can throw a Response in a loader, we can make this simpler and remove the module side effect at the same time so that the server code can be pruned:
+
+```js filename=app/http.js
+import { redirect } from "remix";
+
+export function removeTrailingSlash(url) {
+  if (url.pathname.endsWith("/")) {
+    throw redirect(request.url.slice(0, -1), {
+      status: 308
+    });
+  }
+}
+```
+
+And then use it like this:
+
+```js bad filename=app/root.js
+import { removeTrailingSlash } from "~/http";
+
 export let loader = ({ request }) => {
-  return requireUser(request, user => {
-    return json(user);
-  });
+  removeTrailingSlash(request.url);
+  return { some: "data" };
 };
 ```
 
-You can combine them together too:
+It reads much nicer as well when you've got a lot of these:
 
 ```ts
+// this
 export let loader = ({ request }) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, session => {
@@ -171,127 +210,19 @@ export let loader = ({ request }) => {
     });
   });
 };
-```
 
-There are a lot of functional composition strategies you could implement as an alternative to the API design we chose here. We like to keep the abstraction as low as possible since functional programming can get a little wild pretty quickly 😅
-
-<docs-error>Using a higher order function to create the loader function itself will <i>not</i> work</docs-error>
-
-```ts bad
-export let loader = removeTrailingSlash(async () => {
-  let posts = await db.posts.findMany();
-  return json(posts);
-});
-```
-
-Can you see why?
-
-The problem is we've called `removeTrailingSlash` _in the module scope_. It's exactly like our `console.log` except we assigned it to a variable. Either way, it's a module side effect so the compiler has to keep it around (maybe there's a `console.log` inside of `removeTrailingSlash` 😅).
-
-Even if we tried to do magic tricks with the compiler to remove these kinds of patterns, in our experience they're much harder to write than the ones we're about to show you.
-
-Let's implement a couple of the helpers we've been discussing:
-
-#### `removeTrailingSlash`
-
-```js filename=removeTrailingSlash.js
-import { redirect } from "remix";
-
-export function removeTrailingSlash(request, next) {
-  let url = new URL(request.url);
-  if (url.pathname.endsWith("/")) {
-    return redirect(request.url.slice(0, -1), {
-      status: 308
-    });
-  }
-  return next();
-}
-```
-
-You can see how this function has a chance to return a redirect or let your loader finish the request.
-
-This type of function is a lot easier to author than the kind that don't work with Remix because they don't have to deal with transparently passing along the bag of runtime arguments that are going through the abstraction.
-
-#### `withSession`
-
-This helper allows loaders and actions to skip all the request/response cookie header boilerplate, and ensures the session is always committed.
-
-```js filename=withSession.js
-import {
-  Response,
-  json,
-  createCookieSessionStorage
-} from "remix";
-
-let { getSession, commitSession, destroySession } =
-  createCookieSessionStorage({
-    cookie: { name: "__session" }
-  });
-
-export async function withSession(request, next) {
-  let session = await getSession(
-    request.headers.get("Cookie")
-  );
-
-  // pass the session to the loader/action and let it handle the response
-  let response = await next(session);
-
-  // if they returned a plain object, turn it into a response
-  if (!(response instanceof Response)) {
-    response = json(response);
-  }
-
-  // commit the session automatically
-  response.headers.append(
-    "Set-Cookie",
-    await commitSession(session)
-  );
-
-  return response;
-}
-```
-
-Notice how this function actually inspects and manipulates the response returned by the `next` function. Loaders (and actions) are **pure functions**, meaning they don't _do anything_, they just return a response. This allows you to build abstractions like `withSession`.
-
-Maybe seeing how this would be used will help:
-
-```js filename=routes/some-route.js
-export let action = async ({ request }) => {
-  return withSession(request, session => {
-    session.flash(
-      "message",
-      "Functional Composition is Fun! (ctional)"
-    );
-    return redirect("/this/same/page");
-  });
-};
-
-export let loader = async ({ request }) => {
-  return withSession(request, session => {
-    return json({ message: session.get("message") });
-  });
+// vs. this
+export let loader = ({ request }) => {
+  removeTrailingSlash(request.url);
+  let session = await getSession(request);
+  let user = await requireUser(session);
+  return json(user);
 };
 ```
 
-(Just between us, `withSession` should probably be built-in to Remix 🤫)
+If you want to do some extra-curricular reading, google around for "push vs. pull API". The ability to throw responses changes the model from a "push" to a "pull". This is the same reason folks prefer async/await over callbacks, and React hooks over higher order components and render props.
 
-### Types
-
-If you're using TypeScript, you can use this to get the types right:
-
-```ts [1, 5]
-import type { LoaderFunction } from "remix";
-
-export function withSession(
-  request: Request,
-  loader: () => ReturnType<LoaderFunction>
-) {
-  // etc.
-  return response;
-}
-```
-
-## Avoiding Browser-Only Code While Booting and Rendering
+## Browser-Only Code on the Server
 
 Unlike the browser bundles, Remix doesn't try to remove _browser only code_ from the server bundle because the route modules require every export to render on the server. This means it's your job to be mindful of code that should only execute in the browser.
 
@@ -342,17 +273,20 @@ export async function redirectToStripeCheckout(sessionId) {
 
 You may want to avoid initializing the library multiple times by storing it in a module-scoped variable.
 
-```js [3-6]
+```js
 import { loadStripe } from "@stripe/stripe-js";
 
-let stripe;
+let _stripe;
 async function getStripe() {
-  return (stripe =
-    stripe || (await loadStripe(window.ENV.stripe)));
+  if (!_stripe) {
+    _stripe = await loadStripe(window.ENV.stripe);
+  }
+  return _stripe;
 }
 
 export async function redirectToStripeCheckout(sessionId) {
-  return getStripe().redirectToCheckout({ sessionId });
+  let stripe = await getStripe();
+  return stripe.redirectToCheckout({ sessionId });
 }
 ```
 
@@ -398,11 +332,20 @@ function useLocalStorage(key) {
 
 Now `localStorage` is not being accessed on the initial render, which will work for the server. In the browser, that state will fill in immediately after hydration. Hopefully it doesn't cause a big content layout shift though! If it does, maybe move that state into your database or a cookie so you can access it server side.
 
-### TODO: `useLayoutEffect`
+### `useLayoutEffect`
 
-- when it's preferred: when state is for effects, not rendering (scroll position)
-- when it's not okay: when state is used for rendering (`localStorage`)
-- how to get React/eslint to shut up about it: `window` guard in `useImAnAdultLayoutEffect`
+If you use this hook React will warn you about using it on the server.
+
+This hook is great when you're setting state for things like:
+
+- The position of an element when it pops up (like a menu button)
+- The scroll position in response to user interactions
+
+The point is to perform the effect at the same time as the browser paint so that you don't see the popup show up at `0,0` and then bounce into place. Layout effects let the paint and the effect happen at the same time to avoid this kind of flashing.
+
+It is **not** good for setting state that is rendered inside of elements. Just make sure you aren't using the state set in a `useLayoutEffect` in your elements and you can ignore React's warning.
+
+TODO: Link to Reach UI `useIsomorphicLayoutEffect`
 
 ### Third-Party Module Side Effects
 

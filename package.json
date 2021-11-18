@@ -78,6 +78,7 @@
     "rollup": "^2.36.1",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.4",
+    "strip-ansi": "^6.0.1",
     "typescript": "^4.2.3",
     "unified": "^9.2.0"
   },
