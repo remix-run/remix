@@ -25,9 +25,9 @@ npm i -g netlify-cli
 
 4. You'll need to tell Netlify to use Node 14, as at the time of writing Netlify uses Node 12 by [default](https://docs.netlify.com/functions/build-with-javascript/#runtime-settings)
 
- ```sh
-   netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
- ```
+```sh
+  netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
+```
 
 ## Development
 

@@ -22,7 +22,7 @@ run().then(
   () => {
     process.exit(0);
   },
-  (error) => {
+  error => {
     console.error(error);
     process.exit(1);
   }
@@ -32,15 +32,15 @@ async function run() {
   let { input, flags, showHelp, showVersion } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
-      version: { type: "boolean", default: false, alias: "v" },
-    },
+      version: { type: "boolean", default: false, alias: "v" }
+    }
   });
 
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
   let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
-  await new Promise((res) => setTimeout(res, 1500));
+  await new Promise(res => setTimeout(res, 1500));
   anim.stop();
 
   console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
@@ -57,8 +57,8 @@ async function run() {
               type: "input",
               name: "dir",
               message: "Where would you like to create your app?",
-              default: "./my-remix-app",
-            },
+              default: "./my-remix-app"
+            }
           ])
         ).dir
   );
@@ -81,8 +81,8 @@ async function run() {
         { name: "Fly.io", value: "fly" },
         { name: "Netlify", value: "netlify" },
         { name: "Vercel", value: "vercel" },
-        { name: "Cloudflare Workers", value: "cloudflare-workers" },
-      ],
+        { name: "Cloudflare Workers", value: "cloudflare-workers" }
+      ]
     },
     {
       name: "lang",
@@ -90,15 +90,15 @@ async function run() {
       message: "TypeScript or JavaScript?",
       choices: [
         { name: "TypeScript", value: "ts" },
-        { name: "JavaScript", value: "js" },
-      ],
+        { name: "JavaScript", value: "js" }
+      ]
     },
     {
       name: "install",
       type: "confirm",
       message: "Do you want me to run `npm install`?",
-      default: true,
-    },
+      default: true
+    }
   ]);
 
   // Create the app directory
@@ -147,14 +147,14 @@ async function run() {
   // merge package.jsons
   let appPkg = require(path.join(sharedTemplate, "package.json"));
   let serverPkg = require(path.join(serverTemplate, "package.json"));
-  ["dependencies", "devDependencies", "scripts"].forEach((key) => {
+  ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
   });
 
   appPkg.main = serverPkg.main;
 
   // add current versions of remix deps
-  ["dependencies", "devDependencies"].forEach((pkgKey) => {
+  ["dependencies", "devDependencies"].forEach(pkgKey => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
         appPkg[pkgKey][key] = `^${cliPkgJson.version}`;
