@@ -18,3 +18,7 @@ import { installGlobals } from "@remix-run/node";
 // This installs globals such as "fetch", "Response", "Request" and "Headers.
 installGlobals();
 ```
+
+<docs-info>
+  Keep in mind that we install these for you automatically in your actual app, so you should only need to do this in your test environment.
+</docs-info>
