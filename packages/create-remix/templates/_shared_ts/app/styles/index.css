@@ -31,3 +31,20 @@
 .homepage__resource > :last-child {
   margin-bottom: 0;
 }
+
+.homepage__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.homepage__form > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.homepage__greeting {
+  font-weight: bold;
+}

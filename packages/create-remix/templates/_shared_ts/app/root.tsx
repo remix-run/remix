@@ -42,21 +42,6 @@ export let links: LinksFunction = () => {
 };
 
 /**
- * The `actions` export is a function that is called on the server when a
- * non-GET request is made (so POST, PUT, PATCH, and DELETE requests are all
- * handled here).
- *
- * @see {@link [Actions and Data Updates](https://docs.remix.run/v0.21/tutorial/6-actions/)}
- * @see {@link [Actions API](https://docs.remix.run/v0.21/api/app/#action)}
- */
-export let action: ActionFunction = async () => {
-  let unexpectedError = true;
-  if (unexpectedError) {
-    throw new Error("Hello from the ErrorBoundary! 👋");
-  }
-};
-
-/**
  * The root module's default export is a component that renders the current
  * route via the `<Outlet />` component. Think of this as the global layout
  * component for your app.
@@ -181,23 +166,6 @@ export function CatchBoundary() {
               Check out the docs for more on handling errors in Remix.
             </a>
           </p>
-          <p>
-            {/*
-            This form submission will send a post request that we handle in our
-            `action` export. Any route can export an action, not just the root!
-            Because our action throws a response, it will be caught by the
-            `CatchBoundary` first.
-
-            Take a look at the action's response status code, then take another
-            look at the `CatchBoundary` and see if you can figure out how we end
-            up in our `ErrorBoundary` 🤔
-
-            https://docs.remix.run/v0.21/tutorial/6-actions/
-            */}
-            <Form method="post">
-              <button>Throw an uncaught error</button>
-            </Form>
-          </p>
         </div>
       </Layout>
     </Document>
@@ -220,7 +188,6 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
           <p>
             When your server responds with an error that isn't caught by a{" "}
-            <code>CatchBoundary</code>, or if you throw a new error from the{" "}
             <code>CatchBoundary</code>, you'll land in an{" "}
             <code>ErrorBoundary</code>.
           </p>
