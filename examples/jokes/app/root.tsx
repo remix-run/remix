@@ -53,6 +53,16 @@ function Document({
   );
 }
 
+function Footer() {
+  return (
+    <footer>
+      <Link reloadDocument to="/jokes-rss">
+        RSS
+      </Link>
+    </footer>
+  );
+}
+
 export default function App() {
   let data = useLoaderData<LoaderData>();
   return (
@@ -64,6 +74,9 @@ export default function App() {
           </li>
           <li>
             <Link to="/jokes">Jokes</Link>
+          </li>
+          <li>
+            <Link to="/about">About</Link>
           </li>
           {!data.user ? (
             <li>
@@ -82,6 +95,7 @@ export default function App() {
       ) : null}
       <h1>Remix Jokes</h1>
       <Outlet />
+      <Footer />
     </Document>
   );
 }
@@ -97,6 +111,7 @@ export function CatchBoundary() {
           <h1>
             {caught.status} {caught.statusText}
           </h1>
+          <Footer />
         </Document>
       );
 
@@ -118,6 +133,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
         Replace this UI with what you want users to see when your app throws
         uncaught errors.
       </p>
+      <Footer />
     </Document>
   );
 }

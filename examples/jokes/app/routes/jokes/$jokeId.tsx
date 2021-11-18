@@ -1,9 +1,21 @@
-import type { LoaderFunction, ActionFunction } from "remix";
+import type {
+  LoaderFunction,
+  ActionFunction,
+  MetaFunction,
+  HeadersFunction,
+} from "remix";
 import { json, useLoaderData, useCatch, Link, Form, redirect } from "remix";
 import { useParams } from "react-router-dom";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
+
+export let meta: MetaFunction = ({ data }: { data: LoaderData }) => {
+  return {
+    title: `"${data.joke.name}" joke`,
+    description: `Enjoy the "${data.joke.name}" joke and much more`,
+  };
+};
 
 type LoaderData = { joke: Joke; isOwner: boolean };
 
@@ -14,7 +26,17 @@ export let loader: LoaderFunction = async ({ request, params }) => {
     throw new Response("What a joke! Not found.", { status: 404 });
   }
   let data: LoaderData = { joke, isOwner: userId === joke.jokesterId };
-  return json(data);
+  return json(data, {
+    headers: {
+      "Cache-Control": `public, max-age=${60 * 5} s-maxage=${60 * 60}`,
+    },
+  });
+};
+
+export let headers: HeadersFunction = ({ loaderHeaders }) => {
+  return {
+    "Cache-Control": loaderHeaders.get("Cache-Control") ?? "",
+  };
 };
 
 export let action: ActionFunction = async ({ request, params }) => {
