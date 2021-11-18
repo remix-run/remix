@@ -1,5 +1,13 @@
 # History of Changes
 
+## Unreleased
+
+### Breaking Changes
+
+- Removed `useRouteData` in favor of `useLoaderData`
+- Removed `usePendingLocation` in favor of `useTransition().location`
+- Removed `usePendingFormSubmit` in favor of `useTransition().submission`
+
 ## 0.20.0 - Fri Oct 29 2021
 
 ### Improvements
