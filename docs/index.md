@@ -19,25 +19,25 @@ npx create-remix@latest
 We **strongly encourage you** to do one of the tutorials before anything else. Remix is different. The tutorials will show you how to start with web fundamentals and then progressively enhance your app to the modern UX you're after.
 
 <docs-cards>
-  <a href="main/tutorials/jokes" aria-label="Jokes App Tutorial">
+  <a href="dev/tutorials/jokes" aria-label="Jokes App Tutorial">
     <docs-card>
       <h4>Jokes App Quickstart</h4> 
       <p>Spend your first 30 minutes with Remix building a full stack <i>Tell me a joke</i> app, backed by a SQL database with user authentication and modern UI finishes. You'll learn about nested routes, sessions, data loading, data mutations, progressive enhancement, and more. Get a feel for what a data-backed web app feels like with Remix.</p>
     </docs-card>
   </a>
-  <a href="main/tutorials/blog" aria-label="Developer Blog Tutorial">
+  <a href="dev/tutorials/blog" aria-label="Developer Blog Tutorial">
     <docs-card>
       <h4>Developer Blog Quickstart</h4>
       <p>Yeah, yeah, we know, you want to redo your personal blog with Remix. Remix is a lot more capable than rendering markdown into HTML, so we'll show how to start simple (Remix scales down) and then scale up to a full blogging platform backed by a CMS (it scales up too!).</p>
     </docs-card>
   </a>
-  <a href="main/api/conventions" aria-label="Conventional APIs">
+  <a href="dev/api/conventions" aria-label="Conventional APIs">
     <docs-card>
       <h4>Conventional APIs</h4> 
       <p>Remix has a handful of conventions to make web application development a breeze. You'll spend some time in this document when you're first learning Remix, but probably won't need it much after you get your feet wet.</p>
     </docs-card>
   </a>
-  <a href="main/api/remix" aria-label="Remix API">
+  <a href="dev/api/remix" aria-label="Remix API">
     <docs-card>
       <h4>Remix Package API</h4>
       <p>This is probably the doc page you'll visit the most. It's got all of the Remix package exports that you'll use day-to-day in your app.</p>
