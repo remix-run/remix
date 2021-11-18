@@ -1,5 +1,5 @@
 ---
-title: remix
+title: Remix Package
 order: 2
 ---
 
@@ -38,7 +38,7 @@ You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hostin
 
 ### `<Link>`
 
-This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of clientside routing in Remix.
+This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client side routing in Remix.
 
 It wraps React Router's Link with some extra behavior around resource prefetching.
 
@@ -56,8 +56,6 @@ export default function GlobalNav() {
 }
 ```
 
-#### `<Link prefetch>`
-
 In our effort to remove all loading states from your UI, `Link` can automatically prefetch all the resources the next page needs: JavaScript modules, stylesheets, and data. This prop controls if and when that happens.
 
 ```tsx
@@ -74,36 +72,6 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 <docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
 
 Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>` tags, which provides a lot subtle benefits (like respecting HTTP cache headers, doing the work in browser idle time, using a different thread than your app, etc.) but the implementation might mess with your CSS since the link tags are rendered inside of your anchor tag. This means `a *:last-child {}` style selectors won't work. You'll need to change them to `a *:last-of-type {}` and you should be good. We will eventually get rid of this limitation.
-
-### `<Outlet>`
-
-This is simply a re-export from React Router for convenience and potential future Remix behavior. It is recommended that you import from Remix.
-
-```tsx
-import { Outlet } from "remix";
-```
-
-### ~~`useRouteData`~~
-
-<docs-warning>Deprecated, use <a href="#useLoaderData">useLoaderData</a></docs-warning>
-
-### `useLoaderData`
-
-This hook returns the JSON parsed data from your route data loader.
-
-```tsx [2,9]
-import React from "react";
-import { useLoaderData } from "remix";
-
-export function loader() {
-  return fakeDb.invoices.findAll();
-}
-
-export default function Invoices() {
-  let invoices = useLoaderData();
-  // ...
-}
-```
 
 ### `<Form>`
 
@@ -160,6 +128,8 @@ Native `<form>` only supports get and post, so if you want your form to work wit
 
 Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" method="delete" />`. If you always include JavaScript, you don't need to worry about this.
 
+<docs-info>We generally recommend sticking with "get" and "post" because the other verbs are not supported by HTML</docs-info>
+
 #### `<Form encType>`
 
 Defaults to `application/x-www-urlencoded`, which is also the only supported value right now.
@@ -191,20 +161,38 @@ When the `action` prop is ommitted, `<Form>` and `<form>` will sometimes call di
 
 See also:
 
-- [`useTransition`](#usetransition)
-- [`useActionData`](#usetransition)
-- [`useSubmit`](#usesubmit)
+- [`useTransition`][usetransition]
+- [`useActionData`][useactiondata]
+- [`useSubmit`][usesubmit]
+
+### `useLoaderData`
+
+This hook returns the JSON parsed data from your route loader function.
+
+```tsx [2,9]
+import React from "react";
+import { useLoaderData } from "remix";
+
+export function loader() {
+  return fakeDb.invoices.findAll();
+}
+
+export default function Invoices() {
+  let invoices = useLoaderData();
+  // ...
+}
+```
 
 ### `useActionData`
 
-This hook returns the JSON parsed data from your route action. If there has been no submsision at the current location it returns undefined.
+This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
 ```tsx [2,11,20]
 import React from "react";
 import { useActionData } from "remix";
 
 export function action({ request }) {
-  let body = new URLSearchParams(await request.text());
+  let body = await request.formData();
   let name = body.get("visitorsName");
   return { message: `Hello, ${name}` };
 }
@@ -227,13 +215,11 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [21, 30, 38, 42-44]
+```tsx [19, 28, 36, 40-42]
 import { redirect, json, Form, useActionData } from "remix";
 
 export function action({ request }) {
-  let body = Object.fromEntries(
-    new URLSearchParams(await request.text())
-  );
+  let body = Object.fromEntries(await request.formData());
   let errors = {};
 
   // validate the fields
@@ -337,10 +323,12 @@ The browser will resubmit the form in these situations unless you redirect from 
 
 If you're using `<Form>` and don't care to support the cases above, you don't need to redirect from your actions. However, if you don't redirect from an action, make sure reposting the same information isn't dangerous to your data or your visitors because you can't control if they have JavaScript enabled or not.
 
+<docs-info>In general, if the form validation fails, return data from the action and render it in the component, but once you actually change data (in your database, or otherwise) you should redirect.</docs-info>
+
 See also:
 
-- [`action`](../app/#action)
-- [`useTransition`](#usetransition)
+- [`action`][action]
+- [`useTransition`][usetransition]
 
 ### `useFormAction`
 
@@ -355,85 +343,71 @@ Resolves the value of a `<form action>` attribute using React Router's relative 
 </button>
 ```
 
+(Yes, HTML buttons can change the action of their form!)
+
 ### `useSubmit`
 
 Returns the function that may be used to submit a `<form>` (or some raw `FormData`) to the server using the same process that `<Form>` uses internally `onSubmit`. If you're familiar with React Router's `useNavigate`, you can think about this as the same thing but for `<Form>` instead of `<Link>`.
 
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
-```tsx
-import { useSubmit } from "remix";
+```tsx filename=app/routes/prefs.tsx lines=[1,13,17]
+import { useSubmit, useTransition } from "remix";
+
+export async function loader() {
+  await getUserPreferences();
+}
+
+export async function action() {
+  await updatePreferences(await request.formData());
+  return redirect("/prefs");
+}
 
 function UserPreferences() {
   let submit = useSubmit();
+  let transition = useTransition();
 
   function handleChange(event) {
     submit(event.currentTarget, { replace: true });
   }
 
   return (
-    <form method="post" onChange={handleChange}>
-      {/* ... */}
-    </form>
+    <Form method="post" onChange={handleChange}>
+      <label>
+        <input type="checkbox" name="darkMode" value="on" />{" "}
+        Dark Mode
+      </label>
+      {transition.state === "submitting" && (
+        <p>Saving...</p>
+      )}
+    </Form>
   );
 }
 ```
 
-This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity.
+This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
 
-```tsx [2,7,12]
-import { useCallback, useEffect, useState } from "react";
-import { useSubmit } from "remix";
-
-const oneMinute = 60_000;
-
-function useSessionTimeout(initialTimeout) {
-  let submit = useSubmit();
-  let [sessionTimeout, setSessionTimeout] =
-    useState(initialTimeout);
-
-  let handleTimeout = useCallback(() => {
-    submit(null, { method: "post", action: "/logout" });
-  });
-
-  useEffect(() => {
-    let timer = setTimeout(handleTimeout, sessionTimeout);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [sessionTimeout]);
-
-  return setSessionTimeout;
-}
+```tsx [1,10,15]
+import { useSubmit, useTransition } from "remix";
+import { useEffect } from "react";
 
 function AdminPage() {
-  // User will be automatically signed out after 5 mins of inactivity.
-  let setSessionTimeout = useSessionTimeout(5 * oneMinute);
+  useSessionTimeout();
+  return <div>{/* ... */}</div>;
+}
 
-  // TODO: Use `setSessionTimeout(n)` when there is some activity
-  // on the page to reset the timer and extend the session.
+function useSessionTimeout() {
+  let submit = useSubmit();
+  let transition = useTransition();
 
-  return (
-    <div>
-      {/* User can use this form sign sign out immediately */}
-      <form method="post" action="/logout">
-        <button>Sign out</button>
-      </form>
-
-      {/* ... */}
-    </div>
-  );
+  useEffect(() => {
+    let id = setTimeout(() => {
+      submit(null, { method: "post", action: "/logout" });
+    }, 5 * 60_000);
+    return () => clearTimeout(timer);
+  }, [transition]);
 }
 ```
-
-### ~`usePendingLocation`~
-
-<docs-warning>Deprecated, use <a href="#usetransition"><code>useTransition().location</code></a></docs-warning>
-
-### ~~`usePendingFormSubmit`~~
-
-<docs-warning>Deprecated, use <a href="#usetransition">useTransition().submission</a></docs-warning>
 
 ### `useTransition`
 
@@ -582,6 +556,15 @@ function PendingLink({ to, children }) {
 Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
 
 ### `useFetcher`
+
+<docs-error>This hook is for advanced cases that most features of your app don't need. It does not work with server rendering, usually requires JavaScript in the browser, and requires you to deal with pending states.</docs-error>
+
+It is common for Remix newcomers to see this hook and think it is the primary way to interact with the server for data loading and updates, but it is not! Remix was specifically designed to avoid this type of interaction with the server and has better ways of handling typical data loading and updating workflows, you probably want one of these:
+
+- [`useLoaderData`][useloaderdata]
+- [`Form`][form]
+- [`useActionData`][useactiondata]
+- [`useTransition`][usetransition]
 
 This hook will call loaders and actions without navigating. It's similar to `useFetch()` wrappers found in many React apps but with extra behavior specific to Remix (like capturing data updates automatically across the whole page).
 
@@ -1189,7 +1172,7 @@ In this situation, you may need to save important application state on the page 
 
 Remix or not, this is just good practice to do. The user can change the url, accidentally close the browser window, etc.
 
-```tsx [1, 7-12]
+```tsx [1,7-11]
 import { useBeforeUnload } from "remix";
 
 function SomeForm() {
@@ -1328,8 +1311,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 
 First, create a cookie:
 
-```js
-// app/cookies.js
+```js filename=app/cookies.js
 import { createCookie } from "remix";
 
 export let userPrefs = createCookie("user-prefs", {
@@ -1341,37 +1323,28 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```js
-// app/routes/index.js
-import React from "react";
+```js filename=app/routes/index.js lines=[2,6,14,18]
 import { useLoaderData, json, redirect } from "remix";
-
-import { userPrefs as cookie } from "../cookies";
+import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
-  let value =
-    (await cookie.parse(request.headers.get("Cookie"))) ||
-    {};
-  let showBanner =
-    "showBanner" in value ? value.showBanner : true;
-  return { showBanner };
+  let cookieHeader = request.headers.get("Cookie");
+  let cookie = (await userPrefs.parse(cookieHeader)) || {};
+  return { showBanner: value.showBanner };
 }
 
 export async function action({ request }) {
-  let value =
-    (await cookie.parse(request.headers.get("Cookie"))) ||
-    {};
-  let bodyParams = new URLSearchParams(
-    await request.text()
-  );
+  let cookieHeader = request.headers.get("Cookie");
+  let cookie = (await userPrefs.parse(cookieHeader)) || {};
+  let bodyParams = await request.formData();
 
-  if (bodyParams.get("bannerVisibility") === "hidden") {
-    value.showBanner = false;
+  if (bodyParams.get("banner") === "hidden") {
+    cookie.showBanner = false;
   }
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await cookie.serialize(value)
+      "Set-Cookie": await userPrefs.serialize(cookie)
     }
   });
 }
@@ -1383,14 +1356,15 @@ export default function Home() {
     <div>
       {showBanner && (
         <div>
-          <span>
-            <Link to="../sale">Don't miss our sale!</Link>
-          </span>
-          <form method="POST">
-            <button name="bannerVisibility" value="hidden">
-              Hide
-            </button>
-          </form>
+          <Link to="/sale">Don't miss our sale!</Link>
+          <Form method="post">
+            <input
+              type="hidden"
+              name="bannerVisibility"
+              value="hidden"
+            />
+            <button type="submit">Hide</button>
+          </Form>
         </div>
       )}
       <h1>Welcome!</h1>
@@ -2012,3 +1986,12 @@ import type {
   ShouldReloadFunction
 } from "remix";
 ```
+
+[form]: #form
+[usetransition]: #usetransition
+[useactiondata]: #useactiondata
+[useloaderdata]: #useloaderdata
+[usesubmit]: #usesubmit
+[action]: ../app/#action
+[loader]: ../app/#loader
+[usetransition]: #usetransition

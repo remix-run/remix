@@ -1,7 +1,10 @@
 ---
-title: Remix Docs
+title: Remix Docs Home
+order: 1
 description: Remix! brings the best of modern web development without leaving behind the fundamental parts that make it great. Deploy server rendered, code split, dynamic-data driven React apps to any cloud service provider. Experience unparalleled performance and leave the big build process behind.
 ---
+
+# Remix Documentation
 
 Welcome to Remix! We have put our heart and soul into this project. The API is pretty stable now and now we're tightening the screws on this thing. We don't expect more breaking API changes (but no promises 😅) as we work toward a 1.0 release. These docs are still a bit incomplete and written in a hurry, but they're good enough to get you moving.
 

@@ -1,6 +1,6 @@
 ---
 title: Cache-Control
-disabled: true
+hidden: true
 ---
 
 # Cache Control

@@ -1,5 +1,6 @@
 ---
-title: Remix App Server
+title: "@remix-run/serve"
+orrder: 3
 ---
 
 # Remix App Server
@@ -12,13 +13,9 @@ remix-serve <server-build-path>
 
 Depending on `process.env.NODE_ENV`, the server will boot in development or production mode.
 
-## `server-build-path`
-
 The `server-build-path` needs to point to the `serverBuildDirectory` defined in `remix.config.js`.
 
 Because only the build artifacts (`build/`, `public/build/`) need to be deployed to production, the `remix.config.js` is not guaranteed to be available in production, so you need to tell Remix where your server build is with this option.
-
-## Important Development Notes
 
 In development, `remix-serve` will ensure the latest code is run on each request by purging the require cache of your application modules when files change. This has some effects on your code you might need to be aware of:
 
