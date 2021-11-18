@@ -2,7 +2,7 @@ name: website
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths: [docs/**]
   release:
     types: [published]
