@@ -843,10 +843,34 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action, formMethod);
+    let formRef = React.useRef<HTMLFormElement>();
+    let ref = useComposedRefs(forwardedRef, formRef);
+
+    React.useEffect(() => {
+      let form = formRef.current;
+      if (!form) return;
+
+      let handleClick = (event: MouseEvent) => {
+        if (!(event.target instanceof HTMLElement)) return;
+        let submitButton = event.target.closest<
+          HTMLButtonElement | HTMLInputElement
+        >("button,input[type=submit]");
+
+        if (submitButton && submitButton.type === "submit") {
+          event.preventDefault();
+          submit(submitButton);
+        }
+      };
+
+      form.addEventListener("click", handleClick);
+      return () => {
+        form && form.removeEventListener("click", handleClick);
+      };
+    }, [submit, ref]);
 
     return (
       <form
-        ref={forwardedRef}
+        ref={ref}
         method={formMethod}
         action={formAction}
         encType={encType}
@@ -1262,4 +1286,22 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
       }}
     />
   );
+}
+
+function useComposedRefs<RefValueType = any>(
+  ...refs: Array<React.Ref<RefValueType> | null | undefined>
+): React.RefCallback<RefValueType> {
+  return React.useCallback(node => {
+    for (let ref of refs) {
+      if (ref == null) continue;
+      if (typeof ref === "function") {
+        ref(node);
+      } else {
+        try {
+          (ref as React.MutableRefObject<RefValueType>).current = node!;
+        } catch (_) {}
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, refs);
 }

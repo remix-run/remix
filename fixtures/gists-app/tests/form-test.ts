@@ -30,10 +30,7 @@ describe("form", () => {
       "
     `);
 
-    await Promise.all([
-      page.click("button[type=submit]"),
-      page.waitForNavigation()
-    ]);
+    await Promise.all([page.click("button#submit"), page.waitForNavigation()]);
 
     expect(await getHtml(page, "#results")).toMatchInlineSnapshot(`
       "<div
@@ -77,7 +74,7 @@ describe("form", () => {
       "
     `);
 
-    await page.click("button[type=submit]");
+    await page.click("button#submit");
     await page.waitForSelector("[data-test-id='post']");
 
     expect(await getHtml(page, "#results")).toMatchInlineSnapshot(`
@@ -98,6 +95,52 @@ describe("form", () => {
           <div>
             <dt>multiple[]</dt>
             <dd>[\\"a\\",\\"b\\"]</dd>
+          </div>
+        </dl>
+      </div>
+      "
+    `);
+  });
+
+  it("posts to a loader with button data", async () => {
+    await page.goto(`${testServer}/methods`);
+    await reactIsHydrated(page);
+
+    expect(await getHtml(page, "#results")).toMatchInlineSnapshot(`
+      "<div
+        id=\\"results\\"
+        style=\\"opacity: 1; transition: opacity 300ms; transition-delay: 50ms\\"
+      >
+        <p>null</p>
+      </div>
+      "
+    `);
+
+    await page.click("button#submit-with-data");
+    await page.waitForSelector("[data-test-id='post']");
+
+    expect(await getHtml(page, "#results")).toMatchInlineSnapshot(`
+      "<div id=\\"results\\" style=\\"opacity: 1; transition: opacity 300ms ease 50ms\\">
+        <dl data-test-id=\\"post\\">
+          <div>
+            <dt>selectedMethod</dt>
+            <dd>\\"post\\"</dd>
+          </div>
+          <div>
+            <dt>selectedEnctype</dt>
+            <dd>\\"application/x-www-form-urlencoded\\"</dd>
+          </div>
+          <div>
+            <dt>userInput</dt>
+            <dd>\\"whatever\\"</dd>
+          </div>
+          <div>
+            <dt>multiple[]</dt>
+            <dd>[\\"a\\",\\"b\\"]</dd>
+          </div>
+          <div>
+            <dt>data</dt>
+            <dd>\\"c\\"</dd>
           </div>
         </dl>
       </div>
