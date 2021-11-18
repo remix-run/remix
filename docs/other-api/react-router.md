@@ -1,13 +1,16 @@
 ---
 title: React Router v6
+toc: false
 ---
 
 # React Router v6
 
-Remix uses React Router v6, which is not yet released (we wanted to make sure it was good enough for Remix first, it's a big change!).
+Remix is built on top of React Router v6. Here are the most common that you'll use in your Remix app:
 
-In general you work with Links, useLocation, and useParams, but there's more to the API that you can use in Remix. Some of the APIs in Remix will also be moving into React Router (like useLocationPending).
+- [`Outlet`](https://reactrouter.com/docs/api#outlet)
+- [`useLocation`](https://reactrouter.com/docs/api#uselocation)
+- [`useNavigate`](https://reactrouter.com/docs/api#usenavigate)
+- [`useParams`](https://reactrouter.com/docs/api#useparams)
+- [`useResolvedPath`](https://reactrouter.com/docs/api#useresolvedpath)
 
-## Docs
-
-[This is the best documentation we've got right now](https://github.com/ReactTraining/react-router/tree/dev/docs), but we'll be getting v6 out the door when the dust settles on the Remix Supporter Preview launch.
+Most of the other APIs are either used internally by Remix or just aren't commonly needed in your app.
