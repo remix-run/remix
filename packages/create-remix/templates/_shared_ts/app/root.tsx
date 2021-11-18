@@ -50,7 +50,10 @@ export let links: LinksFunction = () => {
  * @see {@link [Actions API](https://docs.remix.run/v0.21/api/app/#action)}
  */
 export let action: ActionFunction = async () => {
-  throw json("Hello from the ErrorBoundary! 👋", 500);
+  let unexpectedError = true;
+  if (unexpectedError) {
+    throw new Error("Hello from the ErrorBoundary! 👋");
+  }
 };
 
 /**
