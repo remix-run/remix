@@ -3,6 +3,7 @@ import {
   Links,
   Scripts,
   useLoaderData,
+  ScrollRestoration,
   LiveReload,
   useCatch
 } from "remix";
@@ -29,6 +30,7 @@ function Document({ children, title }) {
       </head>
       <body>
         {children}
+        <ScrollRestoration />
         <Scripts />
         {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>

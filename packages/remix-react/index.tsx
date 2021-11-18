@@ -17,6 +17,7 @@ export {
   NavLink,
   Form,
   PrefetchPageLinks,
+  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
