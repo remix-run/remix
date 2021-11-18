@@ -846,25 +846,46 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let formRef = React.useRef<HTMLFormElement>();
     let ref = useComposedRefs(forwardedRef, formRef);
 
+    // When calling `submit` on the form element itself, we don't get data from
+    // the button that submitted the event. For example:
+    //
+    //   <Form>
+    //     <button name="something" value="whatever">Submit</button>
+    //   </Form>
+    //
+    // formData.get("something") should be "whatever", but we don't get that
+    // unless we call submit on the clicked button itself.
+    //
+    // To figure out which button triggered the submit, we'll attach an event
+    // listener to each button. The click event is always triggered before the
+    // submit event (even when submitting via keyboard when focused on another
+    // form field, yeeeeet) so we should have access to that button's data for
+    // use in the submit handler.
+    let clickedButtonRef = React.useRef<any>();
+
     React.useEffect(() => {
       let form = formRef.current;
       if (!form) return;
 
-      let handleClick = (event: MouseEvent) => {
-        if (!(event.target instanceof HTMLElement)) return;
-        let submitButton = event.target.closest<
-          HTMLButtonElement | HTMLInputElement
-        >("button,input[type=submit]");
+      let possibleSubmitButtons = form.querySelectorAll<
+        HTMLButtonElement | HTMLInputElement
+      >("button,input[type=submit]");
 
-        if (submitButton && submitButton.type === "submit") {
-          event.preventDefault();
-          submit(submitButton);
+      function handleClick(event: MouseEvent) {
+        clickedButtonRef.current = event.currentTarget;
+      }
+
+      possibleSubmitButtons.forEach(button => {
+        if (button.type === "submit") {
+          button.addEventListener("click", handleClick as any);
         }
-      };
-
-      form.addEventListener("click", handleClick);
+      });
       return () => {
-        form && form.removeEventListener("click", handleClick);
+        possibleSubmitButtons.forEach(button => {
+          if (button.type === "submit") {
+            button.removeEventListener("click", handleClick as any);
+          }
+        });
       };
     }, [submit, ref]);
 
@@ -881,7 +902,12 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
-                submit(event.currentTarget, { method, replace });
+
+                submit(clickedButtonRef.current || event.currentTarget, {
+                  method,
+                  replace
+                });
+                clickedButtonRef.current = null;
               }
         }
         {...props}
