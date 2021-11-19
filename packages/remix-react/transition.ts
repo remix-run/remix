@@ -870,11 +870,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     pendingNavigationController = controller;
 
+    let isIndexRequest = isIndexRequestAction(submission.action);
+    console.log({ location, matches, isIndexRequest });
     if (
-      !isIndexRequestSearch(location.search) &&
+      !isIndexRequestAction(submission.action) &&
       matches[matches.length - 1].route.id.endsWith("/index")
     ) {
-      matches.pop();
+      matches = matches.slice(0, -1);
     }
 
     let leafMatch = matches.slice(-1)[0];
@@ -1163,10 +1165,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-function isIndexRequestSearch(search: string) {
+function isIndexRequestAction(action: string) {
+  console.log({ action });
   let indexRequest = false;
 
-  let searchParams = new URLSearchParams(search);
+  let searchParams = new URLSearchParams(action.split("?", 2)[1] || "");
   for (let param of searchParams.getAll("index")) {
     if (!param) {
       indexRequest = true;
