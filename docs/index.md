@@ -48,7 +48,7 @@ We **strongly encourage you** to do one of the tutorials before anything else. R
 ## Community
 
 <docs-cards>
-  <a href="https://rmx.as/GitHub" aria-label="GitHub Repository">
+  <a href="https://rmx.as/github" aria-label="GitHub Repository">
     <docs-card>
       <h4>GitHub Repository</h4>
       <p>Follow along and contribute to the development of Remix. We actually love typo PRs.</p>
