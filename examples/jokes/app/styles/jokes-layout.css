@@ -49,10 +49,29 @@
   text-decoration-thickness: 1px;
 }
 
+.jokes-header .user-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 .jokes-main {
   padding-top: 2rem;
   padding-bottom: 2rem;
   flex: 1 1 100%;
+}
+
+.jokes-main .container {
+  display: flex;
+  gap: 1rem;
+}
+
+.jokes-list {
+  max-width: 12rem;
+}
+
+.jokes-outlet {
+  flex: 1;
 }
 
 .jokes-footer {

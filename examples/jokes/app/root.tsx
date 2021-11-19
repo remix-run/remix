@@ -1,16 +1,6 @@
-import {
-  Form,
-  useLoaderData,
-  Link,
-  Meta,
-  Links,
-  Scripts,
-  LiveReload,
-  useCatch,
-} from "remix";
+import { Link, Meta, Links, Scripts, LiveReload, useCatch } from "remix";
 import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
 import { Outlet } from "react-router-dom";
-import type { User } from "@prisma/client";
 import { getUser, logout } from "./utils/session.server";
 
 import globalStylesUrl from "./styles/global.css";
@@ -33,15 +23,9 @@ export let links: LinksFunction = () => {
   ];
 };
 
-type LoaderData = { user: User | null };
-
 export let loader: LoaderFunction = async ({ request }) => {
   const user = await getUser(request);
   return { user };
-};
-
-export let action: ActionFunction = async ({ request }) => {
-  return logout(request);
 };
 
 function Document({
@@ -79,7 +63,6 @@ function Footer() {
 }
 
 export default function App() {
-  let data = useLoaderData<LoaderData>();
   return (
     <Document>
       <Outlet />

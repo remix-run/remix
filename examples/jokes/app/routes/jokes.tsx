@@ -1,13 +1,6 @@
 import type { LoaderFunction, LinksFunction } from "remix";
-import {
-  Form,
-  Outlet,
-  useCatch,
-  useLoaderData,
-  Link,
-  NavLink,
-  json,
-} from "remix";
+import { Form } from "remix";
+import { Outlet, useCatch, useLoaderData, Link, NavLink, json } from "remix";
 import { db } from "~/utils/db.server";
 import type { User } from "@prisma/client";
 import { getUser } from "~/utils/session.server";
@@ -67,22 +60,18 @@ function Header({ user }: { user: User | null }) {
             <li>
               <NavLink to="/about">About</NavLink>
             </li>
-            <li>
-              {user ? (
-                <Link to="/logout">Logout</Link>
-              ) : (
-                <NavLink to="/login">Login</NavLink>
-              )}
-            </li>
+            <li>{user ? null : <NavLink to="/login">Login</NavLink>}</li>
           </ul>
         </nav>
         {user ? (
-          <>
-            {`Hi ${user.username}`}
-            <Link to="/logout" className="button">
-              Logout
-            </Link>
-          </>
+          <div className="user-info">
+            <span>{`Hi ${user.username}`}</span>
+            <Form action="/logout" method="post">
+              <button type="submit" className="button">
+                Logout
+              </button>
+            </Form>
+          </div>
         ) : null}
       </div>
     </header>
@@ -108,18 +97,27 @@ export default function JokesScreen() {
 
   return (
     <Layout>
-      <Outlet />
-      <p>Here are a few more jokes to check out</p>
-      <ul>
-        {data.jokeListItems.map(({ id, name }) => (
-          <li key={id}>
-            <Link to={id}>{name}</Link>
-          </li>
-        ))}
-      </ul>
-      <Link to="new" className="button">
-        Add your own
-      </Link>
+      <div className="jokes-list">
+        {data.jokeListItems.length ? (
+          <>
+            <Link to=".">Get a random joke</Link>
+            <p>Here are a few more jokes to check out:</p>
+            <ul>
+              {data.jokeListItems.map(({ id, name }) => (
+                <li key={id}>
+                  <Link to={id}>{name}</Link>
+                </li>
+              ))}
+            </ul>
+            <Link to="new" className="button">
+              Add your own
+            </Link>
+          </>
+        ) : null}
+      </div>
+      <div className="jokes-outlet">
+        <Outlet />
+      </div>
     </Layout>
   );
 }

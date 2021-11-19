@@ -1,7 +1,9 @@
-import type { ActionFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
+import { Link } from "remix";
+import { json, useLoaderData } from "remix";
 import { useActionData, Form, redirect } from "remix";
 import { db } from "~/utils/db.server";
-import { requireUserId } from "~/utils/session.server";
+import { getUserId, requireUserId } from "~/utils/session.server";
 
 function validateJokeContent(content: unknown) {
   if (typeof content !== "string" || content.length < 4) {
@@ -22,6 +24,14 @@ type ActionData = {
     name: string;
     content: string;
   };
+};
+
+type LoaderData = { loggedIn: boolean };
+
+export let loader: LoaderFunction = async ({ request }) => {
+  let userId = await getUserId(request);
+  let data: LoaderData = { loggedIn: Boolean(userId) };
+  return json(data);
 };
 
 export let action: ActionFunction = async ({
@@ -46,7 +56,18 @@ export let action: ActionFunction = async ({
 };
 
 export default function JokeScreen() {
+  let data = useLoaderData<LoaderData>();
   let actionData = useActionData<ActionData | undefined>();
+
+  console.log(data.loggedIn);
+  if (!data.loggedIn) {
+    return (
+      <div>
+        <p>You must be logged in to create a joke.</p>
+        <Link to="/login">Login</Link>
+      </div>
+    );
+  }
 
   return (
     <div>

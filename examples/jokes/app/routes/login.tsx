@@ -63,7 +63,7 @@ export let action: ActionFunction = async ({
           formError: `Username/Password combination is incorrect`,
         };
       }
-      return createUserSession(user.id, "/");
+      return createUserSession(user.id, "/jokes");
     }
     case "register": {
       let userExists = await db.user.findFirst({ where: { username } });
@@ -80,7 +80,7 @@ export let action: ActionFunction = async ({
           formError: `Something went wrong trying to create a new user.`,
         };
       }
-      return createUserSession(user.id, "/");
+      return createUserSession(user.id, "/jokes");
     }
     default: {
       return { fields, formError: `Login type invalid` };

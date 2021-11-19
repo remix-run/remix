@@ -144,6 +144,7 @@ h6 {
   --shadow-size: 3px;
   -webkit-appearance: none;
   -moz-appearance: none;
+  cursor: pointer;
   appearance: none;
   display: inline-flex;
   align-items: center;

@@ -21,12 +21,17 @@ export default function JokesDefaultScreen() {
       <div>
         <p>Here's a random joke:</p>
         <p>{data.randomJoke.content}</p>
-        <Link to={data.randomJoke.id}>{data.randomJoke.name}</Link>
+        <Link to={data.randomJoke.id}>"{data.randomJoke.name}" Permalink</Link>
       </div>
     );
   }
 
-  return null;
+  return (
+    <div>
+      <p>There's no jokes to display.</p>
+      <Link to="new">Add your own</Link>
+    </div>
+  );
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
