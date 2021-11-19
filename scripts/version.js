@@ -6,8 +6,13 @@ const Confirm = require("prompt-confirm");
 const jsonfile = require("jsonfile");
 const semver = require("semver");
 
-const rootDir = path.resolve(__dirname, "..");
-const examplesDir = path.resolve(rootDir, "examples");
+let rootDir = path.resolve(__dirname, "..");
+let examplesDir = path.resolve(rootDir, "examples");
+
+let adapters = ["architect", "express", "netlify", "vercel"];
+let runtimes = ["cloudflare-workers", "node"];
+let core = ["dev", "server-runtime", "react"];
+let allPackages = [...adapters, ...runtimes, ...core];
 
 /**
  * @param {string} packageName
@@ -121,7 +126,7 @@ async function run(args) {
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
   // Update remix-dev, remix-server-runtime, and remix-react versions
-  for (let name of ["dev", "server-runtime", "react"]) {
+  for (let name of core) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
     });
@@ -131,7 +136,7 @@ async function run(args) {
   }
 
   // Update remix-cloudflare-workers and remix-node versions + server-runtime dep
-  for (let name of ["cloudflare-workers", "node"]) {
+  for (let name of runtimes) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/server-runtime"] = nextVersion;
@@ -142,7 +147,7 @@ async function run(args) {
   }
 
   // Update remix-* node server versions + remix-node dep
-  for (let name of ["architect", "express", "vercel", "netlify"]) {
+  for (let name of adapters) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/node"] = nextVersion;
@@ -177,7 +182,7 @@ async function run(args) {
 
   // Update remix versions in the examples
   let examples = await fsp.readdir(examplesDir);
-  for (const example of examples) {
+  for (let example of examples) {
     let stat = await fsp.stat(path.join(examplesDir, example));
     if (!stat.isDirectory()) continue;
 
@@ -186,18 +191,8 @@ async function run(args) {
         config.dependencies["remix"] = nextVersion;
       }
 
-      // TODO: we could probably a better way...
-      for (const package of [
-        "dev",
-        "server-runtime",
-        "react",
-        "cloudflare-workers",
-        "node",
-        "architect",
-        "express",
-        "vercel",
-        "netlify"
-      ]) {
+      // TODO: probably a better way as this list can get longer...
+      for (let package of allPackages) {
         if (config.dependencies[`@remix-run/${package}`]) {
           config.dependencies[`@remix-run/${package}`] = nextVersion;
         }
