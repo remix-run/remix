@@ -1,3 +1,4 @@
+import { NavLink } from "remix";
 import type { HeadersFunction, LinksFunction, MetaFunction } from "remix";
 import stylesUrl from "../styles/about.css";
 
@@ -23,13 +24,33 @@ export let links: LinksFunction = () => {
 
 export default function AboutRoute() {
   return (
-    <div>
-      <h2>About Us</h2>
-      <p>
-        This page will tell you all about the jokes app and the people who built
-        it. Feel free to insert your name!
-      </p>
-      <p>Created by: Kody the Koala 🐨</p>
+    <div className="container">
+      <div className="content">
+        <h1>About Us</h1>
+        <p>
+          This page will tell you all about the jokes app and the people who
+          built it. Feel free to insert your name!
+        </p>
+        <p>Created by: Kody the Koala 🐨</p>
+
+        <hr />
+
+        <nav>
+          <ul>
+            <li>
+              <NavLink to="/">Home</NavLink>
+            </li>
+            <li>
+              <NavLink to="jokes">Read Jokes</NavLink>
+            </li>
+            <li>
+              <NavLink reloadDocument to="/jokes-rss">
+                RSS
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+      </div>
     </div>
   );
 }
