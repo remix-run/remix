@@ -91,76 +91,95 @@ export let action: ActionFunction = async ({
 export default function Login() {
   const actionData = useActionData<ActionData | undefined>();
   return (
-    <div>
-      <h2>Login</h2>
-      <Form
-        method="post"
-        aria-describedby={
-          actionData?.formError ? "form-error-message" : undefined
-        }
-      >
-        <div>
-          <label>
+    <div className="container">
+      <div className="content" data-light="">
+        <h1>Login</h1>
+        <Form
+          method="post"
+          aria-describedby={
+            actionData?.formError ? "form-error-message" : undefined
+          }
+        >
+          <fieldset>
+            <legend className="sr-only">Login or Register?</legend>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="login"
+                defaultChecked={
+                  !actionData?.fields?.loginType ||
+                  actionData?.fields?.loginType === "login"
+                }
+              />{" "}
+              Login
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="register"
+                defaultChecked={actionData?.fields?.loginType === "register"}
+              />{" "}
+              Register
+            </label>
+          </fieldset>
+          <div>
+            <label htmlFor="username-input">Username</label>
             <input
-              type="radio"
-              name="loginType"
-              value="login"
-              defaultChecked={
-                !actionData?.fields?.loginType ||
-                actionData?.fields?.loginType === "login"
+              type="text"
+              id="username-input"
+              name="username"
+              defaultValue={actionData?.fields?.username}
+              aria-invalid={!!actionData?.fieldErrors?.username || undefined}
+              aria-describedby={
+                actionData?.fieldErrors?.username ? "username-error" : undefined
               }
-            />{" "}
-            Login
-          </label>
-          <label>
+            />
+            {actionData?.fieldErrors?.username ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+                id="username-error"
+              >
+                {actionData?.fieldErrors.username}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="password-input">Password</label>
             <input
-              type="radio"
-              name="loginType"
-              value="register"
-              defaultChecked={actionData?.fields?.loginType === "register"}
-            />{" "}
-            Register
-          </label>
-        </div>
-        <div>
-          <label htmlFor="username-input">Username</label>
-          <input
-            type="text"
-            id="username-input"
-            name="username"
-            defaultValue={actionData?.fields?.username}
-            aria-describedby={
-              actionData?.fieldErrors?.username ? "username-error" : undefined
-            }
-          />
-          {actionData?.fieldErrors?.username ? (
-            <p role="alert">{actionData?.fieldErrors.username}</p>
-          ) : null}
-        </div>
-        <div>
-          <label htmlFor="password-input">Password</label>
-          <input
-            id="password-input"
-            name="password"
-            defaultValue={actionData?.fields?.password}
-            type="password"
-            aria-describedby={
-              actionData?.fieldErrors?.password ? "password-error" : undefined
-            }
-          />
-          {actionData?.fieldErrors?.password ? (
-            <p role="alert">{actionData?.fieldErrors.password}</p>
-          ) : null}
-        </div>
-        <div id="form-error-message">
-          {actionData?.formError ? (
-            <p role="alert">{actionData?.formError}</p>
-          ) : null}
-        </div>
-        <button type="submit" className="button">
-          Submit
-        </button>
-      </Form>
+              id="password-input"
+              name="password"
+              defaultValue={actionData?.fields?.password}
+              type="password"
+              aria-invalid={!!actionData?.fieldErrors?.password || undefined}
+              aria-describedby={
+                actionData?.fieldErrors?.password ? "password-error" : undefined
+              }
+            />
+            {actionData?.fieldErrors?.password ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+                id="password-error"
+              >
+                {actionData?.fieldErrors.password}
+              </p>
+            ) : null}
+          </div>
+          <div id="form-error-message">
+            {actionData?.formError ? (
+              <p className="form-validation-error" role="alert">
+                {actionData?.formError}
+              </p>
+            ) : null}
+          </div>
+          <button type="submit" className="button">
+            Submit
+          </button>
+        </Form>
+      </div>
     </div>
   );
 }

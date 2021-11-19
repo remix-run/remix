@@ -65,7 +65,7 @@ export default function JokeScreen() {
             />
           </label>
           {actionData?.fieldErrors?.name ? (
-            <p role="alert" id="name-error">
+            <p className="form-validation-error" role="alert" id="name-error">
               {actionData?.fieldErrors?.name}
             </p>
           ) : null}
@@ -79,7 +79,11 @@ export default function JokeScreen() {
             />
           </label>
           {actionData?.fieldErrors?.content ? (
-            <p role="alert" id="content-error">
+            <p
+              className="form-validation-error"
+              role="alert"
+              id="content-error"
+            >
               {actionData?.fieldErrors?.content}
             </p>
           ) : null}
