@@ -670,6 +670,12 @@ type ScriptProps = Omit<
   | "suppressHydrationWarning"
 >;
 
+declare global {
+  interface Window {
+    remixIsHydrated: boolean;
+  }
+}
+
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
  * additional routes are loaded later as needed.
@@ -686,6 +692,12 @@ export function Scripts(props: ScriptProps) {
     clientRoutes,
     serverHandoffString
   } = useRemixEntryContext();
+
+  let hydratedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    window.remixIsHydrated = true;
+  }, []);
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
@@ -748,6 +760,8 @@ window.__remixRouteModules = {${matches
 
   let preloads = manifest.entry.imports.concat(routePreloads);
 
+  let alreadyHydrated = typeof window !== "undefined" && window.remixIsHydrated;
+
   return (
     <>
       {dedupe(preloads).map(path => (
@@ -758,7 +772,7 @@ window.__remixRouteModules = {${matches
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {initialScripts}
+      {alreadyHydrated ? null : initialScripts}
     </>
   );
 }

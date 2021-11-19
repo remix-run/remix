@@ -11,6 +11,5 @@ yarn-error.log
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
-/fixtures/my-remix-app
 
 .eslintcache
