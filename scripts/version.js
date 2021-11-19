@@ -6,10 +6,16 @@ const Confirm = require("prompt-confirm");
 const jsonfile = require("jsonfile");
 const semver = require("semver");
 
-const packagesDir = path.resolve(__dirname, "../packages");
+const rootDir = path.resolve(__dirname, "..");
+const examplesDir = path.resolve(rootDir, "examples");
 
-function packageJson(packageName) {
-  return path.join(packagesDir, packageName, "package.json");
+/**
+ * @param {string} packageName
+ * @param {string} [directory]
+ * @returns {string}
+ */
+function packageJson(packageName, directory) {
+  return path.join(rootDir, directory, packageName, "package.json");
 }
 
 function ensureCleanWorkingDirectory() {
@@ -52,13 +58,13 @@ async function prompt(question) {
 }
 
 async function getPackageVersion(packageName) {
-  let file = packageJson(packageName);
+  let file = packageJson(packageName, "packages");
   let json = await jsonfile.readFile(file);
   return json.version;
 }
 
 async function updatePackageConfig(packageName, transform) {
-  let file = packageJson(packageName);
+  let file = packageJson(packageName, "packages");
   let json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
@@ -76,6 +82,17 @@ async function updateChangesVersion(version, date) {
     `## ${version} - ${date.toDateString()}`
   );
   await fsp.writeFile(file, updated);
+}
+
+/**
+ * @param {string} example
+ * @param {(json: string) => any} transform
+ */
+async function updateExamplesPackageConfig(example, transform) {
+  let file = packageJson(example, "examples");
+  let json = await jsonfile.readFile(file);
+  transform(json);
+  await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
 async function run(args) {
@@ -156,6 +173,41 @@ async function run(args) {
     console.log(
       chalk.green(`  Updated release version and date in CHANGES.md`)
     );
+  }
+
+  // Update remix versions in the examples
+  let examples = await fsp.readdir(examplesDir);
+  for (const example of examples) {
+    let stat = await fsp.stat(path.join(examplesDir, example));
+    if (!stat.isDirectory()) continue;
+
+    await updateExamplesPackageConfig(example, config => {
+      if (config.dependencies["remix"]) {
+        config.dependencies["remix"] = nextVersion;
+      }
+
+      // TODO: we could probably a better way...
+      for (const package of [
+        "dev",
+        "server-runtime",
+        "react",
+        "cloudflare-workers",
+        "node",
+        "architect",
+        "express",
+        "vercel",
+        "netlify"
+      ]) {
+        if (config.dependencies[`@remix-run/${package}`]) {
+          config.dependencies[`@remix-run/${package}`] = nextVersion;
+        }
+        if (config.devDependencies[`@remix-run/${package}`]) {
+          config.devDependencies[`@remix-run/${package}`] = nextVersion;
+        }
+      }
+    });
+
+    console.log(chalk.green(`  Updated remix versions in ${example} example`));
   }
 
   // Commit and tag
