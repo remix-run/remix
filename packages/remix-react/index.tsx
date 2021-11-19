@@ -17,6 +17,7 @@ export {
   NavLink,
   Form,
   PrefetchPageLinks,
+  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -26,11 +27,7 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches,
-  // deprecated
-  usePendingLocation,
-  usePendingFormSubmit,
-  useRouteData
+  useMatches
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";

@@ -48,6 +48,8 @@ import type { RouteModules, MetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
+export { ScrollRestoration } from "./scroll-restoration";
+
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
@@ -348,7 +350,7 @@ export function RemixRoute({ id }: { id: string }) {
   }
 
   // It's important for the route context to be above the error boundary so that
-  // a call to `useRouteData` doesn't accidentally get the parents route's data.
+  // a call to `useLoaderData` doesn't accidentally get the parents route's data.
   return (
     <RemixRouteContext.Provider value={context}>
       {element}
@@ -1183,11 +1185,6 @@ export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
-/**
- * @deprecated Use `useLoaderData`
- */
-export let useRouteData = useLoaderData;
-
 export function useActionData<T = AppData>(): T | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
@@ -1259,32 +1256,6 @@ export function useFetchers(): Fetcher[] {
   let { transitionManager } = useRemixEntryContext();
   let { fetchers } = transitionManager.getState();
   return [...fetchers.values()];
-}
-
-/**
- * @deprecated replaced by `useTransition().submission`
- */
-export function usePendingFormSubmit() {
-  let { transitionManager } = useRemixEntryContext();
-  let { submission } = transitionManager.getState().transition;
-  if (submission) {
-    return {
-      ...submission,
-      data: submission.formData
-    };
-  }
-}
-
-/**
- * Returns the next location if a location change is pending. This is useful
- * for showing loading indicators during route transitions from `<Link>`
- * clicks.
- *
- * @deprecated use `useTransition().location`
- */
-export function usePendingLocation(): Location | undefined {
-  let { transitionManager } = useRemixEntryContext();
-  return transitionManager.getState().transition.location;
 }
 
 export function LiveReload({ port = 8002 }: { port?: number }) {

@@ -6,7 +6,8 @@ import {
   useCatch,
   useLoaderData,
   useMatches,
-  Link
+  Link,
+  ScrollRestoration
 } from "remix";
 import { Outlet } from "react-router-dom";
 import normalizeHref from "@exampledev/new.css/new.css";
@@ -65,7 +66,12 @@ export default function Root() {
         <div data-test-id="content" id="content">
           <Outlet />
         </div>
-        {data.enableScripts && <Scripts />}
+        {data.enableScripts && (
+          <>
+            <ScrollRestoration />
+            <Scripts />
+          </>
+        )}
       </body>
     </html>
   );

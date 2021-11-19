@@ -98,7 +98,7 @@ We try to keep the Remix API to a minimum, and instead work with web standards. 
 
 When doing data mutations, we augmented HTML forms. When we prefetch data and assets for the next page, we use `<link rel="prefetch">` and let the browser deal with all of the complexity of caching a resource. If the browser has an API for a use case, Remix uses it.
 
-## Augment the UX with JavaScript
+## Progressive Enhancement
 
 While most recent frameworks only have read APIs for data, Remix has both read and write. HTML `<form>` has been the staple for data mutations since the 90s, Remix embraces and augments that API. This enables the data layer of a Remix app to function with _or without_ JavaScript on the page.
 
