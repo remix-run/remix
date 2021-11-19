@@ -125,6 +125,7 @@ export default function Login() {
         <div>
           <label htmlFor="username-input">Username</label>
           <input
+            type="text"
             id="username-input"
             name="username"
             defaultValue={actionData?.fields?.username}
@@ -156,7 +157,9 @@ export default function Login() {
             <p role="alert">{actionData?.formError}</p>
           ) : null}
         </div>
-        <button type="submit">Submit</button>
+        <button type="submit" className="button">
+          Submit
+        </button>
       </Form>
     </div>
   );

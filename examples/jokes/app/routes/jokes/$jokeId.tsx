@@ -66,7 +66,9 @@ export default function JokeScreen() {
       <Link to=".">{data.joke.name}</Link>
       {data.isOwner ? (
         <Form method="delete">
-          <button type="submit">Delete</button>
+          <button type="submit" className="button">
+            Delete
+          </button>
         </Form>
       ) : null}
     </div>

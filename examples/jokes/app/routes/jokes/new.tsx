@@ -56,6 +56,7 @@ export default function JokeScreen() {
           <label>
             Name:{" "}
             <input
+              type="text"
               defaultValue={actionData?.fields?.name}
               name="name"
               aria-describedby={
@@ -83,7 +84,9 @@ export default function JokeScreen() {
             </p>
           ) : null}
         </div>
-        <button type="submit">Add</button>
+        <button type="submit" className="button">
+          Add
+        </button>
       </Form>
     </div>
   );

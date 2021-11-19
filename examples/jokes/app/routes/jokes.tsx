@@ -69,7 +69,7 @@ function Header({ user }: { user: User | null }) {
             </li>
             <li>
               {user ? (
-                <NavLink to="/logout">Logout</NavLink>
+                <Link to="/logout">Logout</Link>
               ) : (
                 <NavLink to="/login">Login</NavLink>
               )}
@@ -79,9 +79,9 @@ function Header({ user }: { user: User | null }) {
         {user ? (
           <>
             {`Hi ${user.username}`}
-            <Form method="post">
-              <button type="submit">Logout</button>
-            </Form>
+            <Link to="/logout" className="button">
+              Logout
+            </Link>
           </>
         ) : null}
       </div>
