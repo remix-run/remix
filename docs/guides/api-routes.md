@@ -50,7 +50,7 @@ function CitySearchCombobox() {
       <Combobox aria-label="Cities">
         <div>
           <ComboboxInput
-            name="city-query"
+            name="q"
             onChange={event =>
               cities.submit(event.target.form)
             }

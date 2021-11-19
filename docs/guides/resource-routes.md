@@ -20,7 +20,7 @@ If a route doesn't export a default component, it can be used as a Resource Rout
 
 For example, consider a UI Route that renders a report, note the link:
 
-```tsx lines=[10-12] filename=app/routes/reports/$reportId.js
+```tsx lines=[10-12] filename=app/routes/reports/$id.js
 export function loader({ params }) {
   return getReport(params.id);
 }
@@ -41,7 +41,7 @@ export default function Report() {
 
 It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
-```tsx filename=app/routes/reports/$reportId/pdf.ts
+```tsx filename=app/routes/reports/$id/pdf.ts
 export function loader({ params }) {
   let report = await getReport(params.id);
   let pdf = await generateReportPDF(report);
@@ -64,19 +64,19 @@ There's a subtle detail to be aware of when linking to resource routes. You need
 
 ## URL Escaping
 
-You'll probably want to add a file extension to your resource routes. This is tricky because one of Remix's route file naming conventions is that `.` become `/` so you can nest the URL without nesting the UI.
+You'll probably want to add a file extension to your resource routes. This is tricky because one of Remix's route file naming conventions is that `.` becomes `/` so you can nest the URL without nesting the UI.
 
 To add a `.` to a route's path, use the `[]` escape characters. Our PDF route file name would change like so:
 
 ```sh
 # original
 # /reports/123/pdf
-app/routes/reports/$reportId/pdf.ts
+app/routes/reports/$id/pdf.ts
 
 # with a file extension
 # /reports/123.pdf
-app/routes/reports/$reportId/[.pdf].ts
+app/routes/reports/$id/[.pdf].ts
 
 # or like this, the resulting URL is the same
-app/routes/reports/$reportId.[.pdf].ts
+app/routes/reports/$id.[.pdf].ts
 ```
