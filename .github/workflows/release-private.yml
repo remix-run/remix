@@ -41,8 +41,6 @@ jobs:
 
       - name: Setup npm auth
         run: |
-          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
           echo "@remix-run:registry=https://npm.pkg.github.com" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_PUBLISH_TOKEN }}" >> ~/.npmrc
 
