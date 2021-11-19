@@ -9,7 +9,6 @@ import {
   ScrollRestoration,
   useCatch
 } from "remix";
-import type { LinksFunction } from "remix";
 
 import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";
@@ -23,7 +22,7 @@ import mediumStylesUrl from "~/styles/medium.css";
  *
  * @see {@link [Links API](https://docs.remix.run/v0.21/api/app/#links)}
  */
-export let links: LinksFunction = () => {
+export let links = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
@@ -54,13 +53,7 @@ export default function App() {
   );
 }
 
-function Document({
-  children,
-  title
-}: {
-  children: React.ReactNode;
-  title?: string;
-}) {
+function Document({ children, title }) {
   return (
     <html lang="en">
       <head>
@@ -79,7 +72,7 @@ function Document({
   );
 }
 
-function Layout({ children }: React.PropsWithChildren<{}>) {
+function Layout({ children }) {
   return (
     <div className="remix-app">
       <header className="remix-app__header">
@@ -117,7 +110,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
 export function CatchBoundary() {
   let caught = useCatch();
 
-  let message: React.ReactNode;
+  let message;
   switch (caught.status) {
     case 401:
       message = (
@@ -170,7 +163,7 @@ export function CatchBoundary() {
   );
 }
 
-export function ErrorBoundary({ error }: { error: Error }) {
+export function ErrorBoundary({ error }) {
   React.useEffect(() => {
     console.error(error);
   }, [error]);
@@ -210,7 +203,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
   );
 }
 
-function RemixLogo(props: React.ComponentPropsWithoutRef<"svg">) {
+function RemixLogo(props) {
   return (
     <svg
       viewBox="0 0 659 165"
