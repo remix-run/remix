@@ -115,10 +115,6 @@ async function run() {
     }
   }
 
-  // Make sure npm registry is configured
-  await writeLocalNpmrc(projectDir);
-  console.log("💿 Created local .npmrc with Remix Registry");
-
   // copy the shared template
   let sharedTemplate = path.resolve(
     __dirname,
@@ -188,14 +184,6 @@ async function run() {
       )}" and check the README for development and deploy instructions!`
     );
   }
-}
-
-async function writeLocalNpmrc(dir: string): Promise<void> {
-  let npmrc = `
-@remix-run:registry=https://npm.remix.run
-`;
-  let npmrcFile = path.resolve(dir, ".npmrc");
-  return fse.writeFile(npmrcFile, npmrc.trim());
 }
 
 type Server =
