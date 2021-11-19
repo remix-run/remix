@@ -44,7 +44,7 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, MetaDescriptor } from "./routeModules";
+import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
@@ -614,7 +614,7 @@ export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: MetaDescriptor = {};
+  let meta: HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {

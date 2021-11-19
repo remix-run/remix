@@ -35,7 +35,8 @@ export type { FormMethod, FormEncType } from "./data";
 export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
 
-export type { ShouldReloadFunction } from "./routeModules";
+export type { HtmlLinkDescriptor } from "./links";
+export type { ShouldReloadFunction, HtmlMetaDescriptor } from "./routeModules";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";

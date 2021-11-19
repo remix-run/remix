@@ -664,6 +664,8 @@ There are two types of link descriptors you can return:
 
 This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link-tag].
 
+The `links` export from a route should return an array of `HtmlLinkDescriptor` objects.
+
 Examples:
 
 ```tsx
@@ -707,6 +709,30 @@ export let links: LinksFunction = () => {
       media: "(min-width: 1000px)"
     }
   ];
+};
+```
+
+#### HtmlMetaDescriptor
+
+This is an object representation and abstraction of a `<meta {...props} />` element and its attributes. [View the MDN docs for the meta API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta).
+
+The `meta` export from a route should return a single `HtmlMetaDescriptor` object.
+
+Almost every `meta` element takes a `name` and `content` attribute, with the exception of [OpenGraph tags](https://ogp.me/) which use `property` instead of `name`. In either case, the attributes represent a key/value pair for each tag. Each pair in the `HtmlMetaDescriptor` object represents a separate `meta` element, and Remix maps each to the correct attributes for that tag.
+
+The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title)
+
+Examples:
+
+```tsx
+import type { MetaFunction } from "remix";
+
+export let meta: MetaFunction = () => {
+  return {
+    title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
+    description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
+    "og:image": "https://josiesshakeshack.com/logo.jpg" // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
+  };
 };
 ```
 
