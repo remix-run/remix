@@ -41,7 +41,7 @@ export default function AboutRoute() {
               <NavLink to="/">Home</NavLink>
             </li>
             <li>
-              <NavLink to="jokes">Read Jokes</NavLink>
+              <NavLink to="/jokes">Read Jokes</NavLink>
             </li>
             <li>
               <NavLink reloadDocument to="/jokes-rss">
