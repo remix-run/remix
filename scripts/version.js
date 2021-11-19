@@ -182,26 +182,30 @@ async function run(args) {
 
   // Update remix versions in the examples
   let examples = await fsp.readdir(examplesDir);
-  for (let example of examples) {
-    let stat = await fsp.stat(path.join(examplesDir, example));
-    if (!stat.isDirectory()) continue;
+  if (examples.length > 0) {
+    for (let example of examples) {
+      let stat = await fsp.stat(path.join(examplesDir, example));
+      if (!stat.isDirectory()) continue;
 
-    await updateExamplesPackageConfig(example, config => {
-      if (config.dependencies["remix"]) {
-        config.dependencies["remix"] = nextVersion;
-      }
-
-      for (let package of allPackages) {
-        if (config.dependencies[`@remix-run/${package}`]) {
-          config.dependencies[`@remix-run/${package}`] = nextVersion;
+      await updateExamplesPackageConfig(example, config => {
+        if (config.dependencies["remix"]) {
+          config.dependencies["remix"] = nextVersion;
         }
-        if (config.devDependencies[`@remix-run/${package}`]) {
-          config.devDependencies[`@remix-run/${package}`] = nextVersion;
-        }
-      }
-    });
 
-    console.log(chalk.green(`  Updated remix versions in ${example} example`));
+        for (let package of allPackages) {
+          if (config.dependencies[`@remix-run/${package}`]) {
+            config.dependencies[`@remix-run/${package}`] = nextVersion;
+          }
+          if (config.devDependencies[`@remix-run/${package}`]) {
+            config.devDependencies[`@remix-run/${package}`] = nextVersion;
+          }
+        }
+      });
+
+      console.log(
+        chalk.green(`  Updated remix versions in ${example} example`)
+      );
+    }
   }
 
   // Commit and tag
