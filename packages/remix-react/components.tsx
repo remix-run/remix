@@ -900,10 +900,11 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
-                submit(clickedButtonRef.current || event.currentTarget, {
+                submit(event.currentTarget, {
                   method,
-                  replace
-                });
+                  replace,
+                  submissionTrigger: clickedButtonRef.current
+                } as any);
                 clickedButtonRef.current = null;
               }
         }
@@ -1023,10 +1024,18 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let formData: FormData;
 
       if (isFormElement(target)) {
+        let submissionTrigger: HTMLButtonElement | HTMLInputElement = (
+          options as any
+        ).submissionTrigger;
+
         method = options.method || target.method;
         action = options.action || target.action;
         encType = options.encType || target.enctype;
         formData = new FormData(target);
+
+        if (submissionTrigger && submissionTrigger.name) {
+          formData.append(submissionTrigger.name, submissionTrigger.value);
+        }
       } else if (
         isButtonElement(target) ||
         (isInputElement(target) &&
