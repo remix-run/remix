@@ -132,11 +132,11 @@ export default function Methods() {
           </label>
         </p>
         <p>
-          <button type="submit" id="submit">
-            {method}
-          </button>
           <button type="submit" id="submit-with-data" name="data" value="c">
             {method} (with data)
+          </button>
+          <button type="submit" id="submit">
+            {method}
           </button>
         </p>
       </Form>

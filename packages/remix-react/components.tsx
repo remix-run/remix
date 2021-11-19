@@ -858,38 +858,33 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     // formData.get("something") should be "whatever", but we don't get that
     // unless we call submit on the clicked button itself.
     //
-    // To figure out which button triggered the submit, we'll attach an event
-    // listener to each button. The click event is always triggered before the
-    // submit event (even when submitting via keyboard when focused on another
-    // form field, yeeeeet) so we should have access to that button's data for
-    // use in the submit handler.
+    // To figure out which button triggered the submit, we'll attach a click
+    // event listener to the form. The click event is always triggered before
+    // the submit event (even when submitting via keyboard when focused on
+    // another form field, yeeeeet) so we should have access to that button's
+    // data for use in the submit handler.
     let clickedButtonRef = React.useRef<any>();
 
     React.useEffect(() => {
       let form = formRef.current;
       if (!form) return;
 
-      let possibleSubmitButtons = form.querySelectorAll<
-        HTMLButtonElement | HTMLInputElement
-      >("button,input[type=submit]");
-
       function handleClick(event: MouseEvent) {
-        clickedButtonRef.current = event.currentTarget;
+        if (!(event.target instanceof HTMLElement)) return;
+        let submitButton = event.target.closest<
+          HTMLButtonElement | HTMLInputElement
+        >("button,input[type=submit]");
+
+        if (submitButton && submitButton.type === "submit") {
+          clickedButtonRef.current = submitButton;
+        }
       }
 
-      possibleSubmitButtons.forEach(button => {
-        if (button.type === "submit") {
-          button.addEventListener("click", handleClick as any);
-        }
-      });
+      form.addEventListener("click", handleClick);
       return () => {
-        possibleSubmitButtons.forEach(button => {
-          if (button.type === "submit") {
-            button.removeEventListener("click", handleClick as any);
-          }
-        });
+        form && form.removeEventListener("click", handleClick);
       };
-    }, [submit, ref]);
+    }, []);
 
     return (
       <form
