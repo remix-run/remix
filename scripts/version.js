@@ -191,7 +191,6 @@ async function run(args) {
         config.dependencies["remix"] = nextVersion;
       }
 
-      // TODO: probably a better way as this list can get longer...
       for (let package of allPackages) {
         if (config.dependencies[`@remix-run/${package}`]) {
           config.dependencies[`@remix-run/${package}`] = nextVersion;
