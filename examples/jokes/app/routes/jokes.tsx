@@ -117,7 +117,9 @@ export default function JokesScreen() {
           </li>
         ))}
       </ul>
-      <Link to="new">Add your own</Link>
+      <Link to="new" className="button">
+        Add your own
+      </Link>
     </Layout>
   );
 }

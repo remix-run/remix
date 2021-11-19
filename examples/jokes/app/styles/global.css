@@ -6,10 +6,11 @@
 }
 
 :root {
+  --hs-links: 48 100%;
   --color-foreground: hsl(0, 0%, 100%);
   --color-background: hsl(278, 73%, 19%);
-  --color-links: hsl(48, 100%, 50%);
-  --color-links-hover: hsl(48, 100%, 45%);
+  --color-links: hsl(var(--hs-links) 50%);
+  --color-links-hover: hsl(var(--hs-links) 45%);
   --color-border: hsl(277, 85%, 38%);
   --gradient-background: radial-gradient(
     circle,
@@ -127,4 +128,55 @@ h6 {
   max-width: calc(100% - var(--gutter) * 2);
   margin-right: auto;
   margin-left: auto;
+}
+
+.button {
+  --shadow-color: hsl(var(--hs-links) 30%);
+  --shadow-size: 3px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-links);
+  color: var(--color-background);
+  font-family: var(--font-display);
+  font-weight: bold;
+  line-height: 1;
+  font-size: 1.125rem;
+  margin: 0;
+  padding: 0.625em 1em;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: 0 var(--shadow-size) 0 0 var(--shadow-color);
+  outline-offset: 2px;
+  transform: translateY(0);
+  transition: background-color 50ms ease-out, box-shadow 50ms ease-out,
+    transform 100ms cubic-bezier(0.3, 0.6, 0.8, 1.25);
+}
+
+.button:hover {
+  --raise: 1px;
+  color: var(--color-background);
+  text-decoration: none;
+  box-shadow: 0 calc(var(--shadow-size) + var(--raise)) 0 0 var(--shadow-color);
+  transform: translateY(calc(var(--raise) * -1));
+}
+
+.button:active {
+  --press: 1px;
+  box-shadow: 0 calc(var(--shadow-size) - var(--press)) 0 0 var(--shadow-color);
+  transform: translateY(var(--press));
+  background-color: var(--color-links-hover);
+}
+
+.button[disabled],
+.button[aria-disabled="true"] {
+  transform: translateY(0);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.button:focus:not(:focus-visible) {
+  outline: none;
 }
