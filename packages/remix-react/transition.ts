@@ -870,8 +870,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     pendingNavigationController = controller;
 
-    let isIndexRequest = isIndexRequestAction(submission.action);
-    console.log({ location, matches, isIndexRequest });
     if (
       !isIndexRequestAction(submission.action) &&
       matches[matches.length - 1].route.id.endsWith("/index")
