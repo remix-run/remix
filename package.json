@@ -4,6 +4,7 @@
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c && tsc -b",
+    "dev": "yarn build && yarn --cwd ./fixtures/gists-app/ dev",
     "license": "node ./scripts/license.js",
     "publish": "node ./scripts/publish.js",
     "test": "jest",
