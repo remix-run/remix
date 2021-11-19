@@ -10,9 +10,7 @@ function getTaggedVersion() {
 }
 
 function publish(dir, tag) {
-  execSync(`npm publish --access public --tag ${tag} ${dir}`, {
-    stdio: "inherit"
-  });
+  execSync(`npm publish --tag ${tag} ${dir}`, { stdio: "inherit" });
 }
 
 async function run() {

@@ -1,19 +1,14 @@
-import type {
-  ActionFunction,
-  MetaFunction,
-  LinksFunction,
-  LoaderFunction
-} from "remix";
 import { Form, json, useActionData, useLoaderData } from "remix";
 
 import stylesUrl from "../styles/index.css";
 
 import { getRemixResources } from "~/data.server";
-import type { RemixResource } from "~/data.server";
 
-interface LoaderData {
-  resources: Array<RemixResource>;
-}
+/**
+ * @typedef {{
+ *   resources: Array<import("~/data.server").RemixResource>
+ * }} LoaderData
+ */
 
 /**
  * Loader!? What the heck is a loader?
@@ -22,11 +17,14 @@ interface LoaderData {
  * of a route module. Any route can export a loader function and it will only be
  * called on the server.
  *
+ * @type {import("remix").LoaderFunction}
+ *
  * @see {@link [Loading Data in Remix](https://docs.remix.run/v0.21/tutorial/3-loading-data)}
  * @see {@link [Loader API](https://docs.remix.run/v0.21/api/app/#loader)}
  */
-export let loader: LoaderFunction = async ({ request, params, context }) => {
-  let loaderData: LoaderData = {
+export let loader = async ({ request, params, context }) => {
+  /** @type {LoaderData} */
+  let loaderData = {
     resources: await getRemixResources()
   };
   return json(loaderData);
@@ -38,28 +36,34 @@ export let loader: LoaderFunction = async ({ request, params, context }) => {
  * `<meta>` tags in the route. The `title` key renders the route's `<title>`
  * element.
  *
+ * @type {import("remix").MetaFunction}
+ *
  * @see {@link [Meta API](https://docs.remix.run/v0.21/api/app/#meta)}
  */
-export let meta: MetaFunction = () => {
+export let meta = () => {
   return {
     title: "Remix Starter",
     description: "Welcome to remix!"
   };
 };
 
-interface ActionData {
-  greeting: string;
-}
+/**
+ * @typedef {{
+ *   greeting: string
+ * }} ActionData
+ */
 
 /**
  * The `actions` export is a function that is called on the server when a
  * non-GET request is made (so POST, PUT, PATCH, and DELETE requests are all
  * handled here).
  *
+ * @type {import("remix").ActionFunction}
+ *
  * @see {@link [Actions and Data Updates](https://docs.remix.run/v0.21/tutorial/6-actions/)}
  * @see {@link [Actions API](https://docs.remix.run/v0.21/api/app/#action)}
  */
-export let action: ActionFunction = async ({ request }) => {
+export let action = async ({ request }) => {
   // What if we encounter an error in our action?
   let formData = await request.formData();
   let name = formData.get("name");
@@ -73,7 +77,8 @@ export let action: ActionFunction = async ({ request }) => {
 
   // We can also return a response from our action that route components can
   // read via `useActionData`
-  let data: ActionData = {
+  /** @type {ActionData} */
+  let data = {
     greeting: name
       ? `Hello ${name}, from the action! 👋`
       : "Hello from the action! 👋"
@@ -82,13 +87,16 @@ export let action: ActionFunction = async ({ request }) => {
   return json(data);
 };
 
-export let links: LinksFunction = () => {
+/** @type {import("remix").LinksFunction} */
+export let links = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 export default function Index() {
-  let loaderData = useLoaderData<LoaderData>();
-  let actionData = useActionData<ActionData>();
+  /** @type {LoaderData} */
+  let loaderData = useLoaderData();
+  /** @type {ActionData} */
+  let actionData = useActionData();
 
   return (
     <div className="homepage">

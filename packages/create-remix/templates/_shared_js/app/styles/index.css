@@ -1,5 +1,50 @@
-/* 
- * when the user visits this page, this style will apply, when they leave, it
- * will get unloaded, so don't worry so much about conflicting styles between
- * pages!
- */
+.homepage {
+  --gap: 1rem;
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: var(--gap);
+}
+
+@media print, screen and (min-width: 640px) {
+  .homepage {
+    --gap: 2rem;
+    grid-auto-rows: unset;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .homepage {
+    --gap: 4rem;
+  }
+}
+
+.homepage__resources > ul {
+  margin: 0;
+  padding-left: 1.5ch;
+}
+
+.homepage__resource > :first-child {
+  margin-top: 0;
+}
+
+.homepage__resource > :last-child {
+  margin-bottom: 0;
+}
+
+.homepage__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.homepage__form > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.homepage__greeting {
+  font-weight: bold;
+}
