@@ -415,26 +415,33 @@ function requireUserSession(request) {
 }
 ```
 
-```js filename=app/routes/invoice/$invoiceId.tsx
+```tsx filename=app/routes/invoice/$invoiceId.tsx
 import { useCatch, useLoaderData } from "remix";
 import type { ThrownResponse } from "remix";
 
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
-import type { Invoice, InvoiceNotFoundResponse } from "~/db";
+import type {
+  Invoice,
+  InvoiceNotFoundResponse
+} from "~/db";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;
 };
 
-type ThrownResponses = InvoiceNotFoundResponse | ThrownResponse<401, InvoiceCatchData>;
+type ThrownResponses =
+  | InvoiceNotFoundResponse
+  | ThrownResponse<401, InvoiceCatchData>;
 
 export let loader = async ({ request, params }) => {
   let user = await requireUserSession(request);
   let invoice: Invoice = getInvoice(params.invoiceId);
 
   if (!invoice.userIds.includes(user.id)) {
-    let data: InvoiceCatchData = { invoiceOwnerEmail: invoice.owner.email };
+    let data: InvoiceCatchData = {
+      invoiceOwnerEmail: invoice.owner.email
+    };
     throw new json(data, { status: 401 });
   }
 
@@ -455,7 +462,10 @@ export function CatchBoundary() {
       return (
         <div>
           <p>You don't have access to this invoice.</p>
-          <p>Contact {invoiceCatch.data.invoiceOwnerEmail} to get access</p>
+          <p>
+            Contact {invoiceCatch.data.invoiceOwnerEmail} to
+            get access
+          </p>
         </div>
       );
     case 404:
@@ -464,7 +474,12 @@ export function CatchBoundary() {
 
   // You could also `throw new Error("Unknown status in catch boundary")`.
   // This will be caught by the closest `ErrorBoundary`.
-  return <div>Something went wrong: {invoiceCatch.status} {invoiceCatch.statusText}</div>;
+  return (
+    <div>
+      Something went wrong: {invoiceCatch.status}{" "}
+      {invoiceCatch.statusText}
+    </div>
+  );
 }
 ```
 
