@@ -11,11 +11,26 @@ import {
 import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
 import { Outlet } from "react-router-dom";
 import type { User } from "@prisma/client";
-import stylesUrl from "./styles/global.css";
 import { getUser, logout } from "./utils/session.server";
 
+import globalStylesUrl from "./styles/global.css";
+import globalMediumStylesUrl from "./styles/global-medium.css";
+import globalLargeStylesUrl from "./styles/global-large.css";
+
 export let links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: stylesUrl }];
+  return [
+    { rel: "stylesheet", href: globalStylesUrl },
+    {
+      rel: "stylesheet",
+      href: globalMediumStylesUrl,
+      media: "print, (min-width: 640px)",
+    },
+    {
+      rel: "stylesheet",
+      href: globalLargeStylesUrl,
+      media: "screen and (min-width: 1024px)",
+    },
+  ];
 };
 
 type LoaderData = { user: User | null };
@@ -67,35 +82,7 @@ export default function App() {
   let data = useLoaderData<LoaderData>();
   return (
     <Document>
-      <nav>
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/jokes">Jokes</Link>
-          </li>
-          <li>
-            <Link to="/about">About</Link>
-          </li>
-          {!data.user ? (
-            <li>
-              <Link to="/login">Login</Link>
-            </li>
-          ) : null}
-        </ul>
-      </nav>
-      {data.user ? (
-        <>
-          {`Hi ${data.user.username}`}
-          <Form method="post">
-            <button type="submit">Logout</button>
-          </Form>
-        </>
-      ) : null}
-      <h1>Remix Jokes</h1>
       <Outlet />
-      <Footer />
     </Document>
   );
 }

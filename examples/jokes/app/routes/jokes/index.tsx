@@ -16,13 +16,17 @@ export let loader = async () => {
 export default function JokesDefaultScreen() {
   let data = useLoaderData<LoaderData>();
 
-  return (
-    <div>
-      <p>Here's a random joke:</p>
-      <p>{data.randomJoke.content}</p>
-      <Link to={data.randomJoke.id}>{data.randomJoke.name}</Link>
-    </div>
-  );
+  if (data.randomJoke) {
+    return (
+      <div>
+        <p>Here's a random joke:</p>
+        <p>{data.randomJoke.content}</p>
+        <Link to={data.randomJoke.id}>{data.randomJoke.name}</Link>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {

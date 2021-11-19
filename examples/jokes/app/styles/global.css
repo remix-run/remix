@@ -1,7 +1,130 @@
-:focus:not(:focus-visible) {
-  outline: none;
+@font-face {
+  font-family: "baloo";
+  src: url("/fonts/baloo/baloo.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --color-foreground: hsl(0, 0%, 100%);
+  --color-background: hsl(278, 73%, 19%);
+  --color-links: hsl(48, 100%, 50%);
+  --color-links-hover: hsl(48, 100%, 45%);
+  --color-border: hsl(277, 85%, 38%);
+  --gradient-background: radial-gradient(
+    circle,
+    rgba(152, 11, 238, 1) 0%,
+    rgba(118, 15, 181, 1) 35%,
+    rgba(58, 13, 85, 1) 100%
+  );
+  --font-body: -apple-system, "Segoe UI", Helvetica Neue, Helvetica, Roboto,
+    Arial, sans-serif, system-ui, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-display: baloo, var(--font-body);
+}
+
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+:-moz-focusring {
+  outline: auto;
+}
+
+:focus {
+  outline: var(--color-links) solid 2px;
+  outline-offset: 2px;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  color: var(--color-foreground);
+  background-color: var(--color-background);
 }
 
 body {
-  font-family: sans-serif;
+  font-family: var(--font-body);
+  line-height: 1.5;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  min-height: calc(100vh - env(safe-area-inset-bottom));
+}
+
+a {
+  color: var(--color-links);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-links-hover);
+  text-decoration: underline;
+}
+
+hr {
+  display: block;
+  height: 1px;
+  border: 0;
+  background-color: var(--color-border);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+h1 {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+h4 {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+h5,
+h6 {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.container {
+  --gutter: 16px;
+  width: 1024px;
+  max-width: calc(100% - var(--gutter) * 2);
+  margin-right: auto;
+  margin-left: auto;
 }

@@ -1,3 +1,4 @@
+import { Link } from "remix";
 import type { MetaFunction, LinksFunction } from "remix";
 import stylesUrl from "../styles/index.css";
 
@@ -14,9 +15,27 @@ export let links: LinksFunction = () => {
 
 export default function Index() {
   return (
-    <div>
-      <h2>Welcome to the Remix Jokes App!</h2>
-      <p>This is the home page. There's nothing but potential here!</p>
+    <div className="container">
+      <div className="content">
+        <h1>
+          Remix <span>Jokes!</span>
+        </h1>
+        <nav>
+          <ul>
+            <li>
+              <Link to="jokes">Read Jokes</Link>
+            </li>
+            <li>
+              <Link to="about">About Us</Link>
+            </li>
+            <li>
+              <Link reloadDocument to="/jokes-rss">
+                RSS
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
     </div>
   );
 }
