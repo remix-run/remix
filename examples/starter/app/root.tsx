@@ -1,6 +1,5 @@
 import * as React from "react";
 import {
-  Form,
   Links,
   LiveReload,
   Meta,
@@ -8,10 +7,9 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  json,
   useCatch
 } from "remix";
-import type { LinksFunction, ActionFunction } from "remix";
+import type { LinksFunction } from "remix";
 
 import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";

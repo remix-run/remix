@@ -1,4 +1,4 @@
-import { Outlet, Link } from "remix";
+import { Outlet } from "remix";
 import type { MetaFunction, LinksFunction } from "remix";
 
 import stylesUrl from "../styles/about.css";
