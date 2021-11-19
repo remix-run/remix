@@ -39,12 +39,6 @@ async function run() {
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
-
-  // Publish create-remix
-  publish(path.join(buildDir, "create-remix"), tag);
-
-  // Publish remix package
-  publish(path.join(buildDir, "remix"), tag);
 }
 
 run().then(
