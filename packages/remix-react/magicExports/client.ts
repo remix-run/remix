@@ -26,6 +26,7 @@ export {
   Outlet,
   Form,
   PrefetchPageLinks,
+  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -37,9 +38,5 @@ export {
   useActionData,
   useBeforeUnload,
   useMatches,
-  RemixServer,
-  // @deprecated
-  usePendingLocation,
-  usePendingFormSubmit,
-  useRouteData
+  RemixServer
 } from "@remix-run/react";

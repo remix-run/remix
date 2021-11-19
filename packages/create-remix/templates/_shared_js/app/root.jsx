@@ -3,6 +3,7 @@ import {
   Links,
   Scripts,
   useLoaderData,
+  ScrollRestoration,
   LiveReload,
   useCatch
 } from "remix";
@@ -23,13 +24,13 @@ function Document({ children, title }) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
       </head>
       <body>
         {children}
+        <ScrollRestoration />
         <Scripts />
         {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>
