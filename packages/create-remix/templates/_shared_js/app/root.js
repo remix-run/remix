@@ -20,6 +20,8 @@ import mediumStylesUrl from "~/styles/medium.css";
  * every route in the app, but individual routes can include their own links
  * that are automatically unloaded when a user navigates away from the route.
  *
+ * @type {import("remix").LinksFunction}
+ *
  * @see {@link [Links API](https://docs.remix.run/v0.21/api/app/#links)}
  */
 export let links = () => {
