@@ -1164,7 +1164,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
 ////////////////////////////////////////////////////////////////////////////////
 function isIndexRequestAction(action: string) {
-  console.log({ action });
   let indexRequest = false;
 
   let searchParams = new URLSearchParams(action.split("?", 2)[1] || "");

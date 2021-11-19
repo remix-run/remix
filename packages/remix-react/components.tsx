@@ -900,11 +900,10 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
-                submit(event.currentTarget, {
+                submit(clickedButtonRef.current || event.currentTarget, {
                   method,
-                  replace,
-                  submissionTrigger: clickedButtonRef.current
-                } as any);
+                  replace
+                });
                 clickedButtonRef.current = null;
               }
         }
@@ -1048,9 +1047,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
 
         // <button>/<input type="submit"> may override attributes of <form>
-        method = options.method || target.formMethod || form.method;
-        action = options.action || target.formAction || form.action;
-        encType = options.encType || target.formEnctype || form.enctype;
+
+        method =
+          options.method || target.getAttribute("formmethod") || form.method;
+        action =
+          options.action || target.getAttribute("formaction") || form.action;
+        encType =
+          options.encType || target.getAttribute("formenctype") || form.enctype;
         formData = new FormData(form);
 
         // Include name + value from a <button>
