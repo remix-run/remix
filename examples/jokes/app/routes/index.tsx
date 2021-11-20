@@ -34,7 +34,7 @@ export default function Index() {
               <Link to="jokes">Read Jokes</Link>
             </li>
             <li>
-              <Link reloadDocument to="/jokes-rss">
+              <Link reloadDocument to="/jokes.rss">
                 RSS
               </Link>
             </li>

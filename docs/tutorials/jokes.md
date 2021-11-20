@@ -9,9 +9,17 @@ You want to learn Remix? You're in the right place. This tutorial is the fast-tr
 
 We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
 
-We'll be linking to various docs (Remix docs as well as web docs on MDN) throughout the tutorial. If you're ever stuck, make sure you check into any docs links you may have skipped.
+We'll be linking to various docs (Remix docs as well as web docs on MDN) throughout the tutorial. If you're ever stuck, make sure you check into any docs links you may have skipped. Part of the goal of this tutorial is to get you acclamated to the API documentation, so if something's explained in the docs, then you'll be linked to those instead of rehashing it all out in here.
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when your using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
+
+<details>
+
+  <summary>Click me</summary>
+
+There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We recommend you not waste your time struggling with stuff that's unrelated to Remix-specifically. This isn't the time to waste effort guessing what class names to use. Feel free to reference these once you get the main point of the tutorial. Use these to check your work.
+
+</details>
 
 💿 Hello, I'm Rachel the Remix Disk. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. Enjoy the tutorial!
 
@@ -43,7 +51,7 @@ If you'd like to follow along with the deploy step at the end, you'll also want 
 
 We'll also be executing commands in your system command line/terminal interface. So you'll want to be familiar with that.
 
-Som experience with React and TypeScript/JavaScript is assumed. If you'd like to review your knowledge, check out these resources:
+Some experience with React and TypeScript/JavaScript is assumed. If you'd like to review your knowledge, check out these resources:
 
 - [JavaScript to know for React](https://kentcdodds.com/blog/javascript-to-know-for-react)
 - [The Beginner's Guide to React](https://kcd.im/beginner-react)
@@ -239,9 +247,9 @@ The first thing we want to do is get our routing structure set up. Here are all 
 /login
 ```
 
-You can programmatically create routes via the [`remix.config.js`](../api/app#remixconfigjs), but the more common way to create the routes is through the file system. This is called "file-based routing."
+You can programmatically create routes via the [`remix.config.js`](../api/conventions#remixconfigjs), but the more common way to create the routes is through the file system. This is called "file-based routing."
 
-Each of file we put in the `app/routes` directory is called a ["Route Module"](../api/app#route-module-api) and by following [the route filename convention](../api/app#route-filenames) (like that weird `app/routes/$jokeId.tsx` file we're going to make), we can create the routing URL structure we're looking for. Remix uses React Router under the hood to handle this routing.
+Each of file we put in the `app/routes` directory is called a ["Route Module"](../api/conventions#route-module-api) and by following [the route filename convention](../api/conventions#route-filenames) (like that weird `app/routes/$jokeId.tsx` file we're going to make), we can create the routing URL structure we're looking for. Remix uses React Router under the hood to handle this routing.
 
 💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
 
@@ -361,7 +369,7 @@ And notice that each of those route modules is only concerned with their part of
 <summary>For example:</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx
-export default function NewJokeScreen() {
+export default function NewJokeRoute() {
   return (
     <div>
       <p>Add your own hilarious joke</p>
@@ -427,7 +435,7 @@ Great! We've got our primary routes all set up!
 
 To get CSS on the page, we use `<link rel="stylesheet" href="/path-to-file.css" />`. This is how you style your Remix applications as well, but Remix makes it much easier than just throwing `link` tags all over the place. Remix brings the power of it's Nested Routing support to CSS and allows you to associate `link`s to routes. When the route is active, the `link` is on the page and the CSS applies. When the route is not active (the user navigates away), the `link` tag is removed and the CSS no longer applies.
 
-You do this by exporting a [`links`](../api/app#links) function in your route module. Let's get the homepage styled. You can put your CSS files anywhere you like within the `app` directory. We'll put ours in `app/styles/`.
+You do this by exporting a [`links`](../api/conventions#links) function in your route module. Let's get the homepage styled. You can put your CSS files anywhere you like within the `app` directory. We'll put ours in `app/styles/`.
 
 We'll start off by just styling the home page (the index route `/`).
 
@@ -445,7 +453,7 @@ body {
 }
 ```
 
-💿 Now update `app/routes/index.tsx` to import that css file. Then add a `links` export (as described in [the documentation](../api/app#links)) to add that link to the page.
+💿 Now update `app/routes/index.tsx` to import that css file. Then add a `links` export (as described in [the documentation](../api/conventions#links)) to add that link to the page.
 
 <details>
 
@@ -1237,7 +1245,7 @@ You can use any persistence solution you like with Remix, Firebase, Supabase, Ai
 
 ### Set up Prisma
 
-In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.html) database. Effectively, it's a database that lives in a file on your computer. It's surprisingly capable. And what makes it better is it's supported by [Prisma](https://www.prisma.io/), our favorite database ORM. It's a great place to start if you're not sure what database to use.
+In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.html) database. Effectively, it's a database that lives in a file on your computer. It's surprisingly capable. And what makes it better is that it's supported by [Prisma](https://www.prisma.io/), our favorite database ORM. It's a great place to start if you're not sure what database to use.
 
 We're going to use two packages for this, `prisma` which we use during development to interact with our database and schema, and `@prisma/client` which we use during runtime to make queries from our application code.
 
@@ -1273,7 +1281,7 @@ https://pris.ly/d/getting-started
 
 Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
-```ts lines=[13-19]
+```ts filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -1315,6 +1323,8 @@ Datasource "db": SQLite database "dev.db" at "file:./dev.db"
 ```
 
 This command did a few things. For one, it created our database file in `prisma/dev.db`. Then it pushed all the necessary changes to our database to match the schema we provided. Finally it generated Prisma's TypeScript types so we'll get stellar autocomplete and type checking as we use it's API for interacting with our database.
+
+<docs-warning>If your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again.</docs-warning>
 
 Next, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll just give this to you (don't worry, we'll get back to remix soon):
 
@@ -1458,7 +1468,7 @@ Ok, ready to get back to writing Remix code? Me too!
 
 Our goal is to put a list of jokes on the `/jokes` route so we can have a list of links to jokes people can choose from. In Remix, each route module is responsible for getting its own data. So if we want data on the `/jokes` route, then we'll be updating the `app/routes/jokes.tsx` file.
 
-To _load_ data in a Remix route module, you use a [`loader`](../api/app#loader). This is simply an `async` function you export that returns a response for the data your component needs. And then the component gets it using the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
+To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#loader). This is simply an `async` function you export that returns a response for the data your component needs. And then the component gets it using the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
 
 ```tsx
 // this is just an example. No need to copy/paste this 😄
@@ -1500,7 +1510,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>For example:</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[4-5,8,20-31,34,39-45]
+```tsx filename=app/routes/jokes.tsx lines=[4-5,8,20-22,24-33,34,41-47]
 import {
   Link,
   LinksFunction,
@@ -1528,6 +1538,7 @@ export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
     jokeListItems: await db.joke.findMany({
       take: 5,
+      orderBy: { createdAt: "desc" },
       select: { id: true, name: true }
     })
   };
@@ -1564,7 +1575,7 @@ And here's what we have with that now:
 
 I want to call out something specific in my solution. Here's my loader:
 
-```tsx lines=[8-9]
+```tsx lines=[8-10]
 type LoaderData = {
   jokeListItems: Array<{ id: string; name: string }>;
 };
@@ -1573,24 +1584,25 @@ export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
     jokeListItems: await db.joke.findMany({
       take: 5,
-      select: { id: true, name: true }
+      select: { id: true, name: true },
+      orderBy: { createdAt: "desc" }
     })
   };
   return data;
 };
 ```
 
-Notice that all I need for this page is the joke `id` and `name`. I don't need to bother getting the `content`. I'm also limiting to a total of 5 items. So with `prisma`, I can change my query to be exactly what I need and avoid sending too much data to the client! That makes my app faster and more responsive for my users.
+Notice that all I need for this page is the joke `id` and `name`. I don't need to bother getting the `content`. I'm also limiting to a total of 5 items and ordering by creation date so we get the latest jokes. So with `prisma`, I can change my query to be exactly what I need and avoid sending too much data to the client! That makes my app faster and more responsive for my users.
 
-And to make it even coolear, you don't necessarily need prisma or direct database access to do this. You've got a graphql backend you're hitting? Sweet, use your regular graphql stuff in your loader. It's even better than doing it on the client because you don't need to worry about shipping a [huge graphql client](https://bundlephobia.com/package/graphql@16.0.1) to the client. Keep that on your server and filter down to what you want.
+And to make it even cooler, you don't necessarily need prisma or direct database access to do this. You've got a graphql backend you're hitting? Sweet, use your regular graphql stuff in your loader. It's even better than doing it on the client because you don't need to worry about shipping a [huge graphql client](https://bundlephobia.com/package/graphql@16.0.1) to the client. Keep that on your server and filter down to what you want.
 
 Oh, you've just got REST endpoints you hit? That's fine too! You can easily filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
 
-### Network Type Safty
+### Network Type Safety
 
 Oh, and one other fun tip, I don't know about you, but I don't really like double-typing stuff, so we can use TypeScript's [`Awaited`](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-5.html#the-awaited-type-and-promise-improvements) type to avoid that:
 
-```tsx lines=[2-4,7-12,16]
+```tsx lines=[2-4,7-13,17]
 type LoaderData = {
   jokeListItems: Awaited<
     ReturnType<typeof getJokeListItems>
@@ -1601,6 +1613,7 @@ function getJokeListItems() {
   return db.joke.findMany({
     take: 5,
     select: { id: true, name: true }
+    orderBy: { createdAt: "desc" },
   });
 }
 
@@ -1612,7 +1625,7 @@ export let loader: LoaderFunction = async () => {
 };
 ```
 
-With this, now if we needed to add or remove any fields from our query, we could easily change our query and all the types would flow through without having to change anything else. Type safety across network boundaries! In the future, we hope to make this experience even.
+With this, now if we needed to add or remove any fields from our query, we could easily change our query and all the types would flow through without having to change anything else. Type safety across network boundaries! In the future, we hope to make this experience even better.
 
 ### Wrap up database queries
 
@@ -1696,7 +1709,7 @@ let [randomJoke] = await db.joke.findMany({
 <summary>For example:</summary>
 
 ```tsx filename=app/routes/jokes/index.tsx lines=[2-3,5,7-16,19]
-import { useLoaderData, Link, json, useCatch } from "remix";
+import { useLoaderData, Link } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
 
@@ -1710,7 +1723,7 @@ export let loader = async () => {
     skip: randomRowNumber
   });
   let data: LoaderData = { randomJoke };
-  return json(data);
+  return data;
 };
 
 export default function JokesIndexRoute() {
@@ -1733,3 +1746,590 @@ export default function JokesIndexRoute() {
 With that your [`/jokes`](http://localhost:3000/jokes) route should display a list of links to jokes as well as a random joke:
 
 ![Jokes page showing a random joke](/jokes-tutorial/img/random-joke-loaded.png)
+
+## Mutations
+
+We've got ourselves a `/jokes/new` route, but that form doesn't do anything yet. Let's wire it up! As a reminder here's what that code should look like right now:
+
+```tsx filename=app/routes/jokes/new.tsx
+export default function NewJokeRoute() {
+  return (
+    <div>
+      <p>Add your own hilarious joke</p>
+      <form method="post">
+        <div>
+          <label>
+            Name: <input type="text" name="name" />
+          </label>
+        </div>
+        <div>
+          <label>
+            Content: <textarea name="content" />
+          </label>
+        </div>
+        <button type="submit" className="button">
+          Add
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+Not much there. Just a form. What if I told you that you could make that form work with a single export to the route module? Well you can! It's the [`action`](../api/conventions#action) function export! Read up on that a bit.
+
+Here's the prisma code you'll need:
+
+```tsx
+let joke = await db.joke.create({
+  data: { name, content }
+});
+```
+
+💿 Create an `action` in `app/routes/jokes/new.tsx`.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-15]
+import type { ActionFunction } from "remix";
+import { redirect } from "remix";
+import { db } from "~/utils/db.server";
+
+export let action: ActionFunction = async ({ request }) => {
+  let { name, content } = Object.fromEntries(
+    await request.formData()
+  );
+  // we do this type check to be extra sure and to make TypeScript happy
+  // we'll explore validation next!
+  if (
+    typeof name !== "string" ||
+    typeof content !== "string"
+  ) {
+    throw new Error(`Form not submitted correctly.`);
+  }
+
+  let fields = { name, content };
+
+  let joke = await db.joke.create({ data: fields });
+  return redirect(`/jokes/${joke.id}`);
+};
+
+export default function NewJokeRoute() {
+  return (
+    <div>
+      <p>Add your own hilarious joke</p>
+      <form method="post">
+        <div>
+          <label>
+            Name: <input type="text" name="name" />
+          </label>
+        </div>
+        <div>
+          <label>
+            Content: <textarea name="content" />
+          </label>
+        </div>
+        <button type="submit" className="button">
+          Add
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+</details>
+
+If you've got that working, you should be able to create new jokes and you'll be redirected to the new joke's page.
+
+![Create new joke form filled out](/jokes-tutorial/img/creating-new-joke.png)
+
+![Newly created joke displayed](/jokes-tutorial/img/new-joke-created.png)
+
+Hooray! How cool is that? No `useEffect` or `useAnything` hooks. Just a form, and an async function to process the submission. Pretty cool. You can definitely still do all that stuff if you wanted to, but why would you? This is really nice.
+
+Another thing you'll notice is that when we were redirected to the joke's new page, it was there! But we didn't have to think about updating the cache at all. Remix handles invalidating the cache for us automatically. You don't have to think about it. _That_ is cool 😎
+
+Why don't we add some validation? We could definitely do the typical React validation approach. Wiring up `useState` with `onChange` handlers and such. And sometimes that's nice to get some real-time validation as the user's typing. But even if you do all that work, you're still going to want to do validation on the server.
+
+Before I set you off on this one, there's one more thing you need to know about route module `action` functions. The return value is expected to be the same as the `loader` function: A response, or (as a convenience) a serializeable JavaScript object. Normally you want to `redirect` when the action is successful to avoid the annoying "confirm resubmission" dialog you might have seen on some websites.
+
+But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
+
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,39,42-45,47-49,56,67,69-76,79-87,93,95-103,105-113]
+import type { ActionFunction } from "remix";
+import { useActionData, redirect } from "remix";
+import { db } from "~/utils/db.server";
+
+function validateJokeContent(content: string) {
+  if (content.length < 10) {
+    return `That joke is too short`;
+  }
+}
+
+function validateJokeName(name: string) {
+  if (name.length < 2) {
+    return `That joke's name is too short`;
+  }
+}
+
+type ActionData = {
+  formError?: string;
+  fieldErrors?: {
+    name: string | undefined;
+    content: string | undefined;
+  };
+  fields?: {
+    name: string;
+    content: string;
+  };
+};
+
+export let action: ActionFunction = async ({
+  request
+}): Promise<Response | ActionData> => {
+  let { name, content } = Object.fromEntries(
+    await request.formData()
+  );
+  if (
+    typeof name !== "string" ||
+    typeof content !== "string"
+  ) {
+    return { formError: `Form not submitted correctly.` };
+  }
+
+  let fieldErrors = {
+    name: validateJokeName(name),
+    content: validateJokeContent(content)
+  };
+  let fields = { name, content };
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return { fieldErrors, fields };
+  }
+
+  let joke = await db.joke.create({ data: fields });
+  return redirect(`/jokes/${joke.id}`);
+};
+
+export default function NewJokeRoute() {
+  let actionData = useActionData<ActionData | undefined>();
+
+  return (
+    <div>
+      <p>Add your own hilarious joke</p>
+      <form method="post">
+        <div>
+          <label>
+            Name:{" "}
+            <input
+              type="text"
+              defaultValue={actionData?.fields?.name}
+              name="name"
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.name
+                  ? "name-error"
+                  : undefined
+              }
+            />
+          </label>
+          {actionData?.fieldErrors?.name ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+              id="name-error"
+            >
+              {actionData?.fieldErrors?.name}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <label>
+            Content:{" "}
+            <textarea
+              defaultValue={actionData?.fields?.content}
+              name="content"
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.content
+                  ? "content-error"
+                  : undefined
+              }
+            />
+          </label>
+          {actionData?.fieldErrors?.content ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+              id="content-error"
+            >
+              {actionData?.fieldErrors?.content}
+            </p>
+          ) : null}
+        </div>
+        <button type="submit" className="button">
+          Add
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+</details>
+
+Great! You should now have a form that validates the fields on the server and displays those errors on the client:
+
+![New joke form with validation errors](/jokes-tutorial/img/new-joke-form-with-errors.png)
+
+Why don't you pop open my code example for a second. I want to show you a few things about the way I'm doing this.
+
+First I want you to notice that I've added an `ActionData` type so we could get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
+
+You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
+
+Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
+
+Oh, and if you _do_ want to have client-side validation (for while the user is typing), you can simply call the `validateJokeContent` and `validateJokeName` functions that the action is using. You can _actually_ seamlessly share code between the client and server! Now _that_ is cool!
+
+## Authentication
+
+It's the moment we've all been waiting for! We're going to add authentication to our little application. We want to add authentication so we can require a user have an account to create jokes and we can associate the user with the jokes they've created. So many ideas!
+
+One thing that would be good to understand for this section is how [HTTP cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) work on the web.
+
+We're going to handroll our own authentication from scratch. Don't worry, I promise it's not as scary as it sounds.
+
+### Preparing the database
+
+<docs-warning>Remember, if your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again.</docs-warning>
+
+Let's start by showing you our updated `prisma/schema.prisma` file. 💿 Go ahead and update your `prisma/schema.prisma` file to look like this:
+
+```ts filename=prisma/schema.prisma lines=[13-20,24-25]
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  username     String   @unique
+  passwordHash String
+  jokes        Joke[]
+}
+
+model Joke {
+  id         String   @id @default(uuid())
+  jokesterId String
+  jokester   User     @relation(fields: [jokesterId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  name       String
+  content    String
+}
+```
+
+With that updated, let's go ahead and reset our database to this schema:
+
+💿 Run this:
+
+```sh
+npx prisma db push
+```
+
+It will prompt you to reset the database, hit "y" to confirm.
+
+That will give you this output:
+
+```
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "dev.db" at "file:./dev.db"
+
+
+⚠️ We found changes that cannot be executed:
+
+  • Added the required column `jokesterId` to the `Joke` table without a default value. There are 9 rows in this table, it is not possible to execute this step.
+
+
+✔ To apply this change we need to reset the database, do you want to continue? All data will be lost. … yes
+The SQLite database "dev.db" from "file:./dev.db" was successfully reset.
+
+🚀  Your database is now in sync with your schema. Done in 1.56s
+
+✔ Generated Prisma Client (3.5.0) to ./node_modules/@prisma/
+client in 34ms
+```
+
+With this change, we're going to start experiencing some TypeScript errors in our project because you can no longer create a `joke` without a `jokesterId` value.
+
+💿 Let's start by fixing our `prisma/schema.prisma` file.
+
+```ts filename=prisma/schema.prisma lines=[5-11,14-15]
+import { PrismaClient } from "@prisma/client";
+let prisma = new PrismaClient();
+
+async function seed() {
+  let kody = await prisma.user.create({
+    data: {
+      username: "kody",
+      passwordHash:
+        "$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u"
+    }
+  });
+  await Promise.all(
+    getJokes().map(joke => {
+      let data = { jokesterId: kody.id, ...joke };
+      return prisma.joke.create({ data });
+    })
+  );
+}
+
+seed();
+
+function getJokes() {
+  // shout-out to https://icanhazdadjoke.com/
+
+  return [
+    {
+      name: "Road worker",
+      content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`
+    },
+    {
+      name: "Frisbee",
+      content: `I was wondering why the frisbee was getting bigger, then it hit me.`
+    },
+    {
+      name: "Trees",
+      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`
+    },
+    {
+      name: "Skeletons",
+      content: `Why don't skeletons ride roller coasters? They don't have the stomach for it.`
+    },
+    {
+      name: "Hippos",
+      content: `Why don't you find hippopotamuses hiding in trees? They're really good at it.`
+    },
+    {
+      name: "Dinner",
+      content: `What did one plate say to the other plate? Dinner is on me!`
+    },
+    {
+      name: "Elevator",
+      content: `My first time using an elevator was an uplifting experience. The second time let me down.`
+    }
+  ];
+}
+```
+
+💿 Great, now run the seed again:
+
+```sh
+npx prisma db seed
+```
+
+And that outputs:
+
+```
+Environment variables loaded from .env
+Running seed command `node --require esbuild-register prisma/seed.ts` ...
+
+🌱  The seed command has been executed.
+```
+
+Great! Our database is now ready to go.
+
+### Auth Flow Overview
+
+So our authentication will be the traditional username/password variety. We'll be using [`bcrypt`](https://npm.im/bcrypt) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
+
+Let me give you a quick diagram of the flow of things:
+
+![Excalidraw Authentication diagram](/jokes-tutorial/img/auth-flow.png)
+
+Here's that written out:
+
+- On the `/login` route.
+- User submits login form.
+- Form data is validated.
+  - If the form data is invalid, return the form with the errors.
+- Login type is "register"
+  - Check whether the username is available
+    - If the username is not available, return the form with an error.
+  - Hash the password
+  - Create a new user
+- Login type is "login"
+  - Check whether the user exists
+    - If the user doesn't exist, return the form with an error.
+  - Check whether the password hash matches
+    - If the password hash doesn't match, return the form with an error.
+- Create a new session
+- Redirect to the `/jokes` route with the `Set-Cookie` header.
+
+### Build the login form
+
+Alright, enough high-level stuff. Let's start writing some Remix code!
+
+We're going to create a login page, and I've got some CSS for you to use on that page:
+
+<details>
+
+<summary>💿 Copy this CSS into `app/styles/login.css`</summary>
+
+```css
+/*
+ * when the user visits this page, this style will apply, when they leave, it
+ * will get unloaded, so don't worry so much about conflicting styles between
+ * pages!
+ */
+
+body {
+  background-image: var(--gradient-background);
+}
+
+.container {
+  min-height: inherit;
+}
+
+.container,
+.content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.content {
+  padding: 1rem;
+  background-color: hsl(0, 0%, 100%);
+  border-radius: 5px;
+  box-shadow: 0 0.2rem 1rem rgba(0, 0, 0, 0.5);
+  width: 400px;
+  max-width: 100%;
+}
+
+@media print, (min-width: 640px) {
+  .content {
+    padding: 2rem;
+    border-radius: 8px;
+  }
+}
+
+h1 {
+  margin-top: 0;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+fieldset {
+  display: flex;
+  justify-content: center;
+}
+
+fieldset > :not(:last-child) {
+  margin-right: 2rem;
+}
+```
+
+</details>
+
+💿 Create a `/login` route by adding a `app/routes/login.tsx` file.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/login.tsx
+import type { LinksFunction } from "remix";
+import stylesUrl from "../styles/login.css";
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+export default function Login() {
+  return (
+    <div className="container">
+      <div className="content" data-light="">
+        <h1>Login</h1>
+        <form method="post">
+          <fieldset>
+            <legend className="sr-only">
+              Login or Register?
+            </legend>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="login"
+              />{" "}
+              Login
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="register"
+              />{" "}
+              Register
+            </label>
+          </fieldset>
+          <div>
+            <label htmlFor="username-input">Username</label>
+            <input
+              type="text"
+              id="username-input"
+              name="username"
+            />
+          </div>
+          <div>
+            <label htmlFor="password-input">Password</label>
+            <input
+              id="password-input"
+              name="password"
+              type="password"
+            />
+          </div>
+          <button type="submit" className="button">
+            Submit
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+</details>
+
+This should look something like this:
+
+![A login form with a login/register radio button and username/password fields and a submit button](/jokes-tutorial/img/login-route.png)

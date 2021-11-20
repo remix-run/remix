@@ -15,6 +15,7 @@ export let loader: LoaderFunction = async ({ request }) => {
   let jokeListItems = await db.joke.findMany({
     take: 5,
     select: { id: true, name: true },
+    orderBy: { createdAt: "desc" },
   });
   let user = await getUser(request);
 
@@ -34,7 +35,7 @@ function Footer() {
   return (
     <footer className="jokes-footer">
       <div className="container">
-        <Link reloadDocument to="/jokes-rss">
+        <Link reloadDocument to="/jokes.rss">
           RSS
         </Link>
       </div>

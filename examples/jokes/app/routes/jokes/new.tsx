@@ -5,14 +5,22 @@ import { useActionData, Form, redirect } from "remix";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
 
-function validateJokeContent(content: unknown) {
-  if (typeof content !== "string" || content.length < 4) {
+type LoaderData = { loggedIn: boolean };
+
+export let loader: LoaderFunction = async ({ request }) => {
+  let userId = await getUserId(request);
+  let data: LoaderData = { loggedIn: Boolean(userId) };
+  return json(data);
+};
+
+function validateJokeContent(content: string) {
+  if (content.length < 10) {
     return `That joke is too short`;
   }
 }
 
-function validateJokeName(name: unknown) {
-  if (typeof name !== "string" || name.length < 2) {
+function validateJokeName(name: string) {
+  if (name.length < 2) {
     return `That joke's name is too short`;
   }
 }
@@ -24,14 +32,6 @@ type ActionData = {
     name: string;
     content: string;
   };
-};
-
-type LoaderData = { loggedIn: boolean };
-
-export let loader: LoaderFunction = async ({ request }) => {
-  let userId = await getUserId(request);
-  let data: LoaderData = { loggedIn: Boolean(userId) };
-  return json(data);
 };
 
 export let action: ActionFunction = async ({
@@ -55,7 +55,7 @@ export let action: ActionFunction = async ({
   return redirect(`/jokes/${joke.id}`);
 };
 
-export default function JokeScreen() {
+export default function NewJokeRoute() {
   let data = useLoaderData<LoaderData>();
   let actionData = useActionData<ActionData | undefined>();
 
@@ -79,6 +79,7 @@ export default function JokeScreen() {
               type="text"
               defaultValue={actionData?.fields?.name}
               name="name"
+              aria-invalid={Boolean(actionData?.fieldErrors?.name)}
               aria-describedby={
                 actionData?.fieldErrors?.name ? "name-error" : undefined
               }
@@ -96,6 +97,10 @@ export default function JokeScreen() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
+              aria-invalid={Boolean(actionData?.fieldErrors?.content)}
+              aria-describedby={
+                actionData?.fieldErrors?.content ? "content-error" : undefined
+              }
             />
           </label>
           {actionData?.fieldErrors?.content ? (

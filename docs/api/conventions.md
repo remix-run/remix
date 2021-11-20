@@ -493,13 +493,20 @@ Actions have the the very same API as loaders, the only difference is when they 
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
+import { redirect, Form } from "remix";
+import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
+import { TodoList } from "~/components/TodoList";
+
 export async function loader() {
   return fakeGetTodos();
 }
 
 export async function action({ request }) {
   let body = await request.formData();
-  return fakeCreateTodo({ title: body.get("title") });
+  let todo = await fakeCreateTodo({
+    title: body.get("title")
+  });
+  return redirect(`/todos/${todo.id}`);
 }
 
 export default function Todos() {
