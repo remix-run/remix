@@ -95,6 +95,8 @@ async function updateChangesVersion(version, date) {
  */
 async function updateExamplesPackageConfig(example, transform) {
   let file = packageJson(example, "examples");
+  if (!(await fileExists(file))) return;
+
   let json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
@@ -224,3 +226,16 @@ run(process.argv.slice(2)).then(
     process.exit(1);
   }
 );
+
+/**
+ * @param {string} filePath
+ * @returns {Promise<boolean>}
+ */
+async function fileExists(filePath) {
+  try {
+    let stat = await fsp.stat(filePath);
+    return stat.code !== "ENOENT";
+  } catch (_) {
+    return false;
+  }
+}
