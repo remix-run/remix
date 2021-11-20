@@ -1,7 +1,7 @@
 import { Link, Meta, Links, Scripts, LiveReload, useCatch } from "remix";
-import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
+import type { LinksFunction, LoaderFunction } from "remix";
 import { Outlet } from "react-router-dom";
-import { getUser, logout } from "./utils/session.server";
+import { getUser } from "./utils/session.server";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";

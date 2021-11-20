@@ -28,7 +28,7 @@ export default function JokesDefaultScreen() {
 
   return (
     <div>
-      <p>There's no jokes to display.</p>
+      <p>There are no jokes to display.</p>
       <Link to="new">Add your own</Link>
     </div>
   );

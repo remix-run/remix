@@ -1,10 +1,10 @@
 import type { LoaderFunction, LinksFunction } from "remix";
 import { Form } from "remix";
-import { Outlet, useCatch, useLoaderData, Link, NavLink, json } from "remix";
+import { Outlet, useCatch, useLoaderData, Link, json } from "remix";
 import { db } from "~/utils/db.server";
 import type { User } from "@prisma/client";
 import { getUser } from "~/utils/session.server";
-import stylesUrl from "../styles/jokes-layout.css";
+import stylesUrl from "../styles/jokes.css";
 
 interface LoaderData {
   user: User | null;
@@ -46,23 +46,12 @@ function Header({ user }: { user: User | null }) {
   return (
     <header className="jokes-header">
       <div className="container">
-        <div className="home-link">
+        <h1 className="home-link">
           <Link to="/" title="Remix Jokes" aria-label="Remix Jokes">
             <span className="logo">🤪</span>
             <span className="logo-medium">J🤪KES</span>
           </Link>
-        </div>
-        <nav>
-          <ul>
-            <li>
-              <NavLink to="/jokes">Read Jokes</NavLink>
-            </li>
-            <li>
-              <NavLink to="/about">About</NavLink>
-            </li>
-            <li>{user ? null : <NavLink to="/login">Login</NavLink>}</li>
-          </ul>
-        </nav>
+        </h1>
         {user ? (
           <div className="user-info">
             <span>{`Hi ${user.username}`}</span>
@@ -72,7 +61,9 @@ function Header({ user }: { user: User | null }) {
               </button>
             </Form>
           </div>
-        ) : null}
+        ) : (
+          <Link to="/login">Login</Link>
+        )}
       </div>
     </header>
   );

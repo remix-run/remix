@@ -7,7 +7,9 @@ order: 2
 
 You want to learn Remix? You're in the right place. This tutorial is the fast-track to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
-We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing.
+We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
+
+We'll be linking to various docs (Remix docs as well as web docs on MDN) throughout the tutorial. If you're ever stuck, make sure you check into any docs links you may have skipped.
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when your using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
 
@@ -158,32 +160,49 @@ Now you should also have a `.cache/` directory (something used internally by Rem
 npm start
 ```
 
-You should be presented with something that looks a bit like this:
+This will start the server and output this:
+
+```
+Remix App Server started at http://localhost:3000
+```
+
+Open up that URL and you should be presented with something that looks a bit like this:
 
 ![The Remix Starter App](/docs-images/jokes-tutorial/remix-starter.png)
 
-💿 Feel free to read a bit of what's in there and explore the code if you like. I'll be here when you get back.
+Feel free to read a bit of what's in there and explore the code if you like. I'll be here when you get back. You done? Ok, sweet.
 
-💿 You done? Ok, sweet, now delete all this stuff:
+💿 Now stop the server and delete all this stuff:
 
 - `app/routes`
 - `app/styles`
 - `app/data.server.tsx`
 
-💿 Now, replace the contents of `app/root.tsx` with this:
+💿 Replace the contents of `app/root.tsx` with this:
 
-```tsx
+```tsx filename="app/root.tsx"
+import { LiveReload } from "remix";
+
 export default function App() {
   return (
     <html>
       <head>
         <title>Remix: It's funny!</title>
       </head>
-      <body>Hello world</body>
+      <body>
+        Hello world
+        {process.env.NODE_ENV === "development" ? (
+          <LiveReload />
+        ) : null}
+      </body>
     </html>
   );
 }
 ```
+
+<docs-info>
+  The `<LiveReload />` component is useful during development to auto-refresh our browser whenever we make a change. Because our build server is so fast, the reload will often happen before you even notice ⚡
+</docs-info>
 
 Your `app/` directory should now look like this:
 
@@ -202,4 +221,224 @@ Great, now we're ready to start adding stuff back.
 
 ## Routes
 
-The first thing we're going to add
+The first thing we want to do is get our routing structure set up. Here are all the routes our app is going to have:
+
+```
+/
+/jokes
+/jokes/:jokeId
+/jokes/new
+/login
+```
+
+You can programmatically create routes via the [`remix.config.js`](../api/app#remixconfigjs), but the more common way to create the routes is through the file system. This is called "file-based routing."
+
+Each of file we put in the `app/routes` directory is called a ["Route Module"](../api/app#route-module-api) and by following [the route filename convention](../api/app#route-filenames) (like that weird `app/routes/$jokeId.tsx` file we're going to make), we can create the routing URL structure we're looking for. Remix uses React Router under the hood to handle this routing.
+
+💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
+
+<details>
+
+<summary>For example</summary>
+
+```tsx filename="app/routes/index.tsx"
+export default function IndexRoute() {
+  return <div>Hello Index Route</div>;
+}
+```
+
+</details>
+
+React Router supports "nested routing" which means we have parent-child relationships in our routes. The `app/routes/index.tsx` is a child of the `app/root.tsx` route. In nested routing, parents are responsible for laying out their children.
+
+💿 Update the `app/root.tsx` to position children. You'll do this with the `<Outlet />` component from `remix`:
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/root.tsx" lines="1,10"
+import { LiveReload, Outlet } from "remix";
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <title>Remix: It's funny!</title>
+      </head>
+      <body>
+        <Outlet />
+        {process.env.NODE_ENV === "development" ? (
+          <LiveReload />
+        ) : null}
+      </body>
+    </html>
+  );
+}
+```
+
+</details>
+
+💿 With that set up, go ahead and start the dev server up with this command:
+
+```sh
+npm run dev
+```
+
+That will watch your filesystem for changes to rebuild the site and thanks to the `<LiveReload />` component your browser will refresh.
+
+💿 Go ahead and open up the site again and you should be presented with the greeting from the index route.
+
+![A greeting from the index route](/docs-images/jokes-tutorial/index-route-greeting.png)
+
+Great! Next let's handle the `/jokes` route.
+
+💿 Create a new route at `app/routes/jokes.tsx` (keep in mind that this will be a parent route, so you'll want to use an `<Outlet />` route as well).
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/routes/jokes.tsx"
+import { Outlet } from "remix";
+
+export default function JokesRoute() {
+  return (
+    <div>
+      <h1>J🤪KES</h1>
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+</details>
+
+You should be presented with that when you go to [`/jokes`](http://localhost:3000/jokes). Now, in that `<Outlet />` we want to render out some random jokes in the "index route".
+
+💿 Create a route at `app/routes/jokes/index.tsx`
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/routes/jokes/index.tsx"
+export default function JokesIndexRoute() {
+  return (
+    <div>
+      <p>Here's a random joke:</p>
+      <p>
+        I was wondering why the frisbee was getting bigger,
+        then it hit me.
+      </p>
+    </div>
+  );
+}
+```
+
+</details>
+
+Now if you refresh [`/jokes`](http://localhost:3000/jokes), you'll get the content in the `app/routes/jokes.tsx` as well as the `app/routes/jokes/index.tsx`. Here's what mine looks like:
+
+![A random joke on the jokes page: "I was wondering why the frisbee was getting bigger, then it hit me"](/docs-images/jokes-tutorial/random-joke.png)
+
+And notice that each of those route modules is only concerned with their part of the URL. Neat right!? Nested routing is pretty nice, and we're only just getting started. Let's keep going.
+
+💿 Next, let's handle the `/jokes/new` route. I'll bet you can figure out how to do that 😄. Remember we're going to allow people to create jokes on this page, so you'll want to render a `form` with `name` and `content` fields.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/routes/jokes/new.tsx"
+export default function NewJokeScreen() {
+  return (
+    <div>
+      <p>Add your own hilarious joke</p>
+      <form method="post">
+        <div>
+          <label>
+            Name: <input type="text" name="name" />
+          </label>
+        </div>
+        <div>
+          <label>
+            Content: <textarea name="content" />
+          </label>
+        </div>
+        <button type="submit" className="button">
+          Add
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+</details>
+
+Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should display your form:
+
+![A new joke form](/docs-images/jokes-tutorial/new-joke.png)
+
+### Parameterized Routes
+
+Let's add one more route. This one is unique. Soon we're going to add a database that stores our jokes by an ID. So we want a parameterized route: `/jokes/:jokeId` where `:jokeId` is anything, and then we can lookup the `:jokeId` part of the URL in the database to display the right joke.
+
+💿 Create a new route at `app/routes/jokes/$jokeId.tsx`. Don't worry too much about what it displays for now (we don't have a database set up yet!):
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/routes/jokes/$jokeId.tsx"
+export default function JokeRoute() {
+  return (
+    <div>
+      <p>Here's your hilarious joke:</p>
+      <p>
+        Why don't you find hippopotamuses hiding in trees?
+        They're really good at it.
+      </p>
+    </div>
+  );
+}
+```
+
+</details>
+
+Great, so now going to [`/jokes/anything-you-want`](http://localhost:3000/jokes/hippos) should display what you just created (in addition to the parent routes):
+
+![A new joke form](/docs-images/jokes-tutorial/param-route.png)
+
+Great! We've got our primary routes all set up!
+
+## Styling
+
+To get CSS on the page, we use `<link rel="stylesheet" href="/path-to-file.css" />`. This is how you style your Remix applications as well, but Remix makes it much easier than just throwing `link` tags all over the place. Remix brings the power of it's Nested Routing support to CSS and allows you to associate `link`s to routes. When the route is active, the `link` is on the page and the CSS applies. When the route is not active (the user navigates away), the `link` tag is removed and the CSS no longer applies.
+
+You do this by exporting a [`links`](../api/app#links) function in your route module. Let's get the homepage styled. You can put your CSS files anywhere you like within the `app` directory. We'll put ours in `app/styles/`.
+
+💿 Create the following css files in `app/styles/`: `global.css`, `global-large.css`, `global-medium.css`, `index.css`, and `jokes.css`.
+
+💿 Add a `links` export to `app/root.tsx`, `app/routes/index.tsx`, and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each page will have its own CSS file(s)).
+
+<docs-warning>
+  The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?
+</docs-warning>
+
+<docs-warning>
+  The `global-large.css` and `global-medium.css` files are for media query-based CSS. Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
+</docs-warning>
+
+<details>
+
+<summary>CSS Files:</summary>
+
+```tsx filename="app/styles/"
+
+```
+
+</details>

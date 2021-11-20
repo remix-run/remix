@@ -59,7 +59,6 @@ export default function JokeScreen() {
   let data = useLoaderData<LoaderData>();
   let actionData = useActionData<ActionData | undefined>();
 
-  console.log(data.loggedIn);
   if (!data.loggedIn) {
     return (
       <div>

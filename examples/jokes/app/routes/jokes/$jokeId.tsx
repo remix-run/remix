@@ -61,7 +61,7 @@ export default function JokeScreen() {
 
   return (
     <div>
-      <p>Here's your hilarious joke</p>
+      <p>Here's your hilarious joke:</p>
       <p>{data.joke.content}</p>
       <Link to=".">{data.joke.name}</Link>
       {data.isOwner ? (
