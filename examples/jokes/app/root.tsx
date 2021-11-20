@@ -1,7 +1,6 @@
 import { Link, Meta, Links, Scripts, LiveReload, useCatch } from "remix";
-import type { LinksFunction, LoaderFunction } from "remix";
+import type { LinksFunction } from "remix";
 import { Outlet } from "react-router-dom";
-import { getUser } from "./utils/session.server";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -21,11 +20,6 @@ export let links: LinksFunction = () => {
       media: "screen and (min-width: 1024px)",
     },
   ];
-};
-
-export let loader: LoaderFunction = async ({ request }) => {
-  const user = await getUser(request);
-  return { user };
 };
 
 function Document({

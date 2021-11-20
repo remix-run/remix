@@ -53,7 +53,9 @@ With that, I think we're ready to get started!
 ## Generating a new Remix project
 
 <docs-info>
-  If you're planning on using StackBlitz, you can skip this first part, we've got a StackBlitz project already set up for you [here]()
+
+If you're planning on using StackBlitz, you can skip this first part, we've got a StackBlitz project already set up for you [here]()
+
 </docs-info>
 
 💿 Open your terminal and run this command:
@@ -63,7 +65,9 @@ npx create-remix@latest
 ```
 
 <docs-info>
-  This may ask you whether you want to install `create-remix` to run the command. Enter `y`. It will only be installed temporarily to run the setup script.
+
+This may ask you whether you want to install `create-remix` to run the command. Enter `y`. It will only be installed temporarily to run the setup script.
+
 </docs-info>
 
 When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
@@ -83,7 +87,9 @@ R E M I X
 ```
 
 <docs-info>
-  Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured Express.js-based Node.js server. It's the simplest option, so that's what we're going with for this tutorial. Feel free to experiment in the future!
+
+Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured Express.js-based Node.js server. It's the simplest option, so that's what we're going with for this tutorial. Feel free to experiment in the future!
+
 </docs-info>
 
 Once the `npm install` has completed, we'll change into the `remix-jokes` directory:
@@ -180,7 +186,7 @@ Feel free to read a bit of what's in there and explore the code if you like. I'l
 
 💿 Replace the contents of `app/root.tsx` with this:
 
-```tsx filename="app/root.tsx"
+```tsx filename=app/root.tsx
 import { LiveReload } from "remix";
 
 export default function App() {
@@ -201,7 +207,9 @@ export default function App() {
 ```
 
 <docs-info>
-  The `<LiveReload />` component is useful during development to auto-refresh our browser whenever we make a change. Because our build server is so fast, the reload will often happen before you even notice ⚡
+
+The `<LiveReload />` component is useful during development to auto-refresh our browser whenever we make a change. Because our build server is so fast, the reload will often happen before you even notice ⚡
+
 </docs-info>
 
 Your `app/` directory should now look like this:
@@ -241,7 +249,7 @@ Each of file we put in the `app/routes` directory is called a ["Route Module"](.
 
 <summary>For example</summary>
 
-```tsx filename="app/routes/index.tsx"
+```tsx filename=app/routes/index.tsx
 export default function IndexRoute() {
   return <div>Hello Index Route</div>;
 }
@@ -257,7 +265,7 @@ React Router supports "nested routing" which means we have parent-child relation
 
 <summary>For example:</summary>
 
-```tsx filename="app/root.tsx" lines="1,10"
+```tsx filename=app/root.tsx lines=[1,10]
 import { LiveReload, Outlet } from "remix";
 
 export default function App() {
@@ -299,7 +307,7 @@ Great! Next let's handle the `/jokes` route.
 
 <summary>For example:</summary>
 
-```tsx filename="app/routes/jokes.tsx"
+```tsx filename=app/routes/jokes.tsx
 import { Outlet } from "remix";
 
 export default function JokesRoute() {
@@ -324,7 +332,7 @@ You should be presented with that when you go to [`/jokes`](http://localhost:300
 
 <summary>For example:</summary>
 
-```tsx filename="app/routes/jokes/index.tsx"
+```tsx filename=app/routes/jokes/index.tsx
 export default function JokesIndexRoute() {
   return (
     <div>
@@ -352,7 +360,7 @@ And notice that each of those route modules is only concerned with their part of
 
 <summary>For example:</summary>
 
-```tsx filename="app/routes/jokes/new.tsx"
+```tsx filename=app/routes/jokes/new.tsx
 export default function NewJokeScreen() {
   return (
     <div>
@@ -393,7 +401,7 @@ Let's add one more route. This one is unique. Soon we're going to add a database
 
 <summary>For example:</summary>
 
-```tsx filename="app/routes/jokes/$jokeId.tsx"
+```tsx filename=app/routes/jokes/$jokeId.tsx
 export default function JokeRoute() {
   return (
     <div>
@@ -443,7 +451,7 @@ body {
 
 <summary>For example:</summary>
 
-```tsx filename="app/routes/index.tsx" lines="1-6"
+```tsx filename=app/routes/index.tsx lines=[1-6]
 import type { LinksFunction } from "remix";
 import stylesUrl from "../styles/index.css";
 
@@ -468,7 +476,7 @@ So we need some way to get the `link` exports from all active routes and add `<l
 
 <summary>For example:</summary>
 
-```tsx filename="app/root.tsx" lines="1,8"
+```tsx filename=app/root.tsx lines=[1,8]
 import { Links, LiveReload, Outlet } from "remix";
 
 export default function App() {
@@ -502,34 +510,48 @@ Hooray! But I want to call out something important and exciting. You know how th
 🤯 What is this? Why aren't the CSS rules applied? Did the `body` get removed or something?! Nope. If you open the Elements tab of the dev tools you'll notice that the link tag isn't there at all!
 
 <docs-info>
-  This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like and so long as you check each route your file is linked on you'll know that you haven't impacted other pages! 🔥
+
+This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like and so long as you check each route your file is linked on you'll know that you haven't impacted other pages! 🔥
+
+This also means your CSS files can be cached long-term and your CSS is naturally lazy-loaded. Performance FTW ⚡
+
 </docs-info>
 
 That's pretty much all there is to it for styling with the tutorial. The rest is just writing all the CSS and stuff and you're welcome to do that if you want, but I'm going to let you skip that and I'll just give you URLs you can get the CSS from and you can either download and use it in your project or reference it directly (it's all just URLs to CSS files in the end anyway).
 
 💿 Add/update the `links` export to `app/root.tsx`, `app/routes/index.tsx`, and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each page will have its own CSS file(s)). Here are the URLs:
 
-- [global.css](/jokes-tutorial/styling/global.css)
-- [global-large.css](/jokes-tutorial/styling/global-large.css)
-- [global-medium.css](/jokes-tutorial/styling/global-medium.css)
-- [index.css](/jokes-tutorial/styling/index.css)
-- [jokes.css](/jokes-tutorial/styling/jokes.css)
+<!-- These can't be regular links because they're not routes, they're files. -->
+
+<ul>
+<li><a data-noprefetch href="/jokes-tutorial/styling/global.css">global.css</a></li>
+<li><a data-noprefetch href="/jokes-tutorial/styling/global-large.css">global-large.css</a></li>
+<li><a data-noprefetch href="/jokes-tutorial/styling/global-medium.css">global-medium.css</a></li>
+<li><a data-noprefetch href="/jokes-tutorial/styling/index.css">index.css</a></li>
+<li><a data-noprefetch href="/jokes-tutorial/styling/jokes.css">jokes.css</a></li>
+</ul>
 
 As we work through the rest of the tutorial, you may want to check the class names in those CSS files so you can take full advantage of that CSS.
 
 <docs-info>
-  The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?
+
+The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?
+
 </docs-info>
 
+The `global-large.css` and `global-medium.css` files are for media query-based CSS.
+
 <docs-info>
-  The `global-large.css` and `global-medium.css` files are for media query-based CSS. Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
+
+Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
+
 </docs-info>
 
 <details>
 
 <summary>For example:</summary>
 
-```tsx filename="app/root.tsx" lines="1,4-21"
+```tsx filename=app/root.tsx lines=[1,4-21]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet } from "remix";
 
@@ -570,7 +592,7 @@ export default function App() {
 }
 ```
 
-```tsx filename="app/routes/index.tsx" lines="1-10"
+```tsx filename=app/routes/index.tsx lines=[1-10]
 import type { LinksFunction } from "remix";
 
 export let links: LinksFunction = () => {
@@ -587,7 +609,7 @@ export default function IndexRoute() {
 }
 ```
 
-```tsx filename="app/routes/index.tsx" lines="1,4-11"
+```tsx filename=app/routes/index.tsx lines=[1,4-11]
 import type { LinksFunction } from "remix";
 import { Outlet } from "remix";
 
@@ -615,3 +637,329 @@ export default function JokesRoute() {
 </details>
 
 ## Database
+
+Most real-world applications require some form of data persistence. In our case, we want to save our jokes to a database so people can laugh at our hilarity and even submit their own (coming soon in the authentication section!).
+
+You can use any persistence solution you like with Remix, Firebase, Supabase, Airtable, Hasura, Google Spreadsheets, FaunaDB, a custom PostgreSQL, or even your backend team's REST/GraphQL APIs. Seriously. Whatever you want.
+
+### Set up Prisma
+
+In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.html) database. Effectively, it's a database that lives in a file on your computer. It's surprisingly capable. And what makes it better is it's supported by [Prisma](https://www.prisma.io/), our favorite database ORM. It's a great place to start if you're not sure what database to use.
+
+We're going to use two packages for this, `prisma` which we use during development to interact with our database and schema, and `@prisma/client` which we use during runtime to make queries from our application code.
+
+💿 Install prisma:
+
+```sh
+npm install --save-dev prisma
+npm install @prisma/client
+```
+
+💿 Now we can initialize prisma with sqlite:
+
+```sh
+npx prisma init --datasource-provider sqlite
+```
+
+That gives us this output:
+
+```
+✔ Your Prisma schema was created at prisma/schema.prisma
+  You can now open it in your favorite editor.
+
+warn You already have a .gitignore. Don't forget to exclude .env to not commit any secret.
+
+Next steps:
+1. Set the DATABASE_URL in the .env file to point to your existing database. If your database has no tables yet, read https://pris.ly/d/getting-started
+2. Run prisma db pull to turn your database schema into a Prisma schema.
+3. Run prisma generate to generate the Prisma Client. You can then start querying your database.
+
+More information in our documentation:
+https://pris.ly/d/getting-started
+```
+
+Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
+
+```ts lines=[13-19]
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Joke {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  name       String
+  content    String
+}
+```
+
+💿 With that in place, run this:
+
+```sh
+npx prisma db push
+```
+
+This command will give you this output:
+
+```
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "dev.db" at "file:./dev.db"
+
+🚀  Your database is now in sync with your schema. Done in 194ms
+
+✔ Generated Prisma Client (3.5.0) to ./node_modules/
+@prisma/client in 26ms
+```
+
+This command did a few things. For one, it created our database file in `prisma/dev.db`. Then it pushed all the necessary changes to our database to match the schema we provided. Finally it generated Prisma's TypeScript types so we'll get stellar autocomplete and type checking as we use it's API for interacting with our database.
+
+Next, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll just give this to you (don't worry, we'll get back to remix soon):
+
+💿 Copy this into a new file called `prisma/seed.ts`
+
+```ts filename=prisma/seed.ts
+import { PrismaClient } from "@prisma/client";
+let db = new PrismaClient();
+
+async function seed() {
+  await Promise.all(
+    getJokes().map(joke => {
+      return db.joke.create({ data: joke });
+    })
+  );
+}
+
+seed();
+
+function getJokes() {
+  // shout-out to https://icanhazdadjoke.com/
+
+  return [
+    {
+      name: "Road worker",
+      content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`
+    },
+    {
+      name: "Frisbee",
+      content: `I was wondering why the frisbee was getting bigger, then it hit me.`
+    },
+    {
+      name: "Trees",
+      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`
+    },
+    {
+      name: "Skeletons",
+      content: `Why don't skeletons ride roller coasters? They don't have the stomach for it.`
+    },
+    {
+      name: "Hippos",
+      content: `Why don't you find hippopotamuses hiding in trees? They're really good at it.`
+    },
+    {
+      name: "Dinner",
+      content: `What did one plate say to the other plate? Dinner is on me!`
+    },
+    {
+      name: "Elevator",
+      content: `My first time using an elevator was an uplifting experience. The second time let me down.`
+    }
+  ];
+}
+```
+
+Feel free to add your own jokes if you like.
+
+Now we just need to run this file. We wrote it in TypeScript to get type safety (this is much more useful as our app and datamodels grow in complexity). So we'll need a way to run it.
+
+💿 Install `esbuild-register` as a dev dependency:
+
+```sh
+npm install --save-dev esbuild-register
+```
+
+💿 And now we can run our `seed.ts` file with that:
+
+```sh
+node --require esbuild-register prisma/seed.ts
+```
+
+Now our database has those jokes in it. No joke!
+
+But I don't want to have to remember to run that script any time I reset the database. Luckily, we don't have to!
+
+💿 Add this to your `package.json`:
+
+```json
+// ...
+  "prisma": {
+    "seed": "node --require esbuild-register prisma/seed.ts"
+  },
+  "scripts": {
+// ...
+```
+
+Now, whenever we reset the database, prisma will call our seeding file as well.
+
+### Connect to the database
+
+Ok, one last thing we need to do is connect to the database in our app. We do this at the top of our `prisma/seed.ts` file:
+
+```ts
+import { PrismaClient } from "@prisma/client";
+let db = new PrismaClient();
+```
+
+This works just fine, but the problem is, during development, we don't want to close down and completely restart our server every time we make a server-side change. So `@remix-run/serve` actually rebuilds our code and requires it brand new. The problem here is that every time we make a code change, we'll make a new connection to the database and eventually we'll run out of connections! This is such a common problem with database-accessing apps that Prisma has a warning for it:
+
+<docs-warn>Warning: 10 Prisma Clients are already running</docs-warn>
+
+So we've got a little bit of extra work to do to avoid this development time problem.
+
+Note that this isn't a remix-only problem. Any time you have "live reload" of server code, you're going to have to either disconnect and reconnect to databases (which can be slow) or do the workaround I'm about to show you.
+
+💿 Copy this into a new file called `app/utils/db.server.ts`
+
+```ts filename=app/utils/db.server.ts
+import { PrismaClient } from "@prisma/client";
+
+let db: PrismaClient;
+
+declare global {
+  var __db: PrismaClient | undefined;
+}
+
+// this is needed because in development we don't want to restart
+// the server with every change, but we want to make sure we don't
+// create a new connection to the DB with every change either.
+if (process.env.NODE_ENV === "production") {
+  db = new PrismaClient();
+  db.$connect();
+} else {
+  if (!global.__db) {
+    global.__db = new PrismaClient();
+    global.__db.$connect();
+  }
+  db = global.__db;
+}
+
+export { db };
+```
+
+I'll leave analysis of this code as an exercise for the reader because again, this has nothing to do with Remix directly.
+
+The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional, because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes the compiler can get confused while resolving dependencies. So adding the `.server` in the filename acts as a sort of boundary for the compiler.
+
+### Read from the database in a Remix loader
+
+Ok, ready to get back to writing Remix code? Me too!
+
+Our goal is to put a list of jokes on the `/jokes` route so we can have a list of links to jokes people can choose from. In Remix, each route module is responsible for getting its own data. So if we want data on the `/jokes` route, then we'll be updating the `app/routes/jokes.tsx` file.
+
+To _load_ data in a Remix route module, you use a [`loader`](../api/app#loader). This is simply an `async` function you export that returns a response for the data your component needs. And then the component gets it using the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
+
+```tsx
+import type { LoaderFunction } from "remix";
+import type { User } from "@prisma/client";
+import { db } from "~/utils/db.server";
+
+type LoaderData = { users: Array<User> };
+export let loader: LoaderFunction = () => {
+  let data: LoaderData = {
+    users: await prisma.user.findMany()
+  };
+  return { data };
+};
+
+export default function Users() {
+  let data = useLoaderData<LoaderData>();
+  return (
+    <ul>
+      {data.map(user => (
+        <li>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Does that give you a good idea of what to do here? If not, you can take a look at the example 😄
+
+<docs-info>
+
+Remix and the tsconfig.json you get from the starter template are configured to allow imports from the `app/` directory via `~` as demonstrated above so you don't have `../../` all over the place.
+
+</docs-info>
+
+💿 Update the `app/routes/jokes.tsx` route module to load jokes from our database and render a list of links to the jokes.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes.tsx lines=[4-5,8,19-30,33,38-44]
+import {
+  Link,
+  LinksFunction,
+  LoaderFunction,
+  useLoaderData
+} from "remix";
+import { Outlet } from "remix";
+import { db } from "~/utils/db.server";
+
+export let links: LinksFunction = () => {
+  return [
+    {
+      rel: "stylesheet",
+      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/jokes.css"
+    }
+  ];
+};
+
+type LoaderData = {
+  jokeListItems: Array<{ id: string; name: string }>;
+};
+
+export let loader: LoaderFunction = async () => {
+  let data: LoaderData = {
+    jokeListItems: await db.joke.findMany({
+      select: { id: true, name: true }
+    })
+  };
+  return data;
+};
+
+export default function JokesRoute() {
+  let data = useLoaderData<LoaderData>();
+  return (
+    <div>
+      <h1>J🤪KES</h1>
+      <main>
+        <ul>
+          {data.jokeListItems.map(joke => (
+            <li key={joke.id}>
+              <Link to={joke.id}>{joke.name}</Link>
+            </li>
+          ))}
+        </ul>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+</details>
+
+And here's what we have with that now:
+
+![List of links to jokes](/jokes-tutorial/img/jokes-loaded.png)
