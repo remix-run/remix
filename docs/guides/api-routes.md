@@ -99,7 +99,7 @@ export function loader({ params }) {
 }
 ```
 
-If a route is not called by Remix UI (like `<Link>` or `useFetcher`), and does not export a default component, it is now a general purpose Resource Route. If called with `GET`, the loader's response is returned. If called with `POST`, the action's response is called.
+If a route is not called by Remix UI (like `<Link>` or `useFetcher`), and does not export a default component, it is now a general purpose Resource Route. If called with `GET`, the loader's response is returned. If called with `POST`, `PUT`, `PATCH` `DELETE`, the action's response is returned.
 
 Here are a handful of use cases to get you thinking.
 
