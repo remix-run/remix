@@ -168,7 +168,7 @@ Remix App Server started at http://localhost:3000
 
 Open up that URL and you should be presented with something that looks a bit like this:
 
-![The Remix Starter App](/docs-images/jokes-tutorial/remix-starter.png)
+![The Remix Starter App](/jokes-tutorial/img/remix-starter.png)
 
 Feel free to read a bit of what's in there and explore the code if you like. I'll be here when you get back. You done? Ok, sweet.
 
@@ -215,7 +215,7 @@ app
 
 And the app itself should greet the world:
 
-![Bare bones hello world app](/docs-images/jokes-tutorial/bare-bones.png)
+![Bare bones hello world app](/jokes-tutorial/img/bare-bones.png)
 
 Great, now we're ready to start adding stuff back.
 
@@ -289,7 +289,7 @@ That will watch your filesystem for changes to rebuild the site and thanks to th
 
 💿 Go ahead and open up the site again and you should be presented with the greeting from the index route.
 
-![A greeting from the index route](/docs-images/jokes-tutorial/index-route-greeting.png)
+![A greeting from the index route](/jokes-tutorial/img/index-route-greeting.png)
 
 Great! Next let's handle the `/jokes` route.
 
@@ -342,7 +342,7 @@ export default function JokesIndexRoute() {
 
 Now if you refresh [`/jokes`](http://localhost:3000/jokes), you'll get the content in the `app/routes/jokes.tsx` as well as the `app/routes/jokes/index.tsx`. Here's what mine looks like:
 
-![A random joke on the jokes page: "I was wondering why the frisbee was getting bigger, then it hit me"](/docs-images/jokes-tutorial/random-joke.png)
+![A random joke on the jokes page: "I was wondering why the frisbee was getting bigger, then it hit me"](/jokes-tutorial/img/random-joke.png)
 
 And notice that each of those route modules is only concerned with their part of the URL. Neat right!? Nested routing is pretty nice, and we're only just getting started. Let's keep going.
 
@@ -381,7 +381,7 @@ export default function NewJokeScreen() {
 
 Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should display your form:
 
-![A new joke form](/docs-images/jokes-tutorial/new-joke.png)
+![A new joke form](/jokes-tutorial/img/new-joke.png)
 
 ### Parameterized Routes
 
@@ -411,7 +411,7 @@ export default function JokeRoute() {
 
 Great, so now going to [`/jokes/anything-you-want`](http://localhost:3000/jokes/hippos) should display what you just created (in addition to the parent routes):
 
-![A new joke form](/docs-images/jokes-tutorial/param-route.png)
+![A new joke form](/jokes-tutorial/img/param-route.png)
 
 Great! We've got our primary routes all set up!
 
@@ -421,24 +421,197 @@ To get CSS on the page, we use `<link rel="stylesheet" href="/path-to-file.css" 
 
 You do this by exporting a [`links`](../api/app#links) function in your route module. Let's get the homepage styled. You can put your CSS files anywhere you like within the `app` directory. We'll put ours in `app/styles/`.
 
-💿 Create the following css files in `app/styles/`: `global.css`, `global-large.css`, `global-medium.css`, `index.css`, and `jokes.css`.
+We'll start off by just styling the home page (the index route `/`).
 
-💿 Add a `links` export to `app/root.tsx`, `app/routes/index.tsx`, and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each page will have its own CSS file(s)).
+💿 Create `app/styles/index.css` and stick this CSS in it:
 
-<docs-warning>
-  The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?
-</docs-warning>
+```css
+body {
+  color: hsl(0, 0%, 100%);
+  background-image: radial-gradient(
+    circle,
+    rgba(152, 11, 238, 1) 0%,
+    rgba(118, 15, 181, 1) 35%,
+    rgba(58, 13, 85, 1) 100%
+  );
+}
+```
 
-<docs-warning>
-  The `global-large.css` and `global-medium.css` files are for media query-based CSS. Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
-</docs-warning>
+💿 Now update `app/routes/index.tsx` to import that css file. Then add a `links` export (as described in [the documentation](../api/app#links)) to add that link to the page.
 
 <details>
 
-<summary>CSS Files:</summary>
+<summary>For example:</summary>
 
-```tsx filename="app/styles/"
+```tsx filename="app/routes/index.tsx" lines="1-6"
+import type { LinksFunction } from "remix";
+import stylesUrl from "../styles/index.css";
 
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+export default function IndexRoute() {
+  return <div>Hello Index Route</div>;
+}
 ```
 
 </details>
+
+Now if you go to [`/`](http://localhost:3000/) you may be a bit disappointed. Our beautiful styles aren't applyed! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
+
+So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`](../api/remix#link) component.
+
+💿 Go ahead and add the Remix `<Links />` component to `app/root.tsx` within the `<head>`.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/root.tsx" lines="1,8"
+import { Links, LiveReload, Outlet } from "remix";
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <title>Remix: It's funny!</title>
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        {process.env.NODE_ENV === "development" ? (
+          <LiveReload />
+        ) : null}
+      </body>
+    </html>
+  );
+}
+```
+
+</details>
+
+Great, now check [`/`](http://localhost:3000/) again and it should be nice and styled for you:
+
+![The homepage with a purple gradient background and white text with the words "Hello Index Route"](/jokes-tutorial/img/homepage-styles.png)
+
+Hooray! But I want to call out something important and exciting. You know how the CSS we wrote styles the `body` element? What would you expect to happen on the [`/jokes`](http://localhost:3000/jokes) route? Go ahead and check it out.
+
+![The jokes page with no background gradient](/jokes-tutorial/img/jokes-no-styles.png)
+
+🤯 What is this? Why aren't the CSS rules applied? Did the `body` get removed or something?! Nope. If you open the Elements tab of the dev tools you'll notice that the link tag isn't there at all!
+
+<docs-info>
+  This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like and so long as you check each route your file is linked on you'll know that you haven't impacted other pages! 🔥
+</docs-info>
+
+That's pretty much all there is to it for styling with the tutorial. The rest is just writing all the CSS and stuff and you're welcome to do that if you want, but I'm going to let you skip that and I'll just give you URLs you can get the CSS from and you can either download and use it in your project or reference it directly (it's all just URLs to CSS files in the end anyway).
+
+💿 Add/update the `links` export to `app/root.tsx`, `app/routes/index.tsx`, and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each page will have its own CSS file(s)). Here are the URLs:
+
+- [global.css](/jokes-tutorial/styling/global.css)
+- [global-large.css](/jokes-tutorial/styling/global-large.css)
+- [global-medium.css](/jokes-tutorial/styling/global-medium.css)
+- [index.css](/jokes-tutorial/styling/index.css)
+- [jokes.css](/jokes-tutorial/styling/jokes.css)
+
+As we work through the rest of the tutorial, you may want to check the class names in those CSS files so you can take full advantage of that CSS.
+
+<docs-info>
+  The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?
+</docs-info>
+
+<docs-info>
+  The `global-large.css` and `global-medium.css` files are for media query-based CSS. Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
+</docs-info>
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename="app/root.tsx" lines="1,4-21"
+import type { LinksFunction } from "remix";
+import { Links, LiveReload, Outlet } from "remix";
+
+export let links: LinksFunction = () => {
+  return [
+    {
+      rel: "stylesheet",
+      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/global.css"
+    },
+    {
+      rel: "stylesheet",
+      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/global-medium.css",
+      media: "print, (min-width: 640px)"
+    },
+    {
+      rel: "stylesheet",
+      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/global-large.css",
+      media: "screen and (min-width: 1024px)"
+    }
+  ];
+};
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <title>Remix: It's funny!</title>
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        {process.env.NODE_ENV === "development" ? (
+          <LiveReload />
+        ) : null}
+      </body>
+    </html>
+  );
+}
+```
+
+```tsx filename="app/routes/index.tsx" lines="1-10"
+import type { LinksFunction } from "remix";
+
+export let links: LinksFunction = () => {
+  return [
+    {
+      rel: "stylesheet",
+      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/index.css"
+    }
+  ];
+};
+
+export default function IndexRoute() {
+  return <div>Hello Index Route</div>;
+}
+```
+
+```tsx filename="app/routes/index.tsx" lines="1,4-11"
+import type { LinksFunction } from "remix";
+import { Outlet } from "remix";
+
+export let links: LinksFunction = () => {
+  return [
+    {
+      rel: "stylesheet",
+      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/jokes.css"
+    }
+  ];
+};
+
+export default function JokesRoute() {
+  return (
+    <div>
+      <h1>J🤪KES</h1>
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+</details>
+
+## Database
