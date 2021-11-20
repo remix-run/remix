@@ -1,10 +1,10 @@
 ---
-title: Data Updates
+title: Data Writes
 ---
 
-# Data Updates
+# Data Writes
 
-Data updates (some people call these mutations) in Remix are built on top of two fundamental web APIs: `<form>` and HTTP. We then use progressive enhancement to enable optimistic UI, loading indicators, and validation feedback--but the programming model is still built on HTML forms.
+Data writes (some people call these mutations) in Remix are built on top of two fundamental web APIs: `<form>` and HTTP. We then use progressive enhancement to enable optimistic UI, loading indicators, and validation feedback--but the programming model is still built on HTML forms.
 
 When the user submits a form, Remix will:
 
