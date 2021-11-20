@@ -88,13 +88,13 @@ There are a few conventions that Remix uses you should be aware of.
 ### Special Files
 
 - **`remix.config.js`**: Remix uses this file to know how to build your app for production and run it in development. This file is required.
-- **`app/entry.server.{js,tsx}`**: This is your entry into the server rendering piece of Remix. This file is required.
-- **`app/entry.client.{js,tsx}`**: This is your entry into the browser rendering/hydration piece of Remix. This file is required.
+- **`app/entry.server.{js,jsx,ts,tsx}`**: This is your entry into the server rendering piece of Remix. This file is required.
+- **`app/entry.client.{js,jsx,ts,tsx}`**: This is your entry into the browser rendering/hydration piece of Remix. This file is required.
 
 ### Route Filenames
 
 - **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes: you can export a `loader`, `action`, etc.
-- **`app/routes/*.{js,jsx,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
+- **`app/routes/*.{js,jsx,ts,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
 - **`app/routes/{folder}/*.tsx`**: Folders inside of routes will create nested URLs.
 - **`app/routes/{folder}` with `app/routes/{folder}.tsx`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
 - **Dots in route filesnames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
@@ -146,7 +146,7 @@ As you can see, you have full control over hydration. This is the first piece of
 
 Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
 
-This module should render the markup for the current page using a `<Remix>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
+This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
 
 You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occured.
 
@@ -226,11 +226,12 @@ export let loader: LoaderFunction = async () => {
 };
 ```
 
-This function is only ever run on the server. On the initial server render it will provide data to the HTML document. On navigations in the browser, Remix will call the function via `fetch`. This means you can talk directly to your database, use server only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
+This function is only ever run on the server. On the initial server render it will provide data to the HTML document. On navigations in the browser, Remix will call the function via [`fetch`][fetch]. This means you can talk directly to your database, use server only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
 
 Using the database ORM Prisma as an example:
 
-```tsx [3-5,8]
+```tsx [1,4-6,9]
+import { useLoaderData } from "remix";
 import { prisma } from "../db";
 
 export let loader = async () => {

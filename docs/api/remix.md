@@ -93,7 +93,7 @@ function NewEvent() {
 - Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
 - After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
 - `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript)
-- You can build "optimistic UI" and pending indicators with `useTransition`
+- You can build "optimistic UI" and pending indicators with [`useTransition`][usetransition]
 
 For an in-depth look at mutations with form, check out the [Mutations](../../guides/mutations/) page.
 
@@ -126,7 +126,7 @@ This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTT
 
 Native `<form>` only supports get and post, so if you want your form to work with JavaScript on or off the page you'll need to stick with those two.
 
-Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" method="delete" />`. If you always include JavaScript, you don't need to worry about this.
+Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" value="delete" />`. If you always include JavaScript, you don't need to worry about this.
 
 <docs-info>We generally recommend sticking with "get" and "post" because the other verbs are not supported by HTML</docs-info>
 
@@ -292,7 +292,7 @@ When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _doe
 
 <docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
 
-Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't even want this to happen.
+Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
 
 For example, consider this user flow:
 
