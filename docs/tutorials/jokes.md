@@ -517,58 +517,647 @@ This also means your CSS files can be cached long-term and your CSS is naturally
 
 </docs-info>
 
-That's pretty much all there is to it for styling with the tutorial. The rest is just writing all the CSS and stuff and you're welcome to do that if you want, but I'm going to let you skip that and I'll just give you URLs you can get the CSS from and you can either download and use it in your project or reference it directly (it's all just URLs to CSS files in the end anyway).
+That's pretty much all there is to it for styling with the tutorial. The rest is just writing all the CSS and stuff and you're welcome to do that if you want, but I'm going to let you skip that and I'll just give you the CSS you can copy.
 
-💿 Add/update the `links` export to `app/root.tsx`, `app/routes/index.tsx`, and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each page will have its own CSS file(s)). Here are the URLs:
+<details>
 
-<!-- These can't be regular links because they're not routes, they're files. -->
+<summary>💿 Copy this to `app/styles/global.css`</summary>
 
-<ul>
-<li><a data-noprefetch href="/jokes-tutorial/styling/global.css">global.css</a></li>
-<li><a data-noprefetch href="/jokes-tutorial/styling/global-large.css">global-large.css</a></li>
-<li><a data-noprefetch href="/jokes-tutorial/styling/global-medium.css">global-medium.css</a></li>
-<li><a data-noprefetch href="/jokes-tutorial/styling/index.css">index.css</a></li>
-<li><a data-noprefetch href="/jokes-tutorial/styling/jokes.css">jokes.css</a></li>
-</ul>
+```css filename=app/styles/global.css
+@font-face {
+  font-family: "baloo";
+  src: url("/fonts/baloo/baloo.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
 
-As we work through the rest of the tutorial, you may want to check the class names in those CSS files so you can take full advantage of that CSS.
+:root {
+  --hs-links: 48 100%;
+  --color-foreground: hsl(0, 0%, 100%);
+  --color-background: hsl(278, 73%, 19%);
+  --color-links: hsl(var(--hs-links) 50%);
+  --color-links-hover: hsl(var(--hs-links) 45%);
+  --color-border: hsl(277, 85%, 38%);
+  --color-invalid: hsl(356, 100%, 71%);
+  --gradient-background: radial-gradient(
+    circle,
+    rgba(152, 11, 238, 1) 0%,
+    rgba(118, 15, 181, 1) 35%,
+    rgba(58, 13, 85, 1) 100%
+  );
+  --font-body: -apple-system, "Segoe UI", Helvetica Neue, Helvetica,
+    Roboto, Arial, sans-serif, system-ui, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --font-display: baloo, var(--font-body);
+}
 
-<docs-info>
+html {
+  box-sizing: border-box;
+}
 
-The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
 
-</docs-info>
+:-moz-focusring {
+  outline: auto;
+}
+
+:focus {
+  outline: var(--color-links) solid 2px;
+  outline-offset: 2px;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  color: var(--color-foreground);
+  background-color: var(--color-background);
+}
+
+[data-light] {
+  --color-invalid: hsl(356, 70%, 39%);
+  color: var(--color-background);
+  background-color: var(--color-foreground);
+}
+
+body {
+  font-family: var(--font-body);
+  line-height: 1.5;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  min-height: calc(100vh - env(safe-area-inset-bottom));
+}
+
+a {
+  color: var(--color-links);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-links-hover);
+  text-decoration: underline;
+}
+
+hr {
+  display: block;
+  height: 1px;
+  border: 0;
+  background-color: var(--color-border);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+h1 {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+h4 {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+h5,
+h6 {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.container {
+  --gutter: 16px;
+  width: 1024px;
+  max-width: calc(100% - var(--gutter) * 2);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* buttons */
+
+.button {
+  --shadow-color: hsl(var(--hs-links) 30%);
+  --shadow-size: 3px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-links);
+  color: var(--color-background);
+  font-family: var(--font-display);
+  font-weight: bold;
+  line-height: 1;
+  font-size: 1.125rem;
+  margin: 0;
+  padding: 0.625em 1em;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: 0 var(--shadow-size) 0 0 var(--shadow-color);
+  outline-offset: 2px;
+  transform: translateY(0);
+  transition: background-color 50ms ease-out, box-shadow
+      50ms ease-out,
+    transform 100ms cubic-bezier(0.3, 0.6, 0.8, 1.25);
+}
+
+.button:hover {
+  --raise: 1px;
+  color: var(--color-background);
+  text-decoration: none;
+  box-shadow: 0 calc(var(--shadow-size) + var(--raise)) 0 0 var(
+      --shadow-color
+    );
+  transform: translateY(calc(var(--raise) * -1));
+}
+
+.button:active {
+  --press: 1px;
+  box-shadow: 0 calc(var(--shadow-size) - var(--press)) 0 0 var(
+      --shadow-color
+    );
+  transform: translateY(var(--press));
+  background-color: var(--color-links-hover);
+}
+
+.button[disabled],
+.button[aria-disabled="true"] {
+  transform: translateY(0);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* forms */
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  display: block;
+  max-width: 100%;
+  margin-bottom: 0.5rem;
+  color: inherit;
+  white-space: normal;
+}
+
+[type="text"],
+[type="password"],
+[type="date"],
+[type="datetime"],
+[type="datetime-local"],
+[type="month"],
+[type="week"],
+[type="email"],
+[type="number"],
+[type="search"],
+[type="tel"],
+[type="time"],
+[type="url"],
+[type="color"],
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: block;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background-color: hsl(0 0% 100% / 10%);
+  background-blend-mode: luminosity;
+  box-shadow: none;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.5;
+  color: var(--color-foreground);
+  transition: box-shadow 200ms, border-color 50ms ease-out,
+    background-color 50ms ease-out, color 50ms ease-out;
+}
+
+[data-light] [type="text"],
+[data-light] [type="password"],
+[data-light] [type="date"],
+[data-light] [type="datetime"],
+[data-light] [type="datetime-local"],
+[data-light] [type="month"],
+[data-light] [type="week"],
+[data-light] [type="email"],
+[data-light] [type="number"],
+[data-light] [type="search"],
+[data-light] [type="tel"],
+[data-light] [type="time"],
+[data-light] [type="url"],
+[data-light] [type="color"],
+[data-light] textarea {
+  color: var(--color-background);
+  background-color: hsl(0 0% 0% / 10%);
+}
+
+[type="text"][aria-invalid="true"],
+[type="password"][aria-invalid="true"],
+[type="date"][aria-invalid="true"],
+[type="datetime"][aria-invalid="true"],
+[type="datetime-local"][aria-invalid="true"],
+[type="month"][aria-invalid="true"],
+[type="week"][aria-invalid="true"],
+[type="email"][aria-invalid="true"],
+[type="number"][aria-invalid="true"],
+[type="search"][aria-invalid="true"],
+[type="tel"][aria-invalid="true"],
+[type="time"][aria-invalid="true"],
+[type="url"][aria-invalid="true"],
+[type="color"][aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--color-invalid);
+}
+
+textarea {
+  display: block;
+  min-height: 50px;
+  max-width: 100%;
+}
+
+textarea[rows] {
+  height: auto;
+}
+
+input:disabled,
+input[readonly],
+textarea:disabled,
+textarea[readonly] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+[type="file"],
+[type="checkbox"],
+[type="radio"] {
+  margin: 0;
+}
+
+[type="file"] {
+  width: 100%;
+}
+
+label {
+  margin: 0;
+}
+
+[type="checkbox"] + label,
+[type="radio"] + label {
+  margin-left: 0.5rem;
+}
+
+label > [type="checkbox"],
+label > [type="radio"] {
+  margin-right: 0.5rem;
+}
+
+::placeholder {
+  color: hsl(0 0% 100% / 65%);
+}
+
+.form-validation-error {
+  margin: 0;
+  margin-top: 0.25em;
+  color: var(--color-invalid);
+  font-size: 0.8rem;
+}
+```
+
+</details>
+
+<details>
+
+<summary>💿 Copy this to `app/styles/global-large.css`</summary>
+
+```css filename=app/styles/global-large.css
+h1 {
+  font-size: 3.75rem;
+  line-height: 1;
+}
+
+h2 {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+h5 {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+```
+
+</details>
+
+<details>
+
+<summary>💿 Copy this to `app/styles/global-medium.css`</summary>
+
+```css filename=app/styles/global-medium.css
+h1 {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+h2 {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+h4 {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+h5,
+h6 {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.container {
+  --gutter: 40px;
+}
+```
+
+</details>
+
+<details>
+
+<summary>💿 Copy this to `app/styles/index.css`</summary>
+
+```css filename=app/styles/index.css
+/*
+ * when the user visits this page, this style will apply, when they leave, it
+ * will get unloaded, so don't worry so much about conflicting styles between
+ * pages!
+ */
+
+body {
+  background-image: var(--gradient-background);
+}
+
+.container {
+  min-height: inherit;
+}
+
+.container,
+.content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.content {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+h1 {
+  margin: 0;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.75);
+  text-align: center;
+  line-height: 0.5;
+}
+
+h1 span {
+  display: block;
+  font-size: 4.5rem;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 0.2em 0.5em rgba(0, 0, 0, 0.5), 0 5px 0
+      rgba(0, 0, 0, 0.75);
+}
+
+nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+nav ul a:hover {
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+}
+
+@media print, (min-width: 640px) {
+  h1 span {
+    font-size: 6rem;
+  }
+
+  nav ul {
+    font-size: 1.25rem;
+    gap: 1.5rem;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  h1 span {
+    font-size: 8rem;
+  }
+}
+```
+
+</details>
+
+<details>
+
+<summary>💿 Copy this to `app/styles/jokes.css`</summary>
+
+```css filename=app/styles/jokes.css
+.jokes-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: inherit;
+}
+
+.jokes-header {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.jokes-header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.jokes-header .home-link {
+  font-family: var(--font-display);
+  font-size: 3rem;
+}
+
+.jokes-header .home-link a {
+  color: var(--color-foreground);
+}
+
+.jokes-header .home-link a:hover {
+  text-decoration: none;
+}
+
+.jokes-header .logo-medium {
+  display: none;
+}
+
+.jokes-header a:hover {
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+}
+
+.jokes-header .user-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.jokes-main {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  flex: 1 1 100%;
+}
+
+.jokes-main .container {
+  display: flex;
+  gap: 1rem;
+}
+
+.jokes-list {
+  max-width: 12rem;
+}
+
+.jokes-outlet {
+  flex: 1;
+}
+
+.jokes-footer {
+  padding-top: 2rem;
+  padding-bottom: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+@media print, (min-width: 640px) {
+  .jokes-header .logo {
+    display: none;
+  }
+
+  .jokes-header .logo-medium {
+    display: block;
+  }
+
+  .jokes-main {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+}
+```
+
+</details>
+
+💿 Add/update the `links` export to `app/root.tsx`, `app/routes/index.tsx`, and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each page will have its own CSS file(s)).
+
+<docs-info>The `app/root.tsx` will be the one that links to the `global` CSS files. Why do you think the name "global" makes sense for the root route's styles?</docs-info>
 
 The `global-large.css` and `global-medium.css` files are for media query-based CSS.
 
-<docs-info>
-
-Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).
-
-</docs-info>
+<docs-info>Did you know that `<link />` tags can use media queries? [Check out the MDN page for `<link />`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link).</docs-info>
 
 <details>
 
 <summary>For example:</summary>
 
-```tsx filename=app/root.tsx lines=[1,4-21]
+```tsx filename=app/root.tsx lines=[1,4-6,8-25]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet } from "remix";
+
+import globalStylesUrl from "./styles/global.css";
+import globalMediumStylesUrl from "./styles/global-medium.css";
+import globalLargeStylesUrl from "./styles/global-large.css";
 
 export let links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/global.css"
+      href: globalStylesUrl
     },
     {
       rel: "stylesheet",
-      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/global-medium.css",
+      href: globalMediumStylesUrl,
       media: "print, (min-width: 640px)"
     },
     {
       rel: "stylesheet",
-      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/global-large.css",
+      href: globalLargeStylesUrl,
       media: "screen and (min-width: 1024px)"
     }
   ];
@@ -592,14 +1181,15 @@ export default function App() {
 }
 ```
 
-```tsx filename=app/routes/index.tsx lines=[1-10]
+```tsx filename=app/routes/index.tsx lines=[1-2,4-11]
 import type { LinksFunction } from "remix";
+import stylesUrl from "../styles/index.css";
 
 export let links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/index.css"
+      href: stylesUrl
     }
   ];
 };
@@ -609,15 +1199,16 @@ export default function IndexRoute() {
 }
 ```
 
-```tsx filename=app/routes/index.tsx lines=[1,4-11]
+```tsx filename=app/routes/jokes.tsx lines=[1,3,5-12]
 import type { LinksFunction } from "remix";
 import { Outlet } from "remix";
+import stylesUrl from "../styles/jokes.css";
 
 export let links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/jokes.css"
+      href: stylesUrl
     }
   ];
 };
@@ -635,6 +1226,8 @@ export default function JokesRoute() {
 ```
 
 </details>
+
+As we work through the rest of the tutorial, you may want to check the class names in those CSS files so you can take full advantage of that CSS.
 
 ## Database
 
@@ -868,6 +1461,7 @@ Our goal is to put a list of jokes on the `/jokes` route so we can have a list o
 To _load_ data in a Remix route module, you use a [`loader`](../api/app#loader). This is simply an `async` function you export that returns a response for the data your component needs. And then the component gets it using the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
 
 ```tsx
+// this is just an example. No need to copy/paste this 😄
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
@@ -896,7 +1490,7 @@ Does that give you a good idea of what to do here? If not, you can take a look a
 
 <docs-info>
 
-Remix and the tsconfig.json you get from the starter template are configured to allow imports from the `app/` directory via `~` as demonstrated above so you don't have `../../` all over the place.
+Remix and the `tsconfig.json` you get from the starter template are configured to allow imports from the `app/` directory via `~` as demonstrated above so you don't have `../../` all over the place.
 
 </docs-info>
 
@@ -906,7 +1500,7 @@ Remix and the tsconfig.json you get from the starter template are configured to 
 
 <summary>For example:</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[4-5,8,19-30,33,38-44]
+```tsx filename=app/routes/jokes.tsx lines=[4-5,8,20-31,34,39-45]
 import {
   Link,
   LinksFunction,
@@ -915,12 +1509,13 @@ import {
 } from "remix";
 import { Outlet } from "remix";
 import { db } from "~/utils/db.server";
+import stylesUrl from "../styles/jokes.css";
 
 export let links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://remixdotrunstage.fly.dev/jokes-tutorial/styling/jokes.css"
+      href: stylesUrl
     }
   ];
 };
@@ -932,6 +1527,7 @@ type LoaderData = {
 export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
     jokeListItems: await db.joke.findMany({
+      take: 5,
       select: { id: true, name: true }
     })
   };
@@ -963,3 +1559,177 @@ export default function JokesRoute() {
 And here's what we have with that now:
 
 ![List of links to jokes](/jokes-tutorial/img/jokes-loaded.png)
+
+### Data overfetching
+
+I want to call out something specific in my solution. Here's my loader:
+
+```tsx lines=[8-9]
+type LoaderData = {
+  jokeListItems: Array<{ id: string; name: string }>;
+};
+
+export let loader: LoaderFunction = async () => {
+  let data: LoaderData = {
+    jokeListItems: await db.joke.findMany({
+      take: 5,
+      select: { id: true, name: true }
+    })
+  };
+  return data;
+};
+```
+
+Notice that all I need for this page is the joke `id` and `name`. I don't need to bother getting the `content`. I'm also limiting to a total of 5 items. So with `prisma`, I can change my query to be exactly what I need and avoid sending too much data to the client! That makes my app faster and more responsive for my users.
+
+And to make it even coolear, you don't necessarily need prisma or direct database access to do this. You've got a graphql backend you're hitting? Sweet, use your regular graphql stuff in your loader. It's even better than doing it on the client because you don't need to worry about shipping a [huge graphql client](https://bundlephobia.com/package/graphql@16.0.1) to the client. Keep that on your server and filter down to what you want.
+
+Oh, you've just got REST endpoints you hit? That's fine too! You can easily filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
+
+### Network Type Safty
+
+Oh, and one other fun tip, I don't know about you, but I don't really like double-typing stuff, so we can use TypeScript's [`Awaited`](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-5.html#the-awaited-type-and-promise-improvements) type to avoid that:
+
+```tsx lines=[2-4,7-12,16]
+type LoaderData = {
+  jokeListItems: Awaited<
+    ReturnType<typeof getJokeListItems>
+  >;
+};
+
+function getJokeListItems() {
+  return db.joke.findMany({
+    take: 5,
+    select: { id: true, name: true }
+  });
+}
+
+export let loader: LoaderFunction = async () => {
+  let data: LoaderData = {
+    jokeListItems: await getJokeListItems()
+  };
+  return data;
+};
+```
+
+With this, now if we needed to add or remove any fields from our query, we could easily change our query and all the types would flow through without having to change anything else. Type safety across network boundaries! In the future, we hope to make this experience even.
+
+### Wrap up database queries
+
+Before we get to the `/jokes/:jokeId` route, here's a quick example of how you can access params (like `:jokeId`) in your loader.
+
+```tsx
+export let loader: LoaderFunction = async ({ params }) => {
+  console.log(params); // <-- {jokeId: "123"}
+};
+```
+
+And here's how you get the joke from prisma:
+
+```tsx
+let joke = await db.joke.findUnique({
+  where: { id: jokeId }
+});
+```
+
+💿 Great! Now you know everything you need to continue and connect the `/jokes/:jokeId` route in `app/routes/jokes/$jokeId.tsx`.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3-4,6,8-15,18]
+import type { LoaderFunction } from "remix";
+import { Link, useLoaderData } from "remix";
+import type { Joke } from "@prisma/client";
+import { db } from "~/utils/db.server";
+
+type LoaderData = { joke: Joke };
+
+export let loader: LoaderFunction = async ({ params }) => {
+  let joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) throw new Error("Joke not found");
+  let data: LoaderData = { joke };
+  return data;
+};
+
+export default function JokeRoute() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div>
+      <p>Here's your hilarious joke:</p>
+      <p>{data.joke.content}</p>
+      <Link to=".">{data.joke.name} Permalink</Link>
+    </div>
+  );
+}
+```
+
+</details>
+
+With that you should be able to go to [`/jokes`](http://localhost:3000/jokes) and click on a link to get the joke:
+
+![Jokes page showing a unique joke](/jokes-tutorial/img/joke-page.png)
+
+We'll handle the case where someone tries to access a joke that doesn't exist in the database in the next section.
+
+Next, let's handle the `/jokes` index route in `app/routes/jokes/index.tsx` that shows a random joke.
+
+Here's how you get a random joke from prisma:
+
+```tsx
+const count = await db.joke.count();
+const randomRowNumber = Math.floor(Math.random() * count);
+let [randomJoke] = await db.joke.findMany({
+  take: 1,
+  skip: randomRowNumber
+});
+```
+
+💿 You should be able to get the loader working from there.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes/index.tsx lines=[2-3,5,7-16,19]
+import { useLoaderData, Link, json, useCatch } from "remix";
+import type { Joke } from "@prisma/client";
+import { db } from "~/utils/db.server";
+
+type LoaderData = { randomJoke: Joke };
+
+export let loader = async () => {
+  const count = await db.joke.count();
+  const randomRowNumber = Math.floor(Math.random() * count);
+  let [randomJoke] = await db.joke.findMany({
+    take: 1,
+    skip: randomRowNumber
+  });
+  let data: LoaderData = { randomJoke };
+  return json(data);
+};
+
+export default function JokesIndexRoute() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div>
+      <p>Here's a random joke:</p>
+      <p>{data.randomJoke.content}</p>
+      <Link to={data.randomJoke.id}>
+        "{data.randomJoke.name}" Permalink
+      </Link>
+    </div>
+  );
+}
+```
+
+</details>
+
+With that your [`/jokes`](http://localhost:3000/jokes) route should display a list of links to jokes as well as a random joke:
+
+![Jokes page showing a random joke](/jokes-tutorial/img/random-joke-loaded.png)

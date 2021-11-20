@@ -28,7 +28,7 @@ export let loader: LoaderFunction = async ({ request, params }) => {
   let data: LoaderData = { joke, isOwner: userId === joke.jokesterId };
   return json(data, {
     headers: {
-      "Cache-Control": `public, max-age=${60 * 5} s-maxage=${60 * 60}`,
+      "Cache-Control": `private, max-age=${60 * 5}`,
     },
   });
 };
@@ -56,14 +56,14 @@ export let action: ActionFunction = async ({ request, params }) => {
   }
 };
 
-export default function JokeScreen() {
+export default function JokeRoute() {
   let data = useLoaderData<LoaderData>();
 
   return (
     <div>
       <p>Here's your hilarious joke:</p>
       <p>{data.joke.content}</p>
-      <Link to=".">{data.joke.name}</Link>
+      <Link to=".">{data.joke.name} Permalink</Link>
       {data.isOwner ? (
         <Form method="delete">
           <button type="submit" className="button">
