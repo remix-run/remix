@@ -4077,6 +4077,117 @@ Awesome! We're ready to handle errors and it didn't complicate our happy path on
 
 Oh, and don't you love how just like with the `ErrorBoundary`, it's all contextual? So the rest of the app continues to function just as well. Another point for user experience 💪
 
+You know what, while we're adding catch boundaries. Why don't we improve the `app/routes/jokes/$jokeId.tsx` route a bit by allowing users to delete the joke if they own it. If they don't, we can give them a 401 error in the catch boundary.
+
+💿 Add a delete capability to `app/routes/jokes/$jokeId.tsx` route
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,8,11,28-54,68-90]
+import type { Joke } from "@prisma/client";
+import { useParams } from "react-router-dom";
+import { ActionFunction, LoaderFunction } from "remix";
+import {
+  Link,
+  useLoaderData,
+  useCatch,
+  redirect
+} from "remix";
+import { db } from "~/utils/db.server";
+import { requireUserId } from "~/utils/session.server";
+
+type LoaderData = { joke: Joke };
+
+export let loader: LoaderFunction = async ({ params }) => {
+  let joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("What a joke! Not found.", {
+      status: 404
+    });
+  }
+  let data: LoaderData = { joke };
+  return data;
+};
+
+export let action: ActionFunction = async ({
+  request,
+  params
+}) => {
+  if (request.method === "DELETE") {
+    let userId = await requireUserId(request);
+    let joke = await db.joke.findUnique({
+      where: { id: params.jokeId }
+    });
+    if (!joke) {
+      throw new Response(
+        "Can't delete what does not exist",
+        { status: 404 }
+      );
+    }
+    if (joke.jokesterId !== userId) {
+      throw new Response(
+        "Pssh, nice try. That's not your joke",
+        {
+          status: 401
+        }
+      );
+    }
+    await db.joke.delete({ where: { id: params.jokeId } });
+    return redirect("/jokes");
+  }
+};
+
+export default function JokeRoute() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div>
+      <p>Here's your hilarious joke:</p>
+      <p>{data.joke.content}</p>
+      <Link to=".">{data.joke.name} Permalink</Link>
+    </div>
+  );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+  let params = useParams();
+  switch (caught.status) {
+    case 404: {
+      return (
+        <div className="error-container">
+          Huh? What the heck is {params.jokeId}?
+        </div>
+      );
+    }
+    case 401: {
+      return (
+        <div className="error-container">
+          Sorry, but {params.jokeId} is not your joke.
+        </div>
+      );
+    }
+    default: {
+      throw new Error(`Unhandled error: ${caught.status}`);
+    }
+  }
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  let { jokeId } = useParams();
+  return (
+    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+  );
+}
+```
+
+</details>
+
 ## SEO with Meta tags
 
 Meta tags are useful for SEO and social media. The tricky bit is that often the part of the code that has access to the data you need is in components that request/use the data.
@@ -4463,7 +4574,7 @@ export default function Login() {
 ```
 
 ```ts filename=app/routes/jokes/$jokeId.tsx lines=[3,7-16]
-import type { Joke } from ".prisma/client";
+import type { Joke } from "@prisma/client";
 import { useParams } from "react-router-dom";
 import type { LoaderFunction, MetaFunction } from "remix";
 import { Link, useLoaderData, useCatch } from "remix";
@@ -4600,7 +4711,7 @@ export let loader: LoaderFunction = async ({ request }) => {
     headers: {
       "Cache-Control": `public, max-age=${
         60 * 10
-      } s-maxage=${60 * 60 * 24}`,
+      }, s-maxage=${60 * 60 * 24}`,
       "Content-Type": "application/xml",
       "Content-Length": String(Buffer.byteLength(rssString))
     }
@@ -4613,6 +4724,8 @@ export let loader: LoaderFunction = async ({ request }) => {
 ![XML document for RSS feed](/jokes-tutorial/img/jokes-rss-feed.png)
 
 Wahoo! You can seriously do anything you can imagine with this API. You could even make a JSON API for a native version of your app if you wanted to. Lots of power here.
+
+💿 Feel free to throw a link to that RSS feed on `app/routes/index.tsx` and `app/routes/jokes.tsx` pages.
 
 ## JavaScript...
 
@@ -4751,15 +4864,11 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 ![Network tab showing JavaScript loaded](/jokes-tutorial/img/yes-javascript.png)
 
-Another thing we can do now is you can accept the `error` prop in all your `ErrorBoundary` components and `console.error(error);` and you'll get even server-side errors logged in the browser's console. 🤯
+💿 Another thing we can do now is you can accept the `error` prop in all your `ErrorBoundary` components and `console.error(error);` and you'll get even server-side errors logged in the browser's console. 🤯
 
 ![Browser console showing the log of a server-side error](/jokes-tutorial/img/server-side-error-in-browser.png)
 
-## Optimistic UI
-
-Now that we have JavaScript on the page, we can benefit from _progressive enhancement_ and make our site _even better_ with JavaScript by adding some _optimistic UI_ to our app.
-
-Even though our app is quite fast (especially locally 😅), some users may have a poor connection to our app. This means that they're going to submit their jokes, but then they'll have to wait for a while before they see anything. We could add a loading spinner somewhere, but it'd be a much better user experience to be optimistic about the success of the request and render what the user would see.
+💿 One other thing we'll want to do is update the `<form>`s we have on the `/login` and `/jokes/new` routes use [the `<Form />` component from Remix](../api/remix#form) so the post request is made via `fetch` rather than a full-page refreshing POST request.
 
 ## Headers and Caching
 
@@ -4775,5 +4884,1021 @@ For the `Cache-Control` header cache, there are two types of responses that can 
 
 1. The document response (this is the HTML for the page that's rendered by the server).
 2. The data response (this is the JSON sent by your server).
+
+In Remix, you can control the cache control for both of these kinds of responses. Here's an example for the data response:
+
+```tsx
+import { json } from "remix";
+
+export let loader: LoaderFunction = async () => {
+  return json(
+    { data },
+    {
+      headers: {
+        // max-age controls the browser cache
+        // s-maxage controls a CDN cache
+        "Cache-Control":
+          "public, max-age=300, s-maxage=86400"
+      }
+    }
+  );
+};
+```
+
+For the document response, you can use the [`headers` export](../api/conventions#headers-export).
+
+We recommend spending a fair bit of time going over [the `Cache-Control` header documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) at some point to optimize things for your users. If you do have a CDN between your origin server and your users, then understanding your CND's caching strategies will help you improve your user experience as well.
+
+Let's say we have a CDN in front of our app and we really want our homepage to load super fast. So we'll want our CDN to cache that page. If we ever need to make a change to that page, we can purge the cache for that page.
+
+💿 Add cache-control for the document response in `app/routes/index.tsx` and `app/routes/login.tsx`. Add a cache-control for both the data and document response in `app/routes/jokes/$jokeId.tsx`.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/index.tsx lines=[5,21-27]
+import { Link } from "remix";
+import type {
+  MetaFunction,
+  LinksFunction,
+  HeadersFunction
+} from "remix";
+import stylesUrl from "../styles/index.css";
+
+export let meta: MetaFunction = () => {
+  return {
+    title: "Remix: It's funny!",
+    description:
+      "Remix jokes app. Learn Remix and laugh at the same time!"
+  };
+};
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+export let headers: HeadersFunction = () => {
+  return {
+    "Cache-Control": `public, max-age=${
+      60 * 10
+    }, s-maxage=${60 * 60 * 24 * 30}`
+  };
+};
+
+export default function Index() {
+  return (
+    <div className="container">
+      <div className="content">
+        <h1>
+          Remix <span>Jokes!</span>
+        </h1>
+        <nav>
+          <ul>
+            <li>
+              <Link to="jokes">Read Jokes</Link>
+            </li>
+            <li>
+              <Link reloadDocument to="/jokes.rss">
+                RSS
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx filename=app/routes/login.tsx lines=[3,28-34]
+import type {
+  ActionFunction,
+  HeadersFunction,
+  LinksFunction,
+  MetaFunction
+} from "remix";
+import { useActionData, Form } from "remix";
+import {
+  login,
+  createUserSession,
+  register
+} from "~/utils/session.server";
+import { db } from "~/utils/db.server";
+import stylesUrl from "../styles/login.css";
+
+export let meta: MetaFunction = () => {
+  return {
+    title: "Remix Jokes | Login",
+    description:
+      "Login to submit your own jokes to Remix Jokes!"
+  };
+};
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+export let headers: HeadersFunction = () => {
+  return {
+    "Cache-Control": `public, max-age=${
+      60 * 10
+    }, s-maxage=${60 * 60 * 24 * 30}`
+  };
+};
+
+function validateUsername(username: unknown) {
+  if (typeof username !== "string" || username.length < 3) {
+    return `Usernames must be at least 3 characters long`;
+  }
+}
+
+function validatePassword(password: unknown) {
+  if (typeof password !== "string" || password.length < 6) {
+    return `Passwords must be at least 6 characters long`;
+  }
+}
+
+type ActionData = {
+  formError?: string;
+  fieldErrors?: {
+    username: string | undefined;
+    password: string | undefined;
+  };
+  fields?: {
+    loginType: string;
+    username: string;
+    password: string;
+  };
+};
+
+export let action: ActionFunction = async ({
+  request
+}): Promise<Response | ActionData> => {
+  let { loginType, username, password } =
+    Object.fromEntries(await request.formData());
+  if (
+    typeof loginType !== "string" ||
+    typeof username !== "string" ||
+    typeof password !== "string"
+  ) {
+    return { formError: `Form not submitted correctly.` };
+  }
+
+  let fields = { loginType, username, password };
+  let fieldErrors = {
+    username: validateUsername(username),
+    password: validatePassword(password)
+  };
+  if (Object.values(fieldErrors).some(Boolean))
+    return { fieldErrors, fields };
+
+  switch (loginType) {
+    case "login": {
+      const user = await login({ username, password });
+      if (!user) {
+        return {
+          fields,
+          formError: `Username/Password combination is incorrect`
+        };
+      }
+      return createUserSession(user.id, "/jokes");
+    }
+    case "register": {
+      let userExists = await db.user.findFirst({
+        where: { username }
+      });
+      if (userExists) {
+        return {
+          fields,
+          formError: `User with username ${username} already exists`
+        };
+      }
+      const user = await register({ username, password });
+      if (!user) {
+        return {
+          fields,
+          formError: `Something went wrong trying to create a new user.`
+        };
+      }
+      return createUserSession(user.id, "/jokes");
+    }
+    default: {
+      return { fields, formError: `Login type invalid` };
+    }
+  }
+};
+
+export default function Login() {
+  const actionData = useActionData<
+    ActionData | undefined
+  >();
+  return (
+    <div className="container">
+      <div className="content" data-light="">
+        <h1>Login</h1>
+        <Form
+          method="post"
+          aria-describedby={
+            actionData?.formError
+              ? "form-error-message"
+              : undefined
+          }
+        >
+          <fieldset>
+            <legend className="sr-only">
+              Login or Register?
+            </legend>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="login"
+                defaultChecked={
+                  !actionData?.fields?.loginType ||
+                  actionData?.fields?.loginType === "login"
+                }
+              />{" "}
+              Login
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="register"
+                defaultChecked={
+                  actionData?.fields?.loginType ===
+                  "register"
+                }
+              />{" "}
+              Register
+            </label>
+          </fieldset>
+          <div>
+            <label htmlFor="username-input">Username</label>
+            <input
+              type="text"
+              id="username-input"
+              name="username"
+              defaultValue={actionData?.fields?.username}
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.username
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.username
+                  ? "username-error"
+                  : undefined
+              }
+            />
+            {actionData?.fieldErrors?.username ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+                id="username-error"
+              >
+                {actionData.fieldErrors.username}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="password-input">Password</label>
+            <input
+              id="password-input"
+              name="password"
+              defaultValue={actionData?.fields?.password}
+              type="password"
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.password
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.password
+                  ? "password-error"
+                  : undefined
+              }
+            />
+            {actionData?.fieldErrors?.password ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+                id="password-error"
+              >
+                {actionData.fieldErrors.password}
+              </p>
+            ) : null}
+          </div>
+          <div id="form-error-message">
+            {actionData?.formError ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+              >
+                {actionData.formError}
+              </p>
+            ) : null}
+          </div>
+          <button type="submit" className="button">
+            Submit
+          </button>
+        </Form>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,8,53-60,63-71]
+import type {
+  LoaderFunction,
+  ActionFunction,
+  MetaFunction,
+  HeadersFunction
+} from "remix";
+import {
+  json,
+  useLoaderData,
+  useCatch,
+  Link,
+  Form,
+  redirect
+} from "remix";
+import { useParams } from "react-router-dom";
+import type { Joke } from "@prisma/client";
+import { db } from "~/utils/db.server";
+import {
+  getUserId,
+  requireUserId
+} from "~/utils/session.server";
+
+export let meta: MetaFunction = ({
+  data
+}: {
+  data: LoaderData;
+}) => {
+  return {
+    title: `"${data.joke.name}" joke`,
+    description: `Enjoy the "${data.joke.name}" joke and much more`
+  };
+};
+
+type LoaderData = { joke: Joke; isOwner: boolean };
+
+export let loader: LoaderFunction = async ({
+  request,
+  params
+}) => {
+  let userId = await getUserId(request);
+  let joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("What a joke! Not found.", {
+      status: 404
+    });
+  }
+  let data: LoaderData = {
+    joke,
+    isOwner: userId === joke.jokesterId
+  };
+  return json(data, {
+    headers: {
+      "Cache-Control": `public, max-age=${
+        60 * 5
+      }, s-maxage=${60 * 60 * 24}`,
+      Vary: "Cookie"
+    }
+  });
+};
+
+export let headers: HeadersFunction = ({
+  loaderHeaders
+}) => {
+  return {
+    "Cache-Control":
+      loaderHeaders.get("Cache-Control") ?? "",
+    Vary: loaderHeaders.get("Vary") ?? ""
+  };
+};
+
+export let action: ActionFunction = async ({
+  request,
+  params
+}) => {
+  if (request.method === "DELETE") {
+    let userId = await requireUserId(request);
+    let joke = await db.joke.findUnique({
+      where: { id: params.jokeId }
+    });
+    if (!joke) {
+      throw new Response(
+        "Can't delete what does not exist",
+        { status: 404 }
+      );
+    }
+    if (joke.jokesterId !== userId) {
+      throw new Response(
+        "Pssh, nice try. That's not your joke",
+        {
+          status: 401
+        }
+      );
+    }
+    await db.joke.delete({ where: { id: params.jokeId } });
+    return redirect("/jokes");
+  }
+};
+
+export default function JokeRoute() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div>
+      <p>Here's your hilarious joke:</p>
+      <p>{data.joke.content}</p>
+      <Link to=".">{data.joke.name} Permalink</Link>
+      {data.isOwner ? (
+        <Form method="delete">
+          <button type="submit" className="button">
+            Delete
+          </button>
+        </Form>
+      ) : null}
+    </div>
+  );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+  let params = useParams();
+  switch (caught.status) {
+    case 404: {
+      return (
+        <div className="error-container">
+          Huh? What the heck is {params.jokeId}?
+        </div>
+      );
+    }
+    case 401: {
+      return (
+        <div className="error-container">
+          Sorry, but {params.jokeId} is not your joke.
+        </div>
+      );
+    }
+    default: {
+      throw new Error(`Unhandled error: ${caught.status}`);
+    }
+  }
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  let { jokeId } = useParams();
+  return (
+    <div>{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+  );
+}
+```
+
+</details>
+
+You'll notice that for the `app/routes/jokes/$jokeId.tsx` route in addition to `Cache-Control` we've also set `Vary` header to `Cookie`. This is because we're returning something that's specific to the user who is logged in. So we want the cache to associated to that particular Cookie value and not shared with different users, so the browser and CDN will not deliver the cached value if the cookie is different from the cached response's cookie.
+
+Sweet, with those set up, you can now pop open your Network tab and observe the cache headers. To test the data headers, click through the jokes and then click on a joke you have been to already. To test the document headers, go to the page, then change the URL to a separate website (like https://example.com), then hit the back button. To benefit from the headers, make sure to leave the "Disable cache" checkbox unchecked.
+
+Here's what the header should look like for the homepage:
+
+![Cache control header set on a response](/jokes-tutorial/img/homepage-cache-header.png)
+
+Here's what the Vary header should look like for the jokes page:
+
+![Vary header set on a response](/jokes-tutorial/img/joke-vary-header.png)
+
+Here's what it looks like when you go off domain and then hit the back button:
+
+![Document request came from the disk cache](/jokes-tutorial/img/off-domain-return-document-cached.png)
+
+Here's what it looks like when you navigate back to a joke page you've been to recently:
+
+![A few non-cached data requests followed by cached versions of those requests](/jokes-tutorial/img/data-cached.png)
+
+Let me describe why this is so useful. Remix uses the browser cache rather than implementing its own cache in memory. This means that if the user navigates around your site a bit and then closes the page or opens the site in another tab, they will still have all of that information cached. If we managed our own in-memory cache, it would be totally lost when the user navigates away from the site. And even if we tried to persist it in some browser storage API, the browser would have to wait for our JavaScript to retrieve it before the user could make use of it.
+
+Another point for user experience!
+
+But we can make this even better. [The `<Link />` component](../api/remix#link) from Remix has the ability to prefetch the assets and data needed for the page it's linked to via the `prefetch` prop.
+
+<docs-info>Tip: when the devtools are open, you can right-click the refresh button to "Empty Cache and Hard Reload" to test what the experience is like for a user who has not yet cached anything.</docs-info>
+
+![Empty cache and hard reload menu option](/jokes-tutorial/img/hard-reload.png)
+
+💿 Go ahead and add `prefetch="intent"` to the Link for the list of jokes in `app/routes/jokes.tsx` and check what happens as you click around those links.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes.tsx lines=[78]
+import type { LoaderFunction, LinksFunction } from "remix";
+import { Form } from "remix";
+import { Outlet, useLoaderData, Link } from "remix";
+import { db } from "~/utils/db.server";
+import type { User } from "@prisma/client";
+import { getUser } from "~/utils/session.server";
+import stylesUrl from "../styles/jokes.css";
+
+type LoaderData = {
+  user: User | null;
+  jokeListItems: Array<{ id: string; name: string }>;
+};
+
+export let loader: LoaderFunction = async ({ request }) => {
+  let jokeListItems = await db.joke.findMany({
+    take: 5,
+    select: { id: true, name: true },
+    orderBy: { createdAt: "desc" }
+  });
+  let user = await getUser(request);
+
+  let data: LoaderData = {
+    jokeListItems,
+    user
+  };
+
+  return data;
+};
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+export default function JokesScreen() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div className="jokes-layout">
+      <header className="jokes-header">
+        <div className="container">
+          <h1 className="home-link">
+            <Link
+              to="/"
+              title="Remix Jokes"
+              aria-label="Remix Jokes"
+            >
+              <span className="logo">🤪</span>
+              <span className="logo-medium">J🤪KES</span>
+            </Link>
+          </h1>
+          {data.user ? (
+            <div className="user-info">
+              <span>{`Hi ${data.user.username}`}</span>
+              <Form action="/logout" method="post">
+                <button type="submit" className="button">
+                  Logout
+                </button>
+              </Form>
+            </div>
+          ) : (
+            <Link to="/login">Login</Link>
+          )}
+        </div>
+      </header>
+      <main className="jokes-main">
+        <div className="container">
+          <div className="jokes-list">
+            {data.jokeListItems.length ? (
+              <>
+                <Link to=".">Get a random joke</Link>
+                <p>
+                  Here are a few more jokes to check out:
+                </p>
+                <ul>
+                  {data.jokeListItems.map(
+                    ({ id, name }) => (
+                      <li key={id}>
+                        <Link to={id} prefetch="intent">
+                          {name}
+                        </Link>
+                      </li>
+                    )
+                  )}
+                </ul>
+                <Link to="new" className="button">
+                  Add your own
+                </Link>
+              </>
+            ) : null}
+          </div>
+          <div className="jokes-outlet">
+            <Outlet />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+</details>
+
+![JSON prefetch request followed by a fetch request that was served by the prefetch cache](/jokes-tutorial/img/prefetch-cache.png)
+
+Now _that's_ what I call as fast as instant! And it's _user-specific_ data that we're requesting! So we _have_ to hit the origin server. Nice and fast! ⚡ Nice and easy! 💪
+
+## Optimistic UI
+
+Now that we have JavaScript on the page, we can benefit from _progressive enhancement_ and make our site _even better_ with JavaScript by adding some _optimistic UI_ to our app.
+
+Even though our app is quite fast (especially locally 😅), some users may have a poor connection to our app. This means that they're going to submit their jokes, but then they'll have to wait for a while before they see anything. We could add a loading spinner somewhere, but it'd be a much better user experience to be optimistic about the success of the request and render what the user would see.
+
+We have a pretty in depth [guide on Optimistic UI](../guides/optimistic-ui), so go give that a read
+
+💿 Add Optimistic UI to the `app/routes/jokes/new.tsx` route.
+
+Note, you'll probably want to create a new file in `app/components/` called `joke.tsx` so you can reuse that UI in both routes.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/components/joke.tsx
+import { Link, Form } from "remix";
+import type { Joke } from "@prisma/client";
+
+export function JokeDisplay({
+  joke,
+  isOwner,
+  canDelete = true
+}: {
+  joke: Pick<Joke, "content" | "name">;
+  isOwner: boolean;
+  canDelete?: boolean;
+}) {
+  return (
+    <div>
+      <p>Here's your hilarious joke:</p>
+      <p>{joke.content}</p>
+      <Link to=".">{joke.name} Permalink</Link>
+      {isOwner ? (
+        <Form method="delete">
+          <button
+            type="submit"
+            className="button"
+            disabled={!canDelete}
+          >
+            Delete
+          </button>
+        </Form>
+      ) : null}
+    </div>
+  );
+}
+```
+
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[22,105-107]
+import type {
+  LoaderFunction,
+  ActionFunction,
+  MetaFunction,
+  HeadersFunction
+} from "remix";
+import {
+  json,
+  useLoaderData,
+  useCatch,
+  Link,
+  Form,
+  redirect
+} from "remix";
+import { useParams } from "react-router-dom";
+import type { Joke } from "@prisma/client";
+import { db } from "~/utils/db.server";
+import {
+  getUserId,
+  requireUserId
+} from "~/utils/session.server";
+import { JokeDisplay } from "~/components/joke";
+
+export let meta: MetaFunction = ({
+  data
+}: {
+  data: LoaderData;
+}) => {
+  return {
+    title: `"${data.joke.name}" joke`,
+    description: `Enjoy the "${data.joke.name}" joke and much more`
+  };
+};
+
+type LoaderData = { joke: Joke; isOwner: boolean };
+
+export let loader: LoaderFunction = async ({
+  request,
+  params
+}) => {
+  let userId = await getUserId(request);
+  let joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("What a joke! Not found.", {
+      status: 404
+    });
+  }
+  let data: LoaderData = {
+    joke,
+    isOwner: userId === joke.jokesterId
+  };
+  return json(data, {
+    headers: {
+      "Cache-Control": `public, max-age=${
+        60 * 5
+      }, s-maxage=${60 * 60 * 24}`,
+      Vary: "Cookie"
+    }
+  });
+};
+
+export let headers: HeadersFunction = ({
+  loaderHeaders
+}) => {
+  return {
+    "Cache-Control":
+      loaderHeaders.get("Cache-Control") ?? "",
+    Vary: loaderHeaders.get("Vary") ?? ""
+  };
+};
+
+export let action: ActionFunction = async ({
+  request,
+  params
+}) => {
+  if (request.method === "DELETE") {
+    let userId = await requireUserId(request);
+    let joke = await db.joke.findUnique({
+      where: { id: params.jokeId }
+    });
+    if (!joke) {
+      throw new Response(
+        "Can't delete what does not exist",
+        { status: 404 }
+      );
+    }
+    if (joke.jokesterId !== userId) {
+      throw new Response(
+        "Pssh, nice try. That's not your joke",
+        {
+          status: 401
+        }
+      );
+    }
+    await db.joke.delete({ where: { id: params.jokeId } });
+    return redirect("/jokes");
+  }
+};
+
+export default function JokeRoute() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <JokeDisplay joke={data.joke} isOwner={data.isOwner} />
+  );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+  let params = useParams();
+  switch (caught.status) {
+    case 404: {
+      return (
+        <div className="error-container">
+          Huh? What the heck is {params.jokeId}?
+        </div>
+      );
+    }
+    case 401: {
+      return (
+        <div className="error-container">
+          Sorry, but {params.jokeId} is not your joke.
+        </div>
+      );
+    }
+    default: {
+      throw new Error(`Unhandled error: ${caught.status}`);
+    }
+  }
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  let { jokeId } = useParams();
+  return (
+    <div>{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+  );
+}
+```
+
+```tsx filename=app/routes/jokes/new.tsx lines=[10,82-100]
+import type { ActionFunction, LoaderFunction } from "remix";
+import {
+  useActionData,
+  redirect,
+  useCatch,
+  Link,
+  useTransition,
+  Form
+} from "remix";
+import { JokeDisplay } from "~/components/joke";
+import { db } from "~/utils/db.server";
+import {
+  requireUserId,
+  getUserId
+} from "~/utils/session.server";
+
+export let loader: LoaderFunction = async ({ request }) => {
+  let userId = await getUserId(request);
+  if (!userId)
+    throw new Response("Unauthorized", { status: 401 });
+  return {};
+};
+
+function validateJokeContent(content: string) {
+  if (content.length < 10) {
+    return `That joke is too short`;
+  }
+}
+
+function validateJokeName(name: string) {
+  if (name.length < 2) {
+    return `That joke's name is too short`;
+  }
+}
+
+type ActionData = {
+  formError?: string;
+  fieldErrors?: {
+    name: string | undefined;
+    content: string | undefined;
+  };
+  fields?: {
+    name: string;
+    content: string;
+  };
+};
+
+export let action: ActionFunction = async ({
+  request
+}): Promise<Response | ActionData> => {
+  const userId = await requireUserId(request);
+
+  let { name, content } = Object.fromEntries(
+    await request.formData()
+  );
+  if (
+    typeof name !== "string" ||
+    typeof content !== "string"
+  ) {
+    return { formError: `Form not submitted correctly.` };
+  }
+
+  let fieldErrors = {
+    name: validateJokeName(name),
+    content: validateJokeContent(content)
+  };
+  let fields = { name, content };
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return { fieldErrors, fields };
+  }
+
+  let joke = await db.joke.create({
+    data: { ...fields, jokesterId: userId }
+  });
+  return redirect(`/jokes/${joke.id}`);
+};
+
+export default function NewJokeRoute() {
+  let actionData = useActionData<ActionData | undefined>();
+  let transition = useTransition();
+
+  if (transition.submission) {
+    let name = transition.submission.formData.get("name");
+    let content =
+      transition.submission.formData.get("content");
+    if (
+      typeof name === "string" &&
+      typeof content === "string" &&
+      !validateJokeContent(content) &&
+      !validateJokeName(name)
+    ) {
+      return (
+        <JokeDisplay
+          joke={{ name, content }}
+          isOwner={true}
+          canDelete={false}
+        />
+      );
+    }
+  }
+
+  return (
+    <div>
+      <p>Add your own hilarious joke</p>
+      <Form method="post">
+        <div>
+          <label>
+            Name:{" "}
+            <input
+              type="text"
+              defaultValue={actionData?.fields?.name}
+              name="name"
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.name
+                  ? "name-error"
+                  : undefined
+              }
+            />
+          </label>
+          {actionData?.fieldErrors?.name ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+              id="name-error"
+            >
+              {actionData?.fieldErrors?.name}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <label>
+            Content:{" "}
+            <textarea
+              defaultValue={actionData?.fields?.content}
+              name="content"
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.content
+                  ? "content-error"
+                  : undefined
+              }
+            />
+          </label>
+          {actionData?.fieldErrors?.content ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+              id="content-error"
+            >
+              {actionData?.fieldErrors?.content}
+            </p>
+          ) : null}
+        </div>
+        <button type="submit" className="button">
+          Add
+        </button>
+      </Form>
+    </div>
+  );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+
+  if (caught.status === 401) {
+    return (
+      <div className="error-container">
+        <p>You must be logged in to create a joke.</p>
+        <Link to="/login">Login</Link>
+      </div>
+    );
+  }
+
+  throw new Error(
+    `Unexpected caught response with status: ${caught.status}`
+  );
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  return (
+    <div className="error-container">
+      Something unexpected went wrong. Sorry about that.
+    </div>
+  );
+}
+```
+
+</details>
+
+One thing I like about my example is that it can use the _exact_ same validation functions that the server uses! So if what they submitted will fail server-side validation, we don't even bother rendering the optimistic UI because we know it would fail.
+
+That said, this declarative optimistic UI approach is fantastic because we don't have to worry about error recovery. If the request fails, then our component will be re-rendered, it will no longer be a submission and everything will work as it did before. Nice!
+
+Here's a demonstration of what that experience looks like:
+
+<video src="/jokes-tutorial/img/optimistic-ui.mp4" controls muted loop autoplay />
 
 ## Deployment

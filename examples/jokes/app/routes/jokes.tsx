@@ -68,7 +68,9 @@ export default function JokesScreen() {
                 <ul>
                   {data.jokeListItems.map(({ id, name }) => (
                     <li key={id}>
-                      <Link to={id}>{name}</Link>
+                      <Link to={id} prefetch="intent">
+                        {name}
+                      </Link>
                     </li>
                   ))}
                 </ul>

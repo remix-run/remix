@@ -144,7 +144,7 @@ export default function Login() {
               id="username-input"
               name="username"
               defaultValue={actionData?.fields?.username}
-              aria-invalid={!!actionData?.fieldErrors?.username || undefined}
+              aria-invalid={Boolean(actionData?.fieldErrors?.username)}
               aria-describedby={
                 actionData?.fieldErrors?.username ? "username-error" : undefined
               }
@@ -155,7 +155,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -166,7 +166,7 @@ export default function Login() {
               name="password"
               defaultValue={actionData?.fields?.password}
               type="password"
-              aria-invalid={!!actionData?.fieldErrors?.password || undefined}
+              aria-invalid={Boolean(actionData?.fieldErrors?.password)}
               aria-describedby={
                 actionData?.fieldErrors?.password ? "password-error" : undefined
               }
@@ -177,14 +177,14 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
           <div id="form-error-message">
             {actionData?.formError ? (
               <p className="form-validation-error" role="alert">
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>

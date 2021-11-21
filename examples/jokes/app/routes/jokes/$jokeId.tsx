@@ -4,11 +4,12 @@ import type {
   MetaFunction,
   HeadersFunction,
 } from "remix";
-import { json, useLoaderData, useCatch, Link, Form, redirect } from "remix";
+import { json, useLoaderData, useCatch, redirect } from "remix";
 import { useParams } from "react-router-dom";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
+import { JokeDisplay } from "~/components/joke";
 
 export let meta: MetaFunction = ({ data }: { data: LoaderData }) => {
   return {
@@ -29,6 +30,7 @@ export let loader: LoaderFunction = async ({ request, params }) => {
   return json(data, {
     headers: {
       "Cache-Control": `private, max-age=${60 * 5}`,
+      Vary: "Cookie",
     },
   });
 };
@@ -36,6 +38,7 @@ export let loader: LoaderFunction = async ({ request, params }) => {
 export let headers: HeadersFunction = ({ loaderHeaders }) => {
   return {
     "Cache-Control": loaderHeaders.get("Cache-Control") ?? "",
+    Vary: "Cookie",
   };
 };
 
@@ -59,20 +62,7 @@ export let action: ActionFunction = async ({ request, params }) => {
 export default function JokeRoute() {
   let data = useLoaderData<LoaderData>();
 
-  return (
-    <div>
-      <p>Here's your hilarious joke:</p>
-      <p>{data.joke.content}</p>
-      <Link to=".">{data.joke.name} Permalink</Link>
-      {data.isOwner ? (
-        <Form method="delete">
-          <button type="submit" className="button">
-            Delete
-          </button>
-        </Form>
-      ) : null}
-    </div>
-  );
+  return <JokeDisplay joke={data.joke} isOwner={data.isOwner} />;
 }
 
 export function CatchBoundary() {
