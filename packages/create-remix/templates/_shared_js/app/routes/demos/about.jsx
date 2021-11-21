@@ -1,15 +1,13 @@
 import { Outlet } from "remix";
 
-import stylesUrl from "../styles/about.css";
+import stylesUrl from "~/styles/demos/about.css";
 
-/** @type {import("remix").MetaFunction} */
 export let meta = () => {
   return {
-    title: "About Remix"
+    title: "About Remix",
   };
 };
 
-/** @type {import("remix").LinksFunction} */
 export let links = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };

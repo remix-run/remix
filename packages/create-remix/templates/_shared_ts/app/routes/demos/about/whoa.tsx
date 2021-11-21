@@ -7,13 +7,13 @@ export default function AboutIndex() {
         Whoa, this is a nested route! We render the <code>/about</code> layout
         route component, and its <code>Outlet</code> renders our route
         component. 🤯
-        <p>
-          <strong>
-            <Link to="..">
-              Go back to the <code>/about</code> index.
-            </Link>
-          </strong>
-        </p>
+      </p>
+      <p>
+        <strong>
+          <Link to="..">
+            Go back to the <code>/about</code> index.
+          </Link>
+        </strong>
       </p>
     </div>
   );

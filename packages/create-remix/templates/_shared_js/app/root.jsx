@@ -3,16 +3,16 @@ import {
   Links,
   LiveReload,
   Meta,
-  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch
+  useCatch,
+  Link,
 } from "remix";
 
+import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";
-import mediumStylesUrl from "~/styles/medium.css";
 
 /**
  * The `links` export is a function that returns an array of objects that map to
@@ -20,23 +20,17 @@ import mediumStylesUrl from "~/styles/medium.css";
  * every route in the app, but individual routes can include their own links
  * that are automatically unloaded when a user navigates away from the route.
  *
- * @type {import("remix").LinksFunction}
- *
- * @see {@link [Links API](https://docs.remix.run/v0.21/api/app/#links)}
+ * https://docs.remix.run/v0.21/api/app/#links
  */
 export let links = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
-      href: mediumStylesUrl,
-      media: "screen and (min-width: 640px)"
-    },
-    {
-      rel: "stylesheet",
       href: darkStylesUrl,
-      media: "(prefers-color-scheme: dark)"
-    }
+      media: "(prefers-color-scheme: dark)",
+    },
+    { rel: "stylesheet", href: deleteMeRemixStyles },
   ];
 };
 
@@ -79,16 +73,16 @@ function Layout({ children }) {
     <div className="remix-app">
       <header className="remix-app__header">
         <div className="container remix-app__header-content">
-          <NavLink to="/" title="Remix" className="remix-app__header-home-link">
+          <Link to="/" title="Remix" className="remix-app__header-home-link">
             <RemixLogo />
-          </NavLink>
+          </Link>
           <nav aria-label="Main navigation" className="remix-app__header-nav">
             <ul>
               <li>
-                <NavLink to="/about">About</NavLink>
+                <Link to="/">Home</Link>
               </li>
               <li>
-                <NavLink to="/oops">Oops</NavLink>
+                <a href="https://remix.run/docs">Remix Docs</a>
               </li>
               <li>
                 <a href="https://github.com/remix-run/remix">GitHub</a>
@@ -102,7 +96,7 @@ function Layout({ children }) {
       </main>
       <footer className="remix-app__footer">
         <div className="container remix-app__footer-content">
-          <p>&copy; Remix Software</p>
+          <p>&copy; You!</p>
         </div>
       </footer>
     </div>
@@ -138,66 +132,24 @@ export function CatchBoundary() {
         <h1>
           {caught.status}: {caught.statusText}
         </h1>
-        <div style={{ maxWidth: 500 }}>
-          {message}
-
-          <hr />
-
-          <p>
-            When your server responds with an error, you'll land in a{" "}
-            <code>CatchBoundary</code> (if it exists).
-          </p>
-
-          <p>
-            You can export a <code>CatchBoundary</code> component in{" "}
-            <strong>any route</strong>—not just the app root! This enables some
-            pretty cool opportunities to handle errors more elegantly for your
-            users.
-          </p>
-          <p>
-            <a href="https://docs.remix.run/TODO">
-              Check out the docs for more on handling errors in Remix.
-            </a>
-          </p>
-        </div>
+        {message}
       </Layout>
     </Document>
   );
 }
 
 export function ErrorBoundary({ error }) {
-  React.useEffect(() => {
-    console.error(error);
-  }, [error]);
-
+  console.error(error);
   return (
-    <Document title="Uh-oh!">
+    <Document title="Error!">
       <Layout>
-        <div style={{ maxWidth: 500 }}>
-          <h1>Well that sucks!</h1>
+        <div>
+          <h1>There was an error</h1>
           <p>{error.message}</p>
-
           <hr />
-
           <p>
-            When your server responds with an error that isn't caught by a{" "}
-            <code>CatchBoundary</code>, you'll land in an{" "}
-            <code>ErrorBoundary</code>.
-          </p>
-
-          <p>
-            Just like <code>CatchBoundary</code>, you can export an{" "}
-            <code>ErrorBoundary</code> component in <strong>any route</strong>
-            —not just the app root! We suggest that you always include an{" "}
-            <code>ErrorBoundary</code> in your app's root, but exposing them
-            strategically throughout your route hierarchy can be a powerful way
-            to improve the UX of your app.
-          </p>
-
-          <p>
-            <a href="https://docs.remix.run/TODO">
-              Check out the docs for more on handling errors in Remix.
-            </a>
+            Hey, developer, you should replace this with what you want your
+            users to see.
           </p>
         </div>
       </Layout>
@@ -214,6 +166,8 @@ function RemixLogo(props) {
       xmlnsXlink="http://www.w3.org/1999/xlink"
       aria-labelledby="remix-run-logo-title"
       role="img"
+      width="106"
+      height="30"
       fill="currentColor"
       {...props}
     >

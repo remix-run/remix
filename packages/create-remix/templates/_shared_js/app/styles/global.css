@@ -1,3 +1,5 @@
+/* You can just delete everything here or keep whatever you like, it's just a
+ * quick baseline */
 :root {
   --color-foreground: hsl(0, 0%, 7%);
   --color-background: hsl(0, 0%, 100%);
@@ -91,64 +93,4 @@ input[type="search"] {
   max-width: calc(100% - var(--gutter) * 2);
   margin-right: auto;
   margin-left: auto;
-}
-
-.remix-app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: calc(100vh - env(safe-area-inset-bottom));
-}
-
-.remix-app > * {
-  width: 100%;
-}
-
-.remix-app__header {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.remix-app__header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.remix-app__header-home-link {
-  width: 106px;
-  height: 30px;
-  color: var(--color-foreground);
-}
-
-.remix-app__header-nav ul {
-  list-style: none;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 1.5em;
-}
-
-.remix-app__header-nav li {
-  font-weight: bold;
-}
-
-.remix-app__main {
-  --space: 2rem;
-  padding-top: var(--space);
-  padding-top: var(--space);
-  flex: 1 1 auto;
-}
-
-.remix-app__footer {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.remix-app__footer-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
