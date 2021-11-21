@@ -3673,7 +3673,7 @@ With that understanding, we're going to add a `CatchBoundary` component to the f
 - `app/root.tsx` - Just as a last resort fallback.
 - `app/routes/jokes/$jokeId.tsx` - When a user tries to access a joke that doesn't exist (404).
 - `app/routes/jokes/new.tsx` - When a user tries to go to this page without being authenticated (401). Right now they'll just get redirected to the login if they try to submit it without authenticating. That would be super annoying to spend time writing a joke only to get redirected. Rather than inexplicably redirecting them, we could render a message that says they need to authenticate first.
-- `app/routes/jokes/index.tsx` - If there are no jokes in the database then a random joke is 404-not found.
+- `app/routes/jokes/index.tsx` - If there are no jokes in the database then a random joke is 404-not found. (simulate this by deleting the `prisma/dev.db` and running `npx prisma db push`. Don't forget to run `npx prisma db seed` afterwards to get your seed data back.)
 
 💿 Let's add these CatchBoundaries to the routes.
 
@@ -4533,6 +4533,86 @@ export function ErrorBoundary() {
 Sweet! Now search engines and social media platforms will like our site a bit better.
 
 ## Resource Routes
+
+Sometimes we want our routes to render something other than an HTML document. For example, maybe you have an endpoint that generates your social image for a blog post, or the image for a product, or the CSV data for a report, or an RSS feed, or sitemap, or anything else.
+
+This is what [Resource Routes](../guides/resource-routes) are for. I think it'd be cool to have an RSS feed of all our jokes. I think it would make sense to be at the URL `/jokes.rss`. For that to work, you'll need to escape the `.` because that character has special meaning in Remix route filenames. Learn more about [escaping special characters here](../api/conventions#escaping-special-characters).
+
+For this one, you'll probably want to at least peak at the example unless you want to go read up on the RSS spec 😅.
+
+💿 Make a `/jokes.rss` route.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes[.]rss.tsx
+import type { LoaderFunction } from "remix";
+import { db } from "~/utils/db.server";
+
+export let loader: LoaderFunction = async ({ request }) => {
+  let jokes = await db.joke.findMany({
+    take: 100,
+    orderBy: { createdAt: "desc" },
+    include: { jokester: { select: { username: true } } }
+  });
+
+  const host =
+    request.headers.get("X-Forwarded-Host") ??
+    request.headers.get("host");
+  if (!host) {
+    throw new Error("Could not determine domain URL.");
+  }
+  const protocol = host.includes("localhost")
+    ? "http"
+    : "https";
+  let domain = `${protocol}://${host}`;
+  const jokesUrl = `${domain}/jokes`;
+
+  let rssString = `
+    <rss xmlns:blogChannel="${jokesUrl}" version="2.0">
+      <channel>
+        <title>Remix Jokes</title>
+        <link>${jokesUrl}</link>
+        <description>Some funny jokes</description>
+        <language>en-us</language>
+        <generator>Kody the Koala</generator>
+        <ttl>40</ttl>
+        ${jokes
+          .map(joke =>
+            `
+            <item>
+              <title>${joke.name}</title>
+              <description>A funny joke called ${joke.name}</description>
+              <author>${joke.jokester.username}</author>
+              <pubDate>${joke.createdAt}</pubDate>
+              <link>${jokesUrl}/${joke.id}</link>
+              <guid>${jokesUrl}/${joke.id}</guid>
+            </item>
+          `.trim()
+          )
+          .join("\n")}
+      </channel>
+    </rss>
+  `.trim();
+
+  return new Response(rssString, {
+    headers: {
+      "Cache-Control": `public, max-age=${
+        60 * 10
+      } s-maxage=${60 * 60 * 24}`,
+      "Content-Type": "application/xml",
+      "Content-Length": String(Buffer.byteLength(rssString))
+    }
+  });
+};
+```
+
+</details>
+
+![XML document for RSS feed](/jokes-tutorial/img/jokes-rss-feed.png)
+
+Wahoo! You can seriously do anything you can imagine with this API. You could even make a JSON API for a native version of your app if you wanted to. Lots of power here.
 
 ## JavaScript...
 
