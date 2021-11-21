@@ -1,9 +1,9 @@
-import * as bcrypt from "bcrypt";
+import bcrypt from "bcrypt";
 import { createCookieSessionStorage, redirect } from "remix";
 
 import { db } from "./db.server";
 
-export type LoginForm = {
+type LoginForm = {
   username: string;
   password: string;
 };
@@ -62,16 +62,6 @@ export async function getUser(request: Request) {
   let session = await getUserSession(request);
   let userId = session.get("userId");
   if (typeof userId !== "string") return null;
-
-  return db.user
-    .findUnique({ where: { id: userId } })
-    .catch(() => Promise.reject(logout(request)));
-}
-
-export async function requireUser(request: Request) {
-  let session = await getUserSession(request);
-  let userId = session.get("userId");
-  if (!session.has("userId")) throw redirect("/login");
 
   return db.user
     .findUnique({ where: { id: userId } })

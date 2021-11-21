@@ -706,9 +706,11 @@ Perhaps you have a persistent newsletter signup at the bottom of every page on y
 ```tsx
 // routes/newsletter/subscribe.js
 export function action({ request }) {
-  let body = new URLSearchParams(await request.text());
+  let { email } = Object.fromEntries(
+    await request.formData()
+  );
   try {
-    await subscribe(body.get("email"));
+    await subscribe(email);
     return json({ ok: true });
   } catch (error) {
     return json({ error: error.message });
@@ -1602,7 +1604,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```js filename=app/routes/login.js lines=2,5-7,9,14,18,24-26,37,42,47,52
+```tsx filename=app/routes/login.js lines=2,5-7,9,14,18,24-26,37,42,47,52
 import { json, redirect } from "remix";
 import { getSession, commitSession } from "../sessions";
 
@@ -1629,13 +1631,13 @@ export async function action({ request }) {
   let session = await getSession(
     request.headers.get("Cookie")
   );
-  let bodyParams = new URLSearchParams(
-    await request.text()
+  let { username, password } = Object.fromEntries(
+    await request.formData()
   );
 
   let userId = await validateCredentials(
-    bodyParams.get("username"),
-    bodyParams.get("password")
+    username,
+    password
   );
 
   if (userId == null) {
@@ -1681,6 +1683,35 @@ export default function Login() {
   );
 }
 ```
+
+And then a logout form might look something like this:
+
+```tsx
+import { getSession, destroySession } from "../sessions";
+
+export let action: ActionFunction = async ({ request }) => {
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
+  return redirect("/login", {
+    headers: { "Set-Cookie": await destroySession(session) }
+  });
+};
+
+export default function LogoutRoute() {
+  return (
+    <>
+      <p>Are you sure you want to log out?</p>
+      <Form type="post">
+        <button>Logout</button>
+      </Form>
+      <Link to="/">Nevermind</Link>
+    </>
+  );
+}
+```
+
+<docs-warning>It's important that you logout in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
 
 ### Session Gotchas
 

@@ -9,19 +9,19 @@ You want to learn Remix? You're in the right place. This tutorial is the fast-tr
 
 We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
 
-We'll be linking to various docs (Remix docs as well as web docs on MDN) throughout the tutorial. If you're ever stuck, make sure you check into any docs links you may have skipped. Part of the goal of this tutorial is to get you acclamated to the API documentation, so if something's explained in the docs, then you'll be linked to those instead of rehashing it all out in here.
+We'll be linking to various docs (Remix docs as well as web docs on [MDN](https://developer.mozilla.org/en-US/)) throughout the tutorial (if you don't already use MDN, you'll find yourself using it a _lot_ with Remix, and getting better at the web while you're at it). If you're ever stuck, make sure you check into any docs links you may have skipped. Part of the goal of this tutorial is to get you acclimated to the API documentation, so if something's explained in the docs, then you'll be linked to those instead of rehashing it all out in here.
 
-This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when your using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
+This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when you're using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
 
 <details>
 
   <summary>Click me</summary>
 
-There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We recommend you not waste your time struggling with stuff that's unrelated to Remix-specifically. This isn't the time to waste effort guessing what class names to use. Feel free to reference these once you get the main point of the tutorial. Use these to check your work.
+There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly then you can just copy/paste stuff as you go as well. We won't judge you!
 
 </details>
 
-💿 Hello, I'm Rachel the Remix Disk. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. Enjoy the tutorial!
+💿 Hello, I'm Rachel the Remix Disk. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. I hope you enjoy the tutorial!
 
 ## Outline
 
@@ -36,7 +36,7 @@ Here are the topics we'll be covering in this tutorial:
 - Mutations
 - Validation
 - Resource Routes
-- Unexpected (we made a whoopsies) and expected (you made a whoopsies) Error Handling
+- Unexpected (the dev made a whoopsies) and expected (the end-user made a whoopsies) Error Handling
 - Deployment
 
 ## Prerequisites
@@ -96,7 +96,7 @@ R E M I X
 
 <docs-info>
 
-Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured Express.js-based Node.js server. It's the simplest option, so that's what we're going with for this tutorial. Feel free to experiment in the future!
+Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured [Node.js](https://nodejs.org) server based on [Express](https://expressjs.com/). It's the simplest option and it satisfies most people's needs, so that's what we're going with for this tutorial. Feel free to experiment in the future!
 
 </docs-info>
 
@@ -108,9 +108,11 @@ Once the `npm install` has completed, we'll change into the `remix-jokes` direct
 cd remix-jokes
 ```
 
-Great, now open that up in your favorite editor and let's explore the project structure a bit.
+Now you're in the `remix-jokes` directory. All other commands you run from here on out will be in that directory.
 
-## Explore Project structure
+💿 Great, now open that up in your favorite editor and let's explore the project structure a bit.
+
+## Explore the project structure
 
 Here's the tree structure. Hopefully what you've got looks a bit like this:
 
@@ -249,7 +251,7 @@ The first thing we want to do is get our routing structure set up. Here are all 
 
 You can programmatically create routes via the [`remix.config.js`](../api/conventions#remixconfigjs), but the more common way to create the routes is through the file system. This is called "file-based routing."
 
-Each of file we put in the `app/routes` directory is called a ["Route Module"](../api/conventions#route-module-api) and by following [the route filename convention](../api/conventions#route-filenames) (like that weird `app/routes/$jokeId.tsx` file we're going to make), we can create the routing URL structure we're looking for. Remix uses React Router under the hood to handle this routing.
+Each file we put in the `app/routes` directory is called a ["Route Module"](../api/conventions#route-module-api) and by following [the route filename convention](../api/conventions#route-filenames), we can create the routing URL structure we're looking for. Remix uses [React Router](https://reactrouter.com/) under the hood to handle this routing.
 
 💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
 
@@ -301,7 +303,7 @@ export default function App() {
 npm run dev
 ```
 
-That will watch your filesystem for changes to rebuild the site and thanks to the `<LiveReload />` component your browser will refresh.
+That will watch your filesystem for changes, rebuild the site, and thanks to the `<LiveReload />` component your browser will refresh.
 
 💿 Go ahead and open up the site again and you should be presented with the greeting from the index route.
 
@@ -309,7 +311,7 @@ That will watch your filesystem for changes to rebuild the site and thanks to th
 
 Great! Next let's handle the `/jokes` route.
 
-💿 Create a new route at `app/routes/jokes.tsx` (keep in mind that this will be a parent route, so you'll want to use an `<Outlet />` route as well).
+💿 Create a new route at `app/routes/jokes.tsx` (keep in mind that this will be a parent route, so you'll want to use `<Outlet />` again).
 
 <details>
 
@@ -332,7 +334,7 @@ export default function JokesRoute() {
 
 </details>
 
-You should be presented with that when you go to [`/jokes`](http://localhost:3000/jokes). Now, in that `<Outlet />` we want to render out some random jokes in the "index route".
+You should be presented with that component when you go to [`/jokes`](http://localhost:3000/jokes). Now, in that `<Outlet />` we want to render out some random jokes in the "index route".
 
 💿 Create a route at `app/routes/jokes/index.tsx`
 
@@ -401,7 +403,11 @@ Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should di
 
 ### Parameterized Routes
 
-Let's add one more route. This one is unique. Soon we're going to add a database that stores our jokes by an ID. So we want a parameterized route: `/jokes/:jokeId` where `:jokeId` is anything, and then we can lookup the `:jokeId` part of the URL in the database to display the right joke.
+Soon we'll add a database that stores our jokes by an ID, so lets add one more route that's a little more unique, a parameterized route:
+
+`/jokes/:jokeId`
+
+Here the parameter $jokeId can be anything, and we can lookup that part of the URL up in the database to display the right joke. To make a parameterized route, we use the `$` character in the filename. ([Read more about the convention here](../api/conventions#route-filenames)).
 
 💿 Create a new route at `app/routes/jokes/$jokeId.tsx`. Don't worry too much about what it displays for now (we don't have a database set up yet!):
 
@@ -474,7 +480,7 @@ export default function IndexRoute() {
 
 </details>
 
-Now if you go to [`/`](http://localhost:3000/) you may be a bit disappointed. Our beautiful styles aren't applyed! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
+Now if you go to [`/`](http://localhost:3000/) you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
 
 So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`](../api/remix#link) component.
 
@@ -525,7 +531,7 @@ This also means your CSS files can be cached long-term and your CSS is naturally
 
 </docs-info>
 
-That's pretty much all there is to it for styling with the tutorial. The rest is just writing all the CSS and stuff and you're welcome to do that if you want, but I'm going to let you skip that and I'll just give you the CSS you can copy.
+That's pretty much all there is to it for styling with the tutorial. The rest is just writing the CSS which you're welcome to do if you want, or simply copy the styles from below.
 
 <details>
 
@@ -1237,19 +1243,28 @@ export default function JokesRoute() {
 
 As we work through the rest of the tutorial, you may want to check the class names in those CSS files so you can take full advantage of that CSS.
 
+One quick note about CSS. A lot of you folks may be used to using runtime libraries for CSS (like [Styled-Components](https://www.styled-components.com/)). While you can use those with Remix, we'd like to encourage you to look into more traditional approaches to CSS. Many of the problems that led to the creation of these styling solutions aren't really problems in Remix, so you can often go with a simpler styling approach.
+
+That said, many Remix users are very happy with [Tailwind](https://tailwindcss.com/) and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's a generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
+
 ## Database
 
 Most real-world applications require some form of data persistence. In our case, we want to save our jokes to a database so people can laugh at our hilarity and even submit their own (coming soon in the authentication section!).
 
-You can use any persistence solution you like with Remix, Firebase, Supabase, Airtable, Hasura, Google Spreadsheets, FaunaDB, a custom PostgreSQL, or even your backend team's REST/GraphQL APIs. Seriously. Whatever you want.
+You can use any persistence solution you like with Remix; [Firebase](https://firebase.google.com/), [Supabase](https://supabase.com/), [Airtable](https://www.airtable.com/), [Hasura](https://hasura.io/), [Google Spreadsheets](https://www.google.com/sheets/about/), [Fauna](https://fauna.com/features), a custom [PostgreSQL](https://www.postgresql.org/), or even your backend team's REST/GraphQL APIs. Seriously. Whatever you want.
 
 ### Set up Prisma
 
-In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.html) database. Effectively, it's a database that lives in a file on your computer. It's surprisingly capable. And what makes it better is that it's supported by [Prisma](https://www.prisma.io/), our favorite database ORM. It's a great place to start if you're not sure what database to use.
+<docs-info>The prisma team has built [a VSCode extension](https://marketplace.visualstudio.com/items?itemName=Prisma.prisma) you might find quite helpful when working on the prisma schema.</docs-info>
 
-We're going to use two packages for this, `prisma` which we use during development to interact with our database and schema, and `@prisma/client` which we use during runtime to make queries from our application code.
+In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.html) database. Essentially, it's a database that lives in a file on your computer, is surprisingly capable, and best of all it's supported by [Prisma](https://www.prisma.io), our favorite database ORM! It's a great place to start if you're not sure what database to use.
 
-💿 Install prisma:
+There are two packages that we need to get started:
+
+- `prisma` for interact with our database and schema during development
+- `@prisma/client` for making queries to our database during runtime.
+
+💿 Install the prisma packages:
 
 ```sh
 npm install --save-dev prisma
@@ -1422,9 +1437,9 @@ import { PrismaClient } from "@prisma/client";
 let db = new PrismaClient();
 ```
 
-This works just fine, but the problem is, during development, we don't want to close down and completely restart our server every time we make a server-side change. So `@remix-run/serve` actually rebuilds our code and requires it brand new. The problem here is that every time we make a code change, we'll make a new connection to the database and eventually we'll run out of connections! This is such a common problem with database-accessing apps that Prisma has a warning for it:
+This works just fine, but the problem is, during development, we don't want to close down and completely restart our server every time we make a server-side change. So `@remix-run/serve` actually rebuilds our code and requires it brand new. The problem here is that every time we make a code change, we'll make a new connection to the database and eventually run out of connections! This is such a common problem with database-accessing apps that Prisma has a warning for it:
 
-<docs-warn>Warning: 10 Prisma Clients are already running</docs-warn>
+> Warning: 10 Prisma Clients are already running
 
 So we've got a little bit of extra work to do to avoid this development time problem.
 
@@ -1468,7 +1483,7 @@ Ok, ready to get back to writing Remix code? Me too!
 
 Our goal is to put a list of jokes on the `/jokes` route so we can have a list of links to jokes people can choose from. In Remix, each route module is responsible for getting its own data. So if we want data on the `/jokes` route, then we'll be updating the `app/routes/jokes.tsx` file.
 
-To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#loader). This is simply an `async` function you export that returns a response for the data your component needs. And then the component gets it using the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
+To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#loader). This is simply an `async` function you export that returns a response, and is accessed on the component through the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
 
 ```tsx
 // this is just an example. No need to copy/paste this 😄
@@ -1477,7 +1492,7 @@ import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
     users: await prisma.user.findMany()
   };
@@ -1612,8 +1627,8 @@ type LoaderData = {
 function getJokeListItems() {
   return db.joke.findMany({
     take: 5,
-    select: { id: true, name: true }
-    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true },
+    orderBy: { createdAt: "desc" }
   });
 }
 
@@ -1644,6 +1659,8 @@ let joke = await db.joke.findUnique({
   where: { id: jokeId }
 });
 ```
+
+<docs-warning>Remember, when we're referencing the URL route, it's `/jokes/:jokeId`, and when we talk about the file system it's `/app/routes/jokes/$jokeId.tsx`.</docs-warning>
 
 💿 Great! Now you know everything you need to continue and connect the `/jokes/:jokeId` route in `app/routes/jokes/$jokeId.tsx`.
 
@@ -1842,7 +1859,11 @@ export default function NewJokeRoute() {
 
 </details>
 
-If you've got that working, you should be able to create new jokes and you'll be redirected to the new joke's page.
+If you've got that working, you should be able to create new jokes and be redirected to the new joke's page.
+
+<docs-info>
+  The `redirect` utility is a simple utility in Remix for creating a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object that has the right headers/status codes to redirect the user.
+</docs-info>
 
 ![Create new joke form filled out](/jokes-tutorial/img/creating-new-joke.png)
 
@@ -2006,7 +2027,7 @@ Oh, and if you _do_ want to have client-side validation (for while the user is t
 
 ## Authentication
 
-It's the moment we've all been waiting for! We're going to add authentication to our little application. We want to add authentication so we can require a user have an account to create jokes and we can associate the user with the jokes they've created. So many ideas!
+It's the moment we've all been waiting for! We're going to add authentication to our little application. The reason we want to add authentication is so jokes can be associated to the users who created them. So many ideas!
 
 One thing that would be good to understand for this section is how [HTTP cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) work on the web.
 
@@ -2165,6 +2186,18 @@ Great! Our database is now ready to go.
 ### Auth Flow Overview
 
 So our authentication will be the traditional username/password variety. We'll be using [`bcrypt`](https://npm.im/bcrypt) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
+
+💿 Go ahead and get that installed right now so we don't forget:
+
+```sh
+npm install bcrypt
+```
+
+💿 The `bcrypt` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
+
+```sh
+npm install --save-dev @types/bcrypt
+```
 
 Let me give you a quick diagram of the flow of things:
 
@@ -2333,3 +2366,706 @@ export default function Login() {
 This should look something like this:
 
 ![A login form with a login/register radio button and username/password fields and a submit button](/jokes-tutorial/img/login-route.png)
+
+Great, now that we've got the UI looking nice, let's add some logic. This will be very similar to the sort of thing we did in the `/jokes/new` route. Fill in as much as you can (validation and stuff) and we'll just leave comments for the parts of the logic we don't have implemented yet.
+
+💿 Implement validation with an `action` in `app/routes/login.tsx`
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/login.tsx
+import type { ActionFunction, LinksFunction } from "remix";
+import { useActionData } from "remix";
+import { db } from "~/utils/db.server";
+import stylesUrl from "../styles/login.css";
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+function validateUsername(username: unknown) {
+  if (typeof username !== "string" || username.length < 3) {
+    return `Usernames must be at least 3 characters long`;
+  }
+}
+
+function validatePassword(password: unknown) {
+  if (typeof password !== "string" || password.length < 6) {
+    return `Passwords must be at least 6 characters long`;
+  }
+}
+
+type ActionData = {
+  formError?: string;
+  fieldErrors?: {
+    username: string | undefined;
+    password: string | undefined;
+  };
+  fields?: {
+    loginType: string;
+    username: string;
+    password: string;
+  };
+};
+
+export let action: ActionFunction = async ({
+  request
+}): Promise<Response | ActionData> => {
+  let { loginType, username, password } =
+    Object.fromEntries(await request.formData());
+  if (
+    typeof loginType !== "string" ||
+    typeof username !== "string" ||
+    typeof password !== "string"
+  ) {
+    return { formError: `Form not submitted correctly.` };
+  }
+
+  let fields = { loginType, username, password };
+  let fieldErrors = {
+    username: validateUsername(username),
+    password: validatePassword(password)
+  };
+  if (Object.values(fieldErrors).some(Boolean))
+    return { fieldErrors, fields };
+
+  switch (loginType) {
+    case "login": {
+      // login to get the user
+      // if there's no user, return the fields and a formError
+      // if there is a user, create their session and redirect to /jokes
+      return { fields, formError: "Not implemented" };
+    }
+    case "register": {
+      let userExists = await db.user.findFirst({
+        where: { username }
+      });
+      if (userExists) {
+        return {
+          fields,
+          formError: `User with username ${username} already exists`
+        };
+      }
+      // create the user
+      // create their session and redirect to /jokes
+      return { fields, formError: "Not implemented" };
+    }
+    default: {
+      return { fields, formError: `Login type invalid` };
+    }
+  }
+};
+
+export default function Login() {
+  const actionData = useActionData<
+    ActionData | undefined
+  >();
+  return (
+    <div className="container">
+      <div className="content" data-light="">
+        <h1>Login</h1>
+        <form
+          method="post"
+          aria-describedby={
+            actionData?.formError
+              ? "form-error-message"
+              : undefined
+          }
+        >
+          <fieldset>
+            <legend className="sr-only">
+              Login or Register?
+            </legend>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="login"
+                defaultChecked={
+                  !actionData?.fields?.loginType ||
+                  actionData?.fields?.loginType === "login"
+                }
+              />{" "}
+              Login
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="loginType"
+                value="register"
+                defaultChecked={
+                  actionData?.fields?.loginType ===
+                  "register"
+                }
+              />{" "}
+              Register
+            </label>
+          </fieldset>
+          <div>
+            <label htmlFor="username-input">Username</label>
+            <input
+              type="text"
+              id="username-input"
+              name="username"
+              defaultValue={actionData?.fields?.username}
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.username
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.username
+                  ? "username-error"
+                  : undefined
+              }
+            />
+            {actionData?.fieldErrors?.username ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+                id="username-error"
+              >
+                {actionData?.fieldErrors.username}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="password-input">Password</label>
+            <input
+              id="password-input"
+              name="password"
+              defaultValue={actionData?.fields?.password}
+              type="password"
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.password
+              )}
+              aria-describedby={
+                actionData?.fieldErrors?.password
+                  ? "password-error"
+                  : undefined
+              }
+            />
+            {actionData?.fieldErrors?.password ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+                id="password-error"
+              >
+                {actionData?.fieldErrors.password}
+              </p>
+            ) : null}
+          </div>
+          <div id="form-error-message">
+            {actionData?.formError ? (
+              <p
+                className="form-validation-error"
+                role="alert"
+              >
+                {actionData?.formError}
+              </p>
+            ) : null}
+          </div>
+          <button type="submit" className="button">
+            Submit
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+</details>
+
+Once you've got that done, your form should look something like this:
+
+![Login form with errors](/jokes-tutorial/img/login-form-with-errors.png)
+
+Sweet! Now it's time for the juicy stuff. Let's start with the `login` side of things. We seed in a user with the username "kody" and the password (hashed) is "twixrox". So we want to implement enough logic that will allow us to login as that user. We're going to put this logic in a separate file called `app/utils/session.server.ts`.
+
+Here's what we need in that file to get started:
+
+- Export a function called `login` that accepts the `username` and `password`
+- Queries prisma for a user with the `username`
+- If there is no user, return `null`
+- Use `bcrypt.compare` to compare the give `password` to the user's `passwordHash`
+- If the passwords don't match, return `null`
+- If the passwords match, return the user
+
+💿 Create a file called `app/utils/session.server.ts` and implement the above requirements.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/utils/session.server.tsx
+import bcrypt from "bcrypt";
+import { db } from "./db.server";
+
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
+export async function login({
+  username,
+  password
+}: LoginForm) {
+  const user = await db.user.findUnique({
+    where: { username }
+  });
+  if (!user) return null;
+
+  const isCorrectPassword = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
+  if (!isCorrectPassword) return null;
+
+  return user;
+}
+```
+
+</details>
+
+Great, with that in place, now we can update `app/routes/login.tsx` to use it:
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/login.tsx lines=[4,15-22]
+import type { ActionFunction, LinksFunction } from "remix";
+import { useActionData } from "remix";
+import { db } from "~/utils/db.server";
+import { login } from "~/utils/session.server";
+import stylesUrl from "../styles/login.css";
+
+// ...
+
+export let action: ActionFunction = async ({
+  request
+}): Promise<Response | ActionData> => {
+  // ...
+  switch (loginType) {
+    case "login": {
+      const user = await login({ username, password });
+      console.log({ user });
+      if (!user) {
+        return {
+          fields,
+          formError: `Username/Password combination is incorrect`
+        };
+      }
+      // if there is a user, create their session and redirect to /jokes
+      return { fields, formError: "Not implemented" };
+    }
+    // ...
+  }
+};
+
+export default function Login() {
+  // ...
+}
+```
+
+</details>
+
+To check our work, I added a `console.log` to `app/routes/login.tsx` after the `login` call.
+
+<docs-info>Remember, `actions` and `loaders` run on the server, so `console.log` calls you put in those you can't see in the browser console. Those will show up in the terminal window you're running your server in.</docs-info>
+
+💿 With that in place, try to login with the username "kody" and the password "twixrox" and check the terminal output. Here's what I get:
+
+```
+{
+  user: {
+    id: '1dc45f54-4061-4d9e-8a6d-28d6df6a8d7f',
+    createdAt: 2021-11-21T00:28:52.560Z,
+    updatedAt: 2021-11-21T00:28:52.560Z,
+    username: 'kody',
+    passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u'
+  }
+}
+```
+
+<docs-warning>If you're having trouble, run `npx prisma studio` to see the database in the browser. It's possible you don't have any data because you forgot to run `npx prisma db seed` (like I did when I was writing this 😅).</docs-warning>
+
+Wahoo! We got the user! Now we need to put that user's ID into the session. We're going to do this in `app/utils/session.server.ts`. Remix has a built-in abstraction to help us with managing several types of storage mechanisms for sessions ([here are the docs](../api/remix#sessions)). We'll be using [`createCookieSessionStorage`](../api/remix#createcookiesessionstorage) as it's the simplest and scales quite well.
+
+💿 Write a `createUserSession` function in `app/utils/session.server.ts` that accepts a user ID and a route to redirect to. It should do the following:
+
+- creates a new session (via the cookie storage `getSession` function)
+- sets the `userId` field on the session
+- redirects to the given route setting the `Set-Cookie` header (via the cookie storage `commitSession` function)
+
+Note: If you need a hand, there's a small example of how the whole basic flow goes in [the session docs](../api/remix#sessions).
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/utils/session.server.tsx
+import bcrypt from "bcrypt";
+import { db } from "./db.server";
+
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
+export async function login({
+  username,
+  password
+}: LoginForm) {
+  const user = await db.user.findUnique({
+    where: { username }
+  });
+  if (!user) return null;
+
+  const isCorrectPassword = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
+  if (!isCorrectPassword) return null;
+
+  return user;
+}
+```
+
+</details>
+
+Great, with that in place, now we can update `app/routes/login.tsx` to use it:
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-45,47-56]
+import bcrypt from "bcrypt";
+import {
+  createCookieSessionStorage,
+  redirect
+} from "remix";
+import { db } from "./db.server";
+
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
+export async function login({
+  username,
+  password
+}: LoginForm) {
+  const user = await db.user.findUnique({
+    where: { username }
+  });
+  if (!user) return null;
+  const isCorrectPassword = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
+  if (!isCorrectPassword) return null;
+  return user;
+}
+
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  throw new Error("SESSION_SECRET must be set");
+}
+
+let { getSession, commitSession } =
+  createCookieSessionStorage({
+    cookie: {
+      name: "RJ_session",
+      secure: true,
+      secrets: [sessionSecret],
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      httpOnly: true
+    }
+  });
+
+export async function createUserSession(
+  userId: string,
+  redirectTo: string
+) {
+  let session = await getSession();
+  session.set("userId", userId);
+  return redirect(redirectTo, {
+    headers: { "Set-Cookie": await commitSession(session) }
+  });
+}
+```
+
+</details>
+
+I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the badies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
+
+With that, pop open your [Network tab](https://developer.chrome.com/docs/devtools/network/reference/), go to [`/login`](http://localhost:3000/login) and enter `kody` and `twixrox` and check the response headers in the network tab. Should look something like this:
+
+![DevTools Network tab showing a "Set-Cookie" header on the POST response](/jokes-tutorial/img/network-tab-set-cookie.png)
+
+And if you check the cookies section of the [Application tab](https://developer.chrome.com/docs/devtools/storage/cookies/) then you should have the cookie set in there as well.
+
+![DevTools Application tab showing ](/jokes-tutorial/img/application-tab-cookies.png)
+
+And now every request the user makes to our server will include that cookie:
+
+![Request headers showing the Cookie](/jokes-tutorial/img/cookie-header-on-request.png)
+
+So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `prisma.joke.create` call.
+
+<docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
+
+💿 Update `app/utils/session.ts` to get the userId from the session.
+
+<details>
+
+<summary>For example:</summary>
+
+```ts filename=app/utils/session.ts lines=[47,49,51-56,58-65]
+import bcrypt from "bcrypt";
+import {
+  createCookieSessionStorage,
+  redirect
+} from "remix";
+import { db } from "./db.server";
+
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
+export async function login({
+  username,
+  password
+}: LoginForm) {
+  const user = await db.user.findUnique({
+    where: { username }
+  });
+  if (!user) return null;
+  const isCorrectPassword = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
+  if (!isCorrectPassword) return null;
+  return user;
+}
+
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  throw new Error("SESSION_SECRET must be set");
+}
+
+let { getSession, commitSession } =
+  createCookieSessionStorage({
+    cookie: {
+      name: "RJ_session",
+      secure: true,
+      secrets: [sessionSecret],
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      httpOnly: true
+    }
+  });
+
+export function getUserSession(request: Request) {
+  return getSession(request.headers.get("Cookie"));
+}
+
+export async function getUserId(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!userId || typeof userId !== "string") return null;
+  return userId;
+}
+
+export async function requireUserId(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!userId || typeof userId !== "string") {
+    throw redirect("/login");
+  }
+  return userId;
+}
+
+export async function createUserSession(
+  userId: string,
+  redirectTo: string
+) {
+  let session = await getSession();
+  session.set("userId", userId);
+  return redirect(redirectTo, {
+    headers: { "Set-Cookie": await commitSession(session) }
+  });
+}
+```
+
+</details>
+
+<docs-info>Did you notice in my example that we're `throw`ing a `Response`?!</docs-info>
+
+In my example, I created a `requireUserId` which will throw a `redirect`. Remember that's a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix will catch that thrown response and send it back to the client. It's a great way to "exit early" in abstractions like this so users of our `requireUserId` function can just assume that the return will always give us the `userId` and don't need to worry about what happens if there isn't a `userId` because the response is thrown which stops their code execution!
+
+We'll cover this more in the error handling sections later.
+
+💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `prisma.joke.create` call.
+
+<details>
+
+<summary>For example:</summary>
+
+```ts filename=app/utils/session.ts lines=[2,8,30]
+// ...
+import { requireUserId } from "~/utils/session.server";
+// ...
+
+export let action: ActionFunction = async ({
+  request
+}): Promise<Response | ActionData> => {
+  const userId = await requireUserId(request);
+
+  let { name, content } = Object.fromEntries(
+    await request.formData()
+  );
+  if (
+    typeof name !== "string" ||
+    typeof content !== "string"
+  ) {
+    return { formError: `Form not submitted correctly.` };
+  }
+
+  let fieldErrors = {
+    name: validateJokeName(name),
+    content: validateJokeContent(content)
+  };
+  let fields = { name, content };
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return { fieldErrors, fields };
+  }
+
+  let joke = await db.joke.create({
+    data: { ...fields, jokesterId: userId }
+  });
+  return redirect(`/jokes/${joke.id}`);
+};
+
+// ...
+```
+
+</details>
+
+Super! So now if a user attempts to create a new joke, they'll be redirected to the login page because a `userId` is required to create a new joke.
+
+We should probably give people the ability to see that they're logged in and a way to log out right? Yeah, I think so. Let's implement that.
+
+💿 Update `app/utils/session.server.ts` to add a `getUser` function that get's the user from prisma and a `logout` function that uses [`destroySession`](../api/remix#using-sessions) to log the user out.
+
+<details>
+
+<summary>For example:</summary>
+
+```ts filename=app/utils/session.ts lines=[66-74,76-83]
+import bcrypt from "bcrypt";
+import {
+  createCookieSessionStorage,
+  redirect
+} from "remix";
+import { db } from "./db.server";
+
+type LoginForm = {
+  username: string;
+  password: string;
+};
+
+export async function login({
+  username,
+  password
+}: LoginForm) {
+  const user = await db.user.findUnique({
+    where: { username }
+  });
+  if (!user) return null;
+  const isCorrectPassword = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
+  if (!isCorrectPassword) return null;
+  return user;
+}
+
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  throw new Error("SESSION_SECRET must be set");
+}
+
+let { getSession, commitSession, destroySession } =
+  createCookieSessionStorage({
+    cookie: {
+      name: "RJ_session",
+      secure: true,
+      secrets: [sessionSecret],
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      httpOnly: true
+    }
+  });
+
+export function getUserSession(request: Request) {
+  return getSession(request.headers.get("Cookie"));
+}
+
+export async function getUserId(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!userId || typeof userId !== "string") return null;
+  return userId;
+}
+
+export async function requireUserId(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (!userId || typeof userId !== "string")
+    throw redirect("/login");
+  return userId;
+}
+
+export async function getUser(request: Request) {
+  let session = await getUserSession(request);
+  let userId = session.get("userId");
+  if (typeof userId !== "string") return null;
+
+  return db.user
+    .findUnique({ where: { id: userId } })
+    .catch(() => Promise.reject(logout(request)));
+}
+
+export async function logout(request: Request) {
+  let session = await getSession(
+    request.headers.get("Cookie")
+  );
+  return redirect("/login", {
+    headers: { "Set-Cookie": await destroySession(session) }
+  });
+}
+
+export async function createUserSession(
+  userId: string,
+  redirectTo: string
+) {
+  let session = await getSession();
+  session.set("userId", userId);
+  return redirect(redirectTo, {
+    headers: { "Set-Cookie": await commitSession(session) }
+  });
+}
+```
+
+</details>
+
+Wouldn't it be annoying to spend all this time writing a joke only to be redirected when you submit it? I think so! So let's add a message on the page

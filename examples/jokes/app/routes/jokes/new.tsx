@@ -1,16 +1,12 @@
 import type { ActionFunction, LoaderFunction } from "remix";
-import { Link } from "remix";
-import { json, useLoaderData } from "remix";
-import { useActionData, Form, redirect } from "remix";
+import { Link, useCatch, useActionData, Form, redirect } from "remix";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
 
-type LoaderData = { loggedIn: boolean };
-
 export let loader: LoaderFunction = async ({ request }) => {
   let userId = await getUserId(request);
-  let data: LoaderData = { loggedIn: Boolean(userId) };
-  return json(data);
+  if (!userId) throw new Response("Unauthorized", { status: 401 });
+  return {};
 };
 
 function validateJokeContent(content: string) {
@@ -56,17 +52,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let data = useLoaderData<LoaderData>();
   let actionData = useActionData<ActionData | undefined>();
-
-  if (!data.loggedIn) {
-    return (
-      <div>
-        <p>You must be logged in to create a joke.</p>
-        <Link to="/login">Login</Link>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -119,4 +105,23 @@ export default function NewJokeRoute() {
       </Form>
     </div>
   );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+
+  switch (caught.status) {
+    case 401:
+      return (
+        <div>
+          <p>You must be logged in to create a joke.</p>
+          <Link to="/login">Login</Link>
+        </div>
+      );
+
+    default:
+      throw new Error(
+        `Unexpected caught response with status: ${caught.status}`
+      );
+  }
 }
