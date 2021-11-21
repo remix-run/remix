@@ -210,7 +210,7 @@ export default function SomeRouteComponent() {
 }
 ```
 
-### `loader` export
+### `loader`
 
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
@@ -484,7 +484,7 @@ export function CatchBoundary() {
 }
 ```
 
-### `action` export
+### `action`
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
@@ -534,7 +534,7 @@ See also:
 - [`<Form>`][form]
 - [`<Form action>`][form action]
 
-### `headers` export
+### `headers`
 
 Each route can define it's own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
@@ -611,7 +611,7 @@ export function headers({ loaderHeaders, parentHeaders }) {
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
-### `meta` export
+### `meta`
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
@@ -631,7 +631,7 @@ There are a few special cases like `title` renders a `<title>` tag, `og:style` t
 
 In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
 
-### `links` export
+### `links`
 
 The links function defines which `<link>` elements to add to the page when the user visits a route.
 

@@ -7,7 +7,7 @@ export function meta() {
 }
 
 // When your form sends a POST, the action is called on the server.
-// - https://remix.run/api/conventions#action-export
+// - https://remix.run/api/conventions#action
 // - https://remix.run/guides/data-updates
 export let action = async ({ request }) => {
   let formData = await request.formData();
@@ -24,7 +24,7 @@ export let action = async ({ request }) => {
   let rightAnswers = [
     "4fa6024f12494d3a99d8bda9b7a55f7d140f328a",
     "ce3659ad235ca6d1e12dec21465aff3f9a62bb8c",
-    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4",
+    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4"
   ];
 
   let encrypted = hash(answer);
@@ -92,7 +92,7 @@ export default function ActionsDemo() {
           </li>
           <li>
             API:{" "}
-            <a href="https://remix.run/api/conventions#action-export">
+            <a href="https://remix.run/api/conventions#action">
               Route Action Export
             </a>
           </li>

@@ -510,7 +510,7 @@ From your components perspective, all that happend was the `useTransition` hook 
 
 - [Form](../api/remix#form)
 - [useTransition](../api/remix#usetransition)
-- [Actions](../api/conventions#action-export)
-- [Loaders](../api/conventions#loader-export)
+- [Actions](../api/conventions#action)
+- [Loaders](../api/conventions#loader)
 - [`useSubmit()`](../api/remix#usesubmit)
 - [`useFetcher()`](../api/remix#usefetcher)
