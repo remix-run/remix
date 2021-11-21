@@ -11,7 +11,17 @@ import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
 import { JokeDisplay } from "~/components/joke";
 
-export let meta: MetaFunction = ({ data }: { data: LoaderData }) => {
+export let meta: MetaFunction = ({
+  data,
+}: {
+  data: LoaderData | undefined;
+}) => {
+  if (!data) {
+    return {
+      title: "No joke",
+      description: "No joke found",
+    };
+  }
   return {
     title: `"${data.joke.name}" joke`,
     description: `Enjoy the "${data.joke.name}" joke and much more`,

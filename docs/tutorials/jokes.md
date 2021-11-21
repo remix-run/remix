@@ -3154,9 +3154,20 @@ export default function JokesScreen() {
 }
 ```
 
+```tsx filename=app/routes/logout.tsx
+import type { ActionFunction } from "remix";
+import { logout } from "~/utils/session.server";
+
+export let action: ActionFunction = async ({ request }) => {
+  return logout(request);
+};
+```
+
 </details>
 
 Hopefully getting the user in the loader and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of my version of the code before we continue.
+
+First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated.
 
 ```tsx
 <Link to="new" className="button">
@@ -4573,7 +4584,7 @@ export default function Login() {
 }
 ```
 
-```ts filename=app/routes/jokes/$jokeId.tsx lines=[3,7-16]
+```ts filename=app/routes/jokes/$jokeId.tsx lines=[3,7-22]
 import type { Joke } from "@prisma/client";
 import { useParams } from "react-router-dom";
 import type { LoaderFunction, MetaFunction } from "remix";
@@ -4583,8 +4594,14 @@ import { db } from "~/utils/db.server";
 export let meta: MetaFunction = ({
   data
 }: {
-  data: LoaderData;
+  data: LoaderData | undefined;
 }) => {
+  if (!data) {
+    return {
+      title: "No joke",
+      description: "No joke found"
+    };
+  }
   return {
     title: `"${data.joke.name}" joke`,
     description: `Enjoy the "${data.joke.name}" joke and much more`
@@ -5206,7 +5223,7 @@ export default function Login() {
 }
 ```
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,8,53-60,63-71]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,8,59-66,69-77]
 import type {
   LoaderFunction,
   ActionFunction,
@@ -5232,8 +5249,14 @@ import {
 export let meta: MetaFunction = ({
   data
 }: {
-  data: LoaderData;
+  data: LoaderData | undefined;
 }) => {
+  if (!data) {
+    return {
+      title: "No joke",
+      description: "No joke found"
+    };
+  }
   return {
     title: `"${data.joke.name}" joke`,
     description: `Enjoy the "${data.joke.name}" joke and much more`
@@ -5493,6 +5516,13 @@ export default function JokesScreen() {
           </div>
         </div>
       </main>
+      <footer className="jokes-footer">
+        <div className="container">
+          <Link reloadDocument to="/jokes.rss">
+            RSS
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -5554,7 +5584,7 @@ export function JokeDisplay({
 }
 ```
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[22,105-107]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[22,111-113]
 import type {
   LoaderFunction,
   ActionFunction,
@@ -5581,8 +5611,14 @@ import { JokeDisplay } from "~/components/joke";
 export let meta: MetaFunction = ({
   data
 }: {
-  data: LoaderData;
+  data: LoaderData | undefined;
 }) => {
+  if (!data) {
+    return {
+      title: "No joke",
+      description: "No joke found"
+    };
+  }
   return {
     title: `"${data.joke.name}" joke`,
     description: `Enjoy the "${data.joke.name}" joke and much more`
@@ -5902,3 +5938,118 @@ Here's a demonstration of what that experience looks like:
 <video src="/jokes-tutorial/img/optimistic-ui.mp4" controls muted loop autoplay />
 
 ## Deployment
+
+I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`bcrypt`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
+
+<docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
+
+💿 Before proceeding, you're going to need to to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
+
+💿 Once you've done that, run this command from within your project directory:
+
+```sh
+fly launch
+```
+
+The folks at fly were kind enough to put together a great setup experience. They'll detect your Remix project and ask you a few questions to get you started. Here's my output/choices:
+
+```
+Creating app in /Users/kentcdodds/Desktop/remix-jokes
+Scanning source code
+Detected a Remix app
+? App Name (leave blank to use an auto-generated name): remix-jokes
+Automatically selected personal organization: Kent C. Dodds
+? Select region: dfw (Dallas, Texas (US))
+Created app remix-jokes in organization personal
+Created a 10GB volume vol_18l524yj27947zmp in the dfw region
+Wrote config file fly.toml
+
+This launch configuration uses SQLite on a single, dedicated volume. It will not scale beyond a single VM. Look into 'fly postgres' for a more robust production database.
+
+? Would you like to deploy now? No
+Your app is ready. Deploy with `flyctl deploy`
+```
+
+You'll want to choose a different app name because I already took `remix-jokes` (sorry 🙃).
+
+It also allowed you to select a region, I recommend choosing one that's close to you. If you decide to deploy a real app on Fly in the future, you may decide to scale up your fly to multiple regions.
+
+Fly also detected that this project is using sqlite with prisma and created a persistence volume for us (this is the part that costs money).
+
+We don't want to deploy right now because we have an environment variable we need to set! So choose "No".
+
+Fly generated a few files for us:
+
+- `fly.toml` - Fly-specific configuration
+- `Dockerfile` - Remix-specific Dockerfile for the app
+- `.dockerignore` - It just ignores `node_modules` because we'll run the installation as we build the image.
+
+💿 Now set the `SESSION_SECRET` environment variable by running this command:
+
+```sh
+fly secrets set SESSION_SECRET=your-secret-here
+```
+
+`your-secret-here` can be whatever you want. It's just a string that's used to encrypt the session cookie. Use a password generator if you like.
+
+One other thing we need to do is get prisma ready to set up our database for the first time. Now that we're happy with our schema, we can create our first migration.
+
+💿 Run this command:
+
+```sh
+npx prisma migrate dev
+```
+
+This will create a migration file in the `migrations` directory. You may get an error when it tries to run the seed file. You can safely ignore that. It will ask you what you want to call your migration:
+
+```
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "dev.db" at "file:./dev.db"
+
+SQLite database dev.db created at file:./dev.db
+
+✔ Enter a name for the new migration: … init
+```
+
+💿 I called mine "init". Then you'll get the rest of the output:
+
+```
+Applying migration `20211121111251_init`
+
+The following migration(s) have been created and applied from new schema changes:
+
+migrations/
+  └─ 20211121111251_init/
+    └─ migration.sql
+
+Your database is now in sync with your schema.
+
+✔ Generated Prisma Client (3.5.0) to ./node_modules/@prisma/client in 52ms
+```
+
+💿 If you did get an error when running the seed, you can run it manually now:
+
+```sh
+npx prisma db seed
+```
+
+With that done, you're ready to deploy.
+
+💿 Run this command:
+
+```sh
+fly deploy
+```
+
+This will build the docker image and deploy it on Fly in the region you selected. It will take a little while. While you wait, you can think of someone you haven't talked to in a while and shoot them a message telling them why you appreciate them.
+
+Great! We're done and you made someone's day! Success!
+
+Your app is now live at `https://<your-app-name>.fly.dev`! You can find that URL in your fly account online as well: [fly.io/apps](https://fly.io/apps).
+
+Any time you make a change, simply run `fly deploy` again to redeploy.
+
+## Conclusion
+
+Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/docs/en/v1/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journy!
