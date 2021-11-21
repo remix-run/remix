@@ -339,3 +339,9 @@ label > [type="radio"] {
   color: var(--color-invalid);
   font-size: 0.8rem;
 }
+
+.error-container {
+  background-color: hsla(356, 77%, 59%, 0.747);
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+}

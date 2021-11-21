@@ -31,25 +31,18 @@ export default function JokesIndexRoute() {
 export function CatchBoundary() {
   let caught = useCatch();
 
-  switch (caught.status) {
-    case 404: {
-      return (
-        <div>
-          <p>There are no jokes to display.</p>
-          <Link to="new">Add your own</Link>
-        </div>
-      );
-    }
-
-    default: {
-      throw new Error(
-        `Unexpected caught response with status: ${caught.status}`
-      );
-    }
+  if (caught.status === 404) {
+    return (
+      <div className="error-container">
+        <p>There are no jokes to display.</p>
+        <Link to="new">Add your own</Link>
+      </div>
+    );
   }
+  throw new Error(`Unexpected caught response with status: ${caught.status}`);
 }
 
-export function ErrorBoundary({ error }: { error: unknown }) {
+export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
   return <div>I did a whoopsies.</div>;
 }

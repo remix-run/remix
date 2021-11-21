@@ -73,7 +73,7 @@ export default function NewJokeRoute() {
           </label>
           {actionData?.fieldErrors?.name ? (
             <p className="form-validation-error" role="alert" id="name-error">
-              {actionData?.fieldErrors?.name}
+              {actionData.fieldErrors.name}
             </p>
           ) : null}
         </div>
@@ -95,7 +95,7 @@ export default function NewJokeRoute() {
               role="alert"
               id="content-error"
             >
-              {actionData?.fieldErrors?.content}
+              {actionData.fieldErrors.content}
             </p>
           ) : null}
         </div>
@@ -110,18 +110,19 @@ export default function NewJokeRoute() {
 export function CatchBoundary() {
   let caught = useCatch();
 
-  switch (caught.status) {
-    case 401:
-      return (
-        <div>
-          <p>You must be logged in to create a joke.</p>
-          <Link to="/login">Login</Link>
-        </div>
-      );
-
-    default:
-      throw new Error(
-        `Unexpected caught response with status: ${caught.status}`
-      );
+  if (caught.status === 401) {
+    return (
+      <div className="error-container">
+        <p>You must be logged in to create a joke.</p>
+        <Link to="/login">Login</Link>
+      </div>
+    );
   }
+
+  throw new Error(`Unexpected caught response with status: ${caught.status}`);
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  return <div>Something unexpected went wrong. Sorry about that.</div>;
 }

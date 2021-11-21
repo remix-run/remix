@@ -1,5 +1,5 @@
-import { Link, Meta, Links, Scripts, LiveReload, useCatch } from "remix";
-import type { LinksFunction } from "remix";
+import { Meta, Links, Scripts, LiveReload, useCatch } from "remix";
+import type { LinksFunction, MetaFunction } from "remix";
 import { Outlet } from "react-router-dom";
 
 import globalStylesUrl from "./styles/global.css";
@@ -22,6 +22,20 @@ export let links: LinksFunction = () => {
   ];
 };
 
+export let meta: MetaFunction = () => {
+  let description = `Learn Remix and laugh at the same time!`;
+  return {
+    description,
+    keywords: "Remix,jokes",
+    "twitter:image": "/social.png",
+    "twitter:card": "summary_large_image",
+    "twitter:creator": "@remix_run",
+    "twitter:site": "@remix_run",
+    "twitter:title": "Remix Jokes",
+    "twitter:description": description,
+  };
+};
+
 function Document({
   children,
   title,
@@ -33,8 +47,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        {title ? <title>{title}</title> : null}
         <Meta />
+        {title ? <title>{title}</title> : null}
         <Links />
       </head>
       <body>
@@ -43,16 +57,6 @@ function Document({
         {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>
     </html>
-  );
-}
-
-function Footer() {
-  return (
-    <footer>
-      <Link reloadDocument to="/jokes-rss">
-        RSS
-      </Link>
-    </footer>
   );
 }
 
@@ -67,23 +71,15 @@ export default function App() {
 export function CatchBoundary() {
   let caught = useCatch();
 
-  switch (caught.status) {
-    case 401:
-    case 404:
-      return (
-        <Document title={`${caught.status} ${caught.statusText}`}>
-          <h1>
-            {caught.status} {caught.statusText}
-          </h1>
-          <Footer />
-        </Document>
-      );
-
-    default:
-      throw new Error(
-        `Unexpected caught response with status: ${caught.status}`
-      );
-  }
+  return (
+    <Document title={`${caught.status} ${caught.statusText}`}>
+      <div className="error-container">
+        <h1>
+          {caught.status} {caught.statusText}
+        </h1>
+      </div>
+    </Document>
+  );
 }
 
 export function ErrorBoundary({ error }: { error: Error }) {
@@ -91,13 +87,10 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
   return (
     <Document title="Uh-oh!">
-      <h1>App Error</h1>
-      <pre>{error.message}</pre>
-      <p>
-        Replace this UI with what you want users to see when your app throws
-        uncaught errors.
-      </p>
-      <Footer />
+      <div className="error-container">
+        <h1>App Error</h1>
+        <pre>{error.message}</pre>
+      </div>
     </Document>
   );
 }
