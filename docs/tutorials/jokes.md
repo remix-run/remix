@@ -3161,13 +3161,17 @@ import { logout } from "~/utils/session.server";
 export let action: ActionFunction = async ({ request }) => {
   return logout(request);
 };
+
+export let loader: LoaderFunction = async () => {
+  return redirect("/");
+};
 ```
 
 </details>
 
 Hopefully getting the user in the loader and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of my version of the code before we continue.
 
-First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated.
+First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is just there in case someone somehow lands on that page, we'll just redirect them back home.
 
 ```tsx
 <Link to="new" className="button">
