@@ -32,11 +32,11 @@ Here are the topics we'll be covering in this tutorial:
 - Routes (including the nested variety ✨)
 - Styling
 - Database interactions (via `sqlite` and `prisma`)
-- Authentication
 - Mutations
 - Validation
-- Resource Routes
+- Authentication
 - Unexpected (the dev made a whoopsies) and expected (the end-user made a whoopsies) Error Handling
+- Resource Routes
 - Deployment
 
 ## Prerequisites
@@ -62,7 +62,7 @@ With that, I think we're ready to get started!
 
 <docs-info>
 
-If you're planning on using StackBlitz, you can skip this first part, we've got a StackBlitz project already set up for you [here]()
+If you're planning on using StackBlitz, you can skip this first part, we've got a StackBlitz project already set up for you [here](TODO: fill this in)
 
 </docs-info>
 
@@ -2969,7 +2969,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>For example:</summary>
 
-```ts filename=app/utils/session.ts lines=[66-74,76-83]
+```ts filename=app/utils/session.ts lines=[66-78,80-87]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3036,13 +3036,17 @@ export async function requireUserId(request: Request) {
 }
 
 export async function getUser(request: Request) {
-  let session = await getUserSession(request);
-  let userId = session.get("userId");
+  let userId = await getUserId(request);
   if (typeof userId !== "string") return null;
 
-  return db.user
-    .findUnique({ where: { id: userId } })
-    .catch(() => Promise.reject(logout(request)));
+  try {
+    let user = await db.user.findUnique({
+      where: { id: userId }
+    });
+    return user;
+  } catch {
+    throw logout(request);
+  }
 }
 
 export async function logout(request: Request) {
@@ -3067,5 +3071,128 @@ export async function createUserSession(
 ```
 
 </details>
+
+💿 Great, now we're going to update the `app/routes/jokes.tsx` route so we can display a login link if the user isn't logged in. If they are logged in then we'll display their username and a logout form. I'm also going to clean up the UI a bit to match the class names we've got as well, so feel free to copy/paste the example when you're ready.
+
+<details>
+
+<summary>For example:</summary>
+
+```tsx filename=app/routes/jokes.tsx lines=[10,20,24,51-62,]
+import type { LoaderFunction, LinksFunction } from "remix";
+import { Form } from "remix";
+import { Outlet, useLoaderData, Link } from "remix";
+import { db } from "~/utils/db.server";
+import type { User } from "@prisma/client";
+import { getUser } from "~/utils/session.server";
+import stylesUrl from "../styles/jokes.css";
+
+type LoaderData = {
+  user: User | null;
+  jokeListItems: Array<{ id: string; name: string }>;
+};
+
+export let loader: LoaderFunction = async ({ request }) => {
+  let jokeListItems = await db.joke.findMany({
+    take: 5,
+    select: { id: true, name: true },
+    orderBy: { createdAt: "desc" }
+  });
+  let user = await getUser(request);
+
+  let data: LoaderData = {
+    jokeListItems,
+    user
+  };
+
+  return data;
+};
+
+export let links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: stylesUrl }];
+};
+
+export default function JokesScreen() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div className="jokes-layout">
+      <header className="jokes-header">
+        <div className="container">
+          <h1 className="home-link">
+            <Link
+              to="/"
+              title="Remix Jokes"
+              aria-label="Remix Jokes"
+            >
+              <span className="logo">🤪</span>
+              <span className="logo-medium">J🤪KES</span>
+            </Link>
+          </h1>
+          {data.user ? (
+            <div className="user-info">
+              <span>{`Hi ${data.user.username}`}</span>
+              <Form action="/logout" method="post">
+                <button type="submit" className="button">
+                  Logout
+                </button>
+              </Form>
+            </div>
+          ) : (
+            <Link to="/login">Login</Link>
+          )}
+        </div>
+      </header>
+      <main className="jokes-main">
+        <div className="container">
+          <div className="jokes-list">
+            {data.jokeListItems.length ? (
+              <>
+                <Link to=".">Get a random joke</Link>
+                <p>
+                  Here are a few more jokes to check out:
+                </p>
+                <ul>
+                  {data.jokeListItems.map(
+                    ({ id, name }) => (
+                      <li key={id}>
+                        <Link to={id}>{name}</Link>
+                      </li>
+                    )
+                  )}
+                </ul>
+                <Link to="new" className="button">
+                  Add your own
+                </Link>
+              </>
+            ) : null}
+          </div>
+          <div className="jokes-outlet">
+            <Outlet />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+</details>
+
+Hopefully getting the user in the loader and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of my version of the code before we continue.
+
+```tsx
+<Link to="new" className="button">
+  Add your own
+</Link>
+```
+
+Notice that the `to` prop is set to "new" without any `/`. This is the benefit of nested routing. You don't have to construct the entire URL. It can be relative. This is the same thing for the `<Link to=".">Get a random joke</Link>` link which will effectively tell Remix to reload the data for the current route.
+
+Terrific, now our app looks like this:
+
+![Jokes page nice and designed](/jokes-tutorial/img/random-joke-designed.png)
+
+![New Joke form designed](/jokes-tutorial/img/new-joke-designed.png)
 
 Wouldn't it be annoying to spend all this time writing a joke only to be redirected when you submit it? I think so! So let's add a message on the page

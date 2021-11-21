@@ -59,13 +59,15 @@ export async function requireUserId(request: Request) {
 }
 
 export async function getUser(request: Request) {
-  let session = await getUserSession(request);
-  let userId = session.get("userId");
+  let userId = await getUserId(request);
   if (typeof userId !== "string") return null;
 
-  return db.user
-    .findUnique({ where: { id: userId } })
-    .catch(() => Promise.reject(logout(request)));
+  try {
+    let user = await db.user.findUnique({ where: { id: userId } });
+    return user;
+  } catch {
+    throw logout(request);
+  }
 }
 
 export async function logout(request: Request) {
