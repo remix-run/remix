@@ -122,22 +122,29 @@ Here's the tree structure. Hopefully what you've got looks a bit like this:
 remix-jokes
 ├── README.md
 ├── app
-│   ├── data.server.tsx
 │   ├── entry.client.tsx
 │   ├── entry.server.tsx
 │   ├── root.tsx
 │   ├── routes
-│   │   ├── about
-│   │   │   ├── index.tsx
-│   │   │   └── whoa.tsx
-│   │   ├── about.tsx
+│   │   ├── demos
+│   │   │   ├── about
+│   │   │   │   ├── index.tsx
+│   │   │   │   └── whoa.tsx
+│   │   │   ├── about.tsx
+│   │   │   ├── actions.tsx
+│   │   │   ├── correct.tsx
+│   │   │   ├── params
+│   │   │   │   ├── $id.tsx
+│   │   │   │   └── index.tsx
+│   │   │   └── params.tsx
 │   │   └── index.tsx
-│   └── styles
-│       ├── about.css
-│       ├── dark.css
-│       ├── global.css
-│       ├── index.css
-│       └── medium.css
+│   ├── styles
+│   │   ├── dark.css
+│   │   ├── demos
+│   │   │   ├── about.css
+│   │   │   └── remix.css
+│   │   └── global.css
+│   └── utils.server.tsx
 ├── package-lock.json
 ├── package.json
 ├── public
@@ -194,7 +201,7 @@ Feel free to read a bit of what's in there and explore the code if you like. I'l
 
 - `app/routes`
 - `app/styles`
-- `app/data.server.tsx`
+- `app/utils.server.tsx`
 
 💿 Replace the contents of `app/root.tsx` with this:
 
@@ -259,7 +266,7 @@ Each file we put in the `app/routes` directory is called a ["Route Module"](../a
 
 <details>
 
-<summary>For example</summary>
+<summary>app/routes/index.tsx</summary>
 
 ```tsx filename=app/routes/index.tsx
 export default function IndexRoute() {
@@ -275,7 +282,7 @@ React Router supports "nested routing" which means we have parent-child relation
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[1,10]
 import { LiveReload, Outlet } from "remix";
@@ -317,7 +324,7 @@ Great! Next let's handle the `/jokes` route.
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx
 import { Outlet } from "remix";
@@ -342,7 +349,7 @@ You should be presented with that component when you go to [`/jokes`](http://loc
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/index.tsx</summary>
 
 ```tsx filename=app/routes/jokes/index.tsx
 export default function JokesIndexRoute() {
@@ -370,7 +377,7 @@ And notice that each of those route modules is only concerned with their part of
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx
 export default function NewJokeRoute() {
@@ -415,7 +422,7 @@ Here the parameter $jokeId can be anything, and we can lookup that part of the U
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/$jokeId.tsx</summary>
 
 ```tsx filename=app/routes/jokes/$jokeId.tsx
 export default function JokeRoute() {
@@ -465,7 +472,7 @@ body {
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/index.tsx</summary>
 
 ```tsx filename=app/routes/index.tsx lines=[1-6]
 import type { LinksFunction } from "remix";
@@ -490,7 +497,7 @@ So we need some way to get the `link` exports from all active routes and add `<l
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[1,8]
 import { Links, LiveReload, Outlet } from "remix";
@@ -1142,6 +1149,12 @@ nav ul a:hover {
     padding-bottom: 3rem;
   }
 }
+
+@media (max-width: 639px) {
+  .jokes-main .container {
+    flex-direction: column;
+  }
+}
 ```
 
 </details>
@@ -1160,7 +1173,7 @@ The `global-large.css` and `global-medium.css` files are for media query-based C
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[1,4-6,8-25]
 import type { LinksFunction } from "remix";
@@ -1206,6 +1219,12 @@ export default function App() {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/index.tsx</summary>
 
 ```tsx filename=app/routes/index.tsx lines=[1-2,4-11]
 import type { LinksFunction } from "remix";
@@ -1535,7 +1554,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx lines=[4-5,8,20-22,24-33,34,41-47]
 import {
@@ -1678,7 +1697,7 @@ let joke = await db.joke.findUnique({
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/$jokeId.tsx</summary>
 
 ```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3-4,6,8-15,18]
 import type { LoaderFunction } from "remix";
@@ -1735,7 +1754,7 @@ let [randomJoke] = await db.joke.findMany({
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/index.tsx</summary>
 
 ```tsx filename=app/routes/jokes/index.tsx lines=[3-4,6,8-17,20]
 import type { LoaderFunction } from "remix";
@@ -1820,7 +1839,7 @@ let joke = await db.joke.create({
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-15]
 import type { ActionFunction } from "remix";
@@ -1896,7 +1915,7 @@ But if there's an error, you can return an object with the error messages and th
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,39,42-45,47-49,56,67,69-76,79-87,93,95-103,105-113]
 import type { ActionFunction } from "remix";
@@ -2311,7 +2330,7 @@ fieldset > :not(:last-child) {
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/login.tsx</summary>
 
 ```tsx filename=app/routes/login.tsx
 import type { LinksFunction } from "remix";
@@ -2386,7 +2405,7 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/login.tsx</summary>
 
 ```tsx filename=app/routes/login.tsx
 import type { ActionFunction, LinksFunction } from "remix";
@@ -2609,7 +2628,7 @@ Here's what we need in that file to get started:
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/utils/session.server.tsx</summary>
 
 ```tsx filename=app/utils/session.server.tsx
 import bcrypt from "bcrypt";
@@ -2645,7 +2664,7 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/login.tsx</summary>
 
 ```tsx filename=app/routes/login.tsx lines=[4,15-22]
 import type { ActionFunction, LinksFunction } from "remix";
@@ -2712,11 +2731,11 @@ Wahoo! We got the user! Now we need to put that user's ID into the session. We'r
 - sets the `userId` field on the session
 - redirects to the given route setting the `Set-Cookie` header (via the cookie storage `commitSession` function)
 
-Note: If you need a hand, there's a small example of how the whole basic flow goes in [the session docs](../api/remix#sessions).
+Note: If you need a hand, there's a small example of how the whole basic flow goes in [the session docs](../api/remix#sessions). Once you have that, you'll want to use it in `app/routes/login.tsx` to set the session and redirect to the `/jokes` route.
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-45,47-56]
 import bcrypt from "bcrypt";
@@ -2779,6 +2798,27 @@ export async function createUserSession(
 
 </details>
 
+<details>
+
+<summary>app/routes/login.tsx</summary>
+
+```tsx filename=app/routes/login.tsx
+// ...
+case "login": {
+  const user = await login({ username, password });
+  if (!user) {
+    return {
+      fields,
+      formError: `Username/Password combination is incorrect`
+    };
+  }
+  return createUserSession(user.id, "/jokes");
+}
+// ...
+```
+
+</details>
+
 I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the badies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
 
 With that, pop open your [Network tab](https://developer.chrome.com/docs/devtools/network/reference/), go to [`/login`](http://localhost:3000/login) and enter `kody` and `twixrox` and check the response headers in the network tab. Should look something like this:
@@ -2801,7 +2841,7 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/utils/session.ts</summary>
 
 ```ts filename=app/utils/session.ts lines=[47,49,51-56,58-65]
 import bcrypt from "bcrypt";
@@ -2894,7 +2934,7 @@ We'll cover this more in the error handling sections later.
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/utils/session.ts</summary>
 
 ```ts filename=app/utils/session.ts lines=[2,8,30]
 // ...
@@ -2944,7 +2984,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/utils/session.ts</summary>
 
 ```ts filename=app/utils/session.ts lines=[66-78,80-87]
 import bcrypt from "bcrypt";
@@ -3053,7 +3093,7 @@ export async function createUserSession(
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx lines=[10,20,24,51-62,]
 import type { LoaderFunction, LinksFunction } from "remix";
@@ -3109,11 +3149,11 @@ export default function JokesScreen() {
           {data.user ? (
             <div className="user-info">
               <span>{`Hi ${data.user.username}`}</span>
-              <Form action="/logout" method="post">
+              <form action="/logout" method="post">
                 <button type="submit" className="button">
                   Logout
                 </button>
-              </Form>
+              </form>
             </div>
           ) : (
             <Link to="/login">Login</Link>
@@ -3154,8 +3194,15 @@ export default function JokesScreen() {
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/logout.tsx</summary>
+
 ```tsx filename=app/routes/logout.tsx
-import type { ActionFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
+import { redirect } from "remix";
 import { logout } from "~/utils/session.server";
 
 export let action: ActionFunction = async ({ request }) => {
@@ -3197,7 +3244,7 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[14-22]
 import bcrypt from "bcrypt";
@@ -3311,6 +3358,12 @@ export async function createUserSession(
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/login.tsx</summary>
+
 ```tsx filename=app/routes/login.tsx lines=[6,82-89]
 import type { ActionFunction } from "remix";
 import { useActionData } from "remix";
@@ -3417,7 +3470,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <Form
+        <form
           method="post"
           aria-describedby={
             actionData?.formError
@@ -3521,7 +3574,7 @@ export default function Login() {
           <button type="submit" className="button">
             Submit
           </button>
-        </Form>
+        </form>
       </div>
     </div>
   );
@@ -3548,7 +3601,7 @@ Remember that the `app/root.tsx` module is responsible for rendering our `<html>
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[58-65]
 import { Link, Links, Scripts, LiveReload } from "remix";
@@ -3591,7 +3644,6 @@ function Document({
       </head>
       <body>
         {children}
-        <Scripts />
         {process.env.NODE_ENV === "development" && (
           <LiveReload />
         )}
@@ -3618,6 +3670,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/jokes/$jokeId.tsx</summary>
+
 ```tsx filename=app/routes/jokes/$jokeId.tsx
 // ...
 
@@ -3633,6 +3691,12 @@ export function ErrorBoundary() {
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/jokes/new.tsx
+
 ```tsx filename=app/routes/jokes/new.tsx
 // ...
 
@@ -3644,6 +3708,12 @@ export function ErrorBoundary() {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/jokes/index.tsx
 
 ```tsx filename=app/routes/jokes/index.tsx
 // ...
@@ -3694,7 +3764,7 @@ With that understanding, we're going to add a `CatchBoundary` component to the f
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[5,64-78]
 import {
@@ -3788,6 +3858,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/jokes/$jokeId.tsx</summary>
+
 ```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,13-17,34-45]
 import type { Joke } from ".prisma/client";
 import { useParams } from "react-router-dom";
@@ -3842,6 +3918,12 @@ export function ErrorBoundary() {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/jokes/index.tsx</summary>
 
 ```tsx filename=app/routes/jokes/index.tsx lines=[2,15-19,38-52]
 import type { LoaderFunction } from "remix";
@@ -3905,6 +3987,12 @@ export function ErrorBoundary() {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[5,14-20,144-159]
 import type { ActionFunction, LoaderFunction } from "remix";
@@ -4094,13 +4182,24 @@ Oh, and don't you love how just like with the `ErrorBoundary`, it's all contextu
 
 You know what, while we're adding catch boundaries. Why don't we improve the `app/routes/jokes/$jokeId.tsx` route a bit by allowing users to delete the joke if they own it. If they don't, we can give them a 401 error in the catch boundary.
 
-💿 Add a delete capability to `app/routes/jokes/$jokeId.tsx` route
+One thing to keep in mind with `delete` is that HTML forms only support `method="get"` and `method="post"`. They don't support `method="delete"`. So to make sure our form will work with and without JavaScript, it's a good idea to do something like this:
+
+```tsx
+<form method="post">
+  <input type="hidden" name="_method" value="delete" />
+  <button type="submit">Delete</button>
+</form>
+```
+
+And then the `action` can determine whether the intention is to delete based on the `request.formData().get('_method')`.
+
+💿 Add a delete capability to `app/routes/jokes/$jokeId.tsx` route.
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,8,11,28-54,68-90]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,8,11,28-55,65-74,79-101]
 import type { Joke } from "@prisma/client";
 import { useParams } from "react-router-dom";
 import { ActionFunction, LoaderFunction } from "remix";
@@ -4132,7 +4231,8 @@ export let action: ActionFunction = async ({
   request,
   params
 }) => {
-  if (request.method === "DELETE") {
+  let form = await request.formData();
+  if (form.get("_method") === "delete") {
     let userId = await requireUserId(request);
     let joke = await db.joke.findUnique({
       where: { id: params.jokeId }
@@ -4164,6 +4264,16 @@ export default function JokeRoute() {
       <p>Here's your hilarious joke:</p>
       <p>{data.joke.content}</p>
       <Link to=".">{data.joke.name} Permalink</Link>
+      <form method="post">
+        <input
+          type="hidden"
+          name="_method"
+          value="delete"
+        />
+        <button type="submit" className="button">
+          Delete
+        </button>
+      </form>
     </div>
   );
 }
@@ -4219,7 +4329,7 @@ But before you get started, remember that we're in charge of rendering everythin
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```ts filename=app/root.tsx lines=[1-2,25-37,51]
 import { Meta, Links, LiveReload, useCatch } from "remix";
@@ -4321,13 +4431,15 @@ export function ErrorBoundary({ error }: { error: Error }) {
 }
 ```
 
-```ts filename=app/routes/index.tsx lines=[3,9-15]
+</details>
+
+<details>
+
+<summary>app/routes/index.tsx</summary>
+
+```ts filename=app/routes/index.tsx lines=[2,5-11]
 import { Link } from "remix";
-import type {
-  MetaFunction,
-  LinksFunction,
-  HeadersFunction
-} from "remix";
+import type { MetaFunction, LinksFunction } from "remix";
 import stylesUrl from "../styles/index.css";
 
 export let meta: MetaFunction = () => {
@@ -4361,6 +4473,12 @@ export default function Index() {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/login.tsx</summary>
 
 ```ts filename=app/routes/login.tsx lines=[4,15-21]
 import type {
@@ -4588,6 +4706,12 @@ export default function Login() {
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/jokes/$jokeId.tsx</summary>
+
 ```ts filename=app/routes/jokes/$jokeId.tsx lines=[3,7-22]
 import type { Joke } from "@prisma/client";
 import { useParams } from "react-router-dom";
@@ -4676,7 +4800,7 @@ For this one, you'll probably want to at least peak at the example unless you wa
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes[.]rss.tsx</summary>
 
 ```tsx filename=app/routes/jokes[.]rss.tsx
 import type { LoaderFunction } from "remix";
@@ -4770,7 +4894,7 @@ Ok, so let's load JavaScript on this page now 😆
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[4,62,95-96]
 import {
@@ -4919,7 +5043,7 @@ export let loader: LoaderFunction = async () => {
         // max-age controls the browser cache
         // s-maxage controls a CDN cache
         "Cache-Control":
-          "public, max-age=300, s-maxage=86400"
+          "public, max-age=30, s-maxage=86400"
       }
     }
   );
@@ -4936,7 +5060,7 @@ Let's say we have a CDN in front of our app and we really want our homepage to l
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/index.tsx</summary>
 
 ```tsx filename=app/routes/index.tsx lines=[5,21-27]
 import { Link } from "remix";
@@ -4991,6 +5115,12 @@ export default function Index() {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/login.tsx</summary>
 
 ```tsx filename=app/routes/login.tsx lines=[3,28-34]
 import type {
@@ -5227,6 +5357,12 @@ export default function Login() {
 }
 ```
 
+</details>
+
+<details>
+
+<summary>app/routes/jokes/$jokeId.tsx</summary>
+
 ```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,8,59-66,69-77]
 import type {
   LoaderFunction,
@@ -5343,7 +5479,12 @@ export default function JokeRoute() {
       <p>{data.joke.content}</p>
       <Link to=".">{data.joke.name} Permalink</Link>
       {data.isOwner ? (
-        <Form method="delete">
+        <Form method="post">
+          <input
+            type="hidden"
+            name="_method"
+            value="delete"
+          />
           <button type="submit" className="button">
             Delete
           </button>
@@ -5422,7 +5563,7 @@ But we can make this even better. [The `<Link />` component](../api/remix#link) 
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx lines=[78]
 import type { LoaderFunction, LinksFunction } from "remix";
@@ -5552,7 +5693,7 @@ Note, you'll probably want to create a new file in `app/components/` called `jok
 
 <details>
 
-<summary>For example:</summary>
+<summary>app/components/joke.tsx</summary>
 
 ```tsx filename=app/components/joke.tsx
 import { Link, Form } from "remix";
@@ -5573,7 +5714,12 @@ export function JokeDisplay({
       <p>{joke.content}</p>
       <Link to=".">{joke.name} Permalink</Link>
       {isOwner ? (
-        <Form method="delete">
+        <Form method="post">
+          <input
+            type="hidden"
+            name="_method"
+            value="delete"
+          />
           <button
             type="submit"
             className="button"
@@ -5587,6 +5733,12 @@ export function JokeDisplay({
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/jokes/$jokeId.tsx</summary>
 
 ```tsx filename=app/routes/jokes/$jokeId.tsx lines=[22,111-113]
 import type {
@@ -5736,6 +5888,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
   );
 }
 ```
+
+</details>
+
+<details>
+
+<summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[10,82-100]
 import type { ActionFunction, LoaderFunction } from "remix";

@@ -53,7 +53,8 @@ export let headers: HeadersFunction = ({ loaderHeaders }) => {
 };
 
 export let action: ActionFunction = async ({ request, params }) => {
-  if (request.method === "DELETE") {
+  let form = await request.formData();
+  if (form.get("_method") === "delete") {
     let userId = await requireUserId(request);
     let joke = await db.joke.findUnique({ where: { id: params.jokeId } });
     if (!joke) {
