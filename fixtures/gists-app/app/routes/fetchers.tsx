@@ -8,7 +8,7 @@ import {
   useTransition,
   Link
 } from "remix";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "remix";
 
 import styles from "../styles/pending-forms.css";
 

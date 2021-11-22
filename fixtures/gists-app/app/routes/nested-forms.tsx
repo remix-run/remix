@@ -1,6 +1,6 @@
 import type { ActionFunction } from "remix";
 import { Form, json, useActionData } from "remix";
-import { Outlet } from "react-router-dom";
+import { Outlet } from "remix";
 
 export let action: ActionFunction = ({ request }) => {
   return json("layout action data");

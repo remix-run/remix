@@ -1,7 +1,7 @@
 import { Fragment, useEffect } from "react";
 import type { LoaderFunction } from "remix";
 import { Form, json, useLoaderData, useTransition } from "remix";
-import { Link } from "react-router-dom";
+import { Link } from "remix";
 
 import { defaultStyles, sessionStorage } from "./theme-css";
 

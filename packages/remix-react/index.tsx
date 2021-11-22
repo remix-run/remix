@@ -1,6 +1,16 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
-export { Outlet } from "react-router-dom";
+export {
+  Outlet,
+  useHref,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+  useOutlet,
+  useParams,
+  useResolvedPath,
+  useSearchParams
+} from "react-router-dom";
 
 export type {
   FormProps,
