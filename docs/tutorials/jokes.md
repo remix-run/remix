@@ -68,7 +68,7 @@ With that, I think we're ready to get started!
 
 <docs-info>
 
-If you're planning on using StackBlitz, you can skip this first part, we've got a StackBlitz project already set up for you [here](TODO: fill this in)
+If you're planning on using CodeSandbox, you can use [the Basic example](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic) to get started.
 
 </docs-info>
 
