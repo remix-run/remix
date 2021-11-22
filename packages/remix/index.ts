@@ -4,3 +4,5 @@ export * from "./client";
 export * from "./server";
 // @ts-ignore
 export * from "./platform";
+
+export type { RemixConfig } from "@remix-run/dev";

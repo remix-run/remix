@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
+import * as esbuild from "esbuild";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -162,10 +164,37 @@ export async function readConfig(
 
   let rootDirectory = path.resolve(remixRoot);
   let configFile = path.resolve(rootDirectory, "remix.config.js");
+  let tsConfigFile = path.resolve(rootDirectory, "remix.config.ts");
 
   let appConfig: AppConfig;
   try {
-    appConfig = require(configFile);
+    let configFileExists = fs.existsSync(configFile);
+    let tsConfigFileExists = fs.existsSync(tsConfigFile);
+    if (tsConfigFileExists) {
+      if (tsConfigFileExists && configFileExists) {
+        throw new Error(
+          "Both `remix.config.ts` and `remix.config.js` exist. Please delete either as Remix doesn't know which one to use."
+        );
+      }
+
+      let temporaryFile = path.resolve(os.tmpdir(), "_remix.config.js");
+
+      await esbuild.build({
+        entryPoints: [tsConfigFile],
+        format: "cjs",
+        platform: "node",
+        bundle: true,
+        outfile: temporaryFile
+      });
+
+      appConfig = require(temporaryFile);
+
+      // Do we need to handle the possibility that `fs.unlink` might fail?
+      // If so, we could do this in the callback
+      await fs.unlink(temporaryFile, () => {});
+    } else {
+      appConfig = require(configFile);
+    }
   } catch (error) {
     throw new Error(`Error loading Remix config in ${configFile}`);
   }

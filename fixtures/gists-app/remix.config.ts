@@ -1,12 +1,10 @@
-const fsp = require("fs").promises;
-const path = require("path");
+import * as fsp from "fs/promises";
+import path from "path";
+import type { RemixConfig } from "remix";
 
-/**
- * @type {import("@remix-run/dev/config").AppConfig}
- */
-module.exports = {
+const config: RemixConfig = {
   appDirectory: "./app",
-  publicBuildDirectory: "./public/build",
+  browserBuildDirectory: "./public/build",
   publicPath: "/build/",
   serverBuildDirectory: "./build",
   devServerPort: 8002,
@@ -44,3 +42,5 @@ module.exports = {
     });
   }
 };
+
+export default config;
