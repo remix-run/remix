@@ -1159,7 +1159,7 @@ nav ul a:hover {
 
 </details>
 
-💿 Also, download [the font](/jokes-tutorial/styling/fonts/baloo/baloo.woff) and [it's license](/jokes-tutorial/styling/fonts/baloo/License.txt) and put them in `public/fonts/baloo`.
+💿 Also, download [the font](/jokes-tutorial/baloo/baloo.woff) and [it's license](/jokes-tutorial/baloo/License.txt) and put them in `public/fonts/baloo`.
 
 💿 While you're downloading assets, you may as well download [the social image](/jokes-tutorial/social.png) and put that at `public/social.png`. You'll need that later.
 
@@ -2321,6 +2321,20 @@ fieldset {
 
 fieldset > :not(:last-child) {
   margin-right: 2rem;
+}
+
+.links ul {
+  margin-top: 1rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.links a:hover {
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
 }
 ```
 
