@@ -14,22 +14,22 @@
   },
   "dependencies": {
     "@prisma/client": "^3.5.0",
-    "@remix-run/react": "^1.0.0-rc.2",
-    "@remix-run/serve": "^1.0.0-rc.2",
+    "@remix-run/react": "^1.0.0-rc.3",
+    "@remix-run/serve": "^1.0.0-rc.3",
     "bcrypt": "^5.0.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "6.0.2",
-    "remix": "^1.0.0-rc.2"
+    "remix": "^1.0.0-rc.3"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.0.0-rc.2",
+    "@remix-run/dev": "^1.0.0-rc.3",
     "@types/bcrypt": "^5.0.0",
-    "@types/react": "^17.0.35",
+    "@types/react": "^17.0.36",
     "@types/react-dom": "^17.0.11",
     "esbuild-register": "^3.1.2",
     "prisma": "^3.5.0",
-    "typescript": "^4.4.4"
+    "typescript": "^4.5.2"
   },
   "engines": {
     "node": ">=14"

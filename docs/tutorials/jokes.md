@@ -2434,8 +2434,7 @@ fieldset > :not(:last-child) {
 
 ```tsx filename=app/routes/login.tsx
 import type { LinksFunction } from "remix";
-import { Link } from "remix";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "remix";
 import stylesUrl from "../styles/login.css";
 
 export let links: LinksFunction = () => {
@@ -2532,8 +2531,11 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 
 ```tsx filename=app/routes/login.tsx
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, Link } from "remix";
-import { useSearchParams } from "react-router-dom";
+import {
+  useActionData,
+  Link,
+  useSearchParams
+} from "remix";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
 
@@ -3639,10 +3641,9 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[8,87-94]
+```tsx filename=app/routes/login.tsx lines=[8,86-93]
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData } from "remix";
-import { useSearchParams } from "react-router-dom";
+import { useActionData, useSearchParams } from "remix";
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
@@ -3978,7 +3979,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 ```tsx filename=app/routes/jokes/$jokeId.tsx nocopy
 // ...
 
-import { useParams } from "react-router-dom";
+import { Link, useLoaderData, useParams } from "remix";
 
 // ...
 
@@ -4158,12 +4159,16 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,13-17,34-45]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,17-21,38-49]
 import type { LoaderFunction } from "remix";
-import { Link, useLoaderData, useCatch } from "remix";
+import {
+  Link,
+  useLoaderData,
+  useCatch,
+  useParams
+} from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
-import { useParams } from "react-router-dom";
 
 type LoaderData = { joke: Joke };
 
@@ -4491,15 +4496,15 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,8,11,28-55,65-74,79-101]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,28-55,65-74,79-101]
 import type { Joke } from "@prisma/client";
-import { useParams } from "react-router-dom";
 import { ActionFunction, LoaderFunction } from "remix";
 import {
   Link,
   useLoaderData,
   useCatch,
-  redirect
+  redirect,
+  useParams
 } from "remix";
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
@@ -4617,9 +4622,9 @@ import {
   Link,
   useLoaderData,
   useCatch,
-  redirect
+  redirect,
+  useParams
 } from "remix";
-import { useParams } from "react-router-dom";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
 import {
@@ -4918,14 +4923,17 @@ export default function Index() {
 
 <summary>app/routes/login.tsx</summary>
 
-```ts filename=app/routes/login.tsx lines=[4,20-26]
+```ts filename=app/routes/login.tsx lines=[4,23-29]
 import type {
   ActionFunction,
   LinksFunction,
   MetaFunction
 } from "remix";
-import { useActionData, Link } from "remix";
-import { useSearchParams } from "react-router-dom";
+import {
+  useActionData,
+  Link,
+  useSearchParams
+} from "remix";
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
@@ -5183,11 +5191,11 @@ import {
   Link,
   useLoaderData,
   useCatch,
-  redirect
+  redirect,
+  useParams
 } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
-import { useParams } from "react-router-dom";
 import { requireUserId } from "~/utils/session.server";
 
 export let meta: MetaFunction = ({
@@ -5624,11 +5632,11 @@ import {
   Link,
   useLoaderData,
   useCatch,
-  redirect
+  redirect,
+  useParams
 } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
-import { useParams } from "react-router-dom";
 import {
   getUserId,
   requireUserId
