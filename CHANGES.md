@@ -1,6 +1,6 @@
 # History of Changes
 
-## Unreleased
+## 1.0.3 - Mon Nov 22 2021
 
 ### Breaking Changes
 
