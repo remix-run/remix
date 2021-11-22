@@ -1,5 +1,7 @@
-/* You can just delete everything here or keep whatever you like, it's just a
- * quick baseline */
+/*
+ * You can just delete everything here or keep whatever you like, it's just a
+ * quick baseline!
+ */
 :root {
   --color-foreground: hsl(0, 0%, 7%);
   --color-background: hsl(0, 0%, 100%);
@@ -61,8 +63,8 @@ hr {
   margin-bottom: 2rem;
 }
 
-input[type="text"],
-input[type="search"] {
+input:where([type="text"]),
+input:where([type="search"]) {
   display: block;
   border: 1px solid var(--color-border);
   width: 100%;
