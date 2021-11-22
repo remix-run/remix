@@ -5,7 +5,11 @@ order: 2
 
 # Jokes App Tutorial
 
-You want to learn Remix? You're in the right place. This tutorial is the fast-track to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
+You want to learn Remix? You're in the right place. Let's build [Remix Jokes](https://remix-jokes.lol)!
+
+[![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
+
+This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
 We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
 
@@ -289,7 +293,7 @@ React Router supports "nested routing" which means we have parent-child relation
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[1,10]
+```tsx filename=app/root.tsx lines=[1,11]
 import { LiveReload, Outlet } from "remix";
 
 export default function App() {
@@ -1188,7 +1192,7 @@ The `global-large.css` and `global-medium.css` files are for media query-based C
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[1,4-6,8-26]
+```tsx filename=app/root.tsx lines=[1,4-6,8-25]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet } from "remix";
 
@@ -1638,14 +1642,9 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[4-5,8,20-22,24-29,32,56-60]
-import {
-  Link,
-  LinksFunction,
-  LoaderFunction,
-  useLoaderData
-} from "remix";
-import { Outlet } from "remix";
+```tsx filename=app/routes/jokes.tsx lines=[2,3,15-17,19-24,27,51-55]
+import { LinksFunction, LoaderFunction } from "remix";
+import { Link, Outlet, useLoaderData } from "remix";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/jokes.css";
 
@@ -2005,7 +2004,7 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,39,42-45,47-49,56,67,69-77,80-88,94,96-104,107-115]
+```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,31,39,42-45,47-49,56,67,69-77,80-88,94,96-104,107-115]
 import type { ActionFunction } from "remix";
 import { useActionData, redirect } from "remix";
 import { db } from "~/utils/db.server";
@@ -3641,7 +3640,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[8,86-93]
+```tsx filename=app/routes/login.tsx lines=[7,86-93]
 import type { ActionFunction, LinksFunction } from "remix";
 import { useActionData, useSearchParams } from "remix";
 import { db } from "~/utils/db.server";
@@ -5622,7 +5621,7 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[22,111-113]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[19,93-95]
 import type {
   LoaderFunction,
   ActionFunction,
