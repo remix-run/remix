@@ -1,0 +1,10 @@
+node_modules
+# Normally, you want to keep environment variables out of version control
+# but this is just a demo, so we'll keep it around
+# .env
+prisma/dev.db
+.cache/
+build/
+public/build
+./build
+./public/build

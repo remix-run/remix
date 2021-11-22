@@ -3,6 +3,8 @@ title: Routing
 description: In Remix, routes are more than just the page. When routes are nested we're able to know a little more about your app than just a single page, and do a lot more because of it.
 ---
 
+# Routing
+
 Let's talk about a concept in Remix that is critical to understand to get the most out of it: Nested Routes.
 
 We consider nested routes our (not so) secret weapon. This feature of React Router allows Remix to know what you're going to render before you even render it. This lets us fetch data, stylesheets, and modules for the next page, or just the changed part of the page.

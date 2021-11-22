@@ -1,5 +1,5 @@
 import { json } from "remix";
-import { Outlet } from "react-router-dom";
+import { Outlet } from "remix";
 
 export function loader({ request }) {
   let params = new URL(request.url).searchParams;
