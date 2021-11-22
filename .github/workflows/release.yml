@@ -36,9 +36,6 @@ jobs:
       - name: Build
         run: yarn build
 
-      - name: Test
-        run: yarn test
-
       - name: Setup npm auth
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
