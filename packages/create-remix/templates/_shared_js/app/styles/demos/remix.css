@@ -43,10 +43,7 @@
 }
 
 .remix-app__main {
-  --space: 2rem;
-  padding-top: var(--space);
-  padding-top: var(--space);
-  flex: 1 1 auto;
+  flex: 1 1 100%;
 }
 
 .remix-app__footer {
@@ -63,9 +60,12 @@
 
 .remix__page {
   --gap: 1rem;
+  --space: 2rem;
   display: grid;
   grid-auto-rows: min-content;
   gap: var(--gap);
+  padding-top: var(--space);
+  padding-bottom: var(--space);
 }
 
 @media print, screen and (min-width: 640px) {
@@ -82,11 +82,27 @@
   }
 }
 
+.remix__page > main > :first-child {
+  margin-top: 0;
+}
+
+.remix__page > main > :last-child {
+  margin-bottom: 0;
+}
+
 .remix__page > aside {
   margin: 0;
-  padding-left: 1.5ch;
+  padding: 1.5ch 2ch;
   border: solid 1px var(--color-border);
-  border-radius: 1rem;
+  border-radius: 0.5rem;
+}
+
+.remix__page > aside > :first-child {
+  margin-top: 0;
+}
+
+.remix__page > aside > :last-child {
+  margin-bottom: 0;
 }
 
 .remix__form {
@@ -95,6 +111,7 @@
   gap: 1rem;
   padding: 1rem;
   border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
 }
 
 .remix__form > * {
