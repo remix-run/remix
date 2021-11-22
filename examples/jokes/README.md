@@ -2,10 +2,24 @@
 
 This example demonstrates some of the basic features of Remix, including:
 
-- TODO: List what features are included here
+- Generating a new Remix project
+- Conventional files
+- Routes (including the nested variety ✨)
+- Styling
+- Database interactions (via `sqlite` and `prisma`)
+- Mutations
+- Validation
+- Authentication
+- Error handling: Both unexpected (the dev made a whoopsies) and expected (the end-user made a whoopsies) errors
+- SEO with Meta Tags
+- JavaScript...
+- Resource Routes
+- Deployment
+
+This is the finished version of [the tutorial](https://remix.run/docs/tutorials/jokes)
 
 ## Preview
 
-Open this example on [StackBlitz](https://stackblitz.com):
+Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/remix/tree/main/examples/jokes?file=src/app/root.tsx)
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)

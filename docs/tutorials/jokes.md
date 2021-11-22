@@ -4605,6 +4605,139 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 </details>
 
+Now that people will get a proper error message if they try to delete a joke that is not theirs, maybe we could also simply hide the delete button if the user doesn't own the joke.
+
+<details>
+
+<summary>app/routes/jokes/$jokeId.tsx</summary>
+
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[12,16,19,22,33,75-86]
+import { ActionFunction, LoaderFunction } from "remix";
+import {
+  Link,
+  useLoaderData,
+  useCatch,
+  redirect
+} from "remix";
+import { useParams } from "react-router-dom";
+import type { Joke } from "@prisma/client";
+import { db } from "~/utils/db.server";
+import {
+  getUserId,
+  requireUserId
+} from "~/utils/session.server";
+
+type LoaderData = { joke: Joke; isOwner: boolean };
+
+export let loader: LoaderFunction = async ({
+  request,
+  params
+}) => {
+  let userId = await getUserId(request);
+  let joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("What a joke! Not found.", {
+      status: 404
+    });
+  }
+  let data: LoaderData = {
+    joke,
+    isOwner: userId === joke.jokesterId
+  };
+  return data;
+};
+
+export let action: ActionFunction = async ({
+  request,
+  params
+}) => {
+  let form = await request.formData();
+  if (form.get("_method") === "delete") {
+    let userId = await requireUserId(request);
+    let joke = await db.joke.findUnique({
+      where: { id: params.jokeId }
+    });
+    if (!joke) {
+      throw new Response(
+        "Can't delete what does not exist",
+        { status: 404 }
+      );
+    }
+    if (joke.jokesterId !== userId) {
+      throw new Response(
+        "Pssh, nice try. That's not your joke",
+        {
+          status: 401
+        }
+      );
+    }
+    await db.joke.delete({ where: { id: params.jokeId } });
+    return redirect("/jokes");
+  }
+};
+
+export default function JokeRoute() {
+  let data = useLoaderData<LoaderData>();
+
+  return (
+    <div>
+      <p>Here's your hilarious joke:</p>
+      <p>{data.joke.content}</p>
+      <Link to=".">{data.joke.name} Permalink</Link>
+      {data.isOwner ? (
+        <form method="post">
+          <input
+            type="hidden"
+            name="_method"
+            value="delete"
+          />
+          <button type="submit" className="button">
+            Delete
+          </button>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+  let params = useParams();
+  switch (caught.status) {
+    case 404: {
+      return (
+        <div className="error-container">
+          Huh? What the heck is {params.jokeId}?
+        </div>
+      );
+    }
+    case 401: {
+      return (
+        <div className="error-container">
+          Sorry, but {params.jokeId} is not your joke.
+        </div>
+      );
+    }
+    default: {
+      throw new Error(`Unhandled error: ${caught.status}`);
+    }
+  }
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+
+  let { jokeId } = useParams();
+  return (
+    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+  );
+}
+```
+
+</details>
+
 ## SEO with Meta tags
 
 Meta tags are useful for SEO and social media. The tricky bit is that often the part of the code that has access to the data you need is in components that request/use the data.
@@ -5404,7 +5537,21 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 ![Browser console showing the log of a server-side error](/jokes-tutorial/img/server-side-error-in-browser.png)
 
-💿 One other thing we'll want to do is update the `<form>`s we have on the `/login` and `/jokes/new` routes use [the `<Form />` component from Remix](../api/remix#form) so the post request is made via `fetch` rather than a full-page refreshing POST request.
+### Forms
+
+Remix has its own [`<Form />`](../api/remix#form) component. When JavaScript is not yet loaded, it works the same way as a regular form, but when JavaScript is enabled, it's "progressively enhanced" to make a `fetch` request instead so we don't do a full-page reload.
+
+💿 Find all `<form />` elements and change them to the Remix `<Form />` component.
+
+### Prefetching
+
+If a user focuses or mouses-over a link, it's likely they want to go there. So we can prefetch the page that they're going to. And this is all it takes to enable that for a specific link:
+
+```
+<Link prefetch="intent" to="somewhere/neat">Somewhere Neat</Link>
+```
+
+💿 Add `prefetch="intent"` to the list of Joke links in `app/routes/jokes.tsx`.
 
 ## Optimistic UI
 
@@ -5471,20 +5618,17 @@ export function JokeDisplay({
 import type {
   LoaderFunction,
   ActionFunction,
-  MetaFunction,
-  HeadersFunction
+  MetaFunction
 } from "remix";
 import {
-  json,
+  Link,
   useLoaderData,
   useCatch,
-  Link,
-  Form,
   redirect
 } from "remix";
-import { useParams } from "react-router-dom";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
+import { useParams } from "react-router-dom";
 import {
   getUserId,
   requireUserId
@@ -5515,6 +5659,7 @@ export let loader: LoaderFunction = async ({
   params
 }) => {
   let userId = await getUserId(request);
+
   let joke = await db.joke.findUnique({
     where: { id: params.jokeId }
   });
@@ -5527,31 +5672,15 @@ export let loader: LoaderFunction = async ({
     joke,
     isOwner: userId === joke.jokesterId
   };
-  return json(data, {
-    headers: {
-      "Cache-Control": `public, max-age=${
-        60 * 5
-      }, s-maxage=${60 * 60 * 24}`,
-      Vary: "Cookie"
-    }
-  });
-};
-
-export let headers: HeadersFunction = ({
-  loaderHeaders
-}) => {
-  return {
-    "Cache-Control":
-      loaderHeaders.get("Cache-Control") ?? "",
-    Vary: loaderHeaders.get("Vary") ?? ""
-  };
+  return data;
 };
 
 export let action: ActionFunction = async ({
   request,
   params
 }) => {
-  if (request.method === "DELETE") {
+  let form = await request.formData();
+  if (form.get("_method") === "delete") {
     let userId = await requireUserId(request);
     let joke = await db.joke.findUnique({
       where: { id: params.jokeId }
@@ -5609,9 +5738,10 @@ export function CatchBoundary() {
 
 export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
+
   let { jokeId } = useParams();
   return (
-    <div>{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
   );
 }
 ```
@@ -5629,8 +5759,8 @@ import {
   redirect,
   useCatch,
   Link,
-  useTransition,
-  Form
+  Form,
+  useTransition
 } from "remix";
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
@@ -5641,8 +5771,9 @@ import {
 
 export let loader: LoaderFunction = async ({ request }) => {
   let userId = await getUserId(request);
-  if (!userId)
+  if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
+  }
   return {};
 };
 
@@ -5674,7 +5805,6 @@ export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
   let userId = await requireUserId(request);
-
   let form = await request.formData();
   let name = form.get("name");
   let content = form.get("content");
@@ -5752,7 +5882,7 @@ export default function NewJokeRoute() {
               role="alert"
               id="name-error"
             >
-              {actionData?.fieldErrors?.name}
+              {actionData.fieldErrors.name}
             </p>
           ) : null}
         </div>
@@ -5779,7 +5909,7 @@ export default function NewJokeRoute() {
               role="alert"
               id="content-error"
             >
-              {actionData?.fieldErrors?.content}
+              {actionData.fieldErrors.content}
             </p>
           ) : null}
         </div>
@@ -5804,14 +5934,11 @@ export function CatchBoundary() {
       </div>
     );
   }
-
-  throw new Error(
-    `Unexpected caught response with status: ${caught.status}`
-  );
 }
 
 export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
+
   return (
     <div className="error-container">
       Something unexpected went wrong. Sorry about that.
