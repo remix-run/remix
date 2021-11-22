@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet } from "remix";
 import { Link, useLoaderData, useTransition, json } from "remix";
 
 import Shared from "~/components/Shared";

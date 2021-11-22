@@ -9,7 +9,7 @@ import {
   Link,
   ScrollRestoration
 } from "remix";
-import { Outlet } from "react-router-dom";
+import { Outlet } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
 
 import stylesHref from "./styles/app.css";

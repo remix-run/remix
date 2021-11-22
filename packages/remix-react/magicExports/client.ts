@@ -23,7 +23,6 @@ export {
   Scripts,
   Link,
   NavLink,
-  Outlet,
   Form,
   PrefetchPageLinks,
   ScrollRestoration,
@@ -39,4 +38,17 @@ export {
   useBeforeUnload,
   useMatches,
   RemixServer
+} from "@remix-run/react";
+
+// react-router-dom exports
+export {
+  Outlet,
+  useHref,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+  useOutlet,
+  useParams,
+  useResolvedPath,
+  useSearchParams
 } from "@remix-run/react";
