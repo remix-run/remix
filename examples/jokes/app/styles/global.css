@@ -197,6 +197,13 @@ h6 {
 
 /* forms */
 
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
 fieldset {
   margin: 0;
   padding: 0;

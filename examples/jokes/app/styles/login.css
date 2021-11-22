@@ -40,13 +40,6 @@ h1 {
   margin-top: 0;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-}
-
 fieldset {
   display: flex;
   justify-content: center;
