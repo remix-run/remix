@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt";
 import { createCookieSessionStorage, redirect } from "remix";
-
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -16,9 +15,9 @@ export async function register({ username, password }: LoginForm) {
 }
 
 export async function login({ username, password }: LoginForm) {
-  const user = await db.user.findUnique({ where: { username } });
+  let user = await db.user.findUnique({ where: { username } });
   if (!user) return null;
-  const isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
+  let isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
   if (!isCorrectPassword) return null;
   return user;
 }
@@ -47,9 +46,7 @@ export function getUserSession(request: Request) {
 export async function getUserId(request: Request) {
   let session = await getUserSession(request);
   let userId = session.get("userId");
-  if (!userId || typeof userId !== "string") {
-    return null;
-  }
+  if (!userId || typeof userId !== "string") return null;
   return userId;
 }
 

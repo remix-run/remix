@@ -13,7 +13,9 @@ import { getUserId, requireUserId } from "~/utils/session.server";
 
 export let loader: LoaderFunction = async ({ request }) => {
   let userId = await getUserId(request);
-  if (!userId) throw new Response("Unauthorized", { status: 401 });
+  if (!userId) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
   return {};
 };
 
