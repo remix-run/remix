@@ -9,7 +9,7 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 ## Components and Hooks
 
-### `Meta`, `Links`, `Scripts`
+### `<Meta>`, `<Links>`, `<Scripts>`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
@@ -98,8 +98,6 @@ function NewEvent() {
 - After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
 - `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript)
 - You can build "optimistic UI" and pending indicators with [`useTransition`][usetransition]
-
-For an in-depth look at mutations with form, check out the [Mutations](../../guides/mutations/) page.
 
 #### `<Form action>`
 
@@ -519,7 +517,7 @@ Depending on the transition state, the types can be the following:
   - **loaderSubmissionRedirect** - A "loaderSubmission" was redirected by the loader and the next routes are being loaded
   - **actionRedirect** - An "actionSubmission" was redirected by the action and the next routes are being loaded
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded
-  - **fetchActionRedirect** - An action [fetcher](#usefetcher) redirected and the next routes are being loaded
+  - **fetchActionRedirect** - An action [fetcher][usefetcher] redirected and the next routes are being loaded
   - **redirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded
   - **load** - A normal load from a normal navigation
 
@@ -1109,7 +1107,7 @@ Remix knows all of your route matches and data at the top of the React element t
 - add `<link>` tags to assets at the top of the document even though ...
 - add `<script>` bundles for each route at the top of the document ...
 
-Pairing [route `handle`](../app/#handle) with `useMatches`, you can build your own, similar conventions to Remix's built-in `<Meta>`, `<Links>`, and `<Scripts>` components.
+Pairing route `handle` with `useMatches`, you can build your own, similar conventions to Remix's built-in `<Meta>`, `<Links>`, and `<Scripts>` components.
 
 Let's consider building some breadcrumbs. If a route wants to participate in these breadcrumbs at the top of the root layout, it normally can't because it renders down low in the tree.
 
@@ -1182,7 +1180,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
 
 Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we could have used `match.data` to use our route's data in the breadcrumb.
 
-Another common use case is [enabling JavaScript for some routes and not others](../../guides/disabling-javascript/).
+Another common use case is [enabling JavaScript for some routes and not others][disabling-javascript].
 
 Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
 
@@ -1321,13 +1319,13 @@ return new Response("", {
 
 ## Cookies
 
-A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions](#sessions)), shopping carts, user preferences, and many other features that require remembering who is "logged in".
+A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
 ### Using cookies
 
-While you may create these cookies manually, it is more common to use a [session storage](#sessions).
+While you may create these cookies manually, it is more common to use a [session storage][sessions].
 
 In Remix, you will typically work with cookies in your `loader` and/or `action` functions (see <Link to="../mutations">mutations</Link>) since those are the places where you need to read and write data.
 
@@ -1424,7 +1422,7 @@ Please read [more info about these attributes](https://developer.mozilla.org/en-
 
 ### Signing cookies
 
-It is possible to sign a cookie to automatically verify its contents when it is received. Since it's relatively easy to spoof HTTP headers, this is a good idea for any information that you do not want someone to be able to fake, like authentication information (see [sessions](../sessions)).
+It is possible to sign a cookie to automatically verify its contents when it is received. Since it's relatively easy to spoof HTTP headers, this is a good idea for any information that you do not want someone to be able to fake, like authentication information (see [sessions][sessions]).
 
 To sign a cookie, provide one or more `secrets` when you first create the cookie:
 
@@ -1600,7 +1598,7 @@ let { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
-We recommend setting up your session storage object in `app/sessions.js` so all routes that need to access session data can import from the same spot (also, see our [Route Module Constraints](../constraints/)).
+We recommend setting up your session storage object in `app/sessions.js` so all routes that need to access session data can import from the same spot (also, see our [Route Module Constraints][constraints]).
 
 The input/output to a session storage object are HTTP cookies. `getSession()` retrieves the current session from the incoming request's `Cookie` header, and `commitSession()`/`destroySession()` provide the `Set-Cookie` header for the outgoing response.
 
@@ -1731,7 +1729,7 @@ TODO:
 
 ### `createSessionStorage`
 
-Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (or options for creating a cookie, see [cookies](#cookies)) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
+Remix makes it easy to store sessions in your own database if needed. The `createSessionStorage()` API requires a `cookie` (or options for creating a cookie, see [cookies][cookies]) and a set of create, read, update, and delete (CRUD) methods for managing the session data. The cookie is used to persist the session ID.
 
 The following example shows how you could do this using a generic database client:
 
@@ -1786,7 +1784,7 @@ The `expires` argument to `readData` and `updateData` is the same `Date` at whic
 
 ### `createCookieSessionStorage`
 
-For purely cookie-based sessions (where the session data itself is stored in the session cookie with the browser, see [cookies](../cookies)) you can use `createCookieSessionStorage()`.
+For purely cookie-based sessions (where the session data itself is stored in the session cookie with the browser, see [cookies][cookies]) you can use `createCookieSessionStorage()`.
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
@@ -2040,11 +2038,16 @@ import type {
 } from "remix";
 ```
 
+[meta-links-scripts]: #meta-links-scripts
 [form]: #form
+[cookies]: #cookies
+[sessions]: #sessions
+[usefetcher]: #usefetcher
 [usetransition]: #usetransition
 [useactiondata]: #useactiondata
 [useloaderdata]: #useloaderdata
 [usesubmit]: #usesubmit
+[constraints]: ../other-api/constraints
 [action]: ../app/#action
 [loader]: ../app/#loader
-[usetransition]: #usetransition
+[disabling-javascript]: ../guides/disabling-javascript
