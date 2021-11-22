@@ -7,6 +7,7 @@
     "dev": "yarn build && yarn --cwd ./fixtures/gists-app/ dev",
     "license": "node ./scripts/license.js",
     "publish": "node ./scripts/publish.js",
+    "publish:private": "node ./scripts/publish-private.js",
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",

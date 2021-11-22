@@ -45,4 +45,4 @@ jobs:
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_PUBLISH_TOKEN }}" >> ~/.npmrc
 
       - name: Publish
-        run: npm run publish
+        run: npm run publish:private
