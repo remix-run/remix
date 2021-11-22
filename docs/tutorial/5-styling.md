@@ -45,4 +45,4 @@ When you're done, open the dev tools and watch the `<head>` component as you nav
 
 Since we're always using `<link>` to add styles, we don't have a different code path for your styles in development vs. production like a lot of solutions. Also, your styles also always apply in the same order (order of your nested routes), so your dynamic style loading isn't at risk of applying in the wrong order like some dynamic css loading techniques cause.
 
-Remix supports [several different styling options](../../styling/), so go ahead and pick your favorite and we'll make sure to load and unload your CSS when the time is right!
+Remix supports [several different styling options](../guides/styling/), so go ahead and pick your favorite and we'll make sure to load and unload your CSS when the time is right!
