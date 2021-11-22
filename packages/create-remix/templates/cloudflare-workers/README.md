@@ -4,9 +4,9 @@
 
 ## Development
 
-You will be running two processes during development when using Vercel as your server.
+You will be running two processes during development when using Miniflare as your server (miniflare is a local environment for Cloudflare Workers).
 
-- Your Miniflare server in one (miniflare is a local environment for Cloudflare Workers)
+- Your Miniflare server in one
 - The Remix development server in another
 
 ```sh
