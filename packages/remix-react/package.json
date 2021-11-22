@@ -9,7 +9,6 @@
     "react-router-dom": "^6.0.2"
   },
   "peerDependencies": {
-    "history": "^5.1.0",
     "react": ">=16.8",
     "react-dom": ">=16.8"
   },

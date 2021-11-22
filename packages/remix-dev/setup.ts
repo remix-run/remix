@@ -28,14 +28,12 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
     }
   }
 
-  let reactRouterDomJsonFile = resolvePackageJsonFile(`react-router-dom`);
   let platformPkgJsonFile = resolvePackageJsonFile(`@remix-run/${platform}`);
   let serverPkgJsonFile = resolvePackageJsonFile(`@remix-run/server-runtime`);
   let clientPkgJsonFile = resolvePackageJsonFile(`@remix-run/react`);
 
   // Update remix/package.json dependencies
   let remixDeps = {};
-  await assignDependency(remixDeps, reactRouterDomJsonFile);
   await assignDependency(remixDeps, platformPkgJsonFile);
   await assignDependency(remixDeps, serverPkgJsonFile);
   await assignDependency(remixDeps, clientPkgJsonFile);
