@@ -159,7 +159,7 @@ Here's the full code using all of the Route APIs we've introduced so far, as wel
 import React from "react";
 import { useLoaderData } from "remix";
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   let res = await fetch("https://api.github.com/gists");
   let gists = await res.json();
   return json(gists, {
@@ -179,7 +179,7 @@ export function meta({ data }: { data: Gist[] }) {
 
 // The HTTP headers for the server rendered request, just
 // use the cache control from the loader.
-export function headers({ loaderHeaders } {
+export function headers({ loaderHeaders }) {
   return {
     "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
