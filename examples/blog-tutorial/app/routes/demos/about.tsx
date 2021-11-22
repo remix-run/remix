@@ -5,7 +5,7 @@ import stylesUrl from "~/styles/demos/about.css";
 
 export let meta: MetaFunction = () => {
   return {
-    title: "About Remix",
+    title: "About Remix"
   };
 };
 
@@ -31,7 +31,7 @@ export default function Index() {
         <p>
           Wait a sec...<em>its children</em>? To understand what we mean by
           this,{" "}
-          <a href="https://docs.remix.run/v0.21/tutorial/4-nested-routes-params/">
+          <a href="https://remix.run/tutorial/4-nested-routes-params">
             read all about nested routes in the docs
           </a>
           .
