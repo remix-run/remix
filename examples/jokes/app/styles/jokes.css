@@ -83,3 +83,9 @@
     padding-bottom: 3rem;
   }
 }
+
+@media (max-width: 639px) {
+  .jokes-main .container {
+    flex-direction: column;
+  }
+}
