@@ -117,7 +117,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 ### Escaping special characters
 
-Because some characters have special meaning, you must use our escaping syntax if you want those characters to actually appear in the route. For example, if I wanted to make a Resource Route for a `/sitemap.xml`, I could name the file `app/routes/[sitemap.xml].tsx`. So you simply wrap any part of the filename with brackets and that will escape any special characters.
+Because some characters have special meaning, you must use our escaping syntax if you want those characters to actually appear in the route. For example, if I wanted to make a [Resource Route](../guides/resource-routes) for a `/sitemap.xml`, I could name the file `app/routes/[sitemap.xml].tsx`. So you simply wrap any part of the filename with brackets and that will escape any special characters.
 
 <docs-info>
   Note, you could even do `app/routes/sitemap[.]xml.tsx` if you wanted to only wrap the part that needs to be escaped. It makes no difference. Choose the one you like best.
@@ -493,13 +493,20 @@ Actions have the the very same API as loaders, the only difference is when they 
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
+import { redirect, Form } from "remix";
+import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
+import { TodoList } from "~/components/TodoList";
+
 export async function loader() {
   return fakeGetTodos();
 }
 
 export async function action({ request }) {
   let body = await request.formData();
-  return fakeCreateTodo({ title: body.get("title") });
+  let todo = await fakeCreateTodo({
+    title: body.get("title")
+  });
+  return redirect(`/todos/${todo.id}`);
 }
 
 export default function Todos() {
