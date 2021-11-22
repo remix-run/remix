@@ -1,4 +1,4 @@
-import { useLoaderData, Link, json, useCatch } from "remix";
+import { useLoaderData, Link, useCatch } from "remix";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -13,7 +13,7 @@ export let loader = async () => {
     throw new Response("No jokes to be found!", { status: 404 });
   }
   let data: LoaderData = { randomJoke };
-  return json(data);
+  return data;
 };
 
 export default function JokesIndexRoute() {

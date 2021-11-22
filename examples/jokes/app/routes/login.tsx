@@ -1,9 +1,4 @@
-import type {
-  ActionFunction,
-  HeadersFunction,
-  LinksFunction,
-  MetaFunction,
-} from "remix";
+import type { ActionFunction, LinksFunction, MetaFunction } from "remix";
 import { useActionData, Form, Link } from "remix";
 import { useSearchParams } from "react-router-dom";
 import { login, createUserSession, register } from "~/utils/session.server";
@@ -19,14 +14,6 @@ export let meta: MetaFunction = () => {
 
 export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
-};
-
-export let headers: HeadersFunction = () => {
-  return {
-    "Cache-Control": `public, max-age=${60 * 10}, s-maxage=${
-      60 * 60 * 24 * 30
-    }`,
-  };
 };
 
 function validateUsername(username: unknown) {
