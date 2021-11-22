@@ -658,6 +658,12 @@ export function Meta() {
   );
 }
 
+/**
+ * Tracks whether Remix has finished hydrating or not,
+ * so scripts can be skipped during client-side updates.
+ */
+let isHydrated = false;
+
 type ScriptProps = Omit<
   React.HTMLProps<HTMLScriptElement>,
   | "children"
@@ -669,12 +675,6 @@ type ScriptProps = Omit<
   | "dangerouslySetInnerHTML"
   | "suppressHydrationWarning"
 >;
-
-declare global {
-  interface Window {
-    remixIsHydrated: boolean;
-  }
-}
 
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
@@ -693,10 +693,8 @@ export function Scripts(props: ScriptProps) {
     serverHandoffString
   } = useRemixEntryContext();
 
-  let hydratedRef = React.useRef(false);
-
   React.useEffect(() => {
-    window.remixIsHydrated = true;
+    isHydrated = true;
   }, []);
 
   let initialScripts = React.useMemo(() => {
@@ -760,8 +758,6 @@ window.__remixRouteModules = {${matches
 
   let preloads = manifest.entry.imports.concat(routePreloads);
 
-  let alreadyHydrated = typeof window !== "undefined" && window.remixIsHydrated;
-
   return (
     <>
       {dedupe(preloads).map(path => (
@@ -772,7 +768,7 @@ window.__remixRouteModules = {${matches
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {alreadyHydrated ? null : initialScripts}
+      {isHydrated ? null : initialScripts}
     </>
   );
 }
