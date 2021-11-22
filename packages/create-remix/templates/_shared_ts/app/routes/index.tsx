@@ -15,11 +15,11 @@ export let loader: LoaderFunction = () => {
     resources: [
       {
         name: "Remix Docs",
-        url: "https://docs.remix.run"
+        url: "https://remix.run/docs"
       },
       {
         name: "React Router Docs",
-        url: "reactrouter.com/docs"
+        url: "https://reactrouter.com/docs"
       },
       {
         name: "Remix Discord",
