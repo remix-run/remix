@@ -28,3 +28,9 @@ Then run the app in production mode:
 ```sh
 npm start
 ```
+
+## Preview
+
+Open this example on [CodeSandbox](https://codesandbox.com):
+
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic)

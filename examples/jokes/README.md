@@ -1,4 +1,4 @@
-# Remix Jokes App
+# Welcome to Remix!
 
 This example demonstrates some of the basic features of Remix, including:
 
@@ -17,6 +17,33 @@ This example demonstrates some of the basic features of Remix, including:
 - Deployment
 
 This is the finished version of [the tutorial](https://remix.run/docs/tutorials/jokes)
+
+- [Remix Docs](https://remix.run/docs)
+
+## Development
+
+From your terminal:
+
+```sh
+npm install
+npm run dev
+```
+
+This starts your app in development mode, rebuilding assets on file changes.
+
+## Deployment
+
+First, build your app for production:
+
+```sh
+npm run build
+```
+
+Then run the app in production mode:
+
+```sh
+npm start
+```
 
 ## Preview
 
