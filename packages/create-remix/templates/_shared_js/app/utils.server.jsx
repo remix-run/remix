@@ -1,5 +1,5 @@
 // Sometimes some modules don't work in the browser, Remix will generally be
-// able to remove server-only code automatically as long as you don't improt it
+// able to remove server-only code automatically as long as you don't import it
 // directly from a route module (that's where the automatic removal happens). If
 // you're ever still having trouble, you can skip the remix remove-server-code
 // magic and drop your code into a file that ends with `.server` like this one.
