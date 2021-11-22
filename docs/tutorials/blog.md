@@ -213,8 +213,8 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
-import { getPosts } from "~/posts";
-import type { Post } from "~/posts";
+import { getPosts } from "~/post";
+import type { Post } from "~/post";
 
 export let loader = () => {
   return getPosts();
