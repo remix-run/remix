@@ -1702,7 +1702,7 @@ export default function LogoutRoute() {
   return (
     <>
       <p>Are you sure you want to log out?</p>
-      <Form type="post">
+      <Form method="post">
         <button>Logout</button>
       </Form>
       <Link to="/">Nevermind</Link>
@@ -1711,7 +1711,7 @@ export default function LogoutRoute() {
 }
 ```
 
-<docs-warning>It's important that you logout in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
+<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
 
 ### Session Gotchas
 

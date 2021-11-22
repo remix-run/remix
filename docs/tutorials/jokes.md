@@ -1506,7 +1506,7 @@ export { db };
 
 I'll leave analysis of this code as an exercise for the reader because again, this has nothing to do with Remix directly.
 
-The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional, because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes the compiler can get confused while resolving dependencies. So adding the `.server` in the filename acts as a sort of boundary for the compiler.
+The one thing that I will call out is the file name convention. The `.server` part of the filename informs Remix that this code should never end up in the browser. This is optional, because Remix does a good job of ensuring server code doesn't end up in the client. But sometimes some server-only dependencies are difficult to treeshake, so adding the `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser. The `.server` acts as a sort of boundary for the compiler.
 
 ### Read from the database in a Remix loader
 
@@ -1841,15 +1841,15 @@ let joke = await db.joke.create({
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-15]
+```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-22]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 import { db } from "~/utils/db.server";
 
 export let action: ActionFunction = async ({ request }) => {
-  let { name, content } = Object.fromEntries(
-    await request.formData()
-  );
+  let form = await request.formData();
+  let name = form.get("name");
+  let content = form.get("content");
   // we do this type check to be extra sure and to make TypeScript happy
   // we'll explore validation next!
   if (
@@ -1949,9 +1949,9 @@ type ActionData = {
 export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
-  let { name, content } = Object.fromEntries(
-    await request.formData()
-  );
+  let form = await request.formData();
+  let name = form.get("name");
+  let content = form.get("content");
   if (
     typeof name !== "string" ||
     typeof content !== "string"
@@ -2445,8 +2445,10 @@ type ActionData = {
 export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
-  let { loginType, username, password } =
-    Object.fromEntries(await request.formData());
+  let form = await request.formData();
+  let loginType = form.get("loginType");
+  let username = form.get("username");
+  let password = form.get("password");
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -2934,9 +2936,9 @@ We'll cover this more in the error handling sections later.
 
 <details>
 
-<summary>app/utils/session.ts</summary>
+<summary>app/routes/jokes/new.tsx</summary>
 
-```ts filename=app/utils/session.ts lines=[2,8,30]
+```ts filename=app/routes/jokes/new.tsx lines=[2,8,30]
 // ...
 import { requireUserId } from "~/utils/session.server";
 // ...
@@ -2944,11 +2946,14 @@ import { requireUserId } from "~/utils/session.server";
 export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
-  const userId = await requireUserId(request);
-
-  let { name, content } = Object.fromEntries(
-    await request.formData()
+  const userId = await requireUserId(
+    request,
+    "/login?redirectTo=/jokes/new"
   );
+
+  let form = await request.formData();
+  let name = form.get("name");
+  let content = form.get("content");
   if (
     typeof name !== "string" ||
     typeof content !== "string"
@@ -3364,7 +3369,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[6,82-89]
+```tsx filename=app/routes/login.tsx lines=[6,84-91]
 import type { ActionFunction } from "remix";
 import { useActionData } from "remix";
 import {
@@ -3407,8 +3412,10 @@ type ActionData = {
 export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
-  let { loginType, username, password } =
-    Object.fromEntries(await request.formData());
+  let form = await request.formData();
+  let loginType = form.get("loginType");
+  let username = form.get("username");
+  let password = form.get("password");
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -3695,7 +3702,7 @@ export function ErrorBoundary() {
 
 <details>
 
-<summary>app/routes/jokes/new.tsx
+<summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx
 // ...
@@ -3713,7 +3720,7 @@ export function ErrorBoundary() {
 
 <details>
 
-<summary>app/routes/jokes/index.tsx
+<summary>app/routes/jokes/index.tsx</summary>
 
 ```tsx filename=app/routes/jokes/index.tsx
 // ...
@@ -3865,7 +3872,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
 ```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,13-17,34-45]
-import type { Joke } from ".prisma/client";
+import type { Joke } from "@prisma/client";
 import { useParams } from "react-router-dom";
 import type { LoaderFunction } from "remix";
 import { Link, useLoaderData, useCatch } from "remix";
@@ -4045,9 +4052,9 @@ export let action: ActionFunction = async ({
 }): Promise<Response | ActionData> => {
   const userId = await requireUserId(request);
 
-  let { name, content } = Object.fromEntries(
-    await request.formData()
-  );
+  let form = await request.formData();
+  let name = form.get("name");
+  let content = form.get("content");
   if (
     typeof name !== "string" ||
     typeof content !== "string"
@@ -4535,8 +4542,10 @@ type ActionData = {
 export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
-  let { loginType, username, password } =
-    Object.fromEntries(await request.formData());
+  let form = await request.formData();
+  let loginType = form.get("loginType");
+  let username = form.get("username");
+  let password = form.get("password");
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -5186,8 +5195,10 @@ type ActionData = {
 export let action: ActionFunction = async ({
   request
 }): Promise<Response | ActionData> => {
-  let { loginType, username, password } =
-    Object.fromEntries(await request.formData());
+  let form = await request.formData();
+  let loginType = form.get("loginType");
+  let username = form.get("username");
+  let password = form.get("password");
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -5948,9 +5959,9 @@ export let action: ActionFunction = async ({
 }): Promise<Response | ActionData> => {
   const userId = await requireUserId(request);
 
-  let { name, content } = Object.fromEntries(
-    await request.formData()
-  );
+  let form = await request.formData();
+  let name = form.get("name");
+  let content = form.get("content");
   if (
     typeof name !== "string" ||
     typeof content !== "string"

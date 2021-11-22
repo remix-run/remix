@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["browser-route-module:/Users/kentcdodds/code/remix/examples/jokes/app/routes/logout.tsx?browser", "../../../app/routes/logout.tsx"],
-  "sourcesContent": ["export * from \"/Users/kentcdodds/code/remix/examples/jokes/app/routes/logout.tsx\";", "import type { ActionFunction } from \"remix\";\nimport { logout } from \"~/utils/session.server\";\n\nexport let action: ActionFunction = async ({ request }) => {\n  return logout(request);\n};\n"],
-  "mappings": ";;;;;;;;;AAAA;;;ACAA;AACA,qBAAuB;AAEhB,IAAI,SAAyB,OAAO,EAAE,cAAc;AACzD,SAAO,2BAAO;AAAA;",
-  "names": []
-}

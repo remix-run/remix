@@ -4,7 +4,8 @@ import type {
   LinksFunction,
   MetaFunction,
 } from "remix";
-import { useActionData, Form } from "remix";
+import { useActionData, Form, Link } from "remix";
+import { useSearchParams } from "react-router-dom";
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
@@ -49,13 +50,16 @@ type ActionData = {
 export let action: ActionFunction = async ({
   request,
 }): Promise<Response | ActionData> => {
-  let { loginType, username, password } = Object.fromEntries(
-    await request.formData()
-  );
+  let form = await request.formData();
+  let loginType = form.get("loginType");
+  let username = form.get("username");
+  let password = form.get("password");
+  let redirectTo = form.get("redirectTo") || "/jokes";
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
-    typeof password !== "string"
+    typeof password !== "string" ||
+    typeof redirectTo !== "string"
   ) {
     return { formError: `Form not submitted correctly.` };
   }
@@ -65,7 +69,9 @@ export let action: ActionFunction = async ({
     username: validateUsername(username),
     password: validatePassword(password),
   };
-  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, fields };
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return { fieldErrors, fields };
+  }
 
   switch (loginType) {
     case "login": {
@@ -76,7 +82,7 @@ export let action: ActionFunction = async ({
           formError: `Username/Password combination is incorrect`,
         };
       }
-      return createUserSession(user.id, "/jokes");
+      return createUserSession(user.id, redirectTo);
     }
     case "register": {
       let userExists = await db.user.findFirst({ where: { username } });
@@ -93,7 +99,7 @@ export let action: ActionFunction = async ({
           formError: `Something went wrong trying to create a new user.`,
         };
       }
-      return createUserSession(user.id, "/jokes");
+      return createUserSession(user.id, redirectTo);
     }
     default: {
       return { fields, formError: `Login type invalid` };
@@ -102,7 +108,8 @@ export let action: ActionFunction = async ({
 };
 
 export default function Login() {
-  const actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData | undefined>();
+  let [searchParams] = useSearchParams();
   return (
     <div className="container">
       <div className="content" data-light="">
@@ -113,6 +120,11 @@ export default function Login() {
             actionData?.formError ? "form-error-message" : undefined
           }
         >
+          <input
+            type="hidden"
+            name="redirectTo"
+            value={searchParams.get("redirectTo") ?? undefined}
+          />
           <fieldset>
             <legend className="sr-only">Login or Register?</legend>
             <label>
@@ -192,6 +204,16 @@ export default function Login() {
             Submit
           </button>
         </Form>
+      </div>
+      <div className="links">
+        <ul>
+          <li>
+            <Link to="/">Home</Link>
+          </li>
+          <li>
+            <Link to="/jokes">Jokes</Link>
+          </li>
+        </ul>
       </div>
     </div>
   );

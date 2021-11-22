@@ -6,3 +6,5 @@ prisma/dev.db
 .cache/
 build/
 public/build
+./build
+./public/build

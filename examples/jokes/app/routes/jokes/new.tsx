@@ -43,7 +43,9 @@ export let action: ActionFunction = async ({
 }): Promise<Response | ActionData> => {
   const userId = await requireUserId(request);
 
-  let { name, content } = Object.fromEntries(await request.formData());
+  let form = await request.formData();
+  let name = form.get("name");
+  let content = form.get("content");
   if (typeof name !== "string" || typeof content !== "string") {
     return { formError: `Form not submitted correctly.` };
   }
@@ -56,7 +58,7 @@ export let action: ActionFunction = async ({
   if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, fields };
 
   let joke = await db.joke.create({ data: { ...fields, jokesterId: userId } });
-  return redirect(`/jokes/${joke.id}`);
+  return redirect(`/jokes/${joke.id}?redirectTo=/jokes/new`);
 };
 
 export default function NewJokeRoute() {
@@ -142,7 +144,7 @@ export function CatchBoundary() {
     return (
       <div className="error-container">
         <p>You must be logged in to create a joke.</p>
-        <Link to="/login">Login</Link>
+        <Link to="/login?redirectTo=/jokes/new">Login</Link>
       </div>
     );
   }
