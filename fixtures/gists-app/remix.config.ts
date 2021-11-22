@@ -4,7 +4,7 @@ import type { RemixConfig } from "remix";
 
 const config: RemixConfig = {
   appDirectory: "./app",
-  browserBuildDirectory: "./public/build",
+  assetsBuildDirectory: "./public/build",
   publicPath: "/build/",
   serverBuildDirectory: "./build",
   devServerPort: 8002,
