@@ -114,7 +114,7 @@ export function loader() {
 
 Whew, okay, back to our app. Go ahead and map over that array however you'd like, here's a suggestion:
 
-```tsx [6-12]
+```tsx [6-14]
 export default function Gists() {
   let data = useLoaderData();
   return (
