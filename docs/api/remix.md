@@ -237,16 +237,18 @@ The most common use-case for this hook is form validation errors. If the form is
 import { redirect, json, Form, useActionData } from "remix";
 
 export function action({ request }) {
-  let body = Object.fromEntries(await request.formData());
+  let form = await request.formData();
+  let email = form.get("email");
+  let password = form.get("password");
   let errors = {};
 
   // validate the fields
-  if (!body.email.includes("@")) {
+  if (typeof email !== "string" || !email.includes("@")) {
     errors.email =
       "That doesn't look like an email address";
   }
 
-  if (body.password.length < 6) {
+  if (typeof password !== "string" || password.length < 6) {
     errors.password = "Password must be > 6 characters";
   }
 
@@ -706,9 +708,7 @@ Perhaps you have a persistent newsletter signup at the bottom of every page on y
 ```tsx
 // routes/newsletter/subscribe.js
 export function action({ request }) {
-  let { email } = Object.fromEntries(
-    await request.formData()
-  );
+  let email = (await request.formData()).get("email");
   try {
     await subscribe(email);
     return json({ ok: true });
@@ -1631,9 +1631,9 @@ export async function action({ request }) {
   let session = await getSession(
     request.headers.get("Cookie")
   );
-  let { username, password } = Object.fromEntries(
-    await request.formData()
-  );
+  let form = await request.formData();
+  let username = form.get("username");
+  let password = form.get("password");
 
   let userId = await validateCredentials(
     username,
