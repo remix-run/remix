@@ -19,16 +19,16 @@ npx create-remix@latest
 We **strongly encourage you** to do one of the tutorials before anything else. Remix is different. The tutorials will show you how to start with web fundamentals and then progressively enhance your app to the modern UX you're after.
 
 <docs-cards>
-  <a href="dev/tutorials/jokes" aria-label="Jokes App Tutorial">
-    <docs-card>
-      <h4>Jokes App Quickstart</h4> 
-      <p>Spend your first 30 minutes with Remix building a full stack <i>Tell me a joke</i> app, backed by a SQL database with user authentication and modern UI finishes. You'll learn about nested routes, sessions, data loading, data mutations, progressive enhancement, and more. Get a feel for what a data-backed web app feels like with Remix.</p>
-    </docs-card>
-  </a>
   <a href="dev/tutorials/blog" aria-label="Developer Blog Tutorial">
     <docs-card>
-      <h4>Developer Blog Quickstart</h4>
-      <p>Yeah, yeah, we know, you want to redo your personal blog with Remix. Remix is a lot more capable than rendering markdown into HTML, so we'll show how to start simple (Remix scales down) and then scale up to a full blogging platform backed by a CMS (it scales up too!).</p>
+      <h4>Quickstart</h4>
+      <p>Spend your first few minutes with Remix here and let us introduce some of the core features as quickly as possible. After this you can go explore the docs or dive deeper with the other tutorials. We'll build a little markdown blog with data loading, actions, form validation, redirects, and more.</p>
+    </docs-card>
+  </a>
+  <a href="dev/tutorials/jokes" aria-label="Jokes App Tutorial">
+    <docs-card>
+      <h4>Jokes App Deep Dive</h4> 
+      <p>Dive deep into Remix and full stack develoment with this app. It's backed by a SQL database, user authentication and session, and of course some modern UI finishes. You'll learn about nested routes, sessions, data loading, data mutations, progressive enhancement, and more. Get a feel for what a data-backed web app feels like with Remix.</p>
     </docs-card>
   </a>
   <a href="dev/api/conventions" aria-label="Conventional APIs">

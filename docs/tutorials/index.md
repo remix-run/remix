@@ -1,4 +1,4 @@
 ---
-title: Getting Started
+title: Tutorials
 order: 2
 ---
