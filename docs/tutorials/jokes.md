@@ -3109,7 +3109,7 @@ export let action: ActionFunction = async ({
 
 Super! So now if a user attempts to create a new joke, they'll be redirected to the login page because a `userId` is required to create a new joke.
 
-## Build Logout Action
+### Build Logout Action
 
 We should probably give people the ability to see that they're logged in and a way to log out right? Yeah, I think so. Let's implement that.
 
