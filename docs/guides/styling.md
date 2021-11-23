@@ -60,7 +60,7 @@ export let links: LinksFunction = () => {
 While not built into Remix's compiler, it is straight forward to use PostCSS and Tailwind. The strategy is straight forward:
 
 1. Use `postcss` cli directly alongside Remix
-2. Buld CSS into the Remix app directory
+2. Build CSS into the Remix app directory
 3. Import your stylesheet to your modules like any other stylesheet
 
 Here's a quick guide to getting it set up. We encourage you to read the official [Tailwind installation instructions](https://tailwindcss.com/docs/installation#installing-tailwind-css-as-a-post-css-plugin) as well.
