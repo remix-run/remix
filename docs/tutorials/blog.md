@@ -189,7 +189,7 @@ touch app/post.ts
 We're mostly gonna copy/paste it from our route:
 
 ```tsx filename=app/post.ts
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
