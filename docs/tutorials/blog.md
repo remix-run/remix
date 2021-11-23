@@ -893,7 +893,7 @@ import invariant from "tiny-invariant";
 export let action: ActionFunction = async ({ request }) => {
   // ...
 
-  let errors: any = {}
+  let errors: Record<string, boolean> = {}
 
   // ...
 
