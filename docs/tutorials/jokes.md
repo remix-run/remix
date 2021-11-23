@@ -25,7 +25,7 @@ We'll be linking to various docs (Remix docs as well as web docs on [MDN](https:
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when you're using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
 
-💿 Hello, I'm Rachel the Remix Disk. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. I hope you enjoy the tutorial!
+💿 Hello, I'm Rachel the Remix Disc. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. I hope you enjoy the tutorial!
 
 ## Outline
 
