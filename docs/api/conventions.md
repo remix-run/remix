@@ -372,7 +372,7 @@ export let loader: LoaderFunction = async ({ params }) => {
 
 See also:
 
-- (`headers`)["#headers"]
+- [`headers`](#headers)
 - [MDN Response Docs][response]
 
 #### Throwing Responses in Loaders
