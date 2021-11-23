@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as os from "os";
-import * as esbuild from "esbuild";
+import { bundleRequire } from "bundle-require";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -177,21 +176,11 @@ export async function readConfig(
         );
       }
 
-      let temporaryFile = path.resolve(os.tmpdir(), "_remix.config.js");
-
-      await esbuild.build({
-        entryPoints: [tsConfigFile],
-        format: "cjs",
-        platform: "node",
-        bundle: true,
-        outfile: temporaryFile
+      const { mod } = await bundleRequire({
+        filepath: tsConfigFile
       });
 
-      appConfig = require(temporaryFile);
-
-      // Do we need to handle the possibility that `fs.unlink` might fail?
-      // If so, we could do this in the callback
-      await fs.unlink(temporaryFile, () => {});
+      appConfig = mod;
     } else {
       appConfig = require(configFile);
     }

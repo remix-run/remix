@@ -2724,6 +2724,11 @@ builtin-modules@^3.1.0:
   resolved "https://registry.npmjs.org/builtin-modules/-/builtin-modules-3.2.0.tgz#45d5db99e7ee5e6bc4f362e008bf917ab5049887"
   integrity sha512-lGzLKcioL90C7wMczpkY0n/oART3MbBa8R9OFGE1rJxoVI86u4WAGfEk8Wjv10eKSyTHVGkSo3bvBylCEtk7LA==
 
+bundle-require@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/bundle-require/-/bundle-require-2.1.2.tgz#576fb3edc5d418ab4bbaaf50891604c853b8edd9"
+  integrity sha512-i8FENp+PiV5SUJztmjtfoq9rQDKhcQ1Ss924lrmAeBfL0IYT5rb6KTBMss9UNhtxndYVN6HUAh5974aZ6DDIPA==
+
 bytes@3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/bytes/-/bytes-3.0.0.tgz#d32815404d689699f85a4ea4fa8755dd13a96048"
