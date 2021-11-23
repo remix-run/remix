@@ -48,10 +48,15 @@ There's a bit going on in the file. For now, find the `Layout` component and rig
 
 💿 Add a link to posts in `app/root.tsx`
 
-```tsx
+```tsx lines=[4-6]
+...
+<li>
+  <Link to="/">Home</Link>
+</li>
 <li>
   <Link to="/posts">Posts</Link>
 </li>
+...
 ```
 
 Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page since we've not created this route yet. Let's create the route now:
