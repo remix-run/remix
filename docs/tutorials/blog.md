@@ -468,7 +468,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,7,8,15]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,7,8,12,15]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
