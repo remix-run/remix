@@ -2,10 +2,15 @@ const path = require("path");
 const express = require("express");
 const compression = require("compression");
 const morgan = require("morgan");
+const fs = require("fs");
 const { createRequestHandler } = require("@remix-run/express");
 
 const MODE = process.env.NODE_ENV;
 const BUILD_DIR = path.join(process.cwd(), "server/build");
+
+if (!fs.existsSync(BUILD_DIR)) {
+    console.warn("Build directory doesn't exist, please run `npm run dev` or `npm run build` before starting the server.");
+}
 
 let app = express();
 app.use(compression());
