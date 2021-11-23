@@ -142,7 +142,7 @@ TypeScript is mad, so let's help it out:
 ```tsx filename=app/routes/posts/index.tsx lines=[3-6,9,19,23]
 import { Link, useLoaderData } from "remix";
 
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
@@ -184,15 +184,15 @@ Hey, that's pretty cool. We get a pretty solid degree of type safety even over a
 
 A solid practice is to create a module that deals with a particular concern. In our case it's going to be reading and writing posts. Let's set that up now and add a `getPosts` export to our module.
 
-💿 Create `app/post.ts`
+💿 Create `app/posts.ts`
 
 ```sh
-touch app/post.ts
+touch app/posts.ts
 ```
 
 We're mostly gonna copy/paste it from our route:
 
-```tsx filename=app/post.ts
+```tsx filename=app/posts.ts
 export type Post = {
   slug: string;
   title: string;
