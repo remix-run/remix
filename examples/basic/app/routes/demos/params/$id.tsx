@@ -78,7 +78,7 @@ export function CatchBoundary() {
   return (
     <>
       <h2>Oops!</h2>
-      <p>{message}</p>
+      {message}
       <p>
         (Isn't it cool that the user gets to stay in context and try a different
         link in the parts of the UI that didn't blow up?)
