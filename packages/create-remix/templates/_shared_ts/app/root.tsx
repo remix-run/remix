@@ -11,7 +11,6 @@ import {
   useLocation
 } from "remix";
 import type { LinksFunction } from "remix";
-import { useLocation } from "react-router-dom";
 
 import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";
