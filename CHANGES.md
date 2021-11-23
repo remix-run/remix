@@ -1,5 +1,9 @@
 # History of Changes
 
+## Unreleased
+
+- Remove node-specific code from `create-remix` templates
+
 ## 1.0.3 - Mon Nov 22 2021
 
 ### Breaking Changes
