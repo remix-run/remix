@@ -36,7 +36,7 @@ export default function ProjectRoute() {
 }
 ```
 
-One of the crtical pieces here is that the project route renders a reusable component like `<ProjectView>`, because we'll be using it later for our optimistic version. Perhaps it looks like this:
+One of the critical pieces here is that the project route renders a reusable component like `<ProjectView>`, because we'll be using it later for our optimistic version. Perhaps it looks like this:
 
 ```tsx filename=app/component/project.js
 export function ProjectView({ project }) {
