@@ -834,7 +834,7 @@ export let action: ActionFunction = async ({ request }) => {
   let slug = formData.get("slug");
   let markdown = formData.get("markdown");
 
-  let errors = {};
+  let errors: Record<string, boolean> = {};
   if (!title) errors.title = true;
   if (!slug) errors.slug = true;
   if (!markdown) errors.markdown = true;
