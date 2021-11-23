@@ -49,7 +49,7 @@ export default function Gists() {
                 to={user.id}
                 className="text-blue-700 underline"
               >
-                {user.name} {locationPending && "..."}
+                {user.name} {locationPending ? "..." : null}
               </Link>
             </li>
           ))}
