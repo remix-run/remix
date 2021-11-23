@@ -1,0 +1,22 @@
+{
+  "name": "@remix-run/fastify",
+  "version": "1.0.4",
+  "description": "Fastify server request handler for Remix",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-fastify"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/node": "1.0.4"
+  },
+  "peerDependencies": {
+    "fastify": "^3.24.0"
+  },
+  "devDependencies": {
+    "fastify": "^3.24.0"
+  }
+}

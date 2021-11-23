@@ -22,6 +22,7 @@
     "packages/remix-cloudflare-workers",
     "packages/remix-dev",
     "packages/remix-express",
+    "packages/remix-fastify",
     "packages/remix-netlify",
     "packages/remix-node",
     "packages/remix-react",
