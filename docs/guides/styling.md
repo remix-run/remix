@@ -65,7 +65,7 @@ While not built into Remix's compiler, it is straight forward to use PostCSS and
 
 Here's a quick guide to getting it set up. We encourage you to read the official [Tailwind installation instructions](https://tailwindcss.com/docs/installation#installing-tailwind-css-as-a-post-css-plugin) as well.
 
-1.  You'll to install them as dev dependencies in your app:
+1.  You'll need to install them as dev dependencies in your app:
 
     ```sh
     npm install -D tailwindcss@latest postcss@latest autoprefixer@latest postcss-cli@latest
