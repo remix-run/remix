@@ -126,6 +126,14 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "action-errors",
           },
+          "routes/action-errors-fetcher": Object {
+            "caseSensitive": undefined,
+            "file": "routes/action-errors-fetcher.jsx",
+            "id": "routes/action-errors-fetcher",
+            "index": undefined,
+            "parentId": "root",
+            "path": "action-errors-fetcher",
+          },
           "routes/action-errors-self-boundary": Object {
             "caseSensitive": undefined,
             "file": "routes/action-errors-self-boundary.jsx",

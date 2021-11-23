@@ -59,6 +59,25 @@ describe("uncaught exceptions", () => {
           "
         `);
       });
+
+      it("renders the error boundary with a fetcher", async () => {
+        await page.goto(`${testServer}/action-errors-fetcher`);
+        await Utils.reactIsHydrated(page);
+        await page.click("button[type=submit]");
+        await page.waitForSelector('[data-test-id="action-error-boundary"]');
+        let html = await Utils.getHtml(
+          page,
+          '[data-test-id="action-error-boundary"]'
+        );
+        console.log("5");
+        expect(html).toMatchInlineSnapshot(`
+          "<div data-test-id=\\"action-error-boundary\\">
+            <h1>Action Error Boundary</h1>
+            <pre>I am an action error!</pre>
+          </div>
+          "
+        `);
+      });
     });
 
     describe("in an action without an error boundary", () => {
