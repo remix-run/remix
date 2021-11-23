@@ -9,7 +9,7 @@ const semver = require("semver");
 let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
-let adapters = ["architect", "express", "netlify", "vercel"];
+let adapters = ["architect", "express", "netlify", "vercel", "restify"];
 let runtimes = ["cloudflare-workers", "node"];
 let core = ["dev", "server-runtime", "react"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];

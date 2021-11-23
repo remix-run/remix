@@ -434,7 +434,8 @@ function remixServerAdapters() {
     getServerConfig("cloudflare-workers"),
     getServerConfig("express"),
     getServerConfig("vercel"),
-    getServerConfig("netlify")
+    getServerConfig("netlify"),
+    getServerConfig("restify")
   ];
 }
 

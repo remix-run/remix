@@ -37,7 +37,8 @@ async function run() {
     "vercel",
     "netlify",
     "react",
-    "serve"
+    "serve",
+    "restify"
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }

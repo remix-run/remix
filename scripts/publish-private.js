@@ -36,7 +36,8 @@ async function run() {
     "vercel",
     "netlify",
     "react",
-    "serve"
+    "serve",
+    "restify"
   ]) {
     // fix for https://github.com/remix-run/remix/actions/runs/1500713248
     await updatePackageConfig(name, config => {
