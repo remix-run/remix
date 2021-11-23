@@ -17,10 +17,14 @@ This uses TypeScript, but we always pepper the types on after we write the code.
 
 ```sh
 npx create-remix@latest
-# follow the prompts
+# choose Remix App Server
 cd [whatever you named the project]
 npm run dev
 ```
+
+<docs-error>It is important that you pick Remix App Server</docs-error>
+
+We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
@@ -79,7 +83,7 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17]
+```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
 export let loader = () => {
@@ -213,8 +217,8 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
-import { getPosts } from "~/posts";
-import type { Post } from "~/posts";
+import { getPosts } from "~/post";
+import type { Post } from "~/post";
 
 export let loader = () => {
   return getPosts();
@@ -288,7 +292,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,10,13-27]
+```tsx filename=app/post.ts lines=[1-3,10,12-27]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
@@ -497,7 +501,14 @@ Let's use the same markdown parser for our blog here that we actually use on thi
 npm add @ryanflorence/md
 ```
 
-```tsx filename=app/post.ts lines=[4,11,12]
+```tsx filename=app/post.ts lines=[5,11,18,19]
+import path from "path";
+import fs from "fs/promises";
+import parseFrontMatter from "front-matter";
+import invariant from "tiny-invariant";
+import { processMarkdown } from "@ryanflorence/md";
+
+//...
 export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
