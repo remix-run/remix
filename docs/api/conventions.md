@@ -97,7 +97,7 @@ There are a few conventions that Remix uses you should be aware of.
 - **`app/routes/*.{js,jsx,ts,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
 - **`app/routes/{folder}/*.tsx`**: Folders inside of routes will create nested URLs.
 - **`app/routes/{folder}` with `app/routes/{folder}.tsx`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
-- **Dots in route filesnames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
+- **Dots in route filenames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
 - **`app/routes/index.tsx`**: Routes named "index" will render when the parent layout route's path is matched exactly.
 - **`$param`**: The dollar sign denotes a dynamic segment of the URL. It will be parsed and passed to your loaders and routes.
 
@@ -488,7 +488,7 @@ export function CatchBoundary() {
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
-Actions have the the very same API as loaders, the only difference is when they are called.
+Actions have the very same API as loaders, the only difference is when they are called.
 
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
