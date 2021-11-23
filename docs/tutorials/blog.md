@@ -17,10 +17,14 @@ This uses TypeScript, but we always pepper the types on after we write the code.
 
 ```sh
 npx create-remix@latest
-# follow the prompts
+# choose Remix App Server
 cd [whatever you named the project]
 npm run dev
 ```
+
+<docs-error>It is important that you pick Remix App Server</docs-error>
+
+We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
