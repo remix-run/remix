@@ -1,4 +1,4 @@
 ---
-title: Primary API
-order: 2
+title: API
+order: 3
 ---

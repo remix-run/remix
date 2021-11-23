@@ -44,9 +44,11 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, MetaDescriptor } from "./routeModules";
+import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
+
+export { ScrollRestoration } from "./scroll-restoration";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -348,7 +350,7 @@ export function RemixRoute({ id }: { id: string }) {
   }
 
   // It's important for the route context to be above the error boundary so that
-  // a call to `useRouteData` doesn't accidentally get the parents route's data.
+  // a call to `useLoaderData` doesn't accidentally get the parents route's data.
   return (
     <RemixRouteContext.Provider value={context}>
       {element}
@@ -612,7 +614,7 @@ export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: MetaDescriptor = {};
+  let meta: HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
@@ -843,10 +845,50 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action, formMethod);
+    let formRef = React.useRef<HTMLFormElement>();
+    let ref = useComposedRefs(forwardedRef, formRef);
+
+    // When calling `submit` on the form element itself, we don't get data from
+    // the button that submitted the event. For example:
+    //
+    //   <Form>
+    //     <button name="something" value="whatever">Submit</button>
+    //   </Form>
+    //
+    // formData.get("something") should be "whatever", but we don't get that
+    // unless we call submit on the clicked button itself.
+    //
+    // To figure out which button triggered the submit, we'll attach a click
+    // event listener to the form. The click event is always triggered before
+    // the submit event (even when submitting via keyboard when focused on
+    // another form field, yeeeeet) so we should have access to that button's
+    // data for use in the submit handler.
+    let clickedButtonRef = React.useRef<any>();
+
+    React.useEffect(() => {
+      let form = formRef.current;
+      if (!form) return;
+
+      function handleClick(event: MouseEvent) {
+        if (!(event.target instanceof HTMLElement)) return;
+        let submitButton = event.target.closest<
+          HTMLButtonElement | HTMLInputElement
+        >("button,input[type=submit]");
+
+        if (submitButton && submitButton.type === "submit") {
+          clickedButtonRef.current = submitButton;
+        }
+      }
+
+      form.addEventListener("click", handleClick);
+      return () => {
+        form && form.removeEventListener("click", handleClick);
+      };
+    }, []);
 
     return (
       <form
-        ref={forwardedRef}
+        ref={ref}
         method={formMethod}
         action={formAction}
         encType={encType}
@@ -857,7 +899,12 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
-                submit(event.currentTarget, { method, replace });
+
+                submit(clickedButtonRef.current || event.currentTarget, {
+                  method,
+                  replace
+                });
+                clickedButtonRef.current = null;
               }
         }
         {...props}
@@ -976,10 +1023,18 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let formData: FormData;
 
       if (isFormElement(target)) {
+        let submissionTrigger: HTMLButtonElement | HTMLInputElement = (
+          options as any
+        ).submissionTrigger;
+
         method = options.method || target.method;
         action = options.action || target.action;
         encType = options.encType || target.enctype;
         formData = new FormData(target);
+
+        if (submissionTrigger && submissionTrigger.name) {
+          formData.append(submissionTrigger.name, submissionTrigger.value);
+        }
       } else if (
         isButtonElement(target) ||
         (isInputElement(target) &&
@@ -992,9 +1047,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
 
         // <button>/<input type="submit"> may override attributes of <form>
-        method = options.method || target.formMethod || form.method;
-        action = options.action || target.formAction || form.action;
-        encType = options.encType || target.formEnctype || form.enctype;
+
+        method =
+          options.method || target.getAttribute("formmethod") || form.method;
+        action =
+          options.action || target.getAttribute("formaction") || form.action;
+        encType =
+          options.encType || target.getAttribute("formenctype") || form.enctype;
         formData = new FormData(form);
 
         // Include name + value from a <button>
@@ -1133,11 +1192,6 @@ export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
-/**
- * @deprecated Use `useLoaderData`
- */
-export let useRouteData = useLoaderData;
-
 export function useActionData<T = AppData>(): T | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
@@ -1211,32 +1265,6 @@ export function useFetchers(): Fetcher[] {
   return [...fetchers.values()];
 }
 
-/**
- * @deprecated replaced by `useTransition().submission`
- */
-export function usePendingFormSubmit() {
-  let { transitionManager } = useRemixEntryContext();
-  let { submission } = transitionManager.getState().transition;
-  if (submission) {
-    return {
-      ...submission,
-      data: submission.formData
-    };
-  }
-}
-
-/**
- * Returns the next location if a location change is pending. This is useful
- * for showing loading indicators during route transitions from `<Link>`
- * clicks.
- *
- * @deprecated use `useTransition().location`
- */
-export function usePendingLocation(): Location | undefined {
-  let { transitionManager } = useRemixEntryContext();
-  return transitionManager.getState().transition.location;
-}
-
 export function LiveReload({ port = 8002 }: { port?: number }) {
   if (process.env.NODE_ENV !== "development") return null;
   return (
@@ -1262,4 +1290,22 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
       }}
     />
   );
+}
+
+function useComposedRefs<RefValueType = any>(
+  ...refs: Array<React.Ref<RefValueType> | null | undefined>
+): React.RefCallback<RefValueType> {
+  return React.useCallback(node => {
+    for (let ref of refs) {
+      if (ref == null) continue;
+      if (typeof ref === "function") {
+        ref(node);
+      } else {
+        try {
+          (ref as React.MutableRefObject<RefValueType>).current = node!;
+        } catch (_) {}
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, refs);
 }

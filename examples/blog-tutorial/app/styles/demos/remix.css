@@ -1,0 +1,101 @@
+/* You probably want to just delete this file, it's just of the demo pages */
+.remix-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: calc(100vh - env(safe-area-inset-bottom));
+}
+
+.remix-app > * {
+  width: 100%;
+}
+
+.remix-app__header {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.remix-app__header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.remix-app__header-home-link {
+  width: 106px;
+  height: 30px;
+  color: var(--color-foreground);
+}
+
+.remix-app__header-nav ul {
+  list-style: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+}
+
+.remix-app__header-nav li {
+  font-weight: bold;
+}
+
+.remix-app__main {
+  --space: 2rem;
+  padding-top: var(--space);
+  padding-top: var(--space);
+  flex: 1 1 auto;
+}
+
+.remix-app__footer {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.remix-app__footer-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.remix__page {
+  --gap: 1rem;
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: var(--gap);
+}
+
+@media print, screen and (min-width: 640px) {
+  .remix__page {
+    --gap: 2rem;
+    grid-auto-rows: unset;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .remix__page {
+    --gap: 4rem;
+  }
+}
+
+.remix__page > aside {
+  margin: 0;
+  padding-left: 1.5ch;
+  border: solid 1px var(--color-border);
+  border-radius: 1rem;
+}
+
+.remix__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.remix__form > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}

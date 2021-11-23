@@ -52,14 +52,9 @@ function createRemix() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            {
-              src: `${SOURCE_DIR}/package.json`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/README.md`,
-              dest: OUTPUT_DIR
-            },
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
             {
               src: `${SOURCE_DIR}/templates/*`,
               dest: `${OUTPUT_DIR}/templates`
@@ -96,6 +91,7 @@ function remix() {
         }),
         copy({
           targets: [
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
             { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
             { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
           ]
@@ -156,14 +152,9 @@ function remixDev() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            {
-              src: `${SOURCE_DIR}/package.json`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/README.md`,
-              dest: OUTPUT_DIR
-            },
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
             {
               src: `${SOURCE_DIR}/compiler/shims`,
               dest: `${OUTPUT_DIR}/compiler`
@@ -233,14 +224,9 @@ function remixServerRuntime() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            {
-              src: `${SOURCE_DIR}/package.json`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/README.md`,
-              dest: OUTPUT_DIR
-            }
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
           ]
         })
       ]
@@ -312,14 +298,9 @@ function remixNode() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            {
-              src: `${SOURCE_DIR}/package.json`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/README.md`,
-              dest: OUTPUT_DIR
-            }
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
           ]
         })
       ]
@@ -437,14 +418,9 @@ function getServerConfig(name) {
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copy({
         targets: [
-          {
-            src: `${SOURCE_DIR}/package.json`,
-            dest: OUTPUT_DIR
-          },
-          {
-            src: `${SOURCE_DIR}/README.md`,
-            dest: OUTPUT_DIR
-          }
+          { src: `LICENSE.md`, dest: OUTPUT_DIR },
+          { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+          { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
         ]
       })
     ]
@@ -492,14 +468,9 @@ function remixReact() {
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copy({
         targets: [
-          {
-            src: `${SOURCE_DIR}/package.json`,
-            dest: OUTPUT_DIR
-          },
-          {
-            src: `${SOURCE_DIR}/README.md`,
-            dest: OUTPUT_DIR
-          }
+          { src: `LICENSE.md`, dest: OUTPUT_DIR },
+          { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+          { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
         ]
       })
     ]
@@ -604,14 +575,9 @@ function remixServe() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            {
-              src: `${SOURCE_DIR}/package.json`,
-              dest: OUTPUT_DIR
-            },
-            {
-              src: `${SOURCE_DIR}/README.md`,
-              dest: OUTPUT_DIR
-            }
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
           ]
         })
       ]

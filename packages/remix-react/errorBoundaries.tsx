@@ -108,7 +108,7 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href="https://remix.run/dashboard/docs/errors"
+                href="https://remix.run/guides/errors"
               >
                 Error Handling in Remix
               </a>
@@ -187,8 +187,7 @@ export function RemixRootDefaultCatchBoundary() {
               <a
                 target="_blank"
                 rel="noreferrer"
-                // TODO: Update link to docs
-                href="https://remix.run/dashboard/docs/errors"
+                href="https://remix.run/guides/errors"
               >
                 Throwing Responses in Remix
               </a>

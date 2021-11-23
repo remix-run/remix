@@ -18,7 +18,7 @@ export interface RouteModule {
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
-  meta?: MetaFunction | MetaDescriptor;
+  meta?: MetaFunction | HtmlMetaDescriptor;
   unstable_shouldReload?: ShouldReloadFunction;
 }
 
@@ -51,7 +51,7 @@ export interface MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-  }): MetaDescriptor;
+  }): HtmlMetaDescriptor;
 }
 
 /**
@@ -60,7 +60,7 @@ export interface MetaFunction {
  * tag, or an array of strings that will render multiple tags with the same
  * `name` attribute.
  */
-export interface MetaDescriptor {
+export interface HtmlMetaDescriptor {
   [name: string]: string | string[];
 }
 

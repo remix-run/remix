@@ -1,4 +1,4 @@
 ---
 title: Handling Images
-disabled: true
+hidden: true
 ---

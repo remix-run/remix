@@ -1,5 +1,5 @@
 import type { LinksFunction } from "remix";
-import { Form, usePendingFormSubmit } from "remix";
+import { Form, useTransition } from "remix";
 
 import styles from "../styles/gists.new.css";
 
@@ -8,7 +8,7 @@ export let links: LinksFunction = () => {
 };
 
 export default function NewGist() {
-  let pendingForm = usePendingFormSubmit();
+  let pendingForm = useTransition().submission;
 
   return (
     <>
@@ -16,7 +16,7 @@ export default function NewGist() {
       {pendingForm ? (
         <div>
           <p>
-            <Loading /> Creating gist: {pendingForm.data.get("fileName")}
+            <Loading /> Creating gist: {pendingForm.formData.get("fileName")}
           </p>
         </div>
       ) : (
