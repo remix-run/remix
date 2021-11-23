@@ -61,10 +61,12 @@ export function CatchBoundary() {
           Maybe ask the webmaster ({caught.data.webmasterEmail}) for access.
         </p>
       );
+      break;
     case 404:
       message = (
         <p>Looks like you tried to visit a page that does not exist.</p>
       );
+      break;
     default:
       message = (
         <p>
@@ -78,7 +80,7 @@ export function CatchBoundary() {
   return (
     <>
       <h2>Oops!</h2>
-      <p>{message}</p>
+      {message}
       <p>
         (Isn't it cool that the user gets to stay in context and try a different
         link in the parts of the UI that didn't blow up?)
@@ -105,6 +107,6 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export let meta: MetaFunction = ({ data }) => {
   return {
-    title: data ? `Param: ${data.param}` : "Oops...",
+    title: data?.param ? `Param: ${data.param}` : "Oops...",
   };
 };
