@@ -1,0 +1,21 @@
+.admin {
+  display: flex;
+}
+
+.admin > nav {
+  padding-right: 2rem;
+}
+
+.admin > main {
+  flex: 1;
+  border-left: solid 1px #ccc;
+  padding-left: 2rem;
+}
+
+textarea {
+  width: 100%;
+}
+
+em {
+  color: red;
+}
