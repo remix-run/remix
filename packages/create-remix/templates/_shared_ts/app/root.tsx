@@ -245,3 +245,5 @@ const RouteChangeAnnouncement = React.memo(() => {
     </div>
   );
 });
+
+RouteChangeAnnouncement.displayName = 'RouteChangeAnnouncement';
