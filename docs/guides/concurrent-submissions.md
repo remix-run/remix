@@ -1,4 +1,4 @@
 ---
 title: Concurrent Submissions
-disabled: true
+hidden: true
 ---

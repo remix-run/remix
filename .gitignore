@@ -1,4 +1,5 @@
 .vscode
+.DS_Store
 
 /build/
 node_modules/
@@ -7,5 +8,6 @@ yarn-error.log
 /MICHAEL_TODOS.md
 /fixtures/cloudflare
 /fixtures/test
+/fixtures/my-remix-app
 
 .eslintcache

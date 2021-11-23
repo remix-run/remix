@@ -8,7 +8,9 @@ so we appreciate your patience as we figure things out.
 
 ## Documentation
 
-For documentation about Remix, please visit [our website](https://docs.remix.run).
+For documentation about Remix, please visit [our website](https://remix.run/docs).
+
+Also, please [join our community on Discord](https://rmx.as/discord).
 
 The documentation is automatically generated on each release from the files in
 [the `docs` directory](docs).

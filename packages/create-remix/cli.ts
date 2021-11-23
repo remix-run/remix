@@ -52,7 +52,7 @@ async function run() {
     input.length > 0
       ? input[0]
       : (
-          await inquirer.prompt([
+          await inquirer.prompt<{ dir: string }>([
             {
               type: "input",
               name: "dir",

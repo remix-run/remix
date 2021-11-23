@@ -1,5 +1,5 @@
 import type { LinksFunction } from "remix";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet } from "remix";
 
 // @ts-expect-error
 import Shared from "~/components/Shared";

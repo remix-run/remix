@@ -2,6 +2,8 @@
 title: Web Fetch API
 ---
 
+# Web Fetch API
+
 When browsers added `window.fetch`, they also add three other objects: `Headers`, `Request`, and `Response`. Remix is built upon this API.
 
 When you do this:
@@ -23,8 +25,8 @@ Rather than pick a server-side API, Remix adopts the Web Fetch API for all http 
 
 While you can use these APIs directly in Remix, you'll typically use response helpers instead:
 
-- [json](../node/#json)
-- [redirect](../node/#redirect)
+- [json](../api/remix#json)
+- [redirect](../api/remix#redirect)
 
 ## Globally Available
 

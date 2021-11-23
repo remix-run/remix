@@ -1,37 +1,94 @@
-import { useLoaderData } from "remix";
-import { Link } from "react-router-dom";
+import { useLoaderData, json, Link } from "remix";
 
-import stylesUrl from "../styles/index.css";
+// Loaders provide data to components and are only ever called on the server, so
+// you can connect to a database or run any server side code you want right next
+// to the component that renders it.
+// https://remix.run/api/conventions#loader
+export let loader = () => {
+  let data = {
+    resources: [
+      {
+        name: "Remix Docs",
+        url: "https://remix.run/docs"
+      },
+      {
+        name: "React Router Docs",
+        url: "https://reactrouter.com/docs"
+      },
+      {
+        name: "Remix Discord",
+        url: "https://discord.gg/VBePs6d"
+      }
+    ],
+    demos: [
+      {
+        to: "demos/actions",
+        name: "Actions"
+      },
+      {
+        to: "demos/about",
+        name: "Nested Routes, CSS loading/unloading"
+      },
+      {
+        to: "demos/params",
+        name: "URL Params and Error Boundaries"
+      }
+    ]
+  };
 
-export function meta() {
+  // https://remix.run/api/remix#json
+  return json(data);
+};
+
+// https://remix.run/api/conventions#meta
+export let meta = () => {
   return {
     title: "Remix Starter",
     description: "Welcome to remix!"
   };
-}
+};
 
-export function links() {
-  return [{ rel: "stylesheet", href: stylesUrl }];
-}
-
-export function loader() {
-  return { message: "this is awesome 😎" };
-}
-
+// https://remix.run/guides/routing#index-routes
 export default function Index() {
   let data = useLoaderData();
 
   return (
-    <div style={{ textAlign: "center", padding: 20 }}>
-      <h2>Welcome to Remix!</h2>
-      <p>
-        <a href="https://docs.remix.run">Check out the docs</a> to get started.
-      </p>
-      <p>Message from the loader: {data.message}</p>
-      <p>
-        <Link to="not-found">Link to 404 not found page.</Link> Clicking this
-        link will land you in your root CatchBoundary component.
-      </p>
+    <div className="remix__page">
+      <main>
+        <h2>Welcome to Remix!</h2>
+        <p>We're stoked that you're here. 🥳</p>
+        <p>
+          Feel free to take a look around the code to see how Remix does things,
+          it might be a bit different than what you’re used to. When you're
+          ready to dive deeper, we've got plenty of resources to get you
+          up-and-running quickly.
+        </p>
+        <p>
+          Check out all the demos in this starter, and then just delete the{" "}
+          <code>app/routes/demos</code> and <code>app/styles/demos</code>{" "}
+          folders when you're ready to turn this into your next project.
+        </p>
+      </main>
+      <aside>
+        <h2>Demos In This App</h2>
+        <ul>
+          {data.demos.map(demo => (
+            <li key={demo.to} className="remix__page__resource">
+              <Link to={demo.to} prefetch="intent">
+                {demo.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <h2>Resources</h2>
+        <ul>
+          {data.resources.map(resource => (
+            <li key={resource.url} className="remix__page__resource">
+              <a href={resource.url}>{resource.name}</a>
+            </li>
+          ))}
+        </ul>
+      </aside>
     </div>
   );
 }
