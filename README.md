@@ -1,7 +1,12 @@
 # Welcome to Remix!
 
-Remix is a framework for building better websites using modern web standards and
-best practices. We are happy you're here!
+We are happy you're here!
+
+[Remix](https://remix.run/) is a full stack framework for building better websites
+using modern web standards and best practices.  Focus on your user interface and
+while Remix delivers a fast, slick, and resilient user experience.  Serves fully
+formed HTML documents from anywhere: Cloudflare Workers, serverless and traditional
+Node.js. 
 
 This repository contains the Remix source code. This repo is a work in progress,
 so we appreciate your patience as we figure things out.
