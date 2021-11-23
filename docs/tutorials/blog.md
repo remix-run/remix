@@ -110,7 +110,7 @@ export default function Posts() {
 }
 ```
 
-Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the serever in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
 💿 Render links to our posts
 
@@ -270,10 +270,10 @@ title: 90s Mixtape
 - Everlong (Foo Fighters)
 - Ms. Jackson (Outkast)
 - Interstate Love Song (Stone Temple Pilots)
-- Killing Me Softely With His Song (Fugees, Ms. Lauryn Hill)
+- Killing Me Softly With His Song (Fugees, Ms. Lauryn Hill)
 - Just a Friend (Biz Markie)
 - The Man Who Sold The World (Nirvana)
-- Semi-Charmed Lif (Third Eye Blind)
+- Semi-Charmed Life (Third Eye Blind)
 - ...Baby One More Time (Britney Spears)
 - Better Man (Pearl Jam)
 - It's All Coming Back to Me Now (Céline Dion)
