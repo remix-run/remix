@@ -3,7 +3,14 @@
   "version": "1.0.4",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
-  "repository": "https://github.com/remix-run/packages",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/create-remix"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "bin": {
     "create-remix": "cli.js"
   },

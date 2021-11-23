@@ -3,6 +3,14 @@
   "description": "A framework for building better websites",
   "version": "1.0.4",
   "homepage": "https://remix.run",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "main": "index.js",
   "browser": "browser/index.js",
   "sideEffects": false,
