@@ -83,7 +83,7 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17]
+```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
 export let loader = () => {
@@ -193,7 +193,7 @@ touch app/post.ts
 We're mostly gonna copy/paste it from our route:
 
 ```tsx filename=app/post.ts
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
@@ -217,8 +217,8 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
-import { getPosts } from "~/posts";
-import type { Post } from "~/posts";
+import { getPosts } from "~/post";
+import type { Post } from "~/post";
 
 export let loader = () => {
   return getPosts();
