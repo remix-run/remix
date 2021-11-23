@@ -105,6 +105,6 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export let meta: MetaFunction = ({ data }) => {
   return {
-    title: data.param ? `Param: ${data.param}` : "Oops..."
+    title: data?.param ? `Param: ${data.param}` : "Oops..."
   };
 };
