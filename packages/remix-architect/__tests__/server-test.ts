@@ -96,7 +96,7 @@ describe("architect createRequestHandler", () => {
 
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))

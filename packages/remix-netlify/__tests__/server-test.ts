@@ -73,7 +73,7 @@ describe("netlify createRequestHandler", () => {
 
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       // @ts-expect-error We don't have a real app to test, but it doesn't matter. We

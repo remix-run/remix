@@ -230,7 +230,7 @@ async function handleDataRequest(
     headers.set("X-Remix-Redirect", headers.get("Location")!);
     headers.delete("Location");
 
-    return new Response("", {
+    return new Response(null, {
       status: 204,
       headers
     });

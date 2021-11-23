@@ -143,4 +143,50 @@ describe("loaders", () => {
     let res = await handler(request);
     expect(await res.json()).toMatchInlineSnapshot(`"?foo=bar&index=test"`);
   });
+
+  it("sets redirect header", async () => {
+    let loader = async ({ request }) => {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: "/redirected"
+        }
+      });
+    };
+
+    let routeId = "routes/random";
+    let build = {
+      routes: {
+        [routeId]: {
+          id: routeId,
+          path: "/random",
+          module: {
+            loader
+          }
+        }
+      },
+      entry: { module: {} }
+    } as unknown as ServerBuild;
+
+    let handler = createRequestHandler(build, {});
+
+    let request = new Request("http://example.com/random?_data=routes/random", {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    let res = await handler(request);
+    expect(res.status).toBe(204);
+    expect(res.headers).toMatchInlineSnapshot(`
+      Headers {
+        Symbol(map): Object {
+          "X-Remix-Redirect": Array [
+            "/redirected",
+          ],
+        },
+      }
+    `);
+    expect(res.body).toBeNull();
+  });
 });
