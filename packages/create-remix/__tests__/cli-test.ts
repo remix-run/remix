@@ -22,12 +22,19 @@ const createRemix = path.resolve(
   "../../../build/node_modules/create-remix/cli.js"
 );
 
+const DEFAULT_JEST_TIMEOUT = 5000;
+
 describe("create-remix cli", () => {
   beforeAll(() => {
+    jest.setTimeout(DEFAULT_JEST_TIMEOUT * 3);
     if (!fs.existsSync(createRemix)) {
       // TODO: Consider runnuing the build here instead of throwing
       throw new Error(`Cannot run Remix CLI tests without building Remix`);
     }
+  });
+
+  afterAll(() => {
+    jest.setTimeout(DEFAULT_JEST_TIMEOUT);
   });
 
   it("guides the user through the process", async done => {
