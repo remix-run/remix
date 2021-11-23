@@ -1176,7 +1176,7 @@ nav ul a:hover {
 
 </details>
 
-💿 Also, download [the font](/jokes-tutorial/baloo/baloo.woff) and [it's license](/jokes-tutorial/baloo/License.txt) and put them in `public/fonts/baloo`.
+💿 Also, download [the font](/jokes-tutorial/baloo/baloo.woff) and [its license](/jokes-tutorial/baloo/License.txt) and put them in `public/fonts/baloo`.
 
 💿 While you're downloading assets, you may as well download [the social image](/jokes-tutorial/social.png) and put that at `public/social.png`. You'll need that later.
 
