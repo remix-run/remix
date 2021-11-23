@@ -699,7 +699,7 @@ We're gonna get serious now. Let's build a form to create a new post in the our 
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,5-22]
+```tsx filename=app/routes/admin/new.tsx lines=[1,5-24]
 import { Form } from "remix";
 
 export default function NewPost() {
@@ -750,7 +750,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-9]
+```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
 import { redirect, Form } from "remix";
 import { createPost } from "~/post";
 
@@ -853,7 +853,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,12-13,19-20,25-26]
+```tsx filename=app/routes/admin/new.tsx lines=[1,6,12-13,19-20,25-26]
 import { useActionData, Form, redirect } from "remix";
 
 // ...
