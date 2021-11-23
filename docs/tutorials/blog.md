@@ -73,7 +73,7 @@ Data loading is built in to Remix.
 
 If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhacement realized in its fullest.
+If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
 
 So let's get to it and provide some data to our component.
 
@@ -106,7 +106,7 @@ export default function Posts() {
 }
 ```
 
-Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the serever in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
 💿 Render links to our posts
 
@@ -189,7 +189,7 @@ touch app/post.ts
 We're mostly gonna copy/paste it from our route:
 
 ```tsx filename=app/post.ts
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
@@ -213,8 +213,8 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
-import { getPosts } from "~/posts";
-import type { Post } from "~/posts";
+import { getPosts } from "~/post";
+import type { Post } from "~/post";
 
 export let loader = () => {
   return getPosts();
@@ -497,7 +497,11 @@ Let's use the same markdown parser for our blog here that we actually use on thi
 npm add @ryanflorence/md
 ```
 
-```tsx filename=app/post.ts lines=[4,11,12]
+```tsx filename=app/post.ts lines=[1,8,15,16]
+import { processMarkdown } from '@ryanflorence/md'
+
+// ...
+
 export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
@@ -882,11 +886,15 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[7,15-18,20-21]
 //...
 import invariant from "tiny-invariant";
 
 export let action: ActionFunction = async ({ request }) => {
+  // ...
+
+  let errors: any = {}
+
   // ...
 
   if (Object.keys(errors).length) {
