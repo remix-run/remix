@@ -7,6 +7,8 @@ order: 2
 
 You want to learn Remix? You're in the right place. Let's build [Remix Jokes](https://remix-jokes.lol)!
 
+<docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
+
 [![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
