@@ -54,6 +54,6 @@ In development, `remix-serve` will ensure the latest code is run on each request
   }
   ```
 
-  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express](../adapter/#createrequesthandler) server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
+  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express](adapter#createrequesthandler) server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
 
 In production this doesn't happen. The server boots up and that's the end of it.
