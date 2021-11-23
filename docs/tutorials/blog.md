@@ -497,7 +497,9 @@ Let's use the same markdown parser for our blog here that we actually use on thi
 npm add @ryanflorence/md
 ```
 
-```tsx filename=app/post.ts lines=[4,11,12]
+```tsx filename=app/post.ts lines=[1,5,13,15]
+import { processMarkdown } from "@ryanflorence/md";
+...
 export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
