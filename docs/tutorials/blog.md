@@ -653,7 +653,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/admin.tsx lines=[19]
+```tsx filename=app/routes/admin.tsx lines=[1,19]
 import { Outlet, Link, useLoaderData } from "remix";
 
 //...
