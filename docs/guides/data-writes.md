@@ -33,7 +33,7 @@ Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to
 
 ### HTML Form GET
 
-A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` excpect the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
+A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
 
 Consider this form:
 
@@ -141,7 +141,7 @@ We're going to build a mutation from start to finish with:
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 
-Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just us a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
+Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just use a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
 
 ### Building the form
 
@@ -197,7 +197,7 @@ Of course, we started complicating things to try to create better user experienc
 
 ### Form Validation
 
-It's common to validate forms both clientside and serverside. It's also (unfortunately) common to only validate clientside, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
+It's common to validate forms both clientside and serverside. It's also (unfortunately) common to only validate clientside, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You'll find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
 
 We know, we know, you want to animate in nice validation errors and stuff. We'll get to that. But right now we're just building a basic HTML form and user flow. We'll keep it simple first, then make it fancy.
 
