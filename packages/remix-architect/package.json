@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/architect",
   "description": "Architect server request handler for Remix",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@types/aws-lambda": "^8.10.82",
-    "@remix-run/node": "1.0.3"
+    "@remix-run/node": "1.0.4"
   },
   "peerDependencies": {
     "@architect/architect": "^8.3.7"
