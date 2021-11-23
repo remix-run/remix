@@ -49,7 +49,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 ## Prerequisites
 
-You can follow along with this tutorial on [StackBlitz](https://stackblitz.com/) (a fantastic in-browser editor) or locally on your own computer. If you use the StackBlitz approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
+You can follow along with this tutorial on [Codesandbox](https://codesandbox.com/) (a fantastic in-browser editor) or locally on your own computer. If you use the Codesandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
 - [npm](https://www.npmjs.com) 7 or greater
