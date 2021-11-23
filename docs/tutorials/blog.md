@@ -7,7 +7,7 @@ order: 1
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
-<docs-info>💿 Hey I'm Derrick the Remix Compact Disk 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
 
 This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, but once!).
 
@@ -110,7 +110,7 @@ export default function Posts() {
 }
 ```
 
-Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the serever in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
 💿 Render links to our posts
 
@@ -270,10 +270,10 @@ title: 90s Mixtape
 - Everlong (Foo Fighters)
 - Ms. Jackson (Outkast)
 - Interstate Love Song (Stone Temple Pilots)
-- Killing Me Softely With His Song (Fugees, Ms. Lauryn Hill)
+- Killing Me Softly With His Song (Fugees, Ms. Lauryn Hill)
 - Just a Friend (Biz Markie)
 - The Man Who Sold The World (Nirvana)
-- Semi-Charmed Lif (Third Eye Blind)
+- Semi-Charmed Life (Third Eye Blind)
 - ...Baby One More Time (Britney Spears)
 - Better Man (Pearl Jam)
 - It's All Coming Back to Me Now (Céline Dion)
@@ -501,7 +501,14 @@ Let's use the same markdown parser for our blog here that we actually use on thi
 npm add @ryanflorence/md
 ```
 
-```tsx filename=app/post.ts lines=[4,11,12]
+```tsx filename=app/post.ts lines=[5,11,18,19]
+import path from "path";
+import fs from "fs/promises";
+import parseFrontMatter from "front-matter";
+import invariant from "tiny-invariant";
+import { processMarkdown } from "@ryanflorence/md";
+
+//...
 export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
