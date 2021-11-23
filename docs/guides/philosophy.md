@@ -4,7 +4,7 @@ title: Philosophy
 
 # Philosophy
 
-We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and ecommerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
+We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and e-commerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
 
 The Remix philosophy can be summed up in four points:
 

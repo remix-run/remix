@@ -15,7 +15,7 @@ While not built-in to Remix, you can use these also:
 - Tailwind
 - CSS-in-JS libraries (that don't require babel)
 
-Remix does not currently support CSS Modules. However, the Remix compiler uses [esbuild](https://esbuild.github.io) which will eventualy have direct support for them. When it supports them, Remix will.
+Remix does not currently support CSS Modules. However, the Remix compiler uses [esbuild](https://esbuild.github.io) which will eventually have direct support for them. When it supports them, Remix will.
 
 The primary way to style in Remix is to add a `<link>` to the document when a route is active with [Route Module Links](../../api/app/route-module/) export.
 
@@ -60,7 +60,7 @@ export let links: LinksFunction = () => {
 While not built into Remix's compiler, it is straight forward to use PostCSS and Tailwind. The strategy is straight forward:
 
 1. Use `postcss` cli directly alongside Remix
-2. Buld CSS into the Remix app directory
+2. Build CSS into the Remix app directory
 3. Import your stylesheet to your modules like any other stylesheet
 
 Here's a quick guide to getting it set up. We encourage you to read the official [Tailwind installation instructions](https://tailwindcss.com/docs/installation#installing-tailwind-css-as-a-post-css-plugin) as well.
@@ -166,7 +166,7 @@ You can use CSS-in-JS libraries like Styled Components, but you need to perform 
 
 We don't recommend this approach for two reasons:
 
-1. Styles are embedded into your HTML documents instead of cachable URLs. Browsers can't cache the styles shared between pages and HTML documents now must expire on your CDN with the styles inside of them.
+1. Styles are embedded into your HTML documents instead of cacheable URLs. Browsers can't cache the styles shared between pages and HTML documents now must expire on your CDN with the styles inside of them.
 
 2. It's a double render. Probably not a big deal, but it's just not needed.
 

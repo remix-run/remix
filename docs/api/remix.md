@@ -79,7 +79,7 @@ A `<NavLink>` is a special kind of `<Link>` that knows whether or not it is "act
 
 ### `<Form>`
 
-The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
+The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
 ```js
 import { Form } from "remix";
@@ -156,7 +156,7 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 
 <docs-info>This is recommended over <code>&lt;form></code></docs-info>
 
-When the `action` prop is ommitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
+When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
 
 - `<form>` uses the current URL as the default which can lead to surprising results: forms inside parent routes will post to the child action if you're at the child's URL and the parents action when you're at the parent's URL. This means as the user navigates, the form's behavior changes.
 - `<Form>` will always post to the route's action, independent of the URL. A form in a parent route will always post to the parent, even if you're at the child's URL.
@@ -294,7 +294,7 @@ export default function Signup() {
 
 When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
 
-<docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
+<docs-info>Remix client side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
 Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
 
@@ -575,7 +575,7 @@ function PendingLink({ to, children }) {
 }
 ```
 
-Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
+Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for while the state is "submitting", once the action is complete, then the link will go pending.
 
 ### `useFetcher`
 
@@ -622,7 +622,7 @@ Notes about how it works:
   - After the action completes, the loaders on the page are reloaded to capture any mutations that may have happened, automatically keeping your UI in sync with your server state
 - When multiple fetchers are inflight at once, it will
   - commit the freshest available data as they each land
-  - ensure no stale loads overrite fresher data, no matter which order the responses return
+  - ensure no stale loads overwrite fresher data, no matter which order the responses return
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
@@ -1034,7 +1034,7 @@ This is where `useFetchers` comes in. Up in the sidebar we can get access too al
 The strategy has three steps:
 
 1. Find the submissions for tasks in a specific project
-2. Use the `fetcher.submission.formData` to immediatly update the count
+2. Use the `fetcher.submission.formData` to immediately update the count
 3. Use the normal task's state if it's not inflight
 
 Here's some sample code:
@@ -1788,7 +1788,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
 import { createCookieSessionStorage } from "remix";
@@ -1870,7 +1870,7 @@ export { getSession, commitSession, destroySession };
 
 For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
 
-The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globaly replicated, low-latency data store with exceptionally high read volumes with low-latency.
+The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
 // app/sessions.js
@@ -1974,7 +1974,7 @@ export async function loader({ request }) {
     { message },
     {
       headers: {
-        // only necessary with cookieSesionStorage
+        // only necessary with cookieSessionStorage
         "Set-Cookie": await commitSession(session)
       }
     }
