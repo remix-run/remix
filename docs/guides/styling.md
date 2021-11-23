@@ -17,7 +17,13 @@ While not built-in to Remix, you can use these also:
 
 Remix does not currently support CSS Modules. However, the Remix compiler uses [esbuild](https://esbuild.github.io) which will eventualy have direct support for them. When it supports them, Remix will.
 
+**TODO: Update this line's link 👇**
+
 The primary way to style in Remix is to add a `<link>` to the document when a route is active with [Route Module Links](../../api/app/route-module/) export.
+
+To display imported styles, you will need to import the `Links` module from Remix in the app/root.tsx file. You might be wondering why? Well, in the app/root.tsx, we're rendering everything about our app. From the <html> to the </html>. That means if something doesn't show up in there, it's not going to show up at all in our application!
+
+This way, we just import `Links` once in the <head> of app/root.tsx, and we can import styles anywhere we like in our project and display them accordingly.
 
 ## Remote Stylesheets
 
@@ -82,7 +88,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
     };
     ```
 
-3.  And one more config: `tailwind.config.js`:
+3.  And one more config file: `tailwind.config.js`:
 
     ```js filename=tailwind.config.js
     module.exports = {
@@ -97,11 +103,14 @@ Here's a quick guide to getting it set up. We encourage you to read the official
         extend: {}
       },
       variants: {},
-      plugins: []
+      plugins: [
+        tailwindcss: {},
+        autoprefixer: {}
+      ]
     };
     ```
 
-4.  Add a css file to `./styles/app.css`
+4.  Create a folder named `styles` in your project root and add a css file `./styles/app.css`. Import TailwindCSS `base`, `components` and `utilities` styles, this is what you will edit
 
     ```css
     @tailwind base;
@@ -137,19 +146,19 @@ Here's a quick guide to getting it set up. We encourage you to read the official
 
     We recommend adding `app/styles` to your `.gitignore`.
 
-6.  Use it! When you're developing styles, open a terminal tab and run your new watch script:
+6.  Use it! When you're developing styles, open a new terminal tab and run your new watch script:
 
     ```sh
     npm run watch:css
     ```
 
-    When you're building for production, run
+    When you're building for production, run the build script:
 
     ```sh
     npm run build:css
     ```
 
-    Then import like any other css file:
+    Then import it like any other css file:
 
     ```tsx filename=root.tsx
     import type { LinksFunction } from "remix";
@@ -159,6 +168,9 @@ Here's a quick guide to getting it set up. We encourage you to read the official
       return [{ rel: "stylesheet", href: styles }];
     };
     ```
+    
+    **Remember to import the `Links` Component into the `<head>` of `root.tsx`**
+    
 
 ## CSS-in-JS libraries
 
