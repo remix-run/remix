@@ -11,7 +11,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/@remix-run/express",
+    "outDir": "../../build/node_modules/@remix-run/fastify",
     "rootDir": "."
   }
 }
