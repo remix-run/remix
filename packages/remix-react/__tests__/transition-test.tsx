@@ -1264,13 +1264,13 @@ describe("fetcher resubmissions/re-gets", () => {
     let key = "KEY";
     let A = t.fetch.get("/foo", key);
     let B = t.fetch.get("/foo", key);
+    await A.loader.resolve(null);
     let C = t.fetch.get("/foo", key);
-    let D = t.fetch.get("/foo", key);
-    t.fetch.get("/foo", key);
+    await B.loader.resolve(null);
+    await C.loader.resolve(null);
     expect(A.loader.abortMock.calls.length).toBe(1);
     expect(B.loader.abortMock.calls.length).toBe(1);
-    expect(C.loader.abortMock.calls.length).toBe(1);
-    expect(D.loader.abortMock.calls.length).toBe(1);
+    expect(C.loader.abortMock.calls.length).toBe(0);
   });
 
   it("aborts re-get-submissions", async () => {
