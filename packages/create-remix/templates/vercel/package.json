@@ -1,14 +1,10 @@
 {
   "scripts": {
     "postinstall": "remix setup node",
-    "dev": "remix watch",
-    "start": "vercel dev"
+    "build": "remix build",
+    "dev": "remix dev"
   },
   "dependencies": {
-    "@remix-run/vercel": "*",
-    "@vercel/node": "^1.8.3"
-  },
-  "devDependencies": {
-    "vercel": "^21.2.2"
+    "@remix-run/vercel": "*"
   }
 }
