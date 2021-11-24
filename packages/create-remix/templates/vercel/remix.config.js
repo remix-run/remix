@@ -5,7 +5,5 @@ module.exports = {
   appDirectory: "app",
   browserBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "api/build",
-  devServerPort: process.env.PORT || 3000
+  serverBuildDirectory: "api/build"
 };
-  
