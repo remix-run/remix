@@ -13,7 +13,14 @@ describe("init", () => {
   it("initializes with initial values", async () => {
     let tm = createTransitionManager({
       routes: [
-        { element: {}, id: "root", path: "/", ErrorBoundary: {}, module: "" }
+        {
+          element: {},
+          id: "root",
+          path: "/",
+          ErrorBoundary: {},
+          module: "",
+          hasLoader: false
+        }
       ],
       location: createLocation("/"),
       loaderData: { root: "LOADER DATA" },
@@ -193,6 +200,7 @@ describe("shouldReload", () => {
         {
           path: "",
           id: "root",
+          hasLoader: true,
           loader: rootLoader,
           shouldReload,
           element: {},
@@ -203,11 +211,13 @@ describe("shouldReload", () => {
               id: "index",
               action: () => null,
               element: {},
-              module: ""
+              module: "",
+              hasLoader: false
             },
             {
               path: "/child",
               id: "child",
+              hasLoader: true,
               loader: childLoader,
               action: () => null,
               element: {},
@@ -351,6 +361,7 @@ describe("errors on navigation", () => {
             id: "parent",
             element: {},
             module: "",
+            hasLoader: false,
             children: [
               {
                 path: "/child",
@@ -358,6 +369,7 @@ describe("errors on navigation", () => {
                 element: {},
                 module: "",
                 ErrorBoundary: FakeComponent,
+                hasLoader: true,
                 loader
               }
             ]
@@ -386,6 +398,7 @@ describe("errors on navigation", () => {
         id: "child",
         element: {},
         module: "",
+        hasLoader: true,
         loader
       };
       let parent = {
@@ -394,7 +407,8 @@ describe("errors on navigation", () => {
         element: {},
         module: "",
         ErrorBoundary: FakeComponent,
-        children: [child]
+        children: [child],
+        hasLoader: false
       };
 
       let tm = createTestTransitionManager("/", {
@@ -422,12 +436,14 @@ describe("errors on navigation", () => {
             id: "root",
             element: {},
             module: "",
+            hasLoader: false,
             children: [
               {
                 path: "/",
                 id: "parent",
                 element: {},
                 module: "",
+                hasLoader: false,
                 children: [
                   {
                     path: "/child",
@@ -435,6 +451,7 @@ describe("errors on navigation", () => {
                     element: {},
                     module: "",
                     ErrorBoundary: FakeComponent,
+                    hasLoader: true,
                     loader
                   }
                 ]
@@ -483,6 +500,7 @@ describe("errors on navigation", () => {
           element: {},
           module: "",
           loader: loaderA,
+          hasLoader: true,
           children: [
             {
               path: "/b",
@@ -490,6 +508,7 @@ describe("errors on navigation", () => {
               element: {},
               module: "",
               loader: loaderB,
+              hasLoader: true,
               ErrorBoundary: FakeComponent,
               children: [
                 {
@@ -497,6 +516,7 @@ describe("errors on navigation", () => {
                   id: "c",
                   element: {},
                   module: "",
+                  hasLoader: true,
                   loader: loaderC
                 }
               ]
@@ -630,6 +650,7 @@ describe("action errors", () => {
             id: "parent",
             element: {},
             module: "",
+            hasLoader: false,
             children: [
               {
                 path: "/child",
@@ -637,6 +658,7 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 ErrorBoundary: FakeComponent,
+                hasLoader: false,
                 action
               }
             ]
@@ -668,6 +690,7 @@ describe("action errors", () => {
             id: "parent",
             element: {},
             module: "",
+            hasLoader: true,
             loader: parentLoader,
             children: [
               {
@@ -676,6 +699,7 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 ErrorBoundary: FakeComponent,
+                hasLoader: false,
                 action
               }
             ]
@@ -712,12 +736,14 @@ describe("action errors", () => {
             element: {},
             module: "",
             ErrorBoundary: FakeComponent,
+            hasLoader: false,
             children: [
               {
                 path: "/child",
                 id: "child",
                 element: {},
                 module: "",
+                hasLoader: false,
                 action
               }
             ]
@@ -754,6 +780,7 @@ describe("action errors", () => {
             element: {},
             module: "",
             ErrorBoundary: FakeComponent,
+            hasLoader: false,
             children: [
               {
                 path: "/parent",
@@ -761,6 +788,7 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 loader: parentLoader,
+                hasLoader: true,
                 children: [
                   {
                     path: "/parent/child",
@@ -768,6 +796,7 @@ describe("action errors", () => {
                     element: {},
                     module: "",
                     action,
+                    hasLoader: false,
                     ErrorBoundary: FakeComponent
                   }
                 ]
@@ -1230,14 +1259,18 @@ describe("fetcher redirects", () => {
 });
 
 describe("fetcher resubmissions/re-gets", () => {
-  it("aborts re-gets", async () => {
+  it.only("aborts re-gets", async () => {
     let t = setup();
     let key = "KEY";
     let A = t.fetch.get("/foo", key);
     let B = t.fetch.get("/foo", key);
+    let C = t.fetch.get("/foo", key);
+    let D = t.fetch.get("/foo", key);
     t.fetch.get("/foo", key);
     expect(A.loader.abortMock.calls.length).toBe(1);
     expect(B.loader.abortMock.calls.length).toBe(1);
+    expect(C.loader.abortMock.calls.length).toBe(1);
+    expect(D.loader.abortMock.calls.length).toBe(1);
   });
 
   it("aborts re-get-submissions", async () => {
@@ -1771,11 +1804,13 @@ let setup = ({ url } = { url: "/" }) => {
       module: "",
       ErrorBoundary: FakeComponent,
       CatchBoundary: FakeComponent,
+      hasLoader: true,
       loader: rootLoader,
       children: [
         {
           path: "/",
           id: "index",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1784,6 +1819,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/foo",
           id: "foo",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1792,6 +1828,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/bar",
           id: "bar",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1800,6 +1837,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/baz",
           id: "baz",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1808,6 +1846,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/p/:param",
           id: "param",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
