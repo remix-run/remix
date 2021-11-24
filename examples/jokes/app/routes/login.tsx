@@ -95,7 +95,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function Login() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
   let [searchParams] = useSearchParams();
   return (
     <div className="container">

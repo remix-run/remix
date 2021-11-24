@@ -2062,7 +2062,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -2622,7 +2622,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function Login() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
   let [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -3155,7 +3155,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -3744,7 +3744,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function Login() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
   let [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -4369,7 +4369,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -5042,7 +5042,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function Login() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
   let [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -5840,13 +5840,14 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
   let transition = useTransition();
 
   if (transition.submission) {
     let name = transition.submission.formData.get("name");
-    let content =
-      transition.submission.formData.get("content");
+    let content = transition.submission.formData.get(
+      "content"
+    );
     if (
       typeof name === "string" &&
       typeof content === "string" &&
