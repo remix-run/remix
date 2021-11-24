@@ -23,7 +23,9 @@ If you'd rather run everything in a single tab, you can look at [concurrently](h
 
 ## Deployment
 
-Use wrangler to build and deploy your application to Cloudflare Workers:
+Use [wrangler](https://developers.cloudflare.com/workers/cli-wrangler) to build and deploy your application to Cloudflare Workers. If you don't have it yet, follow [the installation guide](https://developers.cloudflare.com/workers/cli-wrangler/install-update) to get it setup. Be sure to [authenticate the CLI](https://developers.cloudflare.com/workers/cli-wrangler/authentication) as well.
+
+Once that's done, you should be able to deploy your app:
 
 ```sh
 npm run deploy
