@@ -4,16 +4,16 @@
 
 ## Development
 
-You will be running two processes during development when using Vercel as your server.
+You will be running two processes during development:
 
-- Your Miniflare server in one (miniflare is a local environment for Cloudflare Workers)
-- The Remix development server in another
+- The Miniflare server (miniflare is a local environment for Cloudflare Workers)
+- The Remix development server
 
 ```sh
-# in one tab (starts remix dev server)
+# in one tab, start the remix dev server
 $ npm run dev
 
-# in another (starts miniflare server)
+# in another, start the miniflare server
 $ npm start
 ```
 
