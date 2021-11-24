@@ -1259,7 +1259,7 @@ describe("fetcher redirects", () => {
 });
 
 describe("fetcher resubmissions/re-gets", () => {
-  it.only("aborts re-gets", async () => {
+  it("aborts re-gets", async () => {
     let t = setup();
     let key = "KEY";
     let A = t.fetch.get("/foo", key);
