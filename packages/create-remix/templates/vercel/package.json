@@ -5,6 +5,6 @@
     "dev": "remix dev"
   },
   "dependencies": {
-    "@remix-run/vercel": "*",
+    "@remix-run/vercel": "*"
   }
 }
