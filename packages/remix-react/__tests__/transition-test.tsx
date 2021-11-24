@@ -57,6 +57,7 @@ describe("init", () => {
             "route": Object {
               "ErrorBoundary": Object {},
               "element": Object {},
+              "hasLoader": false,
               "id": "root",
               "module": "",
               "path": "/",
@@ -297,6 +298,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "index",
                 "loader": [MockFunction],
                 "module": "",
@@ -305,6 +307,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "foo",
                 "loader": [MockFunction],
                 "module": "",
@@ -313,6 +316,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "bar",
                 "loader": [MockFunction],
                 "module": "",
@@ -321,6 +325,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "baz",
                 "loader": [MockFunction],
                 "module": "",
@@ -329,6 +334,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "param",
                 "loader": [MockFunction],
                 "module": "",
@@ -336,6 +342,7 @@ describe("no route match", () => {
               },
             ],
             "element": Object {},
+            "hasLoader": true,
             "id": "root",
             "loader": [MockFunction],
             "module": "",
