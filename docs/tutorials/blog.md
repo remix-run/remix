@@ -294,7 +294,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,10,12-27]
+```tsx filename=app/post.ts lines=[1-3,11,13-28]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
@@ -304,7 +304,8 @@ export type Post = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+// relative to the server output not the source!
+let postsPath = path.join(__dirname, "..", "posts");
 
 export async function getPosts() {
   let dir = await fs.readdir(postsPath);
@@ -326,6 +327,8 @@ export async function getPosts() {
 ```
 
 This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
+
+<docs-error>If you did not use the React App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
@@ -352,7 +355,7 @@ export type PostMarkdownAttributes = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+let postsPath = path.join(__dirname, "..", "posts");
 
 function isValidPostAttributes(
   attributes: any
