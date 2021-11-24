@@ -3,7 +3,7 @@ title: Deployment
 toc: false
 ---
 
-<docs-info>This document is incomplete</docs-info>
+# Deployment
 
 Remix maintains a few starter templates to help you deploy to various servers right from the start. You should be able to initialize your app and get it live within a couple of minutes.
 
