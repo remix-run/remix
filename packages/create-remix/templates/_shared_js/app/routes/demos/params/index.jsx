@@ -1,5 +1,3 @@
-import { useCatch, Link, json, useLoaderData, Outlet } from "remix";
-
 export default function Boundaries() {
   return (
     <>
