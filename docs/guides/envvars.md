@@ -20,6 +20,7 @@ If you're experience with web development is primarily with the JS frameworks in
 
 Environment variables on your server will be handled by your host, for example:
 
+- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
 - [Fly.io](https://fly.io/docs/reference/secrets/)
 - [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
 - [Vercel](https://vercel.com/docs/environment-variables)
