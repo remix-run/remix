@@ -2,7 +2,12 @@
   "name": "@remix-run/react",
   "description": "React DOM bindings for Remix",
   "version": "1.0.4",
-  "repository": "https://github.com/remix-run/packages",
+  "homepage": "https://remix.run",
+  "repository": {
+    "url": "https://github.com/remix-run/remix.git",
+    "type": "git",
+    "directory": "packages/remix-react"
+  },
   "main": "index.js",
   "browser": "browser/index.js",
   "dependencies": {
