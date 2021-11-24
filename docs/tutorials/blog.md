@@ -112,6 +112,8 @@ export default function Posts() {
 
 Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
+<docs-info>We use <code>let</code> because it is only three letters, you can use <code>const</code> if you want 🙂</docs-info>
+
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[9-15]
@@ -493,12 +495,14 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Quick note on that `invariant`. Because `params` comes from the URL, we can't be totally sure that `params.slug` will be defined--maybe you change the name of the file to `$postId.ts`! It's good practice to validate that stuff with `invariant`, and it makes TypeScript happy too.
 
-Let's use the same markdown parser for our blog here that we actually use on this very website. It's not documented (yet? maybe one day?) but you can use whatever markdown parser you want instead.
+There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working.
 
 💿 Parse the markdown into HTML
 
 ```sh
-npm add @ryanflorence/md
+npm add marked
+# if using typescript
+npm add @types/marked
 ```
 
 ```tsx filename=app/post.ts lines=[5,11,18,19]
@@ -506,7 +510,7 @@ import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
 import invariant from "tiny-invariant";
-import { processMarkdown } from "@ryanflorence/md";
+import { marked } from "marked";
 
 //...
 export async function getPost(slug: string) {
@@ -519,7 +523,7 @@ export async function getPost(slug: string) {
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
   );
-  let html = await processMarkdown(body);
+  let html = marked(body);
   return { slug, html, title: attributes.title };
 }
 ```
