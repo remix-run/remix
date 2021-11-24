@@ -11,15 +11,15 @@ You want to learn Remix? You're in the right place. Let's build [Remix Jokes](ht
 
 [![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
 
-This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
+This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be as excited about Remix as you are (though I make no guarantees).
 
-We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll just give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll just take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
+We're going to be laser focused on Remix. This means that we're going to skip over a few things that are a distraction from the core ideas we want you to learn about Remix. For example, we'll show you how to get a CSS stylesheet on the page, but we're not going to make you write the styles by yourself. So we'll give you stuff you can copy/paste for that kind of thing. However, if you'd prefer to write it all out yourself, you totally can (it'll take you much longer). So we'll put it in little `<details>` elements you have to click to expand to not spoil anything if you'd prefer to code it out yourself.
 
 <details>
 
   <summary>Click me</summary>
 
-There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly then you can just copy/paste stuff as you go as well. We won't judge you!
+There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly then you can copy/paste stuff as you go as well. We won't judge you!
 
 </details>
 
@@ -273,7 +273,7 @@ You can programmatically create routes via the [`remix.config.js`](../api/conven
 
 Each file we put in the `app/routes` directory is called a ["Route Module"](../api/conventions#route-module-api) and by following [the route filename convention](../api/conventions#route-filenames), we can create the routing URL structure we're looking for. Remix uses [React Router](https://reactrouter.com/) under the hood to handle this routing.
 
-💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
+💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it say "Hello Index Route" or something.
 
 <details>
 
@@ -379,7 +379,7 @@ Now if you refresh [`/jokes`](http://localhost:3000/jokes), you'll get the conte
 
 ![A random joke on the jokes page: "I was wondering why the frisbee was getting bigger, then it hit me"](/jokes-tutorial/img/random-joke.png)
 
-And notice that each of those route modules is only concerned with their part of the URL. Neat right!? Nested routing is pretty nice, and we're only just getting started. Let's keep going.
+And notice that each of those route modules is only concerned with their part of the URL. Neat right!? Nested routing is pretty nice, and we're only getting started. Let's keep going.
 
 💿 Next, let's handle the `/jokes/new` route. I'll bet you can figure out how to do that 😄. Remember we're going to allow people to create jokes on this page, so you'll want to render a `form` with `name` and `content` fields.
 
@@ -450,7 +450,7 @@ export default function JokeRoute() {
 
 </details>
 
-Great, so now going to [`/jokes/anything-you-want`](http://localhost:3000/jokes/hippos) should display what you just created (in addition to the parent routes):
+Great, so now going to [`/jokes/anything-you-want`](http://localhost:3000/jokes/hippos) should display what you created (in addition to the parent routes):
 
 ![A new joke form](/jokes-tutorial/img/param-route.png)
 
@@ -458,11 +458,11 @@ Great! We've got our primary routes all set up!
 
 ## Styling
 
-From the beginning of styling on the web, to get CSS on the page, we've used `<link rel="stylesheet" href="/path-to-file.css" />`. This is how you style your Remix applications as well, but Remix makes it much easier than just throwing `link` tags all over the place. Remix brings the power of it's Nested Routing support to CSS and allows you to associate `link`s to routes. When the route is active, the `link` is on the page and the CSS applies. When the route is not active (the user navigates away), the `link` tag is removed and the CSS no longer applies.
+From the beginning of styling on the web, to get CSS on the page, we've used `<link rel="stylesheet" href="/path-to-file.css" />`. This is how you style your Remix applications as well, but Remix makes it much easier than throwing `link` tags all over the place. Remix brings the power of it's Nested Routing support to CSS and allows you to associate `link`s to routes. When the route is active, the `link` is on the page and the CSS applies. When the route is not active (the user navigates away), the `link` tag is removed and the CSS no longer applies.
 
 You do this by exporting a [`links`](../api/conventions#links) function in your route module. Let's get the homepage styled. You can put your CSS files anywhere you like within the `app` directory. We'll put ours in `app/styles/`.
 
-We'll start off by just styling the home page (the index route `/`).
+We'll start off by styling the home page (the index route `/`).
 
 💿 Create `app/styles/index.css` and stick this CSS in it:
 
@@ -551,7 +551,7 @@ This also means your CSS files can be cached long-term and your CSS is naturally
 
 </docs-info>
 
-That's pretty much all there is to it for styling with the tutorial. The rest is just writing the CSS which you're welcome to do if you want, or simply copy the styles from below.
+That's pretty much all there is to it for styling with the tutorial. The rest is writing the CSS which you're welcome to do if you want, or simply copy the styles from below.
 
 <details>
 
@@ -1400,7 +1400,7 @@ More information in our documentation:
 https://pris.ly/d/getting-started
 ```
 
-Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
+Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
 ```ts filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,
@@ -1460,7 +1460,7 @@ node_modules
 
 <docs-warning>If your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again.</docs-warning>
 
-Next, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll just give this to you (don't worry, we'll get back to remix soon):
+Next, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll give this to you (don't worry, we'll get back to remix soon):
 
 💿 Copy this into a new file called `prisma/seed.ts`
 
@@ -1492,7 +1492,7 @@ function getJokes() {
     },
     {
       name: "Trees",
-      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`
+      content: `Why do trees seem suspicious on sunny days? Dunno, they're a bit shady.`
     },
     {
       name: "Skeletons",
@@ -1516,7 +1516,7 @@ function getJokes() {
 
 Feel free to add your own jokes if you like.
 
-Now we just need to run this file. We wrote it in TypeScript to get type safety (this is much more useful as our app and datamodels grow in complexity). So we'll need a way to run it.
+Now we need to run this file. We wrote it in TypeScript to get type safety (this is much more useful as our app and datamodels grow in complexity). So we'll need a way to run it.
 
 💿 Install `esbuild-register` as a dev dependency:
 
@@ -1556,7 +1556,7 @@ import { PrismaClient } from "@prisma/client";
 let db = new PrismaClient();
 ```
 
-This works just fine, but the problem is, during development, we don't want to close down and completely restart our server every time we make a server-side change. So `@remix-run/serve` actually rebuilds our code and requires it brand new. The problem here is that every time we make a code change, we'll make a new connection to the database and eventually run out of connections! This is such a common problem with database-accessing apps that Prisma has a warning for it:
+This works fine, but the problem is, during development, we don't want to close down and completely restart our server every time we make a server-side change. So `@remix-run/serve` actually rebuilds our code and requires it brand new. The problem here is that every time we make a code change, we'll make a new connection to the database and eventually run out of connections! This is such a common problem with database-accessing apps that Prisma has a warning for it:
 
 > Warning: 10 Prisma Clients are already running
 
@@ -1605,7 +1605,7 @@ Our goal is to put a list of jokes on the `/jokes` route so we can have a list o
 To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#loader). This is simply an `async` function you export that returns a response, and is accessed on the component through the [`useLoaderData`](../api/remix#useloaderdata) hook. Here's a quick example:
 
 ```tsx nocopy
-// this is just an example. No need to copy/paste this 😄
+// this is an example. No need to copy/paste this 😄
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
@@ -1746,7 +1746,7 @@ Notice that all I need for this page is the joke `id` and `name`. I don't need t
 
 And to make it even cooler, you don't necessarily need prisma or direct database access to do this. You've got a graphql backend you're hitting? Sweet, use your regular graphql stuff in your loader. It's even better than doing it on the client because you don't need to worry about shipping a [huge graphql client](https://bundlephobia.com/package/graphql@16.0.1) to the client. Keep that on your server and filter down to what you want.
 
-Oh, you've just got REST endpoints you hit? That's fine too! You can easily filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
+Oh, you've got REST endpoints you hit? That's fine too! You can easily filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
 
 ### Network Type Safety
 
@@ -1908,7 +1908,7 @@ export default function NewJokeRoute() {
 }
 ```
 
-Not much there. Just a form. What if I told you that you could make that form work with a single export to the route module? Well you can! It's the [`action`](../api/conventions#action) function export! Read up on that a bit.
+Not much there. What if I told you that you could make that form work with a single export to the route module? Well you can! It's the [`action`](../api/conventions#action) function export! Read up on that a bit.
 
 Here's the prisma code you'll need:
 
@@ -1988,7 +1988,7 @@ The `redirect` utility is a simple utility in Remix for creating a [`Response`](
 
 ![Newly created joke displayed](/jokes-tutorial/img/new-joke-created.png)
 
-Hooray! How cool is that? No `useEffect` or `useAnything` hooks. Just a form, and an async function to process the submission. Pretty cool. You can definitely still do all that stuff if you wanted to, but why would you? This is really nice.
+Hooray! How cool is that? No `useEffect` or `useAnything` hooks. It is a form, and an async function to process the submission. Pretty cool. You can definitely still do all that stuff if you wanted to, but why would you? This is really nice.
 
 Another thing you'll notice is that when we were redirected to the joke's new page, it was there! But we didn't have to think about updating the cache at all. Remix handles invalidating the cache for us automatically. You don't have to think about it. _That_ is cool 😎
 
@@ -2146,7 +2146,7 @@ First I want you to notice that I've added an `ActionData` type so we could get 
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
 
-Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
+Another thing I want to call out is how all of this is so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
 Oh, and if you _do_ want to have client-side validation (for while the user is typing), you can simply call the `validateJokeContent` and `validateJokeName` functions that the action is using. You can _actually_ seamlessly share code between the client and server! Now _that_ is cool!
 
@@ -2270,7 +2270,7 @@ function getJokes() {
     },
     {
       name: "Trees",
-      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`
+      content: `Why do trees seem suspicious on sunny days? Dunno, they're a bit shady.`
     },
     {
       name: "Skeletons",
@@ -2522,7 +2522,7 @@ This should look something like this:
 
 Notice in my solution I'm using `useSearchParams` to get the `redirectTo` query parameter and putting that in a hidden input. This way our `action` can know where to redirect the user. This will be useful later when we redirect a user to the login page.
 
-Great, now that we've got the UI looking nice, let's add some logic. This will be very similar to the sort of thing we did in the `/jokes/new` route. Fill in as much as you can (validation and stuff) and we'll just leave comments for the parts of the logic we don't have implemented yet (like _actually_ registering/logging in).
+Great, now that we've got the UI looking nice, let's add some logic. This will be very similar to the sort of thing we did in the `/jokes/new` route. Fill in as much as you can (validation and stuff) and we'll leave comments for the parts of the logic we don't have implemented yet (like _actually_ registering/logging in).
 
 💿 Implement validation with an `action` in `app/routes/login.tsx`
 
@@ -3083,7 +3083,7 @@ export async function createUserSession(
 
 <docs-info>Did you notice in my example that we're `throw`ing a `Response`?!</docs-info>
 
-In my example, I created a `requireUserId` which will throw a `redirect`. Remember `redirect` is a utility function that returns a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix will catch that thrown response and send it back to the client. It's a great way to "exit early" in abstractions like this so users of our `requireUserId` function can just assume that the return will always give us the `userId` and don't need to worry about what happens if there isn't a `userId` because the response is thrown which stops their code execution!
+In my example, I created a `requireUserId` which will throw a `redirect`. Remember `redirect` is a utility function that returns a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix will catch that thrown response and send it back to the client. It's a great way to "exit early" in abstractions like this so users of our `requireUserId` function can assume that the return will always give us the `userId` and don't need to worry about what happens if there isn't a `userId` because the response is thrown which stops their code execution!
 
 We'll cover this more in the error handling sections later.
 
@@ -3485,7 +3485,7 @@ export let loader: LoaderFunction = async () => {
 
 Hopefully getting the user in the loader and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of my version of the code before we continue.
 
-First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is just there in case someone somehow lands on that page, we'll just redirect them back home.
+First, the new `logout` route is there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is there in case someone somehow lands on that page, we'll redirect them back home.
 
 ```tsx
 <Link to="new" className="button">
@@ -3884,7 +3884,7 @@ Phew, there we go. Now users can register for a new account!
 
 ## Unexpected errors
 
-I'm sorry, but there's no way you'll be able to avoid errors at some point. Servers fall over, co-workers use `// @ts-ignore`, and so on. So we need to just embrace the possibility of unexpected errors and deal with them.
+I'm sorry, but there's no way you'll be able to avoid errors at some point. Servers fall over, co-workers use `// @ts-ignore`, and so on. So we need to embrace the possibility of unexpected errors and deal with them.
 
 Luckily, error handling in Remix is stellar. You may have used React's [Error Boundary feature](https://reactjs.org/docs/error-boundaries.html#gatsby-focus-wrapper). With Remix, your route modules can export an [`ErrorBoundary` component](../api/conventions#errorboundary) and it will be used. But it's even cooler because it works on the server too! Not only that, but it'll handle errors in `loader`s and `action`s too! Wowza! So let's get to it!
 
@@ -4030,7 +4030,7 @@ export function ErrorBoundary() {
 
 </details>
 
-Ok great, with those in place, let's check what happens when there's an error. Go ahead and just add this to the default component, loader, or action of each of the routes. Here's what I get:
+Ok great, with those in place, let's check what happens when there's an error. Go ahead and add this to the default component, loader, or action of each of the routes. Here's what I get:
 
 ![App error](/jokes-tutorial/img/app-level-error.png)
 
@@ -4048,17 +4048,17 @@ Sometimes users do things we can anticipate. I'm not talking about validation ne
 
 It might help to think of the unexpected errors as 500-level errors ([server errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses)) and the expected errors as 400-level errors ([client errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#client_error_responses)).
 
-For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `laoder` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCaught` hook. This will return the `Response` that was thrown.
+For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Like the `useLoaderData` hook to get data from the `laoder` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCaught` hook. This will return the `Response` that was thrown.
 
-One last thing, this isn't for form validations and stuff. We already discussed that earlier with `useActionData`. This is just for situations where the user did something that means we can't reasonably render our default component so we want to render something else instead.
+One last thing, this isn't for form validations and stuff. We already discussed that earlier with `useActionData`. This is for situations where the user did something that means we can't reasonably render our default component so we want to render something else instead.
 
 <docs-info>`ErrorBoundary` and `CatchBoundary` allow our default exports to represent the "happy path" and not worry about errors. If the default component is rendered, then we can assume all is right with the world.</docs-info>
 
 With that understanding, we're going to add a `CatchBoundary` component to the following routes:
 
-- `app/root.tsx` - Just as a last resort fallback.
+- `app/root.tsx` - As a last resort fallback.
 - `app/routes/jokes/$jokeId.tsx` - When a user tries to access a joke that doesn't exist (404).
-- `app/routes/jokes/new.tsx` - When a user tries to go to this page without being authenticated (401). Right now they'll just get redirected to the login if they try to submit it without authenticating. That would be super annoying to spend time writing a joke only to get redirected. Rather than inexplicably redirecting them, we could render a message that says they need to authenticate first.
+- `app/routes/jokes/new.tsx` - When a user tries to go to this page without being authenticated (401). Right now they'll get redirected to the login if they try to submit it without authenticating. That would be super annoying to spend time writing a joke only to get redirected. Rather than inexplicably redirecting them, we could render a message that says they need to authenticate first.
 - `app/routes/jokes/index.tsx` - If there are no jokes in the database then a random joke is 404-not found. (simulate this by deleting the `prisma/dev.db` and running `npx prisma db push`. Don't forget to run `npx prisma db seed` afterwards to get your seed data back.)
 
 💿 Let's add these CatchBoundaries to the routes.
@@ -4476,7 +4476,7 @@ Here's what I've got with that:
 
 Awesome! We're ready to handle errors and it didn't complicate our happy path one bit! 🎉
 
-Oh, and don't you love how just like with the `ErrorBoundary`, it's all contextual? So the rest of the app continues to function just as well. Another point for user experience 💪
+Oh, and don't you love how like with the `ErrorBoundary`, it's all contextual? So the rest of the app continues to function as well. Another point for user experience 💪
 
 You know what, while we're adding catch boundaries. Why don't we improve the `app/routes/jokes/$jokeId.tsx` route a bit by allowing users to delete the joke if they own it. If they don't, we can give them a 401 error in the catch boundary.
 
@@ -6011,7 +6011,7 @@ Fly generated a few files for us:
 
 - `fly.toml` - Fly-specific configuration
 - `Dockerfile` - Remix-specific Dockerfile for the app
-- `.dockerignore` - It just ignores `node_modules` because we'll run the installation as we build the image.
+- `.dockerignore` - It ignores `node_modules` because we'll run the installation as we build the image.
 
 💿 Now set the `SESSION_SECRET` environment variable by running this command:
 
@@ -6019,7 +6019,7 @@ Fly generated a few files for us:
 fly secrets set SESSION_SECRET=your-secret-here
 ```
 
-`your-secret-here` can be whatever you want. It's just a string that's used to encrypt the session cookie. Use a password generator if you like.
+`your-secret-here` can be whatever you want. It's a string that's used to encrypt the session cookie. Use a password generator if you like.
 
 One other thing we need to do is get prisma ready to set up our database for the first time. Now that we're happy with our schema, we can create our first migration.
 

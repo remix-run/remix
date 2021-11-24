@@ -14,7 +14,7 @@ Remix supports using MDX in two ways:
 
 ## Routes
 
-The simplest way to get started with MDX in Remix is to create a route module. Just like `.js` and `.ts` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
+The simplest way to get started with MDX in Remix is to create a route module. Like `.js` and `.ts` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
 
 MDX routes allow you to define both meta and headers as if they were a code based route:
 
@@ -55,7 +55,7 @@ By creating a `app/routes/posts/first-post.mdx` we can start writing a blog post
 ---
 meta:
   title: My First Post
-  description: Isn't this just awesome?
+  description: Isn't this awesome?
 ---
 
 # Example Markdown Post
@@ -65,7 +65,7 @@ You can reference your frontmatter data through "attributes". The title of this 
 
 ## Modules
 
-Besides just route level MDX, you can also import these files anywhere yourself as if it were a regular JavaScript module.
+Besides route level MDX, you can also import these files anywhere yourself as if it were a regular JavaScript module.
 
 When you `import` a `.mdx` file, the exports of the module are:
 

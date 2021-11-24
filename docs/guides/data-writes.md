@@ -33,7 +33,7 @@ Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to
 
 ### HTML Form GET
 
-A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` excpect the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
+A `GET` is a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, like `<a>` excpect the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
 
 Consider this form:
 
@@ -90,7 +90,7 @@ Depending on which checkboxes the uses clicks, the browser will navigate to URLs
 
 ### HTML Form POST
 
-When you want to create, delete, or update data on your website, a form post is the way to go. And we don't just mean big forms like a user profile edit page. Even "Like" buttons can be handled with a form.
+When you want to create, delete, or update data on your website, a form post is the way to go. And we don't mean big forms like a user profile edit page. Even "Like" buttons can be handled with a form.
 
 Let's consider a "new project" form.
 
@@ -127,7 +127,7 @@ If you're newer to web development, you may not have ever used a form this way. 
 />
 ```
 
-If this is you, you're going to be delighted when you see just how easy mutations can be when you just use what browsers (and Remix) have built in!
+If this is you, you're going to be delighted when you see how easy mutations can be when you use what browsers (and Remix) have built in!
 
 ## Remix Mutation, Start to Finish
 
@@ -141,7 +141,7 @@ We're going to build a mutation from start to finish with:
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 
-Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just us a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
+Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, use a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
 
 ### Building the form
 
@@ -199,7 +199,7 @@ Of course, we started complicating things to try to create better user experienc
 
 It's common to validate forms both clientside and serverside. It's also (unfortunately) common to only validate clientside, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
 
-We know, we know, you want to animate in nice validation errors and stuff. We'll get to that. But right now we're just building a basic HTML form and user flow. We'll keep it simple first, then make it fancy.
+We know, we know, you want to animate in nice validation errors and stuff. We'll get to that. But right now we're building a basic HTML form and user flow. We'll keep it simple first, then make it fancy.
 
 Back in our action, maybe we have an API that returns validation errors like this.
 
@@ -223,7 +223,7 @@ export let action: ActionFunction = async ({ request }) => {
 };
 ```
 
-Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
+Like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
 ```tsx [1,8,18,23-27,35,40-44]
 import { redirect, useActionData } from "remix";
@@ -279,7 +279,7 @@ export default function NewProject() {
 }
 ```
 
-Notice how we add `defaultValue` to all of our inputs. Remember, this is regular HTML `<form>`, so it's just normal browser/server stuff happening. We're getting the values back from the server so the user doesn't have to re-type what they had.
+Notice how we add `defaultValue` to all of our inputs. Remember, this is regular HTML `<form>`, so it's normal browser/server stuff happening. We're getting the values back from the server so the user doesn't have to re-type what they had.
 
 You can ship this code as-is. The browser will handle the pending UI and interruptions for you. Enjoy your weekend and make it fancy on Monday.
 
@@ -386,7 +386,7 @@ export default function NewProject() {
 }
 ```
 
-Pretty slick! Now when the user clicks "Create", the inputs go disabled, and the submit button's text changes. The whole operation should be faster now too since there's just one network request happening instead of a full page reload (which involves potentially more network requests, reading assets from the browser cache, parsing JavaScript, parsing CSS, etc.).
+Pretty slick! Now when the user clicks "Create", the inputs go disabled, and the submit button's text changes. The whole operation should be faster now too since there's one network request happening instead of a full page reload (which involves potentially more network requests, reading assets from the browser cache, parsing JavaScript, parsing CSS, etc.).
 
 We didn't do much with `transition` on this page, but it's got all the information about the submission on `transition.submission`, including all of the values being processed on the server on `submission.formData`.
 
@@ -504,7 +504,7 @@ Boom! Fancy UI without having to change anything about how we communicate with t
 
 - Now that there was a stateful page with React, we added loading indicators and animation for the validation errors by simply asking Remix for the state of the transition.
 
-From your components perspective, all that happend was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple state updates. This makes it really easy to dress up any user flow.
+From your components perspective, all that happend was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. A couple state updates. This makes it really easy to dress up any user flow.
 
 ## See also
 

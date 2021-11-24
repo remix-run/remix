@@ -38,7 +38,7 @@ git push origin --follow-tags
 ```
 
 All packages are published together except for `create-remix`, which is
-versioned and published separately. To publish `create-remix`, just run the
+versioned and published separately. To publish `create-remix`, run the
 build and publish it manually.
 
 ```bash

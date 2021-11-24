@@ -37,7 +37,7 @@ In development, `remix-serve` will ensure the latest code is run on each request
   }
   ```
 
-  This should be fine, just be aware that `cache` will be empty after file changes.
+  This should be fine, be aware that `cache` will be empty after file changes.
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 

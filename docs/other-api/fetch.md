@@ -30,7 +30,7 @@ While you can use these APIs directly in Remix, you'll typically use response he
 
 ## Globally Available
 
-Remix adds `Request`, `Response`, `Headers`, and `fetch` to your loader's global context, so you can use them anywhere just like in the browser. We figure if `"what".blink()` made it into the global context of node, we can add these browser globals to make Remix a little nicer to work with.
+Remix adds `Request`, `Response`, `Headers`, and `fetch` to your loader's global context, so you can use them anywhere like in the browser. We figure if `"what".blink()` made it into the global context of node, we can add these browser globals to make Remix a little nicer to work with.
 
 ## MDN Docs
 

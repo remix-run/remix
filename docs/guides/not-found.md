@@ -4,7 +4,7 @@ title: Not Found Handling
 
 # Not Found (404) Handling
 
-When a document isn't found on a web server, it should send a [404 status code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404). This indicates to machines that the document is there: search engines won't index it, CDNS won't cache it, etc. Most SPAs today just serve everything as 200 whether the page exists or not, but for you that stops today!
+When a document isn't found on a web server, it should send a [404 status code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404). This indicates to machines that the document is there: search engines won't index it, CDNS won't cache it, etc. Most SPAs today serve everything as 200 whether the page exists or not, but for you that stops today!
 
 There are two primary cases where a Remix site should send a 404:
 
@@ -66,7 +66,7 @@ export function CatchBoundary() {
 
 ## Nested Catch Boundaries
 
-Just like [errors], nested routes can export their own catch boundary to handle the 404 UI without taking down all of the parent layouts around it, and add some nice UX touches right in context. Bots are happy, SEO is happy, CDNs are happy, users are happy, and your code stays in context, so it seems like everybody involved is happy with this.
+Like [errors], nested routes can export their own catch boundary to handle the 404 UI without taking down all of the parent layouts around it, and add some nice UX touches right in context. Bots are happy, SEO is happy, CDNs are happy, users are happy, and your code stays in context, so it seems like everybody involved is happy with this.
 
 ```tsx filename=app/routes/pages/$pageId.tsx
 import { Form, useLoaderData } from "remix";
@@ -109,7 +109,7 @@ export default function Page() {
 }
 ```
 
-As you can probably tell, this mechanism isn't just limited to 404s. You can throw any response from a loader or action to send your app down the catch boundary path. For more information, check out the [Catch Boundary][catch-boundary] docs.
+As you can probably tell, this mechanism isn't limited to 404s. You can throw any response from a loader or action to send your app down the catch boundary path. For more information, check out the [Catch Boundary][catch-boundary] docs.
 
 [catch-boundary]: ../api/conventions#catchboundary
 [errors]: errors

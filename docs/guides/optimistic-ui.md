@@ -122,7 +122,7 @@ export default function NewProject() {
 }
 ```
 
-Since we know that almost every time this form is submitted it's going to succeed, we can just skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
+Since we know that almost every time this form is submitted it's going to succeed, we can skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
 
 ```js filename=app/routes/projects/new.js lines=[3,14-20]
 import { Form, redirect, useTransition } from "remix";

@@ -14,7 +14,7 @@ The fastest thing to send to a user is, of course, a static document on a CDN th
 
 (No, not the U2 guy.)
 
-Today, there are a lot of exciting things happening with distributed computing "at the edge". Computing "at the edge" generally means running code on servers close to users instead of just one place (like the US East Coast). We're not only seeing more of this, but we're seeing distributed databases moving to the edge as well. We've been anticipating all of this for a while, that's why Remix is designed the way it is.
+Today, there are a lot of exciting things happening with distributed computing "at the edge". Computing "at the edge" generally means running code on servers close to users instead of one place (like the US East Coast). We're not only seeing more of this, but we're seeing distributed databases moving to the edge as well. We've been anticipating all of this for a while, that's why Remix is designed the way it is.
 
 With distributed servers and databases running at the edge, it's now possible to serve dynamic content at speeds comparable to static files. **You can make your server fast, but you can't do anything about the users network**. The only thing left to do is get code out of your browser bundles and onto the server, sending fewer bytes over the network, and provide unparalleled web performance. That's what Remix is designed to do.
 
@@ -26,9 +26,9 @@ We accomplished this with distributed systems. The app runs in several regions o
 
 The code involved is actually really similar to what a Gatsby site might do at build time in `gatsby-node.js` or `getStaticProps` in Next.js. The idea is to take the slow parts (fetching docs from GitHub, processing markdown) and cache it (SSG caches into HTML, this website caches into SQLite on the server).
 
-When users request a page, the app queries its local SQLite database and sends the page. Our server is done with these requests in a few milliseconds. What's most interesting about this architecture is that we don't have to sacrifice speed for freshness. When we edit a doc on GitHub, a GitHub action calls a webhook on the nearest app instance, which then replays that request to all of the other instances across the world. Then they all pull the new tarball from GitHub and sync their database with the docs just like they did when they booted. The docs are updated within a minute or two across the world.
+When users request a page, the app queries its local SQLite database and sends the page. Our server is done with these requests in a few milliseconds. What's most interesting about this architecture is that we don't have to sacrifice speed for freshness. When we edit a doc on GitHub, a GitHub action calls a webhook on the nearest app instance, which then replays that request to all of the other instances across the world. Then they all pull the new tarball from GitHub and sync their database with the docs like they did when they booted. The docs are updated within a minute or two across the world.
 
-But this is just one approach that we wanted to explore.
+But this is one approach that we wanted to explore.
 
 ## Cloudflare Workers
 

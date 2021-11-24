@@ -623,8 +623,8 @@ Notes about how it works:
 - When multiple fetchers are inflight at once, it will
   - commit the freshest available data as they each land
   - ensure no stale loads overrite fresher data, no matter which order the responses return
-- Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
-- Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
+- Handles uncaught errors by rendering the nearest `ErrorBoundary` (like a normal navigation from `<Link>` or `<Form>`)
+- Will redirect the app if your action/loader being called returns a redirect (like a normal navigation from `<Link>` or `<Form>`)
 
 #### `fetcher.state`
 
@@ -669,7 +669,7 @@ It is not available when the fetcher state is "submitting". If you need it aroun
 
 #### `fetcher.Form`
 
-Just like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
+Like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
 
 ```tsx
 function SomeComp() {
@@ -684,7 +684,7 @@ function SomeComp() {
 
 #### `fetcher.submit()`
 
-Just like `useSubmit` except it doesn't cause a navigation.
+Like `useSubmit` except it doesn't cause a navigation.
 
 ```tsx
 let fetcher = useFetcher();
@@ -763,12 +763,12 @@ function NewsletterSignup() {
 
 Because `useFetcher` doesn't cause a navigation, it won't automatically work if there is no JavaScript on the page like a normal Remix `<Form>` will because the browser will still navigate to the form's action.
 
-If you want to support a no JavaScript experience, just export a component from the route with the action.
+If you want to support a no JavaScript experience, export a component from the route with the action.
 
 ```tsx
 // routes/newsletter/subscribe.js
 export function action({ request }) {
-  // just like before
+  // like before
 }
 
 export default function NewsletterSignupRoute() {
@@ -790,7 +790,7 @@ export default function NewsletterSignupRoute() {
 }
 ```
 
-- When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll just get a solid, dynamic experience
+- When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll get a solid, dynamic experience
 - When JS is not on the page, they'll be transitioned to the signup page by the browser.
 
 You could even refactor the component to take props from the hooks and reuse it:
@@ -819,7 +819,7 @@ export function NewsletterForm({
   state,
   type
 }) {
-  // refactor a bit in here, just read from props instead of useFetcher
+  // refactor a bit in here, read from props instead of useFetcher
 }
 ```
 
@@ -1186,13 +1186,13 @@ Once again, `useMatches` with `handle` is a great way for routes to participate 
 
 ### `useBeforeUnload`
 
-This hook is just a helper around `window.onbeforeunload`.
+This hook is a helper around `window.onbeforeunload`.
 
 When users click links to pages they haven't visited yet, Remix loads the code-split modules for that page. If you deploy in the middle of a user's session, and you or your host removes the old files from the server (many do 😭) then Remix's requests for those modules will fail. Remix recovers by automatically reloading the browser at the new URL. This should start over from the server with the latest version of your application. Most of the time this works out great and user doesn't even know anything happened.
 
 In this situation, you may need to save important application state on the page (to something like the browser's local storage) because the automatic page reload will lose any state you had.
 
-Remix or not, this is just good practice to do. The user can change the url, accidentally close the browser window, etc.
+Remix or not, this is good practice to do. The user can change the url, accidentally close the browser window, etc.
 
 ```tsx [1,7-11]
 import { useBeforeUnload } from "remix";
@@ -1341,7 +1341,7 @@ export let userPrefs = createCookie("user-prefs", {
 });
 ```
 
-Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case just checks the value of the user preference so you can use it in your component for deciding whether or not to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
+Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case checks the value of the user preference so you can use it in your component for deciding whether or not to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
@@ -1788,7 +1788,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, the key to find it elsewhere).
 
 ```js
 import { createCookieSessionStorage } from "remix";

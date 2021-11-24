@@ -93,7 +93,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 ### Route Filenames
 
-- **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes: you can export a `loader`, `action`, etc.
+- **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works like all other routes: you can export a `loader`, `action`, etc.
 - **`app/routes/*.{js,jsx,ts,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
 - **`app/routes/{folder}/*.tsx`**: Folders inside of routes will create nested URLs.
 - **`app/routes/{folder}` with `app/routes/{folder}.tsx`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
@@ -109,7 +109,7 @@ There are a few conventions that Remix uses you should be aware of.
   touch routes/\$params.tsx
   ```
 
-  Params can be nested routes, just create a folder with the `$` in it.
+  Params can be nested routes, create a folder with the `$` in it.
 
 - **`app/routes/files/$.tsx`**: To add a "splat" path (some people call this a "catchall") name the file simply `$.tsx`. It will create a route path pattern like `files/*`. You can also use this along with dot file names: `app/routes/files.$.tsx`.
 
@@ -352,7 +352,7 @@ export let loader: LoaderFunction = async () => {
 };
 ```
 
-Between these two examples you can see how `json` just does a little of work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
+Between these two examples you can see how `json` does a little of work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
 
 ```tsx
 import { json } from "remix";
@@ -534,7 +534,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 | `/accounts?index` | `routes/accounts/index.js` |
 | `/accounts`       | `routes/accounts.js`       |
 
-Also note that forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered, so using the `?index` param to disambiguate between parent and index routes is only useful if you're posting to an index route from somewhere besides the index route itself. If you're posting from the index route to itself, or from the parent route to itselt, you don't need to define a `<Form action>` at all, just omit it: `<Form method="post">`.
+Also note that forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered, so using the `?index` param to disambiguate between parent and index routes is only useful if you're posting to an index route from somewhere besides the index route itself. If you're posting from the index route to itself, or from the parent route to itselt, you don't need to define a `<Form action>` at all, omit it: `<Form method="post">`.
 
 See also:
 
@@ -764,7 +764,7 @@ A `CatchBoundary` is a React component that renders whenever an action or loader
 
 **Note:** We use the word "catch" to represent the codepath taken when a `Response` type is thrown; you thought about bailing from the "happy path". This is different from an uncaught error you did not expect to occur.
 
-A Remix `CatchBoundary` component works just like a route component, but instead of `useLoaderData` you have access to `useCatch`. When a response is thrown in an action or loader, the `CatchBoundary` will be rendered in it's place, nested inside parent routes.
+A Remix `CatchBoundary` component works like a route component, but instead of `useLoaderData` you have access to `useCatch`. When a response is thrown in an action or loader, the `CatchBoundary` will be rendered in it's place, nested inside parent routes.
 
 A `CatchBoundary` component has access to the status code and thrown response data through `useCatch`.
 
@@ -792,7 +792,7 @@ An `ErrorBoundary` is a React component that renders whenever there is an error 
 
 **Note:** We use the word "error" to mean an uncaught exception; something you didn't anticipate happening. This is different from other types of "errors" that you are able to recover from easily, for example a 404 error where you can still show something in the user interface to indicate you weren't able to find some data.
 
-A Remix `ErrorBoundary` component works just like normal React [error boundaries](https://reactjs.org/docs/error-boundaries.html), but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
+A Remix `ErrorBoundary` component works like normal React [error boundaries](https://reactjs.org/docs/error-boundaries.html), but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
 
 An `ErrorBoundary` component receives one prop: the `error` that occurred.
 
@@ -935,7 +935,7 @@ export function loader({ params }) {
 }
 ```
 
-We want this loader to be called only if the project has had an update, so we can make this really simple and just say to reload if there is a non-GET submission:
+We want this loader to be called only if the project has had an update, so we can make this really simple and say to reload if there is a non-GET submission:
 
 ```tsx
 export function unstable_shouldReload({ submission }) {

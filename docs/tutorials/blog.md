@@ -51,11 +51,11 @@ mkdir app/routes/posts
 touch app/routes/posts/index.tsx
 ```
 
-<docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `mkdir` and `touch` is just a way for us to make it clear which files you should be creating.</docs-info>
+<docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `mkdir` and `touch` is a way for us to make it clear which files you should be creating.</docs-info>
 
-We could have named it just `posts.tsx` but we'll have another route soon and it'll be nice to put them by each other. An index route will render at the folder's path (just like index.html on a web server).
+We could have named it `posts.tsx` but we'll have another route soon and it'll be nice to put them by each other. An index route will render at the folder's path (like index.html on a web server).
 
-You'll probably see the screen just go blank with `null`. You've got a route but there's nothing there yet. Let's add a component and export it as the default:
+You'll probably see the screen go blank with `null`. You've got a route but there's nothing there yet. Let's add a component and export it as the default:
 
 💿 Make the posts component
 
@@ -94,7 +94,7 @@ export let loader = () => {
     },
     {
       slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You"
+      title: "A Mixtape I Made For You"
     }
   ];
 };
@@ -155,7 +155,7 @@ export let loader = () => {
     },
     {
       slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You"
+      title: "A Mixtape I Made For You"
     }
   ];
   return posts;
@@ -206,7 +206,7 @@ export function getPosts() {
     },
     {
       slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You"
+      title: "A Mixtape I Made For You"
     }
   ];
   return posts;
@@ -229,7 +229,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
@@ -323,7 +323,7 @@ export async function getPosts() {
 }
 ```
 
-This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
+This isn't a Node file system tutorial, so you'll have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
@@ -679,7 +679,7 @@ export default function Admin() {
 }
 ```
 
-Hang with us for a minute, index routes can be confusing at first. Just know that when the URL matches the parent route's path, the index will render inside the outlet.
+Hang with us for a minute, index routes can be confusing at first. Know that when the URL matches the parent route's path, the index will render inside the outlet.
 
 Maybe this will help, let's add the "/admin/new" route and see what happens when we click the link.
 
@@ -849,7 +849,7 @@ export let action: ActionFunction = async ({ request }) => {
 };
 ```
 
-Notice we don't return a redirect this time, we actually return the errors. These errors are available to the component via `useActionData`. It's just like `useLoaderData` but the data comes from the action after a form POST.
+Notice we don't return a redirect this time, we actually return the errors. These errors are available to the component via `useActionData`. It's like `useLoaderData` but the data comes from the action after a form POST.
 
 💿 Add validation messages to the UI
 
@@ -962,8 +962,8 @@ export default function NewPost() {
 }
 ```
 
-Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
+Now the user gets an enhanced experience than if we had done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! You're homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they 404! Create a new route that reads the post, puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
+That's it for today! You're homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they 404! Create a new route that reads the post, puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You gotta put it together.
 
 We hope you love Remix!

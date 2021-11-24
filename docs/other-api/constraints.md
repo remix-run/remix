@@ -294,7 +294,7 @@ export async function redirectToStripeCheckout(sessionId) {
 
 ### Rendering with Browser Only APIs
 
-Another common case is code that calls browser-only APIs while rendering. When server rendering in React (not just Remix), this must be avoided because the APIs don't exist on the server.
+Another common case is code that calls browser-only APIs while rendering. When server rendering in React (not only in Remix), this must be avoided because the APIs don't exist on the server.
 
 <docs-error>This will break your app because the server will try to use local storage</docs-error>
 
@@ -343,7 +343,7 @@ This hook is great when you're setting state for things like:
 
 The point is to perform the effect at the same time as the browser paint so that you don't see the popup show up at `0,0` and then bounce into place. Layout effects let the paint and the effect happen at the same time to avoid this kind of flashing.
 
-It is **not** good for setting state that is rendered inside of elements. Just make sure you aren't using the state set in a `useLayoutEffect` in your elements and you can ignore React's warning.
+It is **not** good for setting state that is rendered inside of elements. Make sure you aren't using the state set in a `useLayoutEffect` in your elements and you can ignore React's warning.
 
 TODO: Link to Reach UI `useIsomorphicLayoutEffect`
 

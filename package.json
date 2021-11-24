@@ -12,6 +12,7 @@
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx .",
+    "lint-language": "alex .",
     "format": "prettier --ignore-path .eslintignore --write ./",
     "prepare": "husky install"
   },
@@ -52,6 +53,7 @@
     "@typescript-eslint/parser": "^4.33.0",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
+    "alex": "^10.0.0",
     "babel-eslint": "^10.1.0",
     "chalk": "^4.1.0",
     "cheerio": "^1.0.0-rc.3",

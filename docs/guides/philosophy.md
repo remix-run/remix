@@ -88,13 +88,13 @@ export default function Gists() {
 }
 ```
 
-This drops the payload from 12kB compressed, 75kB total to 1.8kB compressed, 3.8kB total. That's 20x smaller! We also don't need to ship all the skeleton UI because Remix fetches (and can prefetch) this data before the page is rendered. This is just one example of how embracing the server/client model helps us speed up our apps _by sending less_ over the user's network.
+This drops the payload from 12kB compressed, 75kB total to 1.8kB compressed, 3.8kB total. That's 20x smaller! We also don't need to ship all the skeleton UI because Remix fetches (and can prefetch) this data before the page is rendered. This is one example of how embracing the server/client model helps us speed up our apps _by sending less_ over the user's network.
 
 ## Web Standards, HTTP, and HTML
 
 These technologies have been around for a long time. They're solid. Remix embraces them completely. Combining HTTP Caching, Remix's focus on URLs for assets, dynamic server rendering, and HTML features like `<link rel=prefetch>`, you have all the tools to make your app snappy. Browsers and HTML got really good in the 20+ years we've been using it.
 
-We try to keep the Remix API to a minimum, and instead work with web standards. For example, instead of inventing our own `req/res` API, or even using Node's API, Remix (and your Remix apps) work with the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects. This means as you get good at Remix, you're really just getting good at web standards like [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response), [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) and [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL). All of these are already in your browser, now they're on your server no matter where you deploy to.
+We try to keep the Remix API to a minimum, and instead work with web standards. For example, instead of inventing our own `req/res` API, or even using Node's API, Remix (and your Remix apps) work with the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects. This means as you get good at Remix, you're really getting good at web standards like [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response), [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) and [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL). All of these are already in your browser, now they're on your server no matter where you deploy to.
 
 When doing data mutations, we augmented HTML forms. When we prefetch data and assets for the next page, we use `<link rel="prefetch">` and let the browser deal with all of the complexity of caching a resource. If the browser has an API for a use case, Remix uses it.
 

@@ -168,7 +168,7 @@ We don't recommend this approach for two reasons:
 
 1. Styles are embedded into your HTML documents instead of cachable URLs. Browsers can't cache the styles shared between pages and HTML documents now must expire on your CDN with the styles inside of them.
 
-2. It's a double render. Probably not a big deal, but it's just not needed.
+2. It's a double render. Probably not a big deal, but it's not needed.
 
 We do recognize that CSS in JS solutions really shine for shared component systems.
 

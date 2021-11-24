@@ -1,13 +1,13 @@
 ---
 title: Routing
-description: In Remix, routes are more than just the page. When routes are nested we're able to know a little more about your app than just a single page, and do a lot more because of it.
+description: In Remix, routes are more than the page. When routes are nested we're able to know a little more about your app than a single page, and do a lot more because of it.
 ---
 
 # Routing
 
 Let's talk about a concept in Remix that is critical to understand to get the most out of it: Nested Routes.
 
-We consider nested routes our (not so) secret weapon. This feature of React Router allows Remix to know what you're going to render before you even render it. This lets us fetch data, stylesheets, and modules for the next page, or just the changed part of the page.
+We consider nested routes our (not so) secret weapon. This feature of React Router allows Remix to know what you're going to render before you even render it. This lets us fetch data, stylesheets, and modules for the next page, or the changed part of the page.
 
 ## What are nested routes?
 
@@ -15,7 +15,7 @@ Let's consider a UI to help us out. Imagine you're building invoicing software a
 
 TODO: ADD THE SVG WITHOUT ANIMATION
 
-Just looking at the boxes it's pretty easy to indentify which pieces of the URL match which parts of the UI. As the user clicks between "Invoices | Projects | Customers", the top nav persists while the screen below changes. Down one level, as the user clicks between invoices the top nav and the invoice nav persist, while the invoice screen swaps out new data. And finally, as the user clicks between "Details | Activity", the details or activity screen will swap out for each other, but the rest of the UI remains unchanged.
+Looking at the boxes it's pretty easy to indentify which pieces of the URL match which parts of the UI. As the user clicks between "Invoices | Projects | Customers", the top nav persists while the screen below changes. Down one level, as the user clicks between invoices the top nav and the invoice nav persist, while the invoice screen swaps out new data. And finally, as the user clicks between "Details | Activity", the details or activity screen will swap out for each other, but the rest of the UI remains unchanged.
 
 It's a nested layout tree. In Remix, we call every one of these layouts a "route". You might be used to routes that have a 1:1 component-to-url mapping. In Remix, a single URL can match multiple, nested routes.
 
@@ -25,7 +25,7 @@ Nested folders create nested URLs. So if you put something in `app/routes/invoic
 
 TODO: ADD THE ANIMATED EXAMPLE
 
-The root layout of this UI is "App.js" and it matches up with the domain name in the URL. This isn't a route yet, this is just the layout, it renders all the time, wrapping the entire UI. It holds the top nav with the links to "Invoices | Projects | Customers".
+The root layout of this UI is "App.js" and it matches up with the domain name in the URL. This isn't a route yet, this is the layout, it renders all the time, wrapping the entire UI. It holds the top nav with the links to "Invoices | Projects | Customers".
 
 The next segment of the URL, and our next layout, is a file in `app/routes/invoices.js`. This controls the invoices on the left and wraps the details/activity views. This is our first layout route that matched the URL.
 
@@ -35,7 +35,7 @@ And finally, our final route, `app/routes/invoices/$id/activity.js`. Sometime we
 
 ## What it means
 
-Because we know all of your routes up front, and we can match them before we render anything--we now know the most important components that are about to render before we render. This gives us fine-grained control over style, data, and module loading that you just can't get without nested routes.
+Because we know all of your routes up front, and we can match them before we render anything--we now know the most important components that are about to render before we render. This gives us fine-grained control over style, data, and module loading that you can't get without nested routes.
 
 In fact, when the user clicks on "Details" and "Activity", the only data we fetch is the data for changed portion of the app, rather than for every parent layout above it. It also gives us powerful control over which stylesheets to load and unload, which is a whole new set of tradeoffs for css that we find to be excellent.
 
