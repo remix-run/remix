@@ -328,7 +328,7 @@ export async function getPosts() {
 
 This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
 
-<docs-error>If you did not use the React App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
+<docs-error>If you did not use the Remix App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
