@@ -363,25 +363,13 @@ async function handleDocumentRequest(
   // If we did not match a route, there is no need to call any loaders
   let matchesToLoad = requestState !== "ok" ? [] : matches;
   switch (responseState) {
+    // get rid of the action, we don't want to call it's loader either
+    // because we'll be rendering the catch/error boundary, if you can get access
+    // to the loader data in the catch boundary then how the heck is it
+    // supposed to deal with thrown responses?
     case "caught":
-      matchesToLoad = getMatchesUpToDeepestBoundary(
-        // get rid of the action, we don't want to call it's loader either
-        // because we'll be rendering the catch boundary, if you can get access
-        // to the loader data in the catch boundary then how the heck is it
-        // supposed to deal with thrown responses?
-        matches.slice(0, -1),
-        "CatchBoundary"
-      );
-      break;
     case "error":
-      matchesToLoad = getMatchesUpToDeepestBoundary(
-        // get rid of the action, we don't want to call it's loader either
-        // because we'll be rendering the error boundary, if you can get access
-        // to the loader data in the error boundary then how the heck is it
-        // supposed to deal with errors in the loader, too?
-        matches.slice(0, -1),
-        "ErrorBoundary"
-      );
+      matchesToLoad = matches.slice(0, -1);
       break;
   }
 
