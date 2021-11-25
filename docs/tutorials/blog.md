@@ -7,9 +7,9 @@ order: 1
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
-<docs-info>💿 Hey I'm Derrick the Remix Compact Disk 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
 
-This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, but once!).
+This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, cut once!).
 
 ## Creating the project
 
@@ -17,10 +17,14 @@ This uses TypeScript, but we always pepper the types on after we write the code.
 
 ```sh
 npx create-remix@latest
-# follow the prompts
+# choose Remix App Server
 cd [whatever you named the project]
 npm run dev
 ```
+
+<docs-error>It is important that you pick Remix App Server</docs-error>
+
+We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
@@ -79,7 +83,7 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17]
+```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
 export let loader = () => {
@@ -106,7 +110,9 @@ export default function Posts() {
 }
 ```
 
-Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the serever in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+
+<docs-info>We use <code>let</code> because it is only three letters, you can use <code>const</code> if you want 🙂</docs-info>
 
 💿 Render links to our posts
 
@@ -189,7 +195,7 @@ touch app/post.ts
 We're mostly gonna copy/paste it from our route:
 
 ```tsx filename=app/post.ts
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
@@ -213,8 +219,8 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
-import { getPosts } from "~/posts";
-import type { Post } from "~/posts";
+import { getPosts } from "~/post";
+import type { Post } from "~/post";
 
 export let loader = () => {
   return getPosts();
@@ -266,10 +272,10 @@ title: 90s Mixtape
 - Everlong (Foo Fighters)
 - Ms. Jackson (Outkast)
 - Interstate Love Song (Stone Temple Pilots)
-- Killing Me Softely With His Song (Fugees, Ms. Lauryn Hill)
+- Killing Me Softly With His Song (Fugees, Ms. Lauryn Hill)
 - Just a Friend (Biz Markie)
 - The Man Who Sold The World (Nirvana)
-- Semi-Charmed Lif (Third Eye Blind)
+- Semi-Charmed Life (Third Eye Blind)
 - ...Baby One More Time (Britney Spears)
 - Better Man (Pearl Jam)
 - It's All Coming Back to Me Now (Céline Dion)
@@ -288,7 +294,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,10,13-27]
+```tsx filename=app/post.ts lines=[1-3,11,13-28]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
@@ -298,7 +304,8 @@ export type Post = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+// relative to the server output not the source!
+let postsPath = path.join(__dirname, "..", "posts");
 
 export async function getPosts() {
   let dir = await fs.readdir(postsPath);
@@ -320,6 +327,8 @@ export async function getPosts() {
 ```
 
 This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
+
+<docs-error>If you did not use the React App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
@@ -346,7 +355,7 @@ export type PostMarkdownAttributes = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+let postsPath = path.join(__dirname, "..", "posts");
 
 function isValidPostAttributes(
   attributes: any
@@ -489,15 +498,24 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Quick note on that `invariant`. Because `params` comes from the URL, we can't be totally sure that `params.slug` will be defined--maybe you change the name of the file to `$postId.ts`! It's good practice to validate that stuff with `invariant`, and it makes TypeScript happy too.
 
-Let's use the same markdown parser for our blog here that we actually use on this very website. It's not documented (yet? maybe one day?) but you can use whatever markdown parser you want instead.
+There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working.
 
 💿 Parse the markdown into HTML
 
 ```sh
-npm add @ryanflorence/md
+npm add marked
+# if using typescript
+npm add @types/marked
 ```
 
-```tsx filename=app/post.ts lines=[4,11,12]
+```tsx filename=app/post.ts lines=[5,11,18,19]
+import path from "path";
+import fs from "fs/promises";
+import parseFrontMatter from "front-matter";
+import invariant from "tiny-invariant";
+import { marked } from "marked";
+
+//...
 export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
@@ -508,7 +526,7 @@ export async function getPost(slug: string) {
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
   );
-  let html = await processMarkdown(body);
+  let html = marked(body);
   return { slug, html, title: attributes.title };
 }
 ```
