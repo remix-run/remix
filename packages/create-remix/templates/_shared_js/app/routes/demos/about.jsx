@@ -30,7 +30,7 @@ export default function Index() {
         <p>
           Wait a sec...<em>its children</em>? To understand what we mean by
           this,{" "}
-          <a href="https://remix.run/guides/routing#defining-nested-routes">
+          <a href="https://remix.run/guides/routing#what-are-nested-routes">
             read all about nested routes in the docs
           </a>
           .
