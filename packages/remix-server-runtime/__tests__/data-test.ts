@@ -1,3 +1,5 @@
+import superjson from "superjson";
+
 import type { ServerBuild } from "../build";
 import { createRequestHandler } from "../server";
 
@@ -35,7 +37,8 @@ describe("loaders", () => {
     );
 
     let res = await handler(request);
-    expect(await res.json()).toMatchInlineSnapshot(`"?foo=bar"`);
+    let body = await res.text();
+    expect(superjson.parse(body)).toMatchInlineSnapshot(`"?foo=bar"`);
   });
 
   it("sets header for throw responses", async () => {
@@ -107,7 +110,8 @@ describe("loaders", () => {
     );
 
     let res = await handler(request);
-    expect(await res.json()).toMatchInlineSnapshot(`"?foo=bar"`);
+    let body = await res.text();
+    expect(superjson.parse(body)).toMatchInlineSnapshot(`"?foo=bar"`);
   });
 
   it("removes index from request.url and keeps other values", async () => {
@@ -141,6 +145,9 @@ describe("loaders", () => {
     );
 
     let res = await handler(request);
-    expect(await res.json()).toMatchInlineSnapshot(`"?foo=bar&index=test"`);
+    let body = await res.text();
+    expect(superjson.parse(body)).toMatchInlineSnapshot(
+      `"?foo=bar&index=test"`
+    );
   });
 });

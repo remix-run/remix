@@ -1,3 +1,5 @@
+import { parse } from "superjson";
+
 import invariant from "./invariant";
 import type { Submission } from "./transition";
 
@@ -46,7 +48,8 @@ export async function fetchData(
   let response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
-    let data = await response.json();
+    let text = await response.text();
+    let data = parse<{ message: string; stack: string }>(text);
     let error = new Error(data.message);
     error.stack = data.stack;
     return error;
@@ -60,11 +63,13 @@ export async function extractData(response: Response): Promise<AppData> {
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
 
+  let body = await response.text();
+
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
+    return parse<AppData>(body);
   }
 
-  return response.text();
+  return body;
 }
 
 function getActionInit(

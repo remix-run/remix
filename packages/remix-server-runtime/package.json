@@ -16,7 +16,8 @@
     "jsesc": "^3.0.1",
     "react-router-dom": "^6.0.2",
     "set-cookie-parser": "^2.4.8",
-    "source-map": "^0.7.3"
+    "source-map": "^0.7.3",
+    "superjson": "^1.8.0"
   },
   "peerDependencies": {
     "react": ">=16.8",

@@ -1,3 +1,5 @@
+import superjson from "superjson";
+
 /**
  * A JSON response. Converts `data` to JSON and sets the `Content-Type` header.
  */
@@ -12,7 +14,7 @@ export function json(data: any, init: number | ResponseInit = {}): Response {
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
 
-  return new Response(JSON.stringify(data), {
+  return new Response(superjson.stringify(data), {
     ...responseInit,
     headers
   });

@@ -1,3 +1,5 @@
+import superjson from "superjson";
+
 import { json, redirect } from "../index";
 
 describe("json", () => {
@@ -27,7 +29,8 @@ describe("json", () => {
 
   it("encodes the response body", async () => {
     let response = json({ hello: "remix" });
-    expect(await response.json()).toEqual({ hello: "remix" });
+    let body = await response.text();
+    expect(superjson.parse(body)).toEqual({ hello: "remix" });
   });
 
   it("accepts status as a second parameter", () => {

@@ -13,7 +13,8 @@
   "main": "index.js",
   "browser": "browser/index.js",
   "dependencies": {
-    "react-router-dom": "^6.0.2"
+    "react-router-dom": "^6.0.2",
+    "superjson": "^1.8.0"
   },
   "peerDependencies": {
     "react": ">=16.8",

@@ -1,4 +1,5 @@
 import type { Params } from "react-router";
+import superjson from "superjson";
 
 import type { ServerBuild } from "./build";
 import { json } from "./responses";
@@ -113,11 +114,13 @@ export function isRedirectResponse(response: Response): boolean {
   return redirectStatusCodes.has(response.status);
 }
 
-export function extractData(response: Response): Promise<AppData> {
+export async function extractData(response: Response): Promise<AppData> {
   let contentType = response.headers.get("Content-Type");
 
+  let body = await response.text();
+
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
+    return superjson.parse<AppData>(body);
   }
 
   // What other data types do we need to handle here? What other kinds of
@@ -126,5 +129,5 @@ export function extractData(response: Response): Promise<AppData> {
   // - multipart/form-data ?
   // - binary (audio/video) ?
 
-  return response.text();
+  return body;
 }
