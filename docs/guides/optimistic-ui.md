@@ -162,7 +162,7 @@ export default function NewProject() {
 
 When the user clicks "Create Project" the UI immediately changes to the `<ProjectView />` while Remix posts the form to the server. When the server succeeds, the app is redirected to the project route. Because they show the same component (`<ProjectView>`), the only thing the user might notice is the URL changed.
 
-One of the hardest parts about implementing optimistic UI is how to handle failures and notify the user. In Remix this happens automatically. In the unlikely event that our server side action fails, Remix will automatically render the nearest [error boundary][error-boundary] to tell the user something is wrong. The action won't even make it to the `redirect` so the user didn't actually go anywhere. You can even export an error boundary on the new project route to have more contextual information, but there's nothign wrong with letting some other boundary catch it.
+One of the hardest parts about implementing optimistic UI is how to handle failures and notify the user. In Remix this happens automatically. In the unlikely event that our server side action fails, Remix will automatically render the nearest [error boundary][error-boundary] to tell the user something is wrong. The action won't even make it to the `redirect` so the user didn't actually go anywhere. You can even export an error boundary on the new project route to have more contextual information, but there's nothing wrong with letting some other boundary catch it.
 
 ## Maintain Form State
 
