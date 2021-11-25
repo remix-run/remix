@@ -86,6 +86,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
 
     ```js filename=tailwind.config.js
     module.exports = {
+      mode: 'jit', // enables just-in-time compiler
       purge: [
         "./app/**/*.tsx",
         "./app/**/*.jsx",
