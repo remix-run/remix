@@ -2,11 +2,10 @@
   "scripts": {
     "postinstall": "remix setup node",
     "build": "remix build",
-    "dev": "remix watch",
-    "dev:netlify": "cross-env NODE_ENV=development netlify dev"
+    "dev": "cross-env NODE_ENV=development netlify dev"
   },
   "dependencies": {
-    "@netlify/functions": "^0.7.2",
+    "@netlify/functions": "^0.10.0",
     "@remix-run/netlify": "*"
   },
   "devDependencies": {
