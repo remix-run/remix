@@ -27,6 +27,7 @@ export let loader = async ({ params }) => {
   // Sometimes your code just blows up and you never anticipated it. Remix will
   // automatically catch it and send the UI to the error boundary.
   if (params.id === "kaboom") {
+    // eslint-disable-next-line no-undef
     lol();
   }
 
@@ -60,10 +61,12 @@ export function CatchBoundary() {
           Maybe ask the webmaster ({caught.data.webmasterEmail}) for access.
         </p>
       );
+      break;
     case 404:
       message = (
         <p>Looks like you tried to visit a page that does not exist.</p>
       );
+      break;
     default:
       message = (
         <p>
@@ -104,6 +107,6 @@ export function ErrorBoundary({ error }) {
 
 export let meta = ({ data }) => {
   return {
-    title: data ? `Param: ${data.param}` : "Oops...",
+    title: data ? `Param: ${data.param}` : "Oops..."
   };
 };
