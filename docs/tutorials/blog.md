@@ -260,7 +260,7 @@ title: My First Post
 Isn't it great?
 ```
 
-```md filename=posts/90s-mix-cdr.md
+```md filename=posts/90s-mixtape.md
 ---
 title: 90s Mixtape
 ---
@@ -396,7 +396,7 @@ Now let's make a route to actually view the post. We want these URLs to work:
 
 ```
 /posts/my-first-post
-/posts/90s-mix-cdr
+/posts/90s-mixtape
 ```
 
 Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
@@ -841,7 +841,7 @@ export let action: ActionFunction = async ({ request }) => {
   let slug = formData.get("slug");
   let markdown = formData.get("markdown");
 
-  let errors = {};
+  let errors:any = {};
   if (!title) errors.title = true;
   if (!slug) errors.slug = true;
   if (!markdown) errors.markdown = true;
@@ -971,6 +971,6 @@ export default function NewPost() {
 
 Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! You're homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they 404! Create a new route that reads the post, puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
+That's it for today! You're homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they 404! Create a new route that reads the post, puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/posts/new.tsx`. You just gotta put it together.
 
 We hope you love Remix!
