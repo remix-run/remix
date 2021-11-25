@@ -79,6 +79,7 @@ async function run() {
         { name: "Express Server", value: "express" },
         { name: "Architect (AWS Lambda)", value: "arc" },
         { name: "Fly.io", value: "fly" },
+        { name: "Koyeb", value: "koyeb" },
         { name: "Netlify", value: "netlify" },
         { name: "Vercel", value: "vercel" },
         { name: "Cloudflare Workers", value: "cloudflare-workers" }
@@ -191,6 +192,7 @@ type Server =
   | "cloudflare-workers"
   | "express"
   | "fly"
+  | "koyeb"
   | "netlify"
   | "remix"
   | "vercel";

@@ -75,6 +75,7 @@ describe("create-remix cli", () => {
             "Express Server",
             "Architect (AWS Lambda)",
             "Fly.io",
+            "Koyeb",
             "Netlify",
             "Vercel",
             "Cloudflare Workers"

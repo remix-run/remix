@@ -21,6 +21,7 @@ If you're experience with web development is primarily with the JS frameworks in
 Environment variables on your server will be handled by your host, for example:
 
 - [Fly.io](https://fly.io/docs/reference/secrets/)
+- [Koyeb](https://www.koyeb.com/docs/secrets)
 - [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
 - [Vercel](https://vercel.com/docs/environment-variables)
 - [Architect](https://arc.codes/docs/en/reference/cli/env)
