@@ -17,7 +17,7 @@ While not built-in to Remix, you can use these also:
 
 Remix does not currently support CSS Modules. However, the Remix compiler uses [esbuild](https://esbuild.github.io) which will eventualy have direct support for them. When it supports them, Remix will.
 
-The primary way to style in Remix is to add a `<link>` to the document when a route is active with [Route Module Links](../../api/app/route-module/) export.
+The primary way to style in Remix is to add a `<link>` to the document when a route is active with [Route Module Links]([route-module-links]) export.
 
 ## Remote Stylesheets
 
@@ -263,3 +263,5 @@ Here's some sample code to show how you might use Styled Components with Remix:
      );
    }
    ```
+
+[route-module-links]: ../api/conventions#links
