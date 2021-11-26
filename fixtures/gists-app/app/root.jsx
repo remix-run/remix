@@ -66,7 +66,7 @@ export default function Root() {
         <div data-test-id="content" id="content">
           <Outlet />
         </div>
-        {data.enableScripts ? (
+        {data?.enableScripts ? (
           <>
             <ScrollRestoration />
             <Scripts />
