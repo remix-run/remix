@@ -26,6 +26,11 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 
   // First, find all route modules in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
+    // Ignore dotfiles (e.g. ".DS_Store")
+    if (file.startsWith(".")) {
+      return;
+    }
+
     let routeId = createRouteId(path.join("routes", file));
 
     if (isRouteModuleFile(file)) {
