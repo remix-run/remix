@@ -90,7 +90,7 @@ export default function Index() {
         <ul>
           {data.resources.map(resource => (
             <li key={resource.url} className="remix__page__resource">
-              <a href={resource.url}>{resource.name}</a>
+              <a href={resource.url} target=”_blank” rel=”noopener noreferrer”>{resource.name}</a>
             </li>
           ))}
         </ul>
