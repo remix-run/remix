@@ -11,10 +11,7 @@ let app = express();
 app.use(compression());
 
 // You may want to be more aggressive with this caching
-app.use(express.static("public", { maxAge: "1h" }));
-
-// Remix fingerprints its assets so we can cache forever
-app.use(express.static("public/build", { immutable: true, maxAge: "1y" }));
+app.use(express.static("public", { maxAge: "1h", setHeaders: setCustomCacheControl }));
 
 app.use(morgan("tiny"));
 app.all(
@@ -44,5 +41,13 @@ function purgeRequireCache() {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
     }
+  }
+}
+
+const remixBuildPath = path.join(process.cwd(), 'public', 'build');
+function setCustomCacheControl (res, filePath) {
+  // Remix fingerprints its assets so we can cache forever
+  if (filePath.startsWith(remixBuildPath)) {
+      res.setHeader('Cache-Control', `max-age=${60 * 60 * 24 * 365},immutable`);
   }
 }
