@@ -103,10 +103,7 @@ Here's a quick guide to getting it set up. We encourage you to read the official
         extend: {}
       },
       variants: {},
-      plugins: [
-        tailwindcss: {},
-        autoprefixer: {}
-      ]
+      plugins: []
     };
     ```
 
