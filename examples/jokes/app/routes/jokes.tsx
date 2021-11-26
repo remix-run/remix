@@ -21,7 +21,10 @@ export const loader: LoaderFunction = async ({ request }) => {
 
   const data: LoaderData = {
     jokeListItems,
-    user,
+    user: user && {
+      id: user.id,
+      username: user.username,
+    },
   };
 
   return data;
