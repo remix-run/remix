@@ -44,7 +44,7 @@ function purgeRequireCache() {
   }
 }
 
-const remixBuildPath = path.join(process.cwd(), 'public', 'build');
+let remixBuildPath = path.join(process.cwd(), 'public', 'build');
 function setCustomCacheControl (res, filePath) {
   // Remix fingerprints its assets so we can cache forever
   if (filePath.startsWith(remixBuildPath)) {
