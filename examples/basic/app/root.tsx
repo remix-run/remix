@@ -22,7 +22,7 @@ import darkStylesUrl from "~/styles/dark.css";
  * every route in the app, but individual routes can include their own links
  * that are automatically unloaded when a user navigates away from the route.
  *
- * https://remix.run/api/app#links
+ * https://remix.run/api/conventions#links
  */
 export let links: LinksFunction = () => {
   return [
