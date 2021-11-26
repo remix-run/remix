@@ -804,7 +804,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       update({
         fetchers: new Map(state.fetchers),
         error: result.value,
-        errorBoundaryId
+        errorBoundaryId,
+        location: {
+          ...state.location,
+          state: { isRedirect: false, type: "error" }
+        }
       });
       return true;
     }
