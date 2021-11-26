@@ -92,10 +92,10 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
                 <Link to="/">Home</Link>
               </li>
               <li>
-                <a href="https://remix.run/docs">Remix Docs</a>
+                <a href="https://remix.run/docs" target=”_blank” rel=”noopener noreferrer”>Remix Docs</a>
               </li>
               <li>
-                <a href="https://github.com/remix-run/remix">GitHub</a>
+                <a href="https://github.com/remix-run/remix" target=”_blank” rel=”noopener noreferrer”>GitHub</a>
               </li>
             </ul>
           </nav>
