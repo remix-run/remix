@@ -12,7 +12,7 @@ import {
 import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";
 
-// https://remix.run/api/app#links
+// https://remix.run/api/conventions#links
 export let links = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
