@@ -10,42 +10,39 @@
 npm i -g netlify-cli
 ```
 
+If you have previously installed the Netlify CLI, you should update it to the latest version:
+
+```sh
+npm i -g netlify-cli@latest
+```
+
 2. Sign up and log in to Netlify:
 
 ```sh
-  netlify login
+netlify login
 ```
 
 3. Create a new site:
 
 ```sh
-  netlify init
+netlify init
 ```
 
 4. You'll need to tell Netlify to use Node 14, as at the time of writing Netlify uses Node 12 by [default](https://docs.netlify.com/functions/build-with-javascript/#runtime-settings)
 
 ```sh
-  netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
+netlify env:set AWS_LAMBDA_JS_RUNTIME nodejs14.x
 ```
 
 ## Development
 
-You will be running two processes during development when using Netlify as your server.
-
-- Your Netlify server in one
-- The Remix development server in another
+The Netlify CLI starts your app in development mode, rebuilding assets on file changes.
 
 ```sh
-# in one tab
-$ npm run dev:netlify
-
-# in another
-$ npm run dev
+npm run dev
 ```
 
 Open up [http://localhost:3000](http://localhost:3000), and you should be ready to go!
-
-If you'd rather run everything in a single tab, you can look at [concurrently](https://npm.im/concurrently) or similar tools to run both processes in one tab.
 
 ## Deployment
 
