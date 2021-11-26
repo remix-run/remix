@@ -7,6 +7,8 @@ order: 2
 
 You want to learn Remix? You're in the right place. Let's build [Remix Jokes](https://remix-jokes.lol)!
 
+<docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
+
 [![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
@@ -1176,9 +1178,9 @@ nav ul a:hover {
 
 </details>
 
-💿 Also, download [the font](/jokes-tutorial/baloo/baloo.woff) and [it's license](/jokes-tutorial/baloo/License.txt) and put them in `public/fonts/baloo`.
+💿 Also, download <a href="/jokes-tutorial/baloo/baloo.woff" data-noprefetch target="_blank">the font</a> and <a href="/jokes-tutorial/baloo/License.txt" data-noprefetch target="_blank">it's license</a> and put them in `public/fonts/baloo`.
 
-💿 While you're downloading assets, you may as well download [the social image](/jokes-tutorial/social.png) and put that at `public/social.png`. You'll need that later.
+💿 While you're downloading assets, you may as well download <a href="/jokes-tutorial/social.png" data-noprefetch target="_blank">the social image</a> and put that at `public/social.png`. You'll need that later.
 
 💿 Add the `links` export to `app/root.tsx` and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each will have its own CSS file(s)). You can look at the CSS and add some structure to your JSX elements to make things look appealing. I'm going to add some links too.
 
@@ -4760,7 +4762,7 @@ But before you get started, remember that we're in charge of rendering everythin
 
 <summary>app/root.tsx</summary>
 
-```ts filename=app/root.tsx lines=[1,7,33-45,59]
+```ts filename=app/root.tsx lines=[1,7,33-45,58]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
@@ -4818,8 +4820,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
@@ -5483,8 +5485,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
