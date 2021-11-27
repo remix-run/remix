@@ -14,6 +14,7 @@ import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders, getLoaderForFile } from "./compiler/loaders";
 import { mdxPlugin } from "./compiler/plugins/mdx";
+import { nativeNodeModulesPlugin } from "./compiler/plugins/nativeNodeModules";
 import { getRouteModuleExportsCached } from "./compiler/routes";
 import { writeFileSafe } from "./compiler/utils/fs";
 
@@ -326,6 +327,7 @@ async function createBrowserBuild(
     },
     plugins: [
       mdxPlugin(config),
+      nativeNodeModulesPlugin(),
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
@@ -359,6 +361,7 @@ async function createServerBuild(
     publicPath: config.publicPath,
     plugins: [
       mdxPlugin(config),
+      nativeNodeModulesPlugin(),
       serverRouteModulesPlugin(config),
       emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
       manualExternalsPlugin((id, importer) => {

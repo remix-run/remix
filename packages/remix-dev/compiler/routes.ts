@@ -4,6 +4,7 @@ import * as esbuild from "esbuild";
 import * as cache from "../cache";
 import type { RemixConfig } from "../config";
 import { mdxPlugin } from "./plugins/mdx";
+import { nativeNodeModulesPlugin } from "./plugins/nativeNodeModules";
 import { getFileHash } from "./utils/crypto";
 
 type CachedRouteExports = { hash: string; exports: string[] };
@@ -54,7 +55,7 @@ export async function getRouteModuleExports(
     metafile: true,
     write: false,
     logLevel: "silent",
-    plugins: [mdxPlugin(config)]
+    plugins: [mdxPlugin(config), nativeNodeModulesPlugin()]
   });
   let metafile = result.metafile!;
 
