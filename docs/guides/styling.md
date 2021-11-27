@@ -130,8 +130,6 @@ Given these routes, this table shows which CSS will apply at specific URLs:
 
 It's subtle, but this little feature removes a lot of the difficulty when styling your app with plain stylesheets.
 
-TODO: Dark mode
-
 ### Shared Component Styles
 
 Websites large and small usually have a set of shared components used throughout the rest of the app: buttons, form elements, layouts, etc. When using plain style sheets in Remix there are two approaches we recommend.
