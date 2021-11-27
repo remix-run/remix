@@ -499,7 +499,7 @@ Here's how to set it up:
    };
    ```
 
-3. Add a css files to a `styles/` folder _next to `app/`_, we'll point postcss at this folder to build _into_ the `app/styles` folder next.
+3. Add stylesheets to a `styles/` folder _next to `app/`_, we'll point postcss at this folder to build _into_ the `app/styles` folder next.
 
    ```sh
    mkdir styles
