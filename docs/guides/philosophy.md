@@ -8,9 +8,9 @@ We've worked on a lot of different types of websites: static sites for credit ca
 
 The Remix philosophy can be summed up in four points:
 
-1. Embrace the server/client model, including seperation of source code from content/data.
+1. Embrace the server/client model, including separation of source code from content/data.
 2. Work with, not against, the foundations of the web: Browsers, HTTP, and HTML. It’s always been good and it's gotten _really good_ in the last few years.
-3. Use JavaScript to augment the user experience by emulating browser behavior
+3. Use JavaScript to augment the user experience by emulating browser behavior.
 4. Don't over-abstract the underlying technologies
 
 ## Server/Client Model
