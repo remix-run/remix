@@ -2987,13 +2987,13 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
-💿 Update `app/utils/session.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
+💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
 
 <details>
 
-<summary>app/utils/session.ts</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[46-48,50-55,57-70]
+```ts filename=app/utils/session.server.ts lines=[46-48,50-55,57-70]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
