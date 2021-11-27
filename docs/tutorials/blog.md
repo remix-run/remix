@@ -315,7 +315,8 @@ export async function getPosts() {
         path.join(postsPath, filename)
       );
       let { attributes } = parseFrontMatter(
-        file.toString()
+        file.toString(),
+        { allowUnsafe: true }
       );
       return {
         slug: filename.replace(/\.md$/, ""),
