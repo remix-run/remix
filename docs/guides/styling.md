@@ -473,7 +473,7 @@ export let links: LinksFunction = () => {
 };
 ```
 
-## PostCSS / Tailwind
+## PostCSS
 
 While not built into Remix's compiler, it is straight forward to use PostCSS and add whatever syntax sugar you'd like to your stylesheets, here's the gist of it:
 
