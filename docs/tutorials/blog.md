@@ -372,7 +372,8 @@ export async function getPosts() {
         path.join(postsPath, filename)
       );
       let { attributes } = parseFrontMatter(
-        file.toString()
+        file.toString(),
+        { allowUnsafe: true }
       );
       invariant(
         isValidPostAttributes(attributes),
@@ -463,7 +464,9 @@ Put this function anywhere in the `app/post.ts` module:
 export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
-  let { attributes } = parseFrontMatter(file.toString());
+  let { attributes } = parseFrontMatter(file.toString(), {
+    allowUnsafe: true
+  });
   invariant(
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
@@ -521,7 +524,10 @@ export async function getPost(slug: string) {
   let filepath = path.join(postsPath, slug + ".md");
   let file = await fs.readFile(filepath);
   let { attributes, body } = parseFrontMatter(
-    file.toString()
+    file.toString(),
+    {
+      allowUnsafe: true
+    }
   );
   invariant(
     isValidPostAttributes(attributes),
