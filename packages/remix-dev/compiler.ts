@@ -331,7 +331,7 @@ async function createBrowserBuild(
     ]
   };
   if (typeof config.esbuild === "function") {
-    esbuildConfig = await config.esbuild(esbuildConfig, BuildTarget.Browser);
+    esbuildConfig = await config.esbuild(esbuildConfig, { target: BuildTarget.Browser });
   }
   return esbuild.build(esbuildConfig);
 }
@@ -399,7 +399,7 @@ async function createServerBuild(
     ]
   };
   if (typeof config.esbuild === "function") {
-    esbuildConfig = await config.esbuild(esbuildConfig, BuildTarget.Server);
+    esbuildConfig = await config.esbuild(esbuildConfig, { target: BuildTarget.Server });
   }
   return esbuild.build(esbuildConfig);
 }

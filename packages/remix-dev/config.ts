@@ -83,7 +83,7 @@ export interface AppConfig {
    */
   esbuild?: (
     options: BuildOptions,
-    target: BuildTarget
+    context: { target: BuildTarget }
   ) => BuildOptions | Promise<BuildOptions>;
 }
 
@@ -158,7 +158,7 @@ export interface RemixConfig {
    */
   esbuild?: (
     options: BuildOptions,
-    target: BuildTarget
+    context: { target: BuildTarget }
   ) => BuildOptions | Promise<BuildOptions>;
 }
 
