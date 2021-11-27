@@ -11,7 +11,8 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+      href:
+        "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
     }
   ];
 }
@@ -70,9 +71,9 @@ In general, stylesheets added to the page with `<link>` tend to provide the best
 - Changes to components don't break the cache for the styles
 - Changes to the styles don't break the cache for the JavaScript
 
-Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler and adding direct support inside of Remix is not tenable with the vast number of libraries out there.
+Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler. Aditionally, adding support directly inside of Remix is not tenable with the vast number of libraries out there.
 
-Remix also supports "runtime" frameworks like styled components where styles are evaluated at runtime but don't require any kind of bundler integration--though we would prefer your stylesheets had a URL isntead of being injected into style tags.
+Remix also supports "runtime" frameworks like styled components where styles are evaluated at runtime but don't require any kind of bundler integration--though we would prefer your stylesheets had a URL instead of being injected into style tags.
 
 All this is to say that **we're still researching how best to integrate and work with the frameworks that require compiler integration**. With Remix's unique ability to prefetch, add, and remove CSS for partial UI on the page, we anticipate CSS frameworks will have some new ideas on how to support building actual CSS files to better support Remix and the performance of websites using them.
 
@@ -444,7 +445,7 @@ export function links() {
 
 This isn't required, but it's recommended to add the generated file to your gitignore list:
 
-```txt lines=[5] filename=.gitignore
+```sh lines=[5] filename=.gitignore
 node_modules
 /.cache
 /build
@@ -465,7 +466,8 @@ export let links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+      href:
+        "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
     }
   ];
 };
