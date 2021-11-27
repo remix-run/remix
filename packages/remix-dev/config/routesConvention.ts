@@ -21,18 +21,18 @@ export function isRouteModuleFile(filename: string): boolean {
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(appDir: string): RouteManifest {
+export function defineConventionalRoutes(appDir: string, routesDirectory: string): RouteManifest {
   let files: { [routeId: string]: string } = {};
 
   // First, find all route modules in app/routes
-  visitFiles(path.join(appDir, "routes"), file => {
-    let routeId = createRouteId(path.join("routes", file));
+  visitFiles(path.join(appDir, routesDirectory), file => {
+    let routeId = createRouteId(path.join(routesDirectory, file));
 
     if (isRouteModuleFile(file)) {
-      files[routeId] = path.join("routes", file);
+      files[routeId] = path.join(routesDirectory, file);
     } else {
       throw new Error(
-        `Invalid route module file: ${path.join(appDir, "routes", file)}`
+        `Invalid route module file: ${path.join(appDir, routesDirectory, file)}`
       );
     }
   });
@@ -52,11 +52,11 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 
     for (let routeId of childRouteIds) {
       let routePath: string | undefined = createRoutePath(
-        routeId.slice((parentId || "routes").length + 1)
+        routeId.slice((parentId || routesDirectory).length + 1)
       );
 
       let isIndexRoute = routeId.endsWith("/index");
-      let fullPath = createRoutePath(routeId.slice("routes".length + 1));
+      let fullPath = createRoutePath(routeId.slice(routesDirectory.length + 1));
       let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
 
       if (typeof uniqueRouteId !== "undefined") {

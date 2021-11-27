@@ -26,6 +26,12 @@ export interface AppConfig {
   appDirectory?: string;
 
   /**
+   * The path to the `routes` directory, relative to `remix.config.js`. Defaults
+   * to "routes".
+   */
+   routesDirectory?: string;
+
+  /**
    * The path to a directory Remix can use for caching things in development,
    * relative to `remix.config.js`. Defaults to ".cache".
    */
@@ -90,6 +96,11 @@ export interface RemixConfig {
    * The absolute path to the application source directory.
    */
   appDirectory: string;
+
+  /**
+   * The path to the routes directory, relative to `config.appDirectory`.
+   */
+   routesDirectory: string;
 
   /**
    * The absolute path to the cache directory.
@@ -180,6 +191,8 @@ export async function readConfig(
     appConfig.cacheDirectory || ".cache"
   );
 
+  let routesDirectory = appConfig.routesDirectory || "routes";
+
   let entryClientFile = findEntry(appDirectory, "entry.client");
   if (!entryClientFile) {
     throw new Error(`Missing "entry.client" file in ${appDirectory}`);
@@ -215,8 +228,8 @@ export async function readConfig(
   let routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile }
   };
-  if (fs.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = defineConventionalRoutes(appDirectory);
+  if (fs.existsSync(path.resolve(appDirectory, routesDirectory))) {
+    let conventionalRoutes = defineConventionalRoutes(appDirectory, routesDirectory);
     for (let key of Object.keys(conventionalRoutes)) {
       let route = conventionalRoutes[key];
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
@@ -233,6 +246,7 @@ export async function readConfig(
   return {
     appDirectory,
     cacheDirectory,
+    routesDirectory,
     entryClientFile,
     entryServerFile,
     devServerPort,
