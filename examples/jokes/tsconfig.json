@@ -1,6 +1,7 @@
 {
   "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
+    "baseUrl" : ".",
     "lib": ["DOM", "DOM.Iterable", "ES2019"],
     "esModuleInterop": true,
     "jsx": "react-jsx",
