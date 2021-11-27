@@ -1,6 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
+import type { BuildOptions } from "esbuild";
 
+import type { BuildTarget } from "./build";
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
@@ -75,6 +77,14 @@ export interface AppConfig {
   devServerBroadcastDelay?: number;
 
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * A hook to modify the esbuild config before it is used.
+   */
+  esbuild?: (
+    options: BuildOptions,
+    target: BuildTarget
+  ) => BuildOptions | Promise<BuildOptions>;
 }
 
 /**
@@ -142,6 +152,14 @@ export interface RemixConfig {
   devServerBroadcastDelay: number;
 
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * A hook to modify the esbuild config before it is used.
+   */
+  esbuild?: (
+    options: BuildOptions,
+    target: BuildTarget
+  ) => BuildOptions | Promise<BuildOptions>;
 }
 
 /**
@@ -243,7 +261,8 @@ export async function readConfig(
     routes,
     serverBuildDirectory,
     serverMode,
-    mdx: appConfig.mdx
+    mdx: appConfig.mdx,
+    esbuild: appConfig.esbuild
   };
 }
 

@@ -302,7 +302,7 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  return esbuild.build({
+  let esbuildConfig: esbuild.BuildOptions = {
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
@@ -329,7 +329,11 @@ async function createBrowserBuild(
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
-  });
+  };
+  if (typeof config.esbuild === "function") {
+    esbuildConfig = await config.esbuild(esbuildConfig, BuildTarget.Browser);
+  }
+  return esbuild.build(esbuildConfig);
 }
 
 async function createServerBuild(
@@ -338,7 +342,7 @@ async function createServerBuild(
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
 
-  return esbuild.build({
+  let esbuildConfig: esbuild.BuildOptions = {
     stdin: {
       contents: getServerEntryPointModule(config, options),
       resolveDir: config.serverBuildDirectory
@@ -393,7 +397,11 @@ async function createServerBuild(
         return false;
       })
     ]
-  });
+  };
+  if (typeof config.esbuild === "function") {
+    esbuildConfig = await config.esbuild(esbuildConfig, BuildTarget.Server);
+  }
+  return esbuild.build(esbuildConfig);
 }
 
 function isBareModuleId(id: string): boolean {
