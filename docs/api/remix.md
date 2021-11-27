@@ -66,7 +66,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 ```
 
 - **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
-- **"intent"** - Recommended if you want to prefetch. Fetches when when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
+- **"intent"** - Recommended if you want to prefetch. Fetches when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
 - **"render"** - Fetches when the link is rendered.
 
 <docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
@@ -334,7 +334,7 @@ Now the user can click back without resubmitting the form.
 
 **When you should worry about this**
 
-Usually your actions will either return validation issues or redirect, and then you're data and your user's are safe no matter how the form is submitted. But to go into further detail, if you're using:
+Usually your actions will either return validation issues or redirect, and then your data and your user's are safe no matter how the form is submitted. But to go into further detail, if you're using:
 
 - `<form>`
 - `<Form reloadDocument>`
@@ -1352,7 +1352,7 @@ import { userPrefs } from "~/cookies";
 export async function loader({ request }) {
   let cookieHeader = request.headers.get("Cookie");
   let cookie = (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: value.showBanner };
+  return { showBanner: cookie.showBanner };
 }
 
 export async function action({ request }) {
@@ -1459,7 +1459,7 @@ export async function loader({ request }) {
 
 ### `createCookie`
 
-Creates a logical container for managing a browser cookie from there server.
+Creates a logical container for managing a browser cookie from the server.
 
 ```ts
 import { createCookie } from "remix";
@@ -1680,6 +1680,7 @@ export default function Login() {
           Password:{" "}
           <input type="password" name="password" />
         </label>
+        <button>Login</button>
       </form>
     </div>
   );
@@ -1725,7 +1726,16 @@ TODO:
 
 ### `isSession`
 
-TODO:
+Returns `true` if an object is a Remix session.
+
+```js
+import { isSession } from "remix";
+
+let sessionData = {foo: "bar"}
+let session = createSession(sessionData, "remix-session");
+console.log(isSession(session));
+// true
+```
 
 ### `createSessionStorage`
 
@@ -1788,7 +1798,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
 import { createCookieSessionStorage } from "remix";
