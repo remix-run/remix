@@ -57,7 +57,9 @@ export function links() {
 
 In today's ecosystem there are dozens of approaches and frameworks for styling. Remix supports many of them out of the box, but the frameworks that require direct integration with our compiler and expect Remix to automatically inject styles onto the page don't work right now.
 
-We recognize that not being able to use your favorite CSS framework is a bummer. If yours isn't supported right now, we hope you'll find some of the approaches in this document equally as productive. Here's some background on where we're at.
+We recognize that not being able to use your favorite CSS framework is a bummer. If yours isn't supported right now, we hope you'll find some of the approaches in this document equally as productive. We also recognize that supporting a variety of tools is critical for migration paths to Remix.
+
+Here's some background on where we're at.
 
 In general, stylesheets added to the page with `<link>` tend to provide the best user experience:
 
