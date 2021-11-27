@@ -140,7 +140,7 @@ Websites large and small usually have a set of shared components used throughout
 The first is approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
-// scope with class names
+/* scope with class names */
 .PrimaryButton {
   /* ... */
 }
@@ -149,8 +149,8 @@ The first is approach is very simple. Put them all in a `shared.css` file includ
   /* ... */
 }
 
-// or scope with data attributes to avoid concatenating
-// className props, but it's really up to you
+/* or scope with data attributes to avoid concatenating
+   className props, but it's really up to you */
 [data-primary-button] {
   /* ... */
 }
@@ -162,7 +162,7 @@ The first is approach is very simple. Put them all in a `shared.css` file includ
 
 While this file may become large, it'll be at a single URL that will be shared by all routes in the app.
 
-This also makes it easy for routes to adjust the styles of a component without needing to add an official new variant to the API of that component because you know it won't affect the component anywhere else.
+This also makes it easy for routes to adjust the styles of a component without needing to add an official new variant to the API of that component. You know it won't affect the component anywhere but the `/accounts` routes.
 
 ```css filename=app/styles/accounts.css
 .PrimaryButton {
@@ -226,6 +226,8 @@ export let PrimaryButton = React.forwardRef(
   }
 );
 ```
+
+Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know it's dependencies (just like JavaScript imports).
 
 Because these buttons are not routes, and therefore not associate with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
