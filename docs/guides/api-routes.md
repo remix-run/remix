@@ -28,7 +28,7 @@ Whenever the user clicks a link to `<Link to="/teams" />`, Remix in the browser 
 
 There are times, however, that you want to get the data from a loader but not because the user is visiting the route, but the current page needs that route's data for some reason. A very clear example is a `<Combobox>` component that queries the database for records and suggests them to the user.
 
-You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, race conditions, interruptions, and fetch cancelations are handled for you, too.
+You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, race conditions, interruptions, and fetch cancellations are handled for you, too.
 
 For example, you could have a route to handle the search:
 

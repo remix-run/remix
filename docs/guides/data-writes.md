@@ -33,7 +33,7 @@ Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to
 
 ### HTML Form GET
 
-A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` excpect the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
+A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
 
 Consider this form:
 
@@ -102,7 +102,7 @@ Let's consider a "new project" form.
 </form>
 ```
 
-When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is twofold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
+When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is two-fold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
 
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
@@ -141,7 +141,7 @@ We're going to build a mutation from start to finish with:
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 
-Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just us a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
+Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just use a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
 
 ### Building the form
 

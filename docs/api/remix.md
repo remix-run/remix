@@ -156,7 +156,7 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 
 <docs-info>This is recommended over <code>&lt;form></code></docs-info>
 
-When the `action` prop is ommitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
+When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
 
 - `<form>` uses the current URL as the default which can lead to surprising results: forms inside parent routes will post to the child action if you're at the child's URL and the parents action when you're at the parent's URL. This means as the user navigates, the form's behavior changes.
 - `<Form>` will always post to the route's action, independent of the URL. A form in a parent route will always post to the parent, even if you're at the child's URL.
@@ -1034,7 +1034,7 @@ This is where `useFetchers` comes in. Up in the sidebar we can get access too al
 The strategy has three steps:
 
 1. Find the submissions for tasks in a specific project
-2. Use the `fetcher.submission.formData` to immediatly update the count
+2. Use the `fetcher.submission.formData` to immediately update the count
 3. Use the normal task's state if it's not inflight
 
 Here's some sample code:
@@ -1788,7 +1788,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
 import { createCookieSessionStorage } from "remix";
