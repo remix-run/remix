@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "remix";
 
 export default function Resources() {
   return (

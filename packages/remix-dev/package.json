@@ -1,15 +1,22 @@
 {
   "name": "@remix-run/dev",
   "description": "Dev tools and CLI for Remix",
-  "version": "0.21.0",
-  "repository": "https://github.com/remix-run/packages",
+  "version": "1.0.6",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-dev"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "bin": {
     "remix": "cli.js"
   },
   "dependencies": {
     "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
-    "esbuild": "0.11.16",
+    "esbuild": "0.13.14",
     "fs-extra": "^10.0.0",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",

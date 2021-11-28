@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams } from "remix";
 import { Link, useLoaderData, json, redirect } from "remix";
 
 let fakeGists = [

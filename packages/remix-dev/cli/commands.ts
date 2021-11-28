@@ -3,6 +3,9 @@ import * as fse from "fs-extra";
 import signalExit from "signal-exit";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
+import type { Server } from "http";
+import type * as Express from "express";
+import type { createApp as createAppType } from "@remix-run/serve";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as compiler from "../compiler";
@@ -60,11 +63,17 @@ export async function build(
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
+type WatchCallbacks = {
+  onRebuildStart?(): void;
+  onInitialBuild?(): void;
+};
+
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
   modeArg?: string,
-  onRebuildStart?: () => void
+  callbacks?: WatchCallbacks
 ): Promise<void> {
+  let { onInitialBuild, onRebuildStart } = callbacks || {};
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   console.log(`Watching Remix app in ${mode} mode...`);
 
@@ -91,53 +100,83 @@ export async function watch(
     broadcast({ type: "LOG", message });
   }
 
-  signalExit(
-    await compiler.watch(config, {
-      mode,
-      onRebuildStart() {
-        start = Date.now();
-        onRebuildStart && onRebuildStart();
-        log("Rebuilding...");
-      },
-      onRebuildFinish() {
-        log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
-        broadcast({ type: "RELOAD" });
-      },
-      onFileCreated(file) {
-        log(`File created: ${path.relative(process.cwd(), file)}`);
-      },
-      onFileChanged(file) {
-        log(`File changed: ${path.relative(process.cwd(), file)}`);
-      },
-      onFileDeleted(file) {
-        log(`File deleted: ${path.relative(process.cwd(), file)}`);
-      }
-    })
-  );
-
-  signalExit(() => {
-    fse.emptyDirSync(config.assetsBuildDirectory);
-    fse.emptyDirSync(config.serverBuildDirectory);
+  let closeWatcher = await compiler.watch(config, {
+    mode,
+    onInitialBuild,
+    onRebuildStart() {
+      start = Date.now();
+      onRebuildStart && onRebuildStart();
+      log("Rebuilding...");
+    },
+    onRebuildFinish() {
+      log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
+      broadcast({ type: "RELOAD" });
+    },
+    onFileCreated(file) {
+      log(`File created: ${path.relative(process.cwd(), file)}`);
+    },
+    onFileChanged(file) {
+      log(`File changed: ${path.relative(process.cwd(), file)}`);
+    },
+    onFileDeleted(file) {
+      log(`File deleted: ${path.relative(process.cwd(), file)}`);
+    }
   });
 
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
+
+  let resolve: () => void;
+  signalExit(() => {
+    resolve();
+  });
+  return new Promise<void>(r => {
+    resolve = r;
+  }).then(async () => {
+    wss.close();
+    await closeWatcher();
+    fse.emptyDirSync(config.assetsBuildDirectory);
+    fse.emptyDirSync(config.serverBuildDirectory);
+  });
 }
 
 export async function dev(remixRoot: string, modeArg?: string) {
   // TODO: Warn about the need to install @remix-run/serve if it isn't there?
-  let { createApp } = require("@remix-run/serve");
+  let createApp: typeof createAppType;
+  let express: typeof Express;
+  try {
+    let serve = require("@remix-run/serve");
+    createApp = serve.createApp;
+    express = require("express");
+  } catch (err) {
+    throw new Error(
+      "Could not locate @remix-run/serve. Please verify you have it installed to use the dev command."
+    );
+  }
 
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   let port = process.env.PORT || 3000;
 
-  createApp(config.serverBuildDirectory, mode).listen(port, () => {
-    console.log(`Remix App Server started at http://localhost:${port}`);
-  });
-
-  watch(config, mode, () => {
+  let app = express();
+  app.use((_, __, next) => {
     purgeAppRequireCache(config.serverBuildDirectory);
+    next();
   });
+  app.use(createApp(config.serverBuildDirectory, mode));
+
+  let server: Server | null = null;
+
+  try {
+    await watch(config, mode, {
+      onInitialBuild: () => {
+        server = app.listen(port, () => {
+          console.log(`Remix App Server started at http://localhost:${port}`);
+        });
+      }
+    });
+  } finally {
+    server!?.close();
+  }
 }
 
 function purgeAppRequireCache(buildPath: string) {

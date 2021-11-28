@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "remix";
 
 export default function RenderErrors() {
   let location = useLocation();

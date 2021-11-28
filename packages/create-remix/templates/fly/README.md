@@ -1,7 +1,6 @@
 # Welcome to Remix!
 
-- [Remix Docs](https://docs.remix.run)
-- [Customer Dashboard](https://remix.run/dashboard)
+- [Remix Docs](https://remix.run/docs)
 
 ## Fly Setup
 
@@ -31,7 +30,7 @@ This starts your app in development mode, rebuilding assets on file changes.
 
 ## Deployment
 
-If you've followed the setup instructions already, especially the REMIX_TOKEN environment variable step, all you need to do is run this:
+If you've followed the setup instructions already, all you need to do is run this:
 
 ```sh
 npm run deploy

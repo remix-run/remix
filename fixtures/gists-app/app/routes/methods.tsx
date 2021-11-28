@@ -1,12 +1,6 @@
 import * as React from "react";
 import type { LoaderFunction, ActionFunction, FormProps } from "remix";
-import {
-  useLoaderData,
-  usePendingFormSubmit,
-  Form,
-  json,
-  redirect
-} from "remix";
+import { useLoaderData, useTransition, Form, json, redirect } from "remix";
 
 import stylesHref from "../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";
@@ -63,9 +57,9 @@ export default function Methods() {
   let [enctype, setEnctype] = React.useState<FormProps["encType"]>(
     "application/x-www-form-urlencoded"
   );
-  let pendingFormSubmit = usePendingFormSubmit();
+  let pendingFormSubmit = useTransition().submission;
   let pendingForm = pendingFormSubmit
-    ? Object.fromEntries(pendingFormSubmit.data)
+    ? Object.fromEntries(pendingFormSubmit.formData)
     : null;
 
   return (
@@ -138,7 +132,12 @@ export default function Methods() {
           </label>
         </p>
         <p>
-          <button type="submit">{method}</button>
+          <button type="submit" id="submit-with-data" name="data" value="c">
+            {method} (with data)
+          </button>
+          <button type="submit" id="submit">
+            {method}
+          </button>
         </p>
       </Form>
       <div

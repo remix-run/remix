@@ -1,11 +1,18 @@
 {
   "name": "@remix-run/architect",
   "description": "Architect server request handler for Remix",
-  "version": "0.21.0",
-  "repository": "https://github.com/remix-run/packages",
+  "version": "1.0.6",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-architect"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "dependencies": {
     "@types/aws-lambda": "^8.10.82",
-    "@remix-run/node": "0.21.0"
+    "@remix-run/node": "1.0.6"
   },
   "peerDependencies": {
     "@architect/architect": "^8.3.7"

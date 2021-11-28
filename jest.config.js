@@ -7,6 +7,11 @@ module.exports = {
       setupFiles: ["<rootDir>/packages/remix-react/__tests__/setupJest.js"]
     },
     {
+      displayName: "create-remix",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/create-remix/**/*-test.[jt]s?(x)"]
+    },
+    {
       displayName: "dev",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-dev/**/*-test.[jt]s?(x)"]

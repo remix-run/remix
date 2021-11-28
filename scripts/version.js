@@ -6,10 +6,21 @@ const Confirm = require("prompt-confirm");
 const jsonfile = require("jsonfile");
 const semver = require("semver");
 
-const packagesDir = path.resolve(__dirname, "../packages");
+let rootDir = path.resolve(__dirname, "..");
+let examplesDir = path.resolve(rootDir, "examples");
 
-function packageJson(packageName) {
-  return path.join(packagesDir, packageName, "package.json");
+let adapters = ["architect", "express", "netlify", "vercel"];
+let runtimes = ["cloudflare-workers", "node"];
+let core = ["dev", "server-runtime", "react"];
+let allPackages = [...adapters, ...runtimes, ...core, "serve"];
+
+/**
+ * @param {string} packageName
+ * @param {string} [directory]
+ * @returns {string}
+ */
+function packageJson(packageName, directory) {
+  return path.join(rootDir, directory, packageName, "package.json");
 }
 
 function ensureCleanWorkingDirectory() {
@@ -52,30 +63,29 @@ async function prompt(question) {
 }
 
 async function getPackageVersion(packageName) {
-  let file = packageJson(packageName);
+  let file = packageJson(packageName, "packages");
   let json = await jsonfile.readFile(file);
   return json.version;
 }
 
 async function updatePackageConfig(packageName, transform) {
-  let file = packageJson(packageName);
+  let file = packageJson(packageName, "packages");
   let json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
-function isPrereleaseVersion(version) {
-  return semver.prerelease(version) != null;
-}
+/**
+ * @param {string} example
+ * @param {(json: string) => any} transform
+ */
+async function updateExamplesPackageConfig(example, transform) {
+  let file = packageJson(example, "examples");
+  if (!(await fileExists(file))) return;
 
-async function updateChangesVersion(version, date) {
-  let file = path.resolve(__dirname, "../CHANGES.md");
-  let contents = await fsp.readFile(file, "utf-8");
-  let updated = contents.replace(
-    /## Unreleased/,
-    `## ${version} - ${date.toDateString()}`
-  );
-  await fsp.writeFile(file, updated);
+  let json = await jsonfile.readFile(file);
+  transform(json);
+  await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
 async function run(args) {
@@ -104,7 +114,7 @@ async function run(args) {
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
   // Update remix-dev, remix-server-runtime, and remix-react versions
-  for (let name of ["dev", "server-runtime", "react"]) {
+  for (let name of core) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
     });
@@ -114,7 +124,7 @@ async function run(args) {
   }
 
   // Update remix-cloudflare-workers and remix-node versions + server-runtime dep
-  for (let name of ["cloudflare-workers", "node"]) {
+  for (let name of runtimes) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/server-runtime"] = nextVersion;
@@ -125,7 +135,7 @@ async function run(args) {
   }
 
   // Update remix-* node server versions + remix-node dep
-  for (let name of ["architect", "express", "vercel", "netlify"]) {
+  for (let name of adapters) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
       config.dependencies["@remix-run/node"] = nextVersion;
@@ -150,12 +160,32 @@ async function run(args) {
     chalk.green(`  Updated @remix-run/serve to version ${nextVersion}`)
   );
 
-  if (!isPrereleaseVersion(nextVersion)) {
-    // Update CHANGES.md release date
-    await updateChangesVersion(nextVersion, new Date());
-    console.log(
-      chalk.green(`  Updated release version and date in CHANGES.md`)
-    );
+  // Update remix versions in the examples
+  let examples = await fsp.readdir(examplesDir);
+  if (examples.length > 0) {
+    for (let example of examples) {
+      let stat = await fsp.stat(path.join(examplesDir, example));
+      if (!stat.isDirectory()) continue;
+
+      await updateExamplesPackageConfig(example, config => {
+        if (config.dependencies["remix"]) {
+          config.dependencies["remix"] = nextVersion;
+        }
+
+        for (let package of allPackages) {
+          if (config.dependencies[`@remix-run/${package}`]) {
+            config.dependencies[`@remix-run/${package}`] = nextVersion;
+          }
+          if (config.devDependencies[`@remix-run/${package}`]) {
+            config.devDependencies[`@remix-run/${package}`] = nextVersion;
+          }
+        }
+      });
+
+      console.log(
+        chalk.green(`  Updated remix versions in ${example} example`)
+      );
+    }
   }
 
   // Commit and tag
@@ -174,3 +204,16 @@ run(process.argv.slice(2)).then(
     process.exit(1);
   }
 );
+
+/**
+ * @param {string} filePath
+ * @returns {Promise<boolean>}
+ */
+async function fileExists(filePath) {
+  try {
+    let stat = await fsp.stat(filePath);
+    return stat.code !== "ENOENT";
+  } catch (_) {
+    return false;
+  }
+}
