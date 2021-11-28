@@ -13,6 +13,7 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
+import { choosePort } from "../utils";
 
 export async function setup(platformArg?: string) {
   let platform = isSetupPlatform(platformArg)
@@ -168,9 +169,16 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   try {
     await watch(config, mode, {
-      onInitialBuild: () => {
-        server = app.listen(port, () => {
-          console.log(`Remix App Server started at http://localhost:${port}`);
+      onInitialBuild: async () => {
+        const selectedPort = await choosePort(+port);
+        if (selectedPort == null) {
+          // We couldn't find a port.
+          return;
+        }
+        server = app.listen(selectedPort, () => {
+          console.log(
+            `Remix App Server started at http://localhost:${selectedPort}`
+          );
         });
       }
     });
