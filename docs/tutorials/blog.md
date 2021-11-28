@@ -898,14 +898,25 @@ export default function NewPost() {
 }
 ```
 
-TypeScript is still mad, so let's add some invariants to make it happy.
+TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[4-8,13,22-24]
 //...
 import invariant from "tiny-invariant";
 
+type PostError = {
+  title?: boolean;
+  slug?: boolean;
+  markdown?: boolean;
+}
+
 export let action: ActionFunction = async ({ request }) => {
   // ...
+
+  let errors: PostError = {};
+  if (!title) errors.title = true;
+  if (!slug) errors.slug = true;
+  if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
     return errors;
