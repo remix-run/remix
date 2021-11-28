@@ -221,9 +221,7 @@ export default function App() {
       </head>
       <body>
         Hello world
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -307,9 +305,7 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -522,9 +518,7 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -1231,9 +1225,7 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -3943,9 +3935,7 @@ function Document({
       </head>
       <body>
         {children}
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -4110,9 +4100,7 @@ function Document({
       </head>
       <body>
         {children}
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -4826,9 +4814,7 @@ function Document({
       </head>
       <body>
         {children}
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -5492,9 +5478,7 @@ function Document({
       <body>
         {children}
         <Scripts />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
