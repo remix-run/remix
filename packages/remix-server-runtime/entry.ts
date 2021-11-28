@@ -7,7 +7,11 @@ import type {
 } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
-import type { RouteModules, EntryRouteModule } from "./routeModules";
+import type {
+  RouteModules,
+  EntryRouteModule,
+  ServerRouteModule
+} from "./routeModules";
 
 export interface EntryContext {
   componentDidCatchEmulator: ComponentDidCatchEmulator;
@@ -15,7 +19,7 @@ export interface EntryContext {
   matches: RouteMatch<EntryRoute>[];
   routeData: RouteData;
   actionData?: RouteData;
-  routeModules: RouteModules<EntryRouteModule>;
+  routeModules: RouteModules<EntryRouteModule | ServerRouteModule>;
   serverHandoffString?: string;
 }
 
