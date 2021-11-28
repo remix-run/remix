@@ -2062,7 +2062,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
 
   return (
     <div>
