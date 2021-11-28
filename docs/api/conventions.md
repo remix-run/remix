@@ -1004,4 +1004,4 @@ export default function Page() {
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [form]: ../remix/#form
 [form action]: ../remix/#form-action
-[link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[link-tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
