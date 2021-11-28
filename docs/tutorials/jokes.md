@@ -3644,7 +3644,7 @@ export async function createUserSession(
 
 ```tsx filename=app/routes/login.tsx lines=[7,86-93]
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, useSearchParams } from "remix";
+import { useActionData, Link, useSearchParams } from "remix";
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
