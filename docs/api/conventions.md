@@ -488,7 +488,7 @@ export function CatchBoundary() {
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
-Actions have the the very same API as loaders, the only difference is when they are called.
+Actions have the same API as loaders, the only difference is when they are called.
 
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
