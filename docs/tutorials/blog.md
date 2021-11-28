@@ -231,7 +231,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
