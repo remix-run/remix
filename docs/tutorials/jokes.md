@@ -7,6 +7,8 @@ order: 2
 
 You want to learn Remix? You're in the right place. Let's build [Remix Jokes](https://remix-jokes.lol)!
 
+<docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
+
 [![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
@@ -25,7 +27,9 @@ We'll be linking to various docs (Remix docs as well as web docs on [MDN](https:
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when you're using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
 
-💿 Hello, I'm Rachel the Remix Disc. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. I hope you enjoy the tutorial!
+<docs-info>💿 Hello, I'm Rachel the Remix Disc. I'll show up whenever you have to actually _do_ something.</docs-info>
+
+<docs-warning>Feel free to explore as you go, but if you deviate from the tutorial too much (like trying to deploy before getting to that step for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
 
 ## Outline
 
@@ -1176,9 +1180,9 @@ nav ul a:hover {
 
 </details>
 
-💿 Also, download [the font](/jokes-tutorial/baloo/baloo.woff) and [it's license](/jokes-tutorial/baloo/License.txt) and put them in `public/fonts/baloo`.
+💿 Also, download <a href="/jokes-tutorial/baloo/baloo.woff" data-noprefetch target="_blank">the font</a> and <a href="/jokes-tutorial/baloo/License.txt" data-noprefetch target="_blank">it's license</a> and put them in `public/fonts/baloo`.
 
-💿 While you're downloading assets, you may as well download [the social image](/jokes-tutorial/social.png) and put that at `public/social.png`. You'll need that later.
+💿 While you're downloading assets, you may as well download <a href="/jokes-tutorial/social.png" data-noprefetch target="_blank">the social image</a> and put that at `public/social.png`. You'll need that later.
 
 💿 Add the `links` export to `app/root.tsx` and `app/routes/jokes.tsx` to bring in some CSS to make the page look nice (note: each will have its own CSS file(s)). You can look at the CSS and add some structure to your JSX elements to make things look appealing. I'm going to add some links too.
 
@@ -2775,9 +2779,9 @@ Here's what we need in that file to get started:
 
 <details>
 
-<summary>app/utils/session.server.tsx</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.tsx
+```tsx filename=app/utils/session.server.ts
 import bcrypt from "bcrypt";
 import { db } from "./db.server";
 
@@ -2884,7 +2888,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-44,46-57]
+```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -2921,7 +2925,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -2991,9 +2998,9 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <details>
 
-<summary>app/utils/session.server.tsx</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.tsx lines=[46-48,50-55,57-70]
+```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3030,7 +3037,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3239,9 +3249,9 @@ We should probably give people the ability to see that they're logged in and a w
 
 <details>
 
-<summary>app/utils/session.server.tsx</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.tsx lines=[72-86,88-97]
+```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3278,7 +3288,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3560,7 +3573,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -4756,13 +4772,13 @@ This is why Remix has the [`meta`](../api/conventions#meta) export. Why don't yo
 
 But before you get started, remember that we're in charge of rendering everything from the `<html>` to the `</html>` which means we need to make sure these `meta` tags are rendered in the `<head>` of the `<html>`. This is why Remix gives us a [`<Meta />` component](../api/remix#meta-links-scripts).
 
-💿 Add the `<Meta />` component to `app/root.tsx`, and add the `meta` export to the routes mentioned above.
+💿 Add the `<Meta />` component to `app/root.tsx`, and add the `meta` export to the routes mentioned above. The `<Meta />` component needs to be placed above the existing `<title>` tag to be able to overwrite it when provided.
 
 <details>
 
 <summary>app/root.tsx</summary>
 
-```ts filename=app/root.tsx lines=[1,7,33-45,59]
+```ts filename=app/root.tsx lines=[1,7,33-45,58]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
@@ -4820,8 +4836,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
@@ -5485,8 +5501,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
