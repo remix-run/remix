@@ -49,8 +49,6 @@ import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
-export { ScrollRestoration } from "./scroll-restoration";
-
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
