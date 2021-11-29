@@ -123,7 +123,9 @@ export default function Index() {
       {posts.map(post => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
-          {post.description && <p>{post.description}</p>}
+          {post.description ? (
+            <p>{post.description}</p>
+          ) : null}
         </li>
       ))}
     </ul>

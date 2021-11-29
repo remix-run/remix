@@ -93,11 +93,11 @@ export default function Tasks() {
 
       <hr />
       <h2>Tasks</h2>
-      {searchParams.has("q") && (
+      {searchParams.has("q") ? (
         <p>
           Filtered by search: <i>{searchParams.get("q")}</i>
         </p>
-      )}
+      ) : null}
 
       {tasks.map(task => (
         <TaskItem key={task.id} task={task} />
@@ -154,14 +154,14 @@ function TaskItem({ task }: { task: Task }) {
         }
       >
         {renderedTask.complete ? "Mark Incomplete" : "Mark Complete"}
-        {toggleComplete.state === "submitting" && (
+        {toggleComplete.state === "submitting" ? (
           <ProgressBar key={toggleComplete.submission.key} total={task.delay} />
-        )}
+        ) : null}
       </button>{" "}
       {task.name}{" "}
-      {toggleComplete.type === "done" && "error" in toggleComplete.data && (
+      {toggleComplete.type === "done" && "error" in toggleComplete.data ? (
         <span style={{ color: "red" }}>Error! {toggleComplete.data.error}</span>
-      )}
+      ) : null}
     </toggleComplete.Form>
   );
 }
