@@ -273,13 +273,15 @@ export default function Signup() {
       <Form method="post">
         <p>
           <input type="text" name="email" />
-          {errors?.email && <span>{errors.email}</span>}
+          {errors?.email ? (
+            <span>{errors.email}</span>
+          ) : null}
         </p>
         <p>
           <input type="text" name="password" />
-          {errors?.password && (
+          {errors?.password ? (
             <span>{errors.password}</span>
-          )}
+          ) : null}
         </p>
         <p>
           <button type="submit">Sign up</button>
@@ -399,9 +401,9 @@ function UserPreferences() {
         <input type="checkbox" name="darkMode" value="on" />{" "}
         Dark Mode
       </label>
-      {transition.state === "submitting" && (
+      {transition.state === "submitting" ? (
         <p>Saving...</p>
-      )}
+      ) : null}
     </Form>
   );
 }
@@ -748,12 +750,13 @@ function NewsletterSignup() {
         </button>
       </p>
 
-      {newsletter.type === "done" &&
-        (newsletter.data.ok ? (
+      {newsletter.type === "done" ? (
+        newsletter.data.ok ? (
           <p>Thanks for subscribing!</p>
         ) : newsletter.data.error ? (
           <p data-error>{newsletter.data.error}</p>
-        ) : null)}
+        ) : null
+      ) : null}
     </newsletter.Form>
   );
 }
