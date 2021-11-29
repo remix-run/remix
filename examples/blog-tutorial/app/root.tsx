@@ -8,7 +8,7 @@ import {
   ScrollRestoration,
   useCatch,
   Link,
-  NavLink,
+  NavLink
 } from "remix";
 import type { LinksFunction } from "remix";
 
@@ -22,7 +22,7 @@ import darkStylesUrl from "~/styles/dark.css";
  * every route in the app, but individual routes can include their own links
  * that are automatically unloaded when a user navigates away from the route.
  *
- * https://docs.remix.run/v0.21/api/app/#links
+ * https://remix.run/api/conventions#links
  */
 export let links: LinksFunction = () => {
   return [
@@ -30,9 +30,9 @@ export let links: LinksFunction = () => {
     {
       rel: "stylesheet",
       href: darkStylesUrl,
-      media: "(prefers-color-scheme: dark)",
+      media: "(prefers-color-scheme: dark)"
     },
-    { rel: "stylesheet", href: deleteMeRemixStyles },
+    { rel: "stylesheet", href: deleteMeRemixStyles }
   ];
 };
 
@@ -53,7 +53,7 @@ export default function App() {
 
 function Document({
   children,
-  title,
+  title
 }: {
   children: React.ReactNode;
   title?: string;

@@ -191,13 +191,13 @@ export default function NewProject() {
 }
 ```
 
-And that's it! Assuming `createProject` does what we want it to, that's all you have to do. Note that no matter what kind of SPA you may have built in the past, you always need a server side action and a form to get data from the user. The difference with Remix is **that's all you need** (and that's how the web used to be, too.)
+And that's it! Assuming `createProject` does what we want it to, that's all you have to do. Note that no matter what kind of SPA you may have built in the past, you always need a server-side action and a form to get data from the user. The difference with Remix is **that's all you need** (and that's how the web used to be, too.)
 
 Of course, we started complicating things to try to create better user experiences than the default browser behavior. Keep going, we'll get there, but we won’t have to change any of the code we've already written to get the core functionality.
 
 ### Form Validation
 
-It's common to validate forms both clientside and serverside. It's also (unfortunately) common to only validate clientside, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
+It's common to validate forms both client-side and server-side. It's also (unfortunately) common to only validate client-side, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
 
 We know, we know, you want to animate in nice validation errors and stuff. We'll get to that. But right now we're just building a basic HTML form and user flow. We'll keep it simple first, then make it fancy.
 
@@ -498,7 +498,7 @@ Boom! Fancy UI without having to change anything about how we communicate with t
 
 ### Review
 
-- First we built the project form without JavaScript in mind. A simple form, posting to a server side action. Welcome to 1998.
+- First we built the project form without JavaScript in mind. A simple form, posting to a server-side action. Welcome to 1998.
 
 - Once that worked, we used JavaScript to submit the form by changing `<form>` to `<Form>`, but we didnt' have to do anything else!
 
