@@ -17,7 +17,7 @@ export let action: ActionFunction = async ({ request }) => {
   // over the network. Clientside validation is fine, but you definitely need it
   // server side.  If there's a problem, return the the data and the component
   // can render it.
-  if (typeof answer !== "string") {
+  if (!answer || typeof answer !== "string") {
     return json("Come on, at least try!", { status: 400 });
   }
 

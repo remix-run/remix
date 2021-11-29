@@ -328,7 +328,7 @@ export async function getPosts() {
 
 This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
 
-<docs-error>If you did not use the React App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
+<docs-error>If you did not use the Remix App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
@@ -860,7 +860,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,12-13,19-20,25-26]
+```tsx filename=app/routes/admin/new.tsx lines=[1,12-15,21-22,27-30]
 import { useActionData, Form, redirect } from "remix";
 
 // ...
@@ -873,20 +873,24 @@ export default function NewPost() {
       <p>
         <label>
           Post Title:{" "}
-          {errors?.title && <em>Title is required</em>}
+          {errors?.title ? (
+            <em>Title is required</em>
+          ) : null}
           <input type="text" name="title" />
         </label>
       </p>
       <p>
         <label>
           Post Slug:{" "}
-          {errors?.slug && <em>Slug is required</em>}
+          {errors?.slug ? <em>Slug is required</em> : null}
           <input type="text" name="slug" />
         </label>
       </p>
       <p>
         <label htmlFor="markdown">Markdown:</label>{" "}
-        {errors?.markdown && <em>Markdown is required</em>}
+        {errors?.markdown ? (
+          <em>Markdown is required</em>
+        ) : null}
         <br />
         <textarea rows={20} name="markdown" />
       </p>
