@@ -452,7 +452,7 @@ node_modules
 /.cache
 /build
 /public/build
-/app/.tailwind.css
+/app/tailwind.css
 ```
 
 If you're using VSCode, it's recommended you install the [tailwind intellisense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
