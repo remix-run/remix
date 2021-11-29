@@ -231,7 +231,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
@@ -692,6 +692,10 @@ Maybe this will help, let's add the "/admin/new" route and see what happens when
 
 💿 Create the `app/routes/admin/new.tsx` route
 
+```sh
+touch app/routes/admin/new.tsx
+```
+
 ```tsx filename=app/routes/admin/new.tsx
 export default function NewPost() {
   return <h2>New Post</h2>;
@@ -757,7 +761,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-9]
+```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
 import { redirect, Form } from "remix";
 import { createPost } from "~/post";
 
