@@ -555,9 +555,8 @@ This tells you what the next location is going to be. Its most useful when match
 
 For example, this `Link` knows when it's page is loading and it's about to become active:
 
-```tsx [7-9]
-import { useResolvedPath } from "react-router-dom";
-import { Link } from "remix";
+```tsx [6-8]
+import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
   const transition = useTransition();
