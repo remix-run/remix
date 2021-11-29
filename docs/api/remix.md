@@ -235,7 +235,7 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [19, 28, 36, 40-42]
+```tsx [21, 30, 38-40, 44-46]
 import { redirect, json, Form, useActionData } from "remix";
 
 export async function action({ request }) {
