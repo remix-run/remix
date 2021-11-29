@@ -162,7 +162,7 @@ export default function NewProject() {
 
 When the user clicks "Create Project" the UI immediately changes to the `<ProjectView />` while Remix posts the form to the server. When the server succeeds, the app is redirected to the project route. Because they show the same component (`<ProjectView>`), the only thing the user might notice is the URL changed.
 
-One of the hardest parts about implementing optimistic UI is how to handle failures and notify the user. In Remix this happens automatically. In the unlikely event that our server side action fails, Remix will automatically render the nearest [error boundary][error-boundary] to tell the user something is wrong. The action won't even make it to the `redirect` so the user didn't actually go anywhere. You can even export an error boundary on the new project route to have more contextual information, but there's nothign wrong with letting some other boundary catch it.
+One of the hardest parts about implementing optimistic UI is how to handle failures and notify the user. In Remix this happens automatically. In the unlikely event that our server-side action fails, Remix will automatically render the nearest [error boundary][error-boundary] to tell the user something is wrong. The action won't even make it to the `redirect` so the user didn't actually go anywhere. You can even export an error boundary on the new project route to have more contextual information, but there's nothign wrong with letting some other boundary catch it.
 
 ## Maintain Form State
 
@@ -222,9 +222,9 @@ export default function NewProject() {
 
 Now in the rare case of an error on the server, the UI reverts back to the form, all the state is still there and they have an error message. Nearly every other time, however, the UI responds instantly to the user, even though it's doing work in the background.
 
-## Clientside Validation
+## Client-side Validation
 
-For this to work best, you'll want a bit of client side validation so that form validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
+For this to work best, you'll want a bit of client-side validation so that form validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
 
 ```js filename=app/routes/projects/new.js lines=[7-8]
 <Form method="post">

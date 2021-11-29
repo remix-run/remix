@@ -38,7 +38,7 @@ You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hostin
 
 ### `<Link>`
 
-This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client side routing in Remix.
+This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client-side routing in Remix.
 
 It wraps React Router's Link with some extra behavior around resource prefetching.
 
@@ -183,7 +183,7 @@ It must be the last element on the page, right before the `<Scripts/>` tag:
 </html>
 ```
 
-In order to avoid (usually) the client side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
+In order to avoid (usually) the client-side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
 
 ### `useLoaderData`
 
@@ -294,7 +294,7 @@ export default function Signup() {
 
 When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
 
-<docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
+<docs-info>Remix client-side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
 Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
 

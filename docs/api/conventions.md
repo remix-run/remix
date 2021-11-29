@@ -140,7 +140,7 @@ import Remix from "@remix-run/react/browser";
 ReactDOM.hydrate(<Remix />, document);
 ```
 
-As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.
+As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client-side libraries, setup things like `window.history.scrollRestoration`, etc.
 
 ### entry.server.tsx
 
@@ -148,7 +148,7 @@ Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering o
 
 This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
 
-You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occured.
+You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client-side hydration has occured.
 
 Here's a basic example:
 
@@ -191,7 +191,7 @@ export let handleDataRequest: HandleDataRequestFunction = (
 
 ## Route Module API
 
-A route in Remix can be used for many things. Usually they’re used for the user interface of your app, like a React component with server side lifecycle hooks. But they can also serve as generic routes for any kind of resource (like dynamic CSS or social images).
+A route in Remix can be used for many things. Usually they’re used for the user interface of your app, like a React component with server-side lifecycle hooks. But they can also serve as generic routes for any kind of resource (like dynamic CSS or social images).
 
 It's important to read [Route Module Constraints](../constraints/).
 
@@ -827,7 +827,7 @@ This is almost always used on conjunction with `useMatches`. To see what kinds o
 
 <docs-warning>This feature is an <i>additional</i> optimization. In general, Remix's design does a great job of only calling the loaders that the next page needs and ensuring your UI is in sync with your server. When you use this feature you risk your UI getting out of sync with your server. Use with caution!</docs-warning>
 
-This function lets apps optimize which routes should be reloaded on some client side transitions.
+This function lets apps optimize which routes should be reloaded on some client-side transitions.
 
 ```ts
 import type { ShouldReloadFunction } from "remix";
@@ -847,7 +847,7 @@ export let unstable_shouldReload: ShouldReloadFunction = ({
 }) => false; // or `true`;
 ```
 
-During client side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
+During client-side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
 
 This function lets apps further optimize by returning `false` when Remix is about to reload a route. There are three cases when Remix will reload a route and you have the opportunity to optimize:
 
