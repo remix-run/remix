@@ -4770,7 +4770,7 @@ This is why Remix has the [`meta`](../api/conventions#meta) export. Why don't yo
 
 But before you get started, remember that we're in charge of rendering everything from the `<html>` to the `</html>` which means we need to make sure these `meta` tags are rendered in the `<head>` of the `<html>`. This is why Remix gives us a [`<Meta />` component](../api/remix#meta-links-scripts).
 
-💿 Add the `<Meta />` component to `app/root.tsx`, and add the `meta` export to the routes mentioned above.
+💿 Add the `<Meta />` component to `app/root.tsx`, and add the `meta` export to the routes mentioned above. The `<Meta />` component needs to be placed above the existing `<title>` tag to be able to overwrite it when provided.
 
 <details>
 
