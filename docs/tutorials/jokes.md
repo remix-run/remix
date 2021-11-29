@@ -2975,6 +2975,8 @@ case "login": {
 </details>
 
 I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the badies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
+  
+💿 Update .env file with SESSION_SECRET (with any value you like).
 
 With that, pop open your [Network tab](https://developer.chrome.com/docs/devtools/network/reference/), go to [`/login`](http://localhost:3000/login) and enter `kody` and `twixrox` and check the response headers in the network tab. Should look something like this:
 
@@ -2992,13 +2994,13 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
-💿 Update `app/utils/session.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
+💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
 
 <details>
 
-<summary>app/utils/session.ts</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[49-51,53-58,60-73]
+```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3247,9 +3249,9 @@ We should probably give people the ability to see that they're logged in and a w
 
 <details>
 
-<summary>app/utils/session.ts</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[75-89,91-100]
+```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3656,9 +3658,9 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[7,86-93]
+```tsx filename=app/routes/login.tsx lines=[2,7,86-93]
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, useSearchParams } from "remix";
+import { useActionData, useSearchParams, Link } from "remix";
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
