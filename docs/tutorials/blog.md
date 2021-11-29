@@ -692,6 +692,10 @@ Maybe this will help, let's add the "/admin/new" route and see what happens when
 
 💿 Create the `app/routes/admin/new.tsx` route
 
+```sh
+touch app/routes/admin/new.tsx
+```
+
 ```tsx filename=app/routes/admin/new.tsx
 export default function NewPost() {
   return <h2>New Post</h2>;
