@@ -1,6 +1,5 @@
-import { Outlet } from "react-router-dom";
 import type { LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
+import { Link, Outlet, useLoaderData } from "remix";
 
 interface Member {
   id: string;

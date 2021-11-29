@@ -1,6 +1,5 @@
 import type { LoaderFunction, ActionFunction, MetaFunction } from "remix";
-import { useLoaderData, useCatch, redirect } from "remix";
-import { useParams } from "react-router-dom";
+import { useCatch, useLoaderData, useParams, redirect } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
