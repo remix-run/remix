@@ -144,13 +144,11 @@ remix-jokes
 │   │   │   │   └── index.tsx
 │   │   │   └── params.tsx
 │   │   └── index.tsx
-│   ├── styles
-│   │   ├── dark.css
-│   │   ├── demos
-│   │   │   ├── about.css
-│   │   │   └── remix.css
-│   │   └── global.css
-│   └── utils.server.tsx
+│   └── styles
+│       ├── dark.css
+│       ├── demos
+│       │   └── about.css
+│       └── global.css
 ├── package-lock.json
 ├── package.json
 ├── public
@@ -207,7 +205,6 @@ Feel free to read a bit of what's in there and explore the code if you like. I'l
 
 - `app/routes`
 - `app/styles`
-- `app/utils.server.tsx`
 
 💿 Replace the contents of `app/root.tsx` with this:
 

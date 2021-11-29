@@ -55,7 +55,7 @@ export default function App() {
 
 All of your data loading will still work on the server render, and all of your `<Link>`s render normal `<a>` underneath, so they will continue to work.
 
-On any page, at anytime, you can flip between plain HTML and full clientside transitions.
+On any page, at anytime, you can flip between plain HTML and full client-side transitions.
 
 If you need one tiny bit of interactivity, use a `<script dangerouslySetInnerHTML>`.
 

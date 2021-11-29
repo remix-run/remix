@@ -103,7 +103,7 @@ If a route is not called by Remix UI (like `<Link>` or `useFetcher`), and does n
 
 Here are a handful of use cases to get you thinking.
 
-- JSON API for a mobile app that reuses server side code with the Remix UI
+- JSON API for a mobile app that reuses server-side code with the Remix UI
 - Dynamically generating PDFs
 - Dynamically generating social images for blog posts or other pages
 - Webhooks for other services
