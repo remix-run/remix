@@ -27,7 +27,9 @@ We'll be linking to various docs (Remix docs as well as web docs on [MDN](https:
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when you're using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
 
-💿 Hello, I'm Rachel the Remix Disc. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. I hope you enjoy the tutorial!
+<docs-info>💿 Hello, I'm Rachel the Remix Disc. I'll show up whenever you have to actually _do_ something.</docs-info>
+
+<docs-warning>Feel free to explore as you go, but if you deviate from the tutorial too much (like trying to deploy before getting to that step for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
 
 ## Outline
 
@@ -2777,9 +2779,9 @@ Here's what we need in that file to get started:
 
 <details>
 
-<summary>app/utils/session.server.tsx</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.tsx
+```tsx filename=app/utils/session.server.ts
 import bcrypt from "bcrypt";
 import { db } from "./db.server";
 
@@ -2886,7 +2888,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-44,46-57]
+```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -2923,7 +2925,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -2993,7 +2998,7 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <summary>app/utils/session.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[46-48,50-55,57-70]
+```ts filename=app/utils/session.ts lines=[49-51,53-58,60-73]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3030,7 +3035,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3241,7 +3249,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[72-86,88-97]
+```ts filename=app/utils/session.ts lines=[75-89,91-100]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3278,7 +3286,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3560,7 +3571,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
