@@ -3368,9 +3368,9 @@ import {
   Link,
   LinksFunction,
   LoaderFunction,
+  Outlet,
   useLoaderData
 } from "remix";
-import { Outlet } from "remix";
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";
@@ -4762,7 +4762,7 @@ But before you get started, remember that we're in charge of rendering everythin
 
 <summary>app/root.tsx</summary>
 
-```ts filename=app/root.tsx lines=[1,7,33-45,59]
+```ts filename=app/root.tsx lines=[1,7,33-45,58]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
@@ -4820,8 +4820,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
@@ -5485,8 +5485,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
@@ -6081,4 +6081,4 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 
 ## Conclusion
 
-Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/docs/en/v1/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journy!
+Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journy!
