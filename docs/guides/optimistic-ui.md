@@ -214,7 +214,7 @@ export default function NewProject() {
         <textarea name="description" id="description" />
         <button type="submit">Create Project</button>
       </Form>
-      {error && <p>{error}</p>}
+      {error ? <p>{error}</p> : null}
     </>
   );
 }
