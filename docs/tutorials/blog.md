@@ -231,7 +231,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
@@ -691,6 +691,10 @@ Hang with us for a minute, index routes can be confusing at first. Just know tha
 Maybe this will help, let's add the "/admin/new" route and see what happens when we click the link.
 
 💿 Create the `app/routes/admin/new.tsx` route
+
+```sh
+touch app/routes/admin/new.tsx
+```
 
 ```tsx filename=app/routes/admin/new.tsx
 export default function NewPost() {
