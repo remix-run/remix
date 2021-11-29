@@ -211,7 +211,7 @@ This hook returns the JSON parsed data from your route action. It returns `undef
 import React from "react";
 import { useActionData } from "remix";
 
-export function action({ request }) {
+export async function action({ request }) {
   let body = await request.formData();
   let name = body.get("visitorsName");
   return { message: `Hello, ${name}` };
@@ -238,7 +238,7 @@ The most common use-case for this hook is form validation errors. If the form is
 ```tsx [19, 28, 36, 40-42]
 import { redirect, json, Form, useActionData } from "remix";
 
-export function action({ request }) {
+export async function action({ request }) {
   let form = await request.formData();
   let email = form.get("email");
   let password = form.get("password");
@@ -709,7 +709,7 @@ Perhaps you have a persistent newsletter signup at the bottom of every page on y
 
 ```tsx
 // routes/newsletter/subscribe.js
-export function action({ request }) {
+export async function action({ request }) {
   let email = (await request.formData()).get("email");
   try {
     await subscribe(email);
@@ -1267,7 +1267,7 @@ This is shortcut for sending 30x responses.
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
-export let action: ActionFunction = () => {
+export let action: ActionFunction = async () => {
   let userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
