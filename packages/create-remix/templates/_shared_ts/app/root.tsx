@@ -37,7 +37,7 @@ export default function App() {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#errorboundary
+// https://remix.run/api/conventions#errorboundary
 export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
   return (
@@ -57,7 +57,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#catchboundary
+// https://remix.run/api/conventions#catchboundary
 export function CatchBoundary() {
   let caught = useCatch();
 
