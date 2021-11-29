@@ -24,7 +24,7 @@ npm run dev
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there. 
 
-If your application is not running properly at https://localhost:3000(https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
+If your application is not running properly at [https://localhost:3000](https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
 
 ## Your First Route
 
