@@ -18,9 +18,9 @@
   },
   "devDependencies": {
     "@remix-run/dev": "1.1.0",
-    "@types/react": "^17.0.24",
-    "@types/react-dom": "^17.0.9",
-    "typescript": "^4.1.2"
+    "@types/react": "^17.0.37",
+    "@types/react-dom": "^17.0.11",
+    "typescript": "^4.5.2"
   },
   "engines": {
     "node": ">=14"

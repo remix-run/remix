@@ -20,10 +20,10 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@types/react": "^17.0.24",
-    "@types/react-dom": "^17.0.9",
+    "@types/react": "^17.0.37",
+    "@types/react-dom": "^17.0.11",
     "fs-extra": "^10.0.0",
-    "pm2": "^4.5.1"
+    "pm2": "^4.5.6"
   },
   "sideEffects": false
 }

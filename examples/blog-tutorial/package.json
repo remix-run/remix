@@ -13,7 +13,7 @@
     "@remix-run/react": "1.1.0",
     "@remix-run/serve": "1.1.0",
     "front-matter": "^4.0.2",
-    "marked": "^4.0.4",
+    "marked": "^4.0.5",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "1.1.0",
@@ -22,9 +22,9 @@
   "devDependencies": {
     "@remix-run/dev": "1.1.0",
     "@types/marked": "^4.0.1",
-    "@types/react": "^17.0.24",
-    "@types/react-dom": "^17.0.9",
-    "typescript": "^4.1.2"
+    "@types/react": "^17.0.37",
+    "@types/react-dom": "^17.0.11",
+    "typescript": "^4.5.2"
   },
   "engines": {
     "node": ">=14"

@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@remix-run/serve": "*",
-    "@remix-run/vercel": "*"
+    "@remix-run/vercel": "*",
+    "@vercel/node": "^1.12.1"
   }
 }

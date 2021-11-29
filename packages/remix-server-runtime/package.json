@@ -14,9 +14,9 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@types/cookie": "^0.4.0",
+    "@types/cookie": "^0.4.1",
     "cookie": "^0.4.1",
-    "jsesc": "^3.0.1",
+    "jsesc": "^3.0.2",
     "react-router-dom": "^6.2.1",
     "set-cookie-parser": "^2.4.8",
     "source-map": "^0.7.3"
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@types/jsesc": "^2.5.1",
-    "@types/set-cookie-parser": "^2.4.1"
+    "@types/set-cookie-parser": "^2.4.2"
   },
   "sideEffects": false
 }

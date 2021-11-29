@@ -12,16 +12,16 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/node": "1.1.0",
-    "@remix-run/server-runtime": "1.1.0"
+    "@remix-run/node": "1.1.1",
+    "@remix-run/server-runtime": "1.1.1"
   },
   "peerDependencies": {
     "@vercel/node": "^1.8.3"
   },
   "devDependencies": {
-    "@types/supertest": "^2.0.10",
-    "@vercel/node": "^1.8.3",
-    "supertest": "^6.1.5",
-    "node-mocks-http": "^1.10.1"
+    "@types/supertest": "^2.0.11",
+    "@vercel/node": "^1.12.1",
+    "supertest": "^6.2.0",
+    "node-mocks-http": "^1.11.0"
   }
 }

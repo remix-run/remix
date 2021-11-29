@@ -12,8 +12,8 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/node": "1.1.0",
-    "@remix-run/server-runtime": "1.1.0"
+    "@remix-run/node": "1.1.1",
+    "@remix-run/server-runtime": "1.1.1"
   },
   "peerDependencies": {
     "@netlify/functions": "^0.10.0"

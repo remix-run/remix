@@ -12,8 +12,8 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/server-runtime": "1.1.0",
-    "@types/busboy": "^0.3.1",
+    "@remix-run/server-runtime": "1.1.1",
+    "@types/busboy": "^0.3.2",
     "@types/node-fetch": "^2.5.12",
     "@web-std/file": "^3.0.0",
     "abort-controller": "^3.0.0",
@@ -21,12 +21,12 @@
     "busboy": "^0.3.1",
     "cookie-signature": "^1.1.0",
     "form-data": "^4.0.0",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.6",
     "source-map": "^0.7.3"
   },
   "devDependencies": {
     "@types/blob-stream": "^0.1.30",
-    "@types/cookie-signature": "^1.0.3"
+    "@types/cookie-signature": "^1.0.4"
   },
   "sideEffects": false
 }

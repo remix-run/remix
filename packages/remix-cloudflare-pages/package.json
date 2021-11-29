@@ -14,13 +14,13 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/server-runtime": "1.1.0"
+    "@remix-run/server-runtime": "1.1.1"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^3.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.2.0",
+    "@cloudflare/workers-types": "^3.3.0",
     "@types/mime": "^2.0.3"
   }
 }

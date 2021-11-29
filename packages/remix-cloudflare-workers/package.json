@@ -14,8 +14,8 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/server-runtime": "1.1.0"
+    "@cloudflare/kv-asset-handler": "^0.2.0",
+    "@remix-run/server-runtime": "1.1.1"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^2.2.2"
