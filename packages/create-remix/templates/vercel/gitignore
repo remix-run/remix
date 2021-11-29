@@ -5,4 +5,4 @@ node_modules
 .output
 
 public/build
-api/build
+api/_build
