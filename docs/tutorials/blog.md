@@ -34,7 +34,7 @@ If your application is not running properly at [https://localhost:3000](https://
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-There's a bit going on in the file, find into the `Layout` component and right after the link to "Home", add a new link to "/posts"
+There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, and right after the link to "Home", add a new link to "/posts"
 
 💿 Add a link to posts in `app/root.tsx`
 
