@@ -222,9 +222,9 @@ export default function NewProject() {
 
 Now in the rare case of an error on the server, the UI reverts back to the form, all the state is still there and they have an error message. Nearly every other time, however, the UI responds instantly to the user, even though it's doing work in the background.
 
-## Clientside Validation
+## Client-side Validation
 
-For this to work best, you'll want a bit of client side validation so that form validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
+For this to work best, you'll want a bit of client-side validation so that form validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
 
 ```js filename=app/routes/projects/new.js lines=[7-8]
 <Form method="post">

@@ -38,7 +38,7 @@ You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hostin
 
 ### `<Link>`
 
-This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client side routing in Remix.
+This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client-side routing in Remix.
 
 It wraps React Router's Link with some extra behavior around resource prefetching.
 
@@ -183,7 +183,7 @@ It must be the last element on the page, right before the `<Scripts/>` tag:
 </html>
 ```
 
-In order to avoid (usually) the client side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
+In order to avoid (usually) the client-side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
 
 ### `useLoaderData`
 
@@ -211,7 +211,7 @@ This hook returns the JSON parsed data from your route action. It returns `undef
 import React from "react";
 import { useActionData } from "remix";
 
-export function action({ request }) {
+export async function action({ request }) {
   let body = await request.formData();
   let name = body.get("visitorsName");
   return { message: `Hello, ${name}` };
@@ -238,7 +238,7 @@ The most common use-case for this hook is form validation errors. If the form is
 ```tsx [19, 28, 36, 40-42]
 import { redirect, json, Form, useActionData } from "remix";
 
-export function action({ request }) {
+export async function action({ request }) {
   let form = await request.formData();
   let email = form.get("email");
   let password = form.get("password");
@@ -294,7 +294,7 @@ export default function Signup() {
 
 When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
 
-<docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
+<docs-info>Remix client-side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
 Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
 
@@ -709,7 +709,7 @@ Perhaps you have a persistent newsletter signup at the bottom of every page on y
 
 ```tsx
 // routes/newsletter/subscribe.js
-export function action({ request }) {
+export async function action({ request }) {
   let email = (await request.formData()).get("email");
   try {
     await subscribe(email);
@@ -1267,7 +1267,7 @@ This is shortcut for sending 30x responses.
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
-export let action: ActionFunction = () => {
+export let action: ActionFunction = async () => {
   let userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
