@@ -1612,7 +1612,7 @@ import { db } from "~/utils/db.server";
 type LoaderData = { users: Array<User> };
 export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
-    users: await prisma.user.findMany()
+    users: await db.user.findMany()
   };
   return { data };
 };
