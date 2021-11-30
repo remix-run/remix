@@ -342,6 +342,8 @@ export function getDataLinkHrefs(
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
         searchParams.append("_data", match.route.id);
+        searchParams.sort(); // Improves caching
+
         return `${pathname}?${searchParams}`;
       })
   );
