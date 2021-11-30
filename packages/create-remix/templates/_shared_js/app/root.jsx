@@ -36,7 +36,7 @@ export default function App() {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#errorboundary
+// https://remix.run/api/conventions#errorboundary
 export function ErrorBoundary({ error }) {
   console.error(error);
   return (
@@ -56,7 +56,7 @@ export function ErrorBoundary({ error }) {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#catchboundary
+// https://remix.run/api/conventions#catchboundary
 export function CatchBoundary() {
   let caught = useCatch();
 
@@ -106,7 +106,7 @@ function Document({ children, title }) {
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
       </body>
     </html>
   );
