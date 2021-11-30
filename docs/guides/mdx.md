@@ -87,8 +87,7 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { useLoaderData } from "remix";
-import { Link } from "react-router-dom";
+import { Link, useLoaderData } from "remix";
 
 // Import all your posts from the app/routes/posts directory. Since these are
 // regular route modules, they will all be available for individual viewing
@@ -124,7 +123,9 @@ export default function Index() {
       {posts.map(post => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
-          {post.description && <p>{post.description}</p>}
+          {post.description ? (
+            <p>{post.description}</p>
+          ) : null}
         </li>
       ))}
     </ul>
