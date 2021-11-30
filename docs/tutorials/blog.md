@@ -836,10 +836,8 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[9-12,14-16]
 //...
-import invariant from "tiny-invariant";
-
 export let action: ActionFunction = async ({ request }) => {
   let formData = await request.formData();
 
@@ -906,7 +904,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[2,11-14,16-18]
 //...
 import invariant from "tiny-invariant";
 
