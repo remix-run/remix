@@ -97,7 +97,7 @@ There are a few conventions that Remix uses you should be aware of.
 - **`app/routes/*.{js,jsx,ts,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
 - **`app/routes/{folder}/*.tsx`**: Folders inside of routes will create nested URLs.
 - **`app/routes/{folder}` with `app/routes/{folder}.tsx`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
-- **Dots in route filesnames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
+- **Dots in route filenames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
 - **`app/routes/index.tsx`**: Routes named "index" will render when the parent layout route's path is matched exactly.
 - **`$param`**: The dollar sign denotes a dynamic segment of the URL. It will be parsed and passed to your loaders and routes.
 
@@ -140,7 +140,7 @@ import Remix from "@remix-run/react/browser";
 ReactDOM.hydrate(<Remix />, document);
 ```
 
-As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.
+As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client-side libraries, setup things like `window.history.scrollRestoration`, etc.
 
 ### entry.server.tsx
 
@@ -148,7 +148,7 @@ Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering o
 
 This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
 
-You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occured.
+You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occurred.
 
 Here's a basic example:
 
@@ -191,7 +191,7 @@ export let handleDataRequest: HandleDataRequestFunction = (
 
 ## Route Module API
 
-A route in Remix is can used for many things. Usually they’re used for the user interface of your app, like a React component with server side lifecycle hooks. But they can also serve as generic routes for any kind of resource (like dynamic CSS or social images).
+A route in Remix can be used for many things. Usually they’re used for the user interface of your app, like a React component with server-side lifecycle hooks. But they can also serve as generic routes for any kind of resource (like dynamic CSS or social images).
 
 It's important to read [Route Module Constraints](../constraints/).
 
@@ -488,7 +488,7 @@ export function CatchBoundary() {
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
-Actions have the the very same API as loaders, the only difference is when they are called.
+Actions have the same API as loaders, the only difference is when they are called.
 
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
@@ -534,7 +534,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 | `/accounts?index` | `routes/accounts/index.js` |
 | `/accounts`       | `routes/accounts.js`       |
 
-Also note that forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered, so using the `?index` param to disambiguate between parent and index routes is only useful if you're posting to an index route from somewhere besides the index route itself. If you're posting from the index route to itself, or from the parent route to itselt, you don't need to define a `<Form action>` at all, just omit it: `<Form method="post">`.
+Also note that forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered, so using the `?index` param to disambiguate between parent and index routes is only useful if you're posting to an index route from somewhere besides the index route itself. If you're posting from the index route to itself, or from the parent route to itself, you don't need to define a `<Form action>` at all, just omit it: `<Form method="post">`.
 
 See also:
 
@@ -754,7 +754,7 @@ export function links() {
 }
 ```
 
-This load up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the next routes) into the browser cache before the user even navigates there.
+This loads up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the next routes) into the browser cache before the user even navigates there.
 
 <docs-warning>Be careful with this feature. You don't want to download 10MB of JavaScript and data for pages the user probably won't ever visit.</docs-warning>
 
@@ -827,7 +827,7 @@ This is almost always used on conjunction with `useMatches`. To see what kinds o
 
 <docs-warning>This feature is an <i>additional</i> optimization. In general, Remix's design does a great job of only calling the loaders that the next page needs and ensuring your UI is in sync with your server. When you use this feature you risk your UI getting out of sync with your server. Use with caution!</docs-warning>
 
-This function lets apps optimize which routes should be reloaded on some client side transitions.
+This function lets apps optimize which routes should be reloaded on some client-side transitions.
 
 ```ts
 import type { ShouldReloadFunction } from "remix";
@@ -847,7 +847,7 @@ export let unstable_shouldReload: ShouldReloadFunction = ({
 }) => false; // or `true`;
 ```
 
-During client side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
+During client-side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
 
 This function lets apps further optimize by returning `false` when Remix is about to reload a route. There are three cases when Remix will reload a route and you have the opportunity to optimize:
 
