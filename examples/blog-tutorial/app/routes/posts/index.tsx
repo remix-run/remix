@@ -3,12 +3,12 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export let loader = () => {
+export const loader = () => {
   return getPosts();
 };
 
 export default function Posts() {
-  let posts = useLoaderData<Post[]>();
+  const posts = useLoaderData<Post[]>();
   return (
     <div>
       <h1>Posts</h1>
