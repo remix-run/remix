@@ -27,7 +27,7 @@ Consider [the Github Gist API](https://api.github.com/gists). This payload is 75
 
 ```js
 export default function Gists() {
-  let gists = useSomeFetchWrapper(
+  const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"
   );
   if (!gists) {
@@ -56,8 +56,8 @@ With Remix, you can filter down the data _on the server_ before sending it to th
 
 ```js [1-11]
 export async function loader() {
-  let res = await fetch("https://api.github.com/gists");
-  let json = await res.json();
+  const res = await fetch("https://api.github.com/gists");
+  const json = await res.json();
   return json.map(gist => {
     return {
       url: gist.html_url,
@@ -68,7 +68,7 @@ export async function loader() {
 }
 
 export default function Gists() {
-  let gists = useLoaderData();
+  const gists = useLoaderData();
   return (
     <ul>
       {gists.map(gist => (
