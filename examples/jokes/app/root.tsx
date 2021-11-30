@@ -1,6 +1,5 @@
-import { Meta, Links, Scripts, LiveReload, useCatch } from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, useCatch } from "remix";
 import type { LinksFunction, MetaFunction } from "remix";
-import { Outlet } from "react-router-dom";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -54,7 +53,7 @@ function Document({
       <body>
         {children}
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
       </body>
     </html>
   );
