@@ -5,7 +5,7 @@ order: 2
 
 # Server Adapters
 
-Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). It does this through adapters. We maintain a few adapters:
+Idiomatic Remix apps can generally be deployed anywhere because Remix adapts the server's request/response to the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). It does this through adapters. You can [build your own adapter](#custom-adapters), but we provide several for common deployment scenarios:
 
 - `@remix-run/express`
 - `@remix-run/architect`
@@ -139,7 +139,7 @@ import * as build from "../build";
 const handleRequest = createRequestHandler({ build });
 
 const handleEvent = async (event: FetchEvent) => {
-  const response = await handleAsset(event, build);
+  let response = await handleAsset(event, build);
 
   if (!response) {
     response = await handleRequest(event);
@@ -166,3 +166,54 @@ addEventListener("fetch", event => {
   }
 });
 ```
+
+## Custom Adapters
+
+If you want to deploy Remix within a not-yet-supported framework/server, you'll need to write an adapter. This will allow the framework to hand off a request to Remix for processing.
+
+Publishing your custom adapter as an NPM module will allow others to use it. If it includes templates, it can even be used by `create-remix` to bootstrap a new Remix app within that framework/server.
+
+### Handling Requests and Responses
+
+The adapter is responsible for passing a [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) into the Remix request handler and then doing something with the eventual [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response).
+
+For example, here's a simple adapter that takes a URL path, makes a Remix request, and then returns a status code:
+
+```ts
+import type { ServerBuild } from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import { installGlobals } from "@remix-run/node";
+installGlobals();
+
+// Build a request handler that takes a path as an argument and returns the status code
+export function createRequestHandler(build: ServerBuild) {
+  const handleRequest = createRemixRequestHandler(
+    build,
+    {}
+  );
+
+  return async function (path: string) {
+    // Build a Request and let Remix process it, then do something with the Response
+    const response = await handleRequest(
+      new Request("http://localhost/" + path)
+    );
+    return response.status;
+  };
+}
+```
+
+For more real-world examples, check out the adapters that ship with Remix, e.g. [@remix-run/express](https://github.com/remix-run/remix/blob/main/packages/remix-express/index.ts) or [@remix-run/architect](https://github.com/remix-run/remix/blob/main/packages/remix-architect/index.ts)
+
+To make your adapter consistent, we recommend you adhere to the same API as the other adapters (i.e. export your own `createRequestHandler`)
+
+### Templating and `create-remix`
+
+Custom server adapters can be used when generating a new app with `create-remix`. The `--server-type` flag allows you to specify the server template type. In addition to built-in templates like `remix` or `express`, it also works with package names and paths, e.g. `npx create-remix -s @mycool/remix-server-thingy` or `npx create-remix -s ../path/to/my-adapter-and-templates`.
+
+The adapter's templates will be used as follows (where `lang: 'ts' | 'js'`, depending on what was chosen):
+
+1. Files and directories under create-remix' [`_shared_${lang}`](https://github.com/remix-run/remix/tree/main/packages/create-remix/templates) directory are copied in
+2. Files and directories under the package's `templates/shared` directory (if present) are copied in
+3. Files and directories under the package's `templates/${lang}` directory (if present) are coped in
+
+A file copied during a later step will normally overwrite the same file from an earlier one, though package.json gets merged across steps.

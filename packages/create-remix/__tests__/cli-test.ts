@@ -1,9 +1,11 @@
 import childProcess from "child_process";
+import os from "os";
 import fs from "fs-extra";
 import path from "path";
 import util from "util";
 import semver from "semver";
 import stripAnsi from "strip-ansi";
+import { mkdtemp } from "fs/promises";
 
 const DEFAULT_APP_NAME = "my-remix-app";
 
@@ -23,91 +25,237 @@ const createRemix = path.resolve(
 );
 
 const DEFAULT_JEST_TIMEOUT = 5000;
+const tmpDirs = [];
 
 describe("create-remix cli", () => {
   beforeAll(() => {
     jest.setTimeout(DEFAULT_JEST_TIMEOUT * 3);
     if (!fs.existsSync(createRemix)) {
-      // TODO: Consider runnuing the build here instead of throwing
+      // TODO: Consider running the build here instead of throwing
       throw new Error(`Cannot run Remix CLI tests without building Remix`);
     }
   });
 
   afterAll(() => {
     jest.setTimeout(DEFAULT_JEST_TIMEOUT);
+    for (let dir in tmpDirs) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
-  it("guides the user through the process", async done => {
-    let cli = spawn("node", [createRemix], {});
-    let promptCount = 0;
-    let previousPrompt: string;
+  function expectRemix(prompt: string) {
+    expect(prompt).toEqual("R E M I X");
+  }
 
-    cli.stdout.on("data", async data => {
-      let prompt = cleanPrompt(data);
-      if (
-        !prompt ||
-        prompt === "R E M I X" ||
-        isSamePrompt(prompt, previousPrompt)
-      ) {
-        return;
+  function expectWelcome(prompt: string) {
+    expect(prompt).toEqual(
+      "💿 Welcome to Remix! Let's get you set up with a new project."
+    );
+  }
+
+  function expectDirectory(prompt: string) {
+    expect(prompt).toEqual(
+      `? Where would you like to create your app? (./${DEFAULT_APP_NAME})`
+    );
+  }
+
+  function expectAdapterChoices(prompt: string) {
+    // Where do you want to deploy? Choose Remix if you're unsure, it's
+    // easy to change deployment targets.
+    expect(getPromptChoices(prompt)).toEqual([
+      "Remix App Server",
+      "Express Server",
+      "Architect (AWS Lambda)",
+      "Fly.io",
+      "Netlify",
+      "Vercel",
+      "Cloudflare Workers",
+      "(Move up and down to reveal more choices)"
+    ]);
+  }
+
+  function expectLanguageChoices(prompt: string) {
+    // TypeScript or JavaScript?
+    expect(getPromptChoices(prompt)).toEqual(["TypeScript", "JavaScript"]);
+  }
+
+  function expectNpmInstall(prompt: string) {
+    expect(prompt).toEqual("? Do you want me to run `npm install`? (Y/n)");
+  }
+
+  async function launchCreateRemix(...args: Array<string>) {
+    let cwd = await mkdtemp(path.join(os.tmpdir(), "remix-cli-test-"));
+    tmpDirs.push(cwd);
+    let cli = spawn("node", [createRemix, ...args], { cwd });
+
+    function buildStreamAwaiter(stream) {
+      let data: string;
+      let generator = (async function* () {
+        for await (let rawData of stream) {
+          let nextData = cleanPrompt(rawData);
+          if (!nextData || isSamePrompt(nextData, data)) {
+            continue;
+          }
+          data = nextData;
+          yield data;
+        }
+      })();
+      return async () => (await generator.next()).value || "";
+    }
+
+    function done() {
+      return new Promise<void>(resolve => {
+        cli.on("exit", () => resolve());
+      });
+    }
+
+    return {
+      cli,
+      cwd,
+      send: data => cli.stdin.write(data),
+      output: buildStreamAwaiter(cli.stdout),
+      error: buildStreamAwaiter(cli.stderr),
+      done,
+      kill: async () => {
+        cli.kill("SIGINT");
+        await done();
       }
+    };
+  }
 
-      promptCount++;
+  it("guides the user through the process", async () => {
+    let { send, output, done, cwd } = await launchCreateRemix();
 
-      switch (promptCount) {
-        case 1:
-          expect(prompt).toEqual(
-            "💿 Welcome to Remix! Let's get you set up with a new project."
-          );
-          break;
-        case 2:
-          expect(prompt).toEqual(
-            `? Where would you like to create your app? (./${DEFAULT_APP_NAME})`
-          );
-          cli.stdin.write(keys.enter);
-          break;
+    expectRemix(await output());
+    expectWelcome(await output());
 
-        case 3:
-          // Where do you want to deploy? Choose Remix if you're unsure, it's
-          // easy to change deployment targets.
-          expect(getPromptChoices(prompt)).toEqual([
-            "Remix App Server",
-            "Express Server",
-            "Architect (AWS Lambda)",
-            "Fly.io",
-            "Netlify",
-            "Vercel",
-            "Cloudflare Workers"
-          ]);
-          cli.stdin.write(keys.enter);
-          break;
+    expectDirectory(await output());
+    send(keys.enter);
 
-        case 4:
-          // TypeScript or JavaScript?
-          expect(getPromptChoices(prompt)).toEqual([
-            "TypeScript",
-            "JavaScript"
-          ]);
-          cli.stdin.write(keys.enter);
-          break;
+    expectAdapterChoices(await output());
+    send(keys.enter);
 
-        case 5:
-          expect(prompt).toEqual(
-            "? Do you want me to run `npm install`? (Y/n)"
-          );
-          cli.stdin.write("n");
+    expectLanguageChoices(await output());
+    send(keys.enter);
 
-          // At this point the CLI will create directories and all that fun stuff
-          // TODO: We should actually test this stuff too, kinda a big deal
-          cli.kill("SIGINT");
-          break;
-      }
+    expectNpmInstall(await output());
+    send("n" + keys.enter);
 
-      previousPrompt = prompt;
+    await done();
+
+    // TODO: test a lot more stuff, but at least we know it's putting something there 😅
+    expect(fs.existsSync(path.join(cwd, DEFAULT_APP_NAME, "package.json")));
+  });
+
+  it("skips the directory prompt if a directory arg is specified", async () => {
+    let { output, send, done, cwd } = await launchCreateRemix(
+      "./some-other-dir"
+    );
+
+    expectRemix(await output());
+    expectWelcome(await output());
+
+    expectAdapterChoices(await output());
+    send(keys.enter);
+
+    expectLanguageChoices(await output());
+    send(keys.enter);
+
+    expectNpmInstall(await output());
+    send("n" + keys.enter);
+
+    await done();
+    expect(fs.existsSync(path.join(cwd, "./some-other-dir", "package.json")));
+  });
+
+  describe("the --server-type flag", () => {
+    it("accepts built-in server types", async () => {
+      let { send, output, kill } = await launchCreateRemix(
+        "--server-type",
+        "remix"
+      );
+      expectRemix(await output());
+      expectWelcome(await output());
+      expectDirectory(await output());
+      send(keys.enter);
+
+      // no adapter choice, since we were explicit
+      expectLanguageChoices(await output());
+
+      await kill();
     });
 
-    cli.on("exit", () => {
-      done();
+    it("installs valid package ids", async () => {
+      let { send, output, kill } = await launchCreateRemix(
+        "--server-type",
+        "lodash.eq" // doesn't actually have templates, but we don't care at this point, just want to make sure it's installing
+      );
+      expectRemix(await output());
+      expectWelcome(await output());
+      expectDirectory(await output());
+      send(keys.enter);
+
+      // no adapter choice, since we were explicit
+      expectLanguageChoices(await output());
+
+      await kill();
+    });
+
+    it("resolves valid paths", async () => {
+      let { send, output, kill } = await launchCreateRemix(
+        "--server-type",
+        path.join(__dirname, "fixtures", "custom-adapter")
+      );
+      expectRemix(await output());
+      expectWelcome(await output());
+      expectDirectory(await output());
+      send(keys.enter);
+
+      // no adapter choice, since we were explicit
+      expectLanguageChoices(await output());
+
+      await kill();
+    });
+
+    it("warns if the adapter has no templates", async () => {
+      let { send, output, error, done } = await launchCreateRemix(
+        "--server-type",
+        "./"
+      );
+      expectRemix(await output());
+      expectWelcome(await output());
+      expectDirectory(await output());
+      send(keys.enter);
+
+      // no adapter choice, since we were explicit
+      expectLanguageChoices(await output());
+      send(keys.enter);
+      expectNpmInstall(await output());
+      send("n" + keys.enter);
+
+      expect(await error()).toContain("doesn't provide any templates");
+      await done();
+    });
+
+    it("bails on invalid server-types", async () => {
+      let { send, output, error, done } = await launchCreateRemix(
+        "--server-type",
+        "./this-is-neither-a-valid-package-id-nor-a-valid-path"
+      );
+      expectRemix(await output());
+      expectWelcome(await output());
+      expectDirectory(await output());
+      send(keys.enter);
+      // no adapter choice, since we were explicit
+      expectLanguageChoices(await output());
+      send(keys.enter);
+      expectNpmInstall(await output());
+      send("n" + keys.enter);
+
+      expect(await error()).toContain(
+        "doesn't appear to be a valid package id or path"
+      );
+      await done();
     });
   });
 
@@ -128,7 +276,6 @@ describe("create-remix cli", () => {
   describe("the --help flag", () => {
     it("prints help info", async () => {
       let { stdout } = await execFile("node", [createRemix, "--help"]);
-
       expect(stdout).toMatchInlineSnapshot(`
         "
           Create a new Remix app
@@ -139,8 +286,27 @@ describe("create-remix cli", () => {
           If <dir> is not provided up front you will be prompted for it.
 
           Flags:
-            --help, -h          Show this help message
-            --version, -v       Show the version of this script
+            --server-type, -s  Server template to use (built-in, package id, or path)
+                               Built-ins include: remix, express, arc, fly, netlify,
+                               vercel, and cloudflare-workers. Any custom package or
+                               path may be used that contains templates. Refer to
+                               https://remix.run/docs/en/v1/other-api/adapter for more
+                               info
+            --help, -h         Show this help message
+            --version, -v      Show the version of this script
+        
+          Examples:
+            # Create a new remix app
+            $ npx create-remix
+        
+            # Create a new remix app in a specific directory
+            $ npx create-remix ./awesome
+        
+            # Create a new remix app using remix server
+            $ npx create-remix -s remix
+        
+            # Create a new remix app using a custom server template
+            $ npx create-remix -s @mycool/remix-server-thingy
 
         "
       `);
@@ -160,8 +326,27 @@ describe("create-remix cli", () => {
           If <dir> is not provided up front you will be prompted for it.
 
           Flags:
-            --help, -h          Show this help message
-            --version, -v       Show the version of this script
+            --server-type, -s  Server template to use (built-in, package id, or path)
+                               Built-ins include: remix, express, arc, fly, netlify,
+                               vercel, and cloudflare-workers. Any custom package or
+                               path may be used that contains templates. Refer to
+                               https://remix.run/docs/en/v1/other-api/adapter for more
+                               info
+            --help, -h         Show this help message
+            --version, -v      Show the version of this script
+        
+          Examples:
+            # Create a new remix app
+            $ npx create-remix
+        
+            # Create a new remix app in a specific directory
+            $ npx create-remix ./awesome
+        
+            # Create a new remix app using remix server
+            $ npx create-remix -s remix
+        
+            # Create a new remix app using a custom server template
+            $ npx create-remix -s @mycool/remix-server-thingy
 
         "
       `);

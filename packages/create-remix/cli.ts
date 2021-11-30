@@ -14,23 +14,37 @@ const help = `
   If <dir> is not provided up front you will be prompted for it.
 
   Flags:
-    --help, -h          Show this help message
-    --version, -v       Show the version of this script
+    --server-type, -s  Server template to use (built-in, package id, or path)
+                       Built-ins include: remix, express, arc, fly, netlify,
+                       vercel, and cloudflare-workers. Any custom package or
+                       path may be used that contains templates. Refer to
+                       https://remix.run/docs/en/v1/other-api/adapter for more
+                       info
+    --help, -h         Show this help message
+    --version, -v      Show the version of this script
+
+  Examples:
+    # Create a new remix app
+    $ npx create-remix
+
+    # Create a new remix app in a specific directory
+    $ npx create-remix ./awesome
+
+    # Create a new remix app using remix server
+    $ npx create-remix -s remix
+
+    # Create a new remix app using a custom server template
+    $ npx create-remix -s @mycool/remix-server-thingy
 `;
 
-run().then(
-  () => {
-    process.exit(0);
-  },
-  error => {
-    console.error(error);
-    process.exit(1);
-  }
-);
+run().then(() => {
+  process.exit(0);
+}, die);
 
 async function run() {
   let { input, flags, showHelp, showVersion } = meow(help, {
     flags: {
+      serverType: { type: "string", alias: "s" },
       help: { type: "boolean", default: false, alias: "h" },
       version: { type: "boolean", default: false, alias: "v" }
     }
@@ -64,7 +78,8 @@ async function run() {
   );
 
   let answers = await inquirer.prompt<{
-    server: Server;
+    server: ServerTemplateType;
+    customServer: string;
     lang: "ts" | "js";
     install: boolean;
   }>([
@@ -74,15 +89,15 @@ async function run() {
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
-      choices: [
-        { name: "Remix App Server", value: "remix" },
-        { name: "Express Server", value: "express" },
-        { name: "Architect (AWS Lambda)", value: "arc" },
-        { name: "Fly.io", value: "fly" },
-        { name: "Netlify", value: "netlify" },
-        { name: "Vercel", value: "vercel" },
-        { name: "Cloudflare Workers", value: "cloudflare-workers" }
-      ]
+      choices: ServerTemplateTypes,
+      when: () => flags.serverType == null
+    },
+    {
+      name: "customServer",
+      type: "input",
+      message:
+        "Enter a package or path containing your custom server templates.",
+      when: ({ server }) => server === CUSTOM_SERVER_TEMPLATE
     },
     {
       name: "lang",
@@ -101,15 +116,36 @@ async function run() {
     }
   ]);
 
+  let server = flags.serverType ?? answers.server;
+  let serverTemplate: string;
+  let serverLangTemplate: string;
+
+  if (isOfficialServerTemplateType(server)) {
+    serverTemplate = path.resolve(__dirname, "templates", server);
+    serverLangTemplate = path.resolve(
+      __dirname,
+      "templates",
+      `${server}_${answers.lang}`
+    );
+  } else {
+    let customServer = flags.serverType ?? answers.customServer;
+    let serverTemplateBasePath = resolveServerTemplate(customServer);
+    serverTemplate = path.join(serverTemplateBasePath, "templates", "shared");
+    serverLangTemplate = path.join(
+      serverTemplateBasePath,
+      "templates",
+      answers.lang
+    );
+  }
+
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
   if (!projectDirIsCurrentDir) {
     if (fse.existsSync(projectDir)) {
-      console.log(
+      die(
         `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
-      process.exit(1);
     } else {
       await fse.mkdir(projectDir);
     }
@@ -124,16 +160,10 @@ async function run() {
   await fse.copy(sharedTemplate, projectDir);
 
   // copy the server template
-  let serverTemplate = path.resolve(__dirname, "templates", answers.server);
   if (fse.existsSync(serverTemplate)) {
     await fse.copy(serverTemplate, projectDir, { overwrite: true });
   }
 
-  let serverLangTemplate = path.resolve(
-    __dirname,
-    "templates",
-    `${answers.server}_${answers.lang}`
-  );
   if (fse.existsSync(serverLangTemplate)) {
     await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
   }
@@ -146,12 +176,18 @@ async function run() {
 
   // merge package.jsons
   let appPkg = require(path.join(sharedTemplate, "package.json"));
-  let serverPkg = require(path.join(serverTemplate, "package.json"));
-  ["dependencies", "devDependencies", "scripts"].forEach(key => {
-    Object.assign(appPkg[key], serverPkg[key]);
-  });
+  for (let templateDir of [serverTemplate, serverLangTemplate]) {
+    if (!fse.existsSync(path.join(templateDir, "package.json"))) continue;
 
-  appPkg.main = serverPkg.main;
+    let serverPkg = require(path.join(templateDir, "package.json"));
+    ["dependencies", "devDependencies", "scripts"].forEach(key => {
+      Object.assign(appPkg[key], serverPkg[key]);
+    });
+
+    if (serverPkg.main) {
+      appPkg.main = serverPkg.main;
+    }
+  }
 
   // add current versions of remix deps
   ["dependencies", "devDependencies"].forEach(pkgKey => {
@@ -186,11 +222,78 @@ async function run() {
   }
 }
 
-type Server =
-  | "arc"
-  | "cloudflare-workers"
-  | "express"
-  | "fly"
-  | "netlify"
-  | "remix"
-  | "vercel";
+function resolveServerTemplate(packageIdOrPath: string): string {
+  let serverTemplateBasePath = fse.existsSync(packageIdOrPath)
+    ? path.resolve(packageIdOrPath)
+    : resolveServerTemplatePackage(packageIdOrPath);
+  if (!fse.existsSync(path.join(serverTemplateBasePath, "templates"))) {
+    console.warn(
+      `️🚨 WARNING: \`${packageIdOrPath}\` doesn't provide any templates, so this probably won't generate a working app 😬`
+    );
+  }
+  return serverTemplateBasePath;
+}
+
+function resolveServerTemplatePackage(packageId: string): string {
+  let packageName = packageId.replace(/(.+)@.*/, "$1"); // lop off the version if present
+  try {
+    // see if it's already installed 🤞
+    return path.dirname(require.resolve(`${packageName}/package.json`));
+  } catch (e) {
+    // install it (if it's not already cached by npx), and see where npx puts it...
+    // the only breadcrumb npx leaves us is the PATH :-/
+    let [getPaths, pathsDelimiter] =
+      process.platform === "win32" ? ["path", ";"] : ["echo $PATH", ":"];
+    let cmd = `npx -y -p "${packageId}" -c "${getPaths.replace("$", "\\$")}"`;
+    let paths: Array<string>;
+    try {
+      paths = execSync(cmd, { stdio: "pipe" }).toString().split(pathsDelimiter);
+    } catch (e: any) {
+      die(
+        `🚨 Oops, \`${packageId}\` doesn't appear to be a valid package id or path.`
+      );
+    }
+
+    let npxBinDir = paths.find(p => p.includes("_npx"));
+    if (!npxBinDir) {
+      die(
+        `Unable to find npx install location for \`${packageName}\`; this is probably a bug. Current PATH: ${execSync(
+          getPaths
+        )}`
+      );
+    }
+
+    return path.dirname(
+      require.resolve(`${npxBinDir}/../${packageName}/package.json`)
+    );
+  }
+}
+
+function die(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
+
+const CUSTOM_SERVER_TEMPLATE = "_custom_" as const;
+const ServerTemplateTypes = [
+  { name: "Remix App Server", value: "remix" },
+  { name: "Express Server", value: "express" },
+  { name: "Architect (AWS Lambda)", value: "arc" },
+  { name: "Fly.io", value: "fly" },
+  { name: "Netlify", value: "netlify" },
+  { name: "Vercel", value: "vercel" },
+  { name: "Cloudflare Workers", value: "cloudflare-workers" },
+  { name: "Custom...", value: CUSTOM_SERVER_TEMPLATE }
+] as const;
+
+function isOfficialServerTemplateType(
+  server: unknown
+): server is OfficialServerTemplateType {
+  return !!ServerTemplateTypes.find(({ value }) => value === server);
+}
+
+type ServerTemplateType = typeof ServerTemplateTypes[number]["value"];
+type OfficialServerTemplateType = Exclude<
+  ServerTemplateType,
+  typeof CUSTOM_SERVER_TEMPLATE
+>;
