@@ -7,8 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  Link,
-  NavLink
+  Link
 } from "remix";
 import type { LinksFunction } from "remix";
 

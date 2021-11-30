@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ActionFunction } from "remix";
-import { Form, json, useActionData, redirect } from "remix";
+import { Form, json, redirect, useActionData } from "remix";
 
 export function meta() {
   return { title: "Actions Demo" };
