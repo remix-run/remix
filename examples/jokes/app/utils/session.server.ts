@@ -30,7 +30,9 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // secure doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",

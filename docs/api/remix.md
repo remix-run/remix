@@ -38,7 +38,7 @@ You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hostin
 
 ### `<Link>`
 
-This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client side routing in Remix.
+This component renders an anchor tag and is the primary way the user will navigate around your website. Anywhere you would have used `<a href="...">` you should now use `<Link to="..."/>` to get all the performance benefits of client-side routing in Remix.
 
 It wraps React Router's Link with some extra behavior around resource prefetching.
 
@@ -156,7 +156,7 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 
 <docs-info>This is recommended over <code>&lt;form></code></docs-info>
 
-When the `action` prop is ommitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
+When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
 
 - `<form>` uses the current URL as the default which can lead to surprising results: forms inside parent routes will post to the child action if you're at the child's URL and the parents action when you're at the parent's URL. This means as the user navigates, the form's behavior changes.
 - `<Form>` will always post to the route's action, independent of the URL. A form in a parent route will always post to the parent, even if you're at the child's URL.
@@ -183,7 +183,7 @@ It must be the last element on the page, right before the `<Scripts/>` tag:
 </html>
 ```
 
-In order to avoid (usually) the client side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
+In order to avoid (usually) the client-side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
 
 ### `useLoaderData`
 
@@ -211,7 +211,7 @@ This hook returns the JSON parsed data from your route action. It returns `undef
 import React from "react";
 import { useActionData } from "remix";
 
-export function action({ request }) {
+export async function action({ request }) {
   let body = await request.formData();
   let name = body.get("visitorsName");
   return { message: `Hello, ${name}` };
@@ -235,10 +235,10 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [19, 28, 36, 40-42]
+```tsx [21, 30, 38-40, 44-46]
 import { redirect, json, Form, useActionData } from "remix";
 
-export function action({ request }) {
+export async function action({ request }) {
   let form = await request.formData();
   let email = form.get("email");
   let password = form.get("password");
@@ -273,13 +273,15 @@ export default function Signup() {
       <Form method="post">
         <p>
           <input type="text" name="email" />
-          {errors?.email && <span>{errors.email}</span>}
+          {errors?.email ? (
+            <span>{errors.email}</span>
+          ) : null}
         </p>
         <p>
           <input type="text" name="password" />
-          {errors?.password && (
+          {errors?.password ? (
             <span>{errors.password}</span>
-          )}
+          ) : null}
         </p>
         <p>
           <button type="submit">Sign up</button>
@@ -294,7 +296,7 @@ export default function Signup() {
 
 When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _does not_ follow the browser's behavior of resubmitting forms when the user clicks back, forward, or refreshes into the location.
 
-<docs-info>Remix clientside navigation does not resubmit forms on pop events like browsers.</docs-info>
+<docs-info>Remix client-side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
 Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
 
@@ -399,9 +401,9 @@ function UserPreferences() {
         <input type="checkbox" name="darkMode" value="on" />{" "}
         Dark Mode
       </label>
-      {transition.state === "submitting" && (
+      {transition.state === "submitting" ? (
         <p>Saving...</p>
-      )}
+      ) : null}
     </Form>
   );
 }
@@ -553,9 +555,8 @@ This tells you what the next location is going to be. Its most useful when match
 
 For example, this `Link` knows when it's page is loading and it's about to become active:
 
-```tsx [7-9]
-import { useResolvedPath } from "react-router-dom";
-import { Link } from "remix";
+```tsx [6-8]
+import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
   let transition = useTransition();
@@ -709,7 +710,7 @@ Perhaps you have a persistent newsletter signup at the bottom of every page on y
 
 ```tsx
 // routes/newsletter/subscribe.js
-export function action({ request }) {
+export async function action({ request }) {
   let email = (await request.formData()).get("email");
   try {
     await subscribe(email);
@@ -748,12 +749,13 @@ function NewsletterSignup() {
         </button>
       </p>
 
-      {newsletter.type === "done" &&
-        (newsletter.data.ok ? (
+      {newsletter.type === "done" ? (
+        newsletter.data.ok ? (
           <p>Thanks for subscribing!</p>
         ) : newsletter.data.error ? (
           <p data-error>{newsletter.data.error}</p>
-        ) : null)}
+        ) : null
+      ) : null}
     </newsletter.Form>
   );
 }
@@ -1034,7 +1036,7 @@ This is where `useFetchers` comes in. Up in the sidebar we can get access too al
 The strategy has three steps:
 
 1. Find the submissions for tasks in a specific project
-2. Use the `fetcher.submission.formData` to immediatly update the count
+2. Use the `fetcher.submission.formData` to immediately update the count
 3. Use the normal task's state if it's not inflight
 
 Here's some sample code:
@@ -1267,7 +1269,7 @@ This is shortcut for sending 30x responses.
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
-export let action: ActionFunction = () => {
+export let action: ActionFunction = async () => {
   let userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
@@ -1788,7 +1790,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be commited. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
 import { createCookieSessionStorage } from "remix";

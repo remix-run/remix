@@ -28,6 +28,8 @@ We're going to be doing some work with the file system and not all setups are co
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
+If your application is not running properly at [https://localhost:3000](https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
+
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
@@ -77,7 +79,7 @@ Data loading is built in to Remix.
 
 If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhacement realized in its fullest.
+If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
 
 So let's get to it and provide some data to our component.
 
@@ -231,7 +233,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
@@ -554,7 +556,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. Thats gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -699,6 +701,10 @@ Maybe this will help, let's add the "/admin/new" route and see what happens when
 
 💿 Create the `app/routes/admin/new.tsx` route
 
+```sh
+touch app/routes/admin/new.tsx
+```
+
 ```tsx filename=app/routes/admin/new.tsx
 export default function NewPost() {
   return <h2>New Post</h2>;
@@ -764,7 +770,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-9]
+```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
 import { redirect, Form } from "remix";
 import { createPost } from "~/post";
 
@@ -867,7 +873,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,12-13,19-20,25-26]
+```tsx filename=app/routes/admin/new.tsx lines=[1,12-15,21-22,27-30]
 import { useActionData, Form, redirect } from "remix";
 
 // ...
@@ -880,20 +886,24 @@ export default function NewPost() {
       <p>
         <label>
           Post Title:{" "}
-          {errors?.title && <em>Title is required</em>}
+          {errors?.title ? (
+            <em>Title is required</em>
+          ) : null}
           <input type="text" name="title" />
         </label>
       </p>
       <p>
         <label>
           Post Slug:{" "}
-          {errors?.slug && <em>Slug is required</em>}
+          {errors?.slug ? <em>Slug is required</em> : null}
           <input type="text" name="slug" />
         </label>
       </p>
       <p>
         <label htmlFor="markdown">Markdown:</label>{" "}
-        {errors?.markdown && <em>Markdown is required</em>}
+        {errors?.markdown ? (
+          <em>Markdown is required</em>
+        ) : null}
         <br />
         <textarea rows={20} name="markdown" />
       </p>
