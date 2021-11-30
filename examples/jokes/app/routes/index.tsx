@@ -2,14 +2,14 @@ import { Link } from "remix";
 import type { MetaFunction, LinksFunction } from "remix";
 import stylesUrl from "../styles/index.css";
 
-export let meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return {
     title: "Remix: It's funny!",
     description: "Remix jokes app. Learn Remix and laugh at the same time!",
   };
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
