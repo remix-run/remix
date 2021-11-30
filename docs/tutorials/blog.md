@@ -28,6 +28,8 @@ We're going to be doing some work with the file system and not all setups are co
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
+If your application is not running properly at [https://localhost:3000](https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
+
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
@@ -233,7 +235,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
@@ -296,7 +298,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,10,12-27]
+```tsx filename=app/post.ts lines=[1-3,11,13-28]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
@@ -306,7 +308,8 @@ export type Post = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+// relative to the server output not the source!
+let postsPath = path.join(__dirname, "..", "posts");
 
 export async function getPosts() {
   let dir = await fs.readdir(postsPath);
@@ -328,6 +331,8 @@ export async function getPosts() {
 ```
 
 This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
+
+<docs-error>If you did not use the Remix App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
@@ -354,7 +359,7 @@ export type PostMarkdownAttributes = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+let postsPath = path.join(__dirname, "..", "posts");
 
 function isValidPostAttributes(
   attributes: any
@@ -691,6 +696,10 @@ Maybe this will help, let's add the "/admin/new" route and see what happens when
 
 💿 Create the `app/routes/admin/new.tsx` route
 
+```sh
+touch app/routes/admin/new.tsx
+```
+
 ```tsx filename=app/routes/admin/new.tsx
 export default function NewPost() {
   return <h2>New Post</h2>;
@@ -756,7 +765,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-9]
+```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
 import { redirect, Form } from "remix";
 import { createPost } from "~/post";
 
