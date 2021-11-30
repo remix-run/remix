@@ -6,6 +6,7 @@ import WebSocket from "ws";
 import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
+import { resolve } from "eslint-import-resolver-typescript/lib";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as compiler from "../compiler";
@@ -173,7 +174,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
         const selectedPort = await choosePort(+port);
         if (selectedPort == null) {
           // We couldn't find a port.
-          return;
+          process.exit(0);
         }
         server = app.listen(selectedPort, () => {
           console.log(
