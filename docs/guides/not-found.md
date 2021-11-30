@@ -37,7 +37,7 @@ Remix will catch the response and send your app down the [Catch Boundary][catch-
 
 What's nice about throwing a response is that code in your loader _stops executing_. The rest of your code doesn't have to deal with the chance that the page is defined or not (this is especially handy for TypeScript).
 
-Throwing also ensures that your route component doesn't render if the loader wasn't succesful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
+Throwing also ensures that your route component doesn't render if the loader wasn't successful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
 
 ## Root Catch Boundary
 
@@ -69,8 +69,7 @@ export function CatchBoundary() {
 Just like [errors], nested routes can export their own catch boundary to handle the 404 UI without taking down all of the parent layouts around it, and add some nice UX touches right in context. Bots are happy, SEO is happy, CDNs are happy, users are happy, and your code stays in context, so it seems like everybody involved is happy with this.
 
 ```tsx filename=app/routes/pages/$pageId.tsx
-import { Form, useLoaderData } from "remix";
-import { useParams } from "react-router-dom";
+import { Form, useLoaderData, useParams } from "remix";
 
 export function loader({ params }) {
   let page = await db.page.findOne({
