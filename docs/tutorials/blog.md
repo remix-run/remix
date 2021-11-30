@@ -880,7 +880,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,17-18,24-25,30-31]
+```tsx filename=app/routes/admin/new.tsx lines=[2,11,17-18,24-25,30-31]
 import {
   useActionData,
   Form,
