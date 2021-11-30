@@ -1,4 +1,5 @@
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
@@ -12,7 +13,7 @@ export default function Posts() {
     <div>
       <h1>Posts</h1>
       <ul>
-        {posts.map((post) => (
+        {posts.map(post => (
           <li key={post.slug}>
             <Link to={post.slug}>{post.title}</Link>
           </li>
