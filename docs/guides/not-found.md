@@ -37,7 +37,7 @@ Remix will catch the response and send your app down the [Catch Boundary][catch-
 
 What's nice about throwing a response is that code in your loader _stops executing_. The rest of your code doesn't have to deal with the chance that the page is defined or not (this is especially handy for TypeScript).
 
-Throwing also ensures that your route component doesn't render if the loader wasn't succesful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
+Throwing also ensures that your route component doesn't render if the loader wasn't successful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
 
 ## Root Catch Boundary
 
