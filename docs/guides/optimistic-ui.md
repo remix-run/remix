@@ -31,7 +31,7 @@ export function loader({ params }) {
 }
 
 export default function ProjectRoute() {
-  let project = useLoaderData();
+  const project = useLoaderData();
   return <ProjectView project={project} />;
 }
 ```
@@ -60,10 +60,12 @@ Now we can get to the fun part. Here's what a "new project" route might look lik
 import { Form, redirect } from "remix";
 import { createProject } from "~/utils";
 
-export let action: ActionFunction = async ({ request }) => {
-  let body = await request.formData();
-  let newProject = Object.fromEntries(body);
-  let project = await createProject(newProject);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const body = await request.formData();
+  const newProject = Object.fromEntries(body);
+  const project = await createProject(newProject);
   return redirect(`/projects/${project.id}`);
 };
 
@@ -90,15 +92,17 @@ At this point, typically you'd render a busy spinner on the page while the user 
 import { Form, redirect, useTransition } from "remix";
 import { createProject } from "~/utils";
 
-export let action: ActionFunction = async ({ request }) => {
-  let body = await request.formData();
-  let newProject = Object.fromEntries(body);
-  let project = await createProject(newProject);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const body = await request.formData();
+  const newProject = Object.fromEntries(body);
+  const project = await createProject(newProject);
   return redirect(`/projects/${project.id}`);
 };
 
 export default function NewProject() {
-  let transition = useTransition();
+  const transition = useTransition();
   return (
     <>
       <h2>New Project</h2>
@@ -129,15 +133,17 @@ import { Form, redirect, useTransition } from "remix";
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
-export let action: ActionFunction = async ({ request }) => {
-  let body = await request.formData();
-  let newProject = Object.fromEntries(body);
-  let project = await createProject(newProject);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const body = await request.formData();
+  const newProject = Object.fromEntries(body);
+  const project = await createProject(newProject);
   return redirect(`/projects/${project.id}`);
 };
 
 export default function NewProject() {
-  let transition = useTransition();
+  const transition = useTransition();
   return transition.submission ? (
     <ProjectView
       project={Object.fromEntries(
@@ -179,11 +185,13 @@ import {
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
-export let action: ActionFunction = async ({ request }) => {
-  let body = await request.formData();
-  let newProject = Object.fromEntries(body);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const body = await request.formData();
+  const newProject = Object.fromEntries(body);
   try {
-    let project = await createProject(newProject);
+    const project = await createProject(newProject);
     return redirect(`/projects/${project.id}`);
   } catch (e) {
     console.error(e);
@@ -194,8 +202,8 @@ export let action: ActionFunction = async ({ request }) => {
 };
 
 export default function NewProject() {
-  let transition = useTransition();
-  let error = useActionData();
+  const transition = useTransition();
+  const error = useActionData();
 
   return transition.submission ? (
     <ProjectView
