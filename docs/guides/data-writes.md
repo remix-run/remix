@@ -108,8 +108,8 @@ The data is made available to the server's request handler so you can create the
 
 ```js filename=app/routes/projects
 export function action({ request }) {
-  let body = await request.formData();
-  let project = await createProject(body);
+  const body = await request.formData();
+  const project = await createProject(body);
   redirect(`/projects/${project.id}`);
 }
 ```
@@ -180,9 +180,11 @@ import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
-  let project = await createProject(formData);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const formData = await request.formData();
+  const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
 };
 
@@ -204,18 +206,20 @@ We know, we know, you want to animate in nice validation errors and stuff. We'll
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-let [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(newProject);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
 
 ```tsx [3,5-8]
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
-  let [errors, project] = await createProject(formData);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const formData = await request.formData();
+  const [errors, project] = await createProject(formData);
 
   if (errors) {
-    let values = Object.fromEntries(newProject);
+    const values = Object.fromEntries(newProject);
     return { errors, values };
   }
 
@@ -228,12 +232,14 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 ```tsx [1,8,18,23-27,35,40-44]
 import { redirect, useActionData } from "remix";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request
+}) => {
   // ...
 };
 
 export default function NewProject() {
-  let actionData = useActionData();
+  const actionData = useActionData();
 
   return (
     <form method="post" action="/projects/new">
@@ -293,7 +299,7 @@ import { redirect, useActionData, Form } from "remix";
 // ...
 
 export default function NewProject() {
-  let actionData = useActionData();
+  const actionData = useActionData();
 
   return (
     // note the capital "F" <Form> now
@@ -323,8 +329,8 @@ import {
 export default function NewProject() {
   // when the form is being processed on the server, this returns different
   // transition states to help us build pending and optimistic UI.
-  let transition = useTransition();
-  let actionData = useActionData();
+  const transition = useTransition();
+  const actionData = useActionData();
 
   return (
     <Form method="post">
@@ -396,11 +402,11 @@ Now that we're using JavaScript to submit this page, our validation errors can b
 
 ```tsx
 function ValidationMessage({ error, isSubmitting }) {
-  let [show, setShow] = useState(!!error);
+  const [show, setShow] = useState(!!error);
 
   useEffect(() => {
-    let id = setTimeout(() => {
-      let hasError = !!error;
+    const id = setTimeout(() => {
+      const hasError = !!error;
       setShow(hasError && !isSubmitting);
     });
     return () => clearTimeout(id);
@@ -425,8 +431,8 @@ Now we can wrap our old error messages in this new fancy component, and even tur
 
 ```tsx [21-24, 31-34, 48-51, 57-60]
 export default function NewProject() {
-  let transition = useTransition();
-  let actionData = useActionData();
+  const transition = useTransition();
+  const actionData = useActionData();
 
   return (
     <Form method="post">

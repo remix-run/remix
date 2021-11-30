@@ -19,7 +19,7 @@ As soon as you know you don't have what the user is looking for you should _thro
 
 ```tsx filename=routes/page/$slug.js
 export function loader({ params }) {
-  let page = await db.page.findOne({
+  const page = await db.page.findOne({
     where: { slug: params.slug }
   });
 
@@ -45,7 +45,7 @@ You probably already have one at the root of your app. This will handle all thro
 
 ```tsx
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
   return (
     <html>
       <head>
@@ -72,7 +72,7 @@ Just like [errors], nested routes can export their own catch boundary to handle 
 import { Form, useLoaderData, useParams } from "remix";
 
 export function loader({ params }) {
-  let page = await db.page.findOne({
+  const page = await db.page.findOne({
     where: { slug: params.slug }
   });
 
@@ -86,7 +86,7 @@ export function loader({ params }) {
 }
 
 export function CatchBoundary() {
-  let params = useParams();
+  const params = useParams();
   return (
     <div>
       <h2>We couldn't find that page!</h2>
