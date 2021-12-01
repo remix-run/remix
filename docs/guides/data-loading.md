@@ -215,7 +215,7 @@ export let loader: LoaderFunction = async ({
 
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
-```tsx filename=routes/products.tsx lines=[1,5-6]
+```tsx filename=routes/products.tsx lines=[1,4,5]
 import type { LoaderFunction } from "remix";
 
 export let loader: LoaderFunction = ({ request }) => {
@@ -249,7 +249,7 @@ Sometimes you need to read and change the search params from your component inst
 
 **Setting Search Params**
 
-Perhaps the most common way to set a search params is with a form, letting the user control of them:
+Perhaps the most common way to set search params is letting the user control them with a form:
 
 ```tsx filename=app/routes/products/shoes.tsx lines=[8,9,16,17]
 export default function ProductFilters() {
@@ -311,9 +311,9 @@ As the developer, you can control the search params by linking to URLs with sear
 
 **Reading Search Params in Components**
 
-Typically you only need search params in loaders, but you have access to them in components as well:
+In addition to reading search params in loaders, you often need access to them in components, too:
 
-```tsx
+```tsx lines=[1,4,5,15,24]
 import { useSearchParams } from "remix";
 
 export default function ProductFilters() {
@@ -387,11 +387,11 @@ export default function ProductFilters() {
 
 ### Search Params and Controlled Inputs
 
-When you have inputs wired up to the url search params, React never saw it coming so we have to do a little trick to avoid writing a bunch of extra code to make React happy.
+Often you want to keep some inputs, like checkboxes, in sync with the search params in the URL. This can get a little tricky with React's controlled component concept.
 
-If the search params can be set in two ways we want the inputs to stay in sync with the search params. For example, both the `<input type="checkbox">` and the `Link` can change the brand in this component:
+This is only needed if the search params can be set in two ways and we want the inputs to stay in sync with the search params. For example, both the `<input type="checkbox">` and the `Link` can change the brand in this component:
 
-```tsx lines=[11-18]
+```tsx bad lines=[11-18]
 import { useSearchParams } from "remix";
 
 export default function ProductFilters() {
@@ -418,7 +418,7 @@ export default function ProductFilters() {
 }
 ```
 
-If the user clicks the checkbox and submits the form, the URL updates and the checkbox state changes too. But if the user clicks the link _only the url will update and not the checkbox_. That's not what we want. You may be familiar with React's controlled components here:
+If the user clicks the checkbox and submits the form, the URL updates and the checkbox state changes too. But if the user clicks the link _only the url will update and not the checkbox_. That's not what we want. You may be familiar with React's controlled components here and think to switch it to `checked` instead of `defaultChecked`:
 
 ```tsx bad lines=[6]
 <input
@@ -430,7 +430,9 @@ If the user clicks the checkbox and submits the form, the URL updates and the ch
 />
 ```
 
-Now clicking the link updates both the URL and the checkbox state, but _the checkbox no longer works_ because React prevents the state from changing until the URL that controls it changes. React wants you to control it with some state but we want the user to control it until they submit the form, and then we want the URL to control it when it changes. So we're in this "sorta-controlled" spot.
+Now we have the opposite problem: clicking the link updates both the URL and the checkbox state but _the checkbox no longer works_ because React prevents the state from changing until the URL that controls it changes--and it never will because we can't change the checkbox and resubmit the form.
+
+React wants you to control it with some state but we want the user to control it until they submit the form, and then we want the URL to control it when it changes. So we're in this "sorta-controlled" spot.
 
 You have two choices, and what you pick depends on the user experience you want.
 
@@ -465,9 +467,9 @@ export default function ProductFilters() {
 }
 ```
 
-If you are also auto submitting on the form, make sure to `e.stopPropagation()` so the event doesn't bubble up to the form, otherwise you'll get double submissions on every click of the checkbox.
+(If you are also auto submitting on the form `onChange`, make sure to `e.stopPropagation()` so the event doesn't bubble up to the form, otherwise you'll get double submissions on every click of the checkbox.)
 
-**Second Choice**: If you want the input to be "semi controlled", where the checkbox reflects the URL state, but the user can also toggle it on and off before chaning the URL, you'll need to wire up some state. It's a bit of work but straightforward:
+**Second Choice**: If you want the input to be "semi controlled", where the checkbox reflects the URL state, but the user can also toggle it on and off before submitting the form and changing the URL, you'll need to wire up some state. It's a bit of work but straightforward:
 
 - Initialize some state from the search params
 - Update the state when the user clicks the checkbox so the box changes to "checked"
@@ -519,7 +521,11 @@ export default function ProductFilters() {
 You might want to make an abstraction for checkboxes like this:
 
 ```tsx
-<SearchCheckbox name="brand" value="nike" />;
+<div>
+  <SearchCheckbox name="brand" value="nike" />
+  <SearchCheckbox name="brand" value="reebok" />
+  <SearchCheckbox name="brand" value="adidas" />
+</div>;
 
 function SearchCheckbox({ name, value }) {
   let [searchParams] = useSearchParams();
@@ -593,7 +599,7 @@ That said, if you bring an external data library, Remix can no longer automatica
 - Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
 - Help you keep the happy path of your UI happy.
 
-Instea you'll need to do extra work to provide a good user experience.
+Instead you'll need to do extra work to provide a good user experience.
 
 Remix is designed to meet any user experience you can design. While it's unexpected that you _need_ an external data library, nothing about Remix prevents you from using them (unless they require bundler integration).
 
