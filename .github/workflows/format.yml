@@ -1,0 +1,47 @@
+name: Format
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies
+        uses: jaid/action-npm-install@v1.2.1
+
+      - name: Run format script in package.json
+        run: npm run format --if-present
+
+      - name: Setup Git User
+        run: |
+          git config --local user.email "bot@remix.run"
+          git config --local user.name "Remix Run Bot"
+          git remote add github "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git"
+
+      - name: Commit and push formatting changes
+        run: |
+          git add .
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "💿 no formatting changed"
+            exit 0
+          fi
+          git commit -m "chore: format" -m "formatted $GITHUB_SHA"
+          git push github HEAD:${GITHUB_REF}
+          echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
