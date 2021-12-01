@@ -31,7 +31,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Format
-        run: yarn format --if-present
+        run: npm run format --if-present
 
       - name: Commit
         run: |
