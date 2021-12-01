@@ -9,6 +9,10 @@ jobs:
   prettier:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [14.x]
+
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
@@ -18,25 +22,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Setup Node
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: ${{ matrix.node-version }}
 
-      - name: Install Dependencies
-        uses: jaid/action-npm-install@v1.2.1
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
 
-      - name: Run format script in package.json
-        run: npm run format --if-present
+      - name: Format
+        run: yarn format --if-present
 
-      - name: Setup Git User
+      - name: Commit
         run: |
           git config --local user.email "bot@remix.run"
           git config --local user.name "Remix Run Bot"
           git remote add github "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git"
 
-      - name: Commit and push formatting changes
-        run: |
           git add .
           if [ -z "$(git status --porcelain)" ]; then
             echo "💿 no formatting changed"
