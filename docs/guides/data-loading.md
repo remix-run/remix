@@ -583,11 +583,11 @@ All of these behaviors emulate the browser's default behavior. In these cases, R
 
 ## Data Libraries
 
-When you follow Remix data conventions, it's unlikely you need client side data libraries like React Query, useSwr, apollo, relay, urql and others. If you're using global state management libraries like redux primarily for interacting with data on the server, it's also unlikely you'll need those.
+Thanks to Remix's data conventions and nested routes, you'll usually find you don't need to reach for client side data libraries like React Query, useSwr, apollo, relay, urql and others. If you're using global state management libraries like redux, primarily for interacting with data on the server, it's also unlikely you'll need those.
 
-Of course, Remix doesn't prevent you from using them. You can bring whatever React data libraries you like and use them wherever you think they'll serve your UI better than the Remix APIs. In some cases you can use Remix for the initial server render and then switch over to your favorite library for the interactions afterward.
+Of course, Remix doesn't prevent you from using them (unless they require bundler integration). You can bring whatever React data libraries you like and use them wherever you think they'll serve your UI better than the Remix APIs. In some cases you can use Remix for the initial server render and then switch over to your favorite library for the interactions afterward.
 
-That said, if you bring an external data library, Remix can no longer automatically
+That said, if you bring an external data library and sidestep Remix's own data conventions, Remix can no longer automatically
 
 - Server render your pages
 - Be resilient to network conditions when JavaScript fails to load
@@ -601,7 +601,7 @@ That said, if you bring an external data library, Remix can no longer automatica
 
 Instead you'll need to do extra work to provide a good user experience.
 
-Remix is designed to meet any user experience you can design. While it's unexpected that you _need_ an external data library, nothing about Remix prevents you from using them (unless they require bundler integration).
+Remix is designed to meet any user experience you can design. While it's unexpected that you _need_ an external data library, you might still _want_ one and that's fine!
 
 As you learn Remix, you'll find you shift from thinking in client state to thinking in URLs, and you'll get a bunch of stuff for free when you do.
 
