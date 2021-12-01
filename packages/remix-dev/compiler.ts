@@ -352,7 +352,7 @@ async function createServerBuild(
     bundle: true,
     logLevel: "silent",
     incremental: options.incremental,
-    sourcemap: true,
+    sourcemap: "inline",
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
