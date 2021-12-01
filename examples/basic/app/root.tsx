@@ -227,7 +227,6 @@ const RouteChangeAnnouncement = React.memo(() => {
     <div
       aria-live="assertive"
       aria-atomic
-      id="route-change-region"
       style={{
         border: "0",
         clipPath: "inset(100%)",
