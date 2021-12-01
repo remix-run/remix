@@ -8,7 +8,7 @@ You might be used to building React apps that don't run on the server, or least 
 
 In general, you don't need the concept of "API Routes" at all. But we knew you'd come poking around with this term, so here we are!
 
-## Routes are Their Own API
+## Routes Are Their Own API
 
 Consider this route:
 
@@ -41,7 +41,7 @@ export function loader({ request }) {
 
 And then `useFetcher` along with Reach UI's combobox input:
 
-```tsx [2]
+```tsx [2,11,14,19,21,23]
 function CitySearchCombobox() {
   let cities = useFetcher();
 
