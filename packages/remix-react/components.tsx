@@ -1172,7 +1172,7 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
-export function useMatches() {
+export function useMatches<Handle = any>() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   return matches.map(match => {
     let { pathname, params } = match;
@@ -1180,7 +1180,7 @@ export function useMatches() {
       pathname,
       params,
       data: routeData[match.route.id],
-      handle: routeModules[match.route.id].handle
+      handle: routeModules[match.route.id].handle as Handle
     };
   });
 }
