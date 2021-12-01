@@ -583,7 +583,7 @@ All of these behaviors emulate the browser's default behavior. In these cases, R
 
 ## Data Libraries
 
-Thanks to Remix's data conventions and nested routes, you'll usually find you don't need to reach for client side data libraries like React Query, useSwr, apollo, relay, urql and others. If you're using global state management libraries like redux, primarily for interacting with data on the server, it's also unlikely you'll need those.
+Thanks to Remix's data conventions and nested routes, you'll usually find you don't need to reach for client side data libraries like React Query, SWR, Apollo, Relay, urql and others. If you're using global state management libraries like redux, primarily for interacting with data on the server, it's also unlikely you'll need those.
 
 Of course, Remix doesn't prevent you from using them (unless they require bundler integration). You can bring whatever React data libraries you like and use them wherever you think they'll serve your UI better than the Remix APIs. In some cases you can use Remix for the initial server render and then switch over to your favorite library for the interactions afterward.
 
