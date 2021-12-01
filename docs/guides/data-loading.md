@@ -48,7 +48,7 @@ If your server side modules end up in client bundles, move the imports for those
 
 ## Route Params
 
-When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/$userId.tsx/projects/$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
+When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/$userId/projects/$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
 
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx
 import type { LoaderFunction } from "remix";
