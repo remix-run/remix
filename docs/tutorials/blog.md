@@ -28,6 +28,8 @@ We're going to be doing some work with the file system and not all setups are co
 
 Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
+If your application is not running properly at [https://localhost:3000](https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
+
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
@@ -77,7 +79,7 @@ Data loading is built in to Remix.
 
 If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhacement realized in its fullest.
+If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
 
 So let's get to it and provide some data to our component.
 
@@ -111,6 +113,8 @@ export default function Posts() {
 ```
 
 Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+
+<docs-info>We use <code>let</code> because it is only three letters, you can use <code>const</code> if you want 🙂</docs-info>
 
 💿 Render links to our posts
 
@@ -229,7 +233,7 @@ export let loader = () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FauanaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
 
 Instead of hard-coding our links, we'll read them from the file system.
 
@@ -292,7 +296,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,10,12-27]
+```tsx filename=app/post.ts lines=[1-3,11,13-28]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
@@ -302,7 +306,8 @@ export type Post = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+// relative to the server output not the source!
+let postsPath = path.join(__dirname, "..", "posts");
 
 export async function getPosts() {
   let dir = await fs.readdir(postsPath);
@@ -324,6 +329,8 @@ export async function getPosts() {
 ```
 
 This isn't a Node file system tutorial, so you'll just have to trust us on that code. As mentioned before, you could pull this markdown from a database somewhere (which we will show you in a later tutorial).
+
+<docs-error>If you did not use the Remix App Server you'll probably need to add an extra ".." on the path. Also note that you can't deploy this demo anywhere that doesn't have a persistent file system.</docs-error>
 
 TypeScript is gonna be mad at that code, let's make it happy.
 
@@ -350,7 +357,7 @@ export type PostMarkdownAttributes = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "../posts");
+let postsPath = path.join(__dirname, "..", "posts");
 
 function isValidPostAttributes(
   attributes: any
@@ -493,12 +500,14 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Quick note on that `invariant`. Because `params` comes from the URL, we can't be totally sure that `params.slug` will be defined--maybe you change the name of the file to `$postId.ts`! It's good practice to validate that stuff with `invariant`, and it makes TypeScript happy too.
 
-Let's use the same markdown parser for our blog here that we actually use on this very website. It's not documented (yet? maybe one day?) but you can use whatever markdown parser you want instead.
+There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working.
 
 💿 Parse the markdown into HTML
 
 ```sh
-npm add @ryanflorence/md
+npm add marked
+# if using typescript
+npm add @types/marked
 ```
 
 ```tsx filename=app/post.ts lines=[5,11,18,19]
@@ -506,7 +515,7 @@ import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
 import invariant from "tiny-invariant";
-import { processMarkdown } from "@ryanflorence/md";
+import { marked } from "marked";
 
 //...
 export async function getPost(slug: string) {
@@ -519,7 +528,7 @@ export async function getPost(slug: string) {
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
   );
-  let html = await processMarkdown(body);
+  let html = marked(body);
   return { slug, html, title: attributes.title };
 }
 ```
@@ -540,7 +549,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. Thats gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -685,6 +694,10 @@ Maybe this will help, let's add the "/admin/new" route and see what happens when
 
 💿 Create the `app/routes/admin/new.tsx` route
 
+```sh
+touch app/routes/admin/new.tsx
+```
+
 ```tsx filename=app/routes/admin/new.tsx
 export default function NewPost() {
   return <h2>New Post</h2>;
@@ -750,7 +763,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-9]
+```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
 import { redirect, Form } from "remix";
 import { createPost } from "~/post";
 
@@ -823,10 +836,8 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[9-12,14-16]
 //...
-import invariant from "tiny-invariant";
-
 export let action: ActionFunction = async ({ request }) => {
   let formData = await request.formData();
 
@@ -893,7 +904,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[2,11-14,16-18]
 //...
 import invariant from "tiny-invariant";
 

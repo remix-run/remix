@@ -27,7 +27,9 @@ We'll be linking to various docs (Remix docs as well as web docs on [MDN](https:
 
 This tutorial will be using TypeScript. Feel free to follow along and skip/remove the TypeScript bits. We find that Remix is made even better when you're using TypeScript, especially since we'll also be using [prisma](https://www.prisma.io/) to access our data models from the sqlite database.
 
-💿 Hello, I'm Rachel the Remix Disc. This tutorial has a lot of words and mixed throughout is stuff you're actually supposed to _do_ that can kinda get lost in the words. So I'll show up wherever you're supposed to actually _do_ something. I hope you enjoy the tutorial!
+<docs-info>💿 Hello, I'm Rachel the Remix Disc. I'll show up whenever you have to actually _do_ something.</docs-info>
+
+<docs-warning>Feel free to explore as you go, but if you deviate from the tutorial too much (like trying to deploy before getting to that step for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
 
 ## Outline
 
@@ -142,13 +144,11 @@ remix-jokes
 │   │   │   │   └── index.tsx
 │   │   │   └── params.tsx
 │   │   └── index.tsx
-│   ├── styles
-│   │   ├── dark.css
-│   │   ├── demos
-│   │   │   ├── about.css
-│   │   │   └── remix.css
-│   │   └── global.css
-│   └── utils.server.tsx
+│   └── styles
+│       ├── dark.css
+│       ├── demos
+│       │   └── about.css
+│       └── global.css
 ├── package-lock.json
 ├── package.json
 ├── public
@@ -205,7 +205,6 @@ Feel free to read a bit of what's in there and explore the code if you like. I'l
 
 - `app/routes`
 - `app/styles`
-- `app/utils.server.tsx`
 
 💿 Replace the contents of `app/root.tsx` with this:
 
@@ -1613,7 +1612,7 @@ import { db } from "~/utils/db.server";
 type LoaderData = { users: Array<User> };
 export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
-    users: await prisma.user.findMany()
+    users: await db.user.findMany()
   };
   return { data };
 };
@@ -2777,9 +2776,9 @@ Here's what we need in that file to get started:
 
 <details>
 
-<summary>app/utils/session.server.tsx</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.tsx
+```tsx filename=app/utils/session.server.ts
 import bcrypt from "bcrypt";
 import { db } from "./db.server";
 
@@ -2886,7 +2885,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-44,46-57]
+```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -2923,7 +2922,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -2970,6 +2972,8 @@ case "login": {
 </details>
 
 I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the badies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
+  
+💿 Update .env file with SESSION_SECRET (with any value you like).
 
 With that, pop open your [Network tab](https://developer.chrome.com/docs/devtools/network/reference/), go to [`/login`](http://localhost:3000/login) and enter `kody` and `twixrox` and check the response headers in the network tab. Should look something like this:
 
@@ -2987,13 +2991,13 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
-💿 Update `app/utils/session.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
+💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
 
 <details>
 
-<summary>app/utils/session.ts</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[46-48,50-55,57-70]
+```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3030,7 +3034,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3235,13 +3242,13 @@ Super! So now if a user attempts to create a new joke, they'll be redirected to 
 
 We should probably give people the ability to see that they're logged in and a way to log out right? Yeah, I think so. Let's implement that.
 
-💿 Update `app/utils/session.server.ts` to add a `getUser` function that get's the user from prisma and a `logout` function that uses [`destroySession`](../api/remix#using-sessions) to log the user out.
+💿 Update `app/utils/session.server.ts` to add a `getUser` function that gets the user from prisma and a `logout` function that uses [`destroySession`](../api/remix#using-sessions) to log the user out.
 
 <details>
 
-<summary>app/utils/session.ts</summary>
+<summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.ts lines=[72-86,88-97]
+```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
@@ -3278,7 +3285,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3560,7 +3570,10 @@ if (!sessionSecret) {
 let storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
-    secure: true,
+    // normally you want this to be `secure: true`
+    // but that doesn't work on localhost for Safari
+    // https://web.dev/when-to-use-local-https/
+    secure: process.env.NODE_ENV === "production",
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
@@ -3642,9 +3655,9 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[7,86-93]
+```tsx filename=app/routes/login.tsx lines=[2,7,86-93]
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, useSearchParams } from "remix";
+import { useActionData, useSearchParams, Link } from "remix";
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
@@ -4756,13 +4769,13 @@ This is why Remix has the [`meta`](../api/conventions#meta) export. Why don't yo
 
 But before you get started, remember that we're in charge of rendering everything from the `<html>` to the `</html>` which means we need to make sure these `meta` tags are rendered in the `<head>` of the `<html>`. This is why Remix gives us a [`<Meta />` component](../api/remix#meta-links-scripts).
 
-💿 Add the `<Meta />` component to `app/root.tsx`, and add the `meta` export to the routes mentioned above.
+💿 Add the `<Meta />` component to `app/root.tsx`, and add the `meta` export to the routes mentioned above. The `<Meta />` component needs to be placed above the existing `<title>` tag to be able to overwrite it when provided.
 
 <details>
 
 <summary>app/root.tsx</summary>
 
-```ts filename=app/root.tsx lines=[1,7,33-45,59]
+```ts filename=app/root.tsx lines=[1,7,33-45,58]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
@@ -4820,8 +4833,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
@@ -5485,8 +5498,8 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>{title}</title>
         <Meta />
+        <title>{title}</title>
         <Links />
       </head>
       <body>
