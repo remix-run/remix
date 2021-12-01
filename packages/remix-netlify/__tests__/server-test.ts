@@ -228,7 +228,8 @@ describe("netlify createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      Request {
+      RemixRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -265,7 +266,7 @@ describe("netlify createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);
