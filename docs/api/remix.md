@@ -1311,7 +1311,7 @@ Of course, you can do redirects without this helper if you'd rather build it up 
 return redirect("/else/where", 303);
 
 // ...for this
-return new Response("", {
+return new Response(null, {
   status: 303,
   headers: {
     Location: "/else/where"
