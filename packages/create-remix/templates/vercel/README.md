@@ -2,56 +2,33 @@
 
 - [Remix Docs](https://remix.run/docs)
 
-## Vercel Setup
+## Deployment
 
-First you'll need the [Vercel CLI](https://vercel.com/docs/cli):
+After having run the `create-remix` command and selected "Vercel" as a deployment target, you only need to [import your Git repository](https://vercel.com/new) into Vercel, and it will be deployed.
+
+If you'd like to avoid using a Git repository, you can also deploy the directory by running [Vercel CLI](https://vercel.com/cli):
 
 ```sh
 npm i -g vercel
+vercel
 ```
 
-Before you can run the app in development, you need to link this project to a new Vercel project on your account.
-
-**It is important that you use a new project. If you try to link this project to an existing project (like a Next.js site) you will have problems.**
-
-```sh
-$ vercel link
-```
-
-Follow the prompts, and when it's done you should be able to get started.
+It is generally recommended to use a Git repository, because future commits will then automatically be deployed by Vercel, through its [Git Integration](https://vercel.com/docs/concepts/git).
 
 ## Development
 
-You will be running two processes during development when using Vercel as your server.
-
-- Your Vercel server in one
-- The Remix development server in another
+To run your Remix app locally, make sure your project's local dependencies are installed:
 
 ```sh
-# in one tab
-$ vercel dev
+npm install
+```
 
-# in another
-$ npm run dev
+Afterwards, start the Remix development server like so:
+
+```sh
+npm run dev
 ```
 
 Open up [http://localhost:3000](http://localhost:3000) and you should be ready to go!
 
-If you'd rather run everything in a single tab, you can look at [concurrently](https://npm.im/concurrently) or similar tools to run both processes in one tab.
-
-## Deploying
-
-```sh
-$ npm run build
-# preview deployment
-$ vercel
-
-# production deployment
-$ vercel --prod
-```
-
-### GitHub Automatic Deployments
-
-For some reason the GitHub integration doesn't deploy the public folder. We're working with Vercel to figure this out.
-
-For now, [you can set up a GitHub action with this config](https://gist.github.com/mcansh/91f8effda798b41bb373351fad217070) from our friend [@mcansh](https://github.com/mcansh).
+If you're used to using the `vercel dev` command provided by [Vercel CLI](https://vercel.com/cli) instead, you can also use that, but it's not needed.
