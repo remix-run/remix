@@ -36,7 +36,7 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 
 💿 First, go to `app/root.tsx`
 
-There's a bit going on in the file, find into the `Layout` component and right after the link to "Home", add a new link to "/posts"
+There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, and right after the link to "Home", add a new link to "/posts"
 
 💿 Add a link to posts in `app/root.tsx`
 
@@ -81,7 +81,7 @@ Data loading is built in to Remix.
 
 If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhacement realized in its fullest.
+If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
 
 So let's get to it and provide some data to our component.
 
@@ -551,7 +551,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. Thats gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -838,10 +838,8 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[9-12,14-16]
 //...
-import invariant from "tiny-invariant";
-
 export let action: ActionFunction = async ({ request }) => {
   let formData = await request.formData();
 
@@ -908,7 +906,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[2,11-14,16-18]
 //...
 import invariant from "tiny-invariant";
 

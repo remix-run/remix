@@ -1612,7 +1612,7 @@ import { db } from "~/utils/db.server";
 type LoaderData = { users: Array<User> };
 export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
-    users: await prisma.user.findMany()
+    users: await db.user.findMany()
   };
   return { data };
 };
@@ -3242,7 +3242,7 @@ Super! So now if a user attempts to create a new joke, they'll be redirected to 
 
 We should probably give people the ability to see that they're logged in and a way to log out right? Yeah, I think so. Let's implement that.
 
-💿 Update `app/utils/session.server.ts` to add a `getUser` function that get's the user from prisma and a `logout` function that uses [`destroySession`](../api/remix#using-sessions) to log the user out.
+💿 Update `app/utils/session.server.ts` to add a `getUser` function that gets the user from prisma and a `logout` function that uses [`destroySession`](../api/remix#using-sessions) to log the user out.
 
 <details>
 
