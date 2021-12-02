@@ -74,9 +74,11 @@ async function run() {
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
+      pageSize: 8,
       choices: [
         { name: "Remix App Server", value: "remix" },
         { name: "Express Server", value: "express" },
+        { name: "Koa Server", value: "koa" },
         { name: "Architect (AWS Lambda)", value: "arc" },
         { name: "Fly.io", value: "fly" },
         { name: "Netlify", value: "netlify" },
@@ -191,6 +193,7 @@ type Server =
   | "cloudflare-workers"
   | "express"
   | "fly"
+  | "koa"
   | "netlify"
   | "remix"
   | "vercel";

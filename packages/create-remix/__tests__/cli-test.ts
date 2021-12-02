@@ -73,6 +73,7 @@ describe("create-remix cli", () => {
           expect(getPromptChoices(prompt)).toEqual([
             "Remix App Server",
             "Express Server",
+            "Koa Server",
             "Architect (AWS Lambda)",
             "Fly.io",
             "Netlify",
