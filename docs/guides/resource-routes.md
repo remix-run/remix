@@ -26,7 +26,7 @@ export function loader({ params }) {
 }
 
 export default function Report() {
-  let report = useLoaderData();
+  const report = useLoaderData();
   return (
     <div>
       <h1>{report.name}</h1>
@@ -43,8 +43,8 @@ It's linking to a PDF version of the page. To make this work we can create a Res
 
 ```tsx filename=app/routes/reports/$id/pdf.ts
 export function loader({ params }) {
-  let report = await getReport(params.id);
-  let pdf = await generateReportPDF(report);
+  const report = await getReport(params.id);
+  const pdf = await generateReportPDF(report);
   return new Response(pdf, {
     status: 200,
     headers: {

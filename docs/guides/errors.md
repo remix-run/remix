@@ -4,7 +4,7 @@ title: Error Handling
 
 # Error Handling
 
-Remix sets a new precendent in web application error handling that you are going to love. Remix automatically catches most errors in your code, on the server or in the browser, and renders the closest [`ErrorBoundary`][error-boundary] to where the error occured. If you're familiar with React's `componentDidCatch` and `getDerivedStateFromError` class component hooks, it's just like that but with some extra handling for errors on the server.
+Remix sets a new precedent in web application error handling that you are going to love. Remix automatically catches most errors in your code, on the server or in the browser, and renders the closest [`ErrorBoundary`][error-boundary] to where the error occurred. If you're familiar with React's `componentDidCatch` and `getDerivedStateFromError` class component hooks, it's just like that but with some extra handling for errors on the server.
 
 Remix will automatically catch errors and render the nearest error boundary for errors thrown while:
 
