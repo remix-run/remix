@@ -34,7 +34,7 @@ But this is one approach that we wanted to explore.
 
 [Remix Cloudflare Workers Demo](https://remix-cloudflare-demo.jacob-ebey.workers.dev)
 
-Cloudflare has been pushing the boundaries of edge computing for a while now and Remix is positioned to take full advantage of it. You can see our demo's response times are the same as serving static files but the features it demostrates are definitely not static!
+Cloudflare has been pushing the boundaries of edge computing for a while now and Remix is positioned to take full advantage of it. You can see our demo's response times are the same as serving static files but the features it demonstrates are definitely not static!
 
 Not only does Cloudflare run the app close to the user, they also have persistent storage systems like [KV](https://developers.cloudflare.com/workers/learning/how-kv-works) and [Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects) to allow SSG-level speed without the handcuffs of coupling data to deploys and bespoke incremental builder backends.
 
@@ -46,4 +46,4 @@ Here are some other technologies to help speed up your servers:
 
 - [FaunaDB](https://fauna.com/) - a distributed database that runs close to your users
 - [LRU Cache](https://www.npmjs.com/package/lru-cache) - in memory cache that automatically clears out more space when it gets full
-- [Redis](https://www.npmjs.com/package/redis) - tried and true server side cache
+- [Redis](https://www.npmjs.com/package/redis) - tried and true server-side cache

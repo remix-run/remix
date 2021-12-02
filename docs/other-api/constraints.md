@@ -32,7 +32,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -56,7 +56,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -89,7 +89,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -108,7 +108,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -132,7 +132,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -148,8 +148,8 @@ import { redirect } from "remix";
 
 export function removeTrailingSlash(loader) {
   return function (arg) {
-    let { request } = arg;
-    let url = new URL(request.url);
+    const { request } = arg;
+    const url = new URL(request.url);
     if (url.pathname.endsWith("/")) {
       return redirect(request.url.slice(0, -1), {
         status: 308
@@ -165,7 +165,7 @@ And then try to use it like this:
 ```js bad filename=app/root.js
 import { removeTrailingSlash } from "~/http";
 
-export let loader = removeTrailingSlash(({ request }) => {
+export const loader = removeTrailingSlash(({ request }) => {
   return { some: "data" };
 });
 ```
@@ -191,7 +191,7 @@ And then use it like this:
 ```js bad filename=app/root.js
 import { removeTrailingSlash } from "~/http";
 
-export let loader = ({ request }) => {
+export const loader = ({ request }) => {
   removeTrailingSlash(request.url);
   return { some: "data" };
 };
@@ -201,7 +201,7 @@ It reads much nicer as well when you've got a lot of these:
 
 ```ts
 // this
-export let loader = ({ request }) => {
+export const loader = ({ request }) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, session => {
       return requireUser(session, user => {
@@ -212,10 +212,10 @@ export let loader = ({ request }) => {
 };
 
 // vs. this
-export let loader = ({ request }) => {
+export const loader = ({ request }) => {
   removeTrailingSlash(request.url);
-  let session = await getSession(request);
-  let user = await requireUser(session);
+  const session = await getSession(request);
+  const user = await requireUser(session);
   return json(user);
 };
 ```
@@ -231,7 +231,7 @@ Unlike the browser bundles, Remix doesn't try to remove _browser only code_ from
 ```js bad lines=3
 import { loadStripe } from "@stripe/stripe-js";
 
-let stripe = await loadStripe(window.ENV.stripe);
+const stripe = await loadStripe(window.ENV.stripe);
 
 export async function redirectToStripeCheckout(sessionId) {
   return stripe.redirectToCheckout({ sessionId });
@@ -266,7 +266,7 @@ This strategy defers initialization until the library is actually used:
 import { loadStripe } from "@stripe/stripe-js";
 
 export async function redirectToStripeCheckout(sessionId) {
-  let stripe = await loadStripe(window.ENV.stripe);
+  const stripe = await loadStripe(window.ENV.stripe);
   return stripe.redirectToCheckout({ sessionId });
 }
 ```
@@ -285,7 +285,7 @@ async function getStripe() {
 }
 
 export async function redirectToStripeCheckout(sessionId) {
-  let stripe = await getStripe();
+  const stripe = await getStripe();
   return stripe.redirectToCheckout({ sessionId });
 }
 ```
@@ -300,11 +300,11 @@ Another common case is code that calls browser-only APIs while rendering. When s
 
 ```js bad lines=2
 function useLocalStorage(key) {
-  let [state, setState] = useState(
+  const [state, setState] = useState(
     localStorage.getItem(key)
   );
 
-  let setWithLocalStorage = nextState => {
+  const setWithLocalStorage = nextState => {
     setState(nextState);
   };
 
@@ -316,13 +316,13 @@ You can fix this by moving the code into `useEffect`, which only runs in the bro
 
 ```js [2,4-6]
 function useLocalStorage(key) {
-  let [state, setState] = useState(null);
+  const [state, setState] = useState(null);
 
   useEffect(() => {
     setState(localStorage.getItem(key));
   }, []);
 
-  let setWithLocalStorage = nextState => {
+  const setWithLocalStorage = nextState => {
     setState(nextState);
   };
 

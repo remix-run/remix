@@ -4,7 +4,7 @@ title: Error Handling
 
 # Error Handling
 
-Remix sets a new precendent in web application error handling that you are going to love. Remix automatically catches most errors in your code, on the server or in the browser, and renders the closest [`ErrorBoundary`][error-boundary] to where the error occured. If you're familiar with React's `componentDidCatch` and `getDerivedStateFromError` class component hooks, it's like that but with some extra handling for errors on the server.
+Remix sets a new precedent in web application error handling that you are going to love. Remix automatically catches most errors in your code, on the server or in the browser, and renders the closest [`ErrorBoundary`][error-boundary] to where the error occured. If you're familiar with React's `componentDidCatch` and `getDerivedStateFromError` class component hooks, it's like that but with some extra handling for errors on the server.
 
 Remix will automatically catch errors and render the nearest error boundary for errors thrown while:
 
@@ -12,8 +12,8 @@ Remix will automatically catch errors and render the nearest error boundary for 
 - rendering on the server
 - in a loader during the initial server rendered document request
 - in an action during the initial server rendered document request
-- in a loader during a client side transition in the browser (Remix serializes the error and sends it over the network to the browser)
-- in an action during a client side transition in the browser
+- in a loader during a client-side transition in the browser (Remix serializes the error and sends it over the network to the browser)
+- in an action during a client-side transition in the browser
 
 ## Root Error Boundary
 
@@ -42,7 +42,7 @@ You'll want to make sure to still render the Scripts, Meta, and Links components
 
 ## Nested Error Boundaries
 
-Each route in the hierarchy is a potential error boundary. If a nested route exports an error boundary, then any errors below it will be caught and rendered there. This means that the rest of the surrounding UI in the parent routes _continue to render normally_ so the user is able to click another link and not lose any client side state they might have had.
+Each route in the hierarchy is a potential error boundary. If a nested route exports an error boundary, then any errors below it will be caught and rendered there. This means that the rest of the surrounding UI in the parent routes _continue to render normally_ so the user is able to click another link and not lose any client-side state they might have had.
 
 For example, consider these routes:
 

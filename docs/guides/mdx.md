@@ -117,7 +117,7 @@ export function loader() {
 }
 
 export default function Index() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
 
   return (
     <ul>
