@@ -104,7 +104,7 @@ describe("koa createRequestHandler", () => {
           "Set-Cookie",
           "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
-        return new Response("", { headers });
+        return new Response(null, { headers });
       });
 
       const server = http.createServer(createApp().callback());
