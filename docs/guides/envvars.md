@@ -111,7 +111,7 @@ Instead we recommend keeping all of your environment variables on the server (al
    }
 
    export function Root() {
-     let data = useLoaderData();
+     const data = useLoaderData();
      return (
        <html lang="en">
          <head>
@@ -142,7 +142,7 @@ Instead we recommend keeping all of your environment variables on the server (al
    export async function redirectToStripeCheckout(
      sessionId
    ) {
-     let stripe = await loadStripe(window.ENV.stripe);
+     const stripe = await loadStripe(window.ENV.stripe);
      return stripe.redirectToCheckout({ sessionId });
    }
    ```

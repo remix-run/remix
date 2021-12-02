@@ -198,7 +198,7 @@ export function loader() {
 }
 
 export default function Invoices() {
-  let invoices = useLoaderData();
+  const invoices = useLoaderData();
   // ...
 }
 ```
@@ -212,13 +212,13 @@ import React from "react";
 import { useActionData } from "remix";
 
 export async function action({ request }) {
-  let body = await request.formData();
-  let name = body.get("visitorsName");
+  const body = await request.formData();
+  const name = body.get("visitorsName");
   return { message: `Hello, ${name}` };
 }
 
 export default function Invoices() {
-  let data = useActionData();
+  const data = useActionData();
   return (
     <Form method="post">
       <p>
@@ -239,10 +239,10 @@ The most common use-case for this hook is form validation errors. If the form is
 import { redirect, json, Form, useActionData } from "remix";
 
 export async function action({ request }) {
-  let form = await request.formData();
-  let email = form.get("email");
-  let password = form.get("password");
-  let errors = {};
+  const form = await request.formData();
+  const email = form.get("email");
+  const password = form.get("password");
+  const errors = {};
 
   // validate the fields
   if (typeof email !== "string" || !email.includes("@")) {
@@ -265,7 +265,7 @@ export async function action({ request }) {
 }
 
 export default function Signup() {
-  let errors = useActionData();
+  const errors = useActionData();
 
   return (
     <>
@@ -386,8 +386,8 @@ export async function action() {
 }
 
 function UserPreferences() {
-  let submit = useSubmit();
-  let transition = useTransition();
+  const submit = useSubmit();
+  const transition = useTransition();
 
   function handleChange(event) {
     submit(event.currentTarget, { replace: true });
@@ -419,11 +419,11 @@ function AdminPage() {
 }
 
 function useSessionTimeout() {
-  let submit = useSubmit();
-  let transition = useTransition();
+  const submit = useSubmit();
+  const transition = useTransition();
 
   useEffect(() => {
-    let id = setTimeout(() => {
+    const id = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
     return () => clearTimeout(timer);
@@ -446,7 +446,7 @@ This hook tells you everything you need to know about a page transition to build
 import { useTransition } from "remix";
 
 function SomeComponent() {
-  let transition = useTransition();
+  const transition = useTransition();
   transition.state;
   transition.type;
   transition.submission;
@@ -482,9 +482,9 @@ idle → submitting → loading → idle
 
 ```tsx
 function SubmitButton() {
-  let transition = useTransition();
+  const transition = useTransition();
 
-  let text =
+  const text =
     : transition.state === "submitting"
     ? "Saving..."
     : transition.state === "loading"
@@ -523,14 +523,14 @@ Depending on the transition state, the types can be the following:
 
 ```tsx
 function SubmitButton() {
-  let transition = useTransition();
+  const transition = useTransition();
 
-  let loadTexts = {
+  const loadTexts = {
     actionRedirect: "Data saved, redirecting...",
     actionReload: "Data saved, reloading fresh data..."
   };
 
-  let text =
+  const text =
     transition.state === "submitting"
       ? "Saving..."
       : transition.state === "loading"
@@ -558,10 +558,10 @@ import { useResolvedPath } from "react-router-dom";
 import { Link } from "remix";
 
 function PendingLink({ to, children }) {
-  let transition = useTransition();
-  let path = useResolvedPath(to);
+  const transition = useTransition();
+  const path = useResolvedPath(to);
 
-  let isPending =
+  const isPending =
     transition.state === "loading" &&
     transition.location.pathname === path.pathname;
 
@@ -594,7 +594,7 @@ This hook will call loaders and actions without navigating. It's similar to `use
 import { useFetcher } from "remix";
 
 function SomeComponent() {
-  let fetcher = useFetcher();
+  const fetcher = useFetcher();
 
   // trigger the fetch with these
   <fetcher.Form {..formOptions} />;
@@ -673,7 +673,7 @@ Just like `<Form>` except it doesn't cause a navigation. (You'll get over the do
 
 ```tsx
 function SomeComp() {
-  let fetcher = useFetcher();
+  const fetcher = useFetcher();
   return (
     <fetcher.Form method="post" action="/some/route">
       <input type="text" />
@@ -687,7 +687,7 @@ function SomeComp() {
 Just like `useSubmit` except it doesn't cause a navigation.
 
 ```tsx
-let fetcher = useFetcher();
+const fetcher = useFetcher();
 fetcher.submit({ some: "values" }, { method: "post" });
 ```
 
@@ -696,7 +696,7 @@ fetcher.submit({ some: "values" }, { method: "post" });
 Loads data from a route loader.
 
 ```tsx
-let fetcher = useFetcher();
+const fetcher = useFetcher();
 fetcher.load("/some/route");
 fetcher.data; // the data from the loader
 ```
@@ -710,7 +710,7 @@ Perhaps you have a persistent newsletter signup at the bottom of every page on y
 ```tsx
 // routes/newsletter/subscribe.js
 export async function action({ request }) {
-  let email = (await request.formData()).get("email");
+  const email = (await request.formData()).get("email");
   try {
     await subscribe(email);
     return json({ ok: true });
@@ -723,8 +723,8 @@ export async function action({ request }) {
 ```tsx
 // NewsletterSignup.js
 function NewsletterSignup() {
-  let newsletter = useFetcher();
-  let ref = useRef();
+  const newsletter = useFetcher();
+  const ref = useRef();
 
   useEffect(() => {
     if (newsletter.type === "done" && newsletter.data.ok) {
@@ -772,7 +772,7 @@ export function action({ request }) {
 }
 
 export default function NewsletterSignupRoute() {
-  let data = useActionData();
+  const data = useActionData();
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
@@ -801,7 +801,7 @@ import { Form, useFetcher } from "remix";
 
 // used in the footer
 export function NewsletterSignup() {
-  let newsletter = useFetcher();
+  const newsletter = useFetcher();
   return (
     <NewsletterForm
       Form={newsletter.Form}
@@ -831,7 +831,7 @@ import { NewsletterForm } from "~/NewsletterSignup";
 import { Form } from "remix";
 
 export default function NewsletterSignupRoute() {
-  let data = useActionData();
+  const data = useActionData();
   return (
     <NewsletterForm
       Form={Form}
@@ -849,7 +849,7 @@ Imagine you want to mark an article has been read by the current user after they
 
 ```tsx
 function useMarkAsRead({ articleId, userId }) {
-  let marker = useFetcher();
+  const marker = useFetcher();
 
   useSpentSomeTimeHereAndScrolledToTheBottom(() => {
     marker.submit(
@@ -877,8 +877,8 @@ export function loader({ params }) {
 ```tsx
 // UserAvatar.js
 function UserAvatar({ partialUser }) {
-  let userDetails = useFetcher();
-  let [showDetails, setShowDetails] = useState(false);
+  const userDetails = useFetcher();
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     if (showDetails && userDetails.type === "init") {
@@ -910,14 +910,14 @@ If the user needs to select a city, you could have a loader that returns a list 
 ```tsx
 // routes/city-search.tsx
 export function loader({ request }) {
-  let url = new URL(request.url);
+  const url = new URL(request.url);
   return searchCities(url.searchParams.get("city-query"));
 }
 ```
 
 ```tsx
 function CitySearchCombobox() {
-  let cities = useFetcher();
+  const cities = useFetcher();
 
   return (
     <cities.Form method="get" action="/city-search">
@@ -984,14 +984,14 @@ When the user clicks a checkbox, the submission goes to the action to change the
 
 ```tsx
 function Task({ task }) {
-  let toggle = useFetcher();
-  let checked = toggle.submission
+  const toggle = useFetcher();
+  const checked = toggle.submission
     ? // use the optimistic version
       Boolean(toggle.submission.formData.get("complete"))
     : // use the normal version
       task.complete;
 
-  let { projectId, id } = task;
+  const { projectId, id } = task;
   return (
     <toggle.Form
       method="put"
@@ -1041,19 +1041,19 @@ Here's some sample code:
 
 ```js
 function ProjectTaskCount({ project }) {
-  let fetchers = useFetchers();
-  let completedTasks = 0;
+  const fetchers = useFetchers();
+  const completedTasks = 0;
 
   // 1) Find my task's submissions
-  let myFetchers = new Map();
-  for (let f of fetchers) {
+  const myFetchers = new Map();
+  for (const f of fetchers) {
     if (
       f.submission &&
       f.submission.action.startsWith(
         `/projects/${project.id}/task`
       )
     ) {
-      let taskId = f.submission.formData.get("id");
+      const taskId = f.submission.formData.get("id");
       myFetchers.set(
         parseInt(taskId),
         f.submission.formData.get("complete") === "on"
@@ -1061,7 +1061,7 @@ function ProjectTaskCount({ project }) {
     }
   }
 
-  for (let task of project.tasks) {
+  for (const task of project.tasks) {
     // 2) use the optimistic version
     if (myFetchers.has(task.id)) {
       if (myFetchers.get(task.id)) {
@@ -1087,7 +1087,7 @@ function ProjectTaskCount({ project }) {
 Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
 
 ```js
-let matches = useMatches();
+const matches = useMatches();
 ```
 
 `matches` has the following shape:
@@ -1117,7 +1117,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
 
    ```tsx
    // routes/parent.tsx
-   export let handle = {
+   export const handle = {
      breadcrumb: () => <Link to="/parent">Some Route</Link>
    };
    ```
@@ -1126,7 +1126,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
 
    ```tsx
    // routes/parent/child.tsx
-   export let handle = {
+   export const handle = {
      breadcrumb: () => (
        <Link to="/parent/child">Child Route</Link>
      )
@@ -1145,7 +1145,7 @@ You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, 
    } from "remix";
 
    export default function Root() {
-     let matches = useMatches();
+     const matches = useMatches();
 
      return (
        <html lang="en">
@@ -1198,7 +1198,7 @@ Remix or not, this is just good practice to do. The user can change the url, acc
 import { useBeforeUnload } from "remix";
 
 function SomeForm() {
-  let [state, setState] = React.useState(null);
+  const [state, setState] = React.useState(null);
 
   // save it off before the automatic page reload
   useBeforeUnload(
@@ -1230,7 +1230,7 @@ This is a shortcut for creating `application/json` responses. It assumes you are
 import type { LoaderFunction } from "remix";
 import { json } from "remix";
 
-export let loader: LoaderFunction = () => {
+export const loader: LoaderFunction = () => {
   // So you can write this:
   return json({ any: "thing" });
 
@@ -1246,7 +1246,7 @@ export let loader: LoaderFunction = () => {
 You can also pass a status code and headers:
 
 ```ts [4-9]
-export let loader: LoaderFunction = () => {
+export const loader: LoaderFunction = () => {
   return json(
     { not: "coffee" },
     {
@@ -1267,8 +1267,8 @@ This is shortcut for sending 30x responses.
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
-export let action: ActionFunction = async () => {
-  let userSession = await getUserSessionOrWhatever();
+export const action: ActionFunction = async () => {
+  const userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
     return redirect("/login");
@@ -1336,7 +1336,7 @@ First, create a cookie:
 ```js filename=app/cookies.js
 import { createCookie } from "remix";
 
-export let userPrefs = createCookie("user-prefs", {
+export const userPrefs = createCookie("user-prefs", {
   maxAge: 604_800 // one week
 });
 ```
@@ -1350,15 +1350,17 @@ import { useLoaderData, json, redirect } from "remix";
 import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
-  let cookieHeader = request.headers.get("Cookie");
-  let cookie = (await userPrefs.parse(cookieHeader)) || {};
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie =
+    (await userPrefs.parse(cookieHeader)) || {};
   return { showBanner: value.showBanner };
 }
 
 export async function action({ request }) {
-  let cookieHeader = request.headers.get("Cookie");
-  let cookie = (await userPrefs.parse(cookieHeader)) || {};
-  let bodyParams = await request.formData();
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie =
+    (await userPrefs.parse(cookieHeader)) || {};
+  const bodyParams = await request.formData();
 
   if (bodyParams.get("banner") === "hidden") {
     cookie.showBanner = false;
@@ -1372,7 +1374,7 @@ export async function action({ request }) {
 }
 
 export default function Home() {
-  let { showBanner } = useLoaderData();
+  const { showBanner } = useLoaderData();
 
   return (
     <div>
@@ -1400,7 +1402,7 @@ export default function Home() {
 Cookies have [several attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
 ```js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   // These are defaults for this cookie.
   domain: "remix.run",
   path: "/",
@@ -1427,7 +1429,7 @@ It is possible to sign a cookie to automatically verify its contents when it is 
 To sign a cookie, provide one or more `secrets` when you first create the cookie:
 
 ```js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   secrets: ["s3cret1"]
 });
 ```
@@ -1438,15 +1440,15 @@ Secrets may be rotated by adding new secrets to the front of the `secrets` array
 
 ```js
 // app/cookies.js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   secrets: ["n3wsecr3t", "olds3cret"]
 });
 
 // in your route module...
 export async function loader({ request }) {
-  let oldCookie = request.headers.get("Cookie");
+  const oldCookie = request.headers.get("Cookie");
   // oldCookie may have been signed with "olds3cret", but still parses ok
-  let value = await cookie.parse(oldCookie);
+  const value = await cookie.parse(oldCookie);
 
   new Response("...", {
     headers: {
@@ -1464,7 +1466,7 @@ Creates a logical container for managing a browser cookie from there server.
 ```ts
 import { createCookie } from "remix";
 
-let cookie = createCookie("cookie-name", {
+const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
   domain: "remix.run",
   expires: new Date(Date.now() + 60),
@@ -1485,7 +1487,7 @@ Returns `true` if an object is a Remix cookie container.
 
 ```ts
 import { isCookie } from "remix";
-let cookie = createCookie("user-prefs");
+const cookie = createCookie("user-prefs");
 console.log(isCookie(cookie));
 // true
 ```
@@ -1495,7 +1497,7 @@ console.log(isCookie(cookie));
 A cookie container is returned from `createCookie` and has handful of properties and methods.
 
 ```ts
-let cookie = createCookie(name);
+const cookie = createCookie(name);
 cookie.name;
 cookie.parse();
 // etc.
@@ -1510,7 +1512,7 @@ The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
 ```js
-let value = await cookie.parse(
+const value = await cookie.parse(
   request.headers.get("Cookie")
 );
 ```
@@ -1534,7 +1536,7 @@ new Response("...", {
 Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 
 ```js
-let cookie = createCookie("user-prefs");
+const cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
 cookie = createCookie("user-prefs", {
@@ -1548,7 +1550,7 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01")
 });
 
@@ -1577,7 +1579,7 @@ This is an example of a cookie session storage:
 // app/sessions.js
 import { createCookieSessionStorage } from "remix";
 
-let { getSession, commitSession, destroySession } =
+const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
     // a Cookie from `createCookie` or the CookieOptions to create one
     cookie: {
@@ -1611,7 +1613,7 @@ import { json, redirect } from "remix";
 import { getSession, commitSession } from "../sessions";
 
 export async function loader({ request }) {
-  let session = await getSession(
+  const session = await getSession(
     request.headers.get("Cookie")
   );
 
@@ -1620,7 +1622,7 @@ export async function loader({ request }) {
     return redirect("/");
   }
 
-  let data = { error: session.get("error") };
+  const data = { error: session.get("error") };
 
   return json(data, {
     headers: {
@@ -1630,14 +1632,14 @@ export async function loader({ request }) {
 }
 
 export async function action({ request }) {
-  let session = await getSession(
+  const session = await getSession(
     request.headers.get("Cookie")
   );
-  let form = await request.formData();
-  let username = form.get("username");
-  let password = form.get("password");
+  const form = await request.formData();
+  const username = form.get("username");
+  const password = form.get("password");
 
-  let userId = await validateCredentials(
+  const userId = await validateCredentials(
     username,
     password
   );
@@ -1664,7 +1666,7 @@ export async function action({ request }) {
 }
 
 export default function Login() {
-  let { currentUser, error } = useLoaderData();
+  const { currentUser, error } = useLoaderData();
 
   return (
     <div>
@@ -1691,8 +1693,10 @@ And then a logout form might look something like this:
 ```tsx
 import { getSession, destroySession } from "../sessions";
 
-export let action: ActionFunction = async ({ request }) => {
-  let session = await getSession(
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const session = await getSession(
     request.headers.get("Cookie")
   );
   return redirect("/login", {
@@ -1742,7 +1746,7 @@ function createDatabaseSessionStorage({
   port
 }) {
   // Configure your database client...
-  let db = createDatabaseClient(host, port);
+  const db = createDatabaseClient(host, port);
 
   return createSessionStorage({
     cookie,
@@ -1750,7 +1754,7 @@ function createDatabaseSessionStorage({
       // `expires` is a Date after which the data should be considered
       // invalid. You could use it to invalidate the data somehow or
       // automatically purge this record from your database.
-      let id = await db.insert(data);
+      const id = await db.insert(data);
       return id;
     },
     async readData(id) {
@@ -1769,7 +1773,7 @@ function createDatabaseSessionStorage({
 And then you can use it like this:
 
 ```js
-let { getSession, commitSession, destroySession } =
+const { getSession, commitSession, destroySession } =
   createDatabaseSessionStorage({
     host: "localhost",
     port: 1234,
@@ -1793,7 +1797,7 @@ The downside is that you have to `commitSession` in almost every loader and acti
 ```js
 import { createCookieSessionStorage } from "remix";
 
-let { getSession, commitSession, destroySession } =
+const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
     // a Cookie from `createCookie` or the same CookieOptions to create one
     cookie: {
@@ -1818,12 +1822,12 @@ import {
 } from "remix";
 
 // In this example the Cookie is created separately.
-let sessionCookie = createCookie("__session", {
+const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
   sameSite: true
 });
 
-let { getSession, commitSession, destroySession } =
+const { getSession, commitSession, destroySession } =
   createFileSessionStorage({
     // The root directory where you want to store the files.
     // Make sure it's writable!
@@ -1850,12 +1854,12 @@ import {
 } from "remix";
 
 // In this example the Cookie is created separately.
-let sessionCookie = createCookie("__session", {
+const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
   sameSite: true
 });
 
-let { getSession, commitSession, destroySession } =
+const { getSession, commitSession, destroySession } =
   createFileSessionStorage({
     // The root directory where you want to store the files.
     // Make sure it's writable!
@@ -1880,12 +1884,12 @@ import {
 } from "remix";
 
 // In this example the Cookie is created separately.
-let sessionCookie = createCookie("__session", {
+const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
   sameSite: true
 });
 
-let { getSession, commitSession, destroySession } =
+const { getSession, commitSession, destroySession } =
   createCloudflareKVSessionStorage({
     // The KV Namespace where you want to store sessions
     kv: YOUR_NAMESPACE,
@@ -1901,7 +1905,7 @@ After retrieving a session with `getSession`, the session object returned has a 
 
 ```js
 export async function action({ request }) {
-  let session = await getSession(
+  const session = await getSession(
     request.headers.get("Cookie")
   );
   session.get("foo");
@@ -1934,10 +1938,10 @@ Sets a session value that will be unset the first time it is read. After that, i
 import { getSession, commitSession } from "../sessions";
 
 export async function action({ request, params }) {
-  let session = await getSession(
+  const session = await getSession(
     request.headers.get("Cookie")
   );
-  let deletedProject = await archiveProject(
+  const deletedProject = await archiveProject(
     params.projectId
   );
 
@@ -1965,10 +1969,10 @@ import { Meta, Links, Scripts, Outlet, json } from "remix";
 import { getSession, commitSession } from "./sessions";
 
 export async function loader({ request }) {
-  let session = await getSession(
+  const session = await getSession(
     request.headers.get("Cookie")
   );
-  let message = session.get("globalMessage") || null;
+  const message = session.get("globalMessage") || null;
 
   return json(
     { message },
@@ -1982,7 +1986,7 @@ export async function loader({ request }) {
 }
 
 export default function App() {
-  let { message } = useLoaderData();
+  const { message } = useLoaderData();
 
   return (
     <html>

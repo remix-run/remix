@@ -34,7 +34,7 @@ For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
 export function loader({ request }) {
-  let url = new URL(request.url);
+  const url = new URL(request.url);
   return searchCities(url.searchParams.get("q"));
 }
 ```
@@ -43,7 +43,7 @@ And then `useFetcher` along with Reach UI's combobox input:
 
 ```tsx [2,11,14,19,21,23]
 function CitySearchCombobox() {
-  let cities = useFetcher();
+  const cities = useFetcher();
 
   return (
     <cities.Form method="get" action="/city-search">
@@ -88,8 +88,8 @@ In other cases, you may need routes that are part of your application, but aren'
 
 ```tsx
 export function loader({ params }) {
-  let report = await getReport(params.id);
-  let pdf = await generateReportPDF(report);
+  const report = await getReport(params.id);
+  const pdf = await generateReportPDF(report);
   return new Response(pdf, {
     status: 200,
     headers: {
