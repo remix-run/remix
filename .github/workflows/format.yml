@@ -29,7 +29,7 @@ jobs:
 
       - name: Commit
         run: |
-          git config --local user.email "bot@remix.run"
+          git config --local user.email "github-actions@remix.run"
           git config --local user.name "Remix Run Bot"
           git remote add github "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git"
 
