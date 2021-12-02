@@ -1,7 +1,8 @@
 {
   "name": "@remix-run/vercel",
   "description": "Vercel server request handler for Remix",
-  "version": "1.0.4",
+  "version": "1.0.6",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
@@ -11,7 +12,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/node": "1.0.4"
+    "@remix-run/node": "1.0.6"
   },
   "peerDependencies": {
     "@vercel/node": "^1.8.3"
