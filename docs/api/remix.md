@@ -1353,7 +1353,7 @@ export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: value.showBanner };
+  return { showBanner: cookie.showBanner };
 }
 
 export async function action({ request }) {
