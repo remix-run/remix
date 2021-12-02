@@ -79,7 +79,7 @@ You might need to refresh the browser to see our new, bare-bones posts route.
 
 Data loading is built in to Remix.
 
-If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
+If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
 If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
 
@@ -182,7 +182,7 @@ export default function Posts() {
 }
 ```
 
-Hey, that's pretty cool. We get a pretty solid degree of type safety even over a network request because it's all defined in the same file. Unless the network blows up while Remix fetches the data, you've got type safety in this component and it's API (remember, the component is already its own API route).
+Hey, that's pretty cool. We get a pretty solid degree of type safety even over a network request because it's all defined in the same file. Unless the network blows up while Remix fetches the data, you've got type safety in this component and its API (remember, the component is already its own API route).
 
 ## A little refactoring
 
@@ -666,7 +666,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/admin.tsx lines=[19]
+```tsx filename=app/routes/admin.tsx lines=[1,19]
 import { Outlet, Link, useLoaderData } from "remix";
 
 //...
