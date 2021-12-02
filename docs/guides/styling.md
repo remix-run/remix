@@ -11,8 +11,7 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href:
-        "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
     }
   ];
 }
@@ -189,11 +188,11 @@ Note that these are not routes, but they export `links` functions as if they wer
 ```tsx filename=app/components/button/index.js lines=[1,3-5]
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   { rel: "stylesheet", href: styles }
 ];
 
-export let Button = React.forwardRef(
+export const Button = React.forwardRef(
   ({ children, ...props }, ref) => {
     return <button {...props} ref={ref} data-button />;
   }
@@ -213,12 +212,12 @@ And then a `<PrimaryButton>` that extends it:
 import { Button, links as buttonLinks } from "../button";
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   ...buttonLinks(),
   { rel: "stylesheet", href: styles }
 ];
 
-export let PrimaryButton = React.forwardRef(
+export const PrimaryButton = React.forwardRef(
   ({ children, ...props }, ref) => {
     return (
       <Button {...props} ref={ref} data-primary-button />
@@ -269,7 +268,7 @@ export function loader({ params }) {
 }
 
 export default function Category() {
-  let products = useLoaderData();
+  const products = useLoaderData();
   return (
     <TileGrid>
       {products.map(product => (
@@ -341,7 +340,7 @@ Since these are just `<link>` tags, you can do more than stylesheet links, like 
 ```tsx filename=app/components/copy-to-clipboard.jsx lines=[4-9]
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   {
     rel: "preload",
     href: "/icons/clipboard.svg",
@@ -351,7 +350,7 @@ export let links = () => [
   { rel: "stylesheet", href: styles }
 ];
 
-export let CopyToClipboard = React.forwardRef(
+export const CopyToClipboard = React.forwardRef(
   ({ children, ...props }, ref) => {
     return (
       <Button {...props} ref={ref} data-copy-to-clipboard />
@@ -464,12 +463,11 @@ You can load stylesheets from any server, here's an example of loading a modern 
 ```ts filename=app/root.tsx
 import type { LinksFunction } from "remix";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href:
-        "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
     }
   ];
 };
@@ -554,7 +552,7 @@ Here's how to set it up:
    import type { LinksFunction } from "remix";
    import styles from "./styles/app.css";
 
-   export let links: LinksFunction = () => {
+   export const links: LinksFunction = () => {
      return [{ rel: "stylesheet", href: styles }];
    };
    ```
@@ -621,12 +619,12 @@ Here's some sample code to show how you might use Styled Components with Remix:
      );
 
      // Now that we've rendered, we get the styles out of the sheet
-     let styles = sheet.getStyleTags();
+     const styles = sheet.getStyleTags();
      sheet.seal();
 
      // Finally, we render a second time, but this time we have styles to apply,
      // make sure to pass them to `<StylesContext.Provider value>`
-     let markup = ReactDOMServer.renderToString(
+     const markup = ReactDOMServer.renderToString(
        <StylesContext.Provider value={styles}>
          <RemixServer
            context={remixContext}
@@ -653,7 +651,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
    import StylesContext from "./StylesContext";
 
    export default function Root() {
-     let styles = useContext(StylesContext);
+     const styles = useContext(StylesContext);
 
      return (
        <html>
