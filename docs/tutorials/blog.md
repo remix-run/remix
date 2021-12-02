@@ -26,15 +26,17 @@ npm run dev
 
 We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
-Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
+Open up [http://localhost:3000](http://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
-If your application is not running properly at [https://localhost:3000](https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
+If your application is not running properly at [http://localhost:3000](http://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
 
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-There's a bit going on in the file, find into the `Layout` component and right after the link to "Home", add a new link to "/posts"
+💿 First, go to `app/root.tsx`
+
+There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, and right after the link to "Home", add a new link to "/posts"
 
 💿 Add a link to posts in `app/root.tsx`
 
@@ -113,8 +115,6 @@ export default function Posts() {
 ```
 
 Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
-
-<docs-info>We use <code>let</code> because it is only three letters, you can use <code>const</code> if you want 🙂</docs-info>
 
 💿 Render links to our posts
 
