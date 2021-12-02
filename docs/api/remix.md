@@ -380,7 +380,7 @@ export async function loader() {
   await getUserPreferences();
 }
 
-export async function action() {
+export async function action({ request }) {
   await updatePreferences(await request.formData());
   return redirect("/prefs");
 }
