@@ -172,6 +172,16 @@ export async function dev(remixRoot: string, modeArg?: string) {
         server = app.listen(port, () => {
           console.log(`Remix App Server started at http://localhost:${port}`);
         });
+        // handle app start error
+        const onError = (e: Error & { code?: string }) => {
+          if (e.code && e.code === "EADDRINUSE") {
+            console.log(`Port ${port} is inuse, trying another one..`);
+            server!?.listen(++(port as number));
+          } else {
+            server!?.off("error", onError);
+          }
+        };
+        server!?.on("error", onError);
       }
     });
   } finally {
