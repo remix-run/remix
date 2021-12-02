@@ -1271,21 +1271,39 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
     <script
       dangerouslySetInnerHTML={{
         __html: `
-          let ws = new WebSocket("ws://localhost:${port}/socket");
-          ws.onmessage = message => {
-            let event = JSON.parse(message.data);
-            if (event.type === "LOG") {
-              console.log(event.message);
-            }
-            if (event.type === "RELOAD") {
-              console.log("💿 Reloading window ...");
-              window.location.reload();
-            }
-          };
-          ws.onerror = error => {
-            console.log("Remix dev asset server web socket error:");
-            console.error(error);
-          };
+          function remixLiveReloadConnect(config) {
+            let ws = new WebSocket("ws://localhost:${port}/socket");
+            ws.onmessage = (message) => {
+              let event = JSON.parse(message.data);
+              if (event.type === "LOG") {
+                console.log(event.message);
+              }
+              if (event.type === "RELOAD") {
+                console.log("💿 Reloading window ...");
+                window.location.reload();
+              }
+            };
+            ws.onopen = () => {
+              if (config && typeof config.onOpen === "function") {
+                config.onOpen();
+              }
+            };
+            ws.onclose = (error) => {
+              console.log("Remix dev asset server web socket closed. Reconnecting...");
+              setTimeout(
+                () =>
+                  remixLiveReloadConnect({
+                    onOpen: () => window.location.reload(),
+                  }),
+                1000
+              );
+            };
+            ws.onerror = (error) => {
+              console.log("Remix dev asset server web socket error:");
+              console.error(error);
+            };
+          }
+          remixLiveReloadConnect();
       `
       }}
     />
