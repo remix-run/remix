@@ -632,7 +632,14 @@ You can know the state of the fetcher with `fetcher.state`, it will be one of:
 
 - **idle** - nothing is being fetched
 - **submitting** - A form has been submitted. If the method is GET then the route loader is being called, if POST, PUT, PATCH, or DELETE then the route action is being called.
-- **loading** - The loaders for the routes are being reloaded after an action submission completed.
+- **loading** - The loaders for the routes are being reloaded after an action submission 
+
+
+
+
+
+
+.
 
 #### `fetcher.type`
 
@@ -1042,7 +1049,7 @@ Here's some sample code:
 ```js
 function ProjectTaskCount({ project }) {
   const fetchers = useFetchers();
-  const completedTasks = 0;
+  let completedTasks = 0;
 
   // 1) Find my task's submissions
   const myFetchers = new Map();
