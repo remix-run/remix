@@ -477,7 +477,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,7,8,15]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,17]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
@@ -716,7 +716,7 @@ We're gonna get serious now. Let's build a form to create a new post in the our 
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,5-22]
+```tsx filename=app/routes/admin/new.tsx lines=[1,5-24]
 import { Form } from "remix";
 
 export default function NewPost() {
@@ -842,7 +842,7 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/admin/new.tsx lines=[9-12,14-16]
+```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
 //...
 export const action: ActionFunction = async ({
   request
@@ -910,16 +910,27 @@ export default function NewPost() {
 }
 ```
 
-TypeScript is still mad, so let's add some invariants to make it happy.
+TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[4-8,15,24-26]
 //...
 import invariant from "tiny-invariant";
 
+type PostError = {
+  title?: boolean;
+  slug?: boolean;
+  markdown?: boolean;
+}
+
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
+
+  const errors: PostError = {};
+  if (!title) errors.title = true;
+  if (!slug) errors.slug = true;
+  if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
     return errors;
@@ -938,7 +949,7 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/admin/new.tsx lines=[3]
+```tsx filename=app/routes/admin/new.tsx lines=[5]
 // ...
 export const action: ActionFunction = async ({
   request
