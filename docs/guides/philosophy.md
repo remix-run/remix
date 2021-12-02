@@ -8,9 +8,9 @@ We've worked on a lot of different types of websites: static sites for credit ca
 
 The Remix philosophy can be summed up in four points:
 
-1. Embrace the server/client model, including seperation of source code from content/data.
+1. Embrace the server/client model, including separation of source code from content/data.
 2. Work with, not against, the foundations of the web: Browsers, HTTP, and HTML. It’s always been good and it's gotten _really good_ in the last few years.
-3. Use JavaScript to augment the user experience by emulating browser behavior
+3. Use JavaScript to augment the user experience by emulating browser behavior.
 4. Don't over-abstract the underlying technologies
 
 ## Server/Client Model
@@ -27,7 +27,7 @@ Consider [the Github Gist API](https://api.github.com/gists). This payload is 75
 
 ```js
 export default function Gists() {
-  let gists = useSomeFetchWrapper(
+  const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"
   );
   if (!gists) {
@@ -56,8 +56,8 @@ With Remix, you can filter down the data _on the server_ before sending it to th
 
 ```js [1-11]
 export async function loader() {
-  let res = await fetch("https://api.github.com/gists");
-  let json = await res.json();
+  const res = await fetch("https://api.github.com/gists");
+  const json = await res.json();
   return json.map(gist => {
     return {
       url: gist.html_url,
@@ -68,7 +68,7 @@ export async function loader() {
 }
 
 export default function Gists() {
-  let gists = useLoaderData();
+  const gists = useLoaderData();
   return (
     <ul>
       {gists.map(gist => (
