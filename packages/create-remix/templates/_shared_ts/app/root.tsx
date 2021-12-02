@@ -1,4 +1,3 @@
-import * as React from "react";
 import {
   Link,
   Links,
@@ -7,45 +6,88 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch,
-  useLocation
+  useCatch
 } from "remix";
 import type { LinksFunction } from "remix";
 
-import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";
 
-/**
- * The `links` export is a function that returns an array of objects that map to
- * the attributes for an HTML `<link>` element. These will load `<link>` tags on
- * every route in the app, but individual routes can include their own links
- * that are automatically unloaded when a user navigates away from the route.
- *
- * https://remix.run/api/app#links
- */
-export let links: LinksFunction = () => {
+// https://remix.run/api/app#links
+export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
       href: darkStylesUrl,
       media: "(prefers-color-scheme: dark)"
-    },
-    { rel: "stylesheet", href: deleteMeRemixStyles }
+    }
   ];
 };
 
-/**
- * The root module's default export is a component that renders the current
- * route via the `<Outlet />` component. Think of this as the global layout
- * component for your app.
- */
+// https://remix.run/api/conventions#default-export
+// https://remix.run/api/conventions#route-filenames
 export default function App() {
   return (
     <Document>
       <Layout>
         <Outlet />
+      </Layout>
+    </Document>
+  );
+}
+
+// https://remix.run/api/conventions#errorboundary
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  return (
+    <Document title="Error!">
+      <Layout>
+        <div>
+          <h1>There was an error</h1>
+          <p>{error.message}</p>
+          <hr />
+          <p>
+            Hey, developer, you should replace this with what you want your
+            users to see.
+          </p>
+        </div>
+      </Layout>
+    </Document>
+  );
+}
+
+// https://remix.run/api/conventions#catchboundary
+export function CatchBoundary() {
+  const caught = useCatch();
+
+  let message;
+  switch (caught.status) {
+    case 401:
+      message = (
+        <p>
+          Oops! Looks like you tried to visit a page that you do not have access
+          to.
+        </p>
+      );
+      break;
+    case 404:
+      message = (
+        <p>Oops! Looks like you tried to visit a page that does not exist.</p>
+      );
+      break;
+
+    default:
+      throw new Error(caught.data || caught.statusText);
+  }
+
+  return (
+    <Document title={`${caught.status} ${caught.statusText}`}>
+      <Layout>
+        <h1>
+          {caught.status}: {caught.statusText}
+        </h1>
+        {message}
       </Layout>
     </Document>
   );
@@ -69,16 +111,15 @@ function Document({
       </head>
       <body>
         {children}
-        <RouteChangeAnnouncement />
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
       </body>
     </html>
   );
 }
 
-function Layout({ children }: React.PropsWithChildren<{}>) {
+function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="remix-app">
       <header className="remix-app__header">
@@ -113,61 +154,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
   );
 }
 
-export function CatchBoundary() {
-  let caught = useCatch();
-
-  let message;
-  switch (caught.status) {
-    case 401:
-      message = (
-        <p>
-          Oops! Looks like you tried to visit a page that you do not have access
-          to.
-        </p>
-      );
-      break;
-    case 404:
-      message = (
-        <p>Oops! Looks like you tried to visit a page that does not exist.</p>
-      );
-      break;
-
-    default:
-      throw new Error(caught.data || caught.statusText);
-  }
-
-  return (
-    <Document title={`${caught.status} ${caught.statusText}`}>
-      <Layout>
-        <h1>
-          {caught.status}: {caught.statusText}
-        </h1>
-        {message}
-      </Layout>
-    </Document>
-  );
-}
-
-export function ErrorBoundary({ error }: { error: Error }) {
-  console.error(error);
-  return (
-    <Document title="Error!">
-      <Layout>
-        <div>
-          <h1>There was an error</h1>
-          <p>{error.message}</p>
-          <hr />
-          <p>
-            Hey, developer, you should replace this with what you want your
-            users to see.
-          </p>
-        </div>
-      </Layout>
-    </Document>
-  );
-}
-
-function RemixLogo(props: React.ComponentPropsWithoutRef<"svg">) {
+function RemixLogo() {
   return (
     <svg
       viewBox="0 0 659 165"
@@ -179,7 +166,6 @@ function RemixLogo(props: React.ComponentPropsWithoutRef<"svg">) {
       width="106"
       height="30"
       fill="currentColor"
-      {...props}
     >
       <title id="remix-run-logo-title">Remix Logo</title>
       <path d="M0 161V136H45.5416C53.1486 136 54.8003 141.638 54.8003 145V161H0Z M133.85 124.16C135.3 142.762 135.3 151.482 135.3 161H92.2283C92.2283 158.927 92.2653 157.03 92.3028 155.107C92.4195 149.128 92.5411 142.894 91.5717 130.304C90.2905 111.872 82.3473 107.776 67.7419 107.776H54.8021H0V74.24H69.7918C88.2407 74.24 97.4651 68.632 97.4651 53.784C97.4651 40.728 88.2407 32.816 69.7918 32.816H0V0H77.4788C119.245 0 140 19.712 140 51.2C140 74.752 125.395 90.112 105.665 92.672C122.32 96 132.057 105.472 133.85 124.16Z" />
@@ -190,58 +176,3 @@ function RemixLogo(props: React.ComponentPropsWithoutRef<"svg">) {
     </svg>
   );
 }
-
-/**
- * Provides an alert for screen reader users when the route changes.
- */
-const RouteChangeAnnouncement = React.memo(() => {
-  let [hydrated, setHydrated] = React.useState(false);
-  let [innerHtml, setInnerHtml] = React.useState("");
-  let location = useLocation();
-
-  React.useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  let firstRenderRef = React.useRef(true);
-  React.useEffect(() => {
-    // Skip the first render because we don't want an announcement on the
-    // initial page load.
-    if (firstRenderRef.current) {
-      firstRenderRef.current = false;
-      return;
-    }
-
-    let pageTitle = location.pathname === "/" ? "Home page" : document.title;
-    setInnerHtml(`Navigated to ${pageTitle}`);
-  }, [location.pathname]);
-
-  // Render nothing on the server. The live region provides no value unless
-  // scripts are loaded and the browser takes over normal routing.
-  if (!hydrated) {
-    return null;
-  }
-
-  return (
-    <div
-      aria-live="assertive"
-      aria-atomic
-      id="route-change-region"
-      style={{
-        border: "0",
-        clipPath: "inset(100%)",
-        clip: "rect(0 0 0 0)",
-        height: "1px",
-        margin: "-1px",
-        overflow: "hidden",
-        padding: "0",
-        position: "absolute",
-        width: "1px",
-        whiteSpace: "nowrap",
-        wordWrap: "normal"
-      }}
-    >
-      {innerHtml}
-    </div>
-  );
-});

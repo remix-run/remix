@@ -1,6 +1,3 @@
-import { useCatch, Link, json, useLoaderData, Outlet } from "remix";
-import type { LoaderFunction } from "remix";
-
 export default function Boundaries() {
   return (
     <>
@@ -12,7 +9,7 @@ export default function Boundaries() {
       </p>
       <h2>Errors</h2>
       <p>
-        When a route throws and error in it's action, loader, or component,
+        When a route throws an error in it's action, loader, or component,
         Remix automatically catches it, won't even try to render the component,
         but it will render the route's ErrorBoundary instead. If the route
         doesn't have one, it will bubble up to the routes above it until it hits

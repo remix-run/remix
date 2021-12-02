@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "remix-monorepo",
+  "license": "MIT",
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c && tsc -b",
