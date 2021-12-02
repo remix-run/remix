@@ -9,9 +9,9 @@ export function meta() {
 // When your form sends a POST, the action is called on the server.
 // - https://remix.run/api/conventions#action
 // - https://remix.run/guides/data-updates
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
-  let answer = formData.get("answer");
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await request.formData();
+  const answer = formData.get("answer");
 
   // Typical action workflows start with validating the form data that just came
   // over the network. Clientside validation is fine, but you definitely need it
@@ -34,8 +34,8 @@ export let action: ActionFunction = async ({ request }) => {
 
 export default function ActionsDemo() {
   // https://remix.run/api/remix#useactiondata
-  let actionMessage = useActionData<string>();
-  let answerRef = useRef<HTMLInputElement>(null);
+  const actionMessage = useActionData<string>();
+  const answerRef = useRef<HTMLInputElement>(null);
 
   // This form works without JavaScript, but when we have JavaScript we can make
   // the experience better by selecting the input on wrong answers! Go ahead, disable
