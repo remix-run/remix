@@ -101,7 +101,7 @@ function NewEvent() {
 
 #### `<Form action>`
 
-Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes colocating your component, your data reads, and your data writes a snap.
+Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes collocating your component, your data reads, and your data writes a snap.
 
 If you need to post to a different route, then add an action prop:
 
@@ -462,7 +462,7 @@ You can know the state of the transition with `transition.state`, it will be one
 - **submitting** - A form has been submitted, if GET, then the route loader is being called, if POST, PUT, PATCH, DELETE, then the route action is being called.
 - **loading** - The loaders for the next routes are being called to render the next page.
 
-Normal navigations transition as follows:
+Normal navigation's transition as follows:
 
 ```
 idle → loading → idle
@@ -575,7 +575,7 @@ function PendingLink({ to, children }) {
 }
 ```
 
-Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
+Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for while the state is "submitting", once the action is complete, then the link will go pending.
 
 ### `useFetcher`
 
@@ -622,7 +622,7 @@ Notes about how it works:
   - After the action completes, the loaders on the page are reloaded to capture any mutations that may have happened, automatically keeping your UI in sync with your server state
 - When multiple fetchers are inflight at once, it will
   - commit the freshest available data as they each land
-  - ensure no stale loads overrite fresher data, no matter which order the responses return
+  - ensure no stale loads override fresher data, no matter which order the responses return
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
@@ -1711,7 +1711,7 @@ export default function LogoutRoute() {
       <Form method="post">
         <button>Logout</button>
       </Form>
-      <Link to="/">Nevermind</Link>
+      <Link to="/">Never mind</Link>
     </>
   );
 }
