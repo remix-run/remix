@@ -872,8 +872,13 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,12-13,19-20,25-26]
-import { useActionData, Form, redirect } from "remix";
+```tsx filename=app/routes/admin/new.tsx lines=[2,17-18,24-25,30-31]
+import {
+  useActionData,
+  Form,
+  redirect,
+  ActionFunction
+} from 'remix';
 
 // ...
 
