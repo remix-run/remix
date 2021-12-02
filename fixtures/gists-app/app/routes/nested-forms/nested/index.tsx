@@ -7,7 +7,11 @@ export let loader: LoaderFunction = ({ request }) => {
   return json(value);
 };
 
-export let action: ActionFunction = () => {
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await request.formData();
+  if (formData.get("throw") === "true") {
+    throw json("throw");
+  }
   return json("nested index action data");
 };
 
@@ -20,6 +24,13 @@ export default function NestedFormsIndexLayout() {
       <Form method="post">
         {actionData ? <p>{actionData}</p> : null}
         <button type="submit">Submit Nested Index POST Form</button>
+      </Form>
+
+      <Form method="post">
+        {actionData ? <p>{actionData}</p> : null}
+        <button name="throw" value="true" type="submit">
+          Throw a response in the action
+        </button>
       </Form>
 
       <Form method="get">

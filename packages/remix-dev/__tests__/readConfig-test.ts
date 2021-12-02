@@ -230,6 +230,14 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "empty",
           },
+          "routes/fetcher": Object {
+            "caseSensitive": undefined,
+            "file": "routes/fetcher.tsx",
+            "id": "routes/fetcher",
+            "index": undefined,
+            "parentId": "root",
+            "path": "fetcher",
+          },
           "routes/fetchers": Object {
             "caseSensitive": undefined,
             "file": "routes/fetchers.tsx",

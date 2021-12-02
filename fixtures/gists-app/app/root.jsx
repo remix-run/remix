@@ -27,7 +27,7 @@ export function links() {
 
 export function loader({ request }) {
   return {
-    enableScripts: new URL(request.url).searchParams.get("disableJs") == null
+    enableScripts: !new URL(request.url).searchParams.has("disableJs")
   };
 }
 
@@ -103,8 +103,6 @@ export function CatchBoundary() {
         </html>
       );
     default:
-      console.warn("Unexpected catch", caught);
-
       return (
         <html lang="en">
           <head>

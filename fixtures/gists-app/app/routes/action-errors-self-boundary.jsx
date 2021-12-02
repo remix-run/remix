@@ -5,7 +5,7 @@ export function action() {
 }
 
 export function loader() {
-  return "nope";
+  return "only in javascript land";
 }
 
 export default function ActionErrors() {

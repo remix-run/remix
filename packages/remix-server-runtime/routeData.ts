@@ -20,5 +20,5 @@ export async function createRouteData(
 }
 
 export async function createActionData(response: Response): Promise<RouteData> {
-  return extractData(response);
+  return extractData(response) as RouteData;
 }

@@ -55,6 +55,7 @@ describe("uncaught exceptions", () => {
           "<div data-test-id=\\"action-error-boundary\\">
             <h1>Action Error Boundary</h1>
             <pre>I am an action error!</pre>
+            only in javascript land
           </div>
           "
         `);
