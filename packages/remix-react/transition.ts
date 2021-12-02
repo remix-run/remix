@@ -168,13 +168,6 @@ export type TransitionStates = {
   };
 };
 
-export type SubmissionTransition =
-  | TransitionStates["SubmittingAction"]
-  | TransitionStates["LoadingAction"]
-  | TransitionStates["LoadingActionRedirect"]
-  | TransitionStates["SubmittingLoader"]
-  | TransitionStates["LoadingLoaderSubmissionRedirect"];
-
 export type Transition = TransitionStates[keyof TransitionStates];
 
 export type Redirects = {
@@ -745,9 +738,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-    fetchControllers.delete(key);
 
     if (controller.signal.aborted) return;
+    fetchControllers.delete(key);
 
     if (isRedirectResult(result)) {
       let locationState: Redirects["Loader"] = {

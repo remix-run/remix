@@ -1,15 +1,15 @@
 import { useEffect } from "react";
 import {
-  Meta,
+  Link,
   Links,
+  Meta,
+  Outlet,
   Scripts,
+  ScrollRestoration,
   useCatch,
   useLoaderData,
-  useMatches,
-  Link,
-  ScrollRestoration
+  useMatches
 } from "remix";
-import { Outlet } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
 
 import stylesHref from "./styles/app.css";
@@ -66,12 +66,12 @@ export default function Root() {
         <div data-test-id="content" id="content">
           <Outlet />
         </div>
-        {data.enableScripts && (
+        {data.enableScripts ? (
           <>
             <ScrollRestoration />
             <Scripts />
           </>
-        )}
+        ) : null}
       </body>
     </html>
   );

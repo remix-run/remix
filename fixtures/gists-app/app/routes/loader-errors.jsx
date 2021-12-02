@@ -1,5 +1,4 @@
-import { json } from "remix";
-import { Outlet } from "remix";
+import { json, Outlet } from "remix";
 
 export function loader({ request }) {
   let params = new URL(request.url).searchParams;
