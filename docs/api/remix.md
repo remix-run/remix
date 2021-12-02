@@ -1978,7 +1978,7 @@ export async function loader({ request }) {
     { message },
     {
       headers: {
-        // only necessary with cookieSesionStorage
+        // only necessary with cookieSessionStorage
         "Set-Cookie": await commitSession(session)
       }
     }
