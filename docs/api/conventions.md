@@ -913,7 +913,7 @@ The `$activity.tsx` loader can use the search params to filter the list, so visi
 
 ```js [2,7]
 export function loader({ request, params }) {
-  let url = new URLSearchParams(request.url);
+  let url = new URL(request.url);
   return exampleDb.activity.findAll({
     where: {
       projectId: params.projectId,
