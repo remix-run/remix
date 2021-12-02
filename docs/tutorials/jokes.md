@@ -1283,9 +1283,7 @@ export default function JokesRoute() {
             <p>Here are a few more jokes to check out:</p>
             <ul>
               <li>
-                <Link to="some-joke-id" prefetch="intent">
-                  Hippo
-                </Link>
+                <Link to="some-joke-id">Hippo</Link>
               </li>
             </ul>
             <Link to="new" className="button">
