@@ -7,7 +7,7 @@ function isBareModuleId(id) {
   return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
-let executableBanner = "#!/usr/bin/env node \n";
+let executableBanner = "#!/usr/bin/env node\n";
 
 function createBanner(libraryName, version) {
   return `/**
