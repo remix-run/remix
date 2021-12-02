@@ -433,6 +433,7 @@ function remixServerAdapters() {
     getServerConfig("architect"),
     getServerConfig("cloudflare-workers"),
     getServerConfig("express"),
+    getServerConfig("koa"),
     getServerConfig("vercel"),
     getServerConfig("netlify")
   ];

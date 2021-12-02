@@ -44,6 +44,12 @@ module.exports = {
       setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     },
     {
+      displayName: "koa",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-koa/**/*-test.[jt]s?(x)"],
+      setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
+    },
+    {
       displayName: "netlify",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-netlify/**/*-test.[jt]s?(x)"],

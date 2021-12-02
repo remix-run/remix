@@ -1,0 +1,27 @@
+{
+  "name": "@remix-run/koa",
+  "description": "Koa server request handler for Remix",
+  "version": "1.0.6",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-koa"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/node": "1.0.6"
+  },
+  "peerDependencies": {
+    "koa": "^2.13.4"
+  },
+  "devDependencies": {
+    "@shopify/jest-koa-mocks": "^3.0.8",
+    "@types/koa": "^2.13.4",
+    "@types/supertest": "^2.0.10",
+    "koa": "^2.13.4",
+    "node-mocks-http": "^1.10.1",
+    "supertest": "^6.0.1"
+  }
+}
