@@ -5381,6 +5381,14 @@ For this one, you'll probably want to at least peak at the example unless you wa
 import type { LoaderFunction } from "remix";
 import { db } from "~/utils/db.server";
 
+function escapeCdata(s: string) {
+  return s.replaceAll("]]>", "]]]]><![CDATA[>");
+}
+
+function escapeHtml(s: string) {
+  return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+}
+
 export const loader: LoaderFunction = async ({
   request
 }) => {
@@ -5415,9 +5423,9 @@ export const loader: LoaderFunction = async ({
           .map(joke =>
             `
             <item>
-              <title>${joke.name}</title>
-              <description>A funny joke called ${joke.name}</description>
-              <author>${joke.jokester.username}</author>
+              <title><![CDATA[${escapeCdata(joke.name)}]]></title>
+              <description><![CDATA[A funny joke called ${escapeHtml(joke.name)}]]></description>
+              <author><![CDATA[${escapeCdata(joke.jokester.username)}]]></author>
               <pubDate>${joke.createdAt.toUTCString()}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
