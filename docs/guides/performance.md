@@ -46,4 +46,4 @@ Here are some other technologies to help speed up your servers:
 
 - [FaunaDB](https://fauna.com/) - a distributed database that runs close to your users
 - [LRU Cache](https://www.npmjs.com/package/lru-cache) - in memory cache that automatically clears out more space when it gets full
-- [Redis](https://www.npmjs.com/package/redis) - tried and true server side cache
+- [Redis](https://www.npmjs.com/package/redis) - tried and true server-side cache

@@ -4,7 +4,7 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
@@ -139,7 +139,7 @@ Websites large and small usually have a set of shared components used throughout
 The first is approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
-// scope with class names
+/* scope with class names */
 .PrimaryButton {
   /* ... */
 }
@@ -148,8 +148,8 @@ The first is approach is very simple. Put them all in a `shared.css` file includ
   /* ... */
 }
 
-// or scope with data attributes to avoid concatenating
-// className props, but it's really up to you
+/* or scope with data attributes to avoid concatenating
+   className props, but it's really up to you */
 [data-primary-button] {
   /* ... */
 }
@@ -161,7 +161,7 @@ The first is approach is very simple. Put them all in a `shared.css` file includ
 
 While this file may become large, it'll be at a single URL that will be shared by all routes in the app.
 
-This also makes it easy for routes to adjust the styles of a component without needing to add an official new variant to the API of that component because you know it won't affect the component anywhere else.
+This also makes it easy for routes to adjust the styles of a component without needing to add an official new variant to the API of that component. You know it won't affect the component anywhere but the `/accounts` routes.
 
 ```css filename=app/styles/accounts.css
 .PrimaryButton {
@@ -188,11 +188,11 @@ Note that these are not routes, but they export `links` functions as if they wer
 ```tsx filename=app/components/button/index.js lines=[1,3-5]
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   { rel: "stylesheet", href: styles }
 ];
 
-export let Button = React.forwardRef(
+export const Button = React.forwardRef(
   ({ children, ...props }, ref) => {
     return <button {...props} ref={ref} data-button />;
   }
@@ -212,12 +212,12 @@ And then a `<PrimaryButton>` that extends it:
 import { Button, links as buttonLinks } from "../button";
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   ...buttonLinks(),
   { rel: "stylesheet", href: styles }
 ];
 
-export let PrimaryButton = React.forwardRef(
+export const PrimaryButton = React.forwardRef(
   ({ children, ...props }, ref) => {
     return (
       <Button {...props} ref={ref} data-primary-button />
@@ -225,6 +225,8 @@ export let PrimaryButton = React.forwardRef(
   }
 );
 ```
+
+Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know it's dependencies (just like JavaScript imports).
 
 Because these buttons are not routes, and therefore not associate with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
@@ -266,7 +268,7 @@ export function loader({ params }) {
 }
 
 export default function Category() {
-  let products = useLoaderData();
+  const products = useLoaderData();
   return (
     <TileGrid>
       {products.map(product => (
@@ -338,7 +340,7 @@ Since these are just `<link>` tags, you can do more than stylesheet links, like 
 ```tsx filename=app/components/copy-to-clipboard.jsx lines=[4-9]
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   {
     rel: "preload",
     href: "/icons/clipboard.svg",
@@ -348,7 +350,7 @@ export let links = () => [
   { rel: "stylesheet", href: styles }
 ];
 
-export let CopyToClipboard = React.forwardRef(
+export const CopyToClipboard = React.forwardRef(
   ({ children, ...props }, ref) => {
     return (
       <Button {...props} ref={ref} data-copy-to-clipboard />
@@ -449,7 +451,7 @@ node_modules
 /.cache
 /build
 /public/build
-/app/.tailwind.css
+/app/tailwind.css
 ```
 
 If you're using VSCode, it's recommended you install the [tailwind intellisense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
@@ -461,7 +463,7 @@ You can load stylesheets from any server, here's an example of loading a modern 
 ```ts filename=app/root.tsx
 import type { LinksFunction } from "remix";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
@@ -550,7 +552,7 @@ Here's how to set it up:
    import type { LinksFunction } from "remix";
    import styles from "./styles/app.css";
 
-   export let links: LinksFunction = () => {
+   export const links: LinksFunction = () => {
      return [{ rel: "stylesheet", href: styles }];
    };
    ```
@@ -617,12 +619,12 @@ Here's some sample code to show how you might use Styled Components with Remix:
      );
 
      // Now that we've rendered, we get the styles out of the sheet
-     let styles = sheet.getStyleTags();
+     const styles = sheet.getStyleTags();
      sheet.seal();
 
      // Finally, we render a second time, but this time we have styles to apply,
      // make sure to pass them to `<StylesContext.Provider value>`
-     let markup = ReactDOMServer.renderToString(
+     const markup = ReactDOMServer.renderToString(
        <StylesContext.Provider value={styles}>
          <RemixServer
            context={remixContext}
@@ -649,7 +651,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
    import StylesContext from "./StylesContext";
 
    export default function Root() {
-     let styles = useContext(StylesContext);
+     const styles = useContext(StylesContext);
 
      return (
        <html>
@@ -669,3 +671,4 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
+[route-module-links]: ../api/conventions#links

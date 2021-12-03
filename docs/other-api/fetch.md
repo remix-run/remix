@@ -9,14 +9,16 @@ When browsers added `window.fetch`, they also add three other objects: `Headers`
 When you do this:
 
 ```js
-let res = await fetch(url);
+const res = await fetch(url);
 ```
 
 That `res` is an instance of `Response`. And you can make a response yourself:
 
 ```js
-let res = new Response(JSON.stringify({ hello: "there" }));
-let json = await res.json();
+const res = new Response(
+  JSON.stringify({ hello: "there" })
+);
+const json = await res.json();
 console.log(json);
 // { hello: "there" }
 ```

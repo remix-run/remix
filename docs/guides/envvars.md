@@ -20,6 +20,7 @@ If you're experience with web development is primarily with the JS frameworks in
 
 Environment variables on your server will be handled by your host, for example:
 
+- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
 - [Fly.io](https://fly.io/docs/reference/secrets/)
 - [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
 - [Vercel](https://vercel.com/docs/environment-variables)
@@ -71,7 +72,7 @@ Some folks ask if Remix can let them put environment variables into browser bund
 
 Instead we recommend keeping all of your environment variables on the server (all the server secrets as well as the stuff your JavaScript in the browser needs) and exposing them to your browser code through `window.ENV`. Since you always have a server, you don't need this information in your bundle, your server can provide the client side environment variables in the loaders.
 
-1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client side JavaScript.
+1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
 
    ```tsx [3-6]
    export function loader() {
@@ -111,7 +112,7 @@ Instead we recommend keeping all of your environment variables on the server (al
    }
 
    export function Root() {
-     let data = useLoaderData();
+     const data = useLoaderData();
      return (
        <html lang="en">
          <head>
@@ -142,7 +143,7 @@ Instead we recommend keeping all of your environment variables on the server (al
    export async function redirectToStripeCheckout(
      sessionId
    ) {
-     let stripe = await loadStripe(window.ENV.stripe);
+     const stripe = await loadStripe(window.ENV.stripe);
      return stripe.redirectToCheckout({ sessionId });
    }
    ```
