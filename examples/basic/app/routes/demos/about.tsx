@@ -3,13 +3,13 @@ import type { MetaFunction, LinksFunction } from "remix";
 
 import stylesUrl from "~/styles/demos/about.css";
 
-export let meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return {
     title: "About Remix"
   };
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 

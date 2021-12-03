@@ -1,6 +1,5 @@
 import type { LoaderFunction } from "remix";
-import { Form, json, useActionData, useLoaderData } from "remix";
-import { Outlet } from "remix";
+import { Form, json, Outlet, useActionData, useLoaderData } from "remix";
 
 export let loader: LoaderFunction = ({ request }) => {
   let value = new URL(request.url).searchParams.get("value");

@@ -16,7 +16,7 @@ This example demonstrates some of the basic features of Remix, including:
 - Resource Routes
 - Deployment
 
-This is the finished version of [the tutorial](https://remix.run/docs/tutorials/jokes)
+This is the finished version of [the tutorial](https://remix.run/tutorials/jokes)
 
 - [Remix Docs](https://remix.run/docs)
 

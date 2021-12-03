@@ -451,7 +451,7 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           {...props}
         />
-        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
   }
@@ -472,7 +472,7 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           {...props}
         />
-        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
   }
@@ -1079,11 +1079,11 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
           if (target instanceof URLSearchParams) {
             for (let [name, value] of target) {
-              formData.set(name, value);
+              formData.append(name, value);
             }
           } else if (target != null) {
             for (let name of Object.keys(target)) {
-              formData.set(name, target[name]);
+              formData.append(name, target[name]);
             }
           }
         }
@@ -1095,7 +1095,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       if (method.toLowerCase() === "get") {
         for (let [name, value] of formData) {
           if (typeof value === "string") {
-            url.searchParams.set(name, value);
+            url.searchParams.append(name, value);
           } else {
             throw new Error(`Cannot submit binary form data using GET`);
           }
