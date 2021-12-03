@@ -1,6 +1,5 @@
 import type { ActionFunction, LinksFunction, MetaFunction } from "remix";
-import { useActionData, Form, Link } from "remix";
-import { useSearchParams } from "react-router-dom";
+import { useActionData, Form, Link, useSearchParams } from "remix";
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
