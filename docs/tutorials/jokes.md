@@ -9,7 +9,7 @@ You want to learn Remix? You're in the right place. Let's build [Remix Jokes](ht
 
 <docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
 
-[![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
+<a href="https://remix-jokes.lol"><img src="https://remix-jokes.lol/social.png" style="aspect-ratio: 300 / 157;"/></a>
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
@@ -5374,7 +5374,12 @@ function escapeCdata(s: string) {
 }
 
 function escapeHtml(s: string) {
-  return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 export const loader: LoaderFunction = async ({
@@ -5411,9 +5416,15 @@ export const loader: LoaderFunction = async ({
           .map(joke =>
             `
             <item>
-              <title><![CDATA[${escapeCdata(joke.name)}]]></title>
-              <description><![CDATA[A funny joke called ${escapeHtml(joke.name)}]]></description>
-              <author><![CDATA[${escapeCdata(joke.jokester.username)}]]></author>
+              <title><![CDATA[${escapeCdata(
+                joke.name
+              )}]]></title>
+              <description><![CDATA[A funny joke called ${escapeHtml(
+                joke.name
+              )}]]></description>
+              <author><![CDATA[${escapeCdata(
+                joke.jokester.username
+              )}]]></author>
               <pubDate>${joke.createdAt.toUTCString()}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
@@ -5889,12 +5900,9 @@ export default function NewJokeRoute() {
   const transition = useTransition();
 
   if (transition.submission) {
-    const name = transition.submission.formData.get(
-      "name"
-    );
-    const content = transition.submission.formData.get(
-      "content"
-    );
+    const name = transition.submission.formData.get("name");
+    const content =
+      transition.submission.formData.get("content");
     if (
       typeof name === "string" &&
       typeof content === "string" &&
