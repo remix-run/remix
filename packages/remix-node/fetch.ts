@@ -7,7 +7,7 @@ import nodeFetch, { Request as NodeRequest } from "node-fetch";
 
 import { FormData as NodeFormData, isFile } from "./formData";
 import type { UploadHandler } from "./formData";
-import { parseFormData } from "./formData";
+import { internalParseFormData } from "./parseMultipartFormData";
 
 export type { HeadersInit, RequestInfo, ResponseInit } from "node-fetch";
 export { Headers, Response } from "node-fetch";
@@ -88,7 +88,7 @@ class RemixRequest extends NodeRequest {
   async formData(uploadHandler?: UploadHandler): Promise<FormData> {
     let contentType = this.headers.get("Content-Type");
     if (contentType) {
-      return await parseFormData(
+      return await internalParseFormData(
         contentType,
         this.body as Readable,
         this.abortController,

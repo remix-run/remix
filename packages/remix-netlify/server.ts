@@ -1,5 +1,3 @@
-// This has been added as a global in node 15+
-import AbortController from "abort-controller";
 import type {
   AppLoadContext,
   ServerBuild,
@@ -11,6 +9,8 @@ import type {
   RequestInit as NodeRequestInit
 } from "@remix-run/node";
 import {
+  // This has been added as a global in node 15+
+  AbortController,
   formatServerError,
   Headers as NodeHeaders,
   Request as NodeRequest
