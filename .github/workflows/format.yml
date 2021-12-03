@@ -38,5 +38,5 @@ jobs:
             exit 0
           fi
           git commit -m "chore: format" -m "formatted $GITHUB_SHA"
-          git push github HEAD:${GITHUB_REF}
+          git push
           echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
