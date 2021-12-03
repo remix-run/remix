@@ -88,7 +88,7 @@ To handle `GET` requests export a loader function:
 ```ts
 import type { LoaderFunction } from "remix";
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = ({ request }) => {
   // handle "GET" request
 
   return json({ success: true }, 200);
@@ -100,7 +100,7 @@ To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 ```ts
 import type { ActionFunction } from "remix";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = ({ request }) => {
   switch (request.method) {
     case 'POST': { /* handle "POST" */ }
     case 'PUT': { /* handle "PUT" */ }
