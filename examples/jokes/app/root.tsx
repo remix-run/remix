@@ -1,12 +1,11 @@
-import { Meta, Links, Scripts, LiveReload, useCatch } from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, useCatch } from "remix";
 import type { LinksFunction, MetaFunction } from "remix";
-import { Outlet } from "react-router-dom";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
 import globalLargeStylesUrl from "./styles/global-large.css";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
@@ -22,8 +21,8 @@ export let links: LinksFunction = () => {
   ];
 };
 
-export let meta: MetaFunction = () => {
-  let description = `Learn Remix and laugh at the same time!`;
+export const meta: MetaFunction = () => {
+  const description = `Learn Remix and laugh at the same time!`;
   return {
     description,
     keywords: "Remix,jokes",
@@ -54,7 +53,7 @@ function Document({
       <body>
         {children}
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
       </body>
     </html>
   );
@@ -70,7 +69,7 @@ export default function App() {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   return (
     <Document title={`${caught.status} ${caught.statusText}`}>

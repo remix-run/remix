@@ -26,15 +26,17 @@ npm run dev
 
 We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
-Open up [https://localhost:3000](https://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
+Open up [http://localhost:3000](http://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
-If your application is not running properly at [https://localhost:3000](https://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
+If your application is not running properly at [http://localhost:3000](http://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
 
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-There's a bit going on in the file, find into the `Layout` component and right after the link to "Home", add a new link to "/posts"
+💿 First, go to `app/root.tsx`
+
+There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, and right after the link to "Home", add a new link to "/posts"
 
 💿 Add a link to posts in `app/root.tsx`
 
@@ -79,7 +81,7 @@ Data loading is built in to Remix.
 
 If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhacement realized in its fullest.
+If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
 
 So let's get to it and provide some data to our component.
 
@@ -88,7 +90,7 @@ So let's get to it and provide some data to our component.
 ```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
-export let loader = () => {
+export const loader = () => {
   return [
     {
       slug: "my-first-post",
@@ -102,7 +104,7 @@ export let loader = () => {
 };
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   console.log(posts);
   return (
     <div>
@@ -114,8 +116,6 @@ export default function Posts() {
 
 Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
-<docs-info>We use <code>let</code> because it is only three letters, you can use <code>const</code> if you want 🙂</docs-info>
-
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[9-15]
@@ -123,7 +123,7 @@ import { Link, useLoaderData } from "remix";
 
 // ...
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return (
     <div>
       <h1>Posts</h1>
@@ -151,8 +151,8 @@ type Post = {
   title: string;
 };
 
-export let loader = () => {
-  let posts: Post[] = [
+export const loader = () => {
+  const posts: Post[] = [
     {
       slug: "my-first-post",
       title: "My First Post"
@@ -166,7 +166,7 @@ export let loader = () => {
 };
 
 export default function Posts() {
-  let posts = useLoaderData<Post[]>();
+  const posts = useLoaderData<Post[]>();
   return (
     <div>
       <h1>Posts</h1>
@@ -203,7 +203,7 @@ export type Post = {
 };
 
 export function getPosts() {
-  let posts: Post[] = [
+  const posts: Post[] = [
     {
       slug: "my-first-post",
       title: "My First Post"
@@ -224,7 +224,7 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export let loader = () => {
+export const loader = () => {
   return getPosts();
 };
 
@@ -307,16 +307,16 @@ export type Post = {
 };
 
 // relative to the server output not the source!
-let postsPath = path.join(__dirname, "..", "posts");
+const postsPath = path.join(__dirname, "..", "posts");
 
 export async function getPosts() {
-  let dir = await fs.readdir(postsPath);
+  const dir = await fs.readdir(postsPath);
   return Promise.all(
     dir.map(async filename => {
-      let file = await fs.readFile(
+      const file = await fs.readFile(
         path.join(postsPath, filename)
       );
-      let { attributes } = parseFrontMatter(
+      const { attributes } = parseFrontMatter(
         file.toString()
       );
       return {
@@ -357,7 +357,7 @@ export type PostMarkdownAttributes = {
   title: string;
 };
 
-let postsPath = path.join(__dirname, "..", "posts");
+const postsPath = path.join(__dirname, "..", "posts");
 
 function isValidPostAttributes(
   attributes: any
@@ -366,13 +366,13 @@ function isValidPostAttributes(
 }
 
 export async function getPosts() {
-  let dir = await fs.readdir(postsPath);
+  const dir = await fs.readdir(postsPath);
   return Promise.all(
     dir.map(async filename => {
-      let file = await fs.readFile(
+      const file = await fs.readFile(
         path.join(postsPath, filename)
       );
-      let { attributes } = parseFrontMatter(
+      const { attributes } = parseFrontMatter(
         file.toString()
       );
       invariant(
@@ -426,12 +426,12 @@ You can click one of your posts and should see the new page.
 ```tsx filename=app/routes/posts/$slug.tsx lines=[1,3-5,8,11]
 import { useLoaderData } from "remix";
 
-export let loader = async ({ params }) => {
+export const loader = async ({ params }) => {
   return params.slug;
 };
 
 export default function PostSlug() {
-  let slug = useLoaderData();
+  const slug = useLoaderData();
   return (
     <div>
       <h1>Some Post: {slug}</h1>
@@ -448,7 +448,9 @@ The part of the filename attached to the `$` becomes a named key on the `params`
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   return params.slug;
 };
 ```
@@ -462,9 +464,9 @@ Put this function anywhere in the `app/post.ts` module:
 ```tsx filename=app/post.ts lines=[2,4]
 // ...
 export async function getPost(slug: string) {
-  let filepath = path.join(postsPath, slug + ".md");
-  let file = await fs.readFile(filepath);
-  let { attributes } = parseFrontMatter(file.toString());
+  const filepath = path.join(postsPath, slug + ".md");
+  const file = await fs.readFile(filepath);
+  const { attributes } = parseFrontMatter(file.toString());
   invariant(
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
@@ -481,13 +483,15 @@ import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
 import invariant from "tiny-invariant";
 
-export let loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   invariant(params.slug, "expected params.slug");
   return getPost(params.slug);
 };
 
 export default function PostSlug() {
-  let post = useLoaderData();
+  const post = useLoaderData();
   return (
     <div>
       <h1>{post.title}</h1>
@@ -519,16 +523,16 @@ import { marked } from "marked";
 
 //...
 export async function getPost(slug: string) {
-  let filepath = path.join(postsPath, slug + ".md");
-  let file = await fs.readFile(filepath);
-  let { attributes, body } = parseFrontMatter(
+  const filepath = path.join(postsPath, slug + ".md");
+  const file = await fs.readFile(filepath);
+  const { attributes, body } = parseFrontMatter(
     file.toString()
   );
   invariant(
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
   );
-  let html = marked(body);
+  const html = marked(body);
   return { slug, html, title: attributes.title };
 }
 ```
@@ -538,7 +542,7 @@ export async function getPost(slug: string) {
 ```tsx filename=app/routes/posts/$slug.tsx lines=[5]
 // ...
 export default function PostSlug() {
-  let post = useLoaderData();
+  const post = useLoaderData();
   return (
     <div dangerouslySetInnerHTML={{ __html: post.html }} />
   );
@@ -549,7 +553,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. Thats gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -564,12 +568,12 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export let loader = () => {
+export const loader = () => {
   return getPosts();
 };
 
 export default function Admin() {
-  let posts = useLoaderData<Post[]>();
+  const posts = useLoaderData<Post[]>();
   return (
     <div className="admin">
       <nav>
@@ -624,7 +628,7 @@ import { getPosts } from "~/post";
 import type { Post } from "~/post";
 import adminStyles from "~/styles/admin.css";
 
-export let links = () => {
+export const links = () => {
   return [{ rel: "stylesheet", href: adminStyles }];
 };
 
@@ -667,7 +671,7 @@ import { Outlet, Link, useLoaderData } from "remix";
 
 //...
 export default function Admin() {
-  let posts = useLoaderData<Post[]>();
+  const posts = useLoaderData<Post[]>();
   return (
     <div className="admin">
       <nav>
@@ -752,7 +756,7 @@ Let's create the essential code that knows how to save a post first in our `post
 ```tsx filename=app/post.ts
 // ...
 export async function createPost(post) {
-  let md = `---\ntitle: ${post.title}\n---\n\n${post.markdown}`;
+  const md = `---\ntitle: ${post.title}\n---\n\n${post.markdown}`;
   await fs.writeFile(
     path.join(postsPath, post.slug + ".md"),
     md
@@ -767,12 +771,12 @@ export async function createPost(post) {
 import { redirect, Form } from "remix";
 import { createPost } from "~/post";
 
-export let action = async ({ request }) => {
-  let formData = await request.formData();
+export const action = async ({ request }) => {
+  const formData = await request.formData();
 
-  let title = formData.get("title");
-  let slug = formData.get("slug");
-  let markdown = formData.get("markdown");
+  const title = formData.get("title");
+  const slug = formData.get("slug");
+  const markdown = formData.get("markdown");
 
   await createPost({ title, slug, markdown });
 
@@ -801,7 +805,7 @@ type NewPost = {
 };
 
 export async function createPost(post: NewPost) {
-  let md = `---\ntitle: ${post.title}\n---\n\n${post.markdown}`;
+  const md = `---\ntitle: ${post.title}\n---\n\n${post.markdown}`;
   await fs.writeFile(
     path.join(postsPath, post.slug + ".md"),
     md
@@ -817,12 +821,14 @@ import { Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
 import { createPost } from "~/post";
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const formData = await request.formData();
 
-  let title = formData.get("title");
-  let slug = formData.get("slug");
-  let markdown = formData.get("markdown");
+  const title = formData.get("title");
+  const slug = formData.get("slug");
+  const markdown = formData.get("markdown");
 
   await createPost({ title, slug, markdown });
 
@@ -836,18 +842,18 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[9-12,14-16]
 //...
-import invariant from "tiny-invariant";
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const formData = await request.formData();
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
+  const title = formData.get("title");
+  const slug = formData.get("slug");
+  const markdown = formData.get("markdown");
 
-  let title = formData.get("title");
-  let slug = formData.get("slug");
-  let markdown = formData.get("markdown");
-
-  let errors = {};
+  const errors = {};
   if (!title) errors.title = true;
   if (!slug) errors.slug = true;
   if (!markdown) errors.markdown = true;
@@ -866,33 +872,37 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,12-13,19-20,25-26]
+```tsx filename=app/routes/admin/new.tsx lines=[1,12-15,21-22,27-30]
 import { useActionData, Form, redirect } from "remix";
 
 // ...
 
 export default function NewPost() {
-  let errors = useActionData();
+  const errors = useActionData();
 
   return (
     <Form method="post">
       <p>
         <label>
           Post Title:{" "}
-          {errors?.title && <em>Title is required</em>}
+          {errors?.title ? (
+            <em>Title is required</em>
+          ) : null}
           <input type="text" name="title" />
         </label>
       </p>
       <p>
         <label>
           Post Slug:{" "}
-          {errors?.slug && <em>Slug is required</em>}
+          {errors?.slug ? <em>Slug is required</em> : null}
           <input type="text" name="slug" />
         </label>
       </p>
       <p>
         <label htmlFor="markdown">Markdown:</label>{" "}
-        {errors?.markdown && <em>Markdown is required</em>}
+        {errors?.markdown ? (
+          <em>Markdown is required</em>
+        ) : null}
         <br />
         <textarea rows={20} name="markdown" />
       </p>
@@ -906,11 +916,13 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[2,11-14,16-18]
 //...
 import invariant from "tiny-invariant";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request
+}) => {
   // ...
 
   if (Object.keys(errors).length) {
@@ -932,12 +944,14 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 
 ```tsx filename=app/routes/admin/new.tsx lines=[3]
 // ...
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request
+}) => {
   await new Promise(res => setTimeout(res, 1000));
-  let formData = await request.formData();
-  let title = formData.get("title");
-  let slug = formData.get("slug");
-  let markdown = formData.get("markdown");
+  const formData = await request.formData();
+  const title = formData.get("title");
+  const slug = formData.get("slug");
+  const markdown = formData.get("markdown");
   // ...
 };
 //...
@@ -956,8 +970,8 @@ import {
 // ...
 
 export default function NewPost() {
-  let errors = useActionData();
-  let transition = useTransition();
+  const errors = useActionData();
+  const transition = useTransition();
 
   return (
     <Form method="post">

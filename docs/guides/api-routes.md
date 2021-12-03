@@ -8,7 +8,7 @@ You might be used to building React apps that don't run on the server, or least 
 
 In general, you don't need the concept of "API Routes" at all. But we knew you'd come poking around with this term, so here we are!
 
-## Routes are Their Own API
+## Routes Are Their Own API
 
 Consider this route:
 
@@ -28,22 +28,22 @@ Whenever the user clicks a link to `<Link to="/teams" />`, Remix in the browser 
 
 There are times, however, that you want to get the data from a loader but not because the user is visiting the route, but the current page needs that route's data for some reason. A very clear example is a `<Combobox>` component that queries the database for records and suggests them to the user.
 
-You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, race conditions, interruptions, and fetch cancelations are handled for you, too.
+You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, race conditions, interruptions, and fetch cancellations are handled for you, too.
 
 For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
 export function loader({ request }) {
-  let url = new URL(request.url);
+  const url = new URL(request.url);
   return searchCities(url.searchParams.get("q"));
 }
 ```
 
 And then `useFetcher` along with Reach UI's combobox input:
 
-```tsx [2]
+```tsx [2,11,14,19,21,23]
 function CitySearchCombobox() {
-  let cities = useFetcher();
+  const cities = useFetcher();
 
   return (
     <cities.Form method="get" action="/city-search">
@@ -55,10 +55,12 @@ function CitySearchCombobox() {
               cities.submit(event.target.form)
             }
           />
-          {cities.state === "submitting" && <Spinner />}
+          {cities.state === "submitting" ? (
+            <Spinner />
+          ) : null}
         </div>
 
-        {cities.data && (
+        {cities.data ? (
           <ComboboxPopover className="shadow-popup">
             {cities.data.error ? (
               <p>Failed to load cities :(</p>
@@ -75,7 +77,7 @@ function CitySearchCombobox() {
               <span>No results found</span>
             )}
           </ComboboxPopover>
-        )}
+        ) : null}
       </Combobox>
     </cities.Form>
   );
@@ -88,8 +90,8 @@ In other cases, you may need routes that are part of your application, but aren'
 
 ```tsx
 export function loader({ params }) {
-  let report = await getReport(params.id);
-  let pdf = await generateReportPDF(report);
+  const report = await getReport(params.id);
+  const pdf = await generateReportPDF(report);
   return new Response(pdf, {
     status: 200,
     headers: {
