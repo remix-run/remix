@@ -36,7 +36,7 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 
 💿 First, go to `app/root.tsx`
 
-There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, and right after the link to "Home", add a new link to "/posts"
+There's a bit going on in the file. For now, find the `Layout` component and right after the link to "Home", add a new link to "/posts".
 
 💿 Add a link to posts in `app/root.tsx`
 
