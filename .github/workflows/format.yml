@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.FORMAT_PAT }}
 
 jobs:
   format:
