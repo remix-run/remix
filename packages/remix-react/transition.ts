@@ -1200,8 +1200,6 @@ async function callLoaders(
     fetcher
   );
 
-  console.log({ matchesToLoad });
-
   return Promise.all(
     matchesToLoad.map(match => callLoader(match, url, signal))
   );

@@ -1,7 +1,7 @@
 import type { AppLoadContext } from "./data";
 import { extractData } from "./data";
 import { callRouteAction, callRouteLoader } from "./data";
-import type { ComponentDidCatchEmulator } from "./errors";
+import type { AppState } from "./errors";
 import type { HandleDataRequestFunction, ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
@@ -48,7 +48,8 @@ export function createRequestHandler(
           request,
           loadContext,
           matches: matches!,
-          handleDataRequest: build.entry.module.handleDataRequest
+          handleDataRequest: build.entry.module.handleDataRequest,
+          serverMode
         });
         break;
       case "document":
@@ -65,7 +66,8 @@ export function createRequestHandler(
         response = await handleResourceRequest({
           request,
           loadContext,
-          matches: matches!
+          matches: matches!,
+          serverMode
         });
         break;
     }
@@ -85,12 +87,14 @@ async function handleDataRequest({
   handleDataRequest,
   loadContext,
   matches,
-  request
+  request,
+  serverMode
 }: {
   handleDataRequest?: HandleDataRequestFunction;
   loadContext: unknown;
   matches: RouteMatch<ServerRoute>[];
   request: Request;
+  serverMode: ServerMode;
 }): Promise<Response> {
   if (!isValidRequestMethod(request)) {
     return errorBoundaryError(
@@ -161,7 +165,15 @@ async function handleDataRequest({
 
     return response;
   } catch (error: unknown) {
-    return errorBoundaryError(error as Error, 500);
+    if (serverMode !== ServerMode.Test) {
+      console.error(error);
+    }
+
+    if (serverMode === ServerMode.Development) {
+      return errorBoundaryError(error as Error, 500);
+    }
+
+    return errorBoundaryError(new Error("Unexpected Server Error"), 500);
   }
 }
 
@@ -182,7 +194,7 @@ async function renderDocumentRequest({
 }): Promise<Response> {
   let url = new URL(request.url);
 
-  let appState: ComponentDidCatchEmulator = {
+  let appState: AppState = {
     trackBoundaries: true,
     trackCatchBoundaries: true,
     catchBoundaryRouteId: null,
@@ -436,7 +448,7 @@ async function renderDocumentRequest({
 
   let serverHandoff = {
     actionData,
-    componentDidCatchEmulator: appState,
+    appState: appState,
     matches: entryMatches,
     routeData
   };
@@ -501,18 +513,40 @@ async function renderDocumentRequest({
 async function handleResourceRequest({
   loadContext,
   matches,
-  request
+  request,
+  serverMode
 }: {
   request: Request;
   loadContext: unknown;
   matches: RouteMatch<ServerRoute>[];
+  serverMode: ServerMode;
 }): Promise<Response> {
   let match = matches.slice(-1)[0];
 
-  if (isActionRequest(request)) {
-    return callRouteAction({ match, loadContext, request });
-  } else {
-    return callRouteLoader({ match, loadContext, request });
+  try {
+    if (isActionRequest(request)) {
+      return await callRouteAction({ match, loadContext, request });
+    } else {
+      return await callRouteLoader({ match, loadContext, request });
+    }
+  } catch (error: any) {
+    if (serverMode !== ServerMode.Test) {
+      console.error(error);
+    }
+
+    let message = "Unexpected Server Error";
+
+    if (serverMode === ServerMode.Development) {
+      message += `\n\n${String(error)}`;
+    }
+
+    // Good grief folks, get your act together 😂!
+    return new Response(message, {
+      status: 500,
+      headers: {
+        "Content-Type": "text/plain"
+      }
+    });
   }
 }
 
@@ -623,14 +657,14 @@ function getMatchesUpToDeepestBoundary(
 // TODO: maybe do this in <RemixErrorBoundary + context>
 function getRenderableMatches(
   matches: RouteMatch<ServerRoute>[] | null,
-  componentDidCatchEmulator: ComponentDidCatchEmulator
+  appState: AppState
 ) {
   if (!matches) {
     return null;
   }
 
   // no error, no worries
-  if (!componentDidCatchEmulator.catch && !componentDidCatchEmulator.error) {
+  if (!appState.catch && !appState.error) {
     return matches;
   }
 
@@ -639,9 +673,9 @@ function getRenderableMatches(
   matches.forEach((match, index) => {
     let id = match.route.id;
     if (
-      componentDidCatchEmulator.renderBoundaryRouteId === id ||
-      componentDidCatchEmulator.loaderBoundaryRouteId === id ||
-      componentDidCatchEmulator.catchBoundaryRouteId === id
+      appState.renderBoundaryRouteId === id ||
+      appState.loaderBoundaryRouteId === id ||
+      appState.catchBoundaryRouteId === id
     ) {
       lastRenderableIndex = index;
     }
