@@ -154,7 +154,7 @@ export function RemixCatchBoundary({
 }
 
 /**
- * When app's don't provide a root level ErrorBoundary, we default to this.
+ * When app's don't provide a root level CatchBoundary, we default to this.
  */
 export function RemixRootDefaultCatchBoundary() {
   return (

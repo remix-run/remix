@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-let prisma = new PrismaClient();
+const prisma = new PrismaClient();
 
 async function seed() {
-  let kody = await prisma.user.create({
+  const kody = await prisma.user.create({
     data: {
       username: "kody",
       passwordHash:
@@ -11,7 +11,7 @@ async function seed() {
   });
   await Promise.all(
     getJokes().map((joke) => {
-      let data = { jokesterId: kody.id, ...joke };
+      const data = { jokesterId: kody.id, ...joke };
       return prisma.joke.create({ data });
     })
   );

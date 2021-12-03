@@ -15,7 +15,7 @@ Let's consider a UI to help us out. Imagine you're building invoicing software a
 
 TODO: ADD THE SVG WITHOUT ANIMATION
 
-Just looking at the boxes it's pretty easy to indentify which pieces of the URL match which parts of the UI. As the user clicks between "Invoices | Projects | Customers", the top nav persists while the screen below changes. Down one level, as the user clicks between invoices the top nav and the invoice nav persist, while the invoice screen swaps out new data. And finally, as the user clicks between "Details | Activity", the details or activity screen will swap out for each other, but the rest of the UI remains unchanged.
+Just looking at the boxes it's pretty easy to identify which pieces of the URL match which parts of the UI. As the user clicks between "Invoices | Projects | Customers", the top nav persists while the screen below changes. Down one level, as the user clicks between invoices the top nav and the invoice nav persist, while the invoice screen swaps out new data. And finally, as the user clicks between "Details | Activity", the details or activity screen will swap out for each other, but the rest of the UI remains unchanged.
 
 It's a nested layout tree. In Remix, we call every one of these layouts a "route". You might be used to routes that have a 1:1 component-to-url mapping. In Remix, a single URL can match multiple, nested routes.
 
@@ -119,7 +119,7 @@ Assuming the following `app/routes/` directory:
 
 Let's look at a few URLs and what the component tree looks like.
 
-| URL                | Component Heirarchy                                         |
+| URL                | Component Hierarchy                                         |
 | ------------------ | ----------------------------------------------------------- |
 | /                  | `App.js > routes/index.js`                                  |
 | /invoices          | `App.js > routes/invoices.js > routes/invoices/index.js`    |

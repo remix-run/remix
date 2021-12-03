@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Form, json, useActionData, redirect } from "remix";
+import { Form, json, redirect, useActionData } from "remix";
 
 export function meta() {
   return { title: "Actions Demo" };
@@ -16,7 +16,7 @@ export let action = async ({ request }) => {
   // over the network. Clientside validation is fine, but you definitely need it
   // server side.  If there's a problem, return the the data and the component
   // can render it.
-  if (typeof answer !== "string") {
+  if (!answer || typeof answer !== "string") {
     return json("Come on, at least try!", { status: 400 });
   }
 
