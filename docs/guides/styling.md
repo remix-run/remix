@@ -4,7 +4,7 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
@@ -671,3 +671,4 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
+[route-module-links]: ../api/conventions#links
