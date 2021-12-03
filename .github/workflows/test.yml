@@ -6,6 +6,9 @@ on:
       - "**"
     tags-ignore:
       - v*
+    paths-ignore:
+      - "docs/**"
+      - "**/README.md"
 
 jobs:
   build:
