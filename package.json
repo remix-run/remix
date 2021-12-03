@@ -84,6 +84,9 @@
     "typescript": "^4.2.3",
     "unified": "^9.2.0"
   },
+  "engines": {
+    "node": ">=14"
+  },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "eslint --cache --fix",
