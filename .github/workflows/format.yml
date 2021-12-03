@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  prettier:
+  format:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +31,7 @@ jobs:
         run: |
           git config --local user.email "github-actions@remix.run"
           git config --local user.name "Remix Run Bot"
-          git remote add github "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git"
+          git remote add github "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git"
 
           git add .
           if [ -z "$(git status --porcelain)" ]; then
