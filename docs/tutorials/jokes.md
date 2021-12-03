@@ -5418,7 +5418,7 @@ export const loader: LoaderFunction = async ({
               <title>${joke.name}</title>
               <description>A funny joke called ${joke.name}</description>
               <author>${joke.jokester.username}</author>
-              <pubDate>${joke.createdAt}</pubDate>
+              <pubDate>${joke.createdAt.toUTCString()}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
             </item>
