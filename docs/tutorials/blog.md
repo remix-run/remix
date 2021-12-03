@@ -733,9 +733,9 @@ export default function NewPost() {
         </label>
       </p>
       <p>
-        <label htmlFor="markdown">Markdown</label>
+        <label htmlFor="markdown">Markdown:</label>
         <br />
-        <textarea rows={20} name="markdown" />
+        <textarea id="markdown" rows={20} name="markdown" />
       </p>
       <p>
         <button type="submit">Create Post</button>
