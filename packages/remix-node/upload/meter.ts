@@ -23,6 +23,6 @@ export class Meter extends Transform {
 
 export class MeterError extends Error {
   constructor(public field: string, public maxBytes: number) {
-    super(`Field "${field}"" exceeded upload size of ${maxBytes} bytes.`);
+    super(`Field "${field}" exceeded upload size of ${maxBytes} bytes.`);
   }
 }
