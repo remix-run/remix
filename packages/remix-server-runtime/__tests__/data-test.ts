@@ -38,7 +38,7 @@ describe("loaders", () => {
     expect(await res.json()).toMatchInlineSnapshot(`"?foo=bar"`);
   });
 
-  it("sets header for throw responses", async () => {
+  it("sets header for thrown responses", async () => {
     let loader = async ({ request }) => {
       throw new Response("null", {
         headers: {
@@ -74,6 +74,45 @@ describe("loaders", () => {
 
     let res = await handler(request);
     expect(await res.headers.get("X-Remix-Catch")).toBeTruthy();
+  });
+
+  it("doesn't set header for thrown 304 responses", async () => {
+    let loader = async ({ request }) => {
+      throw new Response("null", {
+        status: 304,
+        headers: {
+          "Content-type": "application/json"
+        }
+      });
+    };
+
+    let routeId = "routes/random";
+    let build = {
+      routes: {
+        [routeId]: {
+          id: routeId,
+          path: "/random",
+          module: {
+            loader
+          }
+        }
+      },
+      entry: { module: {} }
+    } as unknown as ServerBuild;
+
+    let handler = createRequestHandler(build, {});
+
+    let request = new Request(
+      "http://example.com/random?_data=routes/random&foo=bar",
+      {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    let res = await handler(request);
+    expect(await res.headers.get("X-Remix-Catch")).toBeFalsy();
   });
 
   it("removes index from request.url", async () => {
