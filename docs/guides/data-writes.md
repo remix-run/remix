@@ -33,7 +33,7 @@ Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to
 
 ### HTML Form GET
 
-A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` excpect the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
+A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
 
 Consider this form:
 
@@ -102,14 +102,14 @@ Let's consider a "new project" form.
 </form>
 ```
 
-When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is twofold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
+When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is two-fold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
 
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
 ```js filename=app/routes/projects
 export function action({ request }) {
-  let body = await request.formData();
-  let project = await createProject(body);
+  const body = await request.formData();
+  const project = await createProject(body);
   redirect(`/projects/${project.id}`);
 }
 ```
@@ -141,7 +141,7 @@ We're going to build a mutation from start to finish with:
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 
-Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just us a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
+Whether you use `<form>` or `<Form>` though, you write the very same code. You can start with a `<form>` and then graduate it to `<Form>` without changing anything. After that, add in the special loading indicators and optimistic UI. However, if you're not feeling up to it, or deadlines are tight, just use a `<form>` and let the browser handle the user feedback! Remix `<Form>` is the realization of "progressive enhancement" for mutations.
 
 ### Building the form
 
@@ -180,9 +180,11 @@ import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
-  let project = await createProject(formData);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const formData = await request.formData();
+  const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
 };
 
@@ -204,18 +206,20 @@ We know, we know, you want to animate in nice validation errors and stuff. We'll
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-let [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(newProject);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
 
 ```tsx [3,5-8]
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await request.formData();
-  let [errors, project] = await createProject(formData);
+export const action: ActionFunction = async ({
+  request
+}) => {
+  const formData = await request.formData();
+  const [errors, project] = await createProject(formData);
 
   if (errors) {
-    let values = Object.fromEntries(newProject);
+    const values = Object.fromEntries(newProject);
     return { errors, values };
   }
 
@@ -228,12 +232,14 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 ```tsx [1,8,18,23-27,35,40-44]
 import { redirect, useActionData } from "remix";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request
+}) => {
   // ...
 };
 
 export default function NewProject() {
-  let actionData = useActionData();
+  const actionData = useActionData();
 
   return (
     <form method="post" action="/projects/new">
@@ -293,7 +299,7 @@ import { redirect, useActionData, Form } from "remix";
 // ...
 
 export default function NewProject() {
-  let actionData = useActionData();
+  const actionData = useActionData();
 
   return (
     // note the capital "F" <Form> now
@@ -323,8 +329,8 @@ import {
 export default function NewProject() {
   // when the form is being processed on the server, this returns different
   // transition states to help us build pending and optimistic UI.
-  let transition = useTransition();
-  let actionData = useActionData();
+  const transition = useTransition();
+  const actionData = useActionData();
 
   return (
     <Form method="post">
@@ -396,11 +402,11 @@ Now that we're using JavaScript to submit this page, our validation errors can b
 
 ```tsx
 function ValidationMessage({ error, isSubmitting }) {
-  let [show, setShow] = useState(!!error);
+  const [show, setShow] = useState(!!error);
 
   useEffect(() => {
-    let id = setTimeout(() => {
-      let hasError = !!error;
+    const id = setTimeout(() => {
+      const hasError = !!error;
       setShow(hasError && !isSubmitting);
     });
     return () => clearTimeout(id);
@@ -425,8 +431,8 @@ Now we can wrap our old error messages in this new fancy component, and even tur
 
 ```tsx [21-24, 31-34, 48-51, 57-60]
 export default function NewProject() {
-  let transition = useTransition();
-  let actionData = useActionData();
+  const transition = useTransition();
+  const actionData = useActionData();
 
   return (
     <Form method="post">
