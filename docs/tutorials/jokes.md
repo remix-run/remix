@@ -5389,7 +5389,9 @@ function escapeHtml(s: string) {
   return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request
+}) => {
   let jokes = await db.joke.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },
