@@ -3,5 +3,7 @@
 
 export {
   createFileSessionStorage,
+  createFileUploadHandler,
+  createMemoryUploadHandler,
   parseMultipartFormData
 } from "@remix-run/node";

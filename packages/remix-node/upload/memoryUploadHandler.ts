@@ -68,7 +68,7 @@ export function createMemoryUploadHandler({
   };
 }
 
-export class BufferStream extends Transform {
+class BufferStream extends Transform {
   public data: any[];
 
   constructor() {

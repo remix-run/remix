@@ -16,6 +16,8 @@ function formDataToStream(formData: NodeFormData): FormStream {
   let formStream = new FormStream();
 
   function toNodeStream(input: any) {
+    // The input is either a Node stream or a web stream, if it has
+    //  a `on` method it's a node stream so we can just return it
     if (typeof input?.on === "function") {
       return input;
     }

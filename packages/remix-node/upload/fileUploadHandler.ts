@@ -68,7 +68,8 @@ async function uniqueFile(filepath: string) {
     i++
   ) {
     uniqueFilepath =
-      (ext ? filepath.slice(0, -ext.length) : filepath) + `(${i})${ext}`;
+      (ext ? filepath.slice(0, -ext.length) : filepath) +
+      `-${new Date().getTime()}${ext}`;
   }
 
   return uniqueFilepath;
@@ -102,7 +103,7 @@ export function createFileUploadHandler({
       filepath = await uniqueFile(filepath);
     }
 
-    await mkdir(dirname(filepath), { recursive: true }).catch(() => {});
+    await mkdir(dirname(filepath), { recursive: true });
 
     let meter = new Meter(name, maxFileSize);
     await new Promise<void>((resolve, reject) => {
@@ -132,11 +133,11 @@ export function createFileUploadHandler({
       stream.pipe(meter).pipe(writeFileStream);
     });
 
-    return new NodeFile(filepath, meter.bytes, mimetype);
+    return new NodeOnDiskFile(filepath, meter.bytes, mimetype);
   };
 }
 
-class NodeFile implements File {
+export class NodeOnDiskFile implements File {
   name: string;
   lastModified: number = 0;
   webkitRelativePath: string = "";

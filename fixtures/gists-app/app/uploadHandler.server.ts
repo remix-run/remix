@@ -1,4 +1,4 @@
-import { createFileUploadHandler } from "@remix-run/node";
+import { createFileUploadHandler } from "remix";
 
 export let uploadHandler = createFileUploadHandler({
   directory: "public/uploads",

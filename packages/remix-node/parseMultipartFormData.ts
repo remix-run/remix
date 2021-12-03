@@ -47,7 +47,7 @@ export async function internalParseFormData(
     });
 
     busboy.on("file", (name, filestream, filename, encoding, mimetype) => {
-      if (uploadHandler && filename) {
+      if (uploadHandler) {
         fileWorkQueue.push(
           (async () => {
             try {
@@ -80,7 +80,8 @@ export async function internalParseFormData(
 
       if (!uploadHandler) {
         console.warn(
-          `Tried to parse multipart file upload but no uploadHandler was provided.`
+          `Tried to parse multipart file upload for field "${name}" but no uploadHandler was provided.` +
+            " Read more here: https://remix.run/api/remix#parseMultipartFormData-node"
         );
       }
     });

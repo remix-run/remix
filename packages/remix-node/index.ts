@@ -18,5 +18,8 @@ export { parseMultipartFormData } from "./parseMultipartFormData";
 
 export { createFileSessionStorage } from "./sessions/fileStorage";
 
-export { createFileUploadHandler } from "./upload/fileUploadHandler";
+export {
+  createFileUploadHandler,
+  NodeOnDiskFile
+} from "./upload/fileUploadHandler";
 export { createMemoryUploadHandler } from "./upload/memoryUploadHandler";
