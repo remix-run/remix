@@ -81,7 +81,7 @@ If you have more fields, the browser will add them:
 </form>
 ```
 
-Depending on which checkboxes the uses clicks, the browser will navigate to URLs like:
+Depending on which checkboxes the user clicks, the browser will navigate to URLs like:
 
 ```
 /search?brand=nike&color=black
