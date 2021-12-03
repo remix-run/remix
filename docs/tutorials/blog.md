@@ -54,7 +54,7 @@ There's a bit going on in the file. For now, find the `Layout` component and rig
 </li>
 ```
 
-Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page. Let's create the route now:
+Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page since we've not created this route yet. Let's create the route now:
 
 💿 Create a new file in `app/routes/posts/index.tsx`
 
@@ -126,7 +126,7 @@ Loaders are the backend "API" for their component and it's already wired up for 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[9-15]
+```tsx filename=app/routes/posts/index.tsx lines=[1,9-15]
 import { Link, useLoaderData } from "remix";
 
 // ...
