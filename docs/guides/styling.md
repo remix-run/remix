@@ -444,6 +444,7 @@ export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 ```
+
 If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
 
 ```css filename=styles/tailwind.css
@@ -457,6 +458,7 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
   }
 }
 ```
+
 Then alter how tailwind is generating css:
 
 ```json filename="package.json lines=[4-7]
@@ -473,6 +475,7 @@ Then alter how tailwind is generating css:
   // ...
 }
 ```
+
 This isn't required, but it's recommended to add the generated file to your gitignore list:
 
 ```sh lines=[5] filename=.gitignore
