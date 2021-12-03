@@ -80,3 +80,32 @@ app/routes/reports/$id/[.pdf].ts
 # or like this, the resulting URL is the same
 app/routes/reports/$id.[.pdf].ts
 ```
+
+## Handling different request methods
+
+To handle `GET` requests export a loader function:
+
+```ts
+import type { LoaderFunction } from "remix";
+
+export const loader: LoaderFunction = ({ request }) => {
+  // handle "GET" request
+
+  return json({ success: true }, 200);
+};
+```
+
+To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
+
+```ts
+import type { ActionFunction } from "remix";
+
+export const action: ActionFunction = ({ request }) => {
+  switch (request.method) {
+    case 'POST': { /* handle "POST" */ }
+    case 'PUT': { /* handle "PUT" */ }
+    case 'PATCH': { /* handle "PATCH" */ }
+    case 'DELETE': { /* handle "DELETE" */ }
+  }
+};
+```
