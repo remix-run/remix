@@ -1468,7 +1468,7 @@ export async function loader({ request }) {
 
 ### `createCookie`
 
-Creates a logical container for managing a browser cookie from there server.
+Creates a logical container for managing a browser cookie from the server.
 
 ```ts
 import { createCookie } from "remix";
