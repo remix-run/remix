@@ -745,9 +745,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-    fetchControllers.delete(key);
 
     if (controller.signal.aborted) return;
+    fetchControllers.delete(key);
 
     if (isRedirectResult(result)) {
       let locationState: Redirects["Loader"] = {
