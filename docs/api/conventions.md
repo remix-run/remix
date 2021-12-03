@@ -673,7 +673,7 @@ There are two types of link descriptors you can return:
 
 #### `HtmlLinkDescriptor`
 
-This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link-tag].
+This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link tag].
 
 The `links` export from a route should return an array of `HtmlLinkDescriptor` objects.
 
