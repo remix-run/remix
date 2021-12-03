@@ -64,7 +64,7 @@ export let action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData | undefined>();
+  let actionData = useActionData<ActionData>();
   let transition = useTransition();
 
   if (transition.submission) {

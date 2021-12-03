@@ -2065,9 +2065,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -2627,9 +2625,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function Login() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -3170,9 +3166,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -3775,9 +3769,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function Login() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -4406,9 +4398,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -5083,9 +5073,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function Login() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -5897,15 +5885,16 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const transition = useTransition();
 
   if (transition.submission) {
-    const name = transition.submission.formData.get("name");
-    const content =
-      transition.submission.formData.get("content");
+    const name = transition.submission.formData.get(
+      "name"
+    );
+    const content = transition.submission.formData.get(
+      "content"
+    );
     if (
       typeof name === "string" &&
       typeof content === "string" &&
