@@ -18,9 +18,13 @@ export type FileUploadHandlerPathResolverArgs = {
   mimetype: string;
 };
 
+/**
+ * Chooses the path of the file to be uploaded. If a string is not
+ * returned the file will not be written.
+ */
 export type FileUploadHandlerPathResolver = (
   args: FileUploadHandlerPathResolverArgs
-) => string;
+) => string | undefined;
 
 export type FileUploadHandlerOptions = {
   /**
@@ -52,7 +56,7 @@ export type FileUploadHandlerOptions = {
 };
 
 let defaultFilePathResolver: FileUploadHandlerPathResolver = ({ filename }) => {
-  let ext = extname(filename);
+  let ext = filename ? extname(filename) : "";
   return "upload_" + randomBytes(4).readUInt32LE(0) + ext;
 };
 
@@ -88,16 +92,26 @@ export function createFileUploadHandler({
       return;
     }
 
-    let filedir = resolvePath(
+    let dir =
       typeof directory === "string"
         ? directory
-        : directory({ filename, encoding, mimetype })
-    );
+        : directory({ filename, encoding, mimetype });
 
-    let filepath = resolvePath(
-      filedir,
-      typeof file === "string" ? file : file({ filename, encoding, mimetype })
-    );
+    if (!dir) {
+      stream.resume();
+      return;
+    }
+
+    let filedir = resolvePath(dir);
+    let path =
+      typeof file === "string" ? file : file({ filename, encoding, mimetype });
+
+    if (!path) {
+      stream.resume();
+      return;
+    }
+
+    let filepath = resolvePath(filedir, path);
 
     if (avoidFileConflicts) {
       filepath = await uniqueFile(filepath);
