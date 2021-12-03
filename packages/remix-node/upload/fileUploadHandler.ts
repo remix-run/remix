@@ -103,7 +103,7 @@ export function createFileUploadHandler({
       filepath = await uniqueFile(filepath);
     }
 
-    await mkdir(dirname(filepath), { recursive: true });
+    await mkdir(dirname(filepath), { recursive: true }).catch(() => {});
 
     let meter = new Meter(name, maxFileSize);
     await new Promise<void>((resolve, reject) => {
