@@ -723,7 +723,7 @@ export const links: LinksFunction = () => {
 };
 ```
 
-#### HtmlMetaDescriptor
+#### `HtmlMetaDescriptor`
 
 This is an object representation and abstraction of a `<meta {...props} />` element and its attributes. [View the MDN docs for the meta API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta).
 
