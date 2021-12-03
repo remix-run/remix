@@ -19,7 +19,7 @@ As soon as you know you don't have what the user is looking for you should _thro
 
 ```tsx filename=routes/page/$slug.js
 export function loader({ params }) {
-  let page = await db.page.findOne({
+  const page = await db.page.findOne({
     where: { slug: params.slug }
   });
 
@@ -37,7 +37,7 @@ Remix will catch the response and send your app down the [Catch Boundary][catch-
 
 What's nice about throwing a response is that code in your loader _stops executing_. The rest of your code doesn't have to deal with the chance that the page is defined or not (this is especially handy for TypeScript).
 
-Throwing also ensures that your route component doesn't render if the loader wasn't succesful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
+Throwing also ensures that your route component doesn't render if the loader wasn't successful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
 
 ## Root Catch Boundary
 
@@ -45,7 +45,7 @@ You probably already have one at the root of your app. This will handle all thro
 
 ```tsx
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
   return (
     <html>
       <head>
@@ -73,7 +73,7 @@ import { Form, useLoaderData } from "remix";
 import { useParams } from "react-router-dom";
 
 export function loader({ params }) {
-  let page = await db.page.findOne({
+  const page = await db.page.findOne({
     where: { slug: params.slug }
   });
 
@@ -87,7 +87,7 @@ export function loader({ params }) {
 }
 
 export function CatchBoundary() {
-  let params = useParams();
+  const params = useParams();
   return (
     <div>
       <h2>We couldn't find that page!</h2>
