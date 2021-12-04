@@ -4,15 +4,14 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
   return [
     {
       rel: "stylesheet",
-      href:
-        "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
     }
   ];
 }
@@ -189,11 +188,11 @@ Note that these are not routes, but they export `links` functions as if they wer
 ```tsx filename=app/components/button/index.js lines=[1,3-5]
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   { rel: "stylesheet", href: styles }
 ];
 
-export let Button = React.forwardRef(
+export const Button = React.forwardRef(
   ({ children, ...props }, ref) => {
     return <button {...props} ref={ref} data-button />;
   }
@@ -213,12 +212,12 @@ And then a `<PrimaryButton>` that extends it:
 import { Button, links as buttonLinks } from "../button";
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   ...buttonLinks(),
   { rel: "stylesheet", href: styles }
 ];
 
-export let PrimaryButton = React.forwardRef(
+export const PrimaryButton = React.forwardRef(
   ({ children, ...props }, ref) => {
     return (
       <Button {...props} ref={ref} data-primary-button />
@@ -269,7 +268,7 @@ export function loader({ params }) {
 }
 
 export default function Category() {
-  let products = useLoaderData();
+  const products = useLoaderData();
   return (
     <TileGrid>
       {products.map(product => (
@@ -341,7 +340,7 @@ Since these are just `<link>` tags, you can do more than stylesheet links, like 
 ```tsx filename=app/components/copy-to-clipboard.jsx lines=[4-9]
 import styles from "./styles.css";
 
-export let links = () => [
+export const links = () => [
   {
     rel: "preload",
     href: "/icons/clipboard.svg",
@@ -351,7 +350,7 @@ export let links = () => [
   { rel: "stylesheet", href: styles }
 ];
 
-export let CopyToClipboard = React.forwardRef(
+export const CopyToClipboard = React.forwardRef(
   ({ children, ...props }, ref) => {
     return (
       <Button {...props} ref={ref} data-copy-to-clipboard />
@@ -445,6 +444,37 @@ export function links() {
 }
 ```
 
+If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
+
+```css filename=styles/tailwind.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .custom-class {
+    @apply ...
+  }
+}
+```
+
+Then alter how tailwind is generating css:
+
+```json filename="package.json lines=[4-7]
+{
+  // ...
+  "scripts": {
+    "build": "npm run build:css && remix build",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
+    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
+    "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
+    "postinstall": "remix setup node",
+    "start": "remix-serve build"
+  }
+  // ...
+}
+```
+
 This isn't required, but it's recommended to add the generated file to your gitignore list:
 
 ```sh lines=[5] filename=.gitignore
@@ -464,12 +494,11 @@ You can load stylesheets from any server, here's an example of loading a modern 
 ```ts filename=app/root.tsx
 import type { LinksFunction } from "remix";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href:
-        "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
     }
   ];
 };
@@ -554,7 +583,7 @@ Here's how to set it up:
    import type { LinksFunction } from "remix";
    import styles from "./styles/app.css";
 
-   export let links: LinksFunction = () => {
+   export const links: LinksFunction = () => {
      return [{ rel: "stylesheet", href: styles }];
    };
    ```
@@ -621,12 +650,12 @@ Here's some sample code to show how you might use Styled Components with Remix:
      );
 
      // Now that we've rendered, we get the styles out of the sheet
-     let styles = sheet.getStyleTags();
+     const styles = sheet.getStyleTags();
      sheet.seal();
 
      // Finally, we render a second time, but this time we have styles to apply,
      // make sure to pass them to `<StylesContext.Provider value>`
-     let markup = ReactDOMServer.renderToString(
+     const markup = ReactDOMServer.renderToString(
        <StylesContext.Provider value={styles}>
          <RemixServer
            context={remixContext}
@@ -653,7 +682,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
    import StylesContext from "./StylesContext";
 
    export default function Root() {
-     let styles = useContext(StylesContext);
+     const styles = useContext(StylesContext);
 
      return (
        <html>
@@ -673,3 +702,4 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
+[route-module-links]: ../api/conventions#links
