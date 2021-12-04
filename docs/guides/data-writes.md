@@ -107,7 +107,7 @@ When the user submits this form, the browser will serialize the fields into a re
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
 ```js filename=app/routes/projects
-export function action({ request }) {
+export async function action({ request }) {
   const body = await request.formData();
   const project = await createProject(body);
   redirect(`/projects/${project.id}`);
