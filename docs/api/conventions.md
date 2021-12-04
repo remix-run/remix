@@ -375,7 +375,7 @@ export const loader: LoaderFunction = async ({
 
 See also:
 
-- (`headers`)["#headers"]
+- [`headers`](#headers)
 - [MDN Response Docs][response]
 
 #### Throwing Responses in Loaders

@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@types/aws-lambda": "^8.10.82",
-    "@remix-run/node": "1.0.6"
+    "@remix-run/node": "1.0.6",
+    "@remix-run/server-runtime": "1.0.6"
   },
   "peerDependencies": {
     "@architect/architect": "^8.3.7"
