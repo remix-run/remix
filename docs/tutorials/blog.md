@@ -485,7 +485,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,17]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,14,17]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
@@ -589,7 +589,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={`/posts/${post.slug}`}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -687,7 +689,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={`/posts/${post.slug}`}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -724,7 +728,7 @@ We're gonna get serious now. Let's build a form to create a new post in the our 
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,5-24]
+```tsx filename=app/routes/admin/new.tsx lines=[1,4-25]
 import { Form } from "remix";
 
 export default function NewPost() {
@@ -880,13 +884,13 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,17-18,24-25,30-31]
+```tsx filename=app/routes/admin/new.tsx lines=[2,6-7,17-18,24-25,30-31]
 import {
   useActionData,
   Form,
   redirect,
   ActionFunction
-} from 'remix';
+} from "remix";
 
 // ...
 
@@ -933,10 +937,10 @@ type PostError = {
   title?: boolean;
   slug?: boolean;
   markdown?: boolean;
-}
+};
 
 export const action: ActionFunction = async ({
-  request,
+  request
 }) => {
   // ...
 
@@ -962,13 +966,15 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/admin/new.tsx lines=[5]
+```tsx filename=app/routes/admin/new.tsx lines=[5-6]
 // ...
 export const action: ActionFunction = async ({
   request
 }) => {
   await new Promise(res => setTimeout(res, 1000));
+
   const formData = await request.formData();
+
   const title = formData.get("title");
   const slug = formData.get("slug");
   const markdown = formData.get("markdown");
