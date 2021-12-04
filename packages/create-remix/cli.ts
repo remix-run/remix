@@ -52,16 +52,23 @@ async function run() {
     input.length > 0
       ? input[0]
       : (
-          await inquirer.prompt<{ dir: string }>([
-            {
-              type: "input",
-              name: "dir",
-              message: "Where would you like to create your app?",
-              default: "./my-remix-app"
-            }
-          ])
-        ).dir
+        await inquirer.prompt<{ dir: string }>([
+          {
+            type: "input",
+            name: "dir",
+            message: "Where would you like to create your app?",
+            default: "./my-remix-app"
+          }
+        ])
+      ).dir
   );
+
+  let packageManager = function () {
+    let currDir = path.resolve(__dirname);
+    if (currDir.includes(".npm")) return "npm";
+    else if (currDir.includes(".pnpm")) return "pnpm";
+    return "npm";
+  }();
 
   let answers = await inquirer.prompt<{
     server: Server;
@@ -96,7 +103,7 @@ async function run() {
     {
       name: "install",
       type: "confirm",
-      message: "Do you want me to run `npm install`?",
+      message: `Do you want me to run \`${packageManager} install\`?`,
       default: true
     }
   ]);
@@ -169,7 +176,7 @@ async function run() {
   );
 
   if (answers.install) {
-    execSync("npm install", { stdio: "inherit", cwd: projectDir });
+    execSync(`${packageManager} install`, { stdio: "inherit", cwd: projectDir });
   }
 
   if (projectDirIsCurrentDir) {
