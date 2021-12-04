@@ -129,7 +129,7 @@ Because some characters have special meaning, you must use our escaping syntax i
 
 Remix uses `app/entry.client.tsx` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
 
-Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module](../entry.server).
+Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module](#entryservertsx).
 
 Here's a basic example:
 
@@ -146,7 +146,7 @@ As you can see, you have full control over hydration. This is the first piece of
 
 Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
 
-This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module]("../entry.client").
+This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module](#entryclienttsx).
 
 You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occurred.
 
@@ -194,7 +194,7 @@ export const handleDataRequest: HandleDataRequestFunction =
 
 A route in Remix can be used for many things. Usually they’re used for the user interface of your app, like a React component with server-side lifecycle hooks. But they can also serve as generic routes for any kind of resource (like dynamic CSS or social images).
 
-It's important to read [Route Module Constraints](../constraints/).
+It's important to read [Route Module Constraints](../other-api/constraints/).
 
 ### `default` export
 
@@ -318,7 +318,7 @@ export const loader: LoaderFunction = ({ context }) => {
 
 #### Returning objects
 
-You can return plain JavaScript objects from your loaders that will be made available to your [route modules]("../route-module").
+You can return plain JavaScript objects from your loaders that will be made available to your component by the [`useLoaderData`](./remix#useloaderdata) hook.
 
 ```ts
 export const loader = async () => {
@@ -375,7 +375,7 @@ export const loader: LoaderFunction = async ({
 
 See also:
 
-- (`headers`)["#headers"]
+- [`headers`]("#headers")
 - [MDN Response Docs][response]
 
 #### Throwing Responses in Loaders
@@ -822,7 +822,7 @@ export const handle = {
 };
 ```
 
-This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](../remix/#usematches) for more information.
+This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](./remix/#usematches) for more information.
 
 ### unstable_shouldReload
 
@@ -1002,6 +1002,6 @@ export default function Page() {
 [response]: https://developer.mozilla.org/en-US/docs/Web/API/Response
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
-[form]: ../remix/#form
-[form action]: ../remix/#form-action
+[form]: ./remix/#form
+[form action]: ./remix/#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
