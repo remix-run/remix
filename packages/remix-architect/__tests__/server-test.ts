@@ -242,7 +242,8 @@ describe("architect createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      Request {
+      RemixRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -296,7 +297,7 @@ describe("architect createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);

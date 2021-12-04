@@ -1319,6 +1319,210 @@ return new Response(null, {
 });
 ```
 
+## `parseMultipartFormData` (node)
+
+Allows you to handle multipart forms (file uploads) for your app.
+
+Would be useful to understand [the Browser File API](https://developer.mozilla.org/en-US/docs/Web/API/File) to know how to use this API.
+
+It's to be used in place of `request.formData()`.
+
+```diff
+- let formData = await request.formData();
++ let formData = await parseMultipartFormData(request, uploadHandler);
+```
+
+For example:
+
+```tsx [2-5,7,23]
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler // <-- we'll look at this deeper next
+  );
+
+  // the returned value for the file field is whatever our uploadHandler returns.
+  // Let's imagine we're uploading the avatar to s3,
+  // so our uploadHandler returns the URL.
+  let avatarUrl = formData.get("avatar");
+
+  // update the currently logged in user's avatar in our database
+  await updateUserAvatar(request, avatarUrl);
+
+  // success! Redirect to account page
+  return redirect("/account");
+};
+
+export default function AvatarUploadRoute() {
+  return (
+    <Form method="post">
+      <label htmlFor="avatar-input">Avatar</label>
+      <input id="avatar-input" type="file" name="avatar" />
+      <button>Upload</button>
+    </Form>
+  );
+}
+```
+
+### `uploadHandler`
+
+The `uploadHandler` is the key to whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
+
+Remix has two utilities to create `uploadHandler`s for you:
+
+- `createFileUploadHandler`
+- `createMemoryUploadHandler`
+
+These are fully featured utilities for handling fairly simple use cases. It's not recommended to load anything but quite small files into memory. Saving files to disk is a reasonable solution for many use cases. But if you want to upload the file to a file hosting provider, then you'll need to write your own.
+
+#### `createFileUploadHandler`
+
+**Example:**
+
+```tsx
+let uploadHandler = createFileUploadHandler({
+  maxFileSize: 5_000_000,
+  file: ({ filename }) => filename
+});
+
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler
+  );
+
+  let file = formData.get("avatar");
+
+  // file is a "NodeFile" which has a similar API to "File"
+  // ... etc
+};
+```
+
+**Options:**
+
+| Property           | Type               | Default                         | Description                                                                                                                                               |
+| ------------------ | ------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
+| directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
+| file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
+| maxFileSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded an error will be thrown.                                                              |
+| filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
+
+The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
+
+The `filter` function accepts an `object` and returns a `boolean` (or a promise that resolves to a `boolean`). The object it accepts has the `filename`, `encoding`, and `mimetype` (all strings). The `boolean` returned is `true` if you want to handle that file stream.
+
+#### `createMemoryUploadHandler`
+
+**Example:**
+
+```tsx
+let uploadHandler = createMemoryUploadHandler({
+  maxFileSize: 500_000
+});
+
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler
+  );
+
+  let file = formData.get("avatar");
+
+  // file is a "File" (https://mdn.io/File) polyfilled for node
+  // ... etc
+};
+```
+
+**Options:** The only options supported are `maxFileSize` and `filter` which work the same as in `createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
+
+### Custom `uploadHandler`
+
+Most of the time, you'll probably want to proxy the file stream to a file host.
+
+**Example:**
+
+```tsx
+import type { UploadHandler } from "remix";
+
+export let action: ActionFunction = async ({ request }) => {
+  const userId = getUserId(request);
+  let uploadHandler: UploadHandler = async ({
+    name,
+    stream
+  }) => {
+    // we only care about the file form field called "avatar"
+    // so we'll ignore anything else
+    // NOTE: the way our form is set up, we shouldn't get any other fields,
+    // but this is good defensive programming in case someone tries to hit our
+    // action directly via curl or something weird like that.
+    if (name !== "avatar") {
+      stream.resume();
+      return;
+    }
+
+    const uploadedImage =
+      await cloudinary.v2.uploader.upload(stream, {
+        public_id: userId,
+        folder: "/my-site/avatars"
+      });
+
+    return uploadedImage.secure_url;
+  };
+
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler
+  );
+
+  let imageUrl = formData.get("avatar");
+
+  // because our uploadHandler returns a string, that's what the imageUrl will be.
+  // ... etc
+};
+```
+
+The `UploadHandler` function accepts a number of parameters about the file:
+
+| Property | Type     | Description                                                                  |
+| -------- | -------- | ---------------------------------------------------------------------------- |
+| name     | string   | The field name (comes from your HTML form field "name" value)                |
+| stream   | Readable | The stream of the file bytes                                                 |
+| filename | string   | The name of the file that the user selected for upload (like `rickroll.mp4`) |
+| encoding | string   | The encoding of the file (like `7bit`)                                       |
+| mimetype | string   | The mimetype of the file (like `video/mp4`)                                  |
+
+Your job is to do whatever you need with the `stream` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined`.
+
+### Upload Handler Composition
+
+We have the built-in `createFileUploadHandler` and `createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
+
+```tsx
+import type { UploadHandler } from "remix";
+import { createFileUploadHandler } from "remix";
+import { createCloudinaryUploadHandler } from "some-handy-remix-util";
+
+export let fileUploadHandler = createFileUploadHandler({
+  directory: "public/calendar-events"
+});
+
+export let cloudinaryUploadHandler =
+  createCloudinaryUploadHandler({
+    folder: "/my-site/avatars"
+  });
+
+export let multHandler: UploadHandler = args => {
+  if (args.name === "calendarEvent") {
+    return fileUploadHandler(args);
+  } else if (args.name === "eventBanner") {
+    return cloudinaryUploadHandler(args);
+  } else {
+    args.stream.resume();
+  }
+};
+```
+
 ## Cookies
 
 A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".

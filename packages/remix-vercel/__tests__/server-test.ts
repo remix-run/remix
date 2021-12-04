@@ -215,7 +215,8 @@ describe("vercel createRemixRequest", () => {
     }) as VercelRequest;
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`
-      Request {
+      RemixRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -257,7 +258,7 @@ describe("vercel createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);

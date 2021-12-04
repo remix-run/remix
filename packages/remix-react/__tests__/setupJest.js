@@ -1,4 +1,4 @@
-let nf = require("node-fetch");
+let nf = require("@remix-run/node/fetch");
 let ac = require("abort-controller");
 global.AbortController = ac.AbortController;
 global.Headers = nf.Headers;
