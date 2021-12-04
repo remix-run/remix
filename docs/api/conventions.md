@@ -673,7 +673,7 @@ There are two types of link descriptors you can return:
 
 #### `HtmlLinkDescriptor`
 
-This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link-tag].
+This is an object representation of a normal `<link {...props} />` element. [View the MDN docs for the link API][link tag].
 
 The `links` export from a route should return an array of `HtmlLinkDescriptor` objects.
 
@@ -1004,4 +1004,4 @@ export default function Page() {
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [form]: ../remix/#form
 [form action]: ../remix/#form-action
-[link-tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
