@@ -318,7 +318,7 @@ export const loader: LoaderFunction = ({ context }) => {
 
 #### Returning objects
 
-You can return plain JavaScript objects from your loaders that will be made available to your [route modules]("../route-module").
+You can return plain JavaScript objects from your loaders that will be made available to your component by the [`useLoaderData`](./remix#useloaderdata) hook.
 
 ```ts
 export const loader = async () => {
