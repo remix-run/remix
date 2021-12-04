@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { createReadStream, createWriteStream } from "fs";
 import { rm, mkdir, readFile, stat } from "fs/promises";
+import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
 
 import { Meter } from "./meter";
@@ -35,7 +36,7 @@ export type FileUploadHandlerOptions = {
   /**
    * The directory to write the upload.
    */
-  directory: string | FileUploadHandlerPathResolver;
+  directory?: string | FileUploadHandlerPathResolver;
   /**
    * The name of the file in the directory. Can be a relative path, the directory
    * structure will be created if it does not exist.
@@ -80,7 +81,7 @@ async function uniqueFile(filepath: string) {
 }
 
 export function createFileUploadHandler({
-  directory,
+  directory = tmpdir(),
   avoidFileConflicts = true,
   file = defaultFilePathResolver,
   filter,

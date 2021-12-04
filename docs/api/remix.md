@@ -1381,7 +1381,6 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 
 ```tsx
 let uploadHandler = createFileUploadHandler({
-  directory: "public/uploads",
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename
 });
@@ -1403,8 +1402,8 @@ export let action: ActionFunction = async ({ request }) => {
 
 | Property           | Type               | Default                         | Description                                                                                                                                               |
 | ------------------ | ------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a count on the end of the filename if it already exists on disk                                                         |
-| directory          | string \| Function | REQUIRED                        | The directory to write the upload.                                                                                                                        |
+| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
+| directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
 | file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
 | maxFileSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded an error will be thrown.                                                              |
 | filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
