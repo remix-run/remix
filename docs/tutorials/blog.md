@@ -561,7 +561,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. While that works and is a simple way to get started, ultimately we'd like to allow users to create and update posts from within the app itself. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -645,9 +645,10 @@ export const links = () => {
 // ...
 ```
 
-Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see it in `root.tsx` if you're curious.
+Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see another example of this in `root.tsx` if you're curious.
 
-Alright, you should have a a decent looking page with the posts on the left and a placeholder on the right.
+Alright, you should have a decent looking page with the posts on the left and a placeholder on the right.
+For now, you need to navigate to [http://localhost:3000/admin](http://localhost:3000/admin) manually as we haven't set up any navigational links yet.
 
 ## Index Routes
 
@@ -759,7 +760,7 @@ export default function NewPost() {
 
 If you love HTML like us, you should be getting pretty excited. If you've been doing a lot of `<form onSubmit>` and `<button onClick>` you're about to have your mind blown by HTML.
 
-All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to.
+All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to do, too.
 
 Let's create the essential code that knows how to save a post first in our `post.ts` module.
 
