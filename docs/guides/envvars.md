@@ -31,7 +31,7 @@ If your host doesn't have any conventions for environment variables during devel
 If you're using the Remix App Server, you can do this very quickly:
 
 ```sh
-npm add dotenv
+npm install dotenv
 touch .env
 ```
 
