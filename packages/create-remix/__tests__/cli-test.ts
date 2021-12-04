@@ -181,8 +181,9 @@ function cleanPrompt<T extends { toString(): string }>(data: T): string {
 }
 
 function getPromptChoices(prompt: string) {
+  let pointer = process.platform === 'win32' ? ">" : "❯";
   return prompt
-    .slice(prompt.indexOf("❯") + 2)
+    .slice(prompt.indexOf(pointer) + 2)
     .split("\n")
     .map(s => s.trim());
 }
