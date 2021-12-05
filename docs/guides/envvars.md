@@ -41,7 +41,7 @@ Edit your `.env` file.
 SOME_SECRET=super-secret
 ```
 
-Then updated your package.json dev script to this:
+Then update your package.json dev script to this:
 
 ```json lines=[2] filename=package.json
 {
