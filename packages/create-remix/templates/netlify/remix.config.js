@@ -6,5 +6,5 @@ module.exports = {
   browserBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "netlify/functions/server/build",
-  devServerPort: 8888
+  devServerPort: 8002
 };
