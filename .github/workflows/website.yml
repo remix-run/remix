@@ -1,6 +1,9 @@
 name: website
 
 on:
+  schedule:
+    # every hour
+    - cron:  "0 * * * *"
   push:
     branches: [main, dev]
     paths: [docs/**]
