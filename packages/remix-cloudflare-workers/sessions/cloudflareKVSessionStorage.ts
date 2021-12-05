@@ -4,7 +4,7 @@ import type {
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 
-interface KVSessionStorageOptions {
+export interface KVSessionStorageOptions {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.

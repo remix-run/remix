@@ -5,6 +5,7 @@ export {
   createCloudflareDurableObjectSessionStorage,
   SessionStorageDurableObject
 } from "./sessions/cloudflareDurableObjectSessionStorage";
+export { createCloudflareSessionStorage } from "./sessions/cloudflareSessionStorage";
 
 export type { GetLoadContextFunction, RequestHandler } from "./worker";
 export {
