@@ -46,7 +46,7 @@ export function createCloudflareKVSessionStorage({
         }
 
         await kv.put(id, JSON.stringify(data), {
-          expiration: expires?.getUTCMilliseconds()
+          expiration: expires ? Math.round(expires.getTime() / 1000) : undefined
         });
 
         return id;
@@ -63,7 +63,7 @@ export function createCloudflareKVSessionStorage({
     },
     async updateData(id, data, expires) {
       await kv.put(id, JSON.stringify(data), {
-        expiration: expires?.getUTCMilliseconds()
+        expiration: expires ? Math.round(expires.getTime() / 1000) : undefined
       });
     },
     async deleteData(id) {
