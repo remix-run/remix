@@ -19,7 +19,7 @@ module.exports = {
   publicPath: "/build/",
   serverBuildDirectory: "build",
   routes(defineRoutes) {
-    return defineRoute(route => {
+    return defineRoutes(route => {
       route("/somewhere/cool/*", "catchall.tsx");
     });
   }
