@@ -561,7 +561,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. While that works and is a simple way to get started, ultimately we'd like to allow users to create and update posts from within the app itself. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. While that works and is a simple way to get started, ultimately it's much better to not have to redeploy the whole app for a simple typo change. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
