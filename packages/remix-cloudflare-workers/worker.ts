@@ -108,11 +108,20 @@ export function createEventHandler({
   });
 
   const handleEvent = async (event: FetchEvent) => {
-    let response = await handleAsset(event, build);
+    const cache = await caches.default;
+    let response: Response | null | undefined = await cache.match(
+      event.request
+    );
+    if (response && process.env.NODE_ENV !== "development") return response;
+
+    response = await handleAsset(event, build);
 
     if (!response) {
       response = await handleRequest(event);
     }
+
+    if (process.env.NODE_ENV !== "development")
+      event.waitUntil(cache.put(event.request, response.clone()));
 
     return response;
   };
