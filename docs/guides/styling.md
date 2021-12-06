@@ -423,9 +423,9 @@ Update the package scripts to generate the tailwind file during dev and for the 
   // ...
   "scripts": {
     "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -o ./app/tailwind.css",
+    "build:css": "tailwindcss -o ./app/tailwind.css --c ./tailwind.config.js",
     "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
-    "dev:css": "tailwindcss -o ./app/tailwind.css --watch",
+    "dev:css": "tailwindcss -o ./app/tailwind.css --c ./tailwind.config.js --watch",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
@@ -453,7 +453,7 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 
 @layer components {
   .custom-class {
-    @apply ...
+    @apply ...;
   }
 }
 ```
