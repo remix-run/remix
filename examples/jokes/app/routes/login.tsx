@@ -1,5 +1,5 @@
 import type { ActionFunction, LinksFunction, MetaFunction } from "remix";
-import { useActionData, Form, Link, useSearchParams } from "remix";
+import { useActionData, Form, Link, useSearchParams, json } from "remix";
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
@@ -33,9 +33,14 @@ type ActionData = {
   fields?: { loginType: string; username: string; password: string };
 };
 
-export let action: ActionFunction = async ({
-  request,
-}): Promise<Response | ActionData> => {
+/**
+ * This helper function gives us typechecking for our ActionData return
+ * statements, while still returning the accurate HTTP status, 400 Bad Request,
+ * to the client.
+ */
+const badRequest = (data: ActionData) => json(data, { status: 400 });
+
+export let action: ActionFunction = async ({ request }) => {
   let form = await request.formData();
   let loginType = form.get("loginType");
   let username = form.get("username");
@@ -47,7 +52,7 @@ export let action: ActionFunction = async ({
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({ formError: `Form not submitted correctly.` });
   }
 
   let fields = { loginType, username, password };
@@ -56,39 +61,39 @@ export let action: ActionFunction = async ({
     password: validatePassword(password),
   };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`,
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     case "register": {
       let userExists = await db.user.findFirst({ where: { username } });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`,
-        };
+        });
       }
       const user = await register({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Something went wrong trying to create a new user.`,
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({ fields, formError: `Login type invalid` });
     }
   }
 };
