@@ -102,10 +102,18 @@ import type { ActionFunction } from "remix";
 
 export const action: ActionFunction = ({ request }) => {
   switch (request.method) {
-    case 'POST': { /* handle "POST" */ }
-    case 'PUT': { /* handle "PUT" */ }
-    case 'PATCH': { /* handle "PATCH" */ }
-    case 'DELETE': { /* handle "DELETE" */ }
+    case "POST": {
+      /* handle "POST" */
+    }
+    case "PUT": {
+      /* handle "PUT" */
+    }
+    case "PATCH": {
+      /* handle "PATCH" */
+    }
+    case "DELETE": {
+      /* handle "DELETE" */
+    }
   }
 };
 ```
