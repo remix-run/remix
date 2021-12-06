@@ -1,9 +1,9 @@
 {
   "scripts": {
     "postinstall": "remix setup node",
-    "build": "rm -rf build && remix build",
+    "build": "remix build",
     "dev": "remix dev",
-    "deploy": "flyctl deploy",
+    "deploy": "rm -rf build && flyctl deploy",
     "start": "remix-serve build"
   },
   "dependencies": {
