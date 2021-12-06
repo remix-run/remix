@@ -1,7 +1,6 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export {
-  Outlet,
   useHref,
   useLocation,
   useNavigate,
@@ -37,7 +36,9 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches
+  useMatches,
+  Outlet,
+  useOutletContext
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
