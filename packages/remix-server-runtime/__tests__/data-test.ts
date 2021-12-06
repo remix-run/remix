@@ -40,7 +40,7 @@ describe("loaders", () => {
 
   it("sets header for thrown responses", async () => {
     let loader = async ({ request }) => {
-      throw new Response("null", {
+      throw new Response(null, {
         headers: {
           "Content-type": "application/json"
         }
@@ -78,7 +78,7 @@ describe("loaders", () => {
 
   it("doesn't set header for thrown 304 responses", async () => {
     let loader = async ({ request }) => {
-      throw new Response("null", {
+      throw new Response(null, {
         status: 304,
         headers: {
           "Content-type": "application/json"
