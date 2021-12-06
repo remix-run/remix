@@ -270,7 +270,7 @@ title: My First Post
 Isn't it great?
 ```
 
-```md filename=posts/90s-mix-cdr.md
+```md filename=posts/90s-mixtape.md
 ---
 title: 90s Mixtape
 ---
