@@ -76,9 +76,9 @@ export interface LoaderFunction {
  * `<meta>` tags for a route. These tags will be merged with (and take
  * precedence over) tags from parent routes.
  */
-export interface MetaFunction {
+export interface MetaFunction<Data = AppData> {
   (args: {
-    data: AppData;
+    data: Data | undefined;
     parentsData: RouteData;
     params: Params;
     location: Location;
