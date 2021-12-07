@@ -3,7 +3,7 @@ import superjson from "superjson";
 /**
  * A JSON response. Converts `data` to JSON and sets the `Content-Type` header.
  */
-export function json(data: any, init: number | ResponseInit = {}): Response {
+export function json<Data>(data: Data, init: number | ResponseInit = {}): Response {
   let responseInit: any = init;
   if (typeof init === "number") {
     responseInit = { status: init };
@@ -38,7 +38,7 @@ export function redirect(
   let headers = new Headers(responseInit.headers);
   headers.set("Location", url);
 
-  return new Response("", {
+  return new Response(null, {
     ...responseInit,
     headers
   });

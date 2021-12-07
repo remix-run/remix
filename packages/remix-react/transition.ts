@@ -168,13 +168,6 @@ export type TransitionStates = {
   };
 };
 
-export type SubmissionTransition =
-  | TransitionStates["SubmittingAction"]
-  | TransitionStates["LoadingAction"]
-  | TransitionStates["LoadingActionRedirect"]
-  | TransitionStates["SubmittingLoader"]
-  | TransitionStates["LoadingLoaderSubmissionRedirect"];
-
 export type Transition = TransitionStates[keyof TransitionStates];
 
 export type Redirects = {

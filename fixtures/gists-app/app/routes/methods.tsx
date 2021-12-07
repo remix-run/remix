@@ -19,21 +19,18 @@ export let loader: LoaderFunction = async ({ request }) => {
 
 export let action: ActionFunction = async ({ request }) => {
   let contentType = request.headers.get("Content-Type");
-  if (contentType !== "application/x-www-form-urlencoded") {
-    throw new Error(`${contentType} is not yet supported`);
-  }
 
   let session = await getSession(request.headers.get("Cookie"));
-  let bodyParams = new URLSearchParams(await request.text());
+  let bodyParams = await request.formData();
   let body = Array.from(bodyParams.entries()).reduce<
     Record<string, string | string[]>
   >((p, [k, v]) => {
     if (typeof p[k] === "undefined") {
-      p[k] = v;
+      p[k] = v as string;
     } else if (Array.isArray(p[k])) {
-      (p[k] as string[]).push(v);
+      (p[k] as string[]).push(v as string);
     } else {
-      p[k] = [p[k] as string, v];
+      p[k] = [p[k] as string, v as string];
     }
     return p;
   }, {});
