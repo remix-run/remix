@@ -48,8 +48,8 @@ import { Link } from "remix";
 export default function GlobalNav() {
   return (
     <nav>
-      <Link to="/dashboard">Dashboard</Link>{" "}
-      <Link to="/account">Account</Link>{" "}
+      <Link to="/dashboard">Dashboard</Link>
+      <Link to="/account">Account</Link>
       <Link to="/support">Dashboard</Link>
     </nav>
   );
@@ -396,7 +396,7 @@ function UserPreferences() {
   return (
     <Form method="post" onChange={handleChange}>
       <label>
-        <input type="checkbox" name="darkMode" value="on" />{" "}
+        <input type="checkbox" name="darkMode" value="on" />
         Dark Mode
       </label>
       {transition.state === "submitting" && (
@@ -741,7 +741,7 @@ function NewsletterSignup() {
       action="/newsletter/subscribe"
     >
       <p>
-        <input type="text" name="email" />{" "}
+        <input type="text" name="email" />
         <button
           type="submit"
           disabled={newsletter.state === "submitting"}
@@ -778,7 +778,7 @@ export default function NewsletterSignupRoute() {
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
-        <input type="text" name="email" />{" "}
+        <input type="text" name="email" />
         <button type="submit">Subscribe</button>
       </p>
 
@@ -1681,7 +1681,7 @@ export default function Login() {
           Username: <input type="text" name="username" />
         </label>
         <label>
-          Password:{" "}
+          Password:
           <input type="password" name="password" />
         </label>
       </form>
