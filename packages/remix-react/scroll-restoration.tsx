@@ -101,7 +101,7 @@ function useScrollRestoration() {
       const regular = /^[0-9]\d+/;
       const { hash } = location;
       if (hash && !regular.test(hash.replace("#", ""))) {
-        let el = document.querySelector(location.hash);
+        let el = document.querySelector(hash);
         if (el) {
           el.scrollIntoView();
           return;
