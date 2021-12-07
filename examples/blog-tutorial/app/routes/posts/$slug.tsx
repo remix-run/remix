@@ -1,7 +1,8 @@
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
-import { getPost } from "~/post";
 import invariant from "tiny-invariant";
+
+import { getPost } from "~/post";
 
 export let loader: LoaderFunction = async ({ params }) => {
   invariant(params.slug, "expected params.slug");

@@ -1,10 +1,11 @@
 import { useTransition, useActionData, Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
-import { createPost } from "~/post";
 import invariant from "tiny-invariant";
 
+import { createPost } from "~/post";
+
 export let action: ActionFunction = async ({ request }) => {
-  await new Promise((res) => setTimeout(res, 1000));
+  await new Promise(res => setTimeout(res, 1000));
   let formData = await request.formData();
   let title = formData.get("title");
   let slug = formData.get("slug");
