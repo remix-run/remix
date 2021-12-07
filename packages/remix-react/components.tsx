@@ -1313,7 +1313,7 @@ function useComposedRefs<RefValueType = any>(
 
 let OutletContext = React.createContext<AppData>(null);
 
-export function Outlet<Data = AppData>({ context }: { context: Data }) {
+export function Outlet<Data = AppData>({ context }: { context?: Data }) {
   return (
     <OutletContext.Provider value={context}>
       <RouterOutlet />
