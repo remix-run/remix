@@ -1,7 +1,9 @@
-import { useOutletContext } from "@remix-run/react";
+import { useOutletContext } from "remix";
+
+import type { RouteData } from "../__layout";
 
 export default function WithLayout() {
-  let outletData = useOutletContext();
+  let outletData = useOutletContext<RouteData>();
   return (
     <div>
       <h1>Page inside layout</h1>

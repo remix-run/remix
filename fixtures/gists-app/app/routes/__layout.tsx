@@ -2,12 +2,17 @@ import type { LoaderFunction } from "remix";
 import { useLoaderData } from "remix";
 import { Outlet } from "remix";
 
+export interface RouteData {
+  nested: boolean;
+}
+
 export let loader: LoaderFunction = () => {
-  return { nested: true };
+  let data: RouteData = { nested: true };
+  return data;
 };
 
 export default function LayoutTest() {
-  let data = useLoaderData();
+  let data = useLoaderData<RouteData>();
   return (
     <div data-test-id="_layout">
       <h1>Layout Test</h1>
