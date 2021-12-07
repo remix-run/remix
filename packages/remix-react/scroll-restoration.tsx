@@ -98,7 +98,9 @@ function useScrollRestoration() {
       }
 
       // try to scroll to the hash
-      if (location.hash) {
+      const regular = /^[0-9]\d+/;
+      const { hash } = location;
+      if (hash && !regular.test(hash.replace("#", ""))) {
         let el = document.querySelector(location.hash);
         if (el) {
           el.scrollIntoView();
