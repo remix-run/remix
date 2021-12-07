@@ -2236,6 +2236,48 @@ return json(data, {
 });
 ```
 
+### `<Outlet context>`
+
+This component is a wrapper around React Router's Outlet with the ability to pass it's data down to nested routes.
+
+```tsx filename=app/routes/users.$userId.tsx
+import { Outlet } from "remix";
+import type { LoaderFunction } from "remix";
+import type { User } from "~/models/user";
+
+export const loader: LoaderFunction = ({ params }) => {
+  let user = db.get(params.userId)
+  if (!user) {
+    throw new Response("User not found", {status: 404})
+  }
+  return user
+}
+
+export default function Parent() {
+  const data = useLoaderData()
+  return (
+    <Layout>
+      <Outlet context={data}>
+    </Layout>
+  );
+}
+```
+
+### `useOutletContext()`
+
+This hook returns the data from the Outlet context.
+
+```tsx filename=app/routes/users.$userId.edit.tsx
+import { useOutletContext } from "remix";
+import type { User } from "~/models/user";
+
+export default function Child() {
+  const data = useOutletContext<User>();
+
+  return <h1>{data.name}</h1>;
+}
+```
+
 ## Types
 
 ```ts
