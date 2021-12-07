@@ -637,13 +637,12 @@ export function Meta() {
 
   return (
     <>
-      {Object.keys(meta).map(name => {
-        let value = meta[name];
+      {Object.entries(meta).map(([name, value]) => {
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
         let isOpenGraphTag = name.startsWith("og:");
         return name === "title" ? (
-          <title key="title">{meta[name]}</title>
+          <title key="title">{value}</title>
         ) : Array.isArray(value) ? (
           value.map(content =>
             isOpenGraphTag ? (
