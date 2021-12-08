@@ -334,7 +334,7 @@ Now the user can click back without resubmitting the form.
 
 **When you should worry about this**
 
-Usually your actions will either return validation issues or redirect, and then you're data and your user's are safe no matter how the form is submitted. But to go into further detail, if you're using:
+Usually your actions will either return validation issues or redirect, and then your data and your users are safe no matter how the form is submitted. But to go into further detail, if you're using:
 
 - `<form>`
 - `<Form reloadDocument>`
@@ -2054,6 +2054,5 @@ import type {
 [useloaderdata]: #useloaderdata
 [usesubmit]: #usesubmit
 [constraints]: ../other-api/constraints
-[action]: ../app/#action
-[loader]: ../app/#loader
+[action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
