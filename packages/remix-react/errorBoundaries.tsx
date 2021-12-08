@@ -48,7 +48,12 @@ export class RemixErrorBoundary extends React.Component<
     if (state.location !== props.location) {
       return { error: props.error || null, location: props.location };
     }
-    return state;
+
+    // If we're not changing locations, preserve the location but still surface
+    // any new errors that may come through. We retain the existing error, we do
+    // this because the error provided from the app state may be cleared without
+    // the location changing.
+    return { error: props.error || state.error, location: state.location };
   }
 
   render() {
