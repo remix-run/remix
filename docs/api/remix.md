@@ -73,6 +73,23 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>` tags, which provides a lot subtle benefits (like respecting HTTP cache headers, doing the work in browser idle time, using a different thread than your app, etc.) but the implementation might mess with your CSS since the link tags are rendered inside of your anchor tag. This means `a *:last-child {}` style selectors won't work. You'll need to change them to `a *:last-of-type {}` and you should be good. We will eventually get rid of this limitation.
 
+### `<PrefetchPageLinks />`
+
+When you use a non-none `prefetch` prop in a `<Link>`, Remix internally makes use of `<PrefetchPageLinks>` to add link[rel=prefetch] tags for all the resources and the HTML required for the path. If you want to prefetch a particular path, but don't want to render an anchor tag for same, you may use `<PrefetchPageLinks />`.
+
+```tsx
+<>
+  {/* renders an anchor tag and adds appropiate link[rel=prefetch] tags */}
+  <Link to="your-path" prefetch="render" />
+
+  {/* only adds adds appropiate link[rel=prefetch] tags */}
+  <PrefetchPageLinks page="/absolute/path/to/your-path" /> 
+</>
+
+```
+
+**Note:** You need to pass absolute path to PrefetchPageLinks.
+
 ### `<NavLink>`
 
 A `<NavLink>` is a special kind of `<Link>` that knows whether or not it is "active". This is useful when building a navigation menu, such as a breadcrumb or a set of tabs where you'd like to show which of them is currently selected. It also provides useful context for assistive technology like screen readers.
