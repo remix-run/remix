@@ -11,15 +11,15 @@ type LoaderData = {
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
-export let loader: LoaderFunction = async ({ request }) => {
-  let jokeListItems = await db.joke.findMany({
+export const loader: LoaderFunction = async ({ request }) => {
+  const jokeListItems = await db.joke.findMany({
     take: 5,
     select: { id: true, name: true },
     orderBy: { createdAt: "desc" },
   });
-  let user = await getUser(request);
+  const user = await getUser(request);
 
-  let data: LoaderData = {
+  const data: LoaderData = {
     jokeListItems,
     user,
   };
@@ -27,12 +27,12 @@ export let loader: LoaderFunction = async ({ request }) => {
   return data;
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 export default function JokesScreen() {
-  let data = useLoaderData<LoaderData>();
+  const data = useLoaderData<LoaderData>();
 
   return (
     <div className="jokes-layout">
