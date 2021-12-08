@@ -4,6 +4,7 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
+import * as fse from "fs-extra";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -69,6 +70,9 @@ export async function build(
     onBuildFailure = defaultBuildFailureHandler
   }: BuildOptions = {}
 ): Promise<void> {
+  // when start build, first empty assetsBuildDirectory
+  fse.emptyDirSync(config.assetsBuildDirectory);
+
   await buildEverything(config, {
     mode,
     target,
@@ -144,6 +148,9 @@ export async function watch(
 
   let rebuildEverything = debounce(async () => {
     if (onRebuildStart) onRebuildStart();
+
+    // when rebuilding file , first empty assetsBuildDirectory
+    fse.emptyDirSync(config.assetsBuildDirectory);
 
     if (!browserBuild?.rebuild || !serverBuild?.rebuild) {
       disposeBuilders();
