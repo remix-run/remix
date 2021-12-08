@@ -1,6 +1,6 @@
 import type { AppData } from "./data";
 
-export interface ComponentDidCatchEmulator {
+export interface AppState {
   error?: SerializedError;
   catch?: ThrownResponse;
   catchBoundaryRouteId: string | null;

@@ -22,7 +22,7 @@ import type { LinkProps, NavLinkProps } from "react-router-dom";
 import type { AppData } from "./data";
 import type { FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
-import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
+import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary,
@@ -59,7 +59,7 @@ interface RemixEntryContextType {
   routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
   pendingLocation?: Location;
-  componentDidCatchEmulator: ComponentDidCatchEmulator;
+  appState: AppState;
   routeModules: RouteModules;
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
@@ -95,7 +95,7 @@ export function RemixEntry({
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
-    componentDidCatchEmulator: entryComponentDidCatchEmulator
+    appState: entryComponentDidCatchEmulator
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -176,7 +176,7 @@ export function RemixEntry({
       value={{
         matches,
         manifest,
-        componentDidCatchEmulator: clientState,
+        appState: clientState,
         routeModules,
         serverHandoffString,
         clientRoutes,
@@ -251,8 +251,7 @@ function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
 
 export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
-  let { routeData, routeModules, componentDidCatchEmulator } =
-    useRemixEntryContext();
+  let { routeData, routeModules, appState } = useRemixEntryContext();
 
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
@@ -264,16 +263,15 @@ export function RemixRoute({ id }: { id: string }) {
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerCaught =
-      componentDidCatchEmulator.catch &&
-      componentDidCatchEmulator.catchBoundaryRouteId === id
-        ? componentDidCatchEmulator.catch
+      appState.catch && appState.catchBoundaryRouteId === id
+        ? appState.catch
         : undefined;
 
     // This needs to run after we check for the error from a previous render,
     // otherwise we will incorrectly render this boundary for a loader error
     // deeper in the tree.
-    if (componentDidCatchEmulator.trackCatchBoundaries) {
-      componentDidCatchEmulator.catchBoundaryRouteId = id;
+    if (appState.trackCatchBoundaries) {
+      appState.catchBoundaryRouteId = id;
     }
 
     context = maybeServerCaught
@@ -315,17 +313,17 @@ export function RemixRoute({ id }: { id: string }) {
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerRenderError =
-      componentDidCatchEmulator.error &&
-      (componentDidCatchEmulator.renderBoundaryRouteId === id ||
-        componentDidCatchEmulator.loaderBoundaryRouteId === id)
-        ? deserializeError(componentDidCatchEmulator.error)
+      appState.error &&
+      (appState.renderBoundaryRouteId === id ||
+        appState.loaderBoundaryRouteId === id)
+        ? deserializeError(appState.error)
         : undefined;
 
     // This needs to run after we check for the error from a previous render,
     // otherwise we will incorrectly render this boundary for a loader error
     // deeper in the tree.
-    if (componentDidCatchEmulator.trackBoundaries) {
-      componentDidCatchEmulator.renderBoundaryRouteId = id;
+    if (appState.trackBoundaries) {
+      appState.renderBoundaryRouteId = id;
     }
 
     context = maybeServerRenderError
