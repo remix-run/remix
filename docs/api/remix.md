@@ -2236,6 +2236,140 @@ return json(data, {
 });
 ```
 
+### `<Outlet context />`
+
+This component is a wrapper around React Router's Outlet with the ability to pass UI state down to nested routes.
+
+<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`](#useloaderdata) or [`useMatches`](#usematches).</docs-warning>
+
+Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
+
+```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-41,50-54,65]
+import type { LoaderData } from "remix";
+import {
+  json,
+  useLoaderData,
+  useParams,
+  Outlet
+} from "remix";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel
+} from "@reach/accordion";
+import { getCompanies, Companies } from "~/utils/companies";
+
+type LoaderData = {
+  companies: Array<Companies>;
+};
+
+export const loader: LoaderFunction = async () => {
+  const data: LoaderData = {
+    companies: await getCompanies()
+  };
+  return json(data);
+};
+
+type Sort = "ASC" | "DESC";
+export type ContextType = {
+  invoiceSort: Sort;
+};
+
+export default function CompaniesRoute() {
+  const data = useLoaderData<LoaderData>();
+
+  const [invoiceSort, setInvoiceSort] =
+    React.useState<Sort>("ASC");
+  function changeInvoiceSort() {
+    setInvoiceSort(invoiceSort === "ASC" ? "DESC" : "ASC");
+  }
+  const context: ContextType = { sort };
+  const outlet = <Outlet context={context} />;
+
+  const params = useParams();
+  const selectedCompanyIndex = data.companies.findIndex(
+    company => company.id === params.companyId
+  );
+
+  return (
+    <div>
+      <button onClick={changeInvoiceSort}>
+        {invoiceSort === "ASC"
+          ? "Sort Descending"
+          : "Sort Ascending"}
+      </button>
+      <Accordion index={selectedCompanyIndex}>
+        {data.companies.map(company => (
+          <AccordionItem key={company.id}>
+            <AccordionButton as={Link} to={company.id}>
+              {company.name}
+            </AccordionButton>
+            {/* render the outlet by the
+            currently selected company */}
+            <AccordionPanel>
+              {params.companyId === company.id
+                ? outlet
+                : null}
+            </AccordionPanel>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+}
+```
+
+### `useOutletContext()`
+
+This hook returns the context from the `<Outlet />` that rendered you.
+
+Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
+
+```tsx filename=app/routes/companies/$companyId.tsx lines=[5,7,24,26-29]
+import type { LoaderFunction } from "remix";
+import {
+  json,
+  useLoaderData,
+  useOutletContext
+} from "remix";
+import type { ContextType } from "../companies";
+
+type LoaderData = {
+  company: Company;
+};
+
+export const loader: LoaderFunction = async ({
+  params
+}) => {
+  const data: LoaderData = {
+    company: await getCompany(params.companyId)
+  };
+  return json(data);
+};
+
+export default function CompanyRoute() {
+  const data = useLoaderData<LoaderData>();
+  const { sort } = useOutletContext<ContextType>();
+
+  const sortedInvoices =
+    sort === "ASC"
+      ? data.company.invoices
+      : data.company.invoices.reverse();
+
+  return (
+    <div>
+      <h2>{data.company.name}</h2>
+      <ul>
+        {sortedInvoices.map(invoice => (
+          <li key={invoice.id}>{invoice.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
 ## Types
 
 ```ts

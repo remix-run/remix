@@ -24,7 +24,14 @@ describe("_layout routes", () => {
       .toMatchInlineSnapshot(`
       "<div data-test-id=\\"_layout\\">
         <h1>Layout Test</h1>
-        <h1>Page inside layout</h1>
+        <div>
+          <h1>Page inside layout</h1>
+          <pre>
+      {
+        \\"nested\\": true
+      }</pre
+          >
+        </div>
       </div>
       "
     `);
@@ -41,7 +48,14 @@ describe("_layout routes", () => {
       .toMatchInlineSnapshot(`
       "<div data-test-id=\\"_layout\\">
         <h1>Layout Test</h1>
-        <h1>Page inside layout</h1>
+        <div>
+          <h1>Page inside layout</h1>
+          <pre>
+      {
+        \\"nested\\": true
+      }</pre
+          >
+        </div>
       </div>
       "
     `);

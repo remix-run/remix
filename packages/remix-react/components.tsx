@@ -11,6 +11,7 @@ import {
   Router,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  Outlet as RouterOutlet,
   useLocation,
   useRoutes,
   useNavigate,
@@ -1306,4 +1307,19 @@ function useComposedRefs<RefValueType = any>(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, refs);
+}
+
+let OutletContext = React.createContext<any>(null);
+
+export function Outlet<ContextData>({ context }: { context?: ContextData }) {
+  return (
+    <OutletContext.Provider value={context}>
+      <RouterOutlet />
+    </OutletContext.Provider>
+  );
+}
+
+export function useOutletContext<ContextData>() {
+  let context = React.useContext<ContextData>(OutletContext);
+  return context;
 }
