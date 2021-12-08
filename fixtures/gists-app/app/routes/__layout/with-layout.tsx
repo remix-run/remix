@@ -1,6 +1,6 @@
 import { useOutletContext } from "remix";
 
-import type { RouteData } from "../__layout";
+import type { ContextData } from "../__layout";
 
 export default function WithLayout() {
   let outletData = useOutletContext<RouteData>();
