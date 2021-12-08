@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Outlet } from "remix";
 
 export interface ContextData {
@@ -5,7 +6,7 @@ export interface ContextData {
 }
 
 export default function LayoutTest() {
-  let [contextData] = useState<ContextData>({ nested: true });
+  let [contextData] = React.useState<ContextData>({ nested: true });
   return (
     <div data-test-id="_layout">
       <h1>Layout Test</h1>
