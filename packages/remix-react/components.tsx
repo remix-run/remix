@@ -1311,9 +1311,9 @@ function useComposedRefs<RefValueType = any>(
   }, refs);
 }
 
-let OutletContext = React.createContext<AppData>(null);
+let OutletContext = React.createContext<any>(null);
 
-export function Outlet<Data extends AppData = AppData>({ context }: { context?: Data }) {
+export function Outlet<ContextData>({ context }: { context?: ContextData }) {
   return (
     <OutletContext.Provider value={context}>
       <RouterOutlet />
@@ -1322,6 +1322,6 @@ export function Outlet<Data extends AppData = AppData>({ context }: { context?: 
 }
 
 export function useOutletContext<ContextData>() {
-  let parentData = React.useContext<ContextData>(OutletContext);
-  return parentData;
+  let context = React.useContext<ContextData>(OutletContext);
+  return context;
 }
