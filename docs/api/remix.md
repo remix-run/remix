@@ -2282,7 +2282,9 @@ export default function CompaniesRoute() {
   const [invoiceSort, setInvoiceSort] =
     React.useState<Sort>("ASC");
   function changeInvoiceSort() {
-    setInvoiceSort(invoiceSort === "ASC" ? "DESC" : "ASC");
+    setInvoiceSort(sort =>
+      sort === "ASC" ? "DESC" : "ASC"
+    );
   }
   const context: ContextType = { sort };
   const outlet = <Outlet context={context} />;
