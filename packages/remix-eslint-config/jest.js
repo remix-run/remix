@@ -4,6 +4,7 @@
  */
 require("@rushstack/eslint-patch/modern-module-resolution");
 
+const OFF = 0;
 const WARN = 1;
 const ERROR = 2;
 
@@ -17,7 +18,7 @@ module.exports = {
       },
       rules: {
         // https://github.com/jest-community/eslint-plugin-jest
-        "jest/no-conditional-expect": WARN,
+        "jest/no-conditional-expect": OFF,
         "jest/no-identical-title": WARN,
         "jest/no-interpolation-in-snapshots": WARN,
         "jest/no-jasmine-globals": ERROR,
