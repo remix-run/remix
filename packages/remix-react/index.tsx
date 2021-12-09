@@ -1,7 +1,6 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export {
-  Outlet,
   useHref,
   useLocation,
   useNavigate,
@@ -27,7 +26,6 @@ export {
   NavLink,
   Form,
   PrefetchPageLinks,
-  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -37,7 +35,9 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches
+  useMatches,
+  Outlet,
+  useOutletContext
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
@@ -47,6 +47,8 @@ export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type { ShouldReloadFunction, HtmlMetaDescriptor } from "./routeModules";
+
+export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";

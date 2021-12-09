@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "remix-monorepo",
+  "license": "MIT",
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c && tsc -b",
@@ -11,8 +12,8 @@
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
-    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx .",
-    "format": "prettier --ignore-path .eslintignore --write ./",
+    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx . --fix",
+    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint",
     "prepare": "husky install"
   },
   "workspaces": [
@@ -82,6 +83,9 @@
     "strip-ansi": "^6.0.1",
     "typescript": "^4.2.3",
     "unified": "^9.2.0"
+  },
+  "engines": {
+    "node": ">=14"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
