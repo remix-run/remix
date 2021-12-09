@@ -10,17 +10,17 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/react": "1.0.6",
-    "@remix-run/serve": "1.0.6",
+    "@remix-run/react": "0.0.0-experimental-b697c4f3",
+    "@remix-run/serve": "0.0.0-experimental-b697c4f3",
     "front-matter": "^4.0.2",
     "marked": "^4.0.4",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "1.0.6",
+    "remix": "0.0.0-experimental-b697c4f3",
     "tiny-invariant": "^1.2.0"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.0.6",
+    "@remix-run/dev": "0.0.0-experimental-b697c4f3",
     "@types/marked": "^4.0.1",
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
