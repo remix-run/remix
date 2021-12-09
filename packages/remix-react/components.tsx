@@ -20,8 +20,7 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 
-import type { AppData } from "./data";
-import type { FormEncType, FormMethod } from "./data";
+import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
 import type { AppState, SerializedError } from "./errors";
 import {
@@ -33,12 +32,13 @@ import {
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
+  getLinksForMatches,
   getModuleLinkHrefs,
   getNewMatchesForLinks,
-  getStylesheetPrefetchLinks
+  getStylesheetPrefetchLinks,
+  isPageLinkDescriptor
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
-import { getLinksForMatches, isPageLinkDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
