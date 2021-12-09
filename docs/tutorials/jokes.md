@@ -247,6 +247,8 @@ app
 
 ```sh
 npm run dev
+&
+npm run start:dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and the app should greet the world:
