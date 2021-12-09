@@ -12,8 +12,8 @@
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
-    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx .",
-    "format": "prettier --ignore-path .eslintignore --write ./",
+    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx . --fix",
+    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint",
     "prepare": "husky install"
   },
   "workspaces": [

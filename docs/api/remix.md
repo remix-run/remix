@@ -66,7 +66,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 ```
 
 - **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
-- **"intent"** - Recommended if you want to prefetch. Fetches when when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
+- **"intent"** - Recommended if you want to prefetch. Fetches when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
 - **"render"** - Fetches when the link is rendered.
 
 <docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
@@ -382,7 +382,7 @@ export async function loader() {
   await getUserPreferences();
 }
 
-export async function action() {
+export async function action({ request }) {
   await updatePreferences(await request.formData());
   return redirect("/prefs");
 }
@@ -425,7 +425,7 @@ function useSessionTimeout() {
   const transition = useTransition();
 
   useEffect(() => {
-    const id = setTimeout(() => {
+    const timer = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
     return () => clearTimeout(timer);
@@ -576,7 +576,7 @@ function PendingLink({ to, children }) {
 }
 ```
 
-Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
+Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for when the state is "submitting", once the action is complete, then the link will go pending.
 
 ### `useFetcher`
 
@@ -633,7 +633,9 @@ You can know the state of the fetcher with `fetcher.state`, it will be one of:
 
 - **idle** - nothing is being fetched
 - **submitting** - A form has been submitted. If the method is GET then the route loader is being called, if POST, PUT, PATCH, or DELETE then the route action is being called.
-- **loading** - The loaders for the routes are being reloaded after an action submission completed.
+- **loading** - The loaders for the routes are being reloaded after an action submission
+
+.
 
 #### `fetcher.type`
 
@@ -1044,7 +1046,7 @@ Here's some sample code:
 ```js
 function ProjectTaskCount({ project }) {
   const fetchers = useFetchers();
-  const completedTasks = 0;
+  let completedTasks = 0;
 
   // 1) Find my task's submissions
   const myFetchers = new Map();
@@ -1559,7 +1561,7 @@ export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: value.showBanner };
+  return { showBanner: cookie.showBanner };
 }
 
 export async function action({ request }) {
@@ -1667,7 +1669,7 @@ export async function loader({ request }) {
 
 ### `createCookie`
 
-Creates a logical container for managing a browser cookie from there server.
+Creates a logical container for managing a browser cookie from the server.
 
 ```ts
 import { createCookie } from "remix";

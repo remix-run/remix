@@ -9,7 +9,7 @@ You want to learn Remix? You're in the right place. Let's build [Remix Jokes](ht
 
 <docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
 
-[![Remix Jokes](https://remix-jokes.lol/social.png)](https://remix-jokes.lol)
+<a href="https://remix-jokes.lol"><img src="https://remix-jokes.lol/social.png" style="aspect-ratio: 300 / 157; width: 100%"/></a>
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
@@ -17,7 +17,7 @@ We're going to be laser focused on Remix. This means that we're going to skip ov
 
 <details>
 
-  <summary>Click me</summary>
+<summary>Click me</summary>
 
 There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly then you can just copy/paste stuff as you go as well. We won't judge you!
 
@@ -30,6 +30,8 @@ This tutorial will be using TypeScript. Feel free to follow along and skip/remov
 <docs-info>💿 Hello, I'm Rachel the Remix Disc. I'll show up whenever you have to actually _do_ something.</docs-info>
 
 <docs-warning>Feel free to explore as you go, but if you deviate from the tutorial too much (like trying to deploy before getting to that step for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
+
+<docs-error>We won't add JavaScript to the browser until toward the end of the tutorial. This is to show you how well your application will work when JavaScript takes a long time to load (or fails to load at all). So until we actually add JavaScript to the page, you won't be able to use things like `useState` until we get to that step.</docs-error>
 
 ## Outline
 
@@ -53,7 +55,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 ## Prerequisites
 
-You can follow along with this tutorial on [Codesandbox](https://codesandbox.com/) (a fantastic in-browser editor) or locally on your own computer. If you use the Codesandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
+You can follow along with this tutorial on [CodeSandbox](https://codesandbox.com/) (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
 - [npm](https://www.npmjs.com) 7 or greater
@@ -2009,9 +2011,9 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,31,39,42-45,47-49,56,67,69-77,80-88,94,96-104,107-115]
+```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,29-30,42-44,47-50,52-54,61,72,74-82,85-93,99,101-109,112-120]
 import type { ActionFunction } from "remix";
-import { useActionData, redirect } from "remix";
+import { useActionData, redirect, json } from "remix";
 import { db } from "~/utils/db.server";
 
 function validateJokeContent(content: string) {
@@ -2038,9 +2040,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const name = form.get("name");
   const content = form.get("content");
@@ -2048,7 +2053,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -2057,7 +2064,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({ data: fields });
@@ -2065,9 +2072,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -2150,6 +2155,8 @@ Why don't you pop open my code example for a second. I want to show you a few th
 First I want you to notice that I've added an `ActionData` type so we could get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
+
+The `badRequest` helper function is important to gives us typechecking to ensure our return value is of type `ActionData`, while still returning the accurate HTTP status, [`400 Bad Request`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400), to the client. If we just return the `ActionData` value, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
@@ -2539,6 +2546,7 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
+  json,
   Link,
   useSearchParams
 } from "remix";
@@ -2574,21 +2582,26 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo");
+  const redirectTo = form.get("redirectTo") || "/jokes";
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fields = { loginType, username, password };
@@ -2597,39 +2610,46 @@ export const action: ActionFunction = async ({
     password: validatePassword(password)
   };
   if (Object.values(fieldErrors).some(Boolean))
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       // login to get the user
       // if there's no user, return the fields and a formError
       // if there is a user, create their session and redirect to /jokes
-      return { fields, formError: "Not implemented" };
+      return badRequest({
+        fields,
+        formError: "Not implemented"
+      });
     }
     case "register": {
       const userExists = await db.user.findFirst({
         where: { username }
       });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`
-        };
+        });
       }
       // create the user
       // create their session and redirect to /jokes
-      return { fields, formError: "Not implemented" };
+      return badRequest({
+        fields,
+        formError: "Not implemented"
+      });
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({
+        fields,
+        formError: `Login type invalid`
+      });
     }
   }
 };
 
 export default function Login() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -2824,7 +2844,7 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 ```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, Link } from "remix";
+import { useActionData, json, Link } from "remix";
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
 import stylesUrl from "../styles/login.css";
@@ -2833,20 +2853,23 @@ import stylesUrl from "../styles/login.css";
 
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   // ...
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       console.log({ user });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       // if there is a user, create their session and redirect to /jokes
-      return { fields, formError: "Not implemented" };
+      return badRequest({
+        fields,
+        formError: "Not implemented"
+      });
     }
     // ...
   }
@@ -2999,7 +3022,7 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
-💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(userId: string)`.
+💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(request: Request, redirectTo: string)`.
 
 <details>
 
@@ -3110,9 +3133,9 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```ts filename=app/routes/jokes/new.tsx lines=[4,33,54]
+```ts filename=app/routes/jokes/new.tsx lines=[4,36,59]
 import type { ActionFunction } from "remix";
-import { useActionData, redirect } from "remix";
+import { useActionData, redirect, json } from "remix";
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
 
@@ -3140,9 +3163,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
@@ -3151,7 +3177,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -3160,7 +3188,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({
@@ -3170,9 +3198,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -3669,10 +3695,11 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[2,7,86-93]
+```tsx filename=app/routes/login.tsx lines=[12,96-102]
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
+  json,
   useSearchParams,
   Link
 } from "remix";
@@ -3713,9 +3740,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
@@ -3727,7 +3757,9 @@ export const action: ActionFunction = async ({
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fields = { loginType, username, password };
@@ -3736,16 +3768,16 @@ export const action: ActionFunction = async ({
     password: validatePassword(password)
   };
   if (Object.values(fieldErrors).some(Boolean))
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
@@ -3754,30 +3786,31 @@ export const action: ActionFunction = async ({
         where: { username }
       });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`
-        };
+        });
       }
       const user = await register({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Something went wrong trying to create a new user.`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({
+        fields,
+        formError: `Login type invalid`
+      });
     }
   }
 };
 
 export default function Login() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -3971,7 +4004,7 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>Remix: So great, it's funny!</title>
+        <title>{title}</title>
         <Links />
       </head>
       <body>
@@ -4081,7 +4114,7 @@ Sometimes users do things we can anticipate. I'm not talking about validation ne
 
 It might help to think of the unexpected errors as 500-level errors ([server errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses)) and the expected errors as 400-level errors ([client errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#client_error_responses)).
 
-For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `laoder` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCaught` hook. This will return the `Response` that was thrown.
+For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `loader` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCaught` hook. This will return the `Response` that was thrown.
 
 One last thing, this isn't for form validations and stuff. We already discussed that earlier with `useActionData`. This is just for situations where the user did something that means we can't reasonably render our default component so we want to render something else instead.
 
@@ -4328,11 +4361,12 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[5-6,14-20,147-158]
+```tsx filename=app/routes/jokes/new.tsx lines=[6-7,15-21,155-166]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
   redirect,
+  json,
   useCatch,
   Link
 } from "remix";
@@ -4376,9 +4410,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
@@ -4387,7 +4424,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -4396,7 +4435,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({
@@ -4406,9 +4445,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
@@ -4965,7 +5002,7 @@ export default function Index() {
 
 <summary>app/routes/login.tsx</summary>
 
-```ts filename=app/routes/login.tsx lines=[4,23-29]
+```ts filename=app/routes/login.tsx lines=[4,24-30]
 import type {
   ActionFunction,
   LinksFunction,
@@ -4973,6 +5010,7 @@ import type {
 } from "remix";
 import {
   useActionData,
+  json,
   Link,
   useSearchParams
 } from "remix";
@@ -5021,9 +5059,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
@@ -5035,7 +5076,9 @@ export const action: ActionFunction = async ({
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fields = { loginType, username, password };
@@ -5044,16 +5087,16 @@ export const action: ActionFunction = async ({
     password: validatePassword(password)
   };
   if (Object.values(fieldErrors).some(Boolean))
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
@@ -5062,30 +5105,31 @@ export const action: ActionFunction = async ({
         where: { username }
       });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`
-        };
+        });
       }
       const user = await register({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Something went wrong trying to create a new user.`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({
+        fields,
+        formError: `Login type invalid`
+      });
     }
   }
 };
 
 export default function Login() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
   return (
     <div className="container">
@@ -5381,6 +5425,19 @@ For this one, you'll probably want to at least peak at the example unless you wa
 import type { LoaderFunction } from "remix";
 import { db } from "~/utils/db.server";
 
+function escapeCdata(s: string) {
+  return s.replaceAll("]]>", "]]]]><![CDATA[>");
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export const loader: LoaderFunction = async ({
   request
 }) => {
@@ -5415,10 +5472,16 @@ export const loader: LoaderFunction = async ({
           .map(joke =>
             `
             <item>
-              <title>${joke.name}</title>
-              <description>A funny joke called ${joke.name}</description>
-              <author>${joke.jokester.username}</author>
-              <pubDate>${joke.createdAt}</pubDate>
+              <title><![CDATA[${escapeCdata(
+                joke.name
+              )}]]></title>
+              <description><![CDATA[A funny joke called ${escapeHtml(
+                joke.name
+              )}]]></description>
+              <author><![CDATA[${escapeCdata(
+                joke.jokester.username
+              )}]]></author>
+              <pubDate>${joke.createdAt.toUTCString()}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
             </item>
@@ -5808,11 +5871,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[10,82-100]
+```tsx filename=app/routes/jokes/new.tsx lines=[11,88-108]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
   redirect,
+  json,
   useCatch,
   Link,
   Form,
@@ -5859,9 +5923,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
@@ -5870,7 +5937,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -5879,7 +5948,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({
@@ -5889,9 +5958,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<
-    ActionData | undefined
-  >();
+  const actionData = useActionData<ActionData>();
   const transition = useTransition();
 
   if (transition.submission) {

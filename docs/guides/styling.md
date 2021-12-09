@@ -4,7 +4,7 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
@@ -444,6 +444,37 @@ export function links() {
 }
 ```
 
+If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
+
+```css filename=styles/tailwind.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .custom-class {
+    @apply ...;
+  }
+}
+```
+
+Then alter how tailwind is generating css:
+
+```json filename="package.json lines=[4-7]
+{
+  // ...
+  "scripts": {
+    "build": "npm run build:css && remix build",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
+    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
+    "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
+    "postinstall": "remix setup node",
+    "start": "remix-serve build"
+  }
+  // ...
+}
+```
+
 This isn't required, but it's recommended to add the generated file to your gitignore list:
 
 ```sh lines=[5] filename=.gitignore
@@ -671,3 +702,4 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
+[route-module-links]: ../api/conventions#links
