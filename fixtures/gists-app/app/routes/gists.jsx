@@ -1,5 +1,4 @@
-import { Outlet } from "react-router-dom";
-import { Link, useLoaderData, usePendingLocation, json } from "remix";
+import { json, Link, Outlet, useLoaderData, useTransition } from "remix";
 
 import Shared from "~/components/Shared";
 import stylesHref from "~/styles/gists.css";
@@ -34,7 +33,7 @@ export let handle = {
 };
 
 export default function Gists() {
-  let locationPending = usePendingLocation();
+  let locationPending = useTransition().location;
   let { users } = useLoaderData();
 
   return (
@@ -49,7 +48,7 @@ export default function Gists() {
                 to={user.id}
                 className="text-blue-700 underline"
               >
-                {user.name} {locationPending && "..."}
+                {user.name} {locationPending ? "..." : null}
               </Link>
             </li>
           ))}

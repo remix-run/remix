@@ -1,12 +1,6 @@
 import * as React from "react";
 import type { LoaderFunction, ActionFunction, FormProps } from "remix";
-import {
-  useLoaderData,
-  usePendingFormSubmit,
-  Form,
-  json,
-  redirect
-} from "remix";
+import { useLoaderData, useTransition, Form, json, redirect } from "remix";
 
 import stylesHref from "../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";
@@ -25,21 +19,18 @@ export let loader: LoaderFunction = async ({ request }) => {
 
 export let action: ActionFunction = async ({ request }) => {
   let contentType = request.headers.get("Content-Type");
-  if (contentType !== "application/x-www-form-urlencoded") {
-    throw new Error(`${contentType} is not yet supported`);
-  }
 
   let session = await getSession(request.headers.get("Cookie"));
-  let bodyParams = new URLSearchParams(await request.text());
+  let bodyParams = await request.formData();
   let body = Array.from(bodyParams.entries()).reduce<
     Record<string, string | string[]>
   >((p, [k, v]) => {
     if (typeof p[k] === "undefined") {
-      p[k] = v;
+      p[k] = v as string;
     } else if (Array.isArray(p[k])) {
-      (p[k] as string[]).push(v);
+      (p[k] as string[]).push(v as string);
     } else {
-      p[k] = [p[k] as string, v];
+      p[k] = [p[k] as string, v as string];
     }
     return p;
   }, {});
@@ -63,9 +54,9 @@ export default function Methods() {
   let [enctype, setEnctype] = React.useState<FormProps["encType"]>(
     "application/x-www-form-urlencoded"
   );
-  let pendingFormSubmit = usePendingFormSubmit();
+  let pendingFormSubmit = useTransition().submission;
   let pendingForm = pendingFormSubmit
-    ? Object.fromEntries(pendingFormSubmit.data)
+    ? Object.fromEntries(pendingFormSubmit.formData)
     : null;
 
   return (
@@ -138,7 +129,12 @@ export default function Methods() {
           </label>
         </p>
         <p>
-          <button type="submit">{method}</button>
+          <button type="submit" id="submit-with-data" name="data" value="c">
+            {method} (with data)
+          </button>
+          <button type="submit" id="submit">
+            {method}
+          </button>
         </p>
       </Form>
       <div

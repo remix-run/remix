@@ -1,13 +1,21 @@
 {
   "name": "@remix-run/serve",
   "description": "Production application server for Remix",
-  "version": "0.20.1",
-  "repository": "https://github.com/remix-run/packages",
+  "version": "0.0.0-experimental-b697c4f3",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-serve"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "bin": {
     "remix-serve": "cli.js"
   },
   "dependencies": {
-    "@remix-run/express": "0.20.1",
+    "@remix-run/express": "0.0.0-experimental-b697c4f3",
     "compression": "^1.7.4",
     "express": "^4.17.1",
     "morgan": "^1.10.0"

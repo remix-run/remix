@@ -1,14 +1,15 @@
 import { useEffect } from "react";
 import {
-  Meta,
+  Link,
   Links,
+  Meta,
+  Outlet,
   Scripts,
+  ScrollRestoration,
   useCatch,
   useLoaderData,
-  useMatches,
-  Link
+  useMatches
 } from "remix";
-import { Outlet } from "react-router-dom";
 import normalizeHref from "@exampledev/new.css/new.css";
 
 import stylesHref from "./styles/app.css";
@@ -19,7 +20,8 @@ export function links() {
       rel: "stylesheet",
       href: normalizeHref
     },
-    { rel: "stylesheet", href: stylesHref }
+    { rel: "stylesheet", href: stylesHref },
+    { rel: "stylesheet", href: "/resources/theme-css" }
   ];
 }
 
@@ -64,7 +66,12 @@ export default function Root() {
         <div data-test-id="content" id="content">
           <Outlet />
         </div>
-        {data.enableScripts && <Scripts />}
+        {data.enableScripts ? (
+          <>
+            <ScrollRestoration />
+            <Scripts />
+          </>
+        ) : null}
       </body>
     </html>
   );

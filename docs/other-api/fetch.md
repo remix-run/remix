@@ -2,29 +2,33 @@
 title: Web Fetch API
 ---
 
+# Web Fetch API
+
 When browsers added `window.fetch`, they also add three other objects: `Headers`, `Request`, and `Response`. Remix is built upon this API.
 
 When you do this:
 
 ```js
-let res = await fetch(url);
+const res = await fetch(url);
 ```
 
 That `res` is an instance of `Response`. And you can make a response yourself:
 
 ```js
-let res = new Response(JSON.stringify({ hello: "there" }));
-let json = await res.json();
+const res = new Response(
+  JSON.stringify({ hello: "there" })
+);
+const json = await res.json();
 console.log(json);
 // { hello: "there" }
 ```
 
-Rather than pick a server-side API, Remix adopt's the Web Fetch API for all http handling. Note that our deployment wrappers like `@remix-run/express` are simply adapters between the deployment server's API and the Web API. `@remix-run/express` interperets a Web API Response that you return from a loader or your server entry into an express response.
+Rather than pick a server-side API, Remix adopts the Web Fetch API for all http handling. Note that our deployment wrappers like `@remix-run/express` are simply adapters between the deployment server's API and the Web API. `@remix-run/express` interperets a Web API Response that you return from a loader or your server entry into an express response.
 
 While you can use these APIs directly in Remix, you'll typically use response helpers instead:
 
-- [json](../node/#json)
-- [redirect](../node/#redirect)
+- [json](../api/remix#json)
+- [redirect](../api/remix#redirect)
 
 ## Globally Available
 

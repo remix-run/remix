@@ -1,5 +1,5 @@
 import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
-import { Link, useRouteData, usePendingLocation, json } from "remix";
+import { Link, useLoaderData, useTransition, json } from "remix";
 
 import * as helloPost from "./hello-world.mdx";
 import * as thirdPost from "./third.md";
@@ -49,8 +49,8 @@ export let headers: HeadersFunction = ({ loaderHeaders }) => {
 };
 
 export default function BlogPosts() {
-  let locationPending = usePendingLocation();
-  let { posts } = useRouteData<PostsData>();
+  let locationPending = useTransition().location;
+  let { posts } = useLoaderData<PostsData>();
 
   return (
     <div data-test-id="/blog">
@@ -60,7 +60,7 @@ export default function BlogPosts() {
           {posts.map(post => (
             <li key={post.slug}>
               <Link to={post.slug} className="text-blue-700 underline">
-                {post.title} {locationPending && "..."}
+                {post.title} {locationPending ? "..." : null}
               </Link>
             </li>
           ))}

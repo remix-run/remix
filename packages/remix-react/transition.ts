@@ -18,7 +18,7 @@ export interface TransitionManagerState {
    * The current location the user sees in the browser, during a transition this
    * is the "old page"
    */
-  location: Location<any>;
+  location: Location;
 
   /**
    * The current set of route matches the user sees in the browser. During a
@@ -134,7 +134,7 @@ export type TransitionStates = {
     state: "loading";
     type: "loaderSubmissionRedirect";
     submission: LoaderSubmission;
-    location: Location<Redirects["LoaderSubmission"]>;
+    location: Location;
   };
   LoadingAction: {
     state: "loading";
@@ -146,34 +146,27 @@ export type TransitionStates = {
     state: "loading";
     type: "actionRedirect";
     submission: ActionSubmission;
-    location: Location<Redirects["Action"]>;
+    location: Location;
   };
   LoadingFetchActionRedirect: {
     state: "loading";
     type: "fetchActionRedirect";
     submission: undefined;
-    location: Location<any>;
+    location: Location;
   };
   LoadingRedirect: {
     state: "loading";
     type: "normalRedirect";
     submission: undefined;
-    location: Location<any>;
+    location: Location;
   };
   Loading: {
     state: "loading";
     type: "normalLoad";
-    location: Location<any>;
+    location: Location;
     submission: undefined;
   };
 };
-
-export type SubmissionTransition =
-  | TransitionStates["SubmittingAction"]
-  | TransitionStates["LoadingAction"]
-  | TransitionStates["LoadingActionRedirect"]
-  | TransitionStates["SubmittingLoader"]
-  | TransitionStates["LoadingLoaderSubmissionRedirect"];
 
 export type Transition = TransitionStates[keyof TransitionStates];
 
@@ -272,7 +265,7 @@ export class CatchValue {
 export type NavigationEvent = {
   type: "navigation";
   action: Action;
-  location: Location<any>;
+  location: Location;
   submission?: Submission;
 };
 
@@ -298,33 +291,25 @@ function isLoaderSubmission(
   return submission.method === "GET";
 }
 
-function isRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects[keyof Redirects]> {
+function isRedirectLocation(location: Location): location is Location {
   return Boolean(location.state) && location.state.isRedirect;
 }
 
-function isLoaderRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects["Loader"]> {
+function isLoaderRedirectLocation(location: Location): location is Location {
   return isRedirectLocation(location) && location.state.type === "loader";
 }
 
-function isActionRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects["Action"]> {
+function isActionRedirectLocation(location: Location): location is Location {
   return isRedirectLocation(location) && location.state.type === "action";
 }
 
-function isFetchActionRedirect(
-  location: Location<any>
-): location is Location<Redirects["FetchAction"]> {
+function isFetchActionRedirect(location: Location): location is Location {
   return isRedirectLocation(location) && location.state.type === "fetchAction";
 }
 
 function isLoaderSubmissionRedirectLocation(
-  location: Location<any>
-): location is Location<Redirects["LoaderSubmission"]> {
+  location: Location
+): location is Location {
   return (
     isRedirectLocation(location) && location.state.type === "loaderSubmission"
   );
@@ -567,6 +552,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
+      match.route.id,
       loadFetcher
     );
 
@@ -753,9 +739,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-    fetchControllers.delete(key);
 
     if (controller.signal.aborted) return;
+    fetchControllers.delete(key);
 
     if (isRedirectResult(result)) {
       let locationState: Redirects["Loader"] = {
@@ -879,10 +865,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     pendingNavigationController = controller;
 
     if (
-      !isIndexRequestSearch(location.search) &&
+      !isIndexRequestAction(submission.action) &&
       matches[matches.length - 1].route.id.endsWith("/index")
     ) {
-      matches.pop();
+      matches = matches.slice(0, -1);
     }
 
     let leafMatch = matches.slice(-1)[0];
@@ -927,7 +913,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionData: { [leafMatch.route.id]: result.value }
     });
 
-    await loadPageData(location, matches, submission, result);
+    await loadPageData(
+      location,
+      matches,
+      submission,
+      leafMatch.route.id,
+      result
+    );
   }
 
   async function handleLoaderSubmissionNavigation(
@@ -980,7 +972,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleLoaderRedirect(
-    location: Location<Redirects["Loader"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -995,7 +987,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleLoaderSubmissionRedirect(
-    location: Location<Redirects["LoaderSubmission"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -1015,7 +1007,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleFetchActionRedirect(
-    location: Location<Redirects["FetchAction"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -1030,7 +1022,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   async function handleActionRedirect(
-    location: Location<Redirects["Action"]>,
+    location: Location,
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
@@ -1062,6 +1054,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: Location,
     matches: ClientMatch[],
     submission?: Submission,
+    submissionRouteId?: string,
     actionResult?: DataResult
   ) {
     let maybeActionErrorResult =
@@ -1081,7 +1074,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       controller.signal,
       maybeActionErrorResult,
       maybeActionCatchResult,
-      submission
+      submission,
+      submissionRouteId
     );
 
     if (controller.signal.aborted) {
@@ -1171,10 +1165,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-function isIndexRequestSearch(search: string) {
+function isIndexRequestAction(action: string) {
   let indexRequest = false;
 
-  let searchParams = new URLSearchParams(search);
+  let searchParams = new URLSearchParams(action.split("?", 2)[1] || "");
   for (let param of searchParams.getAll("index")) {
     if (!param) {
       indexRequest = true;
@@ -1192,6 +1186,7 @@ async function callLoaders(
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
+  submissionRouteId?: string,
   fetcher?: Fetcher
 ): Promise<DataResult[]> {
   let matchesToLoad = filterMatchesToLoad(
@@ -1201,6 +1196,7 @@ async function callLoaders(
     actionErrorResult,
     actionCatchResult,
     submission,
+    submissionRouteId,
     fetcher
   );
 
@@ -1252,8 +1248,25 @@ function filterMatchesToLoad(
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
+  submissionRouteId?: string,
   fetcher?: Fetcher
 ): ClientMatch[] {
+  // Filter out all routes below the problematic route as they aren't going
+  // to render so we don't need to load them.
+  if (submissionRouteId && (actionCatchResult || actionErrorResult)) {
+    let foundProblematicRoute = false;
+    matches = matches.filter(match => {
+      if (foundProblematicRoute) {
+        return false;
+      }
+      if (match.route.id === submissionRouteId) {
+        foundProblematicRoute = true;
+        return false;
+      }
+      return true;
+    });
+  }
+
   let isNew = (match: ClientMatch, index: number) => {
     // [a] -> [a, b]
     if (!state.matches[index]) return true;

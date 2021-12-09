@@ -48,7 +48,12 @@ export class RemixErrorBoundary extends React.Component<
     if (state.location !== props.location) {
       return { error: props.error || null, location: props.location };
     }
-    return state;
+
+    // If we're not changing locations, preserve the location but still surface
+    // any new errors that may come through. We retain the existing error, we do
+    // this because the error provided from the app state may be cleared without
+    // the location changing.
+    return { error: props.error || state.error, location: state.location };
   }
 
   render() {
@@ -108,7 +113,7 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href="https://remix.run/dashboard/docs/errors"
+                href="https://remix.run/guides/errors"
               >
                 Error Handling in Remix
               </a>
@@ -154,7 +159,7 @@ export function RemixCatchBoundary({
 }
 
 /**
- * When app's don't provide a root level ErrorBoundary, we default to this.
+ * When app's don't provide a root level CatchBoundary, we default to this.
  */
 export function RemixRootDefaultCatchBoundary() {
   return (
@@ -187,8 +192,7 @@ export function RemixRootDefaultCatchBoundary() {
               <a
                 target="_blank"
                 rel="noreferrer"
-                // TODO: Update link to docs
-                href="https://remix.run/dashboard/docs/errors"
+                href="https://remix.run/guides/errors"
               >
                 Throwing Responses in Remix
               </a>

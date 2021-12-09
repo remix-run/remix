@@ -1,8 +1,11 @@
 ---
 title: "@remix-run/{adapter}"
+order: 2
 ---
 
-Idiomatic Remix apps can be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). It does this through adapters. We maintain a few adapters:
+# Server Adapters
+
+Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). It does this through adapters. We maintain a few adapters:
 
 - `@remix-run/express`
 - `@remix-run/architect`
@@ -37,7 +40,7 @@ const {
   createRequestHandler
 } = require("@remix-run/express");
 
-let app = express();
+const app = express();
 
 // needs to handle all verbs (GET, POST, etc.)
 app.all(
@@ -95,7 +98,7 @@ function purgeRequireCache() {
   // netlify typically does this for you, but we've found it to be hit or
   // miss and some times requires you to refresh the page after it auto reloads
   // or even have to restart your server
-  for (let key in require.cache) {
+  for (const key in require.cache) {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
     }
@@ -136,7 +139,7 @@ import * as build from "../build";
 const handleRequest = createRequestHandler({ build });
 
 const handleEvent = async (event: FetchEvent) => {
-  let response = await handleAsset(event, build);
+  const response = await handleAsset(event, build);
 
   if (!response) {
     response = await handleRequest(event);

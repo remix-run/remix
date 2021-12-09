@@ -23,9 +23,9 @@ export {
   Scripts,
   Link,
   NavLink,
-  Outlet,
   Form,
   PrefetchPageLinks,
+  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -37,9 +37,19 @@ export {
   useActionData,
   useBeforeUnload,
   useMatches,
-  RemixServer,
-  // @deprecated
-  usePendingLocation,
-  usePendingFormSubmit,
-  useRouteData
+  RemixServer
+} from "@remix-run/react";
+
+// react-router-dom exports
+export {
+  Outlet,
+  useHref,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+  useOutlet,
+  useParams,
+  useResolvedPath,
+  useSearchParams,
+  useOutletContext
 } from "@remix-run/react";

@@ -1,8 +1,17 @@
 {
   "name": "remix",
   "description": "A framework for building better websites",
-  "version": "0.20.1",
+  "version": "0.0.0-experimental-b697c4f3",
   "homepage": "https://remix.run",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "main": "index.js",
   "browser": "browser/index.js",
   "sideEffects": false,

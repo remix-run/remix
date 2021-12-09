@@ -11,6 +11,7 @@ import {
   Router,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  Outlet as RouterOutlet,
   useLocation,
   useRoutes,
   useNavigate,
@@ -21,7 +22,7 @@ import type { LinkProps, NavLinkProps } from "react-router-dom";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
-import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
+import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary,
@@ -44,7 +45,7 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, MetaDescriptor } from "./routeModules";
+import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
@@ -57,7 +58,7 @@ interface RemixEntryContextType {
   routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
   pendingLocation?: Location;
-  componentDidCatchEmulator: ComponentDidCatchEmulator;
+  appState: AppState;
   routeModules: RouteModules;
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
@@ -83,7 +84,7 @@ export function RemixEntry({
 }: {
   context: EntryContext;
   action: Action;
-  location: Location<any>;
+  location: Location;
   navigator: Navigator;
   static?: boolean;
 }) {
@@ -93,7 +94,7 @@ export function RemixEntry({
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
-    componentDidCatchEmulator: entryComponentDidCatchEmulator
+    appState: entryComponentDidCatchEmulator
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -174,7 +175,7 @@ export function RemixEntry({
       value={{
         matches,
         manifest,
-        componentDidCatchEmulator: clientState,
+        appState: clientState,
         routeModules,
         serverHandoffString,
         clientRoutes,
@@ -194,7 +195,7 @@ export function RemixEntry({
           catch={ssrCatchBeforeRoutesRendered}
         >
           <Router
-            action={action}
+            navigationType={action}
             location={location}
             navigator={navigator}
             static={staticProp}
@@ -242,14 +243,14 @@ function useRemixRouteContext(): RemixRouteContextType {
 
 function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
   throw new Error(
-    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.`
+    `Route "${id}" has no component! Please go add a \`default\` export in the route module file.\n` +
+      "If you were trying to navigate or submit to a resource route, use `<a>` instead of `<Link>` or `<Form reloadDocument>`."
   );
 }
 
 export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
-  let { routeData, routeModules, componentDidCatchEmulator } =
-    useRemixEntryContext();
+  let { routeData, routeModules, appState } = useRemixEntryContext();
 
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
@@ -261,16 +262,15 @@ export function RemixRoute({ id }: { id: string }) {
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerCaught =
-      componentDidCatchEmulator.catch &&
-      componentDidCatchEmulator.catchBoundaryRouteId === id
-        ? componentDidCatchEmulator.catch
+      appState.catch && appState.catchBoundaryRouteId === id
+        ? appState.catch
         : undefined;
 
     // This needs to run after we check for the error from a previous render,
     // otherwise we will incorrectly render this boundary for a loader error
     // deeper in the tree.
-    if (componentDidCatchEmulator.trackCatchBoundaries) {
-      componentDidCatchEmulator.catchBoundaryRouteId = id;
+    if (appState.trackCatchBoundaries) {
+      appState.catchBoundaryRouteId = id;
     }
 
     context = maybeServerCaught
@@ -312,17 +312,17 @@ export function RemixRoute({ id }: { id: string }) {
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerRenderError =
-      componentDidCatchEmulator.error &&
-      (componentDidCatchEmulator.renderBoundaryRouteId === id ||
-        componentDidCatchEmulator.loaderBoundaryRouteId === id)
-        ? deserializeError(componentDidCatchEmulator.error)
+      appState.error &&
+      (appState.renderBoundaryRouteId === id ||
+        appState.loaderBoundaryRouteId === id)
+        ? deserializeError(appState.error)
         : undefined;
 
     // This needs to run after we check for the error from a previous render,
     // otherwise we will incorrectly render this boundary for a loader error
     // deeper in the tree.
-    if (componentDidCatchEmulator.trackBoundaries) {
-      componentDidCatchEmulator.renderBoundaryRouteId = id;
+    if (appState.trackBoundaries) {
+      appState.renderBoundaryRouteId = id;
     }
 
     context = maybeServerRenderError
@@ -347,7 +347,7 @@ export function RemixRoute({ id }: { id: string }) {
   }
 
   // It's important for the route context to be above the error boundary so that
-  // a call to `useRouteData` doesn't accidentally get the parents route's data.
+  // a call to `useLoaderData` doesn't accidentally get the parents route's data.
   return (
     <RemixRouteContext.Provider value={context}>
       {element}
@@ -448,7 +448,7 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           {...props}
         />
-        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
   }
@@ -469,7 +469,7 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           {...props}
         />
-        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
   }
@@ -611,7 +611,7 @@ export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: MetaDescriptor = {};
+  let meta: HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
@@ -659,11 +659,27 @@ export function Meta() {
   );
 }
 
+type ScriptProps = Omit<
+  React.HTMLProps<HTMLScriptElement>,
+  | "children"
+  | "async"
+  | "defer"
+  | "src"
+  | "type"
+  | "noModule"
+  | "dangerouslySetInnerHTML"
+  | "suppressHydrationWarning"
+>;
+
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
  * additional routes are loaded later as needed.
+ *
+ * @param props Additional properties to add to each script tag that is rendered.
+ * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
+ * property if provided.
  */
-export function Scripts() {
+export function Scripts(props: ScriptProps) {
   let {
     manifest,
     matches,
@@ -692,15 +708,17 @@ window.__remixRouteModules = {${matches
     return (
       <>
         <script
+          {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
-        <script src={manifest.url} />
+        <script {...props} src={manifest.url} />
         <script
+          {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
         />
-        <script src={manifest.entry.module} type="module" />
+        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -734,7 +752,12 @@ window.__remixRouteModules = {${matches
   return (
     <>
       {dedupe(preloads).map(path => (
-        <link key={path} rel="modulepreload" href={path} />
+        <link
+          key={path}
+          rel="modulepreload"
+          href={path}
+          crossOrigin={props.crossOrigin}
+        />
       ))}
       {initialScripts}
     </>
@@ -816,12 +839,53 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     forwardedRef
   ) => {
     let submit = useSubmitImpl(fetchKey);
-    let formMethod = method.toLowerCase() === "get" ? "get" : "post";
-    let formAction = useFormAction(action);
+    let formMethod: FormMethod =
+      method.toLowerCase() === "get" ? "get" : "post";
+    let formAction = useFormAction(action, formMethod);
+    let formRef = React.useRef<HTMLFormElement>();
+    let ref = useComposedRefs(forwardedRef, formRef);
+
+    // When calling `submit` on the form element itself, we don't get data from
+    // the button that submitted the event. For example:
+    //
+    //   <Form>
+    //     <button name="something" value="whatever">Submit</button>
+    //   </Form>
+    //
+    // formData.get("something") should be "whatever", but we don't get that
+    // unless we call submit on the clicked button itself.
+    //
+    // To figure out which button triggered the submit, we'll attach a click
+    // event listener to the form. The click event is always triggered before
+    // the submit event (even when submitting via keyboard when focused on
+    // another form field, yeeeeet) so we should have access to that button's
+    // data for use in the submit handler.
+    let clickedButtonRef = React.useRef<any>();
+
+    React.useEffect(() => {
+      let form = formRef.current;
+      if (!form) return;
+
+      function handleClick(event: MouseEvent) {
+        if (!(event.target instanceof HTMLElement)) return;
+        let submitButton = event.target.closest<
+          HTMLButtonElement | HTMLInputElement
+        >("button,input[type=submit]");
+
+        if (submitButton && submitButton.type === "submit") {
+          clickedButtonRef.current = submitButton;
+        }
+      }
+
+      form.addEventListener("click", handleClick);
+      return () => {
+        form && form.removeEventListener("click", handleClick);
+      };
+    }, []);
 
     return (
       <form
-        ref={forwardedRef}
+        ref={ref}
         method={formMethod}
         action={formAction}
         encType={encType}
@@ -832,7 +896,12 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
-                submit(event.currentTarget, { method, replace });
+
+                submit(clickedButtonRef.current || event.currentTarget, {
+                  method,
+                  replace
+                });
+                clickedButtonRef.current = null;
               }
         }
         {...props}
@@ -841,18 +910,30 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   }
 );
 
+function isActionRequestMethod(method: string): boolean {
+  method = method.toLowerCase();
+  return (
+    method === "post" ||
+    method === "put" ||
+    method === "patch" ||
+    method === "delete"
+  );
+}
+
 /**
  * Resolves a `<form action>` path relative to the current route.
  */
-export function useFormAction(action = "."): string {
+export function useFormAction(
+  action = ".",
+  method: FormMethod = "get"
+): string {
   let { id } = useRemixRouteContext();
   let path = useResolvedPath(action);
   let search = path.search;
-
   let isIndexRoute = id.endsWith("/index");
 
-  if (isIndexRoute && action === ".") {
-    search = "?index";
+  if (action === "." && isIndexRoute && isActionRequestMethod(method)) {
+    search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
   return path.pathname + search;
@@ -939,10 +1020,18 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let formData: FormData;
 
       if (isFormElement(target)) {
+        let submissionTrigger: HTMLButtonElement | HTMLInputElement = (
+          options as any
+        ).submissionTrigger;
+
         method = options.method || target.method;
         action = options.action || target.action;
         encType = options.encType || target.enctype;
         formData = new FormData(target);
+
+        if (submissionTrigger && submissionTrigger.name) {
+          formData.append(submissionTrigger.name, submissionTrigger.value);
+        }
       } else if (
         isButtonElement(target) ||
         (isInputElement(target) &&
@@ -955,9 +1044,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
 
         // <button>/<input type="submit"> may override attributes of <form>
-        method = options.method || target.formMethod || form.method;
-        action = options.action || target.formAction || form.action;
-        encType = options.encType || target.formEnctype || form.enctype;
+
+        method =
+          options.method || target.getAttribute("formmethod") || form.method;
+        action =
+          options.action || target.getAttribute("formaction") || form.action;
+        encType =
+          options.encType || target.getAttribute("formenctype") || form.enctype;
         formData = new FormData(form);
 
         // Include name + value from a <button>
@@ -983,11 +1076,11 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
           if (target instanceof URLSearchParams) {
             for (let [name, value] of target) {
-              formData.set(name, value);
+              formData.append(name, value);
             }
           } else if (target != null) {
             for (let name of Object.keys(target)) {
-              formData.set(name, target[name]);
+              formData.append(name, target[name]);
             }
           }
         }
@@ -999,7 +1092,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       if (method.toLowerCase() === "get") {
         for (let [name, value] of formData) {
           if (typeof value === "string") {
-            url.searchParams.set(name, value);
+            url.searchParams.append(name, value);
           } else {
             throw new Error(`Cannot submit binary form data using GET`);
           }
@@ -1096,11 +1189,6 @@ export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
-/**
- * @deprecated Use `useLoaderData`
- */
-export let useRouteData = useLoaderData;
-
 export function useActionData<T = AppData>(): T | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
@@ -1174,32 +1262,6 @@ export function useFetchers(): Fetcher[] {
   return [...fetchers.values()];
 }
 
-/**
- * @deprecated replaced by `useTransition().submission`
- */
-export function usePendingFormSubmit() {
-  let { transitionManager } = useRemixEntryContext();
-  let { submission } = transitionManager.getState().transition;
-  if (submission) {
-    return {
-      ...submission,
-      data: submission.formData
-    };
-  }
-}
-
-/**
- * Returns the next location if a location change is pending. This is useful
- * for showing loading indicators during route transitions from `<Link>`
- * clicks.
- *
- * @deprecated use `useTransition().location`
- */
-export function usePendingLocation(): Location<any> | undefined {
-  let { transitionManager } = useRemixEntryContext();
-  return transitionManager.getState().transition.location;
-}
-
 export function LiveReload({ port = 8002 }: { port?: number }) {
   if (process.env.NODE_ENV !== "development") return null;
   return (
@@ -1225,4 +1287,37 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
       }}
     />
   );
+}
+
+function useComposedRefs<RefValueType = any>(
+  ...refs: Array<React.Ref<RefValueType> | null | undefined>
+): React.RefCallback<RefValueType> {
+  return React.useCallback(node => {
+    for (let ref of refs) {
+      if (ref == null) continue;
+      if (typeof ref === "function") {
+        ref(node);
+      } else {
+        try {
+          (ref as React.MutableRefObject<RefValueType>).current = node!;
+        } catch (_) {}
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, refs);
+}
+
+let OutletContext = React.createContext<any>(null);
+
+export function Outlet<ContextData>({ context }: { context?: ContextData }) {
+  return (
+    <OutletContext.Provider value={context}>
+      <RouterOutlet />
+    </OutletContext.Provider>
+  );
+}
+
+export function useOutletContext<ContextData>() {
+  let context = React.useContext<ContextData>(OutletContext);
+  return context;
 }

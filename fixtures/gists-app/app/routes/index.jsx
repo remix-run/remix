@@ -40,7 +40,9 @@ export default function Index() {
       <nav>
         <ul>
           <li>
-            <Link to="/links">Link preloads and stuff</Link>
+            <Link prefetch="intent" to="/links">
+              Link preloads and stuff
+            </Link>
           </li>
           <li>
             <Link to="/gists">View Some gists</Link>
@@ -125,6 +127,9 @@ export default function Index() {
           </li>
           <li>
             <Link to="/with-layout">Route with _layout</Link>
+          </li>
+          <li>
+            <Link to="/resources">Resource routes</Link>
           </li>
         </ul>
       </nav>

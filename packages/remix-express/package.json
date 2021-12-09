@@ -1,10 +1,19 @@
 {
   "name": "@remix-run/express",
   "description": "Express server request handler for Remix",
-  "version": "0.20.1",
-  "repository": "https://github.com/remix-run/packages",
+  "version": "0.0.0-experimental-b697c4f3",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-express"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "dependencies": {
-    "@remix-run/node": "0.20.1"
+    "@remix-run/node": "0.0.0-experimental-b697c4f3",
+    "@remix-run/server-runtime": "1.0.6"
   },
   "peerDependencies": {
     "express": "^4.17.1"

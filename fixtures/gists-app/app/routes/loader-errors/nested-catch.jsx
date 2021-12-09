@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "remix";
 import { json, useCatch } from "remix";
 
 export function loader({ request }) {

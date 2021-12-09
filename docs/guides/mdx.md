@@ -3,6 +3,8 @@ title: MDX
 description: Remix makes integrating MDX into your project a breeze with built in routes and "import" support.
 ---
 
+# MDX
+
 While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX](https://mdxjs.com/) (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
 Remix supports using MDX in two ways:
@@ -85,8 +87,7 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { useRouteData } from "remix";
-import { Link } from "react-router-dom";
+import { Link, useLoaderData } from "remix";
 
 // Import all your posts from the app/routes/posts directory. Since these are
 // regular route modules, they will all be available for individual viewing
@@ -115,20 +116,24 @@ export function loader() {
 }
 
 export default function Index() {
-  let posts = useRouteData();
+  const posts = useLoaderData();
 
   return (
     <ul>
       {posts.map(post => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
-          {post.description && <p>{post.description}</p>}
+          {post.description ? (
+            <p>{post.description}</p>
+          ) : null}
         </li>
       ))}
     </ul>
   );
 }
 ```
+
+Clearly this is not a scalable solution for a blog with thousands of posts. First, you need to admit to yourself that you're not even going to write ten posts, let alone thousands, and move on. Next, if you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler](https://github.com/kentcdodds/mdx-bundler).
 
 ## Advanced Configuration
 

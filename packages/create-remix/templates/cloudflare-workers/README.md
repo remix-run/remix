@@ -1,20 +1,19 @@
 # Welcome to Remix!
 
-- [Remix Docs](https://docs.remix.run)
-- [Customer Dashboard](https://remix.run/dashboard)
+- [Remix Docs](https://remix.run/docs)
 
 ## Development
 
-You will be running two processes during development when using Vercel as your server.
+You will be running two processes during development:
 
-- Your Miniflare server in one (miniflare is a local environment for Cloudflare Workers)
-- The Remix development server in another
+- The Miniflare server (miniflare is a local environment for Cloudflare Workers)
+- The Remix development server
 
 ```sh
-# in one tab (starts remix dev server)
+# in one tab, start the remix dev server
 $ npm run dev
 
-# in another (starts miniflare server)
+# in another, start the miniflare server
 $ npm start
 ```
 
@@ -24,7 +23,11 @@ If you'd rather run everything in a single tab, you can look at [concurrently](h
 
 ## Deployment
 
-Use wrangler to build and deploy your application to Cloudflare Workers:
+Use [wrangler](https://developers.cloudflare.com/workers/cli-wrangler) to build and deploy your application to Cloudflare Workers. If you don't have it yet, follow [the installation guide](https://developers.cloudflare.com/workers/cli-wrangler/install-update) to get it setup. Be sure to [authenticate the CLI](https://developers.cloudflare.com/workers/cli-wrangler/authentication) as well.
+
+If you don't already have an account, then [create a cloudflare account here](https://dash.cloudflare.com/sign-up) and after verifying your email address with Cloudflare, go to your dashboard and set up your free custom Cloudflare Workers subdomain.
+
+Once that's done, you should be able to deploy your app:
 
 ```sh
 npm run deploy
