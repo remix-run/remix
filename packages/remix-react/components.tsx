@@ -5,7 +5,7 @@ import type {
   MouseEventHandler,
   TouchEventHandler
 } from "react";
-import React from "react";
+import * as React from "react";
 import type { Navigator } from "react-router";
 import {
   Router,
