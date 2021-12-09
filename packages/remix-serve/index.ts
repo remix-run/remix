@@ -3,11 +3,15 @@ import compression from "compression";
 import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
 
+const REMIX_SERVE_MAX_AGE = process.env.REMIX_SERVE_MAX_AGE || "1y";
+
 export function createApp(buildPath: string, mode = "production") {
   let app = express();
 
   app.use(compression());
-  app.use(express.static("public", { immutable: true, maxAge: "1y" }));
+  app.use(
+    express.static("public", { immutable: true, maxAge: REMIX_SERVE_MAX_AGE })
+  );
 
   app.use(morgan("tiny"));
   app.all(
