@@ -98,8 +98,15 @@ function useScrollRestoration() {
       }
 
       // try to scroll to the hash
-      if (location.hash) {
-        let el = document.querySelector(location.hash);
+      const { hash } = location;
+      if (hash) {
+        if (!/^(#[A-z][A-z0-9-_:.]*)$/.test(hash)) {
+          return console.warn(
+            `The hash supplied, ${hash}, is not a valid HTML4 hash (https://www.w3.org/TR/html4/types.html#type-id). As HTML5 hashes aren't supported in all browsers, scroll restoration will not work with them.`
+          );
+        }
+
+        let el = document.querySelector(hash);
         if (el) {
           el.scrollIntoView();
           return;
