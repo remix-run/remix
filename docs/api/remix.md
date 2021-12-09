@@ -423,7 +423,7 @@ function useSessionTimeout() {
   const transition = useTransition();
 
   useEffect(() => {
-    const id = setTimeout(() => {
+    const timer = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
     return () => clearTimeout(timer);
