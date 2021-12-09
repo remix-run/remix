@@ -885,13 +885,13 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,6-7,17-18,24-25,30-31]
+```tsx filename=app/routes/admin/new.tsx lines=[2,11-12,17-18,24-25,30-31]
 import {
   useActionData,
   Form,
   redirect,
-  ActionFunction
 } from "remix";
+import type { ActionFunction } from "remix";
 
 // ...
 
@@ -930,7 +930,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[4-8,15,24-26]
+```tsx filename=app/routes/admin/new.tsx lines=[2,4-8,15,24-26]
 //...
 import invariant from "tiny-invariant";
 
