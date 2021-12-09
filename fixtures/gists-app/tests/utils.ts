@@ -1,5 +1,5 @@
-import prettier from "prettier";
 import type { Page, Request, Response } from "puppeteer";
+import prettier from "prettier";
 import cheerio from "cheerio";
 
 export async function getHtml(page: Page, selector?: string): Promise<string> {
@@ -17,7 +17,7 @@ export function selectHtml(source: string, selector: string): string {
   return cheerio.html(el);
 }
 
-export function prettyHtml(source: string): string {
+function prettyHtml(source: string): string {
   return prettier.format(source, { parser: "html" });
 }
 

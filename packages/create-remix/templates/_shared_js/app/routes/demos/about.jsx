@@ -2,13 +2,13 @@ import { Outlet } from "remix";
 
 import stylesUrl from "~/styles/demos/about.css";
 
-export let meta = () => {
+export const meta = () => {
   return {
     title: "About Remix"
   };
 };
 
-export let links = () => {
+export const links = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
