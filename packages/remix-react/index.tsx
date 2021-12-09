@@ -8,7 +8,9 @@ export {
   useOutlet,
   useParams,
   useResolvedPath,
-  useSearchParams
+  useSearchParams,
+  Outlet,
+  useOutletContext
 } from "react-router-dom";
 
 export type {
@@ -35,9 +37,7 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches,
-  Outlet,
-  useOutletContext
+  useMatches
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
