@@ -1288,7 +1288,11 @@ export default function JokesRoute() {
                 <Link to="some-joke-id">Hippo</Link>
               </li>
             </ul>
-            <Link to="new" className="button">
+            <Link
+              to="new"
+              className="button"
+              prefetch="intent"
+            >
               Add your own
             </Link>
           </div>
@@ -1700,7 +1704,11 @@ export default function JokesRoute() {
                 </li>
               ))}
             </ul>
-            <Link to="new" className="button">
+            <Link
+              to="new"
+              className="button"
+              prefetch="intent"
+            >
               Add your own
             </Link>
           </div>
@@ -3495,7 +3503,11 @@ export default function JokesRoute() {
                 </li>
               ))}
             </ul>
-            <Link to="new" className="button">
+            <Link
+              to="new"
+              className="button"
+              prefetch="intent"
+            >
               Add your own
             </Link>
           </div>
