@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { ActionFunction } from "remix";
-import { hash } from "~/utils.server";
 import { Form, json, useActionData, useTransition, redirect } from "remix";
+
+import { hash } from "~/utils.server";
 
 export function meta() {
   return { title: "Actions Demo" };
@@ -16,7 +17,7 @@ export let action: ActionFunction = async ({ request }) => {
 
   // Typical action workflows start with validating the form data that just came
   // over the network. Clientside validation is fine, but you definitely need it
-  // server side.  If there's a problem, return the the data and the component
+  // server side.  If there's a problem, return the data and the component
   // can render it.
   if (typeof answer !== "string") {
     return json("Come on, at least try!", { status: 400 });
