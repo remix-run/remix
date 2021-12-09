@@ -1,6 +1,7 @@
 import { createRequestHandler } from "..";
-import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
+import { ServerMode } from "../mode";
+
 import { mockServerBuild } from "./utils";
 
 function spyConsole() {

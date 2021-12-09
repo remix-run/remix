@@ -1,11 +1,12 @@
 import type { Readable } from "stream";
 import { PassThrough } from "stream";
+
 import type AbortController from "abort-controller";
 import FormStream from "form-data";
 import type { RequestInfo, RequestInit, Response } from "node-fetch";
 import nodeFetch, { Request as NodeRequest } from "node-fetch";
 
-import { FormData as NodeFormData, isFile } from "./formData";
+import { isFile, FormData as NodeFormData } from "./formData";
 import type { UploadHandler } from "./formData";
 import { internalParseFormData } from "./parseMultipartFormData";
 

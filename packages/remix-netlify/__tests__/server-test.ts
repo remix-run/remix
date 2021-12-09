@@ -1,6 +1,6 @@
-import lambdaTester from "lambda-tester";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { HandlerEvent } from "@netlify/functions";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import lambdaTester from "lambda-tester";
 
 import {
   createRemixHeaders,

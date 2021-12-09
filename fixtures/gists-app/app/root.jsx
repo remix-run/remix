@@ -1,3 +1,4 @@
+import normalizeHref from "@exampledev/new.css/new.css";
 import { useEffect } from "react";
 import {
   Link,
@@ -10,7 +11,6 @@ import {
   useLoaderData,
   useMatches
 } from "remix";
-import normalizeHref from "@exampledev/new.css/new.css";
 
 import stylesHref from "./styles/app.css";
 

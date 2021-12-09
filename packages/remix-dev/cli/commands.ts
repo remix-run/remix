@@ -1,18 +1,19 @@
-import * as path from "path";
-import * as fse from "fs-extra";
-import signalExit from "signal-exit";
-import prettyMs from "pretty-ms";
-import WebSocket from "ws";
 import type { Server } from "http";
-import type * as Express from "express";
+import * as path from "path";
+
 import type { createApp as createAppType } from "@remix-run/serve";
+import type * as Express from "express";
+import * as fse from "fs-extra";
+import prettyMs from "pretty-ms";
+import signalExit from "signal-exit";
+import WebSocket from "ws";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
-import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
+import { formatRoutes, isRoutesFormat, RoutesFormat } from "../config/format";
+import { isSetupPlatform, SetupPlatform, setupRemix } from "../setup";
 
 export async function setup(platformArg?: string) {
   let platform = isSetupPlatform(platformArg)

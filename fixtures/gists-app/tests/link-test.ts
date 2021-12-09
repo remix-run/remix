@@ -2,10 +2,10 @@ import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 
 import {
-  reactIsHydrated,
+  collectDataResponses,
   collectResponses,
   disableJavaScript,
-  collectDataResponses
+  reactIsHydrated
 } from "./utils";
 
 const testPort = 3000;

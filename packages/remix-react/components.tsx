@@ -11,23 +11,23 @@ import {
   Router,
   Link as RouterLink,
   NavLink as RouterNavLink,
-  useLocation,
-  useRoutes,
-  useNavigate,
   useHref,
-  useResolvedPath
+  useLocation,
+  useNavigate,
+  useResolvedPath,
+  useRoutes
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
-import type { EntryContext, AssetsManifest } from "./entry";
-import type { AppState, SerializedError } from "./errors";
+import type { AssetsManifest, EntryContext } from "./entry";
 import {
-  RemixRootDefaultErrorBoundary,
+  RemixCatchBoundary,
   RemixErrorBoundary,
   RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary
+  RemixRootDefaultErrorBoundary
 } from "./errorBoundaries";
+import type { AppState, SerializedError } from "./errors";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -39,14 +39,14 @@ import {
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
-import type { ClientRoute } from "./routes";
-import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
+import type { HtmlMetaDescriptor, RouteModules } from "./routeModules";
+import { createClientRoutes } from "./routes";
+import type { ClientRoute } from "./routes";
 import { createTransitionManager } from "./transition";
-import type { Transition, Fetcher, Submission } from "./transition";
+import type { Fetcher, Submission, Transition } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry

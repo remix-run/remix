@@ -1,11 +1,11 @@
 import type { Location } from "history";
 import React, { useContext } from "react";
 
+import type { ThrownResponse } from "./errors";
 import type {
   CatchBoundaryComponent,
   ErrorBoundaryComponent
 } from "./routeModules";
-import type { ThrownResponse } from "./errors";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;

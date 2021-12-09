@@ -1,9 +1,9 @@
 import type { LinksFunction, LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
+import { Link, useLoaderData } from "remix";
 
-import redTextHref from "~/styles/redText.css";
-import blueTextHref from "~/styles/blueText.css";
 import guitar from "~/components/guitar.jpg";
+import blueTextHref from "~/styles/blueText.css";
+import redTextHref from "~/styles/redText.css";
 
 interface User {
   name: string;

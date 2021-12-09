@@ -1,4 +1,4 @@
-import type { LoaderFunction, LinksFunction } from "remix";
+import type { LinksFunction, LoaderFunction } from "remix";
 import { useLoaderData } from "remix";
 
 import styles from "../styles/index.css";

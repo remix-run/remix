@@ -1,21 +1,22 @@
 import { promises as fsp } from "fs";
-import * as path from "path";
 import { builtinModules as nodeBuiltins } from "module";
+import * as path from "path";
+
+import chokidar from "chokidar";
 import * as esbuild from "esbuild";
 import debounce from "lodash.debounce";
-import chokidar from "chokidar";
 
 import { BuildMode, BuildTarget } from "./build";
-import type { RemixConfig } from "./config";
-import { readConfig } from "./config";
-import invariant from "./invariant";
-import { warnOnce } from "./warnings";
 import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
-import { loaders, getLoaderForFile } from "./compiler/loaders";
+import { getLoaderForFile, loaders } from "./compiler/loaders";
 import { mdxPlugin } from "./compiler/plugins/mdx";
 import { getRouteModuleExportsCached } from "./compiler/routes";
 import { writeFileSafe } from "./compiler/utils/fs";
+import { readConfig } from "./config";
+import type { RemixConfig } from "./config";
+import invariant from "./invariant";
+import { warnOnce } from "./warnings";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected

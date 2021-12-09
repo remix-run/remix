@@ -1,5 +1,5 @@
 import { Link } from "remix";
-import type { MetaFunction, LinksFunction } from "remix";
+import type { LinksFunction, MetaFunction } from "remix";
 import stylesUrl from "../styles/index.css";
 
 export const meta: MetaFunction = () => {

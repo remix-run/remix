@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const path = require("path");
+
 const fs = require("fs-extra");
 
 let buildDir = path.resolve(__dirname, "../../../build/node_modules");

@@ -1,7 +1,7 @@
-import type { LoaderFunction, LinksFunction } from "remix";
+import type { LinksFunction, LoaderFunction } from "remix";
 import {
-  Meta,
   Links,
+  Meta,
   Outlet,
   Scripts,
   useLiveReload,

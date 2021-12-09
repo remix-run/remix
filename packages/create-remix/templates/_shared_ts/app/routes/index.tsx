@@ -1,5 +1,5 @@
-import type { MetaFunction, LoaderFunction } from "remix";
-import { useLoaderData, json, Link } from "remix";
+import type { LoaderFunction, MetaFunction } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 type IndexData = {
   resources: Array<{ name: string; url: string }>;

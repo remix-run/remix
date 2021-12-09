@@ -1,5 +1,5 @@
-const path = require("path");
 const cp = require("child_process");
+const path = require("path");
 
 function installDeps(dir) {
   return new Promise((accept, reject) => {

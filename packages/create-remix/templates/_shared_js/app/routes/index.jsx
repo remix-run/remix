@@ -1,4 +1,4 @@
-import { useLoaderData, json, Link } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 // Loaders provide data to components and are only ever called on the server, so
 // you can connect to a database or run any server side code you want right next

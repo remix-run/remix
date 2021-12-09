@@ -1,5 +1,5 @@
-import type { MetaFunction, LoaderFunction, ActionFunction } from "remix";
-import { useLoaderData, useSubmit, Form, Link, redirect } from "remix";
+import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
+import { Form, Link, redirect, useLoaderData, useSubmit } from "remix";
 
 import { userPrefsCookie } from "../cookies";
 

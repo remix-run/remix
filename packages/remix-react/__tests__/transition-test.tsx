@@ -5,9 +5,9 @@ import type { Submission, TransitionManagerInit } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
-  TransitionRedirect,
   IDLE_FETCHER,
-  IDLE_TRANSITION
+  IDLE_TRANSITION,
+  TransitionRedirect
 } from "../transition";
 
 describe("init", () => {

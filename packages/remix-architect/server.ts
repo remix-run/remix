@@ -1,22 +1,22 @@
 import {
   // This has been added as a global in node 15+
   AbortController,
+  formatServerError,
   Headers as NodeHeaders,
-  Request as NodeRequest,
-  formatServerError
+  Request as NodeRequest
 } from "@remix-run/node";
-import type {
-  APIGatewayProxyEventHeaders,
-  APIGatewayProxyEventV2,
-  APIGatewayProxyHandlerV2
-} from "aws-lambda";
+import type { Response as NodeResponse } from "@remix-run/node";
 import type {
   AppLoadContext,
   ServerBuild,
   ServerPlatform
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { Response as NodeResponse } from "@remix-run/node";
+import type {
+  APIGatewayProxyEventHeaders,
+  APIGatewayProxyEventV2,
+  APIGatewayProxyHandlerV2
+} from "aws-lambda";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and

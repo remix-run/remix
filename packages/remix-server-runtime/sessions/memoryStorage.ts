@@ -1,7 +1,7 @@
 import type {
   SessionData,
-  SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
+  SessionStorage
 } from "../sessions";
 import { createSessionStorage } from "../sessions";
 

@@ -1,5 +1,6 @@
-import * as path from "path";
 import { execSync } from "child_process";
+import * as path from "path";
+
 import chalkAnimation from "chalk-animation";
 import fse from "fs-extra";
 import inquirer from "inquirer";

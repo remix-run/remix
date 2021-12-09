@@ -1,5 +1,5 @@
+import type { AssetsManifest, EntryContext } from "./entry";
 import type { DataFunctionArgs } from "./routeModules";
-import type { EntryContext, AssetsManifest } from "./entry";
 import type { ServerRouteManifest } from "./routes";
 
 /**

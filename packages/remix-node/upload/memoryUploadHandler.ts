@@ -1,9 +1,11 @@
 import type { TransformCallback } from "stream";
 import { Transform } from "stream";
+
 import { File as BufferFile } from "@web-std/file";
 
-import { Meter } from "./meter";
 import type { UploadHandler } from "../formData";
+
+import { Meter } from "./meter";
 
 export type MemoryUploadHandlerFilterArgs = {
   filename: string;

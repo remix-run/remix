@@ -1,6 +1,6 @@
-import type { LoaderFunction, ActionFunction, MetaFunction } from "remix";
-import { useCatch, useLoaderData, useParams, redirect } from "remix";
 import type { Joke } from "@prisma/client";
+import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
+import { redirect, useCatch, useLoaderData, useParams } from "remix";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
 import { JokeDisplay } from "~/components/joke";

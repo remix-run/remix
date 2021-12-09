@@ -1,11 +1,11 @@
 import { Action } from "history";
 import type { Location } from "history";
 
+import invariant from "./invariant";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
-import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
-import invariant from "./invariant";
+import type { ClientRoute } from "./routes";
 
 export interface CatchData<T = any> {
   status: number;

@@ -1,8 +1,8 @@
 import type { AppState } from "./errors";
-import type { RouteManifest, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
+import type { EntryRoute, RouteManifest } from "./routes";
 
 export interface EntryContext {
   appState: AppState;

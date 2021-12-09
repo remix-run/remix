@@ -4,8 +4,8 @@ import type { Params } from "react-router"; // TODO: import/export from react-ro
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { ClientRoute, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
+import type { ClientRoute, EntryRoute } from "./routes";
 import type { Submission } from "./transition";
 
 export interface RouteModules {

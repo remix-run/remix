@@ -1,4 +1,4 @@
-import { put, get } from "cacache";
+import { get, put } from "cacache";
 
 export { put, get };
 

@@ -1,5 +1,4 @@
-import { useParams } from "remix";
-import { Link, useLoaderData, json, redirect } from "remix";
+import { json, Link, redirect, useLoaderData, useParams } from "remix";
 
 let fakeGists = [
   {

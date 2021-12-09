@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
+import type { DefineRoutesFunction, RouteManifest } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
-import { ServerMode, isValidServerMode } from "./config/serverModes";
+import { isValidServerMode, ServerMode } from "./config/serverModes";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];

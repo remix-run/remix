@@ -1,11 +1,11 @@
-import lambdaTester from "lambda-tester";
-import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { APIGatewayProxyEventV2 } from "aws-lambda";
+import lambdaTester from "lambda-tester";
 
 import {
-  createRequestHandler,
   createRemixHeaders,
-  createRemixRequest
+  createRemixRequest,
+  createRequestHandler
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the

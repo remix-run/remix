@@ -7,10 +7,10 @@ import { Blob as NodeBlob, File as NodeFile } from "@web-std/file";
 import { atob, btoa } from "./base64";
 import { sign as remixSign, unsign as remixUnsign } from "./cookieSigning";
 import {
+  fetch as nodeFetch,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  Response as NodeResponse,
-  fetch as nodeFetch
+  Response as NodeResponse
 } from "./fetch";
 import { FormData as NodeFormData } from "./formData";
 

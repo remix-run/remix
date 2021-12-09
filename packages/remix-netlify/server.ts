@@ -1,12 +1,7 @@
+import type { Handler, HandlerContext, HandlerEvent } from "@netlify/functions";
 import type {
-  AppLoadContext,
-  ServerBuild,
-  ServerPlatform
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type {
-  Response as NodeResponse,
-  RequestInit as NodeRequestInit
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
@@ -15,7 +10,12 @@ import {
   Headers as NodeHeaders,
   Request as NodeRequest
 } from "@remix-run/node";
-import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and

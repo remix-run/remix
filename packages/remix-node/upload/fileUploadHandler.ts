@@ -1,11 +1,12 @@
 import { randomBytes } from "crypto";
 import { createReadStream, createWriteStream } from "fs";
-import { rm, mkdir, readFile, stat } from "fs/promises";
+import { mkdir, readFile, rm, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
 
-import { Meter } from "./meter";
 import type { UploadHandler } from "../formData";
+
+import { Meter } from "./meter";
 
 export type FileUploadHandlerFilterArgs = {
   filename: string;

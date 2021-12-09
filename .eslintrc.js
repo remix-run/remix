@@ -22,14 +22,20 @@ module.exports = {
   ],
   rules: {
     "@typescript-eslint/consistent-type-imports": "error",
+
+    "sort-imports": [
+      "error",
+      { ignoreCase: true, ignoreDeclarationSort: true }
+    ],
     "import/order": [
       "error",
       {
+        groups: ["builtin", "external", "internal", "parent", "sibling"],
         "newlines-between": "always",
-        groups: [
-          ["builtin", "external", "internal"],
-          ["parent", "sibling", "index"]
-        ]
+        alphabetize: {
+          order: "asc",
+          caseInsensitive: true
+        }
       }
     ]
   }

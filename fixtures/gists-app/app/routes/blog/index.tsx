@@ -1,11 +1,11 @@
 import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
-import { Link, useLoaderData, useTransition, json } from "remix";
+import { json, Link, useLoaderData, useTransition } from "remix";
 
 import * as helloPost from "./hello-world.mdx";
 import * as thirdPost from "./third.md";
 
-import stylesHref from "~/styles/gists.css";
 import * as secondPost from "~/routes/blog/second.md";
+import stylesHref from "~/styles/gists.css";
 
 interface Post {
   title: string;

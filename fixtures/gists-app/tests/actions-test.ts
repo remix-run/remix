@@ -1,4 +1,5 @@
 import path from "path";
+
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
 

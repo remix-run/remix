@@ -5,7 +5,7 @@ import {
   useActionData,
   useLoaderData
 } from "remix";
-import type { HeadersFunction, ActionFunction } from "remix";
+import type { ActionFunction, HeadersFunction } from "remix";
 
 import { uploadHandler } from "../uploadHandler.server";
 

@@ -1,7 +1,8 @@
 import childProcess from "child_process";
-import fs from "fs-extra";
 import path from "path";
 import util from "util";
+
+import fs from "fs-extra";
 import semver from "semver";
 import stripAnsi from "strip-ansi";
 

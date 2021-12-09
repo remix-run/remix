@@ -1,6 +1,6 @@
+import { isRedirectResponse, isResponse, json } from "./responses";
 import type { RouteMatch } from "./routeMatching";
 import type { ServerRoute } from "./routes";
-import { json, isResponse, isRedirectResponse } from "./responses";
 
 /**
  * An object of arbitrary for route loaders and actions provided by the

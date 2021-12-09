@@ -30,6 +30,7 @@ module.exports = {
       version: "detect"
     },
     "import/ignore": ["node_modules", "\\.(css|md|svg|json)$"],
+    "import/internal-regex": "^~/",
     "import/parsers": {
       [require.resolve("@typescript-eslint/parser")]: [".ts", ".tsx", ".d.ts"]
     },

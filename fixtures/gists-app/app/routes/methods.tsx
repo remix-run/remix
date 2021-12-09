@@ -1,9 +1,9 @@
 import * as React from "react";
-import type { LoaderFunction, ActionFunction, FormProps } from "remix";
-import { useLoaderData, useTransition, Form, json, redirect } from "remix";
+import type { ActionFunction, FormProps, LoaderFunction } from "remix";
+import { Form, json, redirect, useLoaderData, useTransition } from "remix";
 
+import { commitSession, getSession } from "../sessionStorage";
 import stylesHref from "../styles/methods.css";
-import { getSession, commitSession } from "../sessionStorage";
 
 export function links() {
   return [{ rel: "stylesheet", href: stylesHref }];

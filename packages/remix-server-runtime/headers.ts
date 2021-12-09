@@ -1,8 +1,8 @@
 import { splitCookiesString } from "set-cookie-parser";
 
 import type { ServerBuild } from "./build";
-import type { ServerRoute } from "./routes";
 import type { RouteMatch } from "./routeMatching";
+import type { ServerRoute } from "./routes";
 
 export function getDocumentHeaders(
   build: ServerBuild,

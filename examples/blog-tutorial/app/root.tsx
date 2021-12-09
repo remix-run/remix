@@ -1,13 +1,13 @@
 import * as React from "react";
 import {
+  Link,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch,
-  Link
+  useCatch
 } from "remix";
 import type { LinksFunction } from "remix";
 

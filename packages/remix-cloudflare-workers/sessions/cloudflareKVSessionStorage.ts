@@ -1,6 +1,6 @@
 import type {
-  SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
+  SessionStorage
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 

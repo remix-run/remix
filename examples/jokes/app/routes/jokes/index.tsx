@@ -1,5 +1,5 @@
-import { useLoaderData, Link, useCatch } from "remix";
 import type { Joke } from "@prisma/client";
+import { Link, useCatch, useLoaderData } from "remix";
 
 import { db } from "~/utils/db.server";
 

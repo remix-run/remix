@@ -1,7 +1,7 @@
-import express from "express";
-import compression from "compression";
-import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
+import compression from "compression";
+import express from "express";
+import morgan from "morgan";
 
 export function createApp(buildPath: string, mode = "production") {
   let app = express();

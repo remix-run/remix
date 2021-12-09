@@ -2,18 +2,18 @@ import type { ComponentType, ReactNode } from "react";
 import React from "react";
 import type { Params } from "react-router";
 
-import type { RouteModules, ShouldReloadFunction } from "./routeModules";
-import { loadRouteModule } from "./routeModules";
 import {
   extractData,
   fetchData,
   isCatchResponse,
   isRedirectResponse
 } from "./data";
+import invariant from "./invariant";
+import { prefetchStyleLinks } from "./links";
+import type { RouteModules, ShouldReloadFunction } from "./routeModules";
+import { loadRouteModule } from "./routeModules";
 import type { Submission } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
-import { prefetchStyleLinks } from "./links";
-import invariant from "./invariant";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;

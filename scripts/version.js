@@ -1,9 +1,10 @@
+const { execSync } = require("child_process");
 const fsp = require("fs").promises;
 const path = require("path");
-const { execSync } = require("child_process");
+
 const chalk = require("chalk");
-const Confirm = require("prompt-confirm");
 const jsonfile = require("jsonfile");
+const Confirm = require("prompt-confirm");
 const semver = require("semver");
 
 let rootDir = path.resolve(__dirname, "..");

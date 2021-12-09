@@ -1,12 +1,12 @@
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
-  Link,
-  useCatch,
-  useActionData,
   Form,
-  redirect,
-  useTransition,
   json,
+  Link,
+  redirect,
+  useActionData,
+  useCatch,
+  useTransition,
 } from "remix";
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";

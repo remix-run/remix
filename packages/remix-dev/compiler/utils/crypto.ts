@@ -1,6 +1,6 @@
-import * as fs from "fs";
 import type { BinaryLike } from "crypto";
 import { createHash } from "crypto";
+import * as fs from "fs";
 
 export function getHash(source: BinaryLike): string {
   return createHash("sha256").update(source).digest("hex");

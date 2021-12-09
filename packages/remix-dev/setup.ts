@@ -1,4 +1,5 @@
 import * as path from "path";
+
 import * as fse from "fs-extra";
 
 export enum SetupPlatform {

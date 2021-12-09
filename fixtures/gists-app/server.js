@@ -1,7 +1,7 @@
+const { createRequestHandler } = require("@remix-run/express");
+const compression = require("compression");
 const express = require("express");
 const morgan = require("morgan");
-const compression = require("compression");
-const { createRequestHandler } = require("@remix-run/express");
 
 const port = process.env.PORT || 3000;
 

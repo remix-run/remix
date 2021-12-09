@@ -1,8 +1,8 @@
-import type { LoaderFunction, LinksFunction } from "remix";
-import { Form } from "remix";
-import { Outlet, useLoaderData, Link } from "remix";
-import { db } from "~/utils/db.server";
 import type { User } from "@prisma/client";
+import type { LinksFunction, LoaderFunction } from "remix";
+import { Form } from "remix";
+import { Link, Outlet, useLoaderData } from "remix";
+import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";
 

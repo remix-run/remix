@@ -1,6 +1,6 @@
+import cheerio from "cheerio";
 import prettier from "prettier";
 import type { Page, Request, Response } from "puppeteer";
-import cheerio from "cheerio";
 
 export async function getHtml(page: Page, selector?: string): Promise<string> {
   let html = await page.content();

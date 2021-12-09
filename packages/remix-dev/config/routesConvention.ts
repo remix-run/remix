@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import type { RouteManifest, DefineRouteFunction } from "./routes";
-import { defineRoutes, createRouteId } from "./routes";
+import type { DefineRouteFunction, RouteManifest } from "./routes";
+import { createRouteId, defineRoutes } from "./routes";
 
 const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
 
