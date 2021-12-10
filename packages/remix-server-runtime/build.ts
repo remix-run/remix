@@ -22,6 +22,19 @@ export interface HandleDocumentRequestFunction {
   ): Promise<Response> | Response;
 }
 
+export interface StreamDocumentRequestFunction {
+  (
+    request: Request,
+    responseStatusCode: number,
+    responseHeaders: Headers,
+    onLoadersComplete: (fn: OnLoadersCompleteCallback) => void
+  ): Promise<Response> | Response;
+}
+
+export interface OnLoadersCompleteCallback {
+  (entryContext: EntryContext): void;
+}
+
 export interface HandleDataRequestFunction {
   (response: Response, args: DataFunctionArgs): Promise<Response> | Response;
 }
@@ -33,4 +46,5 @@ export interface HandleDataRequestFunction {
 export interface ServerEntryModule {
   default: HandleDocumentRequestFunction;
   handleDataRequest?: HandleDataRequestFunction;
+  streamDocument?: StreamDocumentRequestFunction;
 }
