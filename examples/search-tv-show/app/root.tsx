@@ -1,14 +1,12 @@
 import * as React from "react";
 import {
-  Link,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch,
-  useLocation
+  useCatch
 } from "remix";
 import type { LinksFunction } from "remix";
 
@@ -22,7 +20,7 @@ import globalStylesUrl from "~/styles/global.css";
  *
  * https://remix.run/api/app#links
  */
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: globalStylesUrl }];
 };
 
@@ -72,7 +70,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   let message;
   switch (caught.status) {

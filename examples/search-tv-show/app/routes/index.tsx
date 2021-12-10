@@ -1,58 +1,88 @@
-import { Form, Link, useLoaderData, useTransition } from "remix";
-import type { MetaFunction, LinksFunction } from "remix";
-
+import { Form, json, useLoaderData, useTransition } from "remix";
+import type { MetaFunction, LinksFunction, LoaderFunction } from "remix";
 import stylesUrl from "../styles/index.css";
 
-export let meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return {
     title: "Remix: Search a TV show",
     description: "Search a TV show"
   };
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
-export let loader = async ({ request }) => {
+type ShowResult = {
+  id: string;
+  show: { name: string; url: string; image?: { medium: string } };
+};
+
+type LoaderData = {
+  status: "resultsFound" | "noResults" | "emptySearch";
+  searchTerm: string;
+  items: Array<{ id: string; name: string; image: string; url: string }>;
+};
+
+function typedBoolean<T>(
+  value: T
+): value is Exclude<T, "" | 0 | false | null | undefined> {
+  return Boolean(value);
+}
+
+export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
   const searchTerm = url.searchParams.get("search");
 
-  if (!searchTerm)
-    return {
+  if (!searchTerm) {
+    const data: LoaderData = {
       status: "emptySearch",
-      searchTerm,
+      searchTerm: searchTerm || "",
       items: []
     };
+    return json(data);
+  }
 
   const result = await fetch(
     `https://api.tvmaze.com/search/shows?q=${searchTerm}`
   );
-  const data = await result.json();
+  const showResults = (await result.json()) as undefined | Array<ShowResult>;
 
-  if (!data || !data.length)
-    return {
+  if (!showResults || !showResults.length) {
+    const data: LoaderData = {
       status: "noResults",
       searchTerm,
       items: []
     };
+    return json(data);
+  }
 
-  return {
+  const data: LoaderData = {
     status: "resultsFound",
     searchTerm,
-    items: data
-      .filter(item => item.show.image)
-      .map(item => ({
-        id: item.id,
-        name: item.show.name,
-        image: item.show.image.medium,
-        url: item.show.url
-      }))
+    items: showResults
+      .map(item =>
+        item.show.image
+          ? {
+              id: item.id,
+              name: item.show.name,
+              image: item.show.image.medium,
+              url: item.show.url
+            }
+          : null
+      )
+      .filter(typedBoolean)
   };
+
+  return json(data, {
+    headers: {
+      "Cache-Control": "max-age=60, stale-while-revalidate=60"
+    }
+  });
 };
 
 export default function Index() {
-  const data = useLoaderData();
+  const data = useLoaderData<LoaderData>();
   const transition = useTransition();
 
   return (
