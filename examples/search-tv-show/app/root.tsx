@@ -23,9 +23,7 @@ import globalStylesUrl from "~/styles/global.css";
  * https://remix.run/api/app#links
  */
 export let links: LinksFunction = () => {
-  return [
-    { rel: "stylesheet", href: globalStylesUrl }
-  ];
+  return [{ rel: "stylesheet", href: globalStylesUrl }];
 };
 
 /**
@@ -70,11 +68,7 @@ function Document({
 }
 
 function Layout({ children }: React.PropsWithChildren<{}>) {
-  return (
-    <div className="remix-app">
-      {children}
-    </div>
-  );
+  return <div className="remix-app">{children}</div>;
 }
 
 export function CatchBoundary() {
@@ -130,4 +124,3 @@ export function ErrorBoundary({ error }: { error: Error }) {
     </Document>
   );
 }
-
