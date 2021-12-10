@@ -548,7 +548,7 @@ Hooray! But I want to call out something important and exciting. You know how th
 
 This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like and so long as you check each route your file is linked on you'll know that you haven't impacted other pages! 🔥
 
-This also means your CSS files can be cached long-term and your CSS is naturally lazy-loaded. Performance FTW ⚡
+This also means your CSS files can be cached long-term and your CSS is naturally code-split. Performance FTW ⚡
 
 </docs-info>
 
