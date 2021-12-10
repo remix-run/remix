@@ -14,15 +14,15 @@
   },
   "dependencies": {
     "@prisma/client": "^3.5.0",
-    "@remix-run/react": "0.0.0-experimental-f2888180",
-    "@remix-run/serve": "0.0.0-experimental-f2888180",
+    "@remix-run/react": "0.0.0-experimental-db4e08b8",
+    "@remix-run/serve": "0.0.0-experimental-db4e08b8",
     "bcrypt": "^5.0.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "0.0.0-experimental-f2888180"
+    "remix": "0.0.0-experimental-db4e08b8"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-f2888180",
+    "@remix-run/dev": "0.0.0-experimental-db4e08b8",
     "@types/bcrypt": "^5.0.0",
     "@types/react": "^17.0.36",
     "@types/react-dom": "^17.0.11",

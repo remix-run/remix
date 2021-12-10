@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/architect",
   "description": "Architect server request handler for Remix",
-  "version": "0.0.0-experimental-f2888180",
+  "version": "0.0.0-experimental-db4e08b8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@types/aws-lambda": "^8.10.82",
-    "@remix-run/node": "0.0.0-experimental-f2888180",
+    "@remix-run/node": "0.0.0-experimental-db4e08b8",
     "@remix-run/server-runtime": "1.0.6"
   },
   "peerDependencies": {

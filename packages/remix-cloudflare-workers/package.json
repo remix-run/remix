@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/cloudflare-workers",
   "description": "Cloudflare worker request handler for Remix",
-  "version": "0.0.0-experimental-f2888180",
+  "version": "0.0.0-experimental-db4e08b8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/server-runtime": "0.0.0-experimental-f2888180"
+    "@remix-run/server-runtime": "0.0.0-experimental-db4e08b8"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^2.2.2"
