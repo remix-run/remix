@@ -1,6 +1,6 @@
 # Welcome to Remix!
 
-This is a very basic example of a simple Remix app using the Remix App Server.
+This is an example of building a search input with Remix.
 
 - [Remix Docs](https://remix.run/docs)
 
