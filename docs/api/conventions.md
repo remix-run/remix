@@ -99,7 +99,7 @@ Please note that you can use either `.jsx` or `.tsx` file extensions depending o
 
 #### Root Layout Route
 
-```md [3]
+```markdown [3]
 app/
 ├── routes/
 └── root.tsx
@@ -113,7 +113,7 @@ The file in `app/root.tsx` is your root layout, or "root route" (very sorry for 
 
 #### Basic Routes
 
-```md [3-4]
+```markdown [3-4]
 app/
 ├── routes/
 │ ├── about.tsx
@@ -127,7 +127,7 @@ The default export in this file is the component that is rendered at that route 
 
 #### Nested Routes
 
-```md [3-5]
+```markdown [3-5]
 app/
 ├── routes/
 │ ├── blog/
@@ -142,7 +142,7 @@ Folders inside the `app/routes/` directory will create nested routes and URLs in
 
 #### Layout Routes
 
-```md [3,6]
+```markdown [3,6]
 app/
 ├── routes/
 │ ├── blog/
@@ -160,7 +160,7 @@ You can also create layout routes **without adding segments to the URL** by prep
 
 #### Dot Delimeters
 
-```md [6]
+```markdown [6]
 app/
 ├── routes/
 │ ├── blog/
@@ -177,7 +177,7 @@ By creating a file with `.` characters between segments, you can create a nested
 
 #### Dynamic Route Parameters
 
-```md [4]
+```markdown [4]
 app/
 ├── routes/
 │ ├── blog/
@@ -229,7 +229,7 @@ See the [routing guide](../guides/routing.md) for more information.
 
 #### Splat Routes
 
-```md [4,8]
+```markdown [4,8]
 app/
 ├── routes/
 │ ├── blog/
