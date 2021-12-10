@@ -61,7 +61,6 @@ function Document({
       </head>
       <body>
         {children}
-        <RouteChangeAnnouncement />
         <ScrollRestoration />
         <Scripts />
         {process.env.NODE_ENV === "development" && <LiveReload />}
