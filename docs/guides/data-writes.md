@@ -206,7 +206,7 @@ We know, we know, you want to animate in nice validation errors and stuff. We'll
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-const [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(formData);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
