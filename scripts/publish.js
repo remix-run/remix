@@ -28,6 +28,7 @@ async function run() {
 
   // Publish all @remix-run/* packages
   for (let name of [
+    "eslint-config",
     "dev",
     "server-runtime", // publish before platforms
     "cloudflare-workers",
