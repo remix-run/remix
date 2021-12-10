@@ -105,7 +105,7 @@ app
 | root.tsx
 ```
 
-This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes:
+The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes:
 
 - You can export a [`loader`](#loader), [`action`](#action), [`meta`](#meta), [`headers`](#headers), or [`links`](#links) function
 - You can export an [`ErrorBoundary`](#errorboundary) or [`CatchBoundary`](#catchboundary)
@@ -123,7 +123,7 @@ app
 
 Any JavaScript or TypeScript files in the `app/routes/` directory will become routes in your application. The filename maps to the route's URL pathname, except for `index.tsx` which maps to the root pathname.
 
-The default export in this file is the component that is rendered at that route.
+The default export in this file is the component that is rendered at that route and will render within the `<Outlet />` rendered by the root route.
 
 #### Nested Routes
 
@@ -154,7 +154,7 @@ app
 | root.tsx
 ```
 
-When a nested route has the same name its directory, it becomes a "layout route" for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a nested route has the same name its directory, it becomes a layout route for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
 You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`. For example, all of your marketing pages could share a layout rendered in `/app/routes/__marketing.tsx` as the layout, and those routes would go in the `/app/routes/__marketing/` directory. A route `/app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
 
@@ -199,19 +199,29 @@ For example: `/app/routes/blog/$postId.tsx` will match the following URLs:
 - `/blog/once-upon-a-time`
 - `/blog/how-to-ride-a-bike`
 
-On each of these pages, the dynamic segment of the URL path is the value of the parameter in your route's data.
+On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId`) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
+
+```tsx
+import { useParams } from "remix";
+import type { LoaderFunction, ActionFunction } from "remix";
+
+export const loader: LoaderFunction = async ({ params }) => {
+  console.log(params.postId);
+};
+
+export const action: ActionFunction async ({ params }) => {
+  console.log(params.postId);
+};
+
+export default function PostRoute() {
+  const params = useParams();
+  console.log(params.postId);
+}
+```
 
 Also noted: nested routes can contain dynamic segments by using the `$` character in the parent's directory name. For example, `/app/routes/blog/$postId/edit.tsx` might represent the editor view for blog entries.
 
 See the <Link to="../routing">routing guide</Link> for more information.
-
-<docs-info>Some CLIs require you to escape the \$ when creating files:
-
-```bash
-touch routes/\$params.tsx
-```
-
-</docs-info>
 
 #### Splat Routes
 
