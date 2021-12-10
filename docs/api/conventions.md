@@ -201,7 +201,7 @@ For example: `/app/routes/blog/$postId.tsx` will match the following URLs:
 
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId`) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
 
-```tsx
+```tsx filename=app/routes/blog/$postId.tsx
 import { useParams } from "remix";
 import type { LoaderFunction, ActionFunction } from "remix";
 
@@ -249,7 +249,7 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
-```tsx
+```tsx filename=app/routes/$.tsx
 import { useParams } from "remix";
 import type { LoaderFunction, ActionFunction } from "remix";
 
@@ -1133,8 +1133,7 @@ Any files inside the `app` folder can be imported into your modules. Remix will:
 
 It's most common for stylesheets, but can used for anything.
 
-```tsx
-// root.tsx
+```tsx filename=app/routes/root.tsx
 import type { LinksFunction } from "remix";
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
