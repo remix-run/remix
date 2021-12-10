@@ -1,0 +1,77 @@
+/*
+ * when the user visits this page, this style will apply, when they leave, it
+ * will get unloaded, so don't worry so much about conflicting styles between
+ * pages!
+ */
+
+.container {
+  max-width: 1000px;
+  padding: 24px;
+  margin: 0 auto;
+}
+
+.search-form {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.search-form input {
+  height: 40px;
+  background: #f8fafc;
+  border: none;
+  border-radius: 4px;
+  padding: 0 16px;
+  margin-right: 16px;
+  color: #0f172a;
+}
+
+.search-form button {
+  height: 40px;
+  background: #f43f5e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.results {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.placeholder {
+  background: #1e293b;
+  aspect-ratio: 2/3;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.results img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.info {
+  color: #94a3b8;
+  font-size: 32px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 64px;
+}
+
+@media (min-width: 768px) {
+  .results {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .results {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
