@@ -13,7 +13,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "main": "index.js",
-  "browser": "browser/index.js",
+  "module": "esm/index.js",
   "sideEffects": false,
   "dependencies": {
     "fs-extra": "^10.0.0"
