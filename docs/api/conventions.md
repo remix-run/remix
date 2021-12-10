@@ -91,29 +91,147 @@ There are a few conventions that Remix uses you should be aware of.
 - **`app/entry.server.{js,jsx,ts,tsx}`**: This is your entry into the server rendering piece of Remix. This file is required.
 - **`app/entry.client.{js,jsx,ts,tsx}`**: This is your entry into the browser rendering/hydration piece of Remix. This file is required.
 
-### Route Filenames
+### Route File Conventions
 
-- **`app/root.tsx`**: This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes: you can export a `loader`, `action`, etc.
-- **`app/routes/*.{js,jsx,ts,tsx,md,mdx}`**: Any files in the `app/routes/` directory will become routes in your application. Remix supports all of those extensions.
-- **`app/routes/{folder}/*.tsx`**: Folders inside of routes will create nested URLs.
-- **`app/routes/{folder}` with `app/routes/{folder}.tsx`**: When a route has the same name as a folder, it becomes a "layout route" for the child routes inside the folder. Render an `<Outlet />` and the child routes will appear there. This is how you can have multiple levels of persistent layout nesting associated with URLs.
-- **Dots in route filenames**: Adding a `.` in a route file will create a nested URL, but not a nested layout. Flat files are flat layouts, nested files are nested layouts. The `.` allows you to create nested URLs without needing to create a bunch of layouts. For example: `app/routes/some.long.url.tsx` will create the URL `/some/long/url`.
-- **`app/routes/index.tsx`**: Routes named "index" will render when the parent layout route's path is matched exactly.
-- **`$param`**: The dollar sign denotes a dynamic segment of the URL. It will be parsed and passed to your loaders and routes.
+Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-  For example: `app/routes/users/$userId.tsx` will match the following URLs: `users/123` and `users/abc` but not `users/123/abc` because that has too many segments. See the <Link to="../routing">routing guide</Link> for more information.
+Please note that you can use either `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
 
-  Some CLIs require you to escape the \$ when creating files:
+#### Root Layout Route
 
-  ```bash
-  touch routes/\$params.tsx
-  ```
+```[3]
+app
+| routes
+| root.tsx
+```
 
-  Params can be nested routes, just create a folder with the `$` in it.
+This is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes:
 
-- **`app/routes/files/$.tsx`**: To add a "splat" path (some people call this a "catchall") name the file simply `$.tsx`. It will create a route path pattern like `files/*`. You can also use this along with dot file names: `app/routes/files.$.tsx`.
+- You can export a [`loader`](#loader), [`action`](#action), [`meta`](#meta), [`headers`](#headers), or [`links`](#links) function
+- You can export an [`ErrorBoundary`](#errorboundary) or [`CatchBoundary`](#catchboundary)
+- Your default export is the layout component that renders the rest of your app in an [`<Outlet />`](https://reactrouter.com/docs/en/v6/api#outlet)
 
-- **`app/routes/__some-layout/some-path.tsx`**: Prefixing a folder with `__` will create a "layout route". Layout routes are routes that don't add anything to the URL for matching, but do add nested components in the tree for layouts. Make sure to also have `__some-layout.tsx` as well. For example, all of your marketing pages could share a layout in the route tree with `app/routes/__marketing.tsx` as the layout and then all of the child routes go in `app/routes/__marketing/products.tsx` and `app/routes/__marketing/buy.tsx`. The `__marketing.tsx` route won't add any segments to the URL, but it will render when it's child routes match.
+#### Basic Routes
+
+```[3-4]
+app
+| routes
+| - about.tsx
+| - index.tsx
+| root.tsx
+```
+
+Any JavaScript or TypeScript files in the `app/routes/` directory will become routes in your application. The filename maps to the route's URL pathname, except for `index.tsx` which maps to the root pathname.
+
+The default export in this file is the component that is rendered at that route.
+
+#### Nested Routes
+
+```[3-5]
+app
+| routes
+| - blog
+| --- categories.tsx
+| --- index.tsx
+| - about.tsx
+| - index.tsx
+| root.tsx
+```
+
+Folders inside the `app/routes/` directory will create nested routes and URLs in your app. Files named `index.tsx` will render when the parent layout route's path is matched exactly.
+
+#### Layout Routes
+
+```[3-4]
+app
+| routes
+| - blog
+| --- blog.tsx
+| --- categories.tsx
+| --- index.tsx
+| - about.tsx
+| - index.tsx
+| root.tsx
+```
+
+When a nested route has the same name its directory, it becomes a "layout route" for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+
+You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`. For example, all of your marketing pages could share a layout rendered in `/app/routes/__marketing.tsx` as the layout, and those routes would go in the `/app/routes/__marketing/` directory. A route `/app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+
+#### Dot Delimeters
+
+```[8]
+app
+| routes
+| - blog
+| --- blog.tsx
+| --- categories.tsx
+| --- index.tsx
+| - about.tsx
+| - blog.authors.tsx
+| - index.tsx
+| root.tsx
+```
+
+By creating a file with `.` characters between segments, you can create a nested URL without nested layouts. For example, a file `/app/routes/blog.authors.tsx` will route to the pathname `/blog/authors`, but it will not share a layout with routes in the `/app/routes/blog/` directory.
+
+#### Dynamic Route Parameters
+
+```[3]
+app
+| routes
+| - blog
+| --- $postId.tsx
+| --- blog.tsx
+| --- categories.tsx
+| --- index.tsx
+| - about.tsx
+| - blog.authors.tsx
+| - index.tsx
+| root.tsx
+```
+
+Routes that begin with a `$` character indicate the name of a dynamic segment of the URL. It will be parsed and passed to your loader and action data as a value on the `param` object.
+
+For example: `/app/routes/blog/$postId.tsx` will match the following URLs:
+
+- `/blog/my-story`
+- `/blog/once-upon-a-time`
+- `/blog/how-to-ride-a-bike`
+
+On each of these pages, the dynamic segment of the URL path is the value of the parameter in your route's data.
+
+Also noted: nested routes can contain dynamic segments by using the `$` character in the parent's directory name. For example, `/app/routes/blog/$postId/edit.tsx` might represent the editor view for blog entries.
+
+See the <Link to="../routing">routing guide</Link> for more information.
+
+<docs-info>Some CLIs require you to escape the \$ when creating files:
+
+```bash
+touch routes/\$params.tsx
+```
+
+</docs-info>
+
+#### Splat Routes
+
+```[4,9]
+app
+| routes
+| - blog
+| --- $.tsx
+| --- $postId.tsx
+| --- blog.tsx
+| --- categories.tsx
+| --- index.tsx
+| - $.tsx
+| - about.tsx
+| - blog.authors.tsx
+| - index.tsx
+| root.tsx
+```
+
+Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These routes will map to any URL not matched by other route files in the same directory.
 
 ### Escaping special characters
 
