@@ -190,7 +190,7 @@ app/
 | ------------------ | -------------------------------- |
 | `/blog`            | `app/routes/blog/index.tsx`      |
 | `/blog/categories` | `app/routes/blog/categories.tsx` |
-| `/blog/:postId`    | `app/routes/blog/$postId.tsx`    |
+| `/blog/my-post`    | `app/routes/blog/$postId.tsx`    |
 
 </details>
 
@@ -284,12 +284,12 @@ app/
 
 <summary>URL Route Matches</summary>
 
-| URL                | Matched Route                          | Layout                       |
-| ------------------ | -------------------------------------- | ---------------------------- |
-| `/`                | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
-| `/product`         | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
-| `/dashboad`        | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
-| `/:userId/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
+| URL               | Matched Route                          | Layout                       |
+| ----------------- | -------------------------------------- | ---------------------------- |
+| `/`               | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
+| `/product`        | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
+| `/dashboad`       | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
+| `/chance/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
 
 </details>
 
