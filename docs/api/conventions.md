@@ -156,7 +156,33 @@ app/
 
 In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a nested route has the same name its directory, it becomes a layout route for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
-You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`. For example, all of your marketing pages could share a layout rendered in `/app/routes/__marketing.tsx` as the layout, and those routes would go in the `/app/routes/__marketing/` directory. A route `/app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`. For example, all of your marketing pages could share a layout rendered in `app/routes/__marketing.tsx` as the layout, and those routes would go in the `app/routes/__marketing/` directory. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+
+For example:
+
+```markdown [3,7,10-11]
+app/
+├── routes/
+│ ├── **app/
+│ │ ├── dashboard.tsx
+│ │ └── $userId/
+│ │ │ └── profile.tsx
+│ ├── **marketing/
+│ │ ├── about.tsx
+│ │ └── index.tsx
+│ ├── **app.tsx
+│ ├── **marketing.tsx
+└── root.tsx
+```
+
+With the route structure above:
+
+- Any URL that matches in `__app/` is rendered by the `__app.tsx` layout
+- Any URL that matches in `__marketing/` is rendered by the `__marketing.tsx` layout
+- `/` matches `__marketing/index.tsx`
+- `/about` matches `__marketing/about.tsx`
+- `/dashboard` matches `__app/dashboard.tsx`
+- `/:userId/profile` matches `__app/$userId/profile.tsx`
 
 #### Dot Delimeters
 
@@ -173,7 +199,7 @@ app/
 └── root.tsx
 ```
 
-By creating a file with `.` characters between segments, you can create a nested URL without nested layouts. For example, a file `/app/routes/blog.authors.tsx` will route to the pathname `/blog/authors`, but it will not share a layout with routes in the `/app/routes/blog/` directory.
+By creating a file with `.` characters between segments, you can create a nested URL without nested layouts. For example, a file `app/routes/blog.authors.tsx` will route to the pathname `/blog/authors`, but it will not share a layout with routes in the `app/routes/blog/` directory.
 
 #### Dynamic Route Parameters
 
@@ -193,7 +219,7 @@ app/
 
 Routes that begin with a `$` character indicate the name of a dynamic segment of the URL. It will be parsed and passed to your loader and action data as a value on the `param` object.
 
-For example: `/app/routes/blog/$postId.tsx` will match the following URLs:
+For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 
 - `/blog/my-story`
 - `/blog/once-upon-a-time`
@@ -223,7 +249,7 @@ export default function PostRoute() {
 }
 ```
 
-Also noted: nested routes can contain dynamic segments by using the `$` character in the parent's directory name. For example, `/app/routes/blog/$postId/edit.tsx` might represent the editor view for blog entries.
+Nested routes can also contain dynamic segments by using the `$` character in the parent's directory name. For example, `app/routes/blog/$postId/edit.tsx` might represent the editor view for blog entries, accessible for a post with the ID `my-post` at the `/blog/my-post/edit` URL.
 
 See the [routing guide](../guides/routing.md) for more information.
 
