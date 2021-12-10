@@ -99,10 +99,10 @@ Please note that you can use either `.jsx` or `.tsx` file extensions depending o
 
 #### Root Layout Route
 
-```[3]
-app
-| routes
-| root.tsx
+```md [3]
+app/
+├── routes/
+└── root.tsx
 ```
 
 The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes:
@@ -113,12 +113,12 @@ The file in `app/root.tsx` is your root layout, or "root route" (very sorry for 
 
 #### Basic Routes
 
-```[3-4]
-app
-| routes
-| - about.tsx
-| - index.tsx
-| root.tsx
+```md [3-4]
+app/
+├── routes/
+│ ├── about.tsx
+│ └── index.tsx
+└── root.tsx
 ```
 
 Any JavaScript or TypeScript files in the `app/routes/` directory will become routes in your application. The filename maps to the route's URL pathname, except for `index.tsx` which maps to the root pathname.
@@ -127,31 +127,31 @@ The default export in this file is the component that is rendered at that route 
 
 #### Nested Routes
 
-```[3-5]
-app
-| routes
-| - blog
-| --- categories.tsx
-| --- index.tsx
-| - about.tsx
-| - index.tsx
-| root.tsx
+```md [3-5]
+app/
+├── routes/
+│ ├── blog/
+│ │ ├── categories.tsx
+│ │ └── index.tsx
+│ ├── about.tsx
+│ └── index.tsx
+└── root.tsx
 ```
 
 Folders inside the `app/routes/` directory will create nested routes and URLs in your app. Files named `index.tsx` will render when the parent layout route's path is matched exactly.
 
 #### Layout Routes
 
-```[3-4]
-app
-| routes
-| - blog
-| --- blog.tsx
-| --- categories.tsx
-| --- index.tsx
-| - about.tsx
-| - index.tsx
-| root.tsx
+```md [3,6]
+app/
+├── routes/
+│ ├── blog/
+│ │ ├── categories.tsx
+│ │ └── index.tsx
+│ ├── blog.tsx
+│ ├── about.tsx
+│ └── index.tsx
+└── root.tsx
 ```
 
 In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a nested route has the same name its directory, it becomes a layout route for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
@@ -160,35 +160,35 @@ You can also create layout routes **without adding segments to the URL** by prep
 
 #### Dot Delimeters
 
-```[8]
-app
-| routes
-| - blog
-| --- blog.tsx
-| --- categories.tsx
-| --- index.tsx
-| - about.tsx
-| - blog.authors.tsx
-| - index.tsx
-| root.tsx
+```md [6]
+app/
+├── routes/
+│ ├── blog/
+│ │ ├── categories.tsx
+│ │ └── index.tsx
+│ ├── blog.authors.tsx
+│ ├── blog.tsx
+│ ├── about.tsx
+│ └── index.tsx
+└── root.tsx
 ```
 
 By creating a file with `.` characters between segments, you can create a nested URL without nested layouts. For example, a file `/app/routes/blog.authors.tsx` will route to the pathname `/blog/authors`, but it will not share a layout with routes in the `/app/routes/blog/` directory.
 
 #### Dynamic Route Parameters
 
-```[3]
-app
-| routes
-| - blog
-| --- $postId.tsx
-| --- blog.tsx
-| --- categories.tsx
-| --- index.tsx
-| - about.tsx
-| - blog.authors.tsx
-| - index.tsx
-| root.tsx
+```md [4]
+app/
+├── routes/
+│ ├── blog/
+│ │ ├── $postId.tsx
+│ │ ├── categories.tsx
+│ │ └── index.tsx
+│ ├── blog.authors.tsx
+│ ├── blog.tsx
+│ ├── about.tsx
+│ └── index.tsx
+└── root.tsx
 ```
 
 Routes that begin with a `$` character indicate the name of a dynamic segment of the URL. It will be parsed and passed to your loader and action data as a value on the `param` object.
@@ -205,11 +205,15 @@ On each of these pages, the dynamic segment of the URL path is the value of the 
 import { useParams } from "remix";
 import type { LoaderFunction, ActionFunction } from "remix";
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction async ({ params }) => {
+export const action: ActionFunction = async ({
+  params
+}) => {
   console.log(params.postId);
 };
 
@@ -221,27 +225,51 @@ export default function PostRoute() {
 
 Also noted: nested routes can contain dynamic segments by using the `$` character in the parent's directory name. For example, `/app/routes/blog/$postId/edit.tsx` might represent the editor view for blog entries.
 
-See the <Link to="../routing">routing guide</Link> for more information.
+See the [routing guide](../guides/routing.md) for more information.
 
 #### Splat Routes
 
-```[4,9]
-app
-| routes
-| - blog
-| --- $.tsx
-| --- $postId.tsx
-| --- blog.tsx
-| --- categories.tsx
-| --- index.tsx
-| - $.tsx
-| - about.tsx
-| - blog.authors.tsx
-| - index.tsx
-| root.tsx
+```md [4,8]
+app/
+├── routes/
+│ ├── blog/
+│ │ ├── $.tsx
+│ │ ├── $postId.tsx
+│ │ ├── categories.tsx
+│ │ └── index.tsx
+│ ├── $.tsx
+│ ├── blog.authors.tsx
+│ ├── blog.tsx
+│ ├── about.tsx
+│ └── index.tsx
+└── root.tsx
 ```
 
 Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These routes will map to any URL not matched by other route files in the same directory.
+
+Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
+
+```tsx
+import { useParams } from "remix";
+import type { LoaderFunction, ActionFunction } from "remix";
+
+export const loader: LoaderFunction = async ({
+  params
+}) => {
+  console.log(params["*"]);
+};
+
+export const action: ActionFunction = async ({
+  params
+}) => {
+  console.log(params["*"]);
+};
+
+export default function PostRoute() {
+  const params = useParams();
+  console.log(params["*"]);
+}
+```
 
 ### Escaping special characters
 
