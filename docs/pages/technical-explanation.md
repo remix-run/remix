@@ -17,7 +17,7 @@ We often describe Remix as "a compiler for React Router" because everything abou
 
 ## Compiler
 
-Everything in Remix starts with the compiler: `remix build`. Using [esbuild][esbuild], this creates two builds:
+Everything in Remix starts with the compiler: `remix build`. Using [esbuild][esbuild], this creates a few things:
 
 1. A server HTTP handler, usually in `server/build/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server side requests for resources.
 2. A browser build, usually in `public/build/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser
