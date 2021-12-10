@@ -246,9 +246,9 @@ export async function redirectToStripeCheckout(sessionId) {
 
 The most common scenario is intitializing a third party API when your module is imported. There are a couple ways to easily deal with this.
 
-#### Window Guard
+#### Document Guard
 
-This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recomend `document` over `window` because server runtimes like Deno have a global `window` available.
+This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recomend `document` over `window` because server runtimes like Deno has a global `window` available.
 
 ```js [3]
 import firebase from "firebase/app";
