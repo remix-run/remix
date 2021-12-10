@@ -4,14 +4,14 @@ import invariant from "tiny-invariant";
 
 import { createPost } from "~/post";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   await new Promise(res => setTimeout(res, 1000));
-  let formData = await request.formData();
-  let title = formData.get("title");
-  let slug = formData.get("slug");
-  let markdown = formData.get("markdown");
+  const formData = await request.formData();
+  const title = formData.get("title");
+  const slug = formData.get("slug");
+  const markdown = formData.get("markdown");
 
-  let errors: Record<string, boolean> = {};
+  const errors: Record<string, boolean> = {};
   if (!title) errors.title = true;
   if (!slug) errors.slug = true;
   if (!markdown) errors.markdown = true;
@@ -29,8 +29,8 @@ export let action: ActionFunction = async ({ request }) => {
 };
 
 export default function NewPost() {
-  let errors = useActionData();
-  let transition = useTransition();
+  const errors = useActionData();
+  const transition = useTransition();
 
   return (
     <Form method="post">
