@@ -3,7 +3,7 @@ import { json, useCatch, useLoaderData } from "remix";
 // The `$` in route filenames becomes a pattern that's parsed from the URL and
 // passed to your loaders so you can look up data.
 // - https://remix.run/api/conventions#loader-params
-export let loader = async ({ params }) => {
+export const loader = async ({ params }) => {
   // pretend like we're using params.id to look something up in the db
 
   if (params.id === "this-record-does-not-exist") {
@@ -38,7 +38,7 @@ export let loader = async ({ params }) => {
 };
 
 export default function ParamDemo() {
-  let data = useLoaderData();
+  const data = useLoaderData();
   return (
     <h1>
       The param is <i style={{ color: "red" }}>{data.param}</i>
@@ -50,7 +50,7 @@ export default function ParamDemo() {
 // https://remix.run/api/remix#usecatch
 // https://remix.run/api/guides/not-found
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   let message;
   switch (caught.status) {
@@ -105,7 +105,7 @@ export function ErrorBoundary({ error }) {
   );
 }
 
-export let meta = ({ data }) => {
+export const meta = ({ data }) => {
   return {
     title: data ? `Param: ${data.param}` : "Oops..."
   };

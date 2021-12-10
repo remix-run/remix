@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "0.0.0-experimental-b697c4f3",
+  "version": "1.0.6",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "license": "MIT",

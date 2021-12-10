@@ -18,8 +18,6 @@ export let loader: LoaderFunction = async ({ request }) => {
 };
 
 export let action: ActionFunction = async ({ request }) => {
-  let contentType = request.headers.get("Content-Type");
-
   let session = await getSession(request.headers.get("Cookie"));
   let bodyParams = await request.formData();
   let body = Array.from(bodyParams.entries()).reduce<

@@ -1,0 +1,40 @@
+{
+  "name": "@remix-run/eslint-config",
+  "description": "ESLint configuration for Remix projects",
+  "version": "0.0.0",
+  "repository": "https://github.com/remix-run/packages",
+  "main": "index.js",
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "jest.js"
+  ],
+  "dependencies": {
+    "@babel/eslint-parser": "^7.16.3",
+    "@babel/preset-react": "^7.16.0",
+    "@rushstack/eslint-patch": "^1.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.6.0",
+    "@typescript-eslint/parser": "^5.6.0",
+    "eslint-import-resolver-node": "0.3.6",
+    "eslint-import-resolver-typescript": "^2.5.0",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-jest": "^25.3.0",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-react": "^7.27.1",
+    "eslint-plugin-react-hooks": "^4.3.0"
+  },
+  "peerDependencies": {
+    "@remix-run/react": ">=1.0.0",
+    "eslint": ">=8.1.0",
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0",
+    "remix": ">=0.20.1",
+    "typescript": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  }
+}

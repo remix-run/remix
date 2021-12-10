@@ -172,12 +172,12 @@ async function run(args) {
           config.dependencies["remix"] = nextVersion;
         }
 
-        for (let package of allPackages) {
-          if (config.dependencies[`@remix-run/${package}`]) {
-            config.dependencies[`@remix-run/${package}`] = nextVersion;
+        for (let pkg of allPackages) {
+          if (config.dependencies[`@remix-run/${pkg}`]) {
+            config.dependencies[`@remix-run/${pkg}`] = nextVersion;
           }
-          if (config.devDependencies[`@remix-run/${package}`]) {
-            config.devDependencies[`@remix-run/${package}`] = nextVersion;
+          if (config.devDependencies[`@remix-run/${pkg}`]) {
+            config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
           }
         }
       });
