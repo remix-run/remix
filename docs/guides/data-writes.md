@@ -219,7 +219,7 @@ export const action: ActionFunction = async ({
   const [errors, project] = await createProject(formData);
 
   if (errors) {
-    const values = Object.fromEntries(newProject);
+    const values = Object.fromEntries(formData);
     return { errors, values };
   }
 
