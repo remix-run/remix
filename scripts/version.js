@@ -11,7 +11,7 @@ let examplesDir = path.resolve(rootDir, "examples");
 
 let adapters = ["architect", "express", "netlify", "vercel"];
 let runtimes = ["cloudflare-workers", "node"];
-let core = ["dev", "server-runtime", "react"];
+let core = ["dev", "server-runtime", "react", "eslint-config"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
 /**
@@ -113,7 +113,7 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
-  // Update remix-dev, remix-server-runtime, and remix-react versions
+  // Update core package versions
   for (let name of core) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
