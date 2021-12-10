@@ -51,7 +51,7 @@ export default function Index() {
   
   return (
     <div className="container">
-      <Form method="get" action="/" className="search-form">
+      <Form method="get" className="search-form">
         <input defaultValue={data.searchTerm} placeholder="Search a TV show..." autoComplete="off" name="search" type="search" />
         <button type="submit">Search</button>
       </Form>
