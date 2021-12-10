@@ -248,13 +248,13 @@ The most common scenario is intitializing a third party API when your module is 
 
 #### Window Guard
 
-This ensures the library is only initialized if there is a `window`, meaning you're in the browser.
+This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recomend `document` over `window` because server runtimes like Deno have a global `window` available.
 
 ```js [3]
 import firebase from "firebase/app";
 
-if (typeof window !== "undefined") {
-  firebase.initializeApp(window.ENV.firebase);
+if (typeof document !== "undefined") {
+  firebase.initializeApp(document.ENV.firebase);
 }
 
 export { firebase };
