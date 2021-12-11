@@ -537,7 +537,7 @@ export const loader: LoaderFunction = ({ params }) => {
 
 #### loader `request`
 
-This is a [Fetch Request][request] instance with information about the request. You can read the MDN docs to see all of it's properties.
+This is a [Fetch Request][request] instance with information about the request. You can read the MDN docs to see all of its properties.
 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
@@ -622,7 +622,7 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
-Between these two examples you can see how `json` just does a little of work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
+Between these two examples you can see how `json` just does a little of the work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
 
 ```tsx
 import { json } from "remix";
@@ -815,7 +815,7 @@ See also:
 
 ### `headers`
 
-Each route can define it's own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
+Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
 export function headers({ loaderHeaders, parentHeaders }) {
@@ -1036,7 +1036,7 @@ A `CatchBoundary` is a React component that renders whenever an action or loader
 
 **Note:** We use the word "catch" to represent the codepath taken when a `Response` type is thrown; you thought about bailing from the "happy path". This is different from an uncaught error you did not expect to occur.
 
-A Remix `CatchBoundary` component works just like a route component, but instead of `useLoaderData` you have access to `useCatch`. When a response is thrown in an action or loader, the `CatchBoundary` will be rendered in it's place, nested inside parent routes.
+A Remix `CatchBoundary` component works just like a route component, but instead of `useLoaderData` you have access to `useCatch`. When a response is thrown in an action or loader, the `CatchBoundary` will be rendered in its place, nested inside parent routes.
 
 A `CatchBoundary` component has access to the status code and thrown response data through `useCatch`.
 
