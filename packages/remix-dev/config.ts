@@ -83,6 +83,12 @@ export interface AppConfig {
    * The output format of the server build. Defaults to "cjs".
    */
   serverModuleFormat: "esm" | "cjs";
+
+  /**
+   * A filename or a glob pattern to match files in the `app/routes` directory
+   * that Remix will ignore. Matching files will not be recognized as routes.
+   */
+  ignoredRouteFiles?: string;
 }
 
 /**
@@ -235,7 +241,10 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile }
   };
   if (fs.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = defineConventionalRoutes(appDirectory);
+    let conventionalRoutes = defineConventionalRoutes(
+      appDirectory,
+      appConfig.ignoredRouteFiles
+    );
     for (let key of Object.keys(conventionalRoutes)) {
       let route = conventionalRoutes[key];
       routes[route.id] = { ...route, parentId: route.parentId || "root" };

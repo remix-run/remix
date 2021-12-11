@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import minimatch from "minimatch";
 
 import type { RouteManifest, DefineRouteFunction } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
@@ -21,7 +22,10 @@ export function isRouteModuleFile(filename: string): boolean {
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(appDir: string): RouteManifest {
+export function defineConventionalRoutes(
+  appDir: string,
+  ignoredFilePattern?: string
+): RouteManifest {
   let files: { [routeId: string]: string } = {};
 
   // First, find all route modules in app/routes
@@ -35,6 +39,10 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
 
     // https://github.com/remix-run/remix/issues/391
     if (path.basename(file).startsWith(".")) {
+      return;
+    }
+
+    if (ignoredFilePattern && minimatch(file, ignoredFilePattern)) {
       return;
     }
 
