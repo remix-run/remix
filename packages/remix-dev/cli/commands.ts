@@ -86,7 +86,7 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  let wss = new WebSocket.Server({ port: config.devServerPort });
+  let wss = new WebSocket.Server({ port: config.devServer.port });
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
       wss.clients.forEach(client => {
@@ -94,7 +94,7 @@ export async function watch(
           client.send(JSON.stringify(event));
         }
       });
-    }, config.devServerBroadcastDelay);
+    }, config.devServer.broadcastDelay);
   }
 
   function log(_message: string) {

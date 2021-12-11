@@ -4,11 +4,13 @@
 module.exports = {
   serverBuildTarget: "deno",
   server: "./server.js",
-  devServerBroadcastDelay: 1000,
+  devServer: {
+    broadcastDelay: 1000
+    // port: 8002
+  },
   ignoredRouteFiles: [".*"]
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
-  // devServerPort: 8002
 };

@@ -86,12 +86,26 @@ export interface AppConfig {
    */
   publicPath?: string;
 
+  devServer?: {
+    /**
+     * The port number to use for the dev server. Defaults to 8002.
+     */
+    port?: number;
+
+    /**
+     * The delay before the dev server broadcasts a reload event
+     */
+    broadcastDelay?: number;
+  };
+
   /**
    * The port number to use for the dev server. Defaults to 8002.
+   * @deprecated Use `devServer.port` instead
    */
   devServerPort?: number;
   /**
    * The delay before the dev server broadcasts a reload event.
+   *  @deprecated use `devServer.broadcastDelay` instead
    */
   devServerBroadcastDelay?: number;
 
@@ -185,15 +199,17 @@ export interface RemixConfig {
    */
   serverMode: ServerMode;
 
-  /**
-   * The port number to use for the dev (asset) server.
-   */
-  devServerPort: number;
+  devServer: {
+    /**
+     * The port number to use for the dev server. Defaults to 8002.
+     */
 
-  /**
-   * The delay before the dev (asset) server broadcasts a reload event.
-   */
-  devServerBroadcastDelay: number;
+    port: number;
+    /**
+     * The delay before the dev server broadcasts a reload event
+     */
+    broadcastDelay: number;
+  };
 
   /**
    * Additional MDX remark / rehype plugins.
@@ -325,8 +341,27 @@ export async function readConfig(
       path.join("public", "build")
   );
 
-  let devServerPort = await getPort({ port: appConfig.devServerPort || 8002 });
-  let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
+  if ("devServerPort" in appConfig) {
+    console.warn(
+      "devServerPort is deprecated and will be removed in a future major release. Consider using devServer.port instead."
+    );
+  }
+
+  if ("devServerBroadcastDelay" in appConfig) {
+    console.warn(
+      "devServerBroadcastDelay is deprecated and will be removed in a future major release. Consider using devServer.broadcastDelay instead."
+    );
+  }
+
+  let devServerOptions =
+    typeof appConfig.devServer === "object" ? appConfig.devServer : {};
+
+  let devServerPort = await getPort({
+    port: devServerOptions.port || appConfig.devServerPort || 8002
+  });
+
+  let devServerBroadcastDelay =
+    devServerOptions.broadcastDelay || appConfig.devServerBroadcastDelay || 0;
 
   let defaultPublicPath = "/build/";
   switch (serverBuildTarget) {
@@ -372,8 +407,10 @@ export async function readConfig(
     cacheDirectory,
     entryClientFile,
     entryServerFile,
-    devServerPort,
-    devServerBroadcastDelay,
+    devServer: {
+      port: devServerPort,
+      broadcastDelay: devServerBroadcastDelay
+    },
     assetsBuildDirectory,
     publicPath,
     rootDirectory,

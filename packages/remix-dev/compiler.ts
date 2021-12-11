@@ -365,7 +365,7 @@ async function createBrowserBuild(
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode),
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        config.devServerPort
+        config.devServer.port
       )
     },
     plugins: [
@@ -444,7 +444,7 @@ async function createServerBuild(
       define: {
         "process.env.NODE_ENV": JSON.stringify(options.mode),
         "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-          config.devServerPort
+          config.devServer.port
         )
       },
       plugins
