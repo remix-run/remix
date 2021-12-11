@@ -622,7 +622,7 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
-Between these two examples you can see how `json` just does a little of work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
+Between these two examples you can see how `json` just does a little of the work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
 
 ```tsx
 import { json } from "remix";
