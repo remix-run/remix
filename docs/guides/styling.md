@@ -465,7 +465,7 @@ Then alter how tailwind is generating css:
   // ...
   "scripts": {
     "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --minify",
     "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
     "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
     "postinstall": "remix setup node",
