@@ -85,10 +85,11 @@ export interface AppConfig {
   serverModuleFormat: "esm" | "cjs";
 
   /**
-   * A filename or a glob pattern to match files in the `app/routes` directory
-   * that Remix will ignore. Matching files will not be recognized as routes.
+   * A list of filenames or a glob patterns to match files in the `app/routes`
+   * directory that Remix will ignore. Matching files will not be recognized as
+   * routes.
    */
-  ignoredRouteFiles?: string;
+  ignoredRouteFiles?: string[];
 }
 
 /**

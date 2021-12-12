@@ -24,7 +24,7 @@ export function isRouteModuleFile(filename: string): boolean {
  */
 export function defineConventionalRoutes(
   appDir: string,
-  ignoredFilePattern?: string
+  ignoredFilePatterns?: string[]
 ): RouteManifest {
   let files: { [routeId: string]: string } = {};
 
@@ -42,7 +42,10 @@ export function defineConventionalRoutes(
       return;
     }
 
-    if (ignoredFilePattern && minimatch(file, ignoredFilePattern)) {
+    if (
+      ignoredFilePatterns &&
+      ignoredFilePatterns.some(pattern => minimatch(file, pattern))
+    ) {
       return;
     }
 
