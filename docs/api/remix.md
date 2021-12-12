@@ -209,7 +209,7 @@ This hook returns the JSON parsed data from your route action. It returns `undef
 
 ```tsx [2,11,20]
 import React from "react";
-import { useActionData } from "remix";
+import { useActionData, Form } from "remix";
 
 export async function action({ request }) {
   const body = await request.formData();
@@ -227,7 +227,7 @@ export default function Invoices() {
           <input type="text" name="visitorsName" />
         </label>
       </p>
-      <p>{data ? data.message : "Waiting..."}</p>;
+      <p>{data ? data.message : "Waiting..."}</p>
     </Form>
   );
 }
