@@ -270,7 +270,7 @@ title: My First Post
 Isn't it great?
 ```
 
-```md filename=posts/90s-mix-cdr.md
+```md filename=posts/90s-mixtape.md
 ---
 title: 90s Mixtape
 ---
@@ -406,7 +406,7 @@ Now let's make a route to actually view the post. We want these URLs to work:
 
 ```
 /posts/my-first-post
-/posts/90s-mix-cdr
+/posts/90s-mixtape
 ```
 
 Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
