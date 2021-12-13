@@ -12,8 +12,8 @@ import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
 
-export let loader: LoaderFunction = async ({ request }) => {
-  let userId = await getUserId(request);
+export const loader: LoaderFunction = async ({ request }) => {
+  const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
@@ -48,36 +48,38 @@ type ActionData = {
  */
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
 
-  let form = await request.formData();
-  let name = form.get("name");
-  let content = form.get("content");
+  const form = await request.formData();
+  const name = form.get("name");
+  const content = form.get("content");
   if (typeof name !== "string" || typeof content !== "string") {
     return badRequest({ formError: `Form not submitted correctly.` });
   }
 
-  let fieldErrors = {
+  const fieldErrors = {
     name: validateJokeName(name),
     content: validateJokeContent(content),
   };
-  let fields = { name, content };
+  const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
     return badRequest({ fieldErrors, fields });
   }
 
-  let joke = await db.joke.create({ data: { ...fields, jokesterId: userId } });
+  const joke = await db.joke.create({
+    data: { ...fields, jokesterId: userId },
+  });
   return redirect(`/jokes/${joke.id}?redirectTo=/jokes/new`);
 };
 
 export default function NewJokeRoute() {
-  let actionData = useActionData<ActionData>();
-  let transition = useTransition();
+  const actionData = useActionData<ActionData>();
+  const transition = useTransition();
 
   if (transition.submission) {
-    let name = transition.submission.formData.get("name");
-    let content = transition.submission.formData.get("content");
+    const name = transition.submission.formData.get("name");
+    const content = transition.submission.formData.get("content");
     if (
       typeof name === "string" &&
       typeof content === "string" &&
@@ -150,7 +152,7 @@ export default function NewJokeRoute() {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   if (caught.status === 401) {
     return (

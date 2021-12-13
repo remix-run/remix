@@ -8,26 +8,26 @@ type LoginForm = {
 };
 
 export async function register({ username, password }: LoginForm) {
-  let passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
   return db.user.create({
     data: { username, passwordHash },
   });
 }
 
 export async function login({ username, password }: LoginForm) {
-  let user = await db.user.findUnique({ where: { username } });
+  const user = await db.user.findUnique({ where: { username } });
   if (!user) return null;
-  let isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
+  const isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
   if (!isCorrectPassword) return null;
   return user;
 }
 
-let sessionSecret = process.env.SESSION_SECRET;
+const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET must be set");
 }
 
-let storage = createCookieSessionStorage({
+const storage = createCookieSessionStorage({
   cookie: {
     name: "RJ_session",
     // secure doesn't work on localhost for Safari
@@ -46,8 +46,8 @@ export function getUserSession(request: Request) {
 }
 
 export async function getUserId(request: Request) {
-  let session = await getUserSession(request);
-  let userId = session.get("userId");
+  const session = await getUserSession(request);
+  const userId = session.get("userId");
   if (!userId || typeof userId !== "string") return null;
   return userId;
 }
@@ -56,23 +56,23 @@ export async function requireUserId(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
 ) {
-  let session = await getUserSession(request);
-  let userId = session.get("userId");
+  const session = await getUserSession(request);
+  const userId = session.get("userId");
   if (!userId || typeof userId !== "string") {
-    let searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
+    const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
   }
   return userId;
 }
 
 export async function getUser(request: Request) {
-  let userId = await getUserId(request);
+  const userId = await getUserId(request);
   if (typeof userId !== "string") {
     return null;
   }
 
   try {
-    let user = await db.user.findUnique({ where: { id: userId } });
+    const user = await db.user.findUnique({ where: { id: userId } });
     return user;
   } catch {
     throw logout(request);
@@ -80,7 +80,7 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  let session = await storage.getSession(request.headers.get("Cookie"));
+  const session = await storage.getSession(request.headers.get("Cookie"));
   return redirect("/login", {
     headers: {
       "Set-Cookie": await storage.destroySession(session),
@@ -89,7 +89,7 @@ export async function logout(request: Request) {
 }
 
 export async function createUserSession(userId: string, redirectTo: string) {
-  let session = await storage.getSession();
+  const session = await storage.getSession();
   session.set("userId", userId);
   return redirect(redirectTo, {
     headers: {
