@@ -725,7 +725,7 @@ Now click the link from the index route and watch the `<Outlet/>` automatically 
 
 ## Actions
 
-We're gonna get serious now. Let's build a form to create a new post in the our new "new" route.
+We're gonna get serious now. Let's build a form to create a new post in our new "new" route.
 
 💿 Add a form to the new route
 
