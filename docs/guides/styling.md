@@ -612,7 +612,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
 
    ```tsx filename=app/StylesContext.tsx
    import { createContext } from "react";
-   export default createContext<null | React.ReactElement>(
+   export default createContext<null | React.ReactNode>(
      null
    );
    ```
