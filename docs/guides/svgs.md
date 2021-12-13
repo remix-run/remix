@@ -31,7 +31,7 @@ export function YourSVG() {
 
 Add props spread for allowing runtime customisation
 ```tsx [1,3]
-export function YourSVG({ props }) {
+export function YourSVG(props) {
 	return (
 		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...props}>
 			...
@@ -42,7 +42,7 @@ export function YourSVG({ props }) {
 Or for Typescript:
 ```tsx [1-2,4]
 import type { SVGProps } from "react";
-export function YourSVG({ props }: { props?: SVGProps<SVGSVGElement> }) {
+export function YourSVG(props: SVGProps<SVGSVGElement>) {
 	return (
 		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...props}>
 			...
