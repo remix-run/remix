@@ -324,7 +324,7 @@ While that's a bit of boilerplate it enables a lot:
 - The only CSS ever loaded is the CSS that's used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
-- When one compoenent's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
+- When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
 - When a component's JavaScript changes but it's styles don't, the cache is not broken for the styles
 
 #### Asset Preloads
@@ -393,7 +393,7 @@ export function links() {
 
 ## Tailwind
 
-Perhaps the most popular way to style a Remix application in the community is to use tailwind. It has the benefits of inline-style colocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+Perhaps the most popular way to style a Remix application in the community is to use tailwind. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
 First install a couple dev dependencies:
 

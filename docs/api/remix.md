@@ -79,7 +79,7 @@ A `<NavLink>` is a special kind of `<Link>` that knows whether or not it is "act
 
 ### `<Form>`
 
-The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
+The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
 ```js
 import { Form } from "remix";
