@@ -930,7 +930,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[4-8,15,24-26]
+```tsx filename=app/routes/admin/new.tsx lines=[2,4-8,15,24-26]
 //...
 import invariant from "tiny-invariant";
 
