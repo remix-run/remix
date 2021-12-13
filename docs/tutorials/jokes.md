@@ -5526,7 +5526,7 @@ Why does it matter that our app works without JavaScript? Is it because we're wo
 
 Another point for user experience!
 
-There are reasons to include JavaScript on the page. For example, some common UI experiences can't be accessible without JavaScript (focus management in particulr is not great when you have full-page reloads all over the place). And we can make an even nicer user experience with optimistic UI (coming soon) when we have JavaScript on the page. But we thought it'd be cool to show you how far you can get with Remix without JavaScript for your users on poor network connections. 💪
+There are reasons to include JavaScript on the page. For example, some common UI experiences can't be accessible without JavaScript (focus management in particular is not great when you have full-page reloads all over the place). And we can make an even nicer user experience with optimistic UI (coming soon) when we have JavaScript on the page. But we thought it'd be cool to show you how far you can get with Remix without JavaScript for your users on poor network connections. 💪
 
 Ok, so let's load JavaScript on this page now 😆
 
