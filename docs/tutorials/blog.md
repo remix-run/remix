@@ -801,7 +801,7 @@ export default function NewPost() {
 }
 ```
 
-That's it. Remix (and the browser) will take of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
+That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
 In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`.
 
