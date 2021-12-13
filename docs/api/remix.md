@@ -1731,7 +1731,16 @@ TODO:
 
 ### `isSession`
 
-TODO:
+Returns `true` if an object is a Remix session.
+
+```js
+import { isSession } from "remix";
+
+let sessionData = { foo: "bar" };
+let session = createSession(sessionData, "remix-session");
+console.log(isSession(session));
+// true
+```
 
 ### `createSessionStorage`
 
