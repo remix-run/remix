@@ -17,8 +17,8 @@ export const action: ActionFunction = async ({ request }) => {
 
   // Typical action workflows start with validating the form data that just came
   // over the network. Clientside validation is fine, but you definitely need it
-  // server side.  If there's a problem, return the the data and the component
-  // can render it.
+  // server side.  If there's a problem, return the data and the component can
+  // render it.
   if (typeof answer !== "string") {
     return json("Come on, at least try!", { status: 400 });
   }
