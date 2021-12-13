@@ -57,7 +57,7 @@ routes
 
 If `$invoiceId.js` exports an `ErrorBoundary` and an error is thrown in its component, loader, or action, the rest of the app renders normally and only the invoice section of the page renders the error.
 
-![error in a nested route where the parent route's navigation renders normall](/docs-images/error-boundary.png)
+![error in a nested route where the parent route's navigation renders normally](/docs-images/error-boundary.png)
 
 If a route doesn't have an error boundary, the error "bubbles up" to the closest error boundary, all the way to the root, so you don't have to add error boundaries to every route--only when you want to add that extra touch to your UI.
 

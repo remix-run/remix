@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "prefer-const": "error",
+    "import/order": "off"
+  }
+}
