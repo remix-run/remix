@@ -55,7 +55,7 @@ describe("readConfig", () => {
             "id": "pages/test",
             "index": undefined,
             "parentId": "root",
-            "path": "programmatic",
+            "path": "programatic",
           },
           "pages/three": Object {
             "caseSensitive": undefined,
