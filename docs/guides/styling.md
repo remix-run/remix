@@ -453,7 +453,7 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 
 @layer components {
   .custom-class {
-    @apply ...
+    @apply ...;
   }
 }
 ```
