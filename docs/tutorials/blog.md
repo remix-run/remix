@@ -485,7 +485,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,17]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,14,17]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
@@ -561,7 +561,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. While that works and is a simple way to get started, ultimately it's much better to not have to redeploy the whole app for a simple typo change. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -589,7 +589,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={post.slug}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -643,9 +645,10 @@ export const links = () => {
 // ...
 ```
 
-Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see it in `root.tsx` if you're curious.
+Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see another example of this in `root.tsx` if you're curious.
 
-Alright, you should have a a decent looking page with the posts on the left and a placeholder on the right.
+Alright, you should have a decent looking page with the posts on the left and a placeholder on the right.
+For now, you need to navigate to [http://localhost:3000/admin](http://localhost:3000/admin) manually as we haven't set up any navigational links yet.
 
 ## Index Routes
 
@@ -674,7 +677,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/admin.tsx lines=[1,19]
+```tsx filename=app/routes/admin.tsx lines=[1,21]
 import { Outlet, Link, useLoaderData } from "remix";
 
 //...
@@ -726,7 +729,7 @@ We're gonna get serious now. Let's build a form to create a new post in the our 
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,5-24]
+```tsx filename=app/routes/admin/new.tsx lines=[1,4-25]
 import { Form } from "remix";
 
 export default function NewPost() {
@@ -757,7 +760,7 @@ export default function NewPost() {
 
 If you love HTML like us, you should be getting pretty excited. If you've been doing a lot of `<form onSubmit>` and `<button onClick>` you're about to have your mind blown by HTML.
 
-All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to.
+All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to do, too.
 
 Let's create the essential code that knows how to save a post first in our `post.ts` module.
 
@@ -882,7 +885,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,17-18,24-25,30-31]
+```tsx filename=app/routes/admin/new.tsx lines=[2,6-7,17-18,24-25,30-31]
 import {
   useActionData,
   Form,
@@ -964,13 +967,15 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/admin/new.tsx lines=[5]
+```tsx filename=app/routes/admin/new.tsx lines=[5-6]
 // ...
 export const action: ActionFunction = async ({
   request
 }) => {
   await new Promise(res => setTimeout(res, 1000));
+
   const formData = await request.formData();
+
   const title = formData.get("title");
   const slug = formData.get("slug");
   const markdown = formData.get("markdown");
@@ -1013,6 +1018,6 @@ export default function NewPost() {
 
 Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! You're homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they 404! Create a new route that reads the post, puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
+That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
 
 We hope you love Remix!

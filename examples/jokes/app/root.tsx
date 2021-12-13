@@ -6,7 +6,7 @@ import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
 import globalLargeStylesUrl from "./styles/global-large.css";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
@@ -22,8 +22,8 @@ export let links: LinksFunction = () => {
   ];
 };
 
-export let meta: MetaFunction = () => {
-  let description = `Learn Remix and laugh at the same time!`;
+export const meta: MetaFunction = () => {
+  const description = `Learn Remix and laugh at the same time!`;
   return {
     description,
     keywords: "Remix,jokes",
@@ -70,7 +70,7 @@ export default function App() {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   return (
     <Document title={`${caught.status} ${caught.statusText}`}>

@@ -139,6 +139,8 @@ export default function Posts() {
 
 This is no longer a module side effect (runs when the module is imported), but rather a side effect of the loader (runs when the loader is called). The compiler will now remove both the loader _and the prisma import_ because it isn't used anywhere else in the module.
 
+Occasionally, the build may have trouble tree-shaking code that should only run on the server. If this happens, you can use the convention of naming a file with the extension `.server` before the file type, for example `db.server.ts`. Adding `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser.
+
 ### Higher Order Functions
 
 Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
