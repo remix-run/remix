@@ -604,23 +604,22 @@ npm add -D concurrently
 
 ## CSS-in-JS libraries
 
-You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will effect performance in a significant way, React is pretty fast.
+You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way, React is pretty fast.
 
 Here's some sample code to show how you might use Styled Components with Remix:
 
 1. First you'll need some context to put your styles on so that your root route can render them.
 
    ```tsx filename=app/StylesContext.tsx
-   // app/StylesContext.tsx
    import { createContext } from "react";
-   export default createContext<null | string>(null);
+   export default createContext<null | React.ReactElement>(
+     null
+   );
    ```
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx lines=6,7,16,20-26,29-30,35,37
-   // app/entry.server.tsx
-   import ReactDOMServer from "react-dom/server";
+   ```tsx filename=entry.server.tsx
    import type { EntryContext } from "remix";
    import { RemixServer } from "remix";
    import { renderToString } from "react-dom/server";
@@ -650,12 +649,12 @@ Here's some sample code to show how you might use Styled Components with Remix:
      );
 
      // Now that we've rendered, we get the styles out of the sheet
-     const styles = sheet.getStyleTags();
+     const styles = sheet.getStyleElement();
      sheet.seal();
 
      // Finally, we render a second time, but this time we have styles to apply,
      // make sure to pass them to `<StylesContext.Provider value>`
-     const markup = ReactDOMServer.renderToString(
+     const markup = renderToString(
        <StylesContext.Provider value={styles}>
          <RemixServer
            context={remixContext}
@@ -675,8 +674,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
 
 3. Finally, access and render the styles in your root route.
 
-   ```tsx filename=app/root.tsx lines=3,4,7,13
-   // app/root.tsx
+   ```tsx filename=app/root.tsx
    import { Meta, Scripts } from "remix";
    import { useContext } from "react";
    import StylesContext from "./StylesContext";
