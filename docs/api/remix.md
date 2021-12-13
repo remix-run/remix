@@ -66,7 +66,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 ```
 
 - **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
-- **"intent"** - Recommended if you want to prefetch. Fetches when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
+- **"intent"** - Recommended if you want to prefetch. Fetches when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this even smarter. Links with large click areas/padding get a bit of a head start.
 - **"render"** - Fetches when the link is rendered.
 
 <docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
@@ -79,7 +79,7 @@ A `<NavLink>` is a special kind of `<Link>` that knows whether or not it is "act
 
 ### `<Form>`
 
-The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mindshift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
+The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
 ```js
 import { Form } from "remix";
@@ -101,7 +101,7 @@ function NewEvent() {
 
 #### `<Form action>`
 
-Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes colocating your component, your data reads, and your data writes a snap.
+Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes collocating your component, your data reads, and your data writes a snap.
 
 If you need to post to a different route, then add an action prop:
 
@@ -209,7 +209,7 @@ This hook returns the JSON parsed data from your route action. It returns `undef
 
 ```tsx [2,11,20]
 import React from "react";
-import { useActionData } from "remix";
+import { useActionData, Form } from "remix";
 
 export async function action({ request }) {
   const body = await request.formData();
@@ -227,7 +227,7 @@ export default function Invoices() {
           <input type="text" name="visitorsName" />
         </label>
       </p>
-      <p>{data ? data.message : "Waiting..."}</p>;
+      <p>{data ? data.message : "Waiting..."}</p>
     </Form>
   );
 }
@@ -345,7 +345,7 @@ The browser will resubmit the form in these situations unless you redirect from 
 
 If you're using `<Form>` and don't care to support the cases above, you don't need to redirect from your actions. However, if you don't redirect from an action, make sure reposting the same information isn't dangerous to your data or your visitors because you can't control if they have JavaScript enabled or not.
 
-<docs-info>In general, if the form validation fails, return data from the action and render it in the component, but once you actually change data (in your database, or otherwise) you should redirect.</docs-info>
+<docs-info>In general, if the form validation fails, return data from the action and render it in the component. But, once you actually change data (in your database, or otherwise), you should redirect.</docs-info>
 
 See also:
 
@@ -380,7 +380,7 @@ export async function loader() {
   await getUserPreferences();
 }
 
-export async function action() {
+export async function action({ request }) {
   await updatePreferences(await request.formData());
   return redirect("/prefs");
 }
@@ -407,7 +407,7 @@ function UserPreferences() {
 }
 ```
 
-This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
+This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case, we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
 
 ```tsx [1,10,15]
 import { useSubmit, useTransition } from "remix";
@@ -423,7 +423,7 @@ function useSessionTimeout() {
   const transition = useTransition();
 
   useEffect(() => {
-    const id = setTimeout(() => {
+    const timer = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
     return () => clearTimeout(timer);
@@ -456,13 +456,13 @@ function SomeComponent() {
 
 #### `transition.state`
 
-You can know the state of the transition with `transition.state`, it will be one of:
+You can know the state of the transition with `transition.state`. It will be one of:
 
 - **idle** - There is no transition pending.
-- **submitting** - A form has been submitted, if GET, then the route loader is being called, if POST, PUT, PATCH, DELETE, then the route action is being called.
+- **submitting** - A form has been submitted. If GET, then the route loader is being called. If POST, PUT, PATCH, DELETE, then the route action is being called.
 - **loading** - The loaders for the next routes are being called to render the next page.
 
-Normal navigations transition as follows:
+Normal navigation's transition as follows:
 
 ```
 idle → loading → idle
@@ -549,9 +549,9 @@ TODO: Example
 
 #### `transition.location`
 
-This tells you what the next location is going to be. Its most useful when matching against the next URL for custom links and hooks.
+This tells you what the next location is going to be. It's most useful when matching against the next URL for custom links and hooks.
 
-For example, this `Link` knows when it's page is loading and it's about to become active:
+For example, this `Link` knows when its page is loading and about to become active:
 
 ```tsx [7-9]
 import { useResolvedPath } from "react-router-dom";
@@ -575,7 +575,7 @@ function PendingLink({ to, children }) {
 }
 ```
 
-Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
+Note that this link will not appear "pending" if a form is being submitted to the URL the link points to, because we only do this for "loading" states. The form will contain the pending UI for when the state is "submitting", once the action is complete, then the link will go pending.
 
 ### `useFetcher`
 
@@ -622,21 +622,23 @@ Notes about how it works:
   - After the action completes, the loaders on the page are reloaded to capture any mutations that may have happened, automatically keeping your UI in sync with your server state
 - When multiple fetchers are inflight at once, it will
   - commit the freshest available data as they each land
-  - ensure no stale loads overrite fresher data, no matter which order the responses return
+  - ensure no stale loads override fresher data, no matter which order the responses return
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
 #### `fetcher.state`
 
-You can know the state of the fetcher with `fetcher.state`, it will be one of:
+You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
-- **idle** - nothing is being fetched
-- **submitting** - A form has been submitted. If the method is GET then the route loader is being called, if POST, PUT, PATCH, or DELETE then the route action is being called.
-- **loading** - The loaders for the routes are being reloaded after an action submission completed.
+- **idle** - nothing is being fetched.
+- **submitting** - A form has been submitted. If the method is GET, then the route loader is being called. If POST, PUT, PATCH, or DELETE, then the route action is being called.
+- **loading** - The loaders for the routes are being reloaded after an action submission
+
+.
 
 #### `fetcher.type`
 
-This is the type of state the fetcher is in. It's like `fetcher.state` but more granular. Depending on the fetcher's state, the types can be the following:
+This is the type of state the fetcher is in. It's like `fetcher.state`, but more granular. Depending on the fetcher's state, the types can be the following:
 
 - `state === "idle"`
 
@@ -646,12 +648,12 @@ This is the type of state the fetcher is in. It's like `fetcher.state` but more 
 - `state === "submitting"`
 
   - **actionSubmission** - A form has been submitted with POST, PUT, PATCH, or DELETE, and the action is being called.
-  - **loaderSubmission** - A form has been submitted with GET and the loader is being called
+  - **loaderSubmission** - A form has been submitted with GET and the loader is being called.
 
 - `state === "loading"`
 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
-  - **load** - A route's loader is being called without a submission (`fetcher.load()`)
+  - **load** - A route's loader is being called without a submission (`fetcher.load()`).
 
 #### `fetcher.submission`
 
@@ -962,7 +964,7 @@ Returns an array of all inflight fetchers.
 
 This is useful for components throughout the app that didn't create the fetchers but want to use their submissions to participate in optimistic UI.
 
-For example, imagine a UI where the sidebar lists projects and the main view displays a list of checkboxes for the current project. The sidebar could display the number of completed and total tasks for each project.
+For example, imagine a UI where the sidebar lists projects, and the main view displays a list of checkboxes for the current project. The sidebar could display the number of completed and total tasks for each project.
 
 ```
 ┌─────────────────┬────────────────────────────┐
@@ -1029,7 +1031,7 @@ This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes
 
 Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's gonna feel a little funny.
 
-This is where `useFetchers` comes in. Up in the sidebar we can get access too all of the inflight fetcher states from the checkboxes--even though it's not the component that created them.
+This is where `useFetchers` comes in. Up in the sidebar, we can access all the inflight fetcher states from the checkboxes - even though it's not the component that created them.
 
 The strategy has three steps:
 
@@ -1042,7 +1044,7 @@ Here's some sample code:
 ```js
 function ProjectTaskCount({ project }) {
   const fetchers = useFetchers();
-  const completedTasks = 0;
+  let completedTasks = 0;
 
   // 1) Find my task's submissions
   const myFetchers = new Map();
@@ -1111,7 +1113,7 @@ Pairing route `handle` with `useMatches`, you can build your own, similar conven
 
 Let's consider building some breadcrumbs. If a route wants to participate in these breadcrumbs at the top of the root layout, it normally can't because it renders down low in the tree.
 
-You can put whatever you want on a route `handle`, here we'll use `breadcrumb`, it's not a Remix thing, it's whatever you want. Here it's added to a parent route:
+You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. It's not a Remix thing, it's whatever you want. Here it's added to a parent route:
 
 1. Add the breadcrumb handle to the parent route
 
@@ -1188,11 +1190,11 @@ Once again, `useMatches` with `handle` is a great way for routes to participate 
 
 This hook is just a helper around `window.onbeforeunload`.
 
-When users click links to pages they haven't visited yet, Remix loads the code-split modules for that page. If you deploy in the middle of a user's session, and you or your host removes the old files from the server (many do 😭) then Remix's requests for those modules will fail. Remix recovers by automatically reloading the browser at the new URL. This should start over from the server with the latest version of your application. Most of the time this works out great and user doesn't even know anything happened.
+When users click links to pages they haven't visited yet, Remix loads the code-split modules for that page. If you deploy in the middle of a user's session, and you or your host removes the old files from the server (many do 😭), then Remix's requests for those modules will fail. Remix recovers by automatically reloading the browser at the new URL. This should start over from the server with the latest version of your application. Most of the time this works out great, and user doesn't even know anything happened.
 
-In this situation, you may need to save important application state on the page (to something like the browser's local storage) because the automatic page reload will lose any state you had.
+In this situation, you may need to save important application state on the page (to something like the browser's local storage), because the automatic page reload will lose any state you had.
 
-Remix or not, this is just good practice to do. The user can change the url, accidentally close the browser window, etc.
+Remix or not, this is a good practice. The user can change the url, accidentally close the browser window, etc.
 
 ```tsx [1,7-11]
 import { useBeforeUnload } from "remix";
@@ -1327,7 +1329,7 @@ Remix's `Cookie` interface provides a logical, reusable container for cookie met
 
 While you may create these cookies manually, it is more common to use a [session storage][sessions].
 
-In Remix, you will typically work with cookies in your `loader` and/or `action` functions (see <Link to="../mutations">mutations</Link>) since those are the places where you need to read and write data.
+In Remix, you will typically work with cookies in your `loader` and/or `action` functions (see <Link to="../mutations">mutations</Link>), since those are the places where you need to read and write data.
 
 Let's say you have a banner on your e-commerce site that prompts users to check out the items you currently have on sale. The banner spans the top of your homepage, and includes a button on the side that allows the user to dismiss the banner so they don't see it for at least another week.
 
@@ -1341,7 +1343,7 @@ export const userPrefs = createCookie("user-prefs", {
 });
 ```
 
-Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case just checks the value of the user preference so you can use it in your component for deciding whether or not to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
+Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case just checks the value of the user preference so you can use it in your component for deciding whether to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
@@ -1351,7 +1353,8 @@ import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = (await userPrefs.parse(cookieHeader)) || {};
+  const cookie =
+    (await userPrefs.parse(cookieHeader)) || {};
   return { showBanner: cookie.showBanner };
 }
 
@@ -1562,7 +1565,7 @@ Sessions are an important part of websites that allow the server to identify req
 
 In Remix, sessions are managed on a per-route basis (rather than something like express middleware) in your `loader` and `action` methods using a "session storage" object (that implements the `SessionStorage` interface). Session storage understands how to parse and generate cookies, and how to store session data in a database or filesystem.
 
-Remix comes with several pre-built session storage options for common scenarios and one to create your own:
+Remix comes with several pre-built session storage options for common scenarios, and one to create your own:
 
 - `createCookieSessionStorage`
 - `createMemorySessionStorage`
@@ -1681,7 +1684,6 @@ export default function Login() {
           Password:{" "}
           <input type="password" name="password" />
         </label>
-        <button>Login</button>
       </form>
     </div>
   );
@@ -1711,7 +1713,7 @@ export default function LogoutRoute() {
       <Form method="post">
         <button>Logout</button>
       </Form>
-      <Link to="/">Nevermind</Link>
+      <Link to="/">Never mind</Link>
     </>
   );
 }
@@ -1734,7 +1736,7 @@ Returns `true` if an object is a Remix session.
 ```js
 import { isSession } from "remix";
 
-let sessionData = {foo: "bar"}
+let sessionData = { foo: "bar" };
 let session = createSession(sessionData, "remix-session");
 console.log(isSession(session));
 // true
@@ -1883,7 +1885,7 @@ export { getSession, commitSession, destroySession };
 
 For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
 
-The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globaly replicated, low-latency data store with exceptionally high read volumes with low-latency.
+The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
 // app/sessions.js
@@ -1987,7 +1989,7 @@ export async function loader({ request }) {
     { message },
     {
       headers: {
-        // only necessary with cookieSesionStorage
+        // only necessary with cookieSessionStorage
         "Set-Cookie": await commitSession(session)
       }
     }
