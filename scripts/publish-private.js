@@ -1,6 +1,7 @@
 const path = require("path");
 const { execSync } = require("child_process");
 const semver = require("semver");
+const jsonfile = require("jsonfile");
 
 const buildDir = path.resolve(__dirname, "../build/node_modules");
 
@@ -37,6 +38,10 @@ async function run() {
     "react",
     "serve"
   ]) {
+    // fix for https://github.com/remix-run/remix/actions/runs/1500713248
+    await updatePackageConfig(name, config => {
+      config.repository = "https://github.com/remix-run/packages";
+    });
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
 }
@@ -50,3 +55,10 @@ run().then(
     process.exit(1);
   }
 );
+
+async function updatePackageConfig(packageName, transform) {
+  let file = path.join(buildDir, "@remix-run", packageName, "package.json");
+  let json = await jsonfile.readFile(file);
+  transform(json);
+  await jsonfile.writeFile(file, json, { spaces: 2 });
+}
