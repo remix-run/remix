@@ -2408,6 +2408,5 @@ import type {
 [useloaderdata]: #useloaderdata
 [usesubmit]: #usesubmit
 [constraints]: ../other-api/constraints
-[action]: ../app/#action
-[loader]: ../app/#loader
+[action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
