@@ -85,7 +85,7 @@ You might need to refresh the browser to see our new, bare-bones posts route.
 
 ## Loading Data
 
-Data loading is built in to Remix.
+Data loading is built into Remix.
 
 If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
@@ -648,6 +648,7 @@ export const links = () => {
 Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see another example of this in `root.tsx` if you're curious.
 
 Alright, you should have a decent looking page with the posts on the left and a placeholder on the right.
+
 For now, you need to navigate to [http://localhost:3000/admin](http://localhost:3000/admin) manually as we haven't set up any navigational links yet.
 
 ## Index Routes
