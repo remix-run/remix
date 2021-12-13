@@ -390,6 +390,7 @@ async function createServerBuild(
           // allow importing css files for bundling / hashing from node_modules.
           if (id.endsWith(".css")) return false;
 
+          // bundle remix into the server build to avoid issues with magic exports
           if (packageName === "remix") {
             return false;
           }
