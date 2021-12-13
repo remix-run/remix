@@ -101,7 +101,7 @@ function NewEvent() {
 
 #### `<Form action>`
 
-Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes colocating your component, your data reads, and your data writes a snap.
+Most of the time you can omit this prop. Forms without an action prop (`<Form method="post">`) will automatically post to the same route within which they are rendered. This makes collocating your component, your data reads, and your data writes a snap.
 
 If you need to post to a different route, then add an action prop:
 
@@ -462,7 +462,7 @@ You can know the state of the transition with `transition.state`. It will be one
 - **submitting** - A form has been submitted. If GET, then the route loader is being called. If POST, PUT, PATCH, DELETE, then the route action is being called.
 - **loading** - The loaders for the next routes are being called to render the next page.
 
-Normal navigations transition as follows:
+Normal navigation's transition as follows:
 
 ```
 idle → loading → idle
@@ -622,7 +622,7 @@ Notes about how it works:
   - After the action completes, the loaders on the page are reloaded to capture any mutations that may have happened, automatically keeping your UI in sync with your server state
 - When multiple fetchers are inflight at once, it will
   - commit the freshest available data as they each land
-  - ensure no stale loads overrite fresher data, no matter which order the responses return
+  - ensure no stale loads override fresher data, no matter which order the responses return
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
@@ -1713,7 +1713,7 @@ export default function LogoutRoute() {
       <Form method="post">
         <button>Logout</button>
       </Form>
-      <Link to="/">Nevermind</Link>
+      <Link to="/">Never mind</Link>
     </>
   );
 }
@@ -1794,7 +1794,7 @@ For purely cookie-based sessions (where the session data itself is stored in the
 
 The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
 
-The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strageties you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
+The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
 import { createCookieSessionStorage } from "remix";
@@ -1876,7 +1876,7 @@ export { getSession, commitSession, destroySession };
 
 For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
 
-The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globaly replicated, low-latency data store with exceptionally high read volumes with low-latency.
+The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
 // app/sessions.js
@@ -1980,7 +1980,7 @@ export async function loader({ request }) {
     { message },
     {
       headers: {
-        // only necessary with cookieSesionStorage
+        // only necessary with cookieSessionStorage
         "Set-Cookie": await commitSession(session)
       }
     }
