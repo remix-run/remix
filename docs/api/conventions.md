@@ -1091,7 +1091,7 @@ export const handle = {
 };
 ```
 
-This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](./remix/#usematches) for more information.
+This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](./remix#usematches) for more information.
 
 ### unstable_shouldReload
 
@@ -1270,6 +1270,6 @@ export default function Page() {
 [response]: https://developer.mozilla.org/en-US/docs/Web/API/Response
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
-[form]: ./remix/#form
-[form action]: ./remix/#form-action
+[form]: ./remix#form
+[form action]: ./remix#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
