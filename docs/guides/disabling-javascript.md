@@ -46,7 +46,7 @@ export default function App() {
       <body>
         <Outlet />
         {/* include the scripts, or not! */}
-        {includeScripts && <Scripts />}
+        {includeScripts ? <Scripts /> : null}
       </body>
     </html>
   );
