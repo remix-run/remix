@@ -17,7 +17,7 @@ import {
   useHref,
   useResolvedPath
 } from "react-router-dom";
-import type { LinkProps, NavLinkProps, OutletProps } from "react-router-dom";
+import type { LinkProps, NavLinkPropsOutletProps } from "react-router-dom";
 
 import type { AppData } from "./data";
 import type { FormEncType, FormMethod } from "./data";
