@@ -1588,6 +1588,12 @@ if (process.env.NODE_ENV === "production") {
   db = global.__db;
 }
 
+// this is needed to correctly close the process when you try to
+// stop the process of your Remix application
+db.$on("beforeExit", () => {
+  process.exit(0);
+});
+
 export { db };
 ```
 
