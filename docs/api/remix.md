@@ -896,12 +896,13 @@ function UserAvatar({ partialUser }) {
       onMouseLeave={() => setShowDetails(false)}
     >
       <img src={partialUser.profileImageUrl} />
-      {showDetails &&
-        (userDetails.type === "done" ? (
+      {showDetails ? (
+        userDetails.type === "done" ? (
           <UserPopup user={userDetails.data} />
         ) : (
           <UserPopupLoading />
-        ))}
+        )
+      ) : null}
     </div>
   );
 }
@@ -933,10 +934,12 @@ function CitySearchCombobox() {
               cities.submit(event.target.form)
             }
           />
-          {cities.state === "submitting" && <Spinner />}
+          {cities.state === "submitting" ? (
+            <Spinner />
+          ) : null}
         </div>
 
-        {cities.data && (
+        {cities.data ? (
           <ComboboxPopover className="shadow-popup">
             {cities.data.error ? (
               <p>Failed to load cities :(</p>
@@ -953,7 +956,7 @@ function CitySearchCombobox() {
               <span>No results found</span>
             )}
           </ComboboxPopover>
-        )}
+        ) : null}
       </Combobox>
     </cities.Form>
   );
