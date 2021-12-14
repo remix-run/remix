@@ -352,11 +352,11 @@ async function createServerBuild(
     bundle: true,
     logLevel: "silent",
     incremental: options.incremental,
-    sourcemap: options.sourcemap ? "inline" : false,
+    sourcemap: true,
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
-    publicPath: config.publicPath,
+    publicPath: "./",
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
