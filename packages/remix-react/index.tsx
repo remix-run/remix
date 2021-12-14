@@ -18,8 +18,7 @@ export type {
   SubmitOptions,
   SubmitFunction,
   RemixNavLinkProps as NavLinkProps,
-  RemixLinkProps as LinkProps,
-  OutletProps
+  RemixLinkProps as LinkProps
 } from "./components";
 export {
   Meta,
