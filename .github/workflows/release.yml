@@ -19,16 +19,16 @@ jobs:
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
 
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
+      # - run: echo "::set-output name=dir::$(yarn cache dir)"
+      #   id: yarn-cache
 
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+      # - name: Restore dependency cache
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: "${{ steps.yarn-cache.outputs.dir }}"
+      #     key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-yarn-cache-
 
       - name: Install dependencies
         run: yarn --frozen-lockfile
