@@ -13,8 +13,7 @@
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx . --fix",
-    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint",
-    "prepare": "husky install"
+    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint"
   },
   "workspaces": [
     "packages/create-remix",
@@ -69,10 +68,8 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "express": "^4.17.1",
     "glob": "^7.1.6",
-    "husky": "7.0.2",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",
-    "lint-staged": "11.2.0",
     "meow": "^7.1.1",
     "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
@@ -89,12 +86,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --cache --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": "prettier --write"
   }
 }
