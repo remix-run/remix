@@ -12,5 +12,6 @@ Remix is built on top of React Router v6. Here are the most common that you'll u
 - [`useNavigate`](https://reactrouter.com/docs/api#usenavigate)
 - [`useParams`](https://reactrouter.com/docs/api#useparams)
 - [`useResolvedPath`](https://reactrouter.com/docs/api#useresolvedpath)
+- [`useOutletContext`](https://reactrouter.com/docs/en/v6/api#useoutletcontext)
 
 Most of the other APIs are either used internally by Remix or just aren't commonly needed in your app.
