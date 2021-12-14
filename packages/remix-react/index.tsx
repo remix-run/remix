@@ -7,6 +7,7 @@ export {
   useNavigate,
   useNavigationType,
   useOutlet,
+  useOutletContext,
   useParams,
   useResolvedPath,
   useSearchParams
