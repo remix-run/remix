@@ -659,8 +659,8 @@ export function Meta() {
 }
 
 /**
- * Tracks whether Remix has finished hydrating or not,
- * so scripts can be skipped during client-side updates.
+ * Tracks whether Remix has finished hydrating or not, so scripts can be skipped
+ * during client-side updates.
  */
 let isHydrated = false;
 
