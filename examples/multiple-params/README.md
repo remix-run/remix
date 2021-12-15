@@ -2,6 +2,28 @@
 
 This shows how you can structure your routes to support multiple parameters.
 
+Here's the file structure for this project:
+
+```
+app
+├── db.ts
+├── entry.client.tsx
+├── entry.server.tsx
+├── root.tsx
+└── routes
+    ├── clients
+    │   ├── $clientId
+    │   │   ├── index.tsx
+    │   │   ├── invoices
+    │   │   │   ├── $invoiceId.tsx
+    │   │   │   └── index.tsx
+    │   │   └── invoices.tsx
+    │   ├── $clientId.tsx
+    │   └── index.tsx
+    ├── clients.tsx
+    └── index.tsx
+```
+
 Here's the output of `remix routes` for this project:
 
 ```jsx
