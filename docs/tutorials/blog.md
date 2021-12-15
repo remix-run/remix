@@ -159,7 +159,7 @@ TypeScript is mad, so let's help it out:
 ```tsx filename=app/routes/posts/index.tsx lines=[3-6,9,19,23]
 import { Link, useLoaderData } from "remix";
 
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
