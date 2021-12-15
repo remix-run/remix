@@ -32,7 +32,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -56,7 +56,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -89,7 +89,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -108,7 +108,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
@@ -132,12 +132,14 @@ export function meta() {
 }
 
 export default function Posts() {
-  let posts = useLoaderData();
+  const posts = useLoaderData();
   return <PostsView posts={posts} />;
 }
 ```
 
 This is no longer a module side effect (runs when the module is imported), but rather a side effect of the loader (runs when the loader is called). The compiler will now remove both the loader _and the prisma import_ because it isn't used anywhere else in the module.
+
+Occasionally, the build may have trouble tree-shaking code that should only run on the server. If this happens, you can use the convention of naming a file with the extension `.server` before the file type, for example `db.server.ts`. Adding `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser.
 
 ### Higher Order Functions
 
@@ -148,8 +150,8 @@ import { redirect } from "remix";
 
 export function removeTrailingSlash(loader) {
   return function (arg) {
-    let { request } = arg;
-    let url = new URL(request.url);
+    const { request } = arg;
+    const url = new URL(request.url);
     if (url.pathname.endsWith("/")) {
       return redirect(request.url.slice(0, -1), {
         status: 308
@@ -165,7 +167,7 @@ And then try to use it like this:
 ```js bad filename=app/root.js
 import { removeTrailingSlash } from "~/http";
 
-export let loader = removeTrailingSlash(({ request }) => {
+export const loader = removeTrailingSlash(({ request }) => {
   return { some: "data" };
 });
 ```
@@ -191,7 +193,7 @@ And then use it like this:
 ```js bad filename=app/root.js
 import { removeTrailingSlash } from "~/http";
 
-export let loader = ({ request }) => {
+export const loader = ({ request }) => {
   removeTrailingSlash(request.url);
   return { some: "data" };
 };
@@ -201,7 +203,7 @@ It reads much nicer as well when you've got a lot of these:
 
 ```ts
 // this
-export let loader = ({ request }) => {
+export const loader = ({ request }) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, session => {
       return requireUser(session, user => {
@@ -212,10 +214,10 @@ export let loader = ({ request }) => {
 };
 
 // vs. this
-export let loader = ({ request }) => {
+export const loader = ({ request }) => {
   removeTrailingSlash(request.url);
-  let session = await getSession(request);
-  let user = await requireUser(session);
+  const session = await getSession(request);
+  const user = await requireUser(session);
   return json(user);
 };
 ```
@@ -231,7 +233,7 @@ Unlike the browser bundles, Remix doesn't try to remove _browser only code_ from
 ```js bad lines=3
 import { loadStripe } from "@stripe/stripe-js";
 
-let stripe = await loadStripe(window.ENV.stripe);
+const stripe = await loadStripe(window.ENV.stripe);
 
 export async function redirectToStripeCheckout(sessionId) {
   return stripe.redirectToCheckout({ sessionId });
@@ -242,7 +244,7 @@ export async function redirectToStripeCheckout(sessionId) {
 
 ### Initializing Browser Only APIs
 
-The most common scenario is intitializing a third party API when your module is imported. There are a couple ways to easily deal with this.
+The most common scenario is initializing a third party API when your module is imported. There are a couple ways to easily deal with this.
 
 #### Window Guard
 
@@ -266,7 +268,7 @@ This strategy defers initialization until the library is actually used:
 import { loadStripe } from "@stripe/stripe-js";
 
 export async function redirectToStripeCheckout(sessionId) {
-  let stripe = await loadStripe(window.ENV.stripe);
+  const stripe = await loadStripe(window.ENV.stripe);
   return stripe.redirectToCheckout({ sessionId });
 }
 ```
@@ -285,7 +287,7 @@ async function getStripe() {
 }
 
 export async function redirectToStripeCheckout(sessionId) {
-  let stripe = await getStripe();
+  const stripe = await getStripe();
   return stripe.redirectToCheckout({ sessionId });
 }
 ```
@@ -300,11 +302,11 @@ Another common case is code that calls browser-only APIs while rendering. When s
 
 ```js bad lines=2
 function useLocalStorage(key) {
-  let [state, setState] = useState(
+  const [state, setState] = useState(
     localStorage.getItem(key)
   );
 
-  let setWithLocalStorage = nextState => {
+  const setWithLocalStorage = nextState => {
     setState(nextState);
   };
 
@@ -316,13 +318,13 @@ You can fix this by moving the code into `useEffect`, which only runs in the bro
 
 ```js [2,4-6]
 function useLocalStorage(key) {
-  let [state, setState] = useState(null);
+  const [state, setState] = useState(null);
 
   useEffect(() => {
     setState(localStorage.getItem(key));
   }, []);
 
-  let setWithLocalStorage = nextState => {
+  const setWithLocalStorage = nextState => {
     setState(nextState);
   };
 
