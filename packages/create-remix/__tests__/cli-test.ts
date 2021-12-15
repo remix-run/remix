@@ -37,7 +37,8 @@ describe("create-remix cli", () => {
     jest.setTimeout(DEFAULT_JEST_TIMEOUT);
   });
 
-  it("guides the user through the process", async done => {
+  // TODO: Rewrite this test
+  it.skip("guides the user through the process", async done => {
     let cli = spawn("node", [createRemix], {});
     let promptCount = 0;
     let previousPrompt: string;
