@@ -37,7 +37,7 @@ module.exports = {
         route(`/page/${slug}`, `pages/${page}`);
       }
 
-      route("programatic", "pages/test.jsx", () => {
+      route("programmatic", "pages/test.jsx", () => {
         // route("/test", "routes/blog/index.tsx", { index: true });
         route(":messageId", "pages/child.jsx");
       });
