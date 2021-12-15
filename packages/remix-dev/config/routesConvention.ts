@@ -30,17 +30,17 @@ export function defineConventionalRoutes(
 
   // First, find all route modules in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
-    let routeId = createRouteId(path.join("routes", file));
-
-    if (isRouteModuleFile(file)) {
-      files[routeId] = path.join("routes", file);
-      return;
-    }
-
     if (
       ignoredFilePatterns &&
       ignoredFilePatterns.some(pattern => minimatch(file, pattern))
     ) {
+      return;
+    }
+
+    let routeId = createRouteId(path.join("routes", file));
+
+    if (isRouteModuleFile(file)) {
+      files[routeId] = path.join("routes", file);
       return;
     }
 
