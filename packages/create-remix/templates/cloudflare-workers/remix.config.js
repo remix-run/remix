@@ -6,5 +6,6 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "build",
-  devServerBroadcastDelay: 1000
+  devServerBroadcastDelay: 1000,
+  ignoredRouteFiles: [".*"]
 };
