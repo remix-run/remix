@@ -3022,7 +3022,6 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
-
 💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(request: Request, redirectTo: string)`.
 
 <details>
@@ -3284,7 +3283,6 @@ We should probably give people the ability to see that they're logged in and a w
 <details>
 
 <summary>app/utils/session.server.ts</summary>
-
 
 ```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
 import bcrypt from "bcrypt";
