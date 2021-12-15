@@ -7,5 +7,6 @@ module.exports = {
   publicPath: "/build/",
   serverModuleFormat: "esm",
   serverBuildDirectory: "build",
-  devServerBroadcastDelay: 1000
+  devServerBroadcastDelay: 1000,
+  ignoredRouteFiles: [".*"]
 };
