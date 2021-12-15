@@ -77,7 +77,8 @@ describe("create-remix cli", () => {
             "Fly.io",
             "Netlify",
             "Vercel",
-            "Cloudflare Workers"
+            "Cloudflare Workers",
+            "Cloudflare Pages"
           ]);
           cli.stdin.write(keys.enter);
           break;
