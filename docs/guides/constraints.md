@@ -244,7 +244,7 @@ export async function redirectToStripeCheckout(sessionId) {
 
 ### Initializing Browser Only APIs
 
-The most common scenario is intitializing a third party API when your module is imported. There are a couple ways to easily deal with this.
+The most common scenario is initializing a third party API when your module is imported. There are a couple ways to easily deal with this.
 
 #### Window Guard
 
