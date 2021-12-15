@@ -148,7 +148,7 @@ describe("form", () => {
     `);
   });
 
-  it.only("posts with the correct checkbox data", async () => {
+  it("posts with the correct checkbox data", async () => {
     await page.goto(`${testServer}/methods`);
     await reactIsHydrated(page);
 
