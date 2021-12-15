@@ -1,3 +1,4 @@
+import { getType } from "mime";
 import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
@@ -24,17 +25,6 @@ export function createRequestHandler<Env = any>({
   };
 }
 
-type EnvWithAssets = Record<string, unknown> & {
-  ASSETS: { fetch: typeof fetch };
-};
-
-async function handleAsset(request: Request, env: unknown) {
-  let envWithAssets = env as EnvWithAssets;
-
-  const response = await envWithAssets.ASSETS.fetch(request);
-  if (response.ok) return response;
-}
-
 declare const process: any;
 
 export function createFetchHandler<Env = any>({
@@ -52,11 +42,17 @@ export function createFetchHandler<Env = any>({
     let response: Response | undefined;
 
     let url = new URL(context.request.url);
-    response =
-      // TODO: Remove this once a fix has been meged to wranger@v2
-      process.env.NODE_ENV === "development" && url.pathname === "/"
-        ? undefined
-        : await handleAsset(context.request.clone(), context.env);
+    try {
+      response = await context.next();
+      response = response.ok ? response : undefined;
+    } catch {}
+    // This is a known CF bug in the Pages runtime
+    if (response) {
+      let contentType = getType(url.pathname);
+      if (contentType) {
+        response.headers.set("Content-Type", contentType);
+      }
+    }
 
     if (!response) {
       response = await handleRequest(context);
