@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/server-runtime",
   "description": "Server runtime for Remix",
-  "version": "1.0.6",
+  "version": "0.0.0-experimental-0a311ab2",
   "license": "MIT",
   "main": "./index.js",
   "module": "./esm/index.js",
