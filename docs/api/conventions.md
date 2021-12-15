@@ -202,7 +202,7 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 - `/blog/once-upon-a-time`
 - `/blog/how-to-ride-a-bike`
 
-On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId`) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
+On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app](https://github.com/remix-run/remix/tree/main/examples/multiple-params)) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
 import { useParams } from "remix";

@@ -1,4 +1,29 @@
-# Welcome to Remix!
+# Multiple Params Example
+
+This shows how you can structure your routes to support multiple parameters.
+
+Here's the output of `remix routes` for this project:
+
+```jsx
+<Routes>
+  <Route file="root.tsx">
+    <Route path="clients" file="routes/clients.tsx">
+      <Route path=":clientId" file="routes/clients/$clientId.tsx">
+        <Route path="invoices" file="routes/clients/$clientId/invoices.tsx">
+          <Route
+            path=":invoiceId"
+            file="routes/clients/$clientId/invoices/$invoiceId.tsx"
+          />
+          <Route index file="routes/clients/$clientId/invoices/index.tsx" />
+        </Route>
+        <Route index file="routes/clients/$clientId/index.tsx" />
+      </Route>
+      <Route index file="routes/clients/index.tsx" />
+    </Route>
+    <Route index file="routes/index.tsx" />
+  </Route>
+</Routes>
+```
 
 - [Remix Docs](https://remix.run/docs)
 
@@ -7,6 +32,7 @@
 From your terminal:
 
 ```sh
+npm install
 npm run dev
 ```
 
@@ -26,28 +52,8 @@ Then run the app in production mode:
 npm start
 ```
 
-Now you'll need to pick a host to deploy it to.
+## Preview
 
-### DIY
+Open this example on [CodeSandbox](https://codesandbox.com):
 
-If you're familiar with deploying node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `remix build`
-
-- `build/`
-- `public/build/`
-
-### Using a Template
-
-When you ran `npx create-remix@latest` there were a few choices for hosting. You can run that again to create a new project, then copy over your `app/` folder to the new project that's pre-configured for your target server.
-
-```sh
-cd ..
-# create a new project, and pick a pre-configured host
-npx create-remix@latest
-cd my-new-remix-app
-# remove the new project's app (not the old one!)
-rm -rf app
-# copy your app over
-cp -R ../my-old-remix-app/app app
-```
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/multiple-params)

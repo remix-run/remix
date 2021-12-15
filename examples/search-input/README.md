@@ -1,4 +1,4 @@
-# Welcome to Remix!
+# Search Input Example
 
 This is an example of building a search input with Remix.
 
@@ -33,4 +33,4 @@ npm start
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/search-tv-show)
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/search-input)
