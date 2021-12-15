@@ -37,11 +37,6 @@ export function defineConventionalRoutes(
       return;
     }
 
-    // https://github.com/remix-run/remix/issues/391
-    if (path.basename(file).startsWith(".")) {
-      return;
-    }
-
     if (
       ignoredFilePatterns &&
       ignoredFilePatterns.some(pattern => minimatch(file, pattern))
