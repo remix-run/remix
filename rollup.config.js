@@ -390,12 +390,98 @@ function remixCloudflareWorkers() {
       ]
     },
     {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: `${SOURCE_DIR}/index.ts`,
+      output: {
+        banner: createBanner("@remix-run/cloudflare-workers", version),
+        dir: `${OUTPUT_DIR}/esm`,
+        format: "esm",
+        preserveModules: true
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"]
+        }),
+        nodeResolve({ extensions: [".ts", ".tsx"] })
+      ]
+    },
+    {
       external() {
         return true;
       },
       input: `${SOURCE_DIR}/magicExports/platform.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-workers", version),
+        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        format: "esm"
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"]
+        })
+      ]
+    }
+  ];
+}
+
+/** @type {import("rollup").RollupOptions[]} */
+function remixCloudflarePages() {
+  let SOURCE_DIR = "packages/remix-cloudflare-pages";
+  let OUTPUT_DIR = "build/node_modules/@remix-run/cloudflare-pages";
+  let version = getVersion(SOURCE_DIR);
+
+  return [
+    {
+      external() {
+        return true;
+      },
+      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      output: {
+        banner: createBanner("@remix-run/cloudflare-pages", version),
+        dir: `${OUTPUT_DIR}/magicExports`,
+        format: "cjs"
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"]
+        })
+      ]
+    },
+    {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: `${SOURCE_DIR}/index.ts`,
+      output: {
+        banner: createBanner("@remix-run/cloudflare-pages", version),
+        dir: `${OUTPUT_DIR}/esm`,
+        format: "esm",
+        preserveModules: true
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"]
+        }),
+        nodeResolve({ extensions: [".ts", ".tsx"] })
+      ]
+    },
+    {
+      external() {
+        return true;
+      },
+      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      output: {
+        banner: createBanner("@remix-run/cloudflare-pages", version),
         dir: `${OUTPUT_DIR}/magicExports/esm`,
         format: "esm"
       },
@@ -451,6 +537,7 @@ function getServerConfig(name) {
 function remixServerAdapters() {
   return [
     getServerConfig("architect"),
+    getServerConfig("cloudflare-pages"),
     getServerConfig("cloudflare-workers"),
     getServerConfig("express"),
     getServerConfig("vercel"),
@@ -631,6 +718,7 @@ export default function rollup(options) {
     ...remixDev(options),
     ...remixServerRuntime(options),
     ...remixNode(options),
+    ...remixCloudflarePages(options),
     ...remixCloudflareWorkers(options),
     ...remixServerAdapters(options),
     ...remixReact(options),

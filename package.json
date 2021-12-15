@@ -19,6 +19,7 @@
     "packages/create-remix",
     "packages/remix",
     "packages/remix-architect",
+    "packages/remix-cloudflare-pages",
     "packages/remix-cloudflare-workers",
     "packages/remix-dev",
     "packages/remix-eslint-config",

@@ -1022,6 +1022,11 @@
   resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-2.2.2.tgz#1bced16bba801d7af987da835467545bb5cc7ac6"
   integrity sha512-kaMn2rueJ0PL1TYVGknTCh0X0x0d9G+FNXAFep7/4uqecEZoQb/63o6rOmMuiqI09zLuHV6xhKRXinokV/MY9A==
 
+"@cloudflare/workers-types@^3.2.0":
+  version "3.2.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-3.2.0.tgz#df300466f5f8a03b205bdd533990017b0538496e"
+  integrity sha512-y0+f7QeB5/fMMdU0wSwvBB18yE9kAD2s7Wben8a4uI4f/EJyE+eJrai5QO52Pq8EmWP0vRpKqZh0qU857WhY2A==
+
 "@cnakazawa/watch@^1.0.3":
   version "1.0.4"
   resolved "https://registry.npmjs.org/@cnakazawa/watch/-/watch-1.0.4.tgz#f864ae85004d0fcab6f50be9141c4da368d1656a"

@@ -1,6 +1,6 @@
 {
-  "name": "@remix-run/cloudflare-workers",
-  "description": "Cloudflare worker request handler for Remix",
+  "name": "@remix-run/cloudflare-pages",
+  "description": "Cloudflare Pages request handler for Remix",
   "version": "1.0.6",
   "license": "MIT",
   "main": "./index.js",
@@ -8,19 +8,18 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
-    "directory": "packages/remix-cloudflare-workers"
+    "directory": "packages/remix-cloudflare-pages"
   },
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.1.3",
     "@remix-run/server-runtime": "1.0.6"
   },
   "peerDependencies": {
-    "@cloudflare/workers-types": "^2.2.2"
+    "@cloudflare/workers-types": "^3.2.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^2.2.2"
+    "@cloudflare/workers-types": "^3.2.0"
   }
 }
