@@ -24,7 +24,7 @@ import darkStylesUrl from "~/styles/dark.css";
  *
  * https://remix.run/api/conventions#links
  */
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
@@ -115,7 +115,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   let message;
   switch (caught.status) {

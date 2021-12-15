@@ -5,19 +5,22 @@ import { db } from "~/utils/db.server";
 
 type LoaderData = { randomJoke: Joke };
 
-export let loader = async () => {
+export const loader = async () => {
   const count = await db.joke.count();
   const randomRowNumber = Math.floor(Math.random() * count);
-  let [randomJoke] = await db.joke.findMany({ take: 1, skip: randomRowNumber });
+  const [randomJoke] = await db.joke.findMany({
+    take: 1,
+    skip: randomRowNumber,
+  });
   if (!randomJoke) {
     throw new Response("No jokes to be found!", { status: 404 });
   }
-  let data: LoaderData = { randomJoke };
+  const data: LoaderData = { randomJoke };
   return data;
 };
 
 export default function JokesIndexRoute() {
-  let data = useLoaderData<LoaderData>();
+  const data = useLoaderData<LoaderData>();
 
   return (
     <div>
@@ -29,7 +32,7 @@ export default function JokesIndexRoute() {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   if (caught.status === 404) {
     return (

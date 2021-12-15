@@ -8,7 +8,7 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  let markup = ReactDOMServer.renderToString(
+  const markup = ReactDOMServer.renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
