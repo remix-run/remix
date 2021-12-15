@@ -81,6 +81,7 @@ async function run() {
         { name: "Fly.io", value: "fly" },
         { name: "Netlify", value: "netlify" },
         { name: "Vercel", value: "vercel" },
+        { name: "Cloudflare Pages", value: "cloudflare-pages" },
         { name: "Cloudflare Workers", value: "cloudflare-workers" }
       ]
     },
