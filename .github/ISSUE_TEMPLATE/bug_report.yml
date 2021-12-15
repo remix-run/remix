@@ -45,6 +45,11 @@ body:
       label: What version of Remix are you using?
     validations:
       required: true
+  - type: input
+    attributes:
+      label: What version of Node are you using? Minimum supported version is 14.
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: Steps to Reproduce
