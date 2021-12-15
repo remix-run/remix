@@ -10,7 +10,7 @@ let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
 let adapters = ["architect", "express", "netlify", "vercel"];
-let runtimes = ["cloudflare-workers", "node"];
+let runtimes = ["cloudflare-workers", "cloudflare-pages", "node"];
 let core = ["dev", "server-runtime", "react", "eslint-config"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
