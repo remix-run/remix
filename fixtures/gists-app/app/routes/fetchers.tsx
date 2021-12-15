@@ -84,6 +84,7 @@ export async function action({ request }: { request: Request }) {
 export default function Tasks() {
   let tasks = useLoaderData<Task[]>();
   let [searchParams] = useSearchParams();
+  let fetcher = useFetcher();
 
   return (
     <div>
@@ -103,6 +104,11 @@ export default function Tasks() {
       ))}
       <p>
         <Link to="/gists">Gists</Link>
+      </p>
+
+      <h2>Atomic Click This Sucker</h2>
+      <p>
+        <button onClick={() => fetcher.load("/fetchers")}>Load</button>
       </p>
     </div>
   );
