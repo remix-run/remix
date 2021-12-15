@@ -18,6 +18,7 @@ let fakeGists = [
 ];
 
 export async function loader() {
+  await new Promise(res => setTimeout(res, 5000));
   if (process.env.NODE_ENV !== "development") {
     return Promise.resolve(fakeGists);
   }

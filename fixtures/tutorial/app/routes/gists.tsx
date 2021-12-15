@@ -1,7 +1,8 @@
 import type { LoaderFunction, ActionFunction } from "remix";
 import { redirect, useLoaderData } from "remix";
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
+  await new Promise(res => setTimeout(res, 2000));
   return fetch("https://api.github.com/gists");
 };
 
@@ -32,6 +33,16 @@ export function meta() {
     title: "Public Gists",
     description: "View the latest gists from the public"
   };
+}
+
+export function links() {
+  return [
+    {
+      rel: "preload",
+      href: "/banner.jpg",
+      as: "image"
+    }
+  ];
 }
 
 export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {

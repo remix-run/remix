@@ -18,6 +18,9 @@ let fakeGists = [
 ];
 
 export async function loader({ params }) {
+  console.log("artificially slow loader!");
+  await new Promise(res => setTimeout(res, 5000));
+  console.log("slow loader is done!");
   let { username } = params;
 
   if (username === "mjijackson") {

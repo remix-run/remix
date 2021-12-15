@@ -132,11 +132,16 @@ function sendRemixResponse(
     res.set("Connection", "close");
   }
 
+  res.flushHeaders();
+
   if (Buffer.isBuffer(response.body)) {
+    console.log("adapter", "buffer");
     res.end(response.body);
   } else if (response.body?.pipe) {
+    console.log("adapter", "piping");
     response.body.pipe(res);
   } else {
+    console.log("adapter", "end");
     res.end();
   }
 }
