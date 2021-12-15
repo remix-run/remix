@@ -37,9 +37,8 @@ export function defineConventionalRoutes(
       return;
     }
 
-    let routeId = createRouteId(path.join("routes", file));
-
     if (isRouteModuleFile(file)) {
+      let routeId = createRouteId(path.join("routes", file));
       files[routeId] = path.join("routes", file);
       return;
     }
