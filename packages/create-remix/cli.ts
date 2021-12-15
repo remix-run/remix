@@ -157,7 +157,11 @@ async function run() {
   ["dependencies", "devDependencies"].forEach(pkgKey => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
-        appPkg[pkgKey][key] = `^${cliPkgJson.version}`;
+        // Templates created from experimental, alpha, beta releases should pin
+        // to a specific version
+        appPkg[pkgKey][key] = String(cliPkgJson.version).includes("-")
+          ? cliPkgJson.version
+          : "^" + cliPkgJson.version;
       }
     }
   });
