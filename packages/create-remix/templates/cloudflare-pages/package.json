@@ -6,7 +6,7 @@
     "dev:remix": "remix watch",
     "dev:wrangler": "wrangler pages dev ./public --watch ./build",
     "dev": "cross-env NODE_ENV=development run-p dev:*",
-    "start": "npm run wrangler:dev"
+    "start": "npm run dev:wrangler"
   },
   "dependencies": {
     "@remix-run/cloudflare-pages": "*"
