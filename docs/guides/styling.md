@@ -96,7 +96,7 @@ Each route can add style links to the page, for example:
 import styles from "~/styles/dashboard.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -104,7 +104,7 @@ export function links() {
 import styles from "~/styles/accounts.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -112,7 +112,7 @@ export function links() {
 import styles from "~/styles/sales.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
