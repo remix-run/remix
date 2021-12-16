@@ -166,8 +166,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         );
       }
 
-      let data = await extractData(result);
-      return data;
+      return extractData(result);
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);
     }
@@ -186,6 +185,9 @@ function createAction(route: EntryRoute) {
       throw result;
     }
 
+    let redirect = await checkRedirect(result);
+    if (redirect) return redirect;
+
     if (isCatchResponse(result)) {
       throw new CatchValue(
         result.status,
@@ -193,9 +195,6 @@ function createAction(route: EntryRoute) {
         await extractData(result.clone())
       );
     }
-
-    let redirect = await checkRedirect(result);
-    if (redirect) return redirect;
 
     return extractData(result);
   };

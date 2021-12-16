@@ -73,26 +73,26 @@ function getActionInit(
 ): RequestInit {
   let { encType, method, formData } = submission;
 
-  if (encType !== "application/x-www-form-urlencoded") {
-    throw new Error(
-      `Only "application/x-www-form-urlencoded" forms are supported right now.`
-    );
-  }
+  let headers = undefined;
+  let body = formData;
 
-  let body = new URLSearchParams();
-  for (let [key, value] of formData) {
-    invariant(
-      typeof value === "string",
-      "File inputs are not supported right now"
-    );
-    body.append(key, value);
+  if (encType === "application/x-www-form-urlencoded") {
+    body = new URLSearchParams();
+    for (let [key, value] of formData) {
+      invariant(
+        typeof value === "string",
+        `File inputs are not supported with encType "application/x-www-form-urlencoded", please use "multipart/form-data" instead.`
+      );
+      body.append(key, value);
+    }
+    headers = { "Content-Type": encType };
   }
 
   return {
     method,
-    body: body.toString(),
+    body,
     signal,
     credentials: "same-origin",
-    headers: { "Content-Type": encType }
+    headers
   };
 }

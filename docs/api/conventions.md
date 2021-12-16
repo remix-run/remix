@@ -14,7 +14,7 @@ This file has a few build and development configuration options, but does not ac
 ```tsx filename=remix.config.js
 module.exports = {
   appDirectory: "app",
-  browserBuildDirectory: "public/build",
+  assetsBuildDirectory: "public/build",
   devServerPort: 8002,
   publicPath: "/build/",
   serverBuildDirectory: "build",
@@ -65,7 +65,7 @@ exports.routes = async (defineRoutes) => {
 }
 ```
 
-### browserBuildDirectory
+### assetsBuildDirectory
 
 The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
 

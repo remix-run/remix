@@ -3,13 +3,13 @@ import type { MetaFunction, LinksFunction } from "remix";
 
 import stylesUrl from "~/styles/demos/about.css";
 
-export let meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return {
     title: "About Remix"
   };
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
@@ -31,7 +31,7 @@ export default function Index() {
         <p>
           Wait a sec...<em>its children</em>? To understand what we mean by
           this,{" "}
-          <a href="https://remix.run/tutorial/4-nested-routes-params">
+          <a href="https://remix.run/guides/routing#what-are-nested-routes">
             read all about nested routes in the docs
           </a>
           .

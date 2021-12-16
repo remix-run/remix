@@ -13,7 +13,7 @@ import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";
 
 // https://remix.run/api/app#links
-export let links = () => {
+export const links = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
@@ -36,7 +36,7 @@ export default function App() {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#errorboundary
+// https://remix.run/api/conventions#errorboundary
 export function ErrorBoundary({ error }) {
   console.error(error);
   return (
@@ -56,9 +56,9 @@ export function ErrorBoundary({ error }) {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#catchboundary
+// https://remix.run/api/conventions#catchboundary
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   let message;
   switch (caught.status) {
@@ -106,7 +106,7 @@ function Document({ children, title }) {
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
       </body>
     </html>
   );

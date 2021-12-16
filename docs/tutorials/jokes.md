@@ -9,7 +9,7 @@ You want to learn Remix? You're in the right place. Let's build [Remix Jokes](ht
 
 <docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
 
-<a href="https://remix-jokes.lol"><img src="https://remix-jokes.lol/social.png" style="aspect-ratio: 300 / 157;"/></a>
+<a href="https://remix-jokes.lol"><img src="https://remix-jokes.lol/social.png" style="aspect-ratio: 300 / 157; width: 100%"/></a>
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
@@ -3414,9 +3414,9 @@ import {
   Link,
   LinksFunction,
   LoaderFunction,
+  Outlet,
   useLoaderData
 } from "remix";
-import { Outlet } from "remix";
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";
@@ -6199,4 +6199,4 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 
 ## Conclusion
 
-Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/docs/en/v1/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journy!
+Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journy!
