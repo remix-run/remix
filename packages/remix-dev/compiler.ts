@@ -369,6 +369,12 @@ async function createServerBuild(
         // browser build and it's not there yet.
         if (id === "./assets.json" && importer === "<stdin>") return true;
 
+        // Include direct imports to `remix` in the bundle to remove `require("remix")` in the
+        // bundle. These will be mapped to their underlying package such as `@remix-run/react`.
+        if (id === "remix") {
+          return false;
+        }
+
         // Mark all bare imports as external. They will be require()'d at
         // runtime from node_modules.
         if (isBareModuleId(id)) {
