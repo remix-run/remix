@@ -75,20 +75,15 @@ Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>
 
 ### `<PrefetchPageLinks />`
 
-When you use a non-none `prefetch` prop in a `<Link>`, Remix internally makes use of `<PrefetchPageLinks>` to add link[rel=prefetch] tags for all the resources and the HTML required for the path. If you want to prefetch a particular path, but don't want to render an anchor tag for same, you may use `<PrefetchPageLinks />`.
+This component renders all of the `<link rel="prefetch">` and `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of a given page.
+
+This is the component `<Link rel="prefetch">` uses internally, but you render this component to prefetch a page for any other reason.
 
 ```tsx
-<>
-  {/* renders an anchor tag and adds appropiate link[rel=prefetch] tags */}
-  <Link to="your-path" prefetch="render" />
-
-  {/* only adds adds appropiate link[rel=prefetch] tags */}
-  <PrefetchPageLinks page="/absolute/path/to/your-path" /> 
-</>
-
+<PrefetchPageLinks page="/absolute/path/to/your-path" />
 ```
 
-**Note:** You need to pass absolute path to PrefetchPageLinks.
+**Note:** You need to use an absolute path.
 
 ### `<NavLink>`
 
