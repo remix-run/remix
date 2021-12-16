@@ -348,8 +348,8 @@ async function createServerBuild(
     format: config.serverModuleFormat,
     mainFields:
       config.serverModuleFormat === "esm"
-        ? ["module", "browser", "main"]
-        : ["main", "module", "browser"],
+        ? ["module", "main"]
+        : ["main", "module"],
     target: options.target,
     inject: [reactShim],
     loader: loaders,
