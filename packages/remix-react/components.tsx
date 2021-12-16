@@ -658,6 +658,12 @@ export function Meta() {
   );
 }
 
+/**
+ * Tracks whether Remix has finished hydrating or not, so scripts can be skipped
+ * during client-side updates.
+ */
+let isHydrated = false;
+
 type ScriptProps = Omit<
   React.HTMLProps<HTMLScriptElement>,
   | "children"
@@ -686,6 +692,10 @@ export function Scripts(props: ScriptProps) {
     clientRoutes,
     serverHandoffString
   } = useRemixEntryContext();
+
+  React.useEffect(() => {
+    isHydrated = true;
+  }, []);
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
@@ -758,7 +768,7 @@ window.__remixRouteModules = {${matches
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {initialScripts}
+      {isHydrated ? null : initialScripts}
     </>
   );
 }

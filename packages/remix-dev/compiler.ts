@@ -51,7 +51,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
     }
   }
 
-  console.error(failure?.message || "An unknown build error occured");
+  console.error(failure?.message || "An unknown build error occurred");
 }
 
 interface BuildOptions extends Partial<BuildConfig> {
@@ -356,7 +356,7 @@ async function createServerBuild(
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
-    publicPath: config.publicPath,
+    publicPath: "./",
     define: {
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
@@ -369,7 +369,7 @@ async function createServerBuild(
         // browser build and it's not there yet.
         if (id === "./assets.json" && importer === "<stdin>") return true;
 
-        // Mark all bare imports as external. They will be require()'d at
+        // Mark all bare imports as external. They will be require()'d (or imported if esm) at
         // runtime from node_modules.
         if (isBareModuleId(id)) {
           let packageName = getNpmPackageName(id);
@@ -387,8 +387,13 @@ async function createServerBuild(
             );
           }
 
-          // allow importing css files for bundling / hashing from node_modules.
+          // include .css files from node_modules in the build
+          // so we can get a hashed file name to put into the HTML
           if (id.endsWith(".css")) return false;
+
+          // include "remix" in the build so the server runtime (node) doesn't have to try
+          // to find the magic exports
+          if (packageName === "remix") return false;
 
           return true;
         }

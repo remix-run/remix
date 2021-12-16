@@ -1,2 +1,1 @@
-Remix ignores dotfiles in the routes directory. This file only exists to ensure
-that the app continues to build and run as if the file didn't exist.
+this file should be ignored by Remix

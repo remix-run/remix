@@ -10,7 +10,7 @@ let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
 let adapters = ["architect", "express", "netlify", "vercel"];
-let runtimes = ["cloudflare-workers", "node"];
+let runtimes = ["cloudflare-workers", "cloudflare-pages", "node"];
 let core = ["dev", "server-runtime", "react", "eslint-config"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
@@ -113,52 +113,28 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated remix to version ${nextVersion}`));
 
-  // Update core package versions
-  for (let name of core) {
-    await updatePackageConfig(`remix-${name}`, config => {
-      config.version = nextVersion;
-    });
-    console.log(
-      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
-    );
-  }
-
-  // Update remix-cloudflare-workers and remix-node versions + server-runtime dep
-  for (let name of runtimes) {
-    await updatePackageConfig(`remix-${name}`, config => {
-      config.version = nextVersion;
-      config.dependencies["@remix-run/server-runtime"] = nextVersion;
-    });
-    console.log(
-      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
-    );
-  }
-
-  // Update remix-* node server versions + remix-node dep
-  for (let name of adapters) {
-    await updatePackageConfig(`remix-${name}`, config => {
-      config.version = nextVersion;
-      config.dependencies["@remix-run/node"] = nextVersion;
-    });
-    console.log(
-      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
-    );
-  }
-
   // Update create-remix version
   await updatePackageConfig("create-remix", config => {
     config.version = nextVersion;
   });
   console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
 
-  // Update remix-serve version + remix-express dep
-  await updatePackageConfig("remix-serve", config => {
-    config.version = nextVersion;
-    config.dependencies["@remix-run/express"] = nextVersion;
-  });
-  console.log(
-    chalk.green(`  Updated @remix-run/serve to version ${nextVersion}`)
-  );
+  for (let name of allPackages) {
+    await updatePackageConfig(`remix-${name}`, config => {
+      config.version = nextVersion;
+      for (let pkg of allPackages) {
+        if (config.dependencies?.[`@remix-run/${pkg}`]) {
+          config.dependencies[`@remix-run/${pkg}`] = nextVersion;
+        }
+        if (config.devDependencies?.[`@remix-run/${pkg}`]) {
+          config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
+        }
+      }
+    });
+    console.log(
+      chalk.green(`  Updated @remix-run/${name} to version ${nextVersion}`)
+    );
+  }
 
   // Update remix versions in the examples
   let examples = await fsp.readdir(examplesDir);

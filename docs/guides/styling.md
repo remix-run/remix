@@ -70,7 +70,7 @@ In general, stylesheets added to the page with `<link>` tend to provide the best
 - Changes to components don't break the cache for the styles
 - Changes to the styles don't break the cache for the JavaScript
 
-Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler. Aditionally, adding support directly inside of Remix is not tenable with the vast number of libraries out there.
+Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler. Additionally, adding support directly inside of Remix is not tenable with the vast number of libraries out there.
 
 Remix also supports "runtime" frameworks like styled components where styles are evaluated at runtime but don't require any kind of bundler integration--though we would prefer your stylesheets had a URL instead of being injected into style tags.
 
@@ -80,7 +80,7 @@ The two most popular approaches in the Remix community are route-based styleshee
 
 ## Regular Stylesheets
 
-Remix makes writing plain CSS a viable option even for apps with a lot of UI. In our experience, writing plain CSS had maintenence issues for a few reasons. It was difficult to know:
+Remix makes writing plain CSS a viable option even for apps with a lot of UI. In our experience, writing plain CSS had maintenance issues for a few reasons. It was difficult to know:
 
 - how and when to load CSS, so it was usually all loaded on every page
 - if the class names and selectors you were using were accidentally styling other UI in the app
