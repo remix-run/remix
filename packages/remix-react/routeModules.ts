@@ -51,7 +51,7 @@ export interface MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-  }): HtmlMetaDescriptor;
+  }): HtmlMetaDescriptor | undefined;
 }
 
 /**
