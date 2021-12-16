@@ -143,7 +143,7 @@ Instead we recommend keeping all of your environment variables on the server (al
    export async function redirectToStripeCheckout(
      sessionId
    ) {
-     const stripe = await loadStripe(window.ENV.stripe);
+     const stripe = await loadStripe(window.ENV.STRIPE_PUBLIC_KEY);
      return stripe.redirectToCheckout({ sessionId });
    }
    ```
