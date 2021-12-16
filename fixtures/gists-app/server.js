@@ -5,6 +5,32 @@ const { createRequestHandler } = require("@remix-run/express");
 
 const port = process.env.PORT || 3000;
 
+if (process.env.NODE_ENV === "test") {
+  class MockConsole {
+    assert() {}
+    clear() {}
+    count() {}
+    countReset() {}
+    debug() {}
+    dir() {}
+    dirxml() {}
+    error() {}
+    group() {}
+    groupCollapsed() {}
+    groupEnd() {}
+    info() {}
+    log() {}
+    table() {}
+    time() {}
+    timeEnd() {}
+    timeLog() {}
+    timeStamp() {}
+    trace() {}
+    warn() {}
+  }
+  global.console = new MockConsole();
+}
+
 let app = express();
 
 app.use(compression());
