@@ -1,6 +1,6 @@
 # Welcome to Remix!
 
-- [Remix Docs](https://docs.remix.run)
+- [Remix Docs](https://remix.run/docs)
 - [Customer Dashboard](https://remix.run/dashboard)
 
 ## Development

@@ -1,13 +1,13 @@
 import type { ActionFunction, LoaderFunction } from "remix";
-import { Form, json, useActionData, useLoaderData, useFormAction } from "remix";
-import { Outlet, useHref } from "remix";
+import { Form, json, useActionData, useLoaderData } from "remix";
+import { Outlet } from "remix";
 
 export let loader: LoaderFunction = ({ request }) => {
   let value = new URL(request.url).searchParams.get("subvalue");
   return json(value);
 };
 
-export let action: ActionFunction = ({ request }) => {
+export let action: ActionFunction = () => {
   return json("nested index action data");
 };
 
@@ -24,7 +24,7 @@ export default function NestedFormsIndexLayout() {
 
       <Form method="get">
         {loaderData ? <p>{loaderData}</p> : null}
-        <input type="hidden" name="subvalue" value="data from get submition" />
+        <input type="hidden" name="subvalue" value="data from get submission" />
         <button>Submit Nested Index GET Form</button>
       </Form>
 

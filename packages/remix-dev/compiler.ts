@@ -51,7 +51,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
     }
   }
 
-  console.error(failure?.message || "An unknown build error occured");
+  console.error(failure?.message || "An unknown build error occurred");
 }
 
 interface BuildOptions extends Partial<BuildConfig> {
@@ -345,7 +345,7 @@ async function createServerBuild(
     },
     outfile: path.resolve(config.serverBuildDirectory, "index.js"),
     platform: "node",
-    format: "cjs",
+    format: config.serverModuleFormat,
     target: options.target,
     inject: [reactShim],
     loader: loaders,
@@ -357,6 +357,9 @@ async function createServerBuild(
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(options.mode)
+    },
     plugins: [
       mdxPlugin(config),
       serverRouteModulesPlugin(config),

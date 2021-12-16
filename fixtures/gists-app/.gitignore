@@ -1,4 +1,6 @@
+.DS_Store
 /.cache
 /build
 /public/build
+/public/uploads
 /yarn.lock

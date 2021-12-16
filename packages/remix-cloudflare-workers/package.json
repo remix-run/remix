@@ -2,6 +2,9 @@
   "name": "@remix-run/cloudflare-workers",
   "description": "Cloudflare worker request handler for Remix",
   "version": "1.0.6",
+  "license": "MIT",
+  "main": "./index.js",
+  "module": "./esm/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",

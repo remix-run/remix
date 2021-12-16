@@ -1,5 +1,6 @@
-import { URL } from "url";
 import {
+  // This has been added as a global in node 15+
+  AbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
   formatServerError
@@ -47,7 +48,8 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, _context) => {
-    let request = createRemixRequest(event);
+    let abortController = new AbortController();
+    let request = createRemixRequest(event, abortController);
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
@@ -69,6 +71,10 @@ export function createRequestHandler({
 
     if (cookies.length) {
       response.headers.delete("set-cookie");
+    }
+
+    if (abortController.signal.aborted) {
+      response.headers.set("Connection", "close");
     }
 
     return {
@@ -101,7 +107,10 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
+export function createRemixRequest(
+  event: APIGatewayProxyEventV2,
+  abortController?: AbortController
+): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let url = new URL(event.rawPath + search, `https://${host}`);
@@ -112,6 +121,8 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
     body:
       event.body && event.isBase64Encoded
         ? Buffer.from(event.body, "base64").toString()
-        : event.body
+        : event.body,
+    abortController,
+    signal: abortController?.signal
   });
 }

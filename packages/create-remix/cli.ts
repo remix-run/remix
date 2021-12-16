@@ -81,6 +81,7 @@ async function run() {
         { name: "Fly.io", value: "fly" },
         { name: "Netlify", value: "netlify" },
         { name: "Vercel", value: "vercel" },
+        { name: "Cloudflare Pages", value: "cloudflare-pages" },
         { name: "Cloudflare Workers", value: "cloudflare-workers" }
       ]
     },
@@ -157,7 +158,11 @@ async function run() {
   ["dependencies", "devDependencies"].forEach(pkgKey => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
-        appPkg[pkgKey][key] = `^${cliPkgJson.version}`;
+        // Templates created from experimental, alpha, beta releases should pin
+        // to a specific version
+        appPkg[pkgKey][key] = String(cliPkgJson.version).includes("-")
+          ? cliPkgJson.version
+          : "^" + cliPkgJson.version;
       }
     }
   });

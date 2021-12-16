@@ -2,6 +2,7 @@
   "name": "@remix-run/dev",
   "description": "Dev tools and CLI for Remix",
   "version": "1.0.6",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
@@ -20,6 +21,7 @@
     "fs-extra": "^10.0.0",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
+    "minimatch": "^3.0.4",
     "pretty-ms": "^7.0.1",
     "read-package-json-fast": "^2.0.2",
     "remark-frontmatter": "^4.0.0",

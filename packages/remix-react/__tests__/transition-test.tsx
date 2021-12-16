@@ -2,11 +2,12 @@ import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
 import type { Submission, TransitionManagerInit } from "../transition";
-import { IDLE_FETCHER, IDLE_TRANSITION } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
-  TransitionRedirect
+  TransitionRedirect,
+  IDLE_FETCHER,
+  IDLE_TRANSITION
 } from "../transition";
 
 describe("init", () => {
