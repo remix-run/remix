@@ -405,9 +405,7 @@ Initialize a tailwind config so we can tell it which files to generate classes f
 
 ```js filename=tailwind.config.js lines=[2,3]
 module.exports = {
-  mode: "jit",
-  purge: ["./app/**/*.{ts,tsx}"],
-  darkMode: "media", // or 'media' or 'class'
+  content: ["./app/**/*.{ts,tsx}"],
   theme: {
     extend: {}
   },
