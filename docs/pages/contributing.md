@@ -42,7 +42,7 @@ git checkout dev
 
 ## Think You Found a Bug?
 
-Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [ [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
+Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
 
 ## Proposing New or Changed API?
 
