@@ -12,9 +12,9 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "main": "index.js",
-  "browser": "browser/index.js",
+  "module": "esm/index.js",
   "dependencies": {
-    "react-router-dom": "^6.0.2"
+    "react-router-dom": "^6.1.1"
   },
   "peerDependencies": {
     "react": ">=16.8",

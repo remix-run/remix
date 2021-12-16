@@ -139,6 +139,8 @@ export default function Posts() {
 
 This is no longer a module side effect (runs when the module is imported), but rather a side effect of the loader (runs when the loader is called). The compiler will now remove both the loader _and the prisma import_ because it isn't used anywhere else in the module.
 
+Occasionally, the build may have trouble tree-shaking code that should only run on the server. If this happens, you can use the convention of naming a file with the extension `.server` before the file type, for example `db.server.ts`. Adding `.server` to the filename is a hint to the compiler to not worry about this module or its imports when bundling for the browser.
+
 ### Higher Order Functions
 
 Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
@@ -244,15 +246,15 @@ export async function redirectToStripeCheckout(sessionId) {
 
 The most common scenario is intitializing a third party API when your module is imported. There are a couple ways to easily deal with this.
 
-#### Window Guard
+#### Document Guard
 
-This ensures the library is only initialized if there is a `window`, meaning you're in the browser.
+This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recomend `document` over `window` because server runtimes like Deno has a global `window` available.
 
 ```js [3]
 import firebase from "firebase/app";
 
-if (typeof window !== "undefined") {
-  firebase.initializeApp(window.ENV.firebase);
+if (typeof document !== "undefined") {
+  firebase.initializeApp(document.ENV.firebase);
 }
 
 export { firebase };

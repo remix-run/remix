@@ -3,6 +3,8 @@
   "description": "Server runtime for Remix",
   "version": "1.0.6",
   "license": "MIT",
+  "main": "./index.js",
+  "module": "./esm/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
@@ -15,7 +17,7 @@
     "@types/cookie": "^0.4.0",
     "cookie": "^0.4.1",
     "jsesc": "^3.0.1",
-    "react-router-dom": "^6.0.2",
+    "react-router-dom": "^6.1.1",
     "set-cookie-parser": "^2.4.8",
     "source-map": "^0.7.3"
   },

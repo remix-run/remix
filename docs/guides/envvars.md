@@ -8,6 +8,8 @@ Remix does not do anything directly with environment variables, but there are so
 
 Environment Variables are values that live on the server that your application can use. You may be familiar with the ubiquitous `NODE_ENV`. Your deployment server probably automatically sets that to "production".
 
+<docs-warning>When you run `remix build` we will compile `process.env.NODE_ENV` into whatever the current environment value is.</docs-warning>
+
 Here are some example environment variables you might find in the wild:
 
 - `DATABASE_URL`: The URL for a Postgres Database
@@ -20,6 +22,7 @@ If you're experience with web development is primarily with the JS frameworks in
 
 Environment variables on your server will be handled by your host, for example:
 
+- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
 - [Fly.io](https://fly.io/docs/reference/secrets/)
 - [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
 - [Vercel](https://vercel.com/docs/environment-variables)
@@ -40,7 +43,7 @@ Edit your `.env` file.
 SOME_SECRET=super-secret
 ```
 
-Then updated your package.json dev script to this:
+Then update your package.json dev script to this:
 
 ```json lines=[2] filename=package.json
 {

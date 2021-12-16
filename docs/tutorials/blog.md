@@ -30,13 +30,21 @@ Open up [http://localhost:3000](http://localhost:3000), the app should be runnin
 
 If your application is not running properly at [http://localhost:3000](http://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
 
+<docs-error>
+
+Make sure the `postinstall` script runs before you start the app - if it does not, run it manually (e.g. via `npm run postinstall`).
+
+This might happen if you've added `ignore-scripts = true` to your `npm` configuration or you're using `pnpm` or other package manager that does not automatically run `postinstall` scripts, which Remix relies on.
+
+</docs-error>
+
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
 💿 First, go to `app/root.tsx`
 
-There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, and right after the link to "Home", add a new link to "/posts"
+There's a bit going on in the file. For now, find the `Layout` component and right after the link to "Home", add a new link to "/posts".
 
 💿 Add a link to posts in `app/root.tsx`
 
@@ -46,7 +54,7 @@ There's a bit going on in the file `app/root.tsx`. Find the `Layout` component, 
 </li>
 ```
 
-Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page. Let's create the route now:
+Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page since we've not created this route yet. Let's create the route now:
 
 💿 Create a new file in `app/routes/posts/index.tsx`
 
@@ -79,9 +87,9 @@ You might need to refresh the browser to see our new, bare-bones posts route.
 
 Data loading is built in to Remix.
 
-If your web dev background is primarily in the last few years you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also it's own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
+If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
-If your background is a bit farther back than that with Rails, PHP, etc. Then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair. It's progressive enhancement realized in its fullest.
+If your background is a bit farther back than that with MVC web frameworks like Rails, then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair instead of writing detached jQuery code to dress up the user interactions. It's progressive enhancement realized in its fullest. Additionally, your routes are their own controller.
 
 So let's get to it and provide some data to our component.
 
@@ -118,7 +126,7 @@ Loaders are the backend "API" for their component and it's already wired up for 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[9-15]
+```tsx filename=app/routes/posts/index.tsx lines=[1,9-15]
 import { Link, useLoaderData } from "remix";
 
 // ...
@@ -182,7 +190,7 @@ export default function Posts() {
 }
 ```
 
-Hey, that's pretty cool. We get a pretty solid degree of type safety even over a network request because it's all defined in the same file. Unless the network blows up while Remix fetches the data, you've got type safety in this component and it's API (remember, the component is already its own API route).
+Hey, that's pretty cool. We get a pretty solid degree of type safety even over a network request because it's all defined in the same file. Unless the network blows up while Remix fetches the data, you've got type safety in this component and its API (remember, the component is already its own API route).
 
 ## A little refactoring
 
@@ -477,7 +485,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,7,8,15]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,14,17]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
@@ -553,7 +561,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. While that works and is a simple way to get started, ultimately it's much better to not have to redeploy the whole app for a simple typo change. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -581,7 +589,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={post.slug}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -635,9 +645,10 @@ export const links = () => {
 // ...
 ```
 
-Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see it in `root.tsx` if you're curious.
+Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see another example of this in `root.tsx` if you're curious.
 
-Alright, you should have a a decent looking page with the posts on the left and a placeholder on the right.
+Alright, you should have a decent looking page with the posts on the left and a placeholder on the right.
+For now, you need to navigate to [http://localhost:3000/admin](http://localhost:3000/admin) manually as we haven't set up any navigational links yet.
 
 ## Index Routes
 
@@ -666,7 +677,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/admin.tsx lines=[19]
+```tsx filename=app/routes/admin.tsx lines=[1,19]
 import { Outlet, Link, useLoaderData } from "remix";
 
 //...
@@ -679,7 +690,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={post.slug}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -716,7 +729,7 @@ We're gonna get serious now. Let's build a form to create a new post in the our 
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,5-22]
+```tsx filename=app/routes/admin/new.tsx lines=[1,4-25]
 import { Form } from "remix";
 
 export default function NewPost() {
@@ -733,9 +746,9 @@ export default function NewPost() {
         </label>
       </p>
       <p>
-        <label htmlFor="markdown">Markdown</label>
+        <label htmlFor="markdown">Markdown:</label>
         <br />
-        <textarea rows={20} name="markdown" />
+        <textarea id="markdown" rows={20} name="markdown" />
       </p>
       <p>
         <button type="submit">Create Post</button>
@@ -747,7 +760,7 @@ export default function NewPost() {
 
 If you love HTML like us, you should be getting pretty excited. If you've been doing a lot of `<form onSubmit>` and `<button onClick>` you're about to have your mind blown by HTML.
 
-All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to.
+All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to do, too.
 
 Let's create the essential code that knows how to save a post first in our `post.ts` module.
 
@@ -842,7 +855,7 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/admin/new.tsx lines=[9-12,14-16]
+```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
 //...
 export const action: ActionFunction = async ({
   request
@@ -872,8 +885,13 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,12-15,21-22,27-30]
-import { useActionData, Form, redirect } from "remix";
+```tsx filename=app/routes/admin/new.tsx lines=[2,6-7,17-18,24-25,30-31]
+import {
+  useActionData,
+  Form,
+  redirect,
+  ActionFunction
+} from "remix";
 
 // ...
 
@@ -914,16 +932,27 @@ export default function NewPost() {
 }
 ```
 
-TypeScript is still mad, so let's add some invariants to make it happy.
+TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,11-14,16-18]
+```tsx filename=app/routes/admin/new.tsx lines=[4-8,15,24-26]
 //...
 import invariant from "tiny-invariant";
+
+type PostError = {
+  title?: boolean;
+  slug?: boolean;
+  markdown?: boolean;
+};
 
 export const action: ActionFunction = async ({
   request
 }) => {
   // ...
+
+  const errors: PostError = {};
+  if (!title) errors.title = true;
+  if (!slug) errors.slug = true;
+  if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
     return errors;
@@ -942,13 +971,15 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/admin/new.tsx lines=[3]
+```tsx filename=app/routes/admin/new.tsx lines=[5-6]
 // ...
 export const action: ActionFunction = async ({
   request
 }) => {
   await new Promise(res => setTimeout(res, 1000));
+
   const formData = await request.formData();
+
   const title = formData.get("title");
   const slug = formData.get("slug");
   const markdown = formData.get("markdown");
@@ -991,6 +1022,6 @@ export default function NewPost() {
 
 Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! You're homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they 404! Create a new route that reads the post, puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
+That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
 
 We hope you love Remix!

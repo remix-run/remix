@@ -66,7 +66,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 ```
 
 - **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
-- **"intent"** - Recommended if you want to prefetch. Fetches when when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
+- **"intent"** - Recommended if you want to prefetch. Fetches when Remix thinks the user intends to visit the link. Right now the behavior is simple: if they hover or focus the link it will prefetch the resources. In the future we hope to make this event smarter. Links with large click areas/padding get a bit of a head start.
 - **"render"** - Fetches when the link is rendered.
 
 <docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
@@ -382,7 +382,7 @@ export async function loader() {
   await getUserPreferences();
 }
 
-export async function action() {
+export async function action({ request }) {
   await updatePreferences(await request.formData());
   return redirect("/prefs");
 }
@@ -425,7 +425,7 @@ function useSessionTimeout() {
   const transition = useTransition();
 
   useEffect(() => {
-    const id = setTimeout(() => {
+    const timer = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
     return () => clearTimeout(timer);
@@ -576,7 +576,7 @@ function PendingLink({ to, children }) {
 }
 ```
 
-Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for whie the state is "submitting", once the action is complete, then the link will go pending.
+Note that this link will not appear "pending" if a form is being submitted to the URL the link points to because we only do this for "loading" states. The form will contain the pending UI for when the state is "submitting", once the action is complete, then the link will go pending.
 
 ### `useFetcher`
 
@@ -633,7 +633,9 @@ You can know the state of the fetcher with `fetcher.state`, it will be one of:
 
 - **idle** - nothing is being fetched
 - **submitting** - A form has been submitted. If the method is GET then the route loader is being called, if POST, PUT, PATCH, or DELETE then the route action is being called.
-- **loading** - The loaders for the routes are being reloaded after an action submission completed.
+- **loading** - The loaders for the routes are being reloaded after an action submission
+
+.
 
 #### `fetcher.type`
 
@@ -894,12 +896,13 @@ function UserAvatar({ partialUser }) {
       onMouseLeave={() => setShowDetails(false)}
     >
       <img src={partialUser.profileImageUrl} />
-      {showDetails &&
-        (userDetails.type === "done" ? (
+      {showDetails ? (
+        userDetails.type === "done" ? (
           <UserPopup user={userDetails.data} />
         ) : (
           <UserPopupLoading />
-        ))}
+        )
+      ) : null}
     </div>
   );
 }
@@ -931,10 +934,12 @@ function CitySearchCombobox() {
               cities.submit(event.target.form)
             }
           />
-          {cities.state === "submitting" && <Spinner />}
+          {cities.state === "submitting" ? (
+            <Spinner />
+          ) : null}
         </div>
 
-        {cities.data && (
+        {cities.data ? (
           <ComboboxPopover className="shadow-popup">
             {cities.data.error ? (
               <p>Failed to load cities :(</p>
@@ -951,7 +956,7 @@ function CitySearchCombobox() {
               <span>No results found</span>
             )}
           </ComboboxPopover>
-        )}
+        ) : null}
       </Combobox>
     </cities.Form>
   );
@@ -1044,7 +1049,7 @@ Here's some sample code:
 ```js
 function ProjectTaskCount({ project }) {
   const fetchers = useFetchers();
-  const completedTasks = 0;
+  let completedTasks = 0;
 
   // 1) Find my task's submissions
   const myFetchers = new Map();
@@ -1559,7 +1564,7 @@ export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: value.showBanner };
+  return { showBanner: cookie.showBanner };
 }
 
 export async function action({ request }) {
@@ -1667,7 +1672,7 @@ export async function loader({ request }) {
 
 ### `createCookie`
 
-Creates a logical container for managing a browser cookie from there server.
+Creates a logical container for managing a browser cookie from the server.
 
 ```ts
 import { createCookie } from "remix";
@@ -2234,6 +2239,142 @@ return json(data, {
     "Set-Cookie": await commitSession(session)
   }
 });
+```
+
+### `<Outlet context />`
+
+This component is a wrapper around React Router's Outlet with the ability to pass UI state down to nested routes.
+
+<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`](#useloaderdata) or [`useMatches`](#usematches).</docs-warning>
+
+Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
+
+```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-41,50-54,65]
+import type { LoaderData } from "remix";
+import {
+  json,
+  useLoaderData,
+  useParams,
+  Outlet
+} from "remix";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel
+} from "@reach/accordion";
+import { getCompanies, Companies } from "~/utils/companies";
+
+type LoaderData = {
+  companies: Array<Companies>;
+};
+
+export const loader: LoaderFunction = async () => {
+  const data: LoaderData = {
+    companies: await getCompanies()
+  };
+  return json(data);
+};
+
+type Sort = "ASC" | "DESC";
+export type ContextType = {
+  invoiceSort: Sort;
+};
+
+export default function CompaniesRoute() {
+  const data = useLoaderData<LoaderData>();
+
+  const [invoiceSort, setInvoiceSort] =
+    React.useState<Sort>("ASC");
+  function changeInvoiceSort() {
+    setInvoiceSort(sort =>
+      sort === "ASC" ? "DESC" : "ASC"
+    );
+  }
+  const context: ContextType = { sort };
+  const outlet = <Outlet context={context} />;
+
+  const params = useParams();
+  const selectedCompanyIndex = data.companies.findIndex(
+    company => company.id === params.companyId
+  );
+
+  return (
+    <div>
+      <button onClick={changeInvoiceSort}>
+        {invoiceSort === "ASC"
+          ? "Sort Descending"
+          : "Sort Ascending"}
+      </button>
+      <Accordion index={selectedCompanyIndex}>
+        {data.companies.map(company => (
+          <AccordionItem key={company.id}>
+            <AccordionButton as={Link} to={company.id}>
+              {company.name}
+            </AccordionButton>
+            {/* render the outlet by the
+            currently selected company */}
+            <AccordionPanel>
+              {params.companyId === company.id
+                ? outlet
+                : null}
+            </AccordionPanel>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+}
+```
+
+### `useOutletContext()`
+
+This hook returns the context from the `<Outlet />` that rendered you.
+
+Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
+
+```tsx filename=app/routes/companies/$companyId.tsx lines=[5,7,24,26-29]
+import type { LoaderFunction } from "remix";
+import {
+  json,
+  useLoaderData,
+  useOutletContext
+} from "remix";
+import type { ContextType } from "../companies";
+
+type LoaderData = {
+  company: Company;
+};
+
+export const loader: LoaderFunction = async ({
+  params
+}) => {
+  const data: LoaderData = {
+    company: await getCompany(params.companyId)
+  };
+  return json(data);
+};
+
+export default function CompanyRoute() {
+  const data = useLoaderData<LoaderData>();
+  const { sort } = useOutletContext<ContextType>();
+
+  const sortedInvoices =
+    sort === "ASC"
+      ? data.company.invoices
+      : data.company.invoices.reverse();
+
+  return (
+    <div>
+      <h2>{data.company.name}</h2>
+      <ul>
+        {sortedInvoices.map(invoice => (
+          <li key={invoice.id}>{invoice.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 ```
 
 ## Types

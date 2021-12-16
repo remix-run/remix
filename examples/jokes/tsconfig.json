@@ -8,6 +8,7 @@
     "moduleResolution": "node",
     "target": "ES2019",
     "strict": true,
+    "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"]
     },

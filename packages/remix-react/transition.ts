@@ -552,6 +552,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
+      match.route.id,
       loadFetcher
     );
 
@@ -912,7 +913,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionData: { [leafMatch.route.id]: result.value }
     });
 
-    await loadPageData(location, matches, submission, result);
+    await loadPageData(
+      location,
+      matches,
+      submission,
+      leafMatch.route.id,
+      result
+    );
   }
 
   async function handleLoaderSubmissionNavigation(
@@ -1047,6 +1054,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: Location,
     matches: ClientMatch[],
     submission?: Submission,
+    submissionRouteId?: string,
     actionResult?: DataResult
   ) {
     let maybeActionErrorResult =
@@ -1066,7 +1074,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       controller.signal,
       maybeActionErrorResult,
       maybeActionCatchResult,
-      submission
+      submission,
+      submissionRouteId
     );
 
     if (controller.signal.aborted) {
@@ -1177,6 +1186,7 @@ async function callLoaders(
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
+  submissionRouteId?: string,
   fetcher?: Fetcher
 ): Promise<DataResult[]> {
   let matchesToLoad = filterMatchesToLoad(
@@ -1186,6 +1196,7 @@ async function callLoaders(
     actionErrorResult,
     actionCatchResult,
     submission,
+    submissionRouteId,
     fetcher
   );
 
@@ -1237,8 +1248,25 @@ function filterMatchesToLoad(
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
+  submissionRouteId?: string,
   fetcher?: Fetcher
 ): ClientMatch[] {
+  // Filter out all routes below the problematic route as they aren't going
+  // to render so we don't need to load them.
+  if (submissionRouteId && (actionCatchResult || actionErrorResult)) {
+    let foundProblematicRoute = false;
+    matches = matches.filter(match => {
+      if (foundProblematicRoute) {
+        return false;
+      }
+      if (match.route.id === submissionRouteId) {
+        foundProblematicRoute = true;
+        return false;
+      }
+      return true;
+    });
+  }
+
   let isNew = (match: ClientMatch, index: number) => {
     // [a] -> [a, b]
     if (!state.matches[index]) return true;

@@ -4,7 +4,7 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
@@ -70,7 +70,7 @@ In general, stylesheets added to the page with `<link>` tend to provide the best
 - Changes to components don't break the cache for the styles
 - Changes to the styles don't break the cache for the JavaScript
 
-Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler. Aditionally, adding support directly inside of Remix is not tenable with the vast number of libraries out there.
+Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler. Additionally, adding support directly inside of Remix is not tenable with the vast number of libraries out there.
 
 Remix also supports "runtime" frameworks like styled components where styles are evaluated at runtime but don't require any kind of bundler integration--though we would prefer your stylesheets had a URL instead of being injected into style tags.
 
@@ -80,7 +80,7 @@ The two most popular approaches in the Remix community are route-based styleshee
 
 ## Regular Stylesheets
 
-Remix makes writing plain CSS a viable option even for apps with a lot of UI. In our experience, writing plain CSS had maintenence issues for a few reasons. It was difficult to know:
+Remix makes writing plain CSS a viable option even for apps with a lot of UI. In our experience, writing plain CSS had maintenance issues for a few reasons. It was difficult to know:
 
 - how and when to load CSS, so it was usually all loaded on every page
 - if the class names and selectors you were using were accidentally styling other UI in the app
@@ -444,6 +444,37 @@ export function links() {
 }
 ```
 
+If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
+
+```css filename=styles/tailwind.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .custom-class {
+    @apply ...;
+  }
+}
+```
+
+Then alter how tailwind is generating css:
+
+```json filename="package.json lines=[4-7]
+{
+  // ...
+  "scripts": {
+    "build": "npm run build:css && remix build",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
+    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
+    "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
+    "postinstall": "remix setup node",
+    "start": "remix-serve build"
+  }
+  // ...
+}
+```
+
 This isn't required, but it's recommended to add the generated file to your gitignore list:
 
 ```sh lines=[5] filename=.gitignore
@@ -671,3 +702,4 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
+[route-module-links]: ../api/conventions#links
