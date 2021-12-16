@@ -1,7 +1,6 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export {
-  Outlet,
   useHref,
   useLocation,
   useNavigate,
@@ -9,7 +8,9 @@ export {
   useOutlet,
   useParams,
   useResolvedPath,
-  useSearchParams
+  useSearchParams,
+  Outlet,
+  useOutletContext
 } from "react-router-dom";
 
 export type {
@@ -27,7 +28,6 @@ export {
   NavLink,
   Form,
   PrefetchPageLinks,
-  ScrollRestoration,
   LiveReload,
   useFormAction,
   useSubmit,
@@ -47,6 +47,8 @@ export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type { ShouldReloadFunction, HtmlMetaDescriptor } from "./routeModules";
+
+export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";

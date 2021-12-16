@@ -6,6 +6,10 @@ on:
       - "**"
     tags-ignore:
       - v*
+    paths-ignore:
+      - "docs/**"
+      - "**/README.md"
+  pull_request: {}
 
 jobs:
   build:

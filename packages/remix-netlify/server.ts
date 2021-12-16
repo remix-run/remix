@@ -9,6 +9,8 @@ import type {
   RequestInit as NodeRequestInit
 } from "@remix-run/node";
 import {
+  // This has been added as a global in node 15+
+  AbortController,
   formatServerError,
   Headers as NodeHeaders,
   Request as NodeRequest
@@ -41,7 +43,8 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, context) => {
-    let request = createRemixRequest(event);
+    let abortController = new AbortController();
+    let request = createRemixRequest(event, abortController);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(event, context)
@@ -52,6 +55,10 @@ export function createRequestHandler({
       loadContext
     )) as unknown as NodeResponse;
 
+    if (abortController.signal.aborted) {
+      response.headers.set("Connection", "close");
+    }
+
     return {
       statusCode: response.status,
       multiValueHeaders: response.headers.raw(),
@@ -60,7 +67,10 @@ export function createRequestHandler({
   };
 }
 
-export function createRemixRequest(event: HandlerEvent): NodeRequest {
+export function createRemixRequest(
+  event: HandlerEvent,
+  abortController?: AbortController
+): NodeRequest {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -73,7 +83,9 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
 
   let init: NodeRequestInit = {
     method: event.httpMethod,
-    headers: createRemixHeaders(event.multiValueHeaders)
+    headers: createRemixHeaders(event.multiValueHeaders),
+    abortController,
+    signal: abortController?.signal
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {

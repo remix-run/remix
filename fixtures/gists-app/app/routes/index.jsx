@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, Form } from "remix";
+import { Link } from "remix";
 
 import Shared from "../components/Shared";
 // import Guitar from "../components/Guitar";
@@ -40,7 +40,9 @@ export default function Index() {
       <nav>
         <ul>
           <li>
-            <Link to="/links">Link preloads and stuff</Link>
+            <Link prefetch="intent" to="/links">
+              Link preloads and stuff
+            </Link>
           </li>
           <li>
             <Link to="/gists">View Some gists</Link>

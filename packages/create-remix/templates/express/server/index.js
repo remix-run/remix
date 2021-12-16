@@ -12,7 +12,7 @@ if (!fs.existsSync(BUILD_DIR)) {
     console.warn("Build directory doesn't exist, please run `npm run dev` or `npm run build` before starting the server.");
 }
 
-let app = express();
+const app = express();
 app.use(compression());
 
 // You may want to be more aggressive with this caching
@@ -28,12 +28,12 @@ app.all(
     ? createRequestHandler({ build: require("./build") })
     : (req, res, next) => {
         purgeRequireCache();
-        let build = require("./build");
+        const build = require("./build");
         return createRequestHandler({ build, mode: MODE })(req, res, next);
       }
 );
 
-let port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Express server listening on port ${port}`);
 });
@@ -45,7 +45,7 @@ function purgeRequireCache() {
   // alternatively you can set up nodemon/pm2-dev to restart the server on
   // file changes, we prefer the DX of this though, so we've included it
   // for you by default
-  for (let key in require.cache) {
+  for (const key in require.cache) {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
     }

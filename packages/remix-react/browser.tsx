@@ -43,8 +43,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // In the browser, we don't need this because a) in the case of loader
   // errors we already know the order and b) in the case of render errors
   // React knows the order and handles error boundaries normally.
-  entryContext.componentDidCatchEmulator.trackBoundaries = false;
-  entryContext.componentDidCatchEmulator.trackCatchBoundaries = false;
+  entryContext.appState.trackBoundaries = false;
+  entryContext.appState.trackCatchBoundaries = false;
 
   return (
     <RemixEntry
