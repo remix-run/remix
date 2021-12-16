@@ -12,5 +12,5 @@ export function onRequest(context) {
   // https://github.com/cloudflare/wrangler2/issues/117
   request.headers.delete("If-None-Match");
 
-  return handleFetch(context);
+  return handleFetch({ ...context, request });
 }
