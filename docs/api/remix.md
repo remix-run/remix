@@ -709,8 +709,7 @@ fetcher.data; // the data from the loader
 
 Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job:
 
-```tsx
-// routes/newsletter/subscribe.js
+```tsx filename=routes/newsletter/subscribe.tsx
 export async function action({ request }) {
   const email = (await request.formData()).get("email");
   try {
@@ -720,10 +719,7 @@ export async function action({ request }) {
     return json({ error: error.message });
   }
 }
-```
 
-```tsx
-// NewsletterSignup.js
 function NewsletterSignup() {
   const newsletter = useFetcher();
   const ref = useRef();
@@ -767,8 +763,7 @@ Because `useFetcher` doesn't cause a navigation, it won't automatically work if 
 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
-```tsx
-// routes/newsletter/subscribe.js
+```tsx filename=routes/newsletter/subscribe.tsx
 export function action({ request }) {
   // just like before
 }
@@ -797,8 +792,7 @@ export default function NewsletterSignupRoute() {
 
 You could even refactor the component to take props from the hooks and reuse it:
 
-```tsx
-// NewsletterSignup.js
+```tsx filename=routes/newsletter/subscribe.tsx
 import { Form, useFetcher } from "remix";
 
 // used in the footer
@@ -827,8 +821,7 @@ export function NewsletterForm({
 
 And now you could reuse the same form, but it gets data from a different hook for the no-js experience:
 
-```tsx
-// routes/newsletter/subscribe.js
+```tsx filename=routes/newsletter/subscribe.tsx
 import { NewsletterForm } from "~/NewsletterSignup";
 import { Form } from "remix";
 
@@ -869,15 +862,11 @@ function useMarkAsRead({ articleId, userId }) {
 
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
-```tsx
-// routes/user/$id/details.js
+```tsx filename=routes/user/$id/details.tsx
 export function loader({ params }) {
   return fakeDb.user.find({ where: { id: params.id } });
 }
-```
 
-```tsx
-// UserAvatar.js
 function UserAvatar({ partialUser }) {
   const userDetails = useFetcher();
   const [showDetails, setShowDetails] = useState(false);
@@ -909,15 +898,12 @@ function UserAvatar({ partialUser }) {
 
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
-```tsx
-// routes/city-search.tsx
+```tsx filename=routes/city-search.tsx
 export function loader({ request }) {
   const url = new URL(request.url);
   return searchCities(url.searchParams.get("city-query"));
 }
-```
 
-```tsx
 function CitySearchCombobox() {
   const cities = useFetcher();
 
