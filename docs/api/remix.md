@@ -661,7 +661,7 @@ function SomeComponent() {
   const fetcher = useFetcher();
 
   // trigger the fetch with these
-  <fetcher.Form {..formOptions} />;
+  <fetcher.Form {...formOptions} />;
   fetcher.submit(data, options);
   fetcher.load(href);
 
