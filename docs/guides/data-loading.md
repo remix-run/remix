@@ -105,7 +105,7 @@ Remix polyfills the `fetch` API on your server so it's very easy to fetch data f
 
 ```tsx filename=app/routes/gists.jsx lines=[2]
 export function loader() {
-  let res = fetch("https://api.gitub.com/gists");
+  let res = fetch("https://api.github.com/gists");
   return res.json();
 }
 

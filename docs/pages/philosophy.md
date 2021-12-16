@@ -4,7 +4,7 @@ title: Philosophy
 
 # Philosophy
 
-We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and ecommerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
+We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and e-commerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
 
 The Remix philosophy can be summed up in four points:
 
@@ -27,7 +27,7 @@ Consider [the Github Gist API](https://api.github.com/gists). This payload is 75
 
 ```js
 export default function Gists() {
-  let gists = useSomeFetchWrapper(
+  const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"
   );
   if (!gists) {
@@ -56,8 +56,8 @@ With Remix, you can filter down the data _on the server_ before sending it to th
 
 ```js [1-11]
 export async function loader() {
-  let res = await fetch("https://api.github.com/gists");
-  let json = await res.json();
+  const res = await fetch("https://api.github.com/gists");
+  const json = await res.json();
   return json.map(gist => {
     return {
       url: gist.html_url,
@@ -68,7 +68,7 @@ export async function loader() {
 }
 
 export default function Gists() {
-  let gists = useLoaderData();
+  const gists = useLoaderData();
   return (
     <ul>
       {gists.map(gist => (
@@ -100,7 +100,7 @@ When doing data mutations, we augmented HTML forms. When we prefetch data and as
 
 ## Progressive Enhancement
 
-While most recent frameworks only have read APIs for data, Remix has both read and write. HTML `<form>` has been the staple for data mutations since the 90s, Remix embraces and augments that API. This enables the data layer of a Remix app to function with _or without_ JavaScript on the page.
+While most recent frameworks only have read APIs for data, Remix has both read and write. HTML `<form>` has been the staple for data mutations since the 90s. Remix embraces and augments that API. This enables the data layer of a Remix app to function with _or without_ JavaScript on the page.
 
 Adding JavaScript allows Remix to speed up the user experience in two ways on a page transition:
 
@@ -120,8 +120,8 @@ The point is not so much to make the app work without JavaScript, it's more abou
 
 This one is more for us. We've been educators for the 5 years before Remix. Our tagline is _Build Better Websites_. We also think of it with a little extra on the end: _Build Better Websites, Sometimes with Remix_. If you get good at Remix, you will accidentally get good at web development in general.
 
-The APIs Remix provides makes it convenient to use the fundamental Browser/HTTP/JavaScript, but those technologies are not hidden from you.
+Remix's APIs make it convenient to use the fundamental Browser/HTTP/JavaScript, but those technologies are not hidden from you.
 
-For example, getting CSS on specific layouts in your app is done with a route module method named `links`, where you return an array of objects with the values of an HTML `<link>` tag. We abstract enough to optimize the performance of your app (they're objects so we can dedupe them, preload them) without hiding the underlying technology. Learn how to prefetch assets in Remix with `links` and you've learned how to prefetch assets in any website.
+For example, getting CSS on specific layouts in your app is done with a route module method named `links`, where you return an array of objects with the values of an HTML `<link>` tag. We abstract enough to optimize your app's performance (they're objects so we can dedupe them, preload them), without hiding the underlying technology. Learn how to prefetch assets in Remix with `links`, and you've learned how to prefetch assets in any website.
 
 Get good at Remix, get good at the web.
