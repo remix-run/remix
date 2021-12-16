@@ -1,8 +1,8 @@
 import type { LoaderFunction } from "remix";
 import { db } from "~/utils/db.server";
 
-export let loader: LoaderFunction = async ({ request }) => {
-  let jokes = await db.joke.findMany({
+export const loader: LoaderFunction = async ({ request }) => {
+  const jokes = await db.joke.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },
     include: { jokester: { select: { username: true } } },
@@ -14,10 +14,10 @@ export let loader: LoaderFunction = async ({ request }) => {
     throw new Error("Could not determine domain URL.");
   }
   const protocol = host.includes("localhost") ? "http" : "https";
-  let domain = `${protocol}://${host}`;
+  const domain = `${protocol}://${host}`;
   const jokesUrl = `${domain}/jokes`;
 
-  let rssString = `
+  const rssString = `
     <rss xmlns:blogChannel="${jokesUrl}" version="2.0">
       <channel>
         <title>Remix Jokes</title>

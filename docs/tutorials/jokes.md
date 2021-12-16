@@ -9,7 +9,7 @@ You want to learn Remix? You're in the right place. Let's build [Remix Jokes](ht
 
 <docs-info><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=hsIWJpuxNj0">Work through this tutorial with Kent in this live stream</a></docs-info>
 
-<a href="https://remix-jokes.lol"><img src="https://remix-jokes.lol/social.png" style="aspect-ratio: 300 / 157;"/></a>
+<a href="https://remix-jokes.lol"><img src="https://remix-jokes.lol/social.png" style="aspect-ratio: 300 / 157; width: 100%"/></a>
 
 This tutorial is the comprehensive way to getting an overview of the primary APIs available in Remix. By the end, you'll have a full application you can show your mom, significant other, or dog and I'm sure they'll be just as excited about Remix as you are (though I make no guarantees).
 
@@ -17,7 +17,7 @@ We're going to be laser focused on Remix. This means that we're going to skip ov
 
 <details>
 
-  <summary>Click me</summary>
+<summary>Click me</summary>
 
 There are several areas in the tutorial where we stick code behind one of these `<details>` elements. This is so you can choose how much copy/paste you want to do without us spoiling it for you. We don't recommend struggling with concepts unrelated to Remix though, like guessing what class names to use. Feel free to reference these sections to check your work once you get the main point of the tutorial. Or if you want to run through things quickly then you can just copy/paste stuff as you go as well. We won't judge you!
 
@@ -30,6 +30,8 @@ This tutorial will be using TypeScript. Feel free to follow along and skip/remov
 <docs-info>💿 Hello, I'm Rachel the Remix Disc. I'll show up whenever you have to actually _do_ something.</docs-info>
 
 <docs-warning>Feel free to explore as you go, but if you deviate from the tutorial too much (like trying to deploy before getting to that step for example), you may find it doesn't work like you expected because you missed something important.</docs-warning>
+
+<docs-error>We won't add JavaScript to the browser until toward the end of the tutorial. This is to show you how well your application will work when JavaScript takes a long time to load (or fails to load at all). So until we actually add JavaScript to the page, you won't be able to use things like `useState` until we get to that step.</docs-error>
 
 ## Outline
 
@@ -53,7 +55,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 ## Prerequisites
 
-You can follow along with this tutorial on [Codesandbox](https://codesandbox.com/) (a fantastic in-browser editor) or locally on your own computer. If you use the Codesandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
+You can follow along with this tutorial on [CodeSandbox](https://codesandbox.com/) (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
 - [npm](https://www.npmjs.com) 7 or greater
@@ -546,7 +548,7 @@ Hooray! But I want to call out something important and exciting. You know how th
 
 This means that you don't have to worry about unexpected CSS clashes when you're writing your CSS. You can write whatever you like and so long as you check each route your file is linked on you'll know that you haven't impacted other pages! 🔥
 
-This also means your CSS files can be cached long-term and your CSS is naturally lazy-loaded. Performance FTW ⚡
+This also means your CSS files can be cached long-term and your CSS is naturally code-split. Performance FTW ⚡
 
 </docs-info>
 
@@ -1177,7 +1179,7 @@ nav ul a:hover {
 
 </details>
 
-💿 Also, download <a href="/jokes-tutorial/baloo/baloo.woff" data-noprefetch target="_blank">the font</a> and <a href="/jokes-tutorial/baloo/License.txt" data-noprefetch target="_blank">it's license</a> and put them in `public/fonts/baloo`.
+💿 Also, download <a href="/jokes-tutorial/baloo/baloo.woff" data-noprefetch target="_blank">the font</a> and <a href="/jokes-tutorial/baloo/License.txt" data-noprefetch target="_blank">its license</a> and put them in `public/fonts/baloo`.
 
 💿 While you're downloading assets, you may as well download <a href="/jokes-tutorial/social.png" data-noprefetch target="_blank">the social image</a> and put that at `public/social.png`. You'll need that later.
 
@@ -1513,7 +1515,7 @@ function getJokes() {
 
 Feel free to add your own jokes if you like.
 
-Now we just need to run this file. We wrote it in TypeScript to get type safety (this is much more useful as our app and datamodels grow in complexity). So we'll need a way to run it.
+Now we just need to run this file. We wrote it in TypeScript to get type safety (this is much more useful as our app and data models grow in complexity). So we'll need a way to run it.
 
 💿 Install `esbuild-register` as a dev dependency:
 
@@ -1641,7 +1643,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[2,3,15-17,19-24,27,51-55]
+```tsx filename=app/routes/jokes.tsx lines=[1-3,15-17,19-24,27,51-55]
 import { LinksFunction, LoaderFunction } from "remix";
 import { Link, Outlet, useLoaderData } from "remix";
 import { db } from "~/utils/db.server";
@@ -1997,7 +1999,7 @@ Another thing you'll notice is that when we were redirected to the joke's new pa
 
 Why don't we add some validation? We could definitely do the typical React validation approach. Wiring up `useState` with `onChange` handlers and such. And sometimes that's nice to get some real-time validation as the user's typing. But even if you do all that work, you're still going to want to do validation on the server.
 
-Before I set you off on this one, there's one more thing you need to know about route module `action` functions. The return value is expected to be the same as the `loader` function: A response, or (as a convenience) a serializeable JavaScript object. Normally you want to `redirect` when the action is successful to avoid the annoying "confirm resubmission" dialog you might have seen on some websites.
+Before I set you off on this one, there's one more thing you need to know about route module `action` functions. The return value is expected to be the same as the `loader` function: A response, or (as a convenience) a serializable JavaScript object. Normally you want to `redirect` when the action is successful to avoid the annoying "confirm resubmission" dialog you might have seen on some websites.
 
 <!-- TODO: add a page about why `redirect`ing is better for successful actions and link it here. -->
 
@@ -2009,9 +2011,9 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,31,39,42-45,47-49,56,67,69-77,80-88,94,96-104,107-115]
+```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,29-30,42-44,47-50,52-54,61,72,74-82,85-93,99,101-109,112-120]
 import type { ActionFunction } from "remix";
-import { useActionData, redirect } from "remix";
+import { useActionData, redirect, json } from "remix";
 import { db } from "~/utils/db.server";
 
 function validateJokeContent(content: string) {
@@ -2038,9 +2040,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const name = form.get("name");
   const content = form.get("content");
@@ -2048,7 +2053,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -2057,7 +2064,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({ data: fields });
@@ -2148,6 +2155,8 @@ Why don't you pop open my code example for a second. I want to show you a few th
 First I want you to notice that I've added an `ActionData` type so we could get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
+
+The `badRequest` helper function is important to gives us typechecking to ensure our return value is of type `ActionData`, while still returning the accurate HTTP status, [`400 Bad Request`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400), to the client. If we just return the `ActionData` value, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
@@ -2537,6 +2546,7 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
+  json,
   Link,
   useSearchParams
 } from "remix";
@@ -2572,9 +2582,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
@@ -2586,7 +2599,9 @@ export const action: ActionFunction = async ({
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fields = { loginType, username, password };
@@ -2595,31 +2610,40 @@ export const action: ActionFunction = async ({
     password: validatePassword(password)
   };
   if (Object.values(fieldErrors).some(Boolean))
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       // login to get the user
       // if there's no user, return the fields and a formError
       // if there is a user, create their session and redirect to /jokes
-      return { fields, formError: "Not implemented" };
+      return badRequest({
+        fields,
+        formError: "Not implemented"
+      });
     }
     case "register": {
       const userExists = await db.user.findFirst({
         where: { username }
       });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`
-        };
+        });
       }
       // create the user
       // create their session and redirect to /jokes
-      return { fields, formError: "Not implemented" };
+      return badRequest({
+        fields,
+        formError: "Not implemented"
+      });
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({
+        fields,
+        formError: `Login type invalid`
+      });
     }
   }
 };
@@ -2820,7 +2844,7 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 ```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, Link } from "remix";
+import { useActionData, json, Link } from "remix";
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
 import stylesUrl from "../styles/login.css";
@@ -2829,20 +2853,23 @@ import stylesUrl from "../styles/login.css";
 
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   // ...
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       console.log({ user });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       // if there is a user, create their session and redirect to /jokes
-      return { fields, formError: "Not implemented" };
+      return badRequest({
+        fields,
+        formError: "Not implemented"
+      });
     }
     // ...
   }
@@ -2975,7 +3002,7 @@ case "login": {
 
 </details>
 
-I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the badies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
+I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the baddies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
 
 💿 Update .env file with SESSION_SECRET (with any value you like).
 
@@ -3106,9 +3133,9 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```ts filename=app/routes/jokes/new.tsx lines=[4,33,54]
+```ts filename=app/routes/jokes/new.tsx lines=[4,36,59]
 import type { ActionFunction } from "remix";
-import { useActionData, redirect } from "remix";
+import { useActionData, redirect, json } from "remix";
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
 
@@ -3136,9 +3163,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
@@ -3147,7 +3177,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -3156,7 +3188,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({
@@ -3503,7 +3535,7 @@ export const loader: LoaderFunction = async () => {
 
 Hopefully getting the user in the loader and rendering them in the component was pretty straightforward. There are a few things I want to call out about other parts of my version of the code before we continue.
 
-First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is just there in case someone somehow lands on that page, we'll just redirect them back home.
+First, the new `logout` route is just there to make it easy for us to logout. The reason that we're using an action (rather than a loader) is because we want to avoid [CSRF](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) problems by using a POST request rather than a GET request. This is why the logout button is a form and not a link. Additionally, Remix will only re-call our loaders when we perform an `action`, so if we used a `loader` then the cache would not get invalidated. The `loader` is just there in case someone somehow lands on that page, we'll just redirect them back home.
 
 ```tsx
 <Link to="new" className="button">
@@ -3663,10 +3695,11 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[2,7,86-93]
+```tsx filename=app/routes/login.tsx lines=[12,96-102]
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
+  json,
   useSearchParams,
   Link
 } from "remix";
@@ -3707,9 +3740,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
@@ -3721,7 +3757,9 @@ export const action: ActionFunction = async ({
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fields = { loginType, username, password };
@@ -3730,16 +3768,16 @@ export const action: ActionFunction = async ({
     password: validatePassword(password)
   };
   if (Object.values(fieldErrors).some(Boolean))
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
@@ -3748,22 +3786,25 @@ export const action: ActionFunction = async ({
         where: { username }
       });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`
-        };
+        });
       }
       const user = await register({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Something went wrong trying to create a new user.`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({
+        fields,
+        formError: `Login type invalid`
+      });
     }
   }
 };
@@ -4320,11 +4361,12 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[5-6,14-20,147-158]
+```tsx filename=app/routes/jokes/new.tsx lines=[6-7,15-21,155-166]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
   redirect,
+  json,
   useCatch,
   Link
 } from "remix";
@@ -4368,9 +4410,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
@@ -4379,7 +4424,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -4388,7 +4435,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({
@@ -4955,7 +5002,7 @@ export default function Index() {
 
 <summary>app/routes/login.tsx</summary>
 
-```ts filename=app/routes/login.tsx lines=[4,23-29]
+```ts filename=app/routes/login.tsx lines=[4,24-30]
 import type {
   ActionFunction,
   LinksFunction,
@@ -4963,6 +5010,7 @@ import type {
 } from "remix";
 import {
   useActionData,
+  json,
   Link,
   useSearchParams
 } from "remix";
@@ -5011,9 +5059,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
@@ -5025,7 +5076,9 @@ export const action: ActionFunction = async ({
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fields = { loginType, username, password };
@@ -5034,16 +5087,16 @@ export const action: ActionFunction = async ({
     password: validatePassword(password)
   };
   if (Object.values(fieldErrors).some(Boolean))
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
@@ -5052,22 +5105,25 @@ export const action: ActionFunction = async ({
         where: { username }
       });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`
-        };
+        });
       }
       const user = await register({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Something went wrong trying to create a new user.`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({
+        fields,
+        formError: `Login type invalid`
+      });
     }
   }
 };
@@ -5470,7 +5526,7 @@ Why does it matter that our app works without JavaScript? Is it because we're wo
 
 Another point for user experience!
 
-There are reasons to include JavaScript on the page. For example, some common UI experiences can't be accessible without JavaScript (focus management in particulr is not great when you have full-page reloads all over the place). And we can make an even nicer user experience with optimistic UI (coming soon) when we have JavaScript on the page. But we thought it'd be cool to show you how far you can get with Remix without JavaScript for your users on poor network connections. 💪
+There are reasons to include JavaScript on the page. For example, some common UI experiences can't be accessible without JavaScript (focus management in particular is not great when you have full-page reloads all over the place). And we can make an even nicer user experience with optimistic UI (coming soon) when we have JavaScript on the page. But we thought it'd be cool to show you how far you can get with Remix without JavaScript for your users on poor network connections. 💪
 
 Ok, so let's load JavaScript on this page now 😆
 
@@ -5815,11 +5871,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[10,82-100]
+```tsx filename=app/routes/jokes/new.tsx lines=[11,88-108]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
   redirect,
+  json,
   useCatch,
   Link,
   Form,
@@ -5866,9 +5923,12 @@ type ActionData = {
   };
 };
 
+const badRequest = (data: ActionData) =>
+  json(data, { status: 400 });
+
 export const action: ActionFunction = async ({
   request
-}): Promise<Response | ActionData> => {
+}) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
   const name = form.get("name");
@@ -5877,7 +5937,9 @@ export const action: ActionFunction = async ({
     typeof name !== "string" ||
     typeof content !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({
+      formError: `Form not submitted correctly.`
+    });
   }
 
   const fieldErrors = {
@@ -5886,7 +5948,7 @@ export const action: ActionFunction = async ({
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   const joke = await db.joke.create({
@@ -6028,7 +6090,7 @@ I feel pretty great about the user experience we've created here. So let's get t
 
 <docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
 
-💿 Before proceeding, you're going to need to to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
+💿 Before proceeding, you're going to need to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
 
 💿 Once you've done that, run this command from within your project directory:
 
@@ -6137,4 +6199,4 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 
 ## Conclusion
 
-Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/docs/en/v1/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journy!
+Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success](https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/docs/en/v1/tutorials/jokes))! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journey!

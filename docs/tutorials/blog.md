@@ -48,10 +48,15 @@ There's a bit going on in the file. For now, find the `Layout` component and rig
 
 💿 Add a link to posts in `app/root.tsx`
 
-```tsx
+```tsx lines=[4-6]
+...
+<li>
+  <Link to="/">Home</Link>
+</li>
 <li>
   <Link to="/posts">Posts</Link>
 </li>
+...
 ```
 
 Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page since we've not created this route yet. Let's create the route now:
@@ -85,7 +90,7 @@ You might need to refresh the browser to see our new, bare-bones posts route.
 
 ## Loading Data
 
-Data loading is built in to Remix.
+Data loading is built into Remix.
 
 If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
@@ -154,7 +159,7 @@ TypeScript is mad, so let's help it out:
 ```tsx filename=app/routes/posts/index.tsx lines=[3-6,9,19,23]
 import { Link, useLoaderData } from "remix";
 
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
@@ -270,7 +275,7 @@ title: My First Post
 Isn't it great?
 ```
 
-```md filename=posts/90s-mix-cdr.md
+```md filename=posts/90s-mixtape.md
 ---
 title: 90s Mixtape
 ---
@@ -406,7 +411,7 @@ Now let's make a route to actually view the post. We want these URLs to work:
 
 ```
 /posts/my-first-post
-/posts/90s-mix-cdr
+/posts/90s-mixtape
 ```
 
 Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
@@ -485,7 +490,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,17]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,14,17]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import { getPost } from "~/post";
@@ -561,7 +566,7 @@ Holy smokes, you did it. You have a blog.
 
 ## Creating Blog Posts
 
-Right now our blog posts (and typo fixes) are tied to deploys. That's gross. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
+Right now our blog posts (and typo fixes) are tied to deploys. While that works and is a simple way to get started, ultimately it's much better to not have to redeploy the whole app for a simple typo change. The idea here is that your posts would be backed by a database, so we need a way to create a new blog post. We're going to be using actions for that.
 
 Let's make a new "admin" section of the app.
 
@@ -589,7 +594,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={`/posts/${post.slug}`}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -643,9 +650,10 @@ export const links = () => {
 // ...
 ```
 
-Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see it in `root.tsx` if you're curious.
+Each route can export a `links` function that returns array of `<link>` tags, except in object form instead of HTML. So we use `{ rel: "stylesheet", href: adminStyles}` instead of `<link rel="stylesheet" href="..." />`. This allows Remix to merge all of your rendered routes links together and render them in the `<Links/>` element at the top of your document. You can see another example of this in `root.tsx` if you're curious.
 
-Alright, you should have a a decent looking page with the posts on the left and a placeholder on the right.
+Alright, you should have a decent looking page with the posts on the left and a placeholder on the right.
+For now, you need to navigate to [http://localhost:3000/admin](http://localhost:3000/admin) manually as we haven't set up any navigational links yet.
 
 ## Index Routes
 
@@ -674,7 +682,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/admin.tsx lines=[1,19]
+```tsx filename=app/routes/admin.tsx lines=[1,21]
 import { Outlet, Link, useLoaderData } from "remix";
 
 //...
@@ -687,7 +695,9 @@ export default function Admin() {
         <ul>
           {posts.map(post => (
             <li key={post.slug}>
-              <Link to={`/posts/${post.slug}`}>{post.title}</Link>
+              <Link to={`/posts/${post.slug}`}>
+                {post.title}
+              </Link>
             </li>
           ))}
         </ul>
@@ -720,11 +730,11 @@ Now click the link from the index route and watch the `<Outlet/>` automatically 
 
 ## Actions
 
-We're gonna get serious now. Let's build a form to create a new post in the our new "new" route.
+We're gonna get serious now. Let's build a form to create a new post in our new "new" route.
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,5-24]
+```tsx filename=app/routes/admin/new.tsx lines=[1,4-25]
 import { Form } from "remix";
 
 export default function NewPost() {
@@ -755,7 +765,7 @@ export default function NewPost() {
 
 If you love HTML like us, you should be getting pretty excited. If you've been doing a lot of `<form onSubmit>` and `<button onClick>` you're about to have your mind blown by HTML.
 
-All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to.
+All you really need for a feature like this is a form to get data from the user and a backend action to handle it. And in Remix, that's all you have to do, too.
 
 Let's create the essential code that knows how to save a post first in our `post.ts` module.
 
@@ -796,7 +806,7 @@ export default function NewPost() {
 }
 ```
 
-That's it. Remix (and the browser) will take of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
+That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
 In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`.
 
@@ -880,13 +890,9 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,17-18,24-25,30-31]
-import {
-  useActionData,
-  Form,
-  redirect,
-  ActionFunction
-} from 'remix';
+```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-15,20-22,26-28]
+import { useActionData, Form, redirect } from "remix";
+import type { ActionFunction } from "remix";
 
 // ...
 
@@ -925,7 +931,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[4-8,15,24-26]
+```tsx filename=app/routes/admin/new.tsx lines=[2,4-8,15,24-26]
 //...
 import invariant from "tiny-invariant";
 
@@ -933,10 +939,10 @@ type PostError = {
   title?: boolean;
   slug?: boolean;
   markdown?: boolean;
-}
+};
 
 export const action: ActionFunction = async ({
-  request,
+  request
 }) => {
   // ...
 
@@ -962,13 +968,15 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/admin/new.tsx lines=[5]
+```tsx filename=app/routes/admin/new.tsx lines=[5-6]
 // ...
 export const action: ActionFunction = async ({
   request
 }) => {
   await new Promise(res => setTimeout(res, 1000));
+
   const formData = await request.formData();
+
   const title = formData.get("title");
   const slug = formData.get("slug");
   const markdown = formData.get("markdown");
@@ -1011,6 +1019,6 @@ export default function NewPost() {
 
 Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
+That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/admin/new.tsx`. You just gotta put it together.
 
 We hope you love Remix!
