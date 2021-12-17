@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import React from "react";
+import * as React from "react";
 import type { Params } from "react-router";
 
 import type { RouteModules, ShouldReloadFunction } from "./routeModules";

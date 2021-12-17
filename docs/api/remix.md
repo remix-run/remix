@@ -13,8 +13,7 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx [2,10,11,15]
-import React from "react";
+```tsx lines=[1,9-10,14]
 import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
@@ -189,8 +188,7 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 
 This hook returns the JSON parsed data from your route loader function.
 
-```tsx [2,9]
-import React from "react";
+```tsx lines=[1,8]
 import { useLoaderData } from "remix";
 
 export function loader() {
@@ -207,8 +205,7 @@ export default function Invoices() {
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
-```tsx [2,11,20]
-import React from "react";
+```tsx lines=[1,10,19]
 import { useActionData } from "remix";
 
 export async function action({ request }) {
@@ -2174,7 +2171,6 @@ Now we can read the message in a loader.
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```js
-import React from "react";
 import { Meta, Links, Scripts, Outlet, json } from "remix";
 
 import { getSession, commitSession } from "./sessions";
