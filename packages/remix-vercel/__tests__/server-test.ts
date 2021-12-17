@@ -215,7 +215,7 @@ describe("vercel createRemixRequest", () => {
     }) as VercelRequest;
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`
-      RemixRequest {
+      NodeRequest {
         "abortController": undefined,
         "agent": undefined,
         "compress": true,

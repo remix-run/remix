@@ -228,7 +228,7 @@ describe("netlify createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      RemixRequest {
+      NodeRequest {
         "abortController": undefined,
         "agent": undefined,
         "compress": true,
