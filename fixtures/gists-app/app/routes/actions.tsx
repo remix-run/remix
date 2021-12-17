@@ -1,7 +1,7 @@
 import {
   Form,
   json,
-  parseMultipartFormData,
+  unstable_parseMultipartFormData as parseMultipartFormData,
   useActionData,
   useLoaderData
 } from "remix";

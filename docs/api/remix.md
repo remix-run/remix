@@ -1368,17 +1368,17 @@ The `uploadHandler` is the key to whole thing. It's responsible for what happens
 
 Remix has two utilities to create `uploadHandler`s for you:
 
-- `createFileUploadHandler`
-- `createMemoryUploadHandler`
+- `unstable_createFileUploadHandler`
+- `unstable_createMemoryUploadHandler`
 
 These are fully featured utilities for handling fairly simple use cases. It's not recommended to load anything but quite small files into memory. Saving files to disk is a reasonable solution for many use cases. But if you want to upload the file to a file hosting provider, then you'll need to write your own.
 
-#### `createFileUploadHandler`
+#### `unstable_createFileUploadHandler`
 
 **Example:**
 
 ```tsx
-let uploadHandler = createFileUploadHandler({
+let uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename
 });
@@ -1410,17 +1410,17 @@ The function API for `file` and `directory` are the same. They accept an `object
 
 The `filter` function accepts an `object` and returns a `boolean` (or a promise that resolves to a `boolean`). The object it accepts has the `filename`, `encoding`, and `mimetype` (all strings). The `boolean` returned is `true` if you want to handle that file stream.
 
-#### `createMemoryUploadHandler`
+#### `unstable_createMemoryUploadHandler`
 
 **Example:**
 
 ```tsx
-let uploadHandler = createMemoryUploadHandler({
+let uploadHandler = unstable_createMemoryUploadHandler({
   maxFileSize: 500_000
 });
 
 export let action: ActionFunction = async ({ request }) => {
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
@@ -1432,7 +1432,7 @@ export let action: ActionFunction = async ({ request }) => {
 };
 ```
 
-**Options:** The only options supported are `maxFileSize` and `filter` which work the same as in `createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
+**Options:** The only options supported are `maxFileSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
 
 ### Custom `uploadHandler`
 
@@ -1494,14 +1494,14 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 
 ### Upload Handler Composition
 
-We have the built-in `createFileUploadHandler` and `createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
+We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
 ```tsx
 import type { UploadHandler } from "remix";
-import { createFileUploadHandler } from "remix";
+import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export let fileUploadHandler = createFileUploadHandler({
+export let fileUploadHandler = unstable_createFileUploadHandler({
   directory: "public/calendar-events"
 });
 

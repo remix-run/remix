@@ -1,4 +1,4 @@
-import { createFileUploadHandler } from "remix";
+import { unstable_createFileUploadHandler as createFileUploadHandler } from "remix";
 
 export let uploadHandler = createFileUploadHandler({
   directory: "public/uploads",
