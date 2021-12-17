@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/cloudflare-pages",
   "description": "Cloudflare Pages request handler for Remix",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "license": "MIT",
   "main": "./index.js",
   "module": "./esm/index.js",
@@ -14,7 +14,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/server-runtime": "1.0.6"
+    "@remix-run/server-runtime": "1.1.0"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^3.2.0"
