@@ -1501,9 +1501,10 @@ import type { UploadHandler } from "remix";
 import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export let fileUploadHandler = unstable_createFileUploadHandler({
-  directory: "public/calendar-events"
-});
+export let fileUploadHandler =
+  unstable_createFileUploadHandler({
+    directory: "public/calendar-events"
+  });
 
 export let cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
