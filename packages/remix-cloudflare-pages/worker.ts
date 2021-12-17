@@ -1,4 +1,3 @@
-import { getType } from "mime";
 import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
@@ -44,9 +43,8 @@ export function createPagesFunctionHandler<Env = any>({
     // https://github.com/cloudflare/wrangler2/issues/117
     context.request.headers.delete("If-None-Match");
 
-    let url = new URL(context.request.url);
     try {
-      response = await context.env.ASSETS.fetch(
+      response = await (context.env as any).ASSETS.fetch(
         context.request.url,
         context.request
       );
@@ -54,13 +52,6 @@ export function createPagesFunctionHandler<Env = any>({
         ? new Response(response.body, response)
         : undefined;
     } catch {}
-    // This is a known CF bug in the Pages runtime
-    if (response) {
-      let contentType = getType(url.pathname);
-      if (contentType) {
-        response.headers.set("Content-Type", contentType);
-      }
-    }
 
     if (!response) {
       response = await handleRequest(context);
