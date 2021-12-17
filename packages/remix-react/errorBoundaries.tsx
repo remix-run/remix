@@ -70,14 +70,15 @@ export class RemixErrorBoundary extends React.Component<
  */
 export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   console.error(error);
-  console.log(
-    "💿 Hey developer👋. You can provide a way better UX when your app throws errors than this. Check out https://remix.run/guides/errors for more information."
-  );
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>Applicatoin Error!</title>
+        <meta
+          name="viewport"
+          content="width=device-width,initial-scale=1,viewport-fit=cover"
+        />
+        <title>Application Error!</title>
       </head>
       <body>
         <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
@@ -93,6 +94,15 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
             {error.stack}
           </pre>
         </main>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              console.log(
+                "💿 Hey developer👋. You can provide a way better UX when your app throws errors than this. Check out https://remix.run/guides/errors for more information."
+              );
+            `
+          }}
+        />
       </body>
     </html>
   );
@@ -135,19 +145,29 @@ export function RemixCatchBoundary({
  */
 export function RemixRootDefaultCatchBoundary() {
   let caught = useCatch();
-  console.log(
-    "💿 Hey developer👋. You can provide a way better UX when your app throws 404s (and other responses) than this. Check out https://remix.run/guides/not-found for more information."
-  );
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
+        <meta
+          name="viewport"
+          content="width=device-width,initial-scale=1,viewport-fit=cover"
+        />
         <title>Unhandled Thrown Response!</title>
       </head>
       <body>
         <h1 style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
           {caught.status} {caught.statusText}
         </h1>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              console.log(
+                "💿 Hey developer👋. You can provide a way better UX when your app throws 404s (and other responses) than this. Check out https://remix.run/guides/not-found for more information."
+              );
+            `
+          }}
+        />
       </body>
     </html>
   );
