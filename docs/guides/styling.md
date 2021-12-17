@@ -619,7 +619,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx
+   ```tsx filename=entry.server.tsx lines=[4-5,13-42]
    import type { EntryContext } from "remix";
    import { RemixServer } from "remix";
    import { renderToString } from "react-dom/server";
@@ -674,7 +674,7 @@ Here's some sample code to show how you might use Styled Components with Remix:
 
 3. Finally, access and render the styles in your root route.
 
-   ```tsx filename=app/root.tsx
+   ```tsx filename=app/root.tsx lines=[6,12]
    import { Meta, Scripts } from "remix";
    import { useContext } from "react";
    import StylesContext from "./StylesContext";
