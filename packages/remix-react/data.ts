@@ -60,8 +60,20 @@ export async function extractData(response: Response): Promise<AppData> {
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
 
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
+  if (contentType) {
+    if (/\bapplication\/json\b/.test(contentType)) {
+      return response.json();
+    }
+    if (/\bmultipart\/form-data\b/.test(contentType)) {
+      return response.formData();
+    }
+    if (/\btext\/event-stream\b/.test(contentType)) {
+      return response.body;
+    }
+    if (/\bapplication\/x-www-form-urlencoded\b/.test(contentType)) {
+      const text = await response.text();
+      return new URLSearchParams(text);
+    }
   }
 
   return response.text();

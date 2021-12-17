@@ -130,17 +130,27 @@ function stripDataParam(request: Request) {
   return new Request(url.toString(), request);
 }
 
-export function extractData(response: Response): Promise<unknown> {
+export async function extractData(response: Response): Promise<unknown> {
   let contentType = response.headers.get("Content-Type");
 
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
+  if (contentType) {
+    if (/\bapplication\/json\b/.test(contentType)) {
+      return response.json();
+    }
+    if (/\bmultipart\/form-data\b/.test(contentType)) {
+      return response.formData();
+    }
+    if (/\btext\/event-stream\b/.test(contentType)) {
+      return response.body;
+    }
+    if (/\bapplication\/x-www-form-urlencoded\b/.test(contentType)) {
+      const text = await response.text();
+      return new URLSearchParams(text);
+    }
   }
 
   // What other data types do we need to handle here? What other kinds of
   // responses are people going to be returning from their loaders?
-  // - application/x-www-form-urlencoded ?
-  // - multipart/form-data ?
   // - binary (audio/video) ?
 
   return response.text();
