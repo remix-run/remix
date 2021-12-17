@@ -11,3 +11,4 @@ yarn-error.log
 /fixtures/my-remix-app
 
 .eslintcache
+/.idea/
