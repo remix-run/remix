@@ -106,7 +106,7 @@ export function createRemixRequest(
     init.body = req;
   }
 
-  return new NodeRequest(url.toString(), init);
+  return new NodeRequest(url.href, init);
 }
 
 function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
