@@ -14,8 +14,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/server-runtime": "1.0.6",
-    "mime": "^3.0.0"
+    "@remix-run/server-runtime": "1.0.6"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^3.2.0"

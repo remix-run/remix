@@ -1,8 +1,7 @@
-import { getType } from "mime";
 import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
-export interface CreateFetchHandlerParams<Env = any> {
+export interface createPagesFunctionHandlerParams<Env = any> {
   build: ServerBuild;
   getLoadContext?: (context: EventContext<Env, any, any>) => AppLoadContext;
   mode?: string;
@@ -12,7 +11,7 @@ export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
   mode
-}: CreateFetchHandlerParams<Env>): PagesFunction<Env> {
+}: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
   let platform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
@@ -27,11 +26,11 @@ export function createRequestHandler<Env = any>({
 
 declare const process: any;
 
-export function createFetchHandler<Env = any>({
+export function createPagesFunctionHandler<Env = any>({
   build,
   getLoadContext,
   mode
-}: CreateFetchHandlerParams<Env>) {
+}: createPagesFunctionHandlerParams<Env>) {
   const handleRequest = createRequestHandler<Env>({
     build,
     getLoadContext,
@@ -41,23 +40,18 @@ export function createFetchHandler<Env = any>({
   const handleFetch = async (context: EventContext<Env, any, any>) => {
     let response: Response | undefined;
 
-    const request = new Request(context.request);
     // https://github.com/cloudflare/wrangler2/issues/117
-    request.headers.delete("If-None-Match");
-    context.request = request;
+    context.request.headers.delete("If-None-Match");
 
-    let url = new URL(context.request.url);
     try {
-      response = await context.next();
-      response = response.ok ? response : undefined;
+      response = await (context.env as any).ASSETS.fetch(
+        context.request.url,
+        context.request
+      );
+      response = response?.ok
+        ? new Response(response.body, response)
+        : undefined;
     } catch {}
-    // This is a known CF bug in the Pages runtime
-    if (response) {
-      let contentType = getType(url.pathname);
-      if (contentType) {
-        response.headers.set("Content-Type", contentType);
-      }
-    }
 
     if (!response) {
       response = await handleRequest(context);
