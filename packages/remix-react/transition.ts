@@ -291,25 +291,75 @@ function isLoaderSubmission(
   return submission.method === "GET";
 }
 
-function isRedirectLocation(location: Location): location is Location {
-  return Boolean(location.state) && location.state.isRedirect;
+interface _Location extends Location {
+  state: {
+    isRedirect: boolean;
+    type: string;
+  } | null;
 }
 
-function isLoaderRedirectLocation(location: Location): location is Location {
+interface RedirectLocation extends _Location {
+  state: {
+    isRedirect: true;
+    type: string;
+  };
+}
+
+function isRedirectLocation(location: Location): location is RedirectLocation {
+  return (
+    Boolean(location.state) && (location as RedirectLocation).state.isRedirect
+  );
+}
+
+interface LoaderRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "loader";
+  };
+}
+
+function isLoaderRedirectLocation(
+  location: Location
+): location is LoaderRedirectLocation {
   return isRedirectLocation(location) && location.state.type === "loader";
 }
 
-function isActionRedirectLocation(location: Location): location is Location {
+interface ActionRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "action";
+  };
+}
+
+function isActionRedirectLocation(
+  location: Location
+): location is ActionRedirectLocation {
   return isRedirectLocation(location) && location.state.type === "action";
 }
 
-function isFetchActionRedirect(location: Location): location is Location {
+interface FetchActionRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "fetchAction";
+  };
+}
+
+function isFetchActionRedirect(
+  location: Location
+): location is FetchActionRedirectLocation {
   return isRedirectLocation(location) && location.state.type === "fetchAction";
+}
+
+interface LoaderSubmissionRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "loaderSubmission";
+  };
 }
 
 function isLoaderSubmissionRedirectLocation(
   location: Location
-): location is Location {
+): location is LoaderSubmissionRedirectLocation {
   return (
     isRedirectLocation(location) && location.state.type === "loaderSubmission"
   );
