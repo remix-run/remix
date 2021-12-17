@@ -85,6 +85,8 @@ The port number to use for the dev server. Defaults to 8002.
 
 There are a few conventions that Remix uses you should be aware of.
 
+<docs-info>[Dilum Sanjaya](https://twitter.com/DilumSanjaya) made [an awesome visualization](https://remix-routing-demo.netlify.app/) of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
+
 ### Special Files
 
 - **`remix.config.js`**: Remix uses this file to know how to build your app for production and run it in development. This file is required.
