@@ -26,23 +26,11 @@ export interface HtmlLinkDescriptor {
   crossOrigin?: "anonymous" | "use-credentials";
 
   /**
-   * Relationship between the document containing the hyperlink and the destination resource
+   * Relationship between the document containing the hyperlink and the destination resource.
+   * Common values are: "alternate", "dns-prefetch", "icon", "manifest", "modulepreload", "next",
+   * "pingback", "preconnect", "prefetch", "preload", "prerender", "search", and "stylesheet".
    */
-  rel:
-    | "alternate"
-    | "dns-prefetch"
-    | "icon"
-    | "manifest"
-    | "modulepreload"
-    | "next"
-    | "pingback"
-    | "preconnect"
-    | "prefetch"
-    | "preload"
-    | "prerender"
-    | "search"
-    | "stylesheet"
-    | string;
+  rel: string;
 
   /**
    * Applicable media: "screen", "print", "(max-width: 764px)"
@@ -95,30 +83,11 @@ export interface HtmlLinkDescriptor {
 
   /**
    * Potential destination for a preload request (for rel="preload" and rel="modulepreload")
+   * Common values are: "audio", "audioworklet", "document", "embed", "fetch", "font", "frame",
+   * "iframe", "image", "manifest", "object", "paintworklet", "report", "script", "serviceworker",
+   * "sharedworker", "style", "track", "video", "worker", and "xslt"
    */
-  as?:
-    | "audio"
-    | "audioworklet"
-    | "document"
-    | "embed"
-    | "fetch"
-    | "font"
-    | "frame"
-    | "iframe"
-    | "image"
-    | "manifest"
-    | "object"
-    | "paintworklet"
-    | "report"
-    | "script"
-    | "serviceworker"
-    | "sharedworker"
-    | "style"
-    | "track"
-    | "video"
-    | "worker"
-    | "xslt"
-    | string;
+  as?: string;
 
   /**
    * Color to use when customizing a site's icon (for rel="mask-icon")
