@@ -661,11 +661,7 @@ It is not available when the fetcher state is "idle" or "loading".
 
 #### `fetcher.data`
 
-When using `<fetcher.Form>` or `fetcher.submit()`, the action or loader's response is stored here.
-
-In the case of action submissions, the data is available even before the routes on the page are reloaded.
-
-It is not available when the fetcher state is "submitting". If you need it around when the same form is resubmit, you'll need to persist it to your own React state.
+The returned response data from your loader or action is stored here. Once the data is set, it persists on the fetcher even through reloads and resubmissions (like calling `fetcher.load()` again after having already read the data).
 
 #### `fetcher.Form`
 

@@ -207,7 +207,7 @@ type FetcherStates<TData = any> = {
     state: "submitting";
     type: "loaderSubmission";
     submission: LoaderSubmission;
-    data: undefined;
+    data: TData | undefined;
   };
   ReloadingAction: {
     state: "loading";
@@ -219,7 +219,7 @@ type FetcherStates<TData = any> = {
     state: "loading";
     type: "normalLoad";
     submission: undefined;
-    data: undefined;
+    data: TData | undefined;
   };
   Done: {
     state: "idle";
@@ -490,11 +490,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submission: ActionSubmission,
     match: ClientMatch
   ) {
+    let currentFetcher = state.fetchers.get(key);
+
     let fetcher: FetcherStates["SubmittingAction"] = {
       state: "submitting",
       type: "actionSubmission",
       submission,
-      data: undefined
+      data: currentFetcher?.data || undefined
     };
     state.fetchers.set(key, fetcher);
 
@@ -675,12 +677,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submission: LoaderSubmission,
     match: ClientMatch
   ) {
+    let currentFetcher = state.fetchers.get(key);
     let fetcher: FetcherStates["SubmittingLoader"] = {
       state: "submitting",
       type: "loaderSubmission",
       submission,
-      data: undefined
+      data: currentFetcher?.data || undefined
     };
+
     state.fetchers.set(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
@@ -726,11 +730,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
+    let currentFetcher = state.fetchers.get(key);
+
     let fetcher: FetcherStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
-      data: undefined
+      data: currentFetcher?.data || undefined
     };
 
     state.fetchers.set(key, fetcher);
