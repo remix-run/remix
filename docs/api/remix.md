@@ -914,7 +914,7 @@ function useMarkAsRead({ articleId, userId }) {
     marker.submit(
       { userId },
       {
-        method: "POST",
+        method: "post",
         action: "/article/${articleID}/mark-as-read"
       }
     );
