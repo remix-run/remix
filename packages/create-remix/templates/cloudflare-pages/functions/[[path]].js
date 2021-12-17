@@ -1,9 +1,9 @@
-import { createFetchHandler } from "@remix-run/cloudflare-pages";
+import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
 
 // @ts-ignore
 import * as build from "../build";
 
-const handleFetch = createFetchHandler({
+const handleFetch = createPagesFunctionHandler({
   build
 });
 

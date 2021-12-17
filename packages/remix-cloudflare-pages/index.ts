@@ -2,7 +2,7 @@ import { installGlobals } from "./globals";
 
 export { createCloudflareKVSessionStorage } from "./sessions/cloudflareKVSessionStorage";
 
-export type { CreateFetchHandlerParams } from "./worker";
-export { createFetchHandler, createRequestHandler } from "./worker";
+export type { createPagesFunctionHandlerParams } from "./worker";
+export { createPagesFunctionHandler, createRequestHandler } from "./worker";
 
 installGlobals();

@@ -2,7 +2,7 @@ import { getType } from "mime";
 import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 
-export interface CreateFetchHandlerParams<Env = any> {
+export interface createPagesFunctionHandlerParams<Env = any> {
   build: ServerBuild;
   getLoadContext?: (context: EventContext<Env, any, any>) => AppLoadContext;
   mode?: string;
@@ -12,7 +12,7 @@ export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
   mode
-}: CreateFetchHandlerParams<Env>): PagesFunction<Env> {
+}: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
   let platform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
@@ -27,11 +27,11 @@ export function createRequestHandler<Env = any>({
 
 declare const process: any;
 
-export function createFetchHandler<Env = any>({
+export function createPagesFunctionHandler<Env = any>({
   build,
   getLoadContext,
   mode
-}: CreateFetchHandlerParams<Env>) {
+}: createPagesFunctionHandlerParams<Env>) {
   const handleRequest = createRequestHandler<Env>({
     build,
     getLoadContext,
