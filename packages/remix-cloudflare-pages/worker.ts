@@ -41,6 +41,11 @@ export function createFetchHandler<Env = any>({
   const handleFetch = async (context: EventContext<Env, any, any>) => {
     let response: Response | undefined;
 
+    const request = new Request(context.request);
+    // https://github.com/cloudflare/wrangler2/issues/117
+    request.headers.delete("If-None-Match");
+    context.request = request;
+
     let url = new URL(context.request.url);
     try {
       response = await context.next();
