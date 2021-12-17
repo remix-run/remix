@@ -133,24 +133,8 @@ remix-jokes
 │   ├── entry.client.tsx
 │   ├── entry.server.tsx
 │   ├── root.tsx
-│   ├── routes
-│   │   ├── demos
-│   │   │   ├── about
-│   │   │   │   ├── index.tsx
-│   │   │   │   └── whoa.tsx
-│   │   │   ├── about.tsx
-│   │   │   ├── actions.tsx
-│   │   │   ├── correct.tsx
-│   │   │   ├── params
-│   │   │   │   ├── $id.tsx
-│   │   │   │   └── index.tsx
-│   │   │   └── params.tsx
-│   │   └── index.tsx
-│   └── styles
-│       ├── dark.css
-│       ├── demos
-│       │   └── about.css
-│       └── global.css
+│   └── routes
+│       └── index.tsx
 ├── package-lock.json
 ├── package.json
 ├── public
@@ -197,16 +181,14 @@ This will start the server and output this:
 Remix App Server started at http://localhost:3000
 ```
 
-Open up that URL and you should be presented with something that looks a bit like this:
-
-![The Remix Starter App](/jokes-tutorial/img/remix-starter.png)
-
-Feel free to read a bit of what's in there and explore the code if you like. I'll be here when you get back. You done? Ok, sweet.
+Open up that URL and you should be presented with a minimal page pointing to some docs.
 
 💿 Now stop the server and delete all this stuff:
 
 - `app/routes`
 - `app/styles`
+
+We're going to trim this down the the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
