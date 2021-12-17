@@ -70,56 +70,28 @@ export class RemixErrorBoundary extends React.Component<
  */
 export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   console.error(error);
+  console.log(
+    "💿 Hey developer👋. You can provide a way better UX when your app throws errors than this. Check out https://remix.run/guides/errors for more information."
+  );
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <title>Uncaught Exception!</title>
+        <title>Applicatoin Error!</title>
       </head>
       <body>
-        <main
-          style={{
-            border: "solid 2px hsl(10, 50%, 50%)",
-            padding: "2rem"
-          }}
-        >
-          <div>
-            <h1>Uncaught Exception!</h1>
-            <p>
-              If you are not the developer, please click back in your browser
-              and try again.
-            </p>
-            <div
-              style={{
-                fontFamily: `"SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace`,
-                padding: "1rem",
-                margin: "1rem 0",
-                border: "solid 4px"
-              }}
-            >
-              {error.message}
-            </div>
-            <p>
-              There was an uncaught exception in your application. Check the
-              browser console and/or server console to inspect the error.
-            </p>
-            <p>
-              If you are the developer, consider adding your own error boundary
-              so users don't see this page when unexpected errors happen in
-              production!
-            </p>
-            <p>
-              Read more about{" "}
-              <a
-                target="_blank"
-                rel="noreferrer"
-                href="https://remix.run/guides/errors"
-              >
-                Error Handling in Remix
-              </a>
-              .
-            </p>
-          </div>
+        <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+          <h1 style={{ fontSize: "24px" }}>Application Error</h1>
+          <pre
+            style={{
+              padding: "2rem",
+              background: "hsla(10, 50%, 50%, 0.1)",
+              color: "red",
+              overflow: "auto"
+            }}
+          >
+            {error.stack}
+          </pre>
         </main>
       </body>
     </html>
@@ -162,6 +134,10 @@ export function RemixCatchBoundary({
  * When app's don't provide a root level CatchBoundary, we default to this.
  */
 export function RemixRootDefaultCatchBoundary() {
+  let caught = useCatch();
+  console.log(
+    "💿 Hey developer👋. You can provide a way better UX when your app throws 404s (and other responses) than this. Check out https://remix.run/guides/not-found for more information."
+  );
   return (
     <html lang="en">
       <head>
@@ -169,37 +145,9 @@ export function RemixRootDefaultCatchBoundary() {
         <title>Unhandled Thrown Response!</title>
       </head>
       <body>
-        <main
-          style={{
-            border: "solid 2px hsl(10, 50%, 50%)",
-            padding: "2rem"
-          }}
-        >
-          <div>
-            <h1>Unhandled Thrown Response!</h1>
-            <p>
-              If you are not the developer, please click back in your browser
-              and try again.
-            </p>
-            <p>There was an unhandled thrown response in your application.</p>
-            <p>
-              If you are the developer, consider adding your own catch boundary
-              so users don't see this page when unhandled thrown response happen
-              in production!
-            </p>
-            <p>
-              Read more about{" "}
-              <a
-                target="_blank"
-                rel="noreferrer"
-                href="https://remix.run/guides/errors"
-              >
-                Throwing Responses in Remix
-              </a>
-              .
-            </p>
-          </div>
-        </main>
+        <h1 style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
+          {caught.status} {caught.statusText}
+        </h1>
       </body>
     </html>
   );
