@@ -16,9 +16,9 @@
     "@remix-run/server-runtime": "1.0.6"
   },
   "peerDependencies": {
-    "@netlify/functions": "^0.7.2"
+    "@netlify/functions": "^0.10.0"
   },
   "devDependencies": {
-    "@netlify/functions": "^0.7.2"
+    "@netlify/functions": "^0.10.0"
   }
 }

@@ -1271,10 +1271,10 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
-"@netlify/functions@^0.7.2":
-  version "0.7.2"
-  resolved "https://registry.npmjs.org/@netlify/functions/-/functions-0.7.2.tgz#9d39553b94e7aaa86dddf515bdbaed3e89998122"
-  integrity sha512-xf45ZqQukMxmlkqNMC5BXdFMaVZ8VqF42MV5zA5nKVOh2V0mhYlcbTYlVbS/K2/rtvQ3W8lxxixYl4NT7kq6Bg==
+"@netlify/functions@^0.10.0":
+  version "0.10.0"
+  resolved "https://registry.npmjs.org/@netlify/functions/-/functions-0.10.0.tgz#3856b609df1c1d1c7c21773650d1e5b4f81cfaf2"
+  integrity sha512-NNFADTPnokuoMY1OUhaXlE/Jrzk5lHOl1uB4L/8pw1UJ/CaectZJACMExijbJnqaKIhOQG0WmbBQUh1lgnK/Qg==
   dependencies:
     is-promise "^4.0.0"
 
