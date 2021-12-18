@@ -665,7 +665,7 @@ function remixServe() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: [`${SOURCE_DIR}/index.ts`, `${SOURCE_DIR}/env.ts`],
       output: {
         banner: createBanner("@remix-run/serve", version),
         dir: OUTPUT_DIR,
