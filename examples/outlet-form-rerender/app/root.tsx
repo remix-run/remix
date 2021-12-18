@@ -5,15 +5,8 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch,
-} from 'remix'
-import type { LinksFunction } from 'remix'
-
-import globalStylesUrl from '~/styles/global.css'
-
-export const links: LinksFunction = () => {
-  return [{ rel: 'stylesheet', href: globalStylesUrl }]
-}
+  useCatch
+} from "remix";
 
 export default function App() {
   return (
@@ -22,13 +15,13 @@ export default function App() {
         <Outlet />
       </main>
     </Document>
-  )
+  );
 }
 
 export function ErrorBoundary({ error }: { error: Error }) {
-  console.error(error)
+  console.error(error);
   return (
-    <Document title='Error!'>
+    <Document title="Error!">
       <div>
         <h1>There was an error</h1>
         <p>{error.message}</p>
@@ -39,13 +32,13 @@ export function ErrorBoundary({ error }: { error: Error }) {
         </p>
       </div>
     </Document>
-  )
+  );
 }
 
 export function CatchBoundary() {
-  const caught = useCatch()
+  const caught = useCatch();
 
-  let message
+  let message;
   switch (caught.status) {
     case 401:
       message = (
@@ -53,16 +46,16 @@ export function CatchBoundary() {
           Oops! Looks like you tried to visit a page that you do not have access
           to.
         </p>
-      )
-      break
+      );
+      break;
     case 404:
       message = (
         <p>Oops! Looks like you tried to visit a page that does not exist.</p>
-      )
-      break
+      );
+      break;
 
     default:
-      throw new Error(caught.data || caught.statusText)
+      throw new Error(caught.data || caught.statusText);
   }
 
   return (
@@ -72,21 +65,21 @@ export function CatchBoundary() {
       </h1>
       {message}
     </Document>
-  )
+  );
 }
 
 function Document({
   children,
-  title,
+  title
 }: {
-  children: React.ReactNode
-  title?: string
+  children: React.ReactNode;
+  title?: string;
 }) {
   return (
-    <html lang='en'>
+    <html lang="en">
       <head>
-        <meta charSet='utf-8' />
-        <meta name='viewport' content='width=device-width,initial-scale=1' />
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -95,8 +88,8 @@ function Document({
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === 'development' && <LiveReload />}
+        {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>
     </html>
-  )
+  );
 }
