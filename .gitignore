@@ -1,3 +1,4 @@
+.DS_Store
 .vscode
 .DS_Store
 
@@ -9,6 +10,7 @@ yarn-error.log
 /fixtures/cloudflare
 /fixtures/test
 /fixtures/my-remix-app
+/fixtures/deno-app
 
 .eslintcache
 /.idea/

@@ -9,7 +9,7 @@ function purgeRequireCache() {
   // netlify typically does this for you, but we've found it to be hit or
   // miss and some times requires you to refresh the page after it auto reloads
   // or even have to restart your server
-  for (let key in require.cache) {
+  for (const key in require.cache) {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
     }

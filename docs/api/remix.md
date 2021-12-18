@@ -13,8 +13,7 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx [2,10,11,15]
-import React from "react";
+```tsx lines=[1,9-10,14]
 import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
@@ -253,8 +252,7 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 
 This hook returns the JSON parsed data from your route loader function.
 
-```tsx [2,9]
-import React from "react";
+```tsx lines=[1,8]
 import { useLoaderData } from "remix";
 
 export function loader() {
@@ -271,8 +269,7 @@ export default function Invoices() {
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
-```tsx [2,11,20]
-import React from "react";
+```tsx lines=[1,10,19]
 import { useActionData, Form } from "remix";
 
 export async function action({ request }) {
@@ -299,7 +296,7 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [19, 28, 36, 40-42]
+```tsx [21, 30, 38-40, 44-46]
 import { redirect, json, Form, useActionData } from "remix";
 
 export async function action({ request }) {
@@ -337,13 +334,15 @@ export default function Signup() {
       <Form method="post">
         <p>
           <input type="text" name="email" />
-          {errors?.email && <span>{errors.email}</span>}
+          {errors?.email ? (
+            <span>{errors.email}</span>
+          ) : null}
         </p>
         <p>
           <input type="text" name="password" />
-          {errors?.password && (
+          {errors?.password ? (
             <span>{errors.password}</span>
-          )}
+          ) : null}
         </p>
         <p>
           <button type="submit">Sign up</button>
@@ -463,9 +462,9 @@ function UserPreferences() {
         <input type="checkbox" name="darkMode" value="on" />{" "}
         Dark Mode
       </label>
-      {transition.state === "submitting" && (
+      {transition.state === "submitting" ? (
         <p>Saving...</p>
-      )}
+      ) : null}
     </Form>
   );
 }
@@ -617,9 +616,8 @@ This tells you what the next location is going to be. It's most useful when matc
 
 For example, this `Link` knows when its page is loading and about to become active:
 
-```tsx [7-9]
-import { useResolvedPath } from "react-router-dom";
-import { Link } from "remix";
+```tsx [6-8]
+import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
   const transition = useTransition();
@@ -727,11 +725,7 @@ It is not available when the fetcher state is "idle" or "loading".
 
 #### `fetcher.data`
 
-When using `<fetcher.Form>` or `fetcher.submit()`, the action or loader's response is stored here.
-
-In the case of action submissions, the data is available even before the routes on the page are reloaded.
-
-It is not available when the fetcher state is "submitting". If you need it around when the same form is resubmit, you'll need to persist it to your own React state.
+The returned response data from your loader or action is stored here. Once the data is set, it persists on the fetcher even through reloads and resubmissions (like calling `fetcher.load()` again after having already read the data).
 
 #### `fetcher.Form`
 
@@ -810,12 +804,13 @@ function NewsletterSignup() {
         </button>
       </p>
 
-      {newsletter.type === "done" &&
-        (newsletter.data.ok ? (
+      {newsletter.type === "done" ? (
+        newsletter.data.ok ? (
           <p>Thanks for subscribing!</p>
         ) : newsletter.data.error ? (
           <p data-error>{newsletter.data.error}</p>
-        ) : null)}
+        ) : null
+      ) : null}
     </newsletter.Form>
   );
 }
@@ -947,12 +942,13 @@ function UserAvatar({ partialUser }) {
       onMouseLeave={() => setShowDetails(false)}
     >
       <img src={partialUser.profileImageUrl} />
-      {showDetails &&
-        (userDetails.type === "done" ? (
+      {showDetails ? (
+        userDetails.type === "done" ? (
           <UserPopup user={userDetails.data} />
         ) : (
           <UserPopupLoading />
-        ))}
+        )
+      ) : null}
     </div>
   );
 }
@@ -981,10 +977,12 @@ function CitySearchCombobox() {
               cities.submit(event.target.form)
             }
           />
-          {cities.state === "submitting" && <Spinner />}
+          {cities.state === "submitting" ? (
+            <Spinner />
+          ) : null}
         </div>
 
-        {cities.data && (
+        {cities.data ? (
           <ComboboxPopover className="shadow-popup">
             {cities.data.error ? (
               <p>Failed to load cities :(</p>
@@ -1001,7 +999,7 @@ function CitySearchCombobox() {
               <span>No results found</span>
             )}
           </ComboboxPopover>
-        )}
+        ) : null}
       </Combobox>
     </cities.Form>
   );
@@ -1361,12 +1359,217 @@ Of course, you can do redirects without this helper if you'd rather build it up 
 return redirect("/else/where", 303);
 
 // ...for this
-return new Response("", {
+return new Response(null, {
   status: 303,
   headers: {
     Location: "/else/where"
   }
 });
+```
+
+## `parseMultipartFormData` (node)
+
+Allows you to handle multipart forms (file uploads) for your app.
+
+Would be useful to understand [the Browser File API](https://developer.mozilla.org/en-US/docs/Web/API/File) to know how to use this API.
+
+It's to be used in place of `request.formData()`.
+
+```diff
+- let formData = await request.formData();
++ let formData = await parseMultipartFormData(request, uploadHandler);
+```
+
+For example:
+
+```tsx [2-5,7,23]
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler // <-- we'll look at this deeper next
+  );
+
+  // the returned value for the file field is whatever our uploadHandler returns.
+  // Let's imagine we're uploading the avatar to s3,
+  // so our uploadHandler returns the URL.
+  let avatarUrl = formData.get("avatar");
+
+  // update the currently logged in user's avatar in our database
+  await updateUserAvatar(request, avatarUrl);
+
+  // success! Redirect to account page
+  return redirect("/account");
+};
+
+export default function AvatarUploadRoute() {
+  return (
+    <Form method="post">
+      <label htmlFor="avatar-input">Avatar</label>
+      <input id="avatar-input" type="file" name="avatar" />
+      <button>Upload</button>
+    </Form>
+  );
+}
+```
+
+### `uploadHandler`
+
+The `uploadHandler` is the key to whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
+
+Remix has two utilities to create `uploadHandler`s for you:
+
+- `unstable_createFileUploadHandler`
+- `unstable_createMemoryUploadHandler`
+
+These are fully featured utilities for handling fairly simple use cases. It's not recommended to load anything but quite small files into memory. Saving files to disk is a reasonable solution for many use cases. But if you want to upload the file to a file hosting provider, then you'll need to write your own.
+
+#### `unstable_createFileUploadHandler`
+
+**Example:**
+
+```tsx
+let uploadHandler = unstable_createFileUploadHandler({
+  maxFileSize: 5_000_000,
+  file: ({ filename }) => filename
+});
+
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler
+  );
+
+  let file = formData.get("avatar");
+
+  // file is a "NodeFile" which has a similar API to "File"
+  // ... etc
+};
+```
+
+**Options:**
+
+| Property           | Type               | Default                         | Description                                                                                                                                               |
+| ------------------ | ------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
+| directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
+| file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
+| maxFileSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded an error will be thrown.                                                              |
+| filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
+
+The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
+
+The `filter` function accepts an `object` and returns a `boolean` (or a promise that resolves to a `boolean`). The object it accepts has the `filename`, `encoding`, and `mimetype` (all strings). The `boolean` returned is `true` if you want to handle that file stream.
+
+#### `unstable_createMemoryUploadHandler`
+
+**Example:**
+
+```tsx
+let uploadHandler = unstable_createMemoryUploadHandler({
+  maxFileSize: 500_000
+});
+
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await unstable_parseMultipartFormData(
+    request,
+    uploadHandler
+  );
+
+  let file = formData.get("avatar");
+
+  // file is a "File" (https://mdn.io/File) polyfilled for node
+  // ... etc
+};
+```
+
+**Options:** The only options supported are `maxFileSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
+
+### Custom `uploadHandler`
+
+Most of the time, you'll probably want to proxy the file stream to a file host.
+
+**Example:**
+
+```tsx
+import type { UploadHandler } from "remix";
+
+export let action: ActionFunction = async ({ request }) => {
+  const userId = getUserId(request);
+  let uploadHandler: UploadHandler = async ({
+    name,
+    stream
+  }) => {
+    // we only care about the file form field called "avatar"
+    // so we'll ignore anything else
+    // NOTE: the way our form is set up, we shouldn't get any other fields,
+    // but this is good defensive programming in case someone tries to hit our
+    // action directly via curl or something weird like that.
+    if (name !== "avatar") {
+      stream.resume();
+      return;
+    }
+
+    const uploadedImage =
+      await cloudinary.v2.uploader.upload(stream, {
+        public_id: userId,
+        folder: "/my-site/avatars"
+      });
+
+    return uploadedImage.secure_url;
+  };
+
+  let formData = await parseMultipartFormData(
+    request,
+    uploadHandler
+  );
+
+  let imageUrl = formData.get("avatar");
+
+  // because our uploadHandler returns a string, that's what the imageUrl will be.
+  // ... etc
+};
+```
+
+The `UploadHandler` function accepts a number of parameters about the file:
+
+| Property | Type     | Description                                                                  |
+| -------- | -------- | ---------------------------------------------------------------------------- |
+| name     | string   | The field name (comes from your HTML form field "name" value)                |
+| stream   | Readable | The stream of the file bytes                                                 |
+| filename | string   | The name of the file that the user selected for upload (like `rickroll.mp4`) |
+| encoding | string   | The encoding of the file (like `7bit`)                                       |
+| mimetype | string   | The mimetype of the file (like `video/mp4`)                                  |
+
+Your job is to do whatever you need with the `stream` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined`.
+
+### Upload Handler Composition
+
+We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
+
+```tsx
+import type { UploadHandler } from "remix";
+import { unstable_createFileUploadHandler } from "remix";
+import { createCloudinaryUploadHandler } from "some-handy-remix-util";
+
+export let fileUploadHandler =
+  unstable_createFileUploadHandler({
+    directory: "public/calendar-events"
+  });
+
+export let cloudinaryUploadHandler =
+  createCloudinaryUploadHandler({
+    folder: "/my-site/avatars"
+  });
+
+export let multHandler: UploadHandler = args => {
+  if (args.name === "calendarEvent") {
+    return fileUploadHandler(args);
+  } else if (args.name === "eventBanner") {
+    return cloudinaryUploadHandler(args);
+  } else {
+    args.stream.resume();
+  }
+};
 ```
 
 ## Cookies
@@ -2024,7 +2227,6 @@ Now we can read the message in a loader.
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```js
-import React from "react";
 import { Meta, Links, Scripts, Outlet, json } from "remix";
 
 import { getSession, commitSession } from "./sessions";
@@ -2089,6 +2291,142 @@ return json(data, {
     "Set-Cookie": await commitSession(session)
   }
 });
+```
+
+### `<Outlet context />`
+
+This component is a wrapper around React Router's Outlet with the ability to pass UI state down to nested routes.
+
+<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`](#useloaderdata) or [`useMatches`](#usematches).</docs-warning>
+
+Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
+
+```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-41,50-54,65]
+import type { LoaderData } from "remix";
+import {
+  json,
+  useLoaderData,
+  useParams,
+  Outlet
+} from "remix";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel
+} from "@reach/accordion";
+import { getCompanies, Companies } from "~/utils/companies";
+
+type LoaderData = {
+  companies: Array<Companies>;
+};
+
+export const loader: LoaderFunction = async () => {
+  const data: LoaderData = {
+    companies: await getCompanies()
+  };
+  return json(data);
+};
+
+type Sort = "ASC" | "DESC";
+export type ContextType = {
+  invoiceSort: Sort;
+};
+
+export default function CompaniesRoute() {
+  const data = useLoaderData<LoaderData>();
+
+  const [invoiceSort, setInvoiceSort] =
+    React.useState<Sort>("ASC");
+  function changeInvoiceSort() {
+    setInvoiceSort(sort =>
+      sort === "ASC" ? "DESC" : "ASC"
+    );
+  }
+  const context: ContextType = { sort };
+  const outlet = <Outlet context={context} />;
+
+  const params = useParams();
+  const selectedCompanyIndex = data.companies.findIndex(
+    company => company.id === params.companyId
+  );
+
+  return (
+    <div>
+      <button onClick={changeInvoiceSort}>
+        {invoiceSort === "ASC"
+          ? "Sort Descending"
+          : "Sort Ascending"}
+      </button>
+      <Accordion index={selectedCompanyIndex}>
+        {data.companies.map(company => (
+          <AccordionItem key={company.id}>
+            <AccordionButton as={Link} to={company.id}>
+              {company.name}
+            </AccordionButton>
+            {/* render the outlet by the
+            currently selected company */}
+            <AccordionPanel>
+              {params.companyId === company.id
+                ? outlet
+                : null}
+            </AccordionPanel>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+}
+```
+
+### `useOutletContext()`
+
+This hook returns the context from the `<Outlet />` that rendered you.
+
+Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
+
+```tsx filename=app/routes/companies/$companyId.tsx lines=[5,7,24,26-29]
+import type { LoaderFunction } from "remix";
+import {
+  json,
+  useLoaderData,
+  useOutletContext
+} from "remix";
+import type { ContextType } from "../companies";
+
+type LoaderData = {
+  company: Company;
+};
+
+export const loader: LoaderFunction = async ({
+  params
+}) => {
+  const data: LoaderData = {
+    company: await getCompany(params.companyId)
+  };
+  return json(data);
+};
+
+export default function CompanyRoute() {
+  const data = useLoaderData<LoaderData>();
+  const { sort } = useOutletContext<ContextType>();
+
+  const sortedInvoices =
+    sort === "ASC"
+      ? data.company.invoices
+      : data.company.invoices.reverse();
+
+  return (
+    <div>
+      <h2>{data.company.name}</h2>
+      <ul>
+        {sortedInvoices.map(invoice => (
+          <li key={invoice.id}>{invoice.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 ```
 
 ## Types
