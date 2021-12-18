@@ -73,7 +73,7 @@ describe("netlify createRequestHandler", () => {
 
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
@@ -101,7 +101,7 @@ describe("netlify createRequestHandler", () => {
           "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
 
-        return new Response("", { headers });
+        return new Response(null, { headers });
       });
 
       // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
@@ -228,7 +228,8 @@ describe("netlify createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -265,7 +266,7 @@ describe("netlify createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);

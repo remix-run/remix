@@ -96,7 +96,7 @@ describe("architect createRequestHandler", () => {
 
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
@@ -123,7 +123,7 @@ describe("architect createRequestHandler", () => {
           "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
 
-        return new Response("", { headers });
+        return new Response(null, { headers });
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
@@ -242,7 +242,8 @@ describe("architect createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -296,7 +297,7 @@ describe("architect createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);

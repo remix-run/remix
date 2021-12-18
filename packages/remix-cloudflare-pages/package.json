@@ -1,0 +1,26 @@
+{
+  "name": "@remix-run/cloudflare-pages",
+  "description": "Cloudflare Pages request handler for Remix",
+  "version": "1.1.0",
+  "license": "MIT",
+  "main": "./index.js",
+  "module": "./esm/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-cloudflare-pages"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/server-runtime": "1.1.0"
+  },
+  "peerDependencies": {
+    "@cloudflare/workers-types": "^3.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.2.0",
+    "@types/mime": "^2.0.3"
+  }
+}

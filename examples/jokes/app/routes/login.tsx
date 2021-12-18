@@ -1,18 +1,17 @@
 import type { ActionFunction, LinksFunction, MetaFunction } from "remix";
-import { useActionData, Form, Link } from "remix";
-import { useSearchParams } from "react-router-dom";
+import { useActionData, Form, Link, useSearchParams, json } from "remix";
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
 
-export let meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return {
     title: "Remix Jokes | Login",
     description: "Login to submit your own jokes to Remix Jokes!",
   };
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
@@ -34,69 +33,74 @@ type ActionData = {
   fields?: { loginType: string; username: string; password: string };
 };
 
-export let action: ActionFunction = async ({
-  request,
-}): Promise<Response | ActionData> => {
-  let form = await request.formData();
-  let loginType = form.get("loginType");
-  let username = form.get("username");
-  let password = form.get("password");
-  let redirectTo = form.get("redirectTo") || "/jokes";
+/**
+ * This helper function gives us typechecking for our ActionData return
+ * statements, while still returning the accurate HTTP status, 400 Bad Request,
+ * to the client.
+ */
+const badRequest = (data: ActionData) => json(data, { status: 400 });
+
+export const action: ActionFunction = async ({ request }) => {
+  const form = await request.formData();
+  const loginType = form.get("loginType");
+  const username = form.get("username");
+  const password = form.get("password");
+  const redirectTo = form.get("redirectTo") || "/jokes";
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
     typeof password !== "string" ||
     typeof redirectTo !== "string"
   ) {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({ formError: `Form not submitted correctly.` });
   }
 
-  let fields = { loginType, username, password };
-  let fieldErrors = {
+  const fields = { loginType, username, password };
+  const fieldErrors = {
     username: validateUsername(username),
     password: validatePassword(password),
   };
   if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors, fields };
+    return badRequest({ fieldErrors, fields });
   }
 
   switch (loginType) {
     case "login": {
       const user = await login({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`,
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     case "register": {
-      let userExists = await db.user.findFirst({ where: { username } });
+      const userExists = await db.user.findFirst({ where: { username } });
       if (userExists) {
-        return {
+        return badRequest({
           fields,
           formError: `User with username ${username} already exists`,
-        };
+        });
       }
       const user = await register({ username, password });
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Something went wrong trying to create a new user.`,
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
     default: {
-      return { fields, formError: `Login type invalid` };
+      return badRequest({ fields, formError: `Login type invalid` });
     }
   }
 };
 
 export default function Login() {
-  let actionData = useActionData<ActionData | undefined>();
-  let [searchParams] = useSearchParams();
+  const actionData = useActionData<ActionData>();
+  const [searchParams] = useSearchParams();
   return (
     <div className="container">
       <div className="content" data-light="">

@@ -51,7 +51,7 @@ export interface MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-  }): HtmlMetaDescriptor;
+  }): HtmlMetaDescriptor | undefined;
 }
 
 /**
@@ -72,7 +72,7 @@ export interface HtmlMetaDescriptor {
  *
  * This function lets apps further optimize by returning `false` when Remix is
  * about to reload the route. A common case is a root loader with nothing but
- * enviornment variables: after form submissions the root probably doesn't need
+ * environment variables: after form submissions the root probably doesn't need
  * to be reloaded.
  */
 export interface ShouldReloadFunction {
