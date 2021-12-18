@@ -26,7 +26,7 @@ export function mockServerBuild(
         module: ""
       },
       routes: Object.entries(routes).reduce((p, [id, config]) => {
-        let route: EntryRoute = {
+        const route: EntryRoute = {
           hasAction: !!config.action,
           hasCatchBoundary: !!config.CatchBoundary,
           hasErrorBoundary: !!config.ErrorBoundary,
@@ -59,7 +59,7 @@ export function mockServerBuild(
     },
     routes: Object.entries(routes).reduce<ServerRouteManifest>(
       (p, [id, config]) => {
-        let route: Omit<ServerRoute, "children"> = {
+        const route: Omit<ServerRoute, "children"> = {
           id,
           index: config.index,
           path: config.path,

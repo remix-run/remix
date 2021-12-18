@@ -5,7 +5,7 @@ import { mockServerBuild } from "./utils";
 
 function spyConsole() {
   // https://github.com/facebook/react/issues/7047
-  let spy: any = {};
+  const spy: any = {};
 
   beforeAll(() => {
     spy.console = jest.spyOn(console, "error").mockImplementation(() => {});
@@ -19,8 +19,8 @@ function spyConsole() {
 }
 
 describe("server", () => {
-  let routeId = "root";
-  let build: ServerBuild = {
+  const routeId = "root";
+  const build: ServerBuild = {
     entry: {
       module: {
         default: async request => {
@@ -54,7 +54,7 @@ describe("server", () => {
   } as unknown as ServerBuild;
 
   describe("createRequestHandler", () => {
-    let allowThrough = [
+    const allowThrough = [
       ["GET", "/"],
       ["GET", "/_data=root"],
       ["POST", "/"],
@@ -68,8 +68,8 @@ describe("server", () => {
     ];
     for (let [method, to] of allowThrough) {
       it(`allows through ${method} request to ${to}`, async () => {
-        let handler = createRequestHandler(build, {});
-        let response = await handler(
+        const handler = createRequestHandler(build, {});
+        const response = await handler(
           new Request(`http://localhost:3000${to}`, {
             method
           })
@@ -80,8 +80,8 @@ describe("server", () => {
     }
 
     it("strips body for HEAD requests", async () => {
-      let handler = createRequestHandler(build, {});
-      let response = await handler(
+      const handler = createRequestHandler(build, {});
+      const response = await handler(
         new Request("http://localhost:3000/", {
           method: "HEAD"
         })
@@ -99,17 +99,17 @@ describe("shared server runtime", () => {
     spy.console.mockClear();
   });
 
-  let baseUrl = "http://test.com";
+  const baseUrl = "http://test.com";
 
   describe("resource routes", () => {
     test("calls resource route loader", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let resourceLoader = jest.fn(() => {
+      const resourceLoader = jest.fn(() => {
         return "resource";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -119,11 +119,11 @@ describe("shared server runtime", () => {
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      const request = new Request(`${baseUrl}/resource`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("resource");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -131,16 +131,16 @@ describe("shared server runtime", () => {
     });
 
     test("calls sub resource route loader", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let resourceLoader = jest.fn(() => {
+      const resourceLoader = jest.fn(() => {
         return "resource";
       });
-      let subResourceLoader = jest.fn(() => {
+      const subResourceLoader = jest.fn(() => {
         return "sub";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -154,11 +154,11 @@ describe("shared server runtime", () => {
           path: "resource/sub"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource/sub`, { method: "get" });
+      const request = new Request(`${baseUrl}/resource/sub`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("sub");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -167,13 +167,13 @@ describe("shared server runtime", () => {
     });
 
     test("resource route loader allows thrown responses", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let resourceLoader = jest.fn(() => {
+      const resourceLoader = jest.fn(() => {
         throw new Response("resource");
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -183,11 +183,11 @@ describe("shared server runtime", () => {
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      const request = new Request(`${baseUrl}/resource`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.text()).toBe("resource");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -195,52 +195,52 @@ describe("shared server runtime", () => {
     });
 
     test("resource route loader responds with generic error when thrown", async () => {
-      let error = new Error("should be logged when resource loader throws");
-      let loader = jest.fn(() => {
+      const error = new Error("should be logged when resource loader throws");
+      const loader = jest.fn(() => {
         throw error;
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         "routes/resource": {
           loader,
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      const request = new Request(`${baseUrl}/resource`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(await result.text()).toBe("Unexpected Server Error");
     });
 
     test("resource route loader responds with detailed error when thrown in development", async () => {
-      let error = new Error("should be logged when resource loader throws");
-      let loader = jest.fn(() => {
+      const error = new Error("should be logged when resource loader throws");
+      const loader = jest.fn(() => {
         throw error;
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         "routes/resource": {
           loader,
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Development);
+      const handler = createRequestHandler(build, {}, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      const request = new Request(`${baseUrl}/resource`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect((await result.text()).includes(error.message)).toBe(true);
       expect(spy.console.mock.calls.length).toBe(1);
     });
 
     test("calls resource route action", async () => {
-      let rootAction = jest.fn(() => {
+      const rootAction = jest.fn(() => {
         return "root";
       });
-      let resourceAction = jest.fn(() => {
+      const resourceAction = jest.fn(() => {
         return "resource";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           action: rootAction
@@ -250,11 +250,11 @@ describe("shared server runtime", () => {
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      const request = new Request(`${baseUrl}/resource`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("resource");
       expect(rootAction.mock.calls.length).toBe(0);
@@ -262,16 +262,16 @@ describe("shared server runtime", () => {
     });
 
     test("calls sub resource route action", async () => {
-      let rootAction = jest.fn(() => {
+      const rootAction = jest.fn(() => {
         return "root";
       });
-      let resourceAction = jest.fn(() => {
+      const resourceAction = jest.fn(() => {
         return "resource";
       });
-      let subResourceAction = jest.fn(() => {
+      const subResourceAction = jest.fn(() => {
         return "sub";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           action: rootAction
@@ -285,11 +285,11 @@ describe("shared server runtime", () => {
           path: "resource/sub"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource/sub`, { method: "post" });
+      const request = new Request(`${baseUrl}/resource/sub`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("sub");
       expect(rootAction.mock.calls.length).toBe(0);
@@ -298,13 +298,13 @@ describe("shared server runtime", () => {
     });
 
     test("resource route action allows thrown responses", async () => {
-      let rootAction = jest.fn(() => {
+      const rootAction = jest.fn(() => {
         return "root";
       });
-      let resourceAction = jest.fn(() => {
+      const resourceAction = jest.fn(() => {
         throw new Response("resource");
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           action: rootAction
@@ -314,11 +314,11 @@ describe("shared server runtime", () => {
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      const request = new Request(`${baseUrl}/resource`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.text()).toBe("resource");
       expect(rootAction.mock.calls.length).toBe(0);
@@ -326,40 +326,40 @@ describe("shared server runtime", () => {
     });
 
     test("resource route action responds with generic error when thrown", async () => {
-      let error = new Error("should be logged when resource loader throws");
-      let action = jest.fn(() => {
+      const error = new Error("should be logged when resource loader throws");
+      const action = jest.fn(() => {
         throw error;
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         "routes/resource": {
           action,
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      const request = new Request(`${baseUrl}/resource`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(await result.text()).toBe("Unexpected Server Error");
     });
 
     test("resource route action responds with detailed error when thrown in development", async () => {
-      let message = "should be logged when resource loader throws";
-      let action = jest.fn(() => {
+      const message = "should be logged when resource loader throws";
+      const action = jest.fn(() => {
         throw new Error(message);
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         "routes/resource": {
           action,
           path: "resource"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Development);
+      const handler = createRequestHandler(build, {}, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      const request = new Request(`${baseUrl}/resource`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect((await result.text()).includes(message)).toBe(true);
       expect(spy.console.mock.calls.length).toBe(1);
     });
@@ -367,7 +367,7 @@ describe("shared server runtime", () => {
 
   describe("data requests", () => {
     test("data request that does not match loader surfaces error for boundary", async () => {
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {}
         },
@@ -376,26 +376,26 @@ describe("shared server runtime", () => {
           index: true
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?_data=routes/index`, {
+      const request = new Request(`${baseUrl}/?_data=routes/index`, {
         method: "get"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect((await result.json()).message).toBeTruthy();
     });
 
     test("data request calls loader", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -406,13 +406,13 @@ describe("shared server runtime", () => {
           index: true
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?_data=routes/index`, {
+      const request = new Request(`${baseUrl}/?_data=routes/index`, {
         method: "get"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("index");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -420,13 +420,13 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls loader and responds with generic message and error header", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         throw new Error("test");
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         return "root";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -437,13 +437,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test?_data=root`, {
+      const request = new Request(`${baseUrl}/test?_data=root`, {
         method: "get"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect((await result.json()).message).toBe("Unexpected Server Error");
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
@@ -452,15 +452,15 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls loader and responds with detailed info and error header in development mode", async () => {
-      let message =
+      const message =
         "data request loader error logged to console once in dev mode";
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         throw new Error(message);
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         return "root";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -471,13 +471,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Development);
+      const handler = createRequestHandler(build, {}, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/test?_data=root`, {
+      const request = new Request(`${baseUrl}/test?_data=root`, {
         method: "get"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect((await result.json()).message).toBe(message);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
@@ -487,13 +487,13 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls loader and responds with catch header", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         throw new Response("test", { status: 400 });
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         return "root";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -504,13 +504,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test?_data=root`, {
+      const request = new Request(`${baseUrl}/test?_data=root`, {
         method: "get"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(await result.text()).toBe("test");
       expect(result.headers.get("X-Remix-Catch")).toBe("yes");
@@ -519,7 +519,7 @@ describe("shared server runtime", () => {
     });
 
     test("data request that does not match action surfaces error for boundary", async () => {
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {}
         },
@@ -528,26 +528,26 @@ describe("shared server runtime", () => {
           index: true
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index&_data=routes/index`, {
+      const request = new Request(`${baseUrl}/?index&_data=routes/index`, {
         method: "post"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect((await result.json()).message).toBeTruthy();
     });
 
     test("data request calls action", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -558,13 +558,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test?_data=routes/test`, {
+      const request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("test");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -572,13 +572,13 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls action and responds with generic message and error header", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Error("test");
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -589,13 +589,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test?_data=routes/test`, {
+      const request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect((await result.json()).message).toBe("Unexpected Server Error");
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
@@ -604,15 +604,15 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls action and responds with detailed info and error header in development mode", async () => {
-      let message =
+      const message =
         "data request action error logged to console once in dev mode";
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Error(message);
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -623,13 +623,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Development);
+      const handler = createRequestHandler(build, {}, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/test?_data=routes/test`, {
+      const request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect((await result.json()).message).toBe(message);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
@@ -639,13 +639,13 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls action and responds with catch header", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Response("test", { status: 400 });
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -656,13 +656,13 @@ describe("shared server runtime", () => {
           path: "test"
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test?_data=routes/test`, {
+      const request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(await result.text()).toBe("test");
       expect(result.headers.get("X-Remix-Catch")).toBe("yes");
@@ -671,13 +671,13 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls layout action", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let rootAction = jest.fn(() => {
+      const rootAction = jest.fn(() => {
         return "root";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -688,11 +688,11 @@ describe("shared server runtime", () => {
           index: true
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?_data=root`, { method: "post" });
+      const request = new Request(`${baseUrl}/?_data=root`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("root");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -700,13 +700,13 @@ describe("shared server runtime", () => {
     });
 
     test("data request calls index action", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
@@ -717,13 +717,13 @@ describe("shared server runtime", () => {
           index: true
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index&_data=routes/index`, {
+      const request = new Request(`${baseUrl}/?index&_data=routes/index`, {
         method: "post"
       });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("index");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -733,55 +733,55 @@ describe("shared server runtime", () => {
 
   describe("document requests", () => {
     test("not found document request for no matches and no CatchBoundary", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(404);
       expect(rootLoader.mock.calls.length).toBe(0);
       expect(build.entry.module.default.mock.calls.length).toBe(1);
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(404);
       expect(entryContext.appState.catchBoundaryRouteId).toBe(null);
     });
 
     test("sets root as catch boundary for not found document request", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
           CatchBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(404);
       expect(rootLoader.mock.calls.length).toBe(0);
       expect(build.entry.module.default.mock.calls.length).toBe(1);
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(404);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
@@ -789,13 +789,13 @@ describe("shared server runtime", () => {
     });
 
     test("thrown loader responses bubble up", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         throw new Response(null, { status: 400 });
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -808,11 +808,11 @@ describe("shared server runtime", () => {
           loader: indexLoader
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(rootLoader.mock.calls.length).toBe(1);
       expect(indexLoader.mock.calls.length).toBe(1);
@@ -820,7 +820,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(400);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
@@ -830,13 +830,13 @@ describe("shared server runtime", () => {
     });
 
     test("thrown loader responses catch deep", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         throw new Response(null, { status: 400 });
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -850,11 +850,11 @@ describe("shared server runtime", () => {
           CatchBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(rootLoader.mock.calls.length).toBe(1);
       expect(indexLoader.mock.calls.length).toBe(1);
@@ -862,7 +862,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(400);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("routes/index");
@@ -872,16 +872,16 @@ describe("shared server runtime", () => {
     });
 
     test("thrown action responses bubble up", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Response(null, { status: 400 });
       });
-      let testLoader = jest.fn(() => {
+      const testLoader = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -895,11 +895,11 @@ describe("shared server runtime", () => {
           action: testAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test`, { method: "post" });
+      const request = new Request(`${baseUrl}/test`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(testAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -908,7 +908,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(400);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
@@ -918,16 +918,16 @@ describe("shared server runtime", () => {
     });
 
     test("thrown action responses bubble up for index routes", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         throw new Response(null, { status: 400 });
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -941,11 +941,11 @@ describe("shared server runtime", () => {
           action: indexAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index`, { method: "post" });
+      const request = new Request(`${baseUrl}/?index`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(indexAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -954,7 +954,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(400);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
@@ -964,16 +964,16 @@ describe("shared server runtime", () => {
     });
 
     test("thrown action responses catch deep", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Response(null, { status: 400 });
       });
-      let testLoader = jest.fn(() => {
+      const testLoader = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -988,11 +988,11 @@ describe("shared server runtime", () => {
           CatchBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test`, { method: "post" });
+      const request = new Request(`${baseUrl}/test`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(testAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1001,7 +1001,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(400);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("routes/test");
@@ -1011,16 +1011,16 @@ describe("shared server runtime", () => {
     });
 
     test("thrown action responses catch deep for index routes", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         throw new Response(null, { status: 400 });
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1035,11 +1035,11 @@ describe("shared server runtime", () => {
           CatchBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index`, { method: "post" });
+      const request = new Request(`${baseUrl}/?index`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(indexAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1048,7 +1048,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch!.status).toBe(400);
       expect(entryContext.appState.catchBoundaryRouteId).toBe("routes/index");
@@ -1058,19 +1058,19 @@ describe("shared server runtime", () => {
     });
 
     test("thrown loader response after thrown action response bubble up action throw to deepest loader boundary", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let layoutLoader = jest.fn(() => {
+      const layoutLoader = jest.fn(() => {
         throw new Response("layout", { status: 401 });
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Response("action", { status: 400 });
       });
-      let testLoader = jest.fn(() => {
+      const testLoader = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1090,11 +1090,11 @@ describe("shared server runtime", () => {
           action: testAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test`, { method: "post" });
+      const request = new Request(`${baseUrl}/test`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(testAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1103,7 +1103,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch.data).toBe("action");
       expect(entryContext.appState.catchBoundaryRouteId).toBe(
@@ -1115,19 +1115,19 @@ describe("shared server runtime", () => {
     });
 
     test("thrown loader response after thrown index action response bubble up action throw to deepest loader boundary", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let layoutLoader = jest.fn(() => {
+      const layoutLoader = jest.fn(() => {
         throw new Response("layout", { status: 401 });
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         throw new Response("action", { status: 400 });
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1147,11 +1147,11 @@ describe("shared server runtime", () => {
           action: indexAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index`, { method: "post" });
+      const request = new Request(`${baseUrl}/?index`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(400);
       expect(indexAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1160,7 +1160,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.catch).toBeTruthy();
       expect(entryContext.appState.catch.data).toBe("action");
       expect(entryContext.appState.catchBoundaryRouteId).toBe(
@@ -1172,13 +1172,13 @@ describe("shared server runtime", () => {
     });
 
     test("loader errors bubble up", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         throw new Error("index");
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1191,11 +1191,11 @@ describe("shared server runtime", () => {
           loader: indexLoader
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(rootLoader.mock.calls.length).toBe(1);
       expect(indexLoader.mock.calls.length).toBe(1);
@@ -1203,7 +1203,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("index");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("root");
@@ -1213,13 +1213,13 @@ describe("shared server runtime", () => {
     });
 
     test("loader errors catch deep", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         throw new Error("index");
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1233,11 +1233,11 @@ describe("shared server runtime", () => {
           ErrorBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(rootLoader.mock.calls.length).toBe(1);
       expect(indexLoader.mock.calls.length).toBe(1);
@@ -1245,7 +1245,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("index");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/index");
@@ -1255,16 +1255,16 @@ describe("shared server runtime", () => {
     });
 
     test("action errors bubble up", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Error("test");
       });
-      let testLoader = jest.fn(() => {
+      const testLoader = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1278,11 +1278,11 @@ describe("shared server runtime", () => {
           action: testAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test`, { method: "post" });
+      const request = new Request(`${baseUrl}/test`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(testAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1291,7 +1291,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("test");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("root");
@@ -1301,16 +1301,16 @@ describe("shared server runtime", () => {
     });
 
     test("action errors bubble up for index routes", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         throw new Error("index");
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1324,11 +1324,11 @@ describe("shared server runtime", () => {
           action: indexAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index`, { method: "post" });
+      const request = new Request(`${baseUrl}/?index`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(indexAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1337,7 +1337,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("index");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("root");
@@ -1347,16 +1347,16 @@ describe("shared server runtime", () => {
     });
 
     test("action errors catch deep", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Error("test");
       });
-      let testLoader = jest.fn(() => {
+      const testLoader = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1371,11 +1371,11 @@ describe("shared server runtime", () => {
           ErrorBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test`, { method: "post" });
+      const request = new Request(`${baseUrl}/test`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(testAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1384,7 +1384,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("test");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/test");
@@ -1394,16 +1394,16 @@ describe("shared server runtime", () => {
     });
 
     test("action errors catch deep for index routes", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         throw new Error("index");
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1418,11 +1418,11 @@ describe("shared server runtime", () => {
           ErrorBoundary: {}
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index`, { method: "post" });
+      const request = new Request(`${baseUrl}/?index`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(indexAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1431,7 +1431,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("index");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/index");
@@ -1441,19 +1441,19 @@ describe("shared server runtime", () => {
     });
 
     test("loader errors after action error bubble up action error to deepest loader boundary", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let layoutLoader = jest.fn(() => {
+      const layoutLoader = jest.fn(() => {
         throw new Error("layout");
       });
-      let testAction = jest.fn(() => {
+      const testAction = jest.fn(() => {
         throw new Error("action");
       });
-      let testLoader = jest.fn(() => {
+      const testLoader = jest.fn(() => {
         return "test";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1473,11 +1473,11 @@ describe("shared server runtime", () => {
           action: testAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/test`, { method: "post" });
+      const request = new Request(`${baseUrl}/test`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(testAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1486,7 +1486,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("action");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe(
@@ -1498,19 +1498,19 @@ describe("shared server runtime", () => {
     });
 
     test("loader errors after index action error bubble up action error to deepest loader boundary", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let layoutLoader = jest.fn(() => {
+      const layoutLoader = jest.fn(() => {
         throw new Error("layout");
       });
-      let indexAction = jest.fn(() => {
+      const indexAction = jest.fn(() => {
         throw new Error("action");
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1530,11 +1530,11 @@ describe("shared server runtime", () => {
           action: indexAction
         }
       });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index`, { method: "post" });
+      const request = new Request(`${baseUrl}/?index`, { method: "post" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(indexAction.mock.calls.length).toBe(1);
       expect(rootLoader.mock.calls.length).toBe(1);
@@ -1543,7 +1543,7 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1);
-      let entryContext = calls[0][3];
+      const entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("action");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe(
@@ -1555,13 +1555,13 @@ describe("shared server runtime", () => {
     });
 
     test("calls handleDocumentRequest again with new error when handleDocumentRequest throws", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1574,7 +1574,7 @@ describe("shared server runtime", () => {
         }
       });
       let calledBefore = false;
-      let ogHandleDocumentRequest = build.entry.module.default;
+      const ogHandleDocumentRequest = build.entry.module.default;
       build.entry.module.default = jest.fn(function () {
         if (!calledBefore) {
           throw new Error("thrown");
@@ -1582,18 +1582,18 @@ describe("shared server runtime", () => {
         calledBefore = true;
         return ogHandleDocumentRequest.call(null, arguments);
       }) as any;
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(rootLoader.mock.calls.length).toBe(0);
       expect(indexLoader.mock.calls.length).toBe(0);
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(2);
-      let entryContext = calls[1][3];
+      const entryContext = calls[1][3];
       expect(entryContext.appState.error).toBeTruthy();
       expect(entryContext.appState.error.message).toBe("thrown");
       expect(entryContext.appState.trackBoundaries).toBe(false);
@@ -1601,13 +1601,13 @@ describe("shared server runtime", () => {
     });
 
     test("returns generic message if handleDocumentRequest throws a second time", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1624,11 +1624,11 @@ describe("shared server runtime", () => {
         lastThrownError = new Error("rofl");
         throw lastThrownError;
       }) as any;
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
+      const handler = createRequestHandler(build, {}, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect(await result.text()).toBe("Unexpected Server Error");
       expect(rootLoader.mock.calls.length).toBe(0);
@@ -1639,13 +1639,13 @@ describe("shared server runtime", () => {
     });
 
     test("returns more detailed message if handleDocumentRequest throws a second time in development mode", async () => {
-      let rootLoader = jest.fn(() => {
+      const rootLoader = jest.fn(() => {
         return "root";
       });
-      let indexLoader = jest.fn(() => {
+      const indexLoader = jest.fn(() => {
         return "index";
       });
-      let build = mockServerBuild({
+      const build = mockServerBuild({
         root: {
           default: {},
           loader: rootLoader,
@@ -1657,18 +1657,18 @@ describe("shared server runtime", () => {
           loader: indexLoader
         }
       });
-      let errorMessage =
+      const errorMessage =
         "thrown from handleDocumentRequest and expected to be logged in console only once";
       let lastThrownError;
       build.entry.module.default = jest.fn(function () {
         lastThrownError = new Error(errorMessage);
         throw lastThrownError;
       }) as any;
-      let handler = createRequestHandler(build, {}, ServerMode.Development);
+      const handler = createRequestHandler(build, {}, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/`, { method: "get" });
+      const request = new Request(`${baseUrl}/`, { method: "get" });
 
-      let result = await handler(request);
+      const result = await handler(request);
       expect(result.status).toBe(500);
       expect((await result.text()).includes(errorMessage)).toBe(true);
       expect(rootLoader.mock.calls.length).toBe(0);

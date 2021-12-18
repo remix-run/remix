@@ -34,13 +34,13 @@ export function formatRoutesAsJson(routeManifest: RouteManifest): string {
   function handleRoutesRecursive(
     parentId?: string
   ): JsonFormattedRoute[] | undefined {
-    let routes = Object.values(routeManifest).filter(
+    const routes = Object.values(routeManifest).filter(
       route => route.parentId === parentId
     );
 
-    let children = [];
+    const children = [];
 
-    for (let route of routes) {
+    for (const route of routes) {
       children.push({
         id: route.id,
         index: route.index,
@@ -64,15 +64,15 @@ export function formatRoutesAsJsx(routeManifest: RouteManifest) {
   let output = "<Routes>";
 
   function handleRoutesRecursive(parentId?: string, level = 1): boolean {
-    let routes = Object.values(routeManifest).filter(
+    const routes = Object.values(routeManifest).filter(
       route => route.parentId === parentId
     );
 
-    let indent = Array(level * 2)
+    const indent = Array(level * 2)
       .fill(" ")
       .join("");
 
-    for (let route of routes) {
+    for (const route of routes) {
       output += "\n" + indent;
       output += `<Route${
         route.path ? ` path=${JSON.stringify(route.path)}` : ""

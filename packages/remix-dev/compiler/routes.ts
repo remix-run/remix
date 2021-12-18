@@ -12,9 +12,9 @@ export async function getRouteModuleExportsCached(
   config: RemixConfig,
   routeId: string
 ): Promise<string[]> {
-  let file = path.resolve(config.appDirectory, config.routes[routeId].file);
-  let hash = await getFileHash(file);
-  let key = routeId + ".exports";
+  const file = path.resolve(config.appDirectory, config.routes[routeId].file);
+  const hash = await getFileHash(file);
+  const key = routeId + ".exports";
 
   let cached: CachedRouteExports | null = null;
   try {
@@ -45,7 +45,7 @@ export async function getRouteModuleExports(
   config: RemixConfig,
   routeId: string
 ): Promise<string[]> {
-  let result = await esbuild.build({
+  const result = await esbuild.build({
     entryPoints: [
       path.resolve(config.appDirectory, config.routes[routeId].file)
     ],
@@ -58,8 +58,8 @@ export async function getRouteModuleExports(
   });
   let metafile = result.metafile!;
 
-  for (let key in metafile.outputs) {
-    let output = metafile.outputs[key];
+  for (const key in metafile.outputs) {
+    const output = metafile.outputs[key];
     if (output.entryPoint) return output.exports;
   }
 

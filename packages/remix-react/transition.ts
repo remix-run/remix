@@ -390,13 +390,13 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
 };
 
 export function createTransitionManager(init: TransitionManagerInit) {
-  let { routes } = init;
+  const { routes } = init;
 
   let pendingNavigationController: AbortController | undefined;
-  let fetchControllers = new Map<string, AbortController>();
+  const fetchControllers = new Map<string, AbortController>();
   let incrementingLoadId = 0;
   let navigationLoadId = -1;
-  let fetchReloadIds = new Map<string, number>();
+  const fetchReloadIds = new Map<string, number>();
 
   let matches = matchClientRoutes(routes, init.location);
 
@@ -506,7 +506,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
         let matches = matchClientRoutes(routes, href);
         invariant(matches, "No matches found");
-        let match = matches.slice(-1)[0];
+        const match = matches.slice(-1)[0];
 
         if (fetchControllers.has(key)) abortFetcher(key);
 
@@ -530,7 +530,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function dispose() {
     abortNormalNavigation();
-    for (let [, controller] of fetchControllers) {
+    for (const [, controller] of fetchControllers) {
       controller.abort();
     }
   }
@@ -540,9 +540,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submission: ActionSubmission,
     match: ClientMatch
   ) {
-    let currentFetcher = state.fetchers.get(key);
+    const currentFetcher = state.fetchers.get(key);
 
-    let fetcher: FetcherStates["SubmittingAction"] = {
+    const fetcher: FetcherStates["SubmittingAction"] = {
       state: "submitting",
       type: "actionSubmission",
       submission,
@@ -552,10 +552,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     update({ fetchers: new Map(state.fetchers) });
 
-    let controller = new AbortController();
+    const controller = new AbortController();
     fetchControllers.set(key, controller);
 
-    let result = await callAction(submission, match, controller.signal);
+    const result = await callAction(submission, match, controller.signal);
     if (controller.signal.aborted) {
       return;
     }
@@ -577,7 +577,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let loadFetcher: FetcherStates["ReloadingAction"] = {
+    const loadFetcher: FetcherStates["ReloadingAction"] = {
       state: "loading",
       type: "actionReload",
       data: result.value,
@@ -587,16 +587,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     update({ fetchers: new Map(state.fetchers) });
 
-    let maybeActionErrorResult = isErrorResult(result) ? result : undefined;
-    let maybeActionCatchResult = isCatchResult(result) ? result : undefined;
+    const maybeActionErrorResult = isErrorResult(result) ? result : undefined;
+    const maybeActionCatchResult = isCatchResult(result) ? result : undefined;
 
-    let loadId = ++incrementingLoadId;
+    const loadId = ++incrementingLoadId;
     fetchReloadIds.set(key, loadId);
 
-    let matchesToLoad = state.nextMatches || state.matches;
-    let hrefToLoad = createHref(state.transition.location || state.location);
+    const matchesToLoad = state.nextMatches || state.matches;
+    const hrefToLoad = createHref(state.transition.location || state.location);
 
-    let results = await callLoaders(
+    const results = await callLoaders(
       state,
       createUrl(hrefToLoad),
       matchesToLoad,
@@ -615,7 +615,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchReloadIds.delete(key);
     fetchControllers.delete(key);
 
-    let redirect = findRedirect(results);
+    const redirect = findRedirect(results);
     if (redirect) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
@@ -625,19 +625,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let [error, errorBoundaryId] = findErrorAndBoundaryId(
+    const [error, errorBoundaryId] = findErrorAndBoundaryId(
       results,
       state.matches,
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+    const [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
       results,
       state.matches,
       maybeActionCatchResult
     );
 
-    let doneFetcher: FetcherStates["Done"] = {
+    const doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
       data: result.value,
@@ -645,12 +645,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
     };
     state.fetchers.set(key, doneFetcher);
 
-    let abortedKeys = abortStaleFetchLoads(loadId);
+    const abortedKeys = abortStaleFetchLoads(loadId);
     if (abortedKeys) {
       markFetchersDone(abortedKeys);
     }
 
-    let yeetedNavigation = yeetStaleNavigationLoad(loadId);
+    const yeetedNavigation = yeetStaleNavigationLoad(loadId);
 
     // need to do what we would have done when the navigation load completed
     if (yeetedNavigation) {
@@ -684,7 +684,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function yeetStaleNavigationLoad(landedId: number): boolean {
-    let isLoadingNavigation = state.transition.state === "loading";
+    const isLoadingNavigation = state.transition.state === "loading";
     if (isLoadingNavigation && navigationLoadId < landedId) {
       abortNormalNavigation();
       return true;
@@ -693,9 +693,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function markFetchersDone(keys: string[]) {
-    for (let key of keys) {
-      let fetcher = getFetcher(key);
-      let doneFetcher: FetcherStates["Done"] = {
+    for (const key of keys) {
+      const fetcher = getFetcher(key);
+      const doneFetcher: FetcherStates["Done"] = {
         state: "idle",
         type: "done",
         data: fetcher.data,
@@ -706,10 +706,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function abortStaleFetchLoads(landedId: number): false | string[] {
-    let yeetedKeys = [];
-    for (let [key, id] of fetchReloadIds) {
+    const yeetedKeys = [];
+    for (const [key, id] of fetchReloadIds) {
       if (id < landedId) {
-        let fetcher = state.fetchers.get(key);
+        const fetcher = state.fetchers.get(key);
         invariant(fetcher, `Expected fetcher: ${key}`);
         if (fetcher.state === "loading") {
           abortFetcher(key);
@@ -727,8 +727,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submission: LoaderSubmission,
     match: ClientMatch
   ) {
-    let currentFetcher = state.fetchers.get(key);
-    let fetcher: FetcherStates["SubmittingLoader"] = {
+    const currentFetcher = state.fetchers.get(key);
+    const fetcher: FetcherStates["SubmittingLoader"] = {
       state: "submitting",
       type: "loaderSubmission",
       submission,
@@ -738,9 +738,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     state.fetchers.set(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
-    let controller = new AbortController();
+    const controller = new AbortController();
     fetchControllers.set(key, controller);
-    let result = await callLoader(match, createUrl(href), controller.signal);
+    const result = await callLoader(match, createUrl(href), controller.signal);
     fetchControllers.delete(key);
 
     if (controller.signal.aborted) {
@@ -748,7 +748,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isRedirectResult(result)) {
-      let locationState: Redirects["Loader"] = {
+      const locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader"
       };
@@ -764,7 +764,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let doneFetcher: FetcherStates["Done"] = {
+    const doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
       data: result.value,
@@ -780,9 +780,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
-    let currentFetcher = state.fetchers.get(key);
+    const currentFetcher = state.fetchers.get(key);
 
-    let fetcher: FetcherStates["Loading"] = {
+    const fetcher: FetcherStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
@@ -792,15 +792,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     state.fetchers.set(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
-    let controller = new AbortController();
+    const controller = new AbortController();
     fetchControllers.set(key, controller);
-    let result = await callLoader(match, createUrl(href), controller.signal);
+    const result = await callLoader(match, createUrl(href), controller.signal);
 
     if (controller.signal.aborted) return;
     fetchControllers.delete(key);
 
     if (isRedirectResult(result)) {
-      let locationState: Redirects["Loader"] = {
+      const locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader"
       };
@@ -816,7 +816,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let doneFetcher: FetcherStates["Done"] = {
+    const doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
       data: result.value,
@@ -833,7 +833,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     result: DataResult
   ) {
     if (isCatchResult(result)) {
-      let catchBoundaryId = findNearestCatchBoundary(match, state.matches);
+      const catchBoundaryId = findNearestCatchBoundary(match, state.matches);
       state.fetchers.delete(key);
       update({
         transition: IDLE_TRANSITION,
@@ -856,7 +856,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     result: DataResult
   ) {
     if (isErrorResult(result)) {
-      let errorBoundaryId = findNearestBoundary(match, state.matches);
+      const errorBoundaryId = findNearestBoundary(match, state.matches);
       state.fetchers.delete(key);
       update({
         fetchers: new Map(state.fetchers),
@@ -873,7 +873,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: RouteMatch<ClientRoute>[]
   ) {
     abortNormalNavigation();
-    let transition: TransitionStates["Loading"] = {
+    const transition: TransitionStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
@@ -887,7 +887,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     // out later, but this works great.)
     await Promise.resolve();
 
-    let catchBoundaryId = findNearestCatchBoundary(matches[0], matches);
+    const catchBoundaryId = findNearestCatchBoundary(matches[0], matches);
     update({
       location,
       matches,
@@ -908,7 +908,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   ) {
     abortNormalNavigation();
 
-    let transition: TransitionStates["SubmittingAction"] = {
+    const transition: TransitionStates["SubmittingAction"] = {
       state: "submitting",
       type: "actionSubmission",
       submission,
@@ -917,7 +917,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     update({ transition, nextMatches: matches });
 
-    let controller = new AbortController();
+    const controller = new AbortController();
     pendingNavigationController = controller;
 
     if (
@@ -927,15 +927,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches = matches.slice(0, -1);
     }
 
-    let leafMatch = matches.slice(-1)[0];
-    let result = await callAction(submission, leafMatch, controller.signal);
+    const leafMatch = matches.slice(-1)[0];
+    const result = await callAction(submission, leafMatch, controller.signal);
 
     if (controller.signal.aborted) {
       return;
     }
 
     if (isRedirectResult(result)) {
-      let locationState: Redirects["Action"] = {
+      const locationState: Redirects["Action"] = {
         isRedirect: true,
         type: "action"
       };
@@ -944,7 +944,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (isCatchResult(result)) {
-      let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+      const [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
         [result],
         matches,
         result
@@ -957,7 +957,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let loadTransition: TransitionStates["LoadingAction"] = {
+    const loadTransition: TransitionStates["LoadingAction"] = {
       state: "loading",
       type: "actionReload",
       submission,
@@ -984,7 +984,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
-    let transition: TransitionStates["SubmittingLoader"] = {
+    const transition: TransitionStates["SubmittingLoader"] = {
       state: "submitting",
       type: "loaderSubmission",
       submission,
@@ -996,7 +996,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   async function handleHashChange(location: Location, matches: ClientMatch[]) {
     abortNormalNavigation();
-    let transition: TransitionStates["Loading"] = {
+    const transition: TransitionStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
@@ -1017,7 +1017,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   async function handleLoad(location: Location, matches: ClientMatch[]) {
     abortNormalNavigation();
-    let transition: TransitionStates["Loading"] = {
+    const transition: TransitionStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
@@ -1032,7 +1032,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
-    let transition: TransitionStates["LoadingRedirect"] = {
+    const transition: TransitionStates["LoadingRedirect"] = {
       state: "loading",
       type: "normalRedirect",
       submission: undefined,
@@ -1051,7 +1051,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state.transition.type === "loaderSubmission",
       `Unexpected transition: ${JSON.stringify(state.transition)}`
     );
-    let { submission } = state.transition;
+    const { submission } = state.transition;
     let transition: TransitionStates["LoadingLoaderSubmissionRedirect"] = {
       state: "loading",
       type: "loaderSubmissionRedirect",
@@ -1067,7 +1067,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
-    let transition: TransitionStates["LoadingFetchActionRedirect"] = {
+    const transition: TransitionStates["LoadingFetchActionRedirect"] = {
       state: "loading",
       type: "fetchActionRedirect",
       submission: undefined,
@@ -1088,7 +1088,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         state.transition.type === "actionReload",
       `Unexpected transition: ${JSON.stringify(state.transition)}`
     );
-    let { submission } = state.transition;
+    const { submission } = state.transition;
     let transition: TransitionStates["LoadingActionRedirect"] = {
       state: "loading",
       type: "actionRedirect",
@@ -1113,17 +1113,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submissionRouteId?: string,
     actionResult?: DataResult
   ) {
-    let maybeActionErrorResult =
+    const maybeActionErrorResult =
       actionResult && isErrorResult(actionResult) ? actionResult : undefined;
 
-    let maybeActionCatchResult =
+    const maybeActionCatchResult =
       actionResult && isCatchResult(actionResult) ? actionResult : undefined;
 
-    let controller = new AbortController();
+    const controller = new AbortController();
     pendingNavigationController = controller;
     navigationLoadId = ++incrementingLoadId;
 
-    let results = await callLoaders(
+    const results = await callLoaders(
       state,
       createUrl(createHref(location)),
       matches,
@@ -1138,7 +1138,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let redirect = findRedirect(results);
+    const redirect = findRedirect(results);
     if (redirect) {
       // loader redirected during an action reload, treat it like an
       // actionRedirect instead so that all the loaders get called again and the
@@ -1165,19 +1165,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
-    let [error, errorBoundaryId] = findErrorAndBoundaryId(
+    const [error, errorBoundaryId] = findErrorAndBoundaryId(
       results,
       matches,
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+    const [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
       results,
       matches,
       maybeActionErrorResult
     );
 
-    let abortedIds = abortStaleFetchLoads(navigationLoadId);
+    const abortedIds = abortStaleFetchLoads(navigationLoadId);
     if (abortedIds) {
       markFetchersDone(abortedIds);
     }
@@ -1202,7 +1202,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function abortFetcher(key: string) {
-    let controller = fetchControllers.get(key);
+    const controller = fetchControllers.get(key);
     invariant(controller, `Expected fetch controller: ${key}`);
     controller.abort();
     fetchControllers.delete(key);
@@ -1224,8 +1224,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
 function isIndexRequestAction(action: string) {
   let indexRequest = false;
 
-  let searchParams = new URLSearchParams(action.split("?", 2)[1] || "");
-  for (let param of searchParams.getAll("index")) {
+  const searchParams = new URLSearchParams(action.split("?", 2)[1] || "");
+  for (const param of searchParams.getAll("index")) {
     if (!param) {
       indexRequest = true;
     }
@@ -1245,7 +1245,7 @@ async function callLoaders(
   submissionRouteId?: string,
   fetcher?: Fetcher
 ): Promise<DataResult[]> {
-  let matchesToLoad = filterMatchesToLoad(
+  const matchesToLoad = filterMatchesToLoad(
     state,
     url,
     matches,
@@ -1264,7 +1264,7 @@ async function callLoaders(
 async function callLoader(match: ClientMatch, url: URL, signal: AbortSignal) {
   invariant(match.route.loader, `Expected loader for ${match.route.id}`);
   try {
-    let { params } = match;
+    const { params } = match;
     let value = await match.route.loader({ params, url, signal });
     return { match, value };
   } catch (error) {
@@ -1323,7 +1323,7 @@ function filterMatchesToLoad(
     });
   }
 
-  let isNew = (match: ClientMatch, index: number) => {
+  const isNew = (match: ClientMatch, index: number) => {
     // [a] -> [a, b]
     if (!state.matches[index]) return true;
 
@@ -1331,7 +1331,7 @@ function filterMatchesToLoad(
     return match.route.id !== state.matches[index].route.id;
   };
 
-  let matchPathChanged = (match: ClientMatch, index: number) => {
+  const matchPathChanged = (match: ClientMatch, index: number) => {
     return (
       // param change, /users/123 -> /users/456
       state.matches[index].pathname !== match.pathname ||
@@ -1342,7 +1342,7 @@ function filterMatchesToLoad(
     );
   };
 
-  let filterByRouteProps = (match: ClientMatch, index: number) => {
+  const filterByRouteProps = (match: ClientMatch, index: number) => {
     if (!match.route.loader) {
       return false;
     }
@@ -1352,7 +1352,7 @@ function filterMatchesToLoad(
     }
 
     if (match.route.shouldReload) {
-      let prevUrl = createUrl(createHref(state.location));
+      const prevUrl = createUrl(createHref(state.location));
       return match.route.shouldReload({
         prevUrl,
         url,
@@ -1364,7 +1364,7 @@ function filterMatchesToLoad(
     return true;
   };
 
-  let isInRootCatchBoundary = state.matches.length === 1;
+  const isInRootCatchBoundary = state.matches.length === 1;
   if (isInRootCatchBoundary) {
     return matches.filter(match => !!match.route.loader);
   }
@@ -1405,7 +1405,7 @@ function createHref(location: Location | URL) {
 }
 
 function findRedirect(results: DataResult[]): TransitionRedirect | null {
-  for (let result of results) {
+  for (const result of results) {
     if (isRedirectResult(result)) {
       return result.value;
     }
@@ -1420,14 +1420,14 @@ async function findCatchAndBoundaryId(
 ): Promise<[CatchData, string | null] | [undefined, undefined]> {
   let loaderCatchResult: DataCatchResult | undefined;
 
-  for (let result of results) {
+  for (const result of results) {
     if (isCatchResult(result)) {
       loaderCatchResult = result;
       break;
     }
   }
 
-  let extractCatchData = async (res: CatchValue) => ({
+  const extractCatchData = async (res: CatchValue) => ({
     status: res.status,
     statusText: res.statusText,
     data: res.data
@@ -1456,7 +1456,7 @@ function findErrorAndBoundaryId(
 ): [Error, string | null] | [undefined, undefined] {
   let loaderErrorResult;
 
-  for (let result of results) {
+  for (const result of results) {
     if (isErrorResult(result)) {
       loaderErrorResult = result;
       break;
@@ -1489,7 +1489,7 @@ function findNearestCatchBoundary(
   matches: ClientMatch[]
 ): string | null {
   let nearestBoundaryId: null | string = null;
-  for (let match of matches) {
+  for (const match of matches) {
     if (match.route.CatchBoundary) {
       nearestBoundaryId = match.route.id;
     }
@@ -1508,7 +1508,7 @@ function findNearestBoundary(
   matches: ClientMatch[]
 ): string | null {
   let nearestBoundaryId: null | string = null;
-  for (let match of matches) {
+  for (const match of matches) {
     if (match.route.ErrorBoundary) {
       nearestBoundaryId = match.route.id;
     }
@@ -1527,12 +1527,12 @@ function makeLoaderData(
   results: DataResult[],
   matches: ClientMatch[]
 ) {
-  let newData: RouteData = {};
+  const newData: RouteData = {};
   for (let { match, value } of results) {
     newData[match.route.id] = value;
   }
 
-  let loaderData: RouteData = {};
+  const loaderData: RouteData = {};
   for (let { route } of matches) {
     let value =
       newData[route.id] !== undefined

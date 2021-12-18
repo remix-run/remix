@@ -12,13 +12,13 @@ import {
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the express adapter
 jest.mock("@remix-run/server-runtime/server");
-let mockedCreateRequestHandler =
+const mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
   >;
 
 function createApp() {
-  let app = express();
+  const app = express();
 
   app.all(
     "*",
@@ -47,8 +47,8 @@ describe("express createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      let request = supertest(createApp());
-      let res = await request.get("/foo/bar");
+      const request = supertest(createApp());
+      const res = await request.get("/foo/bar");
 
       expect(res.status).toBe(200);
       expect(res.text).toBe("URL: /foo/bar");
@@ -60,8 +60,8 @@ describe("express createRequestHandler", () => {
         return new Response(null, { status: 200 });
       });
 
-      let request = supertest(createApp());
-      let res = await request.get("/");
+      const request = supertest(createApp());
+      const res = await request.get("/");
 
       expect(res.status).toBe(200);
     });
@@ -71,8 +71,8 @@ describe("express createRequestHandler", () => {
         return new Response(null, { status: 204 });
       });
 
-      let request = supertest(createApp());
-      let res = await request.get("/");
+      const request = supertest(createApp());
+      const res = await request.get("/");
 
       expect(res.status).toBe(204);
     });
@@ -95,8 +95,8 @@ describe("express createRequestHandler", () => {
         return new Response(null, { headers });
       });
 
-      let request = supertest(createApp());
-      let res = await request.get("/");
+      const request = supertest(createApp());
+      const res = await request.get("/");
 
       expect(res.headers["x-time-of-year"]).toBe("most wonderful");
       expect(res.headers["set-cookie"]).toEqual([

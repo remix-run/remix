@@ -9,7 +9,7 @@ function getCookieFromSetCookie(setCookie: string): string {
 }
 
 describe("File session storage", () => {
-  let dir = path.join(os.tmpdir(), "file-session-storage");
+  const dir = path.join(os.tmpdir(), "file-session-storage");
 
   beforeAll(async () => {
     await fsp.mkdir(dir, { recursive: true });
@@ -20,20 +20,20 @@ describe("File session storage", () => {
   });
 
   it("persists session data across requests", async () => {
-    let { getSession, commitSession } = createFileSessionStorage({
+    const { getSession, commitSession } = createFileSessionStorage({
       dir,
       cookie: { secrets: ["secret1"] }
     });
     let session = await getSession();
     session.set("user", "mjackson");
-    let setCookie = await commitSession(session);
+    const setCookie = await commitSession(session);
     session = await getSession(getCookieFromSetCookie(setCookie));
 
     expect(session.get("user")).toEqual("mjackson");
   });
 
   it("returns an empty session for cookies that are not signed properly", async () => {
-    let { getSession, commitSession } = createFileSessionStorage({
+    const { getSession, commitSession } = createFileSessionStorage({
       dir,
       cookie: { secrets: ["secret1"] }
     });
@@ -42,7 +42,7 @@ describe("File session storage", () => {
 
     expect(session.get("user")).toBe("mjackson");
 
-    let setCookie = await commitSession(session);
+    const setCookie = await commitSession(session);
     session = await getSession(
       // Tamper with the cookie...
       getCookieFromSetCookie(setCookie).slice(0, -1)
@@ -59,13 +59,13 @@ describe("File session storage", () => {
       });
       let session = await getSession();
       session.set("user", "mjackson");
-      let setCookie = await commitSession(session);
+      const setCookie = await commitSession(session);
       session = await getSession(getCookieFromSetCookie(setCookie));
 
       expect(session.get("user")).toEqual("mjackson");
 
       // A new secret enters the rotation...
-      let storage = createFileSessionStorage({
+      const storage = createFileSessionStorage({
         dir,
         cookie: { secrets: ["secret2", "secret1"] }
       });
@@ -77,7 +77,7 @@ describe("File session storage", () => {
       expect(session.get("user")).toEqual("mjackson");
 
       // New cookies should be signed using the new secret.
-      let setCookie2 = await commitSession(session);
+      const setCookie2 = await commitSession(session);
       expect(setCookie2).not.toEqual(setCookie);
     });
   });

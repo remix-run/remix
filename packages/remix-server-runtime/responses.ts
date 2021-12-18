@@ -10,7 +10,7 @@ export function json<Data>(
     responseInit = { status: init };
   }
 
-  let headers = new Headers(responseInit.headers);
+  const headers = new Headers(responseInit.headers);
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
@@ -36,7 +36,7 @@ export function redirect(
     responseInit.status = 302;
   }
 
-  let headers = new Headers(responseInit.headers);
+  const headers = new Headers(responseInit.headers);
   headers.set("Location", url);
 
   return new Response(null, {
@@ -65,7 +65,7 @@ export function isCatchResponse(response: Response) {
 }
 
 export function extractData(response: Response): Promise<unknown> {
-  let contentType = response.headers.get("Content-Type");
+  const contentType = response.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();

@@ -2,7 +2,7 @@ import { createRoutePath } from "../config/routesConvention";
 
 describe("createRoutePath", () => {
   describe("creates proper route paths", () => {
-    let tests = [
+    const tests = [
       ["routes/$", "routes/*"],
       ["routes/sub/$", "routes/sub/*"],
       ["routes.sub/$", "routes/sub/*"],

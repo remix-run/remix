@@ -193,8 +193,8 @@ export async function readConfig(
     throw new Error(`Invalid server mode "${serverMode}"`);
   }
 
-  let rootDirectory = path.resolve(remixRoot);
-  let configFile = path.resolve(rootDirectory, "remix.config.js");
+  const rootDirectory = path.resolve(remixRoot);
+  const configFile = path.resolve(rootDirectory, "remix.config.js");
 
   let appConfig: AppConfig;
   try {
@@ -203,57 +203,57 @@ export async function readConfig(
     throw new Error(`Error loading Remix config in ${configFile}`);
   }
 
-  let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
-  let serverPlatform = appConfig.serverPlatform || "node";
-  let mdx = appConfig.mdx;
+  const serverModuleFormat = appConfig.serverModuleFormat || "cjs";
+  const serverPlatform = appConfig.serverPlatform || "node";
+  const mdx = appConfig.mdx;
 
-  let appDirectory = path.resolve(
+  const appDirectory = path.resolve(
     rootDirectory,
     appConfig.appDirectory || "app"
   );
 
-  let cacheDirectory = path.resolve(
+  const cacheDirectory = path.resolve(
     rootDirectory,
     appConfig.cacheDirectory || ".cache"
   );
 
-  let entryClientFile = findEntry(appDirectory, "entry.client");
+  const entryClientFile = findEntry(appDirectory, "entry.client");
   if (!entryClientFile) {
     throw new Error(`Missing "entry.client" file in ${appDirectory}`);
   }
 
-  let entryServerFile = findEntry(appDirectory, "entry.server");
+  const entryServerFile = findEntry(appDirectory, "entry.server");
   if (!entryServerFile) {
     throw new Error(`Missing "entry.server" file in ${appDirectory}`);
   }
 
-  let serverBuildDirectory = path.resolve(
+  const serverBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.serverBuildDirectory || "build"
   );
 
-  let assetsBuildDirectory = path.resolve(
+  const assetsBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.assetsBuildDirectory ||
       appConfig.browserBuildDirectory ||
       path.join("public", "build")
   );
 
-  let devServerPort = appConfig.devServerPort || 8002;
-  let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
+  const devServerPort = appConfig.devServerPort || 8002;
+  const devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
-  let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
+  const publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
-  let rootRouteFile = findEntry(appDirectory, "root");
+  const rootRouteFile = findEntry(appDirectory, "root");
   if (!rootRouteFile) {
     throw new Error(`Missing "root" route file in ${appDirectory}`);
   }
 
-  let routes: RouteManifest = {
+  const routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile }
   };
   if (fs.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = defineConventionalRoutes(
+    const conventionalRoutes = defineConventionalRoutes(
       appDirectory,
       appConfig.ignoredRouteFiles
     );
@@ -263,7 +263,7 @@ export async function readConfig(
     }
   }
   if (appConfig.routes) {
-    let manualRoutes = await appConfig.routes(defineRoutes);
+    const manualRoutes = await appConfig.routes(defineRoutes);
     for (let key of Object.keys(manualRoutes)) {
       let route = manualRoutes[key];
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
@@ -296,8 +296,8 @@ function addTrailingSlash(path: string): string {
 const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 
 function findEntry(dir: string, basename: string): string | undefined {
-  for (let ext of entryExts) {
-    let file = path.resolve(dir, basename + ext);
+  for (const ext of entryExts) {
+    const file = path.resolve(dir, basename + ext);
     if (fs.existsSync(file)) return path.relative(dir, file);
   }
 

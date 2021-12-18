@@ -32,13 +32,13 @@ export function createRequestHandler(
   platform: ServerPlatform,
   mode?: string
 ): RequestHandler {
-  let routes = createRoutes(build.routes);
-  let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
+  const routes = createRoutes(build.routes);
+  const serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
   return async function requestHandler(request, loadContext) {
-    let url = new URL(request.url);
-    let matches = matchServerRoutes(routes, url.pathname);
-    let requestType = getRequestType(url, matches);
+    const url = new URL(request.url);
+    const matches = matchServerRoutes(routes, url.pathname);
+    const requestType = getRequestType(url, matches);
 
     let response: Response;
     switch (requestType) {
@@ -102,7 +102,7 @@ async function handleDataRequest({
     );
   }
 
-  let url = new URL(request.url);
+  const url = new URL(request.url);
 
   if (!matches) {
     return errorBoundaryError(
@@ -123,12 +123,12 @@ async function handleDataRequest({
         request: request
       });
     } else {
-      let routeId = url.searchParams.get("_data");
+      const routeId = url.searchParams.get("_data");
       if (!routeId) {
         return errorBoundaryError(new Error(`Missing route id in ?_data`), 403);
       }
 
-      let tempMatch = matches.find(match => match.route.id === routeId);
+      const tempMatch = matches.find(match => match.route.id === routeId);
       if (!tempMatch) {
         return errorBoundaryError(
           new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
@@ -144,7 +144,7 @@ async function handleDataRequest({
       // We don't have any way to prevent a fetch request from following
       // redirects. So we use the `X-Remix-Redirect` header to indicate the
       // next URL, and then "follow" the redirect manually on the client.
-      let headers = new Headers(response.headers);
+      const headers = new Headers(response.headers);
       headers.set("X-Remix-Redirect", headers.get("Location")!);
       headers.delete("Location");
 
@@ -191,9 +191,9 @@ async function renderDocumentRequest({
   routes: ServerRoute[];
   serverMode?: ServerMode;
 }): Promise<Response> {
-  let url = new URL(request.url);
+  const url = new URL(request.url);
 
-  let appState: AppState = {
+  const appState: AppState = {
     trackBoundaries: true,
     trackCatchBoundaries: true,
     catchBoundaryRouteId: null,
@@ -275,7 +275,7 @@ async function renderDocumentRequest({
     }
   }
 
-  let routeModules = createEntryRouteModules(build.routes);
+  const routeModules = createEntryRouteModules(build.routes);
 
   let matchesToLoad = matches || [];
   if (appState.catch) {
@@ -298,7 +298,7 @@ async function renderDocumentRequest({
     );
   }
 
-  let routeLoaderResults = await Promise.allSettled(
+  const routeLoaderResults = await Promise.allSettled(
     matchesToLoad.map(match =>
       match.route.module.loader
         ? callRouteLoader({
@@ -314,27 +314,27 @@ async function renderDocumentRequest({
   // what catch or error boundary should be rendered under cases where
   // actions don't throw but loaders do, actions throw and parent loaders
   // also throw, etc.
-  let actionCatch = appState.catch;
-  let actionError = appState.error;
-  let actionCatchBoundaryRouteId = appState.catchBoundaryRouteId;
-  let actionLoaderBoundaryRouteId = appState.loaderBoundaryRouteId;
+  const actionCatch = appState.catch;
+  const actionError = appState.error;
+  const actionCatchBoundaryRouteId = appState.catchBoundaryRouteId;
+  const actionLoaderBoundaryRouteId = appState.loaderBoundaryRouteId;
   // Reset the app error and catch state to propogate the loader states
   // from the results into the app state.
   appState.catch = undefined;
   appState.error = undefined;
 
-  let headerMatches: RouteMatch<ServerRoute>[] = [];
-  let routeLoaderResponses: Response[] = [];
-  let loaderStatusCodes: number[] = [];
-  let routeData: Record<string, unknown> = {};
+  const headerMatches: RouteMatch<ServerRoute>[] = [];
+  const routeLoaderResponses: Response[] = [];
+  const loaderStatusCodes: number[] = [];
+  const routeData: Record<string, unknown> = {};
   for (let index = 0; index < matchesToLoad.length; index++) {
     let match = matchesToLoad[index];
-    let result = routeLoaderResults[index];
+    const result = routeLoaderResults[index];
 
     let error = result.status === "rejected" ? result.reason : undefined;
-    let response = result.status === "fulfilled" ? result.value : undefined;
-    let isRedirect = response ? isRedirectResponse(response) : false;
-    let isCatch = response ? isCatchResponse(response) : false;
+    const response = result.status === "fulfilled" ? result.value : undefined;
+    const isRedirect = response ? isRedirectResponse(response) : false;
+    const isCatch = response ? isCatchResponse(response) : false;
 
     // If a parent loader has already caught or error'd, bail because
     // we don't need any more child data.
@@ -410,7 +410,7 @@ async function renderDocumentRequest({
   if (!renderableMatches) {
     renderableMatches = [];
 
-    let root = routes[0];
+    const root = routes[0];
     if (root?.module.CatchBoundary) {
       appState.catchBoundaryRouteId = "root";
       renderableMatches.push({
@@ -423,7 +423,7 @@ async function renderDocumentRequest({
 
   // Handle responses with a non-200 status code. The first loader with a
   // non-200 status code determines the status code for the whole response.
-  let notOkResponse =
+  const notOkResponse =
     actionStatus && actionStatus.status !== 200
       ? actionStatus.status
       : loaderStatusCodes.find(status => status !== 200);
@@ -436,30 +436,30 @@ async function renderDocumentRequest({
     ? appState.catch.status
     : 200;
 
-  let responseHeaders = getDocumentHeaders(
+  const responseHeaders = getDocumentHeaders(
     build,
     renderableMatches,
     routeLoaderResponses,
     actionResponse
   );
 
-  let entryMatches = createEntryMatches(renderableMatches, build.assets.routes);
+  const entryMatches = createEntryMatches(renderableMatches, build.assets.routes);
 
-  let serverHandoff = {
+  const serverHandoff = {
     actionData,
     appState: appState,
     matches: entryMatches,
     routeData
   };
 
-  let entryContext: EntryContext = {
+  const entryContext: EntryContext = {
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
     serverHandoffString: createServerHandoffString(serverHandoff)
   };
 
-  let handleDocumentRequest = build.entry.module.default;
+  const handleDocumentRequest = build.entry.module.default;
   try {
     return await handleDocumentRequest(
       request.clone(),
@@ -520,7 +520,7 @@ async function handleResourceRequest({
   matches: RouteMatch<ServerRoute>[];
   serverMode: ServerMode;
 }): Promise<Response> {
-  let match = matches.slice(-1)[0];
+  const match = matches.slice(-1)[0];
 
   try {
     if (isActionRequest(request)) {
@@ -563,7 +563,7 @@ function getRequestType(
     return "document";
   }
 
-  let match = matches.slice(-1)[0];
+  const match = matches.slice(-1)[0];
   if (!match.route.module.default) {
     return "resource";
   }
@@ -572,7 +572,7 @@ function getRequestType(
 }
 
 function isActionRequest(request: Request): boolean {
-  let method = request.method.toLowerCase();
+  const method = request.method.toLowerCase();
   return (
     method === "post" ||
     method === "put" ||
@@ -605,7 +605,7 @@ async function errorBoundaryError(error: Error, status: number) {
 function isIndexRequestUrl(url: URL) {
   let indexRequest = false;
 
-  for (let param of url.searchParams.getAll("index")) {
+  for (const param of url.searchParams.getAll("index")) {
     if (!param) {
       indexRequest = true;
     }
@@ -615,7 +615,7 @@ function isIndexRequestUrl(url: URL) {
 }
 
 function getActionRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
-  let match = matches.slice(-1)[0];
+  const match = matches.slice(-1)[0];
 
   if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
     return matches.slice(-2)[0];
@@ -628,7 +628,7 @@ function getDeepestRouteIdWithBoundary(
   matches: RouteMatch<ServerRoute>[],
   key: "CatchBoundary" | "ErrorBoundary"
 ) {
-  let matched = getMatchesUpToDeepestBoundary(matches, key).slice(-1)[0];
+  const matched = getMatchesUpToDeepestBoundary(matches, key).slice(-1)[0];
   return matched ? matched.route.id : null;
 }
 
@@ -670,7 +670,7 @@ function getRenderableMatches(
   let lastRenderableIndex: number = -1;
 
   matches.forEach((match, index) => {
-    let id = match.route.id;
+    const id = match.route.id;
     if (
       appState.renderBoundaryRouteId === id ||
       appState.loaderBoundaryRouteId === id ||

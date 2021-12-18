@@ -168,14 +168,14 @@ export function getLinksForMatches(
   routeModules: RouteModules,
   manifest: AssetsManifest
 ): LinkDescriptor[] {
-  let descriptors = matches
+  const descriptors = matches
     .map((match): LinkDescriptor[] => {
-      let module = routeModules[match.route.id];
+      const module = routeModules[match.route.id];
       return module.links?.() || [];
     })
     .flat(1);
 
-  let preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
+  const preloads = getCurrentPageModulePreloadHrefs(matches, manifest);
   return dedupe(descriptors, preloads);
 }
 
@@ -183,18 +183,18 @@ export async function prefetchStyleLinks(
   routeModule: RouteModule
 ): Promise<void> {
   if (!routeModule.links) return;
-  let descriptors = routeModule.links();
+  const descriptors = routeModule.links();
   if (!descriptors) return;
 
-  let styleLinks = [];
-  for (let descriptor of descriptors) {
+  const styleLinks = [];
+  for (const descriptor of descriptors) {
     if (!isPageLinkDescriptor(descriptor) && descriptor.rel === "stylesheet") {
       styleLinks.push({ ...descriptor, rel: "preload", as: "style" });
     }
   }
 
   // don't block for non-matching media queries
-  let matchingLinks = styleLinks.filter(
+  const matchingLinks = styleLinks.filter(
     link => !link.media || window.matchMedia(link.media).matches
   );
 
@@ -205,7 +205,7 @@ async function prefetchStyleLink(
   descriptor: HtmlLinkDescriptor
 ): Promise<void> {
   return new Promise(resolve => {
-    let link = document.createElement("link");
+    const link = document.createElement("link");
     Object.assign(link, descriptor);
 
     function removeLink() {
@@ -252,9 +252,9 @@ export async function getStylesheetPrefetchLinks(
   matches: RouteMatch<ClientRoute>[],
   routeModules: RouteModules
 ) {
-  let links = await Promise.all(
+  const links = await Promise.all(
     matches.map(async match => {
-      let mod = await loadRouteModule(match.route, routeModules);
+      const mod = await loadRouteModule(match.route, routeModules);
       return mod.links ? mod.links() : [];
     })
   );
@@ -279,14 +279,14 @@ export function getNewMatchesForLinks(
   location: Location,
   mode: "data" | "assets"
 ): RouteMatch<ClientRoute>[] {
-  let path = parsePathPatch(page);
+  const path = parsePathPatch(page);
 
-  let isNew = (match: RouteMatch<ClientRoute>, index: number) => {
+  const isNew = (match: RouteMatch<ClientRoute>, index: number) => {
     if (!currentMatches[index]) return true;
     return match.route.id !== currentMatches[index].route.id;
   };
 
-  let matchPathChanged = (match: RouteMatch<ClientRoute>, index: number) => {
+  const matchPathChanged = (match: RouteMatch<ClientRoute>, index: number) => {
     return (
       // param change, /users/123 -> /users/456
       currentMatches[index].pathname !== match.pathname ||
@@ -299,7 +299,7 @@ export function getNewMatchesForLinks(
 
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
-  let newMatches =
+  const newMatches =
     mode === "data" && location.search !== path.search
       ? // this is really similar to stuff in transition.ts, maybe somebody smarter
         // than me (or in less of a hurry) can share some of it. You're the best.
@@ -339,13 +339,13 @@ export function getDataLinkHrefs(
   matches: RouteMatch<ClientRoute>[],
   manifest: AssetsManifest
 ): string[] {
-  let path = parsePathPatch(page);
+  const path = parsePathPatch(page);
   return dedupeHrefs(
     matches
       .filter(match => manifest.routes[match.route.id].hasLoader)
       .map(match => {
-        let { pathname, search } = path;
-        let searchParams = new URLSearchParams(search);
+        const { pathname, search } = path;
+        const searchParams = new URLSearchParams(search);
         searchParams.append("_data", match.route.id);
         return `${pathname}?${searchParams}`;
       })
@@ -359,7 +359,7 @@ export function getModuleLinkHrefs(
   return dedupeHrefs(
     matches
       .map(match => {
-        let route = manifestPatch.routes[match.route.id];
+        const route = manifestPatch.routes[match.route.id];
         let hrefs = [route.module];
         if (route.imports) {
           hrefs = hrefs.concat(route.imports);
@@ -380,7 +380,7 @@ function getCurrentPageModulePreloadHrefs(
   return dedupeHrefs(
     matches
       .map(match => {
-        let route = manifest.routes[match.route.id];
+        const route = manifest.routes[match.route.id];
         let hrefs = [route.module];
 
         if (route.imports) {
@@ -398,11 +398,11 @@ function dedupeHrefs(hrefs: string[]): string[] {
 }
 
 export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
-  let set = new Set();
-  let preloadsSet = new Set(preloads);
+  const set = new Set();
+  const preloadsSet = new Set(preloads);
 
   return descriptors.reduce((deduped, descriptor) => {
-    let alreadyModulePreload =
+    const alreadyModulePreload =
       !isPageLinkDescriptor(descriptor) &&
       descriptor.as === "script" &&
       descriptor.href &&
@@ -412,7 +412,7 @@ export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
       return deduped;
     }
 
-    let str = JSON.stringify(descriptor);
+    const str = JSON.stringify(descriptor);
     if (!set.has(str)) {
       set.add(str);
       deduped.push(descriptor);
@@ -424,7 +424,7 @@ export function dedupe(descriptors: LinkDescriptor[], preloads: string[]) {
 
 // https://github.com/remix-run/history/issues/897
 function parsePathPatch(href: string) {
-  let path = parsePath(href);
+  const path = parsePath(href);
   if (path.search === undefined) path.search = "";
   return path;
 }

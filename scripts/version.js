@@ -6,13 +6,13 @@ const Confirm = require("prompt-confirm");
 const jsonfile = require("jsonfile");
 const semver = require("semver");
 
-let rootDir = path.resolve(__dirname, "..");
-let examplesDir = path.resolve(rootDir, "examples");
+const rootDir = path.resolve(__dirname, "..");
+const examplesDir = path.resolve(rootDir, "examples");
 
-let adapters = ["architect", "express", "netlify", "vercel"];
-let runtimes = ["cloudflare-workers", "cloudflare-pages", "node"];
-let core = ["dev", "server-runtime", "react", "eslint-config"];
-let allPackages = [...adapters, ...runtimes, ...core, "serve"];
+const adapters = ["architect", "express", "netlify", "vercel"];
+const runtimes = ["cloudflare-workers", "cloudflare-pages", "node"];
+const core = ["dev", "server-runtime", "react", "eslint-config"];
+const allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
 /**
  * @param {string} packageName
@@ -24,8 +24,8 @@ function packageJson(packageName, directory) {
 }
 
 function ensureCleanWorkingDirectory() {
-  let status = execSync(`git status --porcelain`).toString().trim();
-  let lines = status.split("\n");
+  const status = execSync(`git status --porcelain`).toString().trim();
+  const lines = status.split("\n");
   if (!lines.every(line => line === "" || line.startsWith("?"))) {
     console.error(
       "Working directory is not clean. Please commit or stash your changes."
@@ -42,7 +42,7 @@ function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
 
   let nextVersion;
   if (givenVersion === "experimental") {
-    let hash = execSync(`git rev-parse --short HEAD`).toString().trim();
+    const hash = execSync(`git rev-parse --short HEAD`).toString().trim();
     nextVersion = `0.0.0-experimental-${hash}`;
   } else {
     nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
@@ -57,20 +57,20 @@ function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
 }
 
 async function prompt(question) {
-  let confirm = new Confirm(question);
-  let answer = await confirm.run();
+  const confirm = new Confirm(question);
+  const answer = await confirm.run();
   return answer;
 }
 
 async function getPackageVersion(packageName) {
-  let file = packageJson(packageName, "packages");
-  let json = await jsonfile.readFile(file);
+  const file = packageJson(packageName, "packages");
+  const json = await jsonfile.readFile(file);
   return json.version;
 }
 
 async function updatePackageConfig(packageName, transform) {
-  let file = packageJson(packageName, "packages");
-  let json = await jsonfile.readFile(file);
+  const file = packageJson(packageName, "packages");
+  const json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
@@ -80,29 +80,29 @@ async function updatePackageConfig(packageName, transform) {
  * @param {(json: string) => any} transform
  */
 async function updateExamplesPackageConfig(example, transform) {
-  let file = packageJson(example, "examples");
+  const file = packageJson(example, "examples");
   if (!(await fileExists(file))) return;
 
-  let json = await jsonfile.readFile(file);
+  const json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
 async function run(args) {
-  let givenVersion = args[0];
-  let prereleaseId = args[1];
+  const givenVersion = args[0];
+  const prereleaseId = args[1];
 
   ensureCleanWorkingDirectory();
 
   // Get the next version number
-  let currentVersion = await getPackageVersion("remix");
+  const currentVersion = await getPackageVersion("remix");
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(currentVersion, givenVersion, prereleaseId);
   }
 
   // Confirm the next version number
-  let answer = await prompt(
+  const answer = await prompt(
     `Are you sure you want to bump version ${currentVersion} to ${nextVersion}? [Yn] `
   );
   if (answer === false) return 0;
@@ -119,10 +119,10 @@ async function run(args) {
   });
   console.log(chalk.green(`  Updated create-remix to version ${nextVersion}`));
 
-  for (let name of allPackages) {
+  for (const name of allPackages) {
     await updatePackageConfig(`remix-${name}`, config => {
       config.version = nextVersion;
-      for (let pkg of allPackages) {
+      for (const pkg of allPackages) {
         if (config.dependencies?.[`@remix-run/${pkg}`]) {
           config.dependencies[`@remix-run/${pkg}`] = nextVersion;
         }
@@ -137,10 +137,10 @@ async function run(args) {
   }
 
   // Update remix versions in the examples
-  let examples = await fsp.readdir(examplesDir);
+  const examples = await fsp.readdir(examplesDir);
   if (examples.length > 0) {
-    for (let example of examples) {
-      let stat = await fsp.stat(path.join(examplesDir, example));
+    for (const example of examples) {
+      const stat = await fsp.stat(path.join(examplesDir, example));
       if (!stat.isDirectory()) continue;
 
       await updateExamplesPackageConfig(example, config => {
@@ -148,7 +148,7 @@ async function run(args) {
           config.dependencies["remix"] = nextVersion;
         }
 
-        for (let pkg of allPackages) {
+        for (const pkg of allPackages) {
           if (config.dependencies[`@remix-run/${pkg}`]) {
             config.dependencies[`@remix-run/${pkg}`] = nextVersion;
           }
@@ -187,7 +187,7 @@ run(process.argv.slice(2)).then(
  */
 async function fileExists(filePath) {
   try {
-    let stat = await fsp.stat(filePath);
+    const stat = await fsp.stat(filePath);
     return stat.code !== "ENOENT";
   } catch (_) {
     return false;

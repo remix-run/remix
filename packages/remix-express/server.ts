@@ -44,8 +44,8 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  const platform: ServerPlatform = { formatServerError };
+  const handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (
     req: express.Request,
@@ -53,14 +53,14 @@ export function createRequestHandler({
     next: express.NextFunction
   ) => {
     try {
-      let abortController = new AbortController();
-      let request = createRemixRequest(req, abortController);
-      let loadContext =
+      const abortController = new AbortController();
+      const request = createRemixRequest(req, abortController);
+      const loadContext =
         typeof getLoadContext === "function"
           ? getLoadContext(req, res)
           : undefined;
 
-      let response = (await handleRequest(
+      const response = (await handleRequest(
         request as unknown as Request,
         loadContext
       )) as unknown as NodeResponse;
@@ -77,9 +77,9 @@ export function createRequestHandler({
 export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
 ): NodeHeaders {
-  let headers = new NodeHeaders();
+  const headers = new NodeHeaders();
 
-  for (let [key, values] of Object.entries(requestHeaders)) {
+  for (const [key, values] of Object.entries(requestHeaders)) {
     if (values) {
       if (Array.isArray(values)) {
         for (const value of values) {
@@ -98,10 +98,10 @@ export function createRemixRequest(
   req: express.Request,
   abortController?: AbortController
 ): NodeRequest {
-  let origin = `${req.protocol}://${req.get("host")}`;
-  let url = new URL(req.url, origin);
+  const origin = `${req.protocol}://${req.get("host")}`;
+  const url = new URL(req.url, origin);
 
-  let init: NodeRequestInit = {
+  const init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
     signal: abortController?.signal,
@@ -122,7 +122,7 @@ function sendRemixResponse(
 ): void {
   res.status(response.status);
 
-  for (let [key, values] of Object.entries(response.headers.raw())) {
+  for (const [key, values] of Object.entries(response.headers.raw())) {
     for (const value of values) {
       res.append(key, value);
     }

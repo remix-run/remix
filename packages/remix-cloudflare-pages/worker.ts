@@ -12,11 +12,11 @@ export function createRequestHandler<Env = any>({
   getLoadContext,
   mode
 }: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
-  let platform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  const platform = {};
+  const handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return context => {
-    let loadContext =
+    const loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(context)
         : undefined;

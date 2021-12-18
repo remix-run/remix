@@ -103,7 +103,7 @@ export async function watch(
     onInitialBuild
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
-  let options = {
+  const options = {
     mode,
     target,
     sourcemap,
@@ -125,7 +125,7 @@ export async function watch(
     serverBuild = undefined;
   }
 
-  let restartBuilders = debounce(async (newConfig?: RemixConfig) => {
+  const restartBuilders = debounce(async (newConfig?: RemixConfig) => {
     disposeBuilders();
     try {
       newConfig = await readConfig(config.rootDirectory);
@@ -136,13 +136,13 @@ export async function watch(
 
     config = newConfig;
     if (onRebuildStart) onRebuildStart();
-    let builders = await buildEverything(config, options);
+    const builders = await buildEverything(config, options);
     if (onRebuildFinish) onRebuildFinish();
     browserBuild = builders[0];
     serverBuild = builders[1];
   }, 500);
 
-  let rebuildEverything = debounce(async () => {
+  const rebuildEverything = debounce(async () => {
     if (onRebuildStart) onRebuildStart();
 
     if (!browserBuild?.rebuild || !serverBuild?.rebuild) {
@@ -178,7 +178,7 @@ export async function watch(
     if (onRebuildFinish) onRebuildFinish();
   }, 100);
 
-  let watcher = chokidar
+  const watcher = chokidar
     .watch(config.appDirectory, {
       persistent: true,
       ignoreInitial: true,
@@ -224,7 +224,7 @@ export async function watch(
 }
 
 function isEntryPoint(config: RemixConfig, file: string) {
-  let appFile = path.relative(config.appDirectory, file);
+  const appFile = path.relative(config.appDirectory, file);
 
   if (
     appFile === config.entryClientFile ||
@@ -232,7 +232,7 @@ function isEntryPoint(config: RemixConfig, file: string) {
   ) {
     return true;
   }
-  for (let key in config.routes) {
+  for (const key in config.routes) {
     if (appFile === config.routes[key].file) return true;
   }
 
@@ -254,8 +254,8 @@ async function buildEverything(
   // in a single JavaScript file.
 
   try {
-    let browserBuildPromise = createBrowserBuild(config, options);
-    let serverBuildPromise = createServerBuild(config, options);
+    const browserBuildPromise = createBrowserBuild(config, options);
+    const serverBuildPromise = createServerBuild(config, options);
 
     return await Promise.all([
       browserBuildPromise.then(async build => {
@@ -279,9 +279,9 @@ async function createBrowserBuild(
   // *actually* be external in the browser build (we want to bundle all deps) so
   // this is really just making sure we don't accidentally have any dependencies
   // on node built-ins in browser bundles.
-  let dependencies = Object.keys(await getAppDependencies(config));
-  let externals = nodeBuiltins.filter(mod => !dependencies.includes(mod));
-  let fakeBuiltins = nodeBuiltins.filter(mod => dependencies.includes(mod));
+  const dependencies = Object.keys(await getAppDependencies(config));
+  const externals = nodeBuiltins.filter(mod => !dependencies.includes(mod));
+  const fakeBuiltins = nodeBuiltins.filter(mod => dependencies.includes(mod));
 
   if (fakeBuiltins.length > 0) {
     throw new Error(
@@ -291,10 +291,10 @@ async function createBrowserBuild(
     );
   }
 
-  let entryPoints: esbuild.BuildOptions["entryPoints"] = {
+  const entryPoints: esbuild.BuildOptions["entryPoints"] = {
     "entry.client": path.resolve(config.appDirectory, config.entryClientFile)
   };
-  for (let id of Object.keys(config.routes)) {
+  for (const id of Object.keys(config.routes)) {
     // All route entry points are virtual modules that will be loaded by the
     // browserEntryPointsPlugin. This allows us to tree-shake server-only code
     // that we don't want to run in the browser (i.e. action & loader).
@@ -336,7 +336,7 @@ async function createServerBuild(
   config: RemixConfig,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
-  let dependencies = Object.keys(await getAppDependencies(config));
+  const dependencies = Object.keys(await getAppDependencies(config));
 
   return esbuild.build({
     stdin: {
@@ -376,7 +376,7 @@ async function createServerBuild(
         // Mark all bare imports as external. They will be require()'d (or
         // imported if ESM) at runtime from node_modules.
         if (isBareModuleId(id)) {
-          let packageName = getNpmPackageName(id);
+          const packageName = getNpmPackageName(id);
           if (
             !/\bnode_modules\b/.test(importer) &&
             !nodeBuiltins.includes(packageName) &&
@@ -415,7 +415,7 @@ function isBareModuleId(id: string): boolean {
 }
 
 function getNpmPackageName(id: string): string {
-  let split = id.split("/");
+  const split = id.split("/");
   let packageName = split[0];
   if (packageName.startsWith("@")) packageName += `/${split[1]}`;
   return packageName;
@@ -425,9 +425,9 @@ async function generateManifests(
   config: RemixConfig,
   metafile: esbuild.Metafile
 ): Promise<string[]> {
-  let assetsManifest = await createAssetsManifest(config, metafile);
+  const assetsManifest = await createAssetsManifest(config, metafile);
 
-  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
+  const filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
   assetsManifest.url = config.publicPath + filename;
 
   return Promise.all([
@@ -454,7 +454,7 @@ import * as entryServer from ${JSON.stringify(
       )};
 ${Object.keys(config.routes)
   .map((key, index) => {
-    let route = config.routes[key];
+    const route = config.routes[key];
     return `import * as route${index} from ${JSON.stringify(
       path.resolve(config.appDirectory, route.file)
     )};`;
@@ -465,7 +465,7 @@ export const entry = { module: entryServer };
 export const routes = {
   ${Object.keys(config.routes)
     .map((key, index) => {
-      let route = config.routes[key];
+      const route = config.routes[key];
       return `${JSON.stringify(key)}: {
     id: ${JSON.stringify(route.id)},
     parentId: ${JSON.stringify(route.parentId)},
@@ -507,9 +507,9 @@ function browserRouteModulesPlugin(
   return {
     name: "browser-route-modules",
     async setup(build) {
-      let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
+      const routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
         (map, key) => {
-          let route = config.routes[key];
+          const route = config.routes[key];
           map.set(path.resolve(config.appDirectory, route.file), route);
           return map;
         },
@@ -523,8 +523,8 @@ function browserRouteModulesPlugin(
       build.onLoad(
         { filter: suffixMatcher, namespace: "browser-route-module" },
         async args => {
-          let file = args.path.replace(suffixMatcher, "");
-          let route = routesByFile.get(file);
+          const file = args.path.replace(suffixMatcher, "");
+          const route = routesByFile.get(file);
           invariant(route, `Cannot get route by path: ${args.path}`);
 
           let exports;
@@ -542,8 +542,8 @@ function browserRouteModulesPlugin(
               ]
             };
           }
-          let spec = exports.length > 0 ? `{ ${exports.join(", ")} }` : "*";
-          let contents = `export ${spec} from ${JSON.stringify(file)};`;
+          const spec = exports.length > 0 ? `{ ${exports.join(", ")} }` : "*";
+          const contents = `export ${spec} from ${JSON.stringify(file)};`;
 
           return {
             contents,
@@ -568,7 +568,7 @@ function emptyModulesPlugin(
     name: "empty-modules",
     setup(build) {
       build.onResolve({ filter }, args => {
-        let resolved = path.resolve(args.resolveDir, args.path);
+        const resolved = path.resolve(args.resolveDir, args.path);
         if (
           // Limit this behavior to modules found in only the `app` directory.
           // This allows node_modules to use the `.server.js` and `.client.js`
@@ -599,7 +599,7 @@ function serverRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
   return {
     name: "server-route-modules",
     setup(build) {
-      let routeFiles = new Set(
+      const routeFiles = new Set(
         Object.keys(config.routes).map(key =>
           path.resolve(config.appDirectory, config.routes[key].file)
         )
@@ -612,8 +612,8 @@ function serverRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
       });
 
       build.onLoad({ filter: /.*/, namespace: "route-module" }, async args => {
-        let file = args.path;
-        let contents = await fsp.readFile(file, "utf-8");
+        const file = args.path;
+        const contents = await fsp.readFile(file, "utf-8");
 
         // Default to `export {}` if the file is empty so esbuild interprets
         // this file as ESM instead of CommonJS with `default: {}`. This helps

@@ -26,15 +26,15 @@ module.exports = {
 
   // custom routes
   routes: async defineRoutes => {
-    let pages = await fsp.readdir(path.join(__dirname, "app", "pages"));
+    const pages = await fsp.readdir(path.join(__dirname, "app", "pages"));
 
     return defineRoutes(route => {
       // create some custom routes from the pages/ dir
-      for (let page of pages) {
+      for (const page of pages) {
         // skip MDX pages for now...
         if (page.endsWith(".mdx")) continue;
 
-        let slug = page.replace(/\.[a-z]+$/, "");
+        const slug = page.replace(/\.[a-z]+$/, "");
         route(`/page/${slug}`, `pages/${page}`);
       }
 

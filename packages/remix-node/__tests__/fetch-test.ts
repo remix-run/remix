@@ -3,7 +3,7 @@ import { PassThrough } from "stream";
 import { Request } from "../fetch";
 import { createMemoryUploadHandler } from "../upload/memoryUploadHandler";
 
-let test = {
+const test = {
   source: [
     [
       "-----------------------------paZqsnEHRufoShdX6fh0lUhXBP4k",
@@ -70,13 +70,13 @@ let test = {
 };
 
 describe("Request", () => {
-  let uploadHandler = createMemoryUploadHandler({});
+  const uploadHandler = createMemoryUploadHandler({});
 
   it("clones", async () => {
-    let body = new PassThrough();
+    const body = new PassThrough();
     test.source.forEach(chunk => body.write(chunk));
 
-    let req = new Request("http://test.com", {
+    const req = new Request("http://test.com", {
       method: "post",
       body,
       headers: {
@@ -84,11 +84,11 @@ describe("Request", () => {
       }
     });
 
-    let cloned = req.clone();
+    const cloned = req.clone();
     expect(Object.getPrototypeOf(req)).toBe(Object.getPrototypeOf(cloned));
 
-    let formData = await req.formData(uploadHandler);
-    let clonedFormData = await cloned.formData(uploadHandler);
+    const formData = await req.formData(uploadHandler);
+    const clonedFormData = await cloned.formData(uploadHandler);
 
     expect(formData.get("file_name_0")).toBe("super alpha file");
     expect(clonedFormData.get("file_name_0")).toBe("super alpha file");

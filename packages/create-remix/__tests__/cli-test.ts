@@ -39,12 +39,12 @@ describe("create-remix cli", () => {
 
   // TODO: Rewrite this test
   it.skip("guides the user through the process", async done => {
-    let cli = spawn("node", [createRemix], {});
+    const cli = spawn("node", [createRemix], {});
     let promptCount = 0;
     let previousPrompt: string;
 
     cli.stdout.on("data", async data => {
-      let prompt = cleanPrompt(data);
+      const prompt = cleanPrompt(data);
       if (
         !prompt ||
         prompt === "R E M I X" ||
@@ -115,21 +115,21 @@ describe("create-remix cli", () => {
 
   describe("the --version flag", () => {
     it("prints the current version", async () => {
-      let { stdout } = await execFile("node", [createRemix, "--version"]);
+      const { stdout } = await execFile("node", [createRemix, "--version"]);
       expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
 
   describe("the -v flag", () => {
     it("prints the current version", async () => {
-      let { stdout } = await execFile("node", [createRemix, "-v"]);
+      const { stdout } = await execFile("node", [createRemix, "-v"]);
       expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
 
   describe("the --help flag", () => {
     it("prints help info", async () => {
-      let { stdout } = await execFile("node", [createRemix, "--help"]);
+      const { stdout } = await execFile("node", [createRemix, "--help"]);
 
       expect(stdout).toMatchInlineSnapshot(`
         "
@@ -151,7 +151,7 @@ describe("create-remix cli", () => {
 
   describe("the -h flag", () => {
     it("prints help info", async () => {
-      let { stdout } = await execFile("node", [createRemix, "-h"]);
+      const { stdout } = await execFile("node", [createRemix, "-h"]);
       expect(stdout).toMatchInlineSnapshot(`
         "
           Create a new Remix app

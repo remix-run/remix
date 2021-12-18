@@ -20,7 +20,7 @@ describe("remix cli", () => {
 
   describe("the --help flag", () => {
     it("prints help info", async () => {
-      let { stdout } = await execFile("node", [remix, "--help"]);
+      const { stdout } = await execFile("node", [remix, "--help"]);
       expect(stdout).toMatchInlineSnapshot(`
         "
           Usage
@@ -52,14 +52,14 @@ describe("remix cli", () => {
 
   describe("the --version flag", () => {
     it("prints the current version", async () => {
-      let { stdout } = await execFile("node", [remix, "--version"]);
+      const { stdout } = await execFile("node", [remix, "--version"]);
       expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
 
   describe("the -v flag", () => {
     it("prints the current version", async () => {
-      let { stdout } = await execFile("node", [remix, "-v"]);
+      const { stdout } = await execFile("node", [remix, "-v"]);
       expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });

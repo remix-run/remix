@@ -31,7 +31,7 @@ export async function mapToSourceFile(
   cache: Map<string, SourceMapConsumer>,
   stackLine: string
 ) {
-  let match = SOURCE_PATTERN.exec(stackLine);
+  const match = SOURCE_PATTERN.exec(stackLine);
 
   if (!match?.groups) {
     // doesn't match pattern but may still have a filename
@@ -41,7 +41,7 @@ export async function mapToSourceFile(
   let { at, filename } = match.groups;
   let line: number | string = match.groups.line;
   let column: number | string = match.groups.column;
-  let mapFilename = `${filename}.map`;
+  const mapFilename = `${filename}.map`;
   let smc = cache.get(mapFilename);
   filename = relativeFilename(filename);
 

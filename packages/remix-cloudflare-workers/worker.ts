@@ -37,11 +37,11 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  const platform: ServerPlatform = {};
+  const handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return (event: FetchEvent) => {
-    let loadContext =
+    const loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
     return handleRequest(event.request, loadContext);
@@ -64,9 +64,9 @@ export async function handleAsset(
     }
 
     let cacheControl = {};
-    let url = new URL(event.request.url);
-    let assetpath = build.assets.url.split("/").slice(0, -1).join("/");
-    let requestpath = url.pathname.split("/").slice(0, -1).join("/");
+    const url = new URL(event.request.url);
+    const assetpath = build.assets.url.split("/").slice(0, -1).join("/");
+    const requestpath = url.pathname.split("/").slice(0, -1).join("/");
 
     if (requestpath.startsWith(assetpath)) {
       cacheControl = {

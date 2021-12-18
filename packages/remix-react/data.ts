@@ -39,15 +39,15 @@ export async function fetchData(
   url.searchParams.set("_data", routeId);
   url.searchParams.sort(); // Improves caching
 
-  let init: RequestInit = submission
+  const init: RequestInit = submission
     ? getActionInit(submission, signal)
     : { credentials: "same-origin", signal };
 
-  let response = await fetch(url.href, init);
+  const response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
-    let data = await response.json();
-    let error = new Error(data.message);
+    const data = await response.json();
+    const error = new Error(data.message);
     error.stack = data.stack;
     return error;
   }
@@ -58,7 +58,7 @@ export async function fetchData(
 export async function extractData(response: Response): Promise<AppData> {
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
-  let contentType = response.headers.get("Content-Type");
+  const contentType = response.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();
@@ -71,14 +71,14 @@ function getActionInit(
   submission: Submission,
   signal: AbortSignal
 ): RequestInit {
-  let { encType, method, formData } = submission;
+  const { encType, method, formData } = submission;
 
   let headers = undefined;
   let body = formData;
 
   if (encType === "application/x-www-form-urlencoded") {
     body = new URLSearchParams();
-    for (let [key, value] of formData) {
+    for (const [key, value] of formData) {
       invariant(
         typeof value === "string",
         `File inputs are not supported with encType "application/x-www-form-urlencoded", please use "multipart/form-data" instead.`

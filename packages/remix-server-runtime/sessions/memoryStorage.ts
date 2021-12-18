@@ -24,7 +24,7 @@ export function createMemorySessionStorage({
   cookie
 }: MemorySessionStorageOptions = {}): SessionStorage {
   let uniqueId = 0;
-  let map = new Map<string, { data: SessionData; expires?: Date }>();
+  const map = new Map<string, { data: SessionData; expires?: Date }>();
 
   return createSessionStorage({
     cookie,

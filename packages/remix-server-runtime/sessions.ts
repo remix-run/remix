@@ -70,7 +70,7 @@ function flash(name: string): string {
  * Instead, use a `SessionStorage` object's `getSession` method.
  */
 export function createSession(initialData: SessionData = {}, id = ""): Session {
-  let map = new Map<string, any>(Object.entries(initialData));
+  const map = new Map<string, any>(Object.entries(initialData));
 
   return {
     get id() {
@@ -85,7 +85,7 @@ export function createSession(initialData: SessionData = {}, id = ""): Session {
     get(name) {
       if (map.has(name)) return map.get(name);
 
-      let flashName = flash(name);
+      const flashName = flash(name);
       if (map.has(flashName)) {
         let value = map.get(flashName);
         map.delete(flashName);

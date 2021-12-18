@@ -2,7 +2,7 @@ import { defineRoutes } from "../config/routes";
 
 describe("defineRoutes", () => {
   it("returns an array of routes", () => {
-    let routes = defineRoutes(route => {
+    const routes = defineRoutes(route => {
       route("/", "routes/home.js");
       route("inbox", "routes/inbox.js", () => {
         route("/", "routes/inbox/index.js", { index: true });
@@ -59,9 +59,9 @@ describe("defineRoutes", () => {
 
   it("works with async data", async () => {
     // Read everything *before* calling defineRoutes.
-    let fakeDirectory = await Promise.resolve(["one.md", "two.md"]);
-    let routes = defineRoutes(route => {
-      for (let file of fakeDirectory) {
+    const fakeDirectory = await Promise.resolve(["one.md", "two.md"]);
+    const routes = defineRoutes(route => {
+      for (const file of fakeDirectory) {
         route(file.replace(/\.md$/, ""), file);
       }
     });

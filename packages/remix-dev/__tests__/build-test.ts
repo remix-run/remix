@@ -30,7 +30,7 @@ describe.skip("building", () => {
 
   describe("the development server build", () => {
     it("generates the correct bundles", async () => {
-      let output = await generateBuild(config, {
+      const output = await generateBuild(config, {
         mode: BuildMode.Development,
         target: BuildTarget.Server
       });
@@ -66,7 +66,7 @@ describe.skip("building", () => {
 
   describe("the production server build", () => {
     it("generates the correct bundles", async () => {
-      let output = await generateBuild(config, {
+      const output = await generateBuild(config, {
         mode: BuildMode.Production,
         target: BuildTarget.Server
       });
@@ -102,7 +102,7 @@ describe.skip("building", () => {
 
   describe("the development browser build", () => {
     it("generates the correct bundles", async () => {
-      let output = await generateBuild(config, {
+      const output = await generateBuild(config, {
         mode: BuildMode.Development,
         target: BuildTarget.Browser
       });
@@ -160,7 +160,7 @@ describe.skip("building", () => {
 
   describe("the production browser build", () => {
     it("generates the correct bundles", async () => {
-      let output = await generateBuild(config, {
+      const output = await generateBuild(config, {
         mode: BuildMode.Production,
         target: BuildTarget.Browser
       });

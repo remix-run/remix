@@ -52,13 +52,13 @@ export async function createAssetsManifest(
       .map(im => resolveUrl(im.path));
   }
 
-  let entryClientFile = path.resolve(
+  const entryClientFile = path.resolve(
     config.appDirectory,
     config.entryClientFile
   );
-  let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
+  const routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
     (map, key) => {
-      let route = config.routes[key];
+      const route = config.routes[key];
       map.set(path.resolve(config.appDirectory, route.file), route);
       return map;
     },
@@ -68,11 +68,11 @@ export async function createAssetsManifest(
   let entry: AssetsManifest["entry"] | undefined;
   let routes: AssetsManifest["routes"] = {};
 
-  for (let key of Object.keys(metafile.outputs).sort()) {
-    let output = metafile.outputs[key];
+  for (const key of Object.keys(metafile.outputs).sort()) {
+    const output = metafile.outputs[key];
     if (!output.entryPoint) continue;
 
-    let entryPointFile = path.resolve(
+    const entryPointFile = path.resolve(
       output.entryPoint.replace(/(^browser-route-module:|\?browser$)/g, "")
     );
     if (entryPointFile === entryClientFile) {
@@ -82,9 +82,9 @@ export async function createAssetsManifest(
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
     } else if (output.entryPoint.startsWith("browser-route-module:")) {
-      let route = routesByFile.get(entryPointFile);
+      const route = routesByFile.get(entryPointFile);
       invariant(route, `Cannot get route for entry point ${output.entryPoint}`);
-      let sourceExports = await getRouteModuleExportsCached(config, route.id);
+      const sourceExports = await getRouteModuleExportsCached(config, route.id);
       routes[route.id] = {
         id: route.id,
         parentId: route.parentId,
@@ -104,7 +104,7 @@ export async function createAssetsManifest(
   invariant(entry, `Missing output for entry point`);
 
   optimizeRoutes(routes, entry.imports);
-  let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
+  const version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
   return { version, entry, routes };
 }
@@ -117,9 +117,9 @@ function optimizeRoutes(
 ): void {
   // This cache is an optimization that allows us to avoid pruning the same
   // route's imports more than once.
-  let importsCache: ImportsCache = Object.create(null);
+  const importsCache: ImportsCache = Object.create(null);
 
-  for (let key in routes) {
+  for (const key in routes) {
     optimizeRouteImports(key, routes, entryImports, importsCache);
   }
 }
@@ -132,7 +132,7 @@ function optimizeRouteImports(
 ): string[] {
   if (importsCache[routeId]) return importsCache[routeId];
 
-  let route = routes[routeId];
+  const route = routes[routeId];
 
   if (route.parentId) {
     parentImports = parentImports.concat(
@@ -140,7 +140,7 @@ function optimizeRouteImports(
     );
   }
 
-  let routeImports = (route.imports || []).filter(
+  const routeImports = (route.imports || []).filter(
     url => !parentImports.includes(url)
   );
 

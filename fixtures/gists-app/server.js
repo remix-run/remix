@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === "test") {
   global.console = new MockConsole();
 }
 
-let app = express();
+const app = express();
 
 app.use(compression());
 

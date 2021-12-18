@@ -36,9 +36,9 @@ export function createMemoryUploadHandler({
       return;
     }
 
-    let bufferStream = new BufferStream();
+    const bufferStream = new BufferStream();
     await new Promise<void>((resolve, reject) => {
-      let meter = new Meter(name, maxFileSize);
+      const meter = new Meter(name, maxFileSize);
 
       let aborted = false;
       async function abort(error: Error) {

@@ -13,7 +13,7 @@ export type { HeadersInit, RequestInfo, ResponseInit } from "node-fetch";
 export { Headers, Response } from "node-fetch";
 
 function formDataToStream(formData: NodeFormData): FormStream {
-  let formStream = new FormStream();
+  const formStream = new FormStream();
 
   function toNodeStream(input: any) {
     // The input is either a Node stream or a web stream, if it has
@@ -22,9 +22,9 @@ function formDataToStream(formData: NodeFormData): FormStream {
       return input;
     }
 
-    let passthrough = new PassThrough();
-    let stream = input as ReadableStream<any>;
-    let reader = stream.getReader();
+    const passthrough = new PassThrough();
+    const stream = input as ReadableStream<any>;
+    const reader = stream.getReader();
     reader
       .read()
       .then(async ({ done, value }) => {
@@ -52,7 +52,7 @@ function formDataToStream(formData: NodeFormData): FormStream {
         knownLength: value.size
       });
     } else {
-      let file = value as File;
+      const file = value as File;
       let stream = toNodeStream(file.stream());
       formStream.append(key, stream, {
         filename: "unknown"
@@ -80,8 +80,8 @@ class NodeRequest extends BaseNodeRequest {
 
     super(input, init);
 
-    let anyInput = input as any;
-    let anyInit = init as any;
+    const anyInput = input as any;
+    const anyInit = init as any;
 
     this.abortController =
       anyInput?.abortController || anyInit?.abortController;

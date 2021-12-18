@@ -15,7 +15,7 @@ import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
 
 export async function setup(platformArg?: string) {
-  let platform = isSetupPlatform(platformArg)
+  const platform = isSetupPlatform(platformArg)
     ? platformArg
     : SetupPlatform.Node;
 
@@ -28,9 +28,9 @@ export async function routes(
   remixRoot: string,
   formatArg?: string
 ): Promise<void> {
-  let config = await readConfig(remixRoot);
+  const config = await readConfig(remixRoot);
 
-  let format = isRoutesFormat(formatArg) ? formatArg : RoutesFormat.jsx;
+  const format = isRoutesFormat(formatArg) ? formatArg : RoutesFormat.jsx;
 
   console.log(formatRoutes(config.routes, format));
 }
@@ -40,7 +40,7 @@ export async function build(
   modeArg?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Production;
+  const mode = isBuildMode(modeArg) ? modeArg : BuildMode.Production;
 
   console.log(`Building Remix app in ${mode} mode...`);
 
@@ -56,8 +56,8 @@ export async function build(
     );
   }
 
-  let start = Date.now();
-  let config = await readConfig(remixRoot);
+  const start = Date.now();
+  const config = await readConfig(remixRoot);
   await compiler.build(config, { mode: mode, sourcemap });
 
   console.log(`Built in ${prettyMs(Date.now() - start)}`);
@@ -73,17 +73,17 @@ export async function watch(
   modeArg?: string,
   callbacks?: WatchCallbacks
 ): Promise<void> {
-  let { onInitialBuild, onRebuildStart } = callbacks || {};
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+  const { onInitialBuild, onRebuildStart } = callbacks || {};
+  const mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let start = Date.now();
-  let config =
+  const config =
     typeof remixRootOrConfig === "object"
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  let wss = new WebSocket.Server({ port: config.devServerPort });
+  const wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
       wss.clients.forEach(client => {
@@ -95,12 +95,12 @@ export async function watch(
   }
 
   function log(_message: string) {
-    let message = `💿 ${_message}`;
+    const message = `💿 ${_message}`;
     console.log(message);
     broadcast({ type: "LOG", message });
   }
 
-  let closeWatcher = await compiler.watch(config, {
+  const closeWatcher = await compiler.watch(config, {
     mode,
     onInitialBuild,
     onRebuildStart() {
@@ -144,7 +144,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
-    let serve = require("@remix-run/serve");
+    const serve = require("@remix-run/serve");
     createApp = serve.createApp;
     express = require("express");
   } catch (err) {
@@ -153,11 +153,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
     );
   }
 
-  let config = await readConfig(remixRoot);
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
-  let port = process.env.PORT || 3000;
+  const config = await readConfig(remixRoot);
+  const mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+  const port = process.env.PORT || 3000;
 
-  let app = express();
+  const app = express();
   app.use((_, __, next) => {
     purgeAppRequireCache(config.serverBuildDirectory);
     next();
@@ -180,7 +180,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
 }
 
 function purgeAppRequireCache(buildPath: string) {
-  for (let key in require.cache) {
+  for (const key in require.cache) {
     if (key.startsWith(buildPath)) {
       delete require.cache[key];
     }

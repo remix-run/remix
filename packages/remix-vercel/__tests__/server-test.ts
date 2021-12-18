@@ -13,18 +13,18 @@ import {
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the vercel adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler =
+const mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
   >;
 
-let consumeEventMock = jest.fn();
-let mockBridge = { consumeEvent: consumeEventMock };
+const consumeEventMock = jest.fn();
+const mockBridge = { consumeEvent: consumeEventMock };
 
 function createApp() {
   // TODO: get supertest args into the event
   consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
-  let server = createServerWithHelpers(
+  const server = createServerWithHelpers(
     createRequestHandler({ build: undefined }),
     mockBridge
   );
@@ -47,9 +47,9 @@ describe("vercel createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      let request = supertest(createApp());
+      const request = supertest(createApp());
       // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
-      let res = await request
+      const res = await request
         .get("/foo/bar")
         .set({ "x-now-bridge-request-id": "2" });
 
@@ -62,9 +62,9 @@ describe("vercel createRequestHandler", () => {
         return new Response(null, { status: 200 });
       });
 
-      let request = supertest(createApp());
+      const request = supertest(createApp());
       // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
-      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+      const res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(200);
     });
@@ -74,9 +74,9 @@ describe("vercel createRequestHandler", () => {
         return new Response(null, { status: 204 });
       });
 
-      let request = supertest(createApp());
+      const request = supertest(createApp());
       // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
-      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+      const res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(204);
     });
@@ -99,9 +99,9 @@ describe("vercel createRequestHandler", () => {
         return new Response(null, { headers });
       });
 
-      let request = supertest(createApp());
+      const request = supertest(createApp());
       // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
-      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+      const res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.headers["x-time-of-year"]).toBe("most wonderful");
       expect(res.headers["set-cookie"]).toEqual([
@@ -204,7 +204,7 @@ describe("vercel createRemixHeaders", () => {
 
 describe("vercel createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    let request = createRequest({
+    const request = createRequest({
       method: "GET",
       url: "/foo/bar",
       headers: {

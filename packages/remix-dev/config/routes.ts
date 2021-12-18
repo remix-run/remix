@@ -108,8 +108,8 @@ export type DefineRoutesFunction = typeof defineRoutes;
 export function defineRoutes(
   callback: (defineRoute: DefineRouteFunction) => void
 ): RouteManifest {
-  let routes: RouteManifest = Object.create(null);
-  let parentRoutes: ConfigRoute[] = [];
+  const routes: RouteManifest = Object.create(null);
+  const parentRoutes: ConfigRoute[] = [];
   let alreadyReturned = false;
 
   let defineRoute: DefineRouteFunction = (
@@ -137,7 +137,7 @@ export function defineRoutes(
       options = optionsOrChildren || {};
     }
 
-    let route: ConfigRoute = {
+    const route: ConfigRoute = {
       path: path ? path : undefined,
       index: options.index ? true : undefined,
       caseSensitive: options.caseSensitive ? true : undefined,

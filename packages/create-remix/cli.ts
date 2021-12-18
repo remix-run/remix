@@ -29,7 +29,7 @@ run().then(
 );
 
 async function run() {
-  let { input, flags, showHelp, showVersion } = meow(help, {
+  const { input, flags, showHelp, showVersion } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
       version: { type: "boolean", default: false, alias: "v" }
@@ -39,7 +39,7 @@ async function run() {
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
-  let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
+  const anim = chalkAnimation.rainbow(`\nR E M I X\n`);
   await new Promise(res => setTimeout(res, 1500));
   anim.stop();
 
@@ -47,7 +47,7 @@ async function run() {
   console.log();
 
   // Figure out the app directory
-  let projectDir = path.resolve(
+  const projectDir = path.resolve(
     process.cwd(),
     input.length > 0
       ? input[0]
@@ -63,7 +63,7 @@ async function run() {
         ).dir
   );
 
-  let answers = await inquirer.prompt<{
+  const answers = await inquirer.prompt<{
     server: Server;
     lang: "ts" | "js";
     install: boolean;
@@ -103,8 +103,8 @@ async function run() {
   ]);
 
   // Create the app directory
-  let relativeProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relativeProjectDir === "";
+  const relativeProjectDir = path.relative(process.cwd(), projectDir);
+  const projectDirIsCurrentDir = relativeProjectDir === "";
   if (!projectDirIsCurrentDir) {
     if (fse.existsSync(projectDir)) {
       console.log(
@@ -117,7 +117,7 @@ async function run() {
   }
 
   // copy the shared template
-  let sharedTemplate = path.resolve(
+  const sharedTemplate = path.resolve(
     __dirname,
     "templates",
     `_shared_${answers.lang}`
@@ -125,12 +125,12 @@ async function run() {
   await fse.copy(sharedTemplate, projectDir);
 
   // copy the server template
-  let serverTemplate = path.resolve(__dirname, "templates", answers.server);
+  const serverTemplate = path.resolve(__dirname, "templates", answers.server);
   if (fse.existsSync(serverTemplate)) {
     await fse.copy(serverTemplate, projectDir, { overwrite: true });
   }
 
-  let serverLangTemplate = path.resolve(
+  const serverLangTemplate = path.resolve(
     __dirname,
     "templates",
     `${answers.server}_${answers.lang}`
@@ -146,8 +146,8 @@ async function run() {
   );
 
   // merge package.jsons
-  let appPkg = require(path.join(sharedTemplate, "package.json"));
-  let serverPkg = require(path.join(serverTemplate, "package.json"));
+  const appPkg = require(path.join(sharedTemplate, "package.json"));
+  const serverPkg = require(path.join(serverTemplate, "package.json"));
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
   });
@@ -156,7 +156,7 @@ async function run() {
 
   // add current versions of remix deps
   ["dependencies", "devDependencies"].forEach(pkgKey => {
-    for (let key in appPkg[pkgKey]) {
+    for (const key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
         // Templates created from experimental, alpha, beta releases should pin
         // to a specific version

@@ -4,13 +4,13 @@ import { FormData as NodeFormData } from "../formData";
 
 describe("FormData", () => {
   it("allows for mix of set and append", () => {
-    let formData = new NodeFormData();
+    const formData = new NodeFormData();
     formData.set("single", "heyo");
     formData.append("multi", "one");
     formData.append("multi", "two");
 
-    let results = [];
-    for (let [k, v] of formData) results.push([k, v]);
+    const results = [];
+    for (const [k, v] of formData) results.push([k, v]);
     expect(results).toEqual([
       ["single", "heyo"],
       ["multi", "one"],
@@ -19,7 +19,7 @@ describe("FormData", () => {
   });
 
   it("allows for mix of set and append with blobs and files", () => {
-    let formData = new NodeFormData();
+    const formData = new NodeFormData();
     formData.set("single", new Blob([]));
     formData.append("multi", new Blob([]));
     formData.append("multi", new File([], "test.txt"));

@@ -103,7 +103,7 @@ export async function loadRouteModule(
   }
 
   try {
-    let routeModule = await import(route.module);
+    const routeModule = await import(route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
   } catch (error) {

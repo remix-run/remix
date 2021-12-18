@@ -39,18 +39,18 @@ export function createRequestHandler({
   getLoadContext?: AppLoadContext;
   mode?: string;
 }): Handler {
-  let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  const platform: ServerPlatform = { formatServerError };
+  const handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, context) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(event, abortController);
-    let loadContext =
+    const abortController = new AbortController();
+    const request = createRemixRequest(event, abortController);
+    const loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(event, context)
         : undefined;
 
-    let response = (await handleRequest(
+    const response = (await handleRequest(
       request as unknown as Request,
       loadContext
     )) as unknown as NodeResponse;
@@ -76,12 +76,12 @@ export function createRemixRequest(
   if (process.env.NODE_ENV !== "development") {
     url = new URL(event.rawUrl);
   } else {
-    let origin = event.headers.host;
-    let rawPath = getRawPath(event);
+    const origin = event.headers.host;
+    const rawPath = getRawPath(event);
     url = new URL(rawPath, `http://${origin}`);
   }
 
-  let init: NodeRequestInit = {
+  const init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
     abortController,
@@ -100,7 +100,7 @@ export function createRemixRequest(
 export function createRemixHeaders(
   requestHeaders: HandlerEvent["multiValueHeaders"]
 ): NodeHeaders {
-  let headers = new NodeHeaders();
+  const headers = new NodeHeaders();
 
   for (const [key, values] of Object.entries(requestHeaders)) {
     if (values) {
@@ -116,22 +116,22 @@ export function createRemixHeaders(
 // `netlify dev` doesn't return the full url in the event.rawUrl, so we need to create it ourselves
 function getRawPath(event: HandlerEvent): string {
   let rawPath = event.path;
-  let searchParams = new URLSearchParams();
+  const searchParams = new URLSearchParams();
 
   if (!event.multiValueQueryStringParameters) {
     return rawPath;
   }
 
-  let paramKeys = Object.keys(event.multiValueQueryStringParameters);
-  for (let key of paramKeys) {
-    let values = event.multiValueQueryStringParameters[key];
+  const paramKeys = Object.keys(event.multiValueQueryStringParameters);
+  for (const key of paramKeys) {
+    const values = event.multiValueQueryStringParameters[key];
     if (!values) continue;
-    for (let val of values) {
+    for (const val of values) {
       searchParams.append(key, val);
     }
   }
 
-  let rawParams = searchParams.toString();
+  const rawParams = searchParams.toString();
 
   if (rawParams) rawPath += `?${rawParams}`;
 

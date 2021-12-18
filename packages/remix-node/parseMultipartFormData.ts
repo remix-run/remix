@@ -18,8 +18,8 @@ export async function internalParseFormData(
   abortController?: AbortController,
   uploadHandler?: UploadHandler
 ) {
-  let formData = new NodeFormData();
-  let fileWorkQueue: Promise<void>[] = [];
+  const formData = new NodeFormData();
+  const fileWorkQueue: Promise<void>[] = [];
 
   let stream: Readable;
   if (typeof body === "string" || Buffer.isBuffer(body)) {
@@ -29,7 +29,7 @@ export async function internalParseFormData(
   }
 
   await new Promise<void>(async (resolve, reject) => {
-    let busboy = new Busboy({
+    const busboy = new Busboy({
       highWaterMark: 2 * 1024 * 1024,
       headers: {
         "content-type": contentType
@@ -58,7 +58,7 @@ export async function internalParseFormData(
         fileWorkQueue.push(
           (async () => {
             try {
-              let value = await uploadHandler({
+              const value = await uploadHandler({
                 name,
                 stream: filestream,
                 filename,

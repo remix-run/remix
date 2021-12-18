@@ -1,7 +1,7 @@
 const encoder = new TextEncoder();
 
 export async function sign(value: string, secret: string): Promise<string> {
-  let key = await crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
@@ -9,8 +9,8 @@ export async function sign(value: string, secret: string): Promise<string> {
     ["sign"]
   );
 
-  let data = encoder.encode(value);
-  let signature = await crypto.subtle.sign("HMAC", key, data);
+  const data = encoder.encode(value);
+  const signature = await crypto.subtle.sign("HMAC", key, data);
   let hash = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(
     /=+$/,
     ""
@@ -23,7 +23,7 @@ export async function unsign(
   cookie: string,
   secret: string
 ): Promise<string | false> {
-  let key = await crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
@@ -31,18 +31,18 @@ export async function unsign(
     ["verify"]
   );
 
-  let value = cookie.slice(0, cookie.lastIndexOf("."));
+  const value = cookie.slice(0, cookie.lastIndexOf("."));
   let hash = cookie.slice(cookie.lastIndexOf(".") + 1);
 
-  let data = encoder.encode(value);
-  let signature = byteStringToUint8Array(atob(hash));
-  let valid = await crypto.subtle.verify("HMAC", key, signature, data);
+  const data = encoder.encode(value);
+  const signature = byteStringToUint8Array(atob(hash));
+  const valid = await crypto.subtle.verify("HMAC", key, signature, data);
 
   return valid ? value : false;
 }
 
 function byteStringToUint8Array(byteString: string): Uint8Array {
-  let array = new Uint8Array(byteString.length);
+  const array = new Uint8Array(byteString.length);
 
   for (let i = 0; i < byteString.length; i++) {
     array[i] = byteString.charCodeAt(i);

@@ -29,7 +29,7 @@ function runBuild(dir) {
 
 async function startServer(dir) {
   return new Promise(accept => {
-    let proc = cp.spawn("yarn", ["start"], {
+    const proc = cp.spawn("yarn", ["start"], {
       cwd: dir,
       stdio: "inherit"
     });
@@ -42,7 +42,7 @@ async function startServer(dir) {
 }
 
 module.exports = async () => {
-  let rootDir = path.dirname(__dirname);
+  const rootDir = path.dirname(__dirname);
   await installDeps(rootDir);
   await runBuild(rootDir);
   global.testServerProc = await startServer(rootDir);

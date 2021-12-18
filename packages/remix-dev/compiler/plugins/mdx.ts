@@ -10,7 +10,7 @@ export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
   return {
     name: "remix-mdx",
     async setup(build) {
-      let [xdm, { default: remarkFrontmatter }] = await Promise.all([
+      const [xdm, { default: remarkFrontmatter }] = await Promise.all([
         import("xdm"),
         import("remark-frontmatter") as any
       ]);
@@ -28,8 +28,8 @@ export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
         try {
           let contents = await fsp.readFile(args.path, "utf-8");
 
-          let rehypePlugins = [];
-          let remarkPlugins = [
+          const rehypePlugins = [];
+          const remarkPlugins = [
             remarkFrontmatter,
             [remarkMdxFrontmatter, { name: "attributes" }]
           ];
@@ -41,20 +41,20 @@ export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
 
               break;
             case "function":
-              let mdxConfig = await config.mdx(args.path);
+              const mdxConfig = await config.mdx(args.path);
               rehypePlugins.push(...(mdxConfig?.rehypePlugins || []));
               remarkPlugins.push(...(mdxConfig?.remarkPlugins || []));
               break;
           }
 
-          let remixExports = `
+          const remixExports = `
 export const filename = ${JSON.stringify(path.basename(args.path))};
 export const headers = typeof attributes !== "undefined" && attributes.headers;
 export const meta = typeof attributes !== "undefined" && attributes.meta;
 export const links = undefined;
           `;
 
-          let compiled = await xdm.compile(contents, {
+          const compiled = await xdm.compile(contents, {
             jsx: true,
             jsxRuntime: "classic",
             pragma: "React.createElement",
@@ -68,10 +68,10 @@ ${compiled.value}
 ${remixExports}`;
 
           let errors: esbuild.PartialMessage[] = [];
-          let warnings: esbuild.PartialMessage[] = [];
+          const warnings: esbuild.PartialMessage[] = [];
 
           compiled.messages.forEach(message => {
-            let toPush = message.fatal ? errors : warnings;
+            const toPush = message.fatal ? errors : warnings;
             toPush.push({
               location:
                 message.line || message.column

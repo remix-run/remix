@@ -12,7 +12,7 @@ describe("Session", () => {
   });
 
   it("correctly stores and retrieves values", () => {
-    let session = createSession();
+    const session = createSession();
 
     session.set("user", "mjackson");
     session.flash("error", "boom");
@@ -51,12 +51,12 @@ describe("isSession", () => {
 
 describe("In-memory session storage", () => {
   it("persists session data across requests", async () => {
-    let { getSession, commitSession } = createMemorySessionStorage({
+    const { getSession, commitSession } = createMemorySessionStorage({
       cookie: { secrets: ["secret1"] }
     });
     let session = await getSession();
     session.set("user", "mjackson");
-    let setCookie = await commitSession(session);
+    const setCookie = await commitSession(session);
     session = await getSession(getCookieFromSetCookie(setCookie));
 
     expect(session.get("user")).toEqual("mjackson");
@@ -65,19 +65,19 @@ describe("In-memory session storage", () => {
 
 describe("Cookie session storage", () => {
   it("persists session data across requests", async () => {
-    let { getSession, commitSession } = createCookieSessionStorage({
+    const { getSession, commitSession } = createCookieSessionStorage({
       cookie: { secrets: ["secret1"] }
     });
     let session = await getSession();
     session.set("user", "mjackson");
-    let setCookie = await commitSession(session);
+    const setCookie = await commitSession(session);
     session = await getSession(getCookieFromSetCookie(setCookie));
 
     expect(session.get("user")).toEqual("mjackson");
   });
 
   it("returns an empty session for cookies that are not signed properly", async () => {
-    let { getSession, commitSession } = createCookieSessionStorage({
+    const { getSession, commitSession } = createCookieSessionStorage({
       cookie: { secrets: ["secret1"] }
     });
     let session = await getSession();
@@ -85,7 +85,7 @@ describe("Cookie session storage", () => {
 
     expect(session.get("user")).toEqual("mjackson");
 
-    let setCookie = await commitSession(session);
+    const setCookie = await commitSession(session);
     session = await getSession(
       // Tamper with the session cookie...
       getCookieFromSetCookie(setCookie).slice(0, -1)
@@ -101,13 +101,13 @@ describe("Cookie session storage", () => {
       });
       let session = await getSession();
       session.set("user", "mjackson");
-      let setCookie = await commitSession(session);
+      const setCookie = await commitSession(session);
       session = await getSession(getCookieFromSetCookie(setCookie));
 
       expect(session.get("user")).toEqual("mjackson");
 
       // A new secret enters the rotation...
-      let storage = createCookieSessionStorage({
+      const storage = createCookieSessionStorage({
         cookie: { secrets: ["secret2", "secret1"] }
       });
       getSession = storage.getSession;
@@ -118,7 +118,7 @@ describe("Cookie session storage", () => {
       expect(session.get("user")).toEqual("mjackson");
 
       // New cookies should be signed using the new secret.
-      let setCookie2 = await storage.commitSession(session);
+      const setCookie2 = await storage.commitSession(session);
       expect(setCookie2).not.toEqual(setCookie);
     });
   });

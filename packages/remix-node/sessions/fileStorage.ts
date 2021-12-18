@@ -38,7 +38,7 @@ export function createFileSessionStorage({
       while (true) {
         // TODO: Once node v16 is available on AWS we should use the webcrypto
         // API's crypto.getRandomValues() function here instead.
-        let randomBytes = crypto.randomBytes(8);
+        const randomBytes = crypto.randomBytes(8);
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions

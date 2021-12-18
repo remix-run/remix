@@ -3,8 +3,8 @@
 const path = require("path");
 const fs = require("fs-extra");
 
-let buildDir = path.resolve(__dirname, "../../../build/node_modules");
-let installDir = path.resolve(__dirname, "../node_modules");
+const buildDir = path.resolve(__dirname, "../../../build/node_modules");
+const installDir = path.resolve(__dirname, "../node_modules");
 
 async function run() {
   // Install all remix packages

@@ -31,7 +31,7 @@ export function createCloudflareKVSessionStorage({
     cookie,
     async createData(data, expires) {
       while (true) {
-        let randomBytes = new Uint8Array(8);
+        const randomBytes = new Uint8Array(8);
         crypto.getRandomValues(randomBytes);
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
@@ -53,7 +53,7 @@ export function createCloudflareKVSessionStorage({
       }
     },
     async readData(id) {
-      let session = await kv.get(id);
+      const session = await kv.get(id);
 
       if (!session) {
         return null;

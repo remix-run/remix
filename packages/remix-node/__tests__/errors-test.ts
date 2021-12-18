@@ -24,7 +24,7 @@ describe("getSourceContentForPosition", () => {
   });
 
   it("returns trimmed source", () => {
-    let smc = {
+    const smc = {
       sourceContentFor: jest.fn(() => "\n test() \n")
     };
 
@@ -38,24 +38,24 @@ describe("getSourceContentForPosition", () => {
 });
 
 describe("relativeFilename", () => {
-  let root = process.cwd() + "/";
-  let baseFilename = "./app/test.jsx";
+  const root = process.cwd() + "/";
+  const baseFilename = "./app/test.jsx";
   it("returns original filename", () => {
     expect(relativeFilename(baseFilename)).toBe(baseFilename);
   });
 
   it("returns clean filename for route-module: prefix", () => {
-    let filename = "route-module:./app/test.jsx";
+    const filename = "route-module:./app/test.jsx";
     expect(relativeFilename(filename)).toBe(baseFilename);
   });
 
   it("returns clean filename for absolute path route-module: prefix", () => {
-    let filename = `route-module:${root}app/test.jsx`;
+    const filename = `route-module:${root}app/test.jsx`;
     expect(relativeFilename(filename)).toBe(baseFilename);
   });
 
   it("returns clean filename for absolute path route-module: prefix with extra stuff", () => {
-    let filename = `extra-stuff:route-module:${root}app/test.jsx`;
+    const filename = `extra-stuff:route-module:${root}app/test.jsx`;
     expect(relativeFilename(filename)).toBe(baseFilename);
   });
 });

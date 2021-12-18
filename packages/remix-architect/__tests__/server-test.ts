@@ -11,13 +11,13 @@ import {
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler =
+const mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
   >;
 
 function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
-  let now = new Date();
+  const now = new Date();
   return {
     headers: {
       host: "localhost:3333",
@@ -108,7 +108,7 @@ describe("architect createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        let headers = new Headers();
+        const headers = new Headers();
         headers.append("X-Time-Of-Year", "most wonderful");
         headers.append(
           "Set-Cookie",

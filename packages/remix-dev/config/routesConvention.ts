@@ -26,7 +26,7 @@ export function defineConventionalRoutes(
   appDir: string,
   ignoredFilePatterns?: string[]
 ): RouteManifest {
-  let files: { [routeId: string]: string } = {};
+  const files: { [routeId: string]: string } = {};
 
   // First, find all route modules in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
@@ -38,7 +38,7 @@ export function defineConventionalRoutes(
     }
 
     if (isRouteModuleFile(file)) {
-      let routeId = createRouteId(path.join("routes", file));
+      const routeId = createRouteId(path.join("routes", file));
       files[routeId] = path.join("routes", file);
       return;
     }
@@ -48,27 +48,27 @@ export function defineConventionalRoutes(
     );
   });
 
-  let routeIds = Object.keys(files).sort(byLongestFirst);
+  const routeIds = Object.keys(files).sort(byLongestFirst);
 
-  let uniqueRoutes = new Map<string, string>();
+  const uniqueRoutes = new Map<string, string>();
 
   // Then, recurse through all routes using the public defineRoutes() API
   function defineNestedRoutes(
     defineRoute: DefineRouteFunction,
     parentId?: string
   ): void {
-    let childRouteIds = routeIds.filter(
+    const childRouteIds = routeIds.filter(
       id => findParentRouteId(routeIds, id) === parentId
     );
 
     for (let routeId of childRouteIds) {
-      let routePath: string | undefined = createRoutePath(
+      const routePath: string | undefined = createRoutePath(
         routeId.slice((parentId || "routes").length + 1)
       );
 
-      let isIndexRoute = routeId.endsWith("/index");
-      let fullPath = createRoutePath(routeId.slice("routes".length + 1));
-      let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
+      const isIndexRoute = routeId.endsWith("/index");
+      const fullPath = createRoutePath(routeId.slice("routes".length + 1));
+      const uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
 
       if (typeof uniqueRouteId !== "undefined") {
         if (uniqueRoutes.has(uniqueRouteId)) {
@@ -85,7 +85,7 @@ export function defineConventionalRoutes(
       }
 
       if (isIndexRoute) {
-        let invalidChildRoutes = routeIds.filter(
+        const invalidChildRoutes = routeIds.filter(
           id => findParentRouteId(routeIds, id) === routeId
         );
 
@@ -109,8 +109,8 @@ export function defineConventionalRoutes(
   return defineRoutes(defineNestedRoutes);
 }
 
-let escapeStart = "[";
-let escapeEnd = "]";
+const escapeStart = "[";
+const escapeEnd = "]";
 
 // TODO: Cleanup and write some tests for this function
 export function createRoutePath(partialRouteId: string): string | undefined {
@@ -209,9 +209,9 @@ function visitFiles(
   visitor: (file: string) => void,
   baseDir = dir
 ): void {
-  for (let filename of fs.readdirSync(dir)) {
+  for (const filename of fs.readdirSync(dir)) {
     let file = path.resolve(dir, filename);
-    let stat = fs.lstatSync(file);
+    const stat = fs.lstatSync(file);
 
     if (stat.isDirectory()) {
       visitFiles(file, visitor, baseDir);

@@ -25,7 +25,7 @@ function isBlob(value: any): value is Blob {
 }
 
 export function isFile(blob: Blob): blob is File {
-  let file = blob as File;
+  const file = blob as File;
   return typeof file.name === "string";
 }
 

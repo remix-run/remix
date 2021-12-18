@@ -56,13 +56,13 @@ export type FileUploadHandlerOptions = {
   filter?(args: FileUploadHandlerFilterArgs): boolean | Promise<boolean>;
 };
 
-let defaultFilePathResolver: FileUploadHandlerPathResolver = ({ filename }) => {
-  let ext = filename ? extname(filename) : "";
+const defaultFilePathResolver: FileUploadHandlerPathResolver = ({ filename }) => {
+  const ext = filename ? extname(filename) : "";
   return "upload_" + randomBytes(4).readUInt32LE(0) + ext;
 };
 
 async function uniqueFile(filepath: string) {
-  let ext = extname(filepath);
+  const ext = extname(filepath);
   let uniqueFilepath = filepath;
 
   for (
@@ -93,7 +93,7 @@ export function createFileUploadHandler({
       return;
     }
 
-    let dir =
+    const dir =
       typeof directory === "string"
         ? directory
         : directory({ filename, encoding, mimetype });
@@ -103,8 +103,8 @@ export function createFileUploadHandler({
       return;
     }
 
-    let filedir = resolvePath(dir);
-    let path =
+    const filedir = resolvePath(dir);
+    const path =
       typeof file === "string" ? file : file({ filename, encoding, mimetype });
 
     if (!path) {
@@ -120,9 +120,9 @@ export function createFileUploadHandler({
 
     await mkdir(dirname(filepath), { recursive: true }).catch(() => {});
 
-    let meter = new Meter(name, maxFileSize);
+    const meter = new Meter(name, maxFileSize);
     await new Promise<void>((resolve, reject) => {
-      let writeFileStream = createWriteStream(filepath);
+      const writeFileStream = createWriteStream(filepath);
 
       let aborted = false;
       async function abort(error: Error) {
