@@ -10,7 +10,7 @@ export type {
 } from "./fetch";
 export { Headers, Request, Response, fetch } from "./fetch";
 
-export { FormData } from "./formData";
+export { FormData, UploadHandler, UploadHandlerArgs } from "./formData";
 
 export { installGlobals } from "./globals";
 
