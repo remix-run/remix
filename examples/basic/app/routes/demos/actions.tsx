@@ -1,8 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ActionFunction } from "remix";
-import { Form, json, useActionData, useTransition, redirect } from "remix";
-
-import { hash } from "~/utils.server";
+import { Form, json, useActionData, redirect } from "remix";
 
 export function meta() {
   return { title: "Actions Demo" };
@@ -19,19 +17,11 @@ export const action: ActionFunction = async ({ request }) => {
   // over the network. Clientside validation is fine, but you definitely need it
   // server side.  If there's a problem, return the data and the component can
   // render it.
-  if (typeof answer !== "string") {
+  if (!answer || typeof answer !== "string") {
     return json("Come on, at least try!", { status: 400 });
   }
 
-  const rightAnswers = [
-    "4fa6024f12494d3a99d8bda9b7a55f7d140f328a",
-    "ce3659ad235ca6d1e12dec21465aff3f9a62bb8c",
-    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4"
-  ];
-
-  const encrypted = hash(answer);
-
-  if (!rightAnswers.includes(encrypted)) {
+  if (answer !== "egg") {
     return json(`Sorry, ${answer} is not right.`, { status: 400 });
   }
 

@@ -22,7 +22,7 @@ cd [whatever you named the project]
 npm run dev
 ```
 
-<docs-error>It is important that you pick Remix App Server</docs-error>
+<docs-warning>It is important that you pick Remix App Server</docs-warning>
 
 We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
@@ -30,36 +30,25 @@ Open up [http://localhost:3000](http://localhost:3000), the app should be runnin
 
 If your application is not running properly at [http://localhost:3000](http://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
 
-<docs-error>
-
+<docs-warning>
 Make sure the `postinstall` script runs before you start the app - if it does not, run it manually (e.g. via `npm run postinstall`).
+</docs-warning>
 
 This might happen if you've added `ignore-scripts = true` to your `npm` configuration or you're using `pnpm` or other package manager that does not automatically run `postinstall` scripts, which Remix relies on.
-
-</docs-error>
 
 ## Your First Route
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-💿 First, go to `app/root.tsx`
-
-There's a bit going on in the file. For now, find the `Layout` component and right after the link to "Home", add a new link to "/posts".
-
 💿 Add a link to posts in `app/root.tsx`
 
-```tsx lines=[4-6]
-...
-<li>
-  <Link to="/">Home</Link>
-</li>
-<li>
-  <Link to="/posts">Posts</Link>
-</li>
-...
+```tsx
+<Link to="/posts">Posts</Link>
 ```
 
-Back in the browser you should see your new link in the header. Go ahead and click it, you should see a 404 page since we've not created this route yet. Let's create the route now:
+You can put it anywhere you like, you might want to just delete everything that's there.
+
+Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
 💿 Create a new file in `app/routes/posts/index.tsx`
 
@@ -890,7 +879,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,11-12,17-18,24-25,30-31]
+```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-15,20-22,26-28]
 import { useActionData, Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
 
@@ -904,20 +893,24 @@ export default function NewPost() {
       <p>
         <label>
           Post Title:{" "}
-          {errors?.title && <em>Title is required</em>}
+          {errors?.title ? (
+            <em>Title is required</em>
+          ) : null}
           <input type="text" name="title" />
         </label>
       </p>
       <p>
         <label>
           Post Slug:{" "}
-          {errors?.slug && <em>Slug is required</em>}
+          {errors?.slug ? <em>Slug is required</em> : null}
           <input type="text" name="slug" />
         </label>
       </p>
       <p>
         <label htmlFor="markdown">Markdown:</label>{" "}
-        {errors?.markdown && <em>Markdown is required</em>}
+        {errors?.markdown ? (
+          <em>Markdown is required</em>
+        ) : null}
         <br />
         <textarea rows={20} name="markdown" />
       </p>
@@ -1019,6 +1012,6 @@ export default function NewPost() {
 
 Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/posts/new.tsx`. You just gotta put it together.
+That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/admin/new.tsx`. You just gotta put it together.
 
 We hope you love Remix!

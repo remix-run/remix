@@ -70,11 +70,31 @@ export interface AppConfig {
    */
   devServerPort?: number;
   /**
-   * The delay before the dev server broadcasts a reload event
+   * The delay before the dev server broadcasts a reload event.
    */
   devServerBroadcastDelay?: number;
 
+  /**
+   * Additional MDX remark / rehype plugins.
+   */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * The output format of the server build. Defaults to "cjs".
+   */
+  serverModuleFormat?: "esm" | "cjs";
+
+  /**
+   * The platform the server build is targeting. Defaults to "node".
+   */
+  serverPlatform?: "node" | "neutral";
+
+  /**
+   * A list of filenames or a glob patterns to match files in the `app/routes`
+   * directory that Remix will ignore. Matching files will not be recognized as
+   * routes.
+   */
+  ignoredRouteFiles?: string[];
 }
 
 /**
@@ -141,7 +161,20 @@ export interface RemixConfig {
    */
   devServerBroadcastDelay: number;
 
+  /**
+   * Additional MDX remark / rehype plugins.
+   */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * The output format of the server build. Defaults to "cjs".
+   */
+  serverModuleFormat: "esm" | "cjs";
+
+  /**
+   * The platform the server build is targeting. Defaults to "node".
+   */
+  serverPlatform: "node" | "neutral";
 }
 
 /**
@@ -169,6 +202,10 @@ export async function readConfig(
   } catch (error) {
     throw new Error(`Error loading Remix config in ${configFile}`);
   }
+
+  let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
+  let serverPlatform = appConfig.serverPlatform || "node";
+  let mdx = appConfig.mdx;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -216,7 +253,10 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile }
   };
   if (fs.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = defineConventionalRoutes(appDirectory);
+    let conventionalRoutes = defineConventionalRoutes(
+      appDirectory,
+      appConfig.ignoredRouteFiles
+    );
     for (let key of Object.keys(conventionalRoutes)) {
       let route = conventionalRoutes[key];
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
@@ -243,7 +283,9 @@ export async function readConfig(
     routes,
     serverBuildDirectory,
     serverMode,
-    mdx: appConfig.mdx
+    serverModuleFormat,
+    serverPlatform,
+    mdx
   };
 }
 

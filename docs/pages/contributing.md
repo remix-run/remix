@@ -17,6 +17,8 @@ If you'd like to contribute something—whether it's a bug fix to scratch your o
 
 **We don't yet have a CLA, but we are working on it and we will be able to accept your contributions as soon as we do.** Until then, please keep letting us know about our bugs and typos in Discord and we will do our best to address them.
 
+When you start a pull request, the remix-cla-bot will prompt you to review the [CLA](https://github.com/remix-run/remix/blob/main/docs/contributing.md) and sign it by adding your name to `contributors.yml`.
+
 ## Setup
 
 Before you can contribute to the codebase, you will need to fork the repo. This will look a bit different depending on what type of contribution you are making:
@@ -42,7 +44,7 @@ git checkout dev
 
 ## Think You Found a Bug?
 
-Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [ [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
+Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
 
 ## Proposing New or Changed API?
 

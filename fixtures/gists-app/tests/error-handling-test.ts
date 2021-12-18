@@ -54,7 +54,7 @@ describe("uncaught exceptions", () => {
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"action-error-boundary\\">
             <h1>Action Error Boundary</h1>
-            <pre>I am an action error!</pre>
+            <pre>Unexpected Server Error</pre>
           </div>
           "
         `);
@@ -98,7 +98,7 @@ describe("uncaught exceptions", () => {
         expect(html).toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-error-boundary\\">
             <h1>App Error Boundary</h1>
-            <pre>I am an action error!</pre>
+            <pre>Unexpected Server Error</pre>
           </div>
           "
         `);
@@ -229,7 +229,7 @@ describe("uncaught exceptions", () => {
           .toMatchInlineSnapshot(`
           "<div data-test-id=\\"app-error-boundary\\">
             <h1>App Error Boundary</h1>
-            <pre>I am a loader error!</pre>
+            <pre>Unexpected Server Error</pre>
           </div>
           "
         `);
@@ -289,7 +289,7 @@ describe("uncaught exceptions", () => {
                 There was an error at this specific route. The parent still renders cause
                 it was fine, but this one blew up.
               </p>
-              <pre>I am a loader error!</pre>
+              <pre>Unexpected Server Error</pre>
             </div>
           </div>
           "

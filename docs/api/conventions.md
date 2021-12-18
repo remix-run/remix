@@ -14,7 +14,7 @@ This file has a few build and development configuration options, but does not ac
 ```tsx filename=remix.config.js
 module.exports = {
   appDirectory: "app",
-  browserBuildDirectory: "public/build",
+  assetsBuildDirectory: "public/build",
   devServerPort: 8002,
   publicPath: "/build/",
   serverBuildDirectory: "build",
@@ -65,7 +65,7 @@ exports.routes = async (defineRoutes) => {
 }
 ```
 
-### browserBuildDirectory
+### assetsBuildDirectory
 
 The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
 
@@ -84,6 +84,8 @@ The port number to use for the dev server. Defaults to 8002.
 ## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.
+
+<docs-info>[Dilum Sanjaya](https://twitter.com/DilumSanjaya) made [an awesome visualization](https://remix-routing-demo.netlify.app/) of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
 ### Special Files
 
@@ -202,7 +204,7 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 - `/blog/once-upon-a-time`
 - `/blog/how-to-ride-a-bike`
 
-On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId`) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
+On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app](https://github.com/remix-run/remix/tree/main/examples/multiple-params)) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
 import { useParams } from "remix";
@@ -933,6 +935,15 @@ export const meta: MetaFunction = () => {
   };
 };
 ```
+
+#### Page context in `meta` function
+
+`meta` function is passed an object that has following data:
+
+- `data` is whatever exported by `loader` function
+- `location` is a `window.location`-like object that has some data about the current route
+- `params` is an object containing route params
+- `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
 
 ### `links`
 
