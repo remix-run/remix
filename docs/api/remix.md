@@ -140,6 +140,14 @@ function NavList() {
 }
 ```
 
+If the `end` prop is used, it will ensure this component isn't matched as "active" when its descendant paths are matched. For example, to render a link that is only active at the website root and not any other URLs, you can use:
+
+```tsx
+<NavLink to="/" end>
+  Home
+</NavLink>
+```
+
 ### `<Form>`
 
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
