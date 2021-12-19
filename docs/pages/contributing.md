@@ -93,7 +93,7 @@ Before running the tests, you need to run a build. After you build, running `yar
 yarn test
 
 # Test only @remix-run/express
-yarn test --projects packages/remix-express
+yarn test --selectProjects express
 ```
 
 ## Repository Branching
