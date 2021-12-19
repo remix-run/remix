@@ -2898,7 +2898,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
+```tsx filename=app/utils/session.server.ts lines=[2-5,29-32,34-47,49-60]
 import bcrypt from "bcrypt";
 import {
   createCookieSessionStorage,
