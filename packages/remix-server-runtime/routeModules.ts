@@ -1,5 +1,5 @@
 import type { Location } from "history";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { Params } from "react-router-dom";
 
 import type { AppLoadContext, AppData } from "./data";
@@ -91,7 +91,9 @@ export interface MetaFunction {
  * tag, or an array of strings that will render multiple tags with the same
  * `name` attribute.
  */
-export interface HtmlMetaDescriptor {
+export type HtmlMetaDescriptor = {
+  title: ReactNode;
+} | {
   [name: string]: string | string[];
 }
 
