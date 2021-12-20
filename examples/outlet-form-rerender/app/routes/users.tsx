@@ -1,5 +1,5 @@
 import type { LoaderFunction, MetaFunction } from "remix";
-import { Link, Outlet } from "remix";
+import { Link, Outlet, json } from "remix";
 import { useLoaderData } from "remix";
 import type { User } from "~/data.server";
 import { users } from "~/data.server";
@@ -13,7 +13,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader: LoaderFunction = async () => {
-  return { users } as LoaderData;
+  return json<LoaderData>({ users });
 };
 
 export default function Users() {

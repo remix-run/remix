@@ -1,6 +1,5 @@
 import type { LoaderFunction, MetaFunction } from "remix";
-import { useCatch } from "remix";
-import { json, useLoaderData } from "remix";
+import { Form, json, useCatch, useLoaderData } from "remix";
 import type { User as UserType } from "~/data.server";
 import { users } from "~/data.server";
 
@@ -24,8 +23,9 @@ export const loader: LoaderFunction = async ({ params }) => {
     throw json(null, { status: 404 });
   }
 
-  return { user } as LoaderData;
+  return json<LoaderData>({ user });
 };
+
 export default function User() {
   const { user } = useLoaderData<LoaderData>();
 
@@ -40,8 +40,13 @@ export default function User() {
      * which resets the initial values
      *
      * https://reactjs.org/docs/uncontrolled-components.html
+     *
+     * In React, we can do this easily using the `key` prop.
+     * When ever `key` changes React will unmount and remount the component
+     *
+     * https://reactjs.org/docs/lists-and-keys.html#keys
      * */
-    <form method="post" key={user.id}>
+    <Form method="post" key={user.id}>
       <fieldset>
         <label>
           Name{" "}
@@ -54,7 +59,7 @@ export default function User() {
         <input name="id" type="hidden" defaultValue={user.id} />
         <button>Submit</button>
       </fieldset>
-    </form>
+    </Form>
   );
 }
 
