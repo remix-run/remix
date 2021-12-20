@@ -1,53 +1,18 @@
-# Welcome to Remix!
+# Welcome to Remix
 
 - [Remix Docs](https://remix.run/docs)
 
-## Development
+In this example, we will be looking at how to update a Form with uncontrolled fields with the updated values when the form does not unmount between transitions.
 
-From your terminal:
+For example, when the form is rendered inside a nested route, changing the route from the parent route does not cause the form to unmount but updates the values of the fields.
 
-```sh
-npm run dev
-```
+## Example
 
-This starts your app in development mode, rebuilding assets on file changes.
+Here we have a simple example where we list a set of users and, clicking on a user will open a form inside a nested route with details of the user prefilled.
 
-## Deployment
+You can check the explanation for the problem of updating the form with the updated values at [$userId.tsx](app/routes/users/$userId.tsx)
 
-First, build your app for production:
+## Related links
 
-```sh
-npm run build
-```
-
-Then run the app in production mode:
-
-```sh
-npm start
-```
-
-Now you'll need to pick a host to deploy it to.
-
-### DIY
-
-If you're familiar with deploying node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `remix build`
-
-- `build/`
-- `public/build/`
-
-### Using a Template
-
-When you ran `npx create-remix@latest` there were a few choices for hosting. You can run that again to create a new project, then copy over your `app/` folder to the new project that's pre-configured for your target server.
-
-```sh
-cd ..
-# create a new project, and pick a pre-configured host
-npx create-remix@latest
-cd my-new-remix-app
-# remove the new project's app (not the old one!)
-rm -rf app
-# copy your app over
-cp -R ../my-old-remix-app/app app
-```
+- [React Uncontrolled Components](https://reactjs.org/docs/uncontrolled-components.html)
+- [React Keys](https://reactjs.org/docs/lists-and-keys.html#keys)
