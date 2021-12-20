@@ -86,7 +86,7 @@ Running `yarn build` from the root directory will run the build.
 
 ### Testing
 
-Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --projects packages/<package-name>`:
+Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --selectProjects <display-name>`:
 
 ```bash
 # Test all packages
