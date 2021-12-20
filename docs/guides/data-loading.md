@@ -357,7 +357,7 @@ export default function ProductFilters() {
   let brands = searchParams.getAll("brand");
 
   return (
-    <Form method="get" onChange={e => submit(e.target)}>
+    <Form method="get" onChange={e => submit(e.currentTarget)}>
       {/* ... */}
     </Form>
   );
