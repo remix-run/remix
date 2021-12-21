@@ -52,7 +52,7 @@ exports.routes = async (defineRoutes) => {
     // A common use for this is catchall routes.
     // - The first argument is the React Router path to match against
     // - The second is the relative filename of the route handler
-    route("/some/path/*", "catchall.tsx")
+    route("/some/path/*", "catchall.tsx");
 
     // if you want to nest routes, use the optional callback argument
     route("some/:path", "some/route/file.js", () => {
@@ -61,7 +61,7 @@ exports.routes = async (defineRoutes) => {
       route("relative/path", "some/other/file")
     });
 
-  }
+  })
 }
 ```
 
