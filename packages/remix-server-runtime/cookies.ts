@@ -76,8 +76,14 @@ export interface Cookie {
  */
 export function createCookie(
   name: string,
-  { secrets = [], ...options }: CookieOptions = {}
+  cookieOptions: CookieOptions = {}
 ): Cookie {
+  const { secrets, ...options } = {
+    secrets: [],
+    path: "/",
+    ...cookieOptions
+  };
+
   return {
     get name() {
       return name;
