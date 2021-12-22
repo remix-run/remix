@@ -12,6 +12,7 @@ import {
 } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
 
+import favicon from "../public/favicon.ico";
 import stylesHref from "./styles/app.css";
 
 export function links() {
@@ -21,7 +22,8 @@ export function links() {
       href: normalizeHref
     },
     { rel: "stylesheet", href: stylesHref },
-    { rel: "stylesheet", href: "/resources/theme-css" }
+    { rel: "stylesheet", href: "/resources/theme-css" },
+    { rel: "shortcut icon", href: favicon }
   ];
 }
 
