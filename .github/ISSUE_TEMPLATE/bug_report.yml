@@ -33,6 +33,7 @@ body:
         - label: "`@remix-run/architect`"
         - label: "`@remix-run/cloudflare-workers`"
         - label: "`@remix-run/dev`"
+        - label: "`@remix-run/eslint-config`"
         - label: "`@remix-run/express`"
         - label: "`@remix-run/netlify`"
         - label: "`@remix-run/node`"
