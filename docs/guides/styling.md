@@ -399,6 +399,7 @@ First install a couple dev dependencies:
 
 ```sh
 npm add -D concurrently tailwindcss
+npx tailwindcss init
 ```
 
 Initialize a tailwind config so we can tell it which files to generate classes from.
