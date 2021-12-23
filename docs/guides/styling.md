@@ -601,7 +601,7 @@ npm add -D concurrently
 ```
 
 ## CSS Preprocessors
-You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
+You can use CSS preprocessors like LESS and SASS with Remix. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
 Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export]([route-module-links]) function, just like any other CSS file in Remix.
 
