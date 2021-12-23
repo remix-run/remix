@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Outlet } from "remix";
 
 export default function LayoutTest() {

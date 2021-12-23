@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "remix-monorepo",
+  "license": "MIT",
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c && tsc -b",
@@ -12,15 +13,16 @@
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx . --fix",
-    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint",
-    "prepare": "husky install"
+    "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint"
   },
   "workspaces": [
     "packages/create-remix",
     "packages/remix",
     "packages/remix-architect",
+    "packages/remix-cloudflare-pages",
     "packages/remix-cloudflare-workers",
     "packages/remix-dev",
+    "packages/remix-eslint-config",
     "packages/remix-express",
     "packages/remix-netlify",
     "packages/remix-node",
@@ -31,13 +33,15 @@
   ],
   "dependencies": {
     "@babel/core": "^7.10.4",
+    "@babel/eslint-parser": "^7.16.3",
     "@babel/plugin-proposal-export-namespace-from": "^7.10.4",
     "@babel/plugin-proposal-optional-chaining": "^7.12.7",
     "@babel/preset-env": "^7.10.4",
-    "@babel/preset-react": "^7.10.4",
+    "@babel/preset-react": "^7.16.0",
     "@babel/preset-typescript": "^7.12.7",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-node-resolve": "^11.0.1",
+    "@rushstack/eslint-patch": "^1.1.0",
     "@types/cheerio": "^0.22.22",
     "@types/jest": "^25.2.3",
     "@types/node-fetch": "^2.5.7",
@@ -48,34 +52,32 @@
     "@types/retry": "^0.12.0",
     "@types/semver": "^7.3.4",
     "@types/ssri": "^7.1.0",
-    "@typescript-eslint/eslint-plugin": "^4.33.0",
-    "@typescript-eslint/parser": "^4.33.0",
+    "@typescript-eslint/eslint-plugin": "^5.6.0",
+    "@typescript-eslint/parser": "^5.6.0",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
-    "babel-eslint": "^10.1.0",
     "chalk": "^4.1.0",
     "cheerio": "^1.0.0-rc.3",
-    "eslint": "^7.32.0",
-    "eslint-config-react-app": "^6.0.0",
+    "eslint": "^8.1.0",
+    "eslint-import-resolver-node": "0.3.6",
     "eslint-import-resolver-typescript": "^2.5.0",
-    "eslint-plugin-flowtype": "^6.1.0",
-    "eslint-plugin-import": "^2.24.2",
-    "eslint-plugin-jsx-a11y": "^6.4.1",
-    "eslint-plugin-react": "^7.26.1",
-    "eslint-plugin-react-hooks": "^4.2.0",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-jest": "^25.3.0",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-react": "^7.27.1",
+    "eslint-plugin-react-hooks": "^4.3.0",
     "express": "^4.17.1",
     "glob": "^7.1.6",
-    "husky": "7.0.2",
     "jest": "^26.0.1",
     "jsonfile": "^6.0.1",
-    "lint-staged": "11.2.0",
     "meow": "^7.1.1",
     "prettier": "^2.1.2",
     "prompt-confirm": "^2.0.4",
     "puppeteer": "^9.1.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-router-dom": "^6.0.2",
+    "react-router-dom": "^6.2.1",
     "rollup": "^2.36.1",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.4",
@@ -83,11 +85,7 @@
     "typescript": "^4.2.3",
     "unified": "^9.2.0"
   },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --cache --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": "prettier --write"
+  "engines": {
+    "node": ">=14"
   }
 }

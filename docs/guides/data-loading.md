@@ -105,7 +105,7 @@ Remix polyfills the `fetch` API on your server so it's very easy to fetch data f
 
 ```tsx filename=app/routes/gists.jsx lines=[2]
 export function loader() {
-  let res = fetch("https://api.gitub.com/gists");
+  let res = fetch("https://api.github.com/gists");
   return res.json();
 }
 
@@ -607,7 +607,7 @@ As you learn Remix, you'll find you shift from thinking in client state to think
 
 ## Gotchas
 
-Loaders are only called on the server, via `fetch` from the browser, so your data is serialized with `JSON.stringify` and sent over the network before it makes it to you component. This means your data needs to be serializable. For example:
+Loaders are only called on the server, via `fetch` from the browser, so your data is serialized with `JSON.stringify` and sent over the network before it makes it to your component. This means your data needs to be serializable. For example:
 
 <docs-error>This won't work!</docs-error>
 

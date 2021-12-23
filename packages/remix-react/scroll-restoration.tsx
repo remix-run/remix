@@ -7,7 +7,7 @@ let STORAGE_KEY = "positions";
 
 let positions: { [key: string]: number } = {};
 
-if (typeof window !== "undefined") {
+if (typeof document !== "undefined") {
   let sessionPositions = sessionStorage.getItem(STORAGE_KEY);
   if (sessionPositions) {
     positions = JSON.parse(sessionPositions);
@@ -79,7 +79,7 @@ function useScrollRestoration() {
     }, [])
   );
 
-  if (typeof window !== "undefined") {
+  if (typeof document !== "undefined") {
     // eslint-disable-next-line
     React.useLayoutEffect(() => {
       // don't do anything on hydration, the component already did this with an

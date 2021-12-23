@@ -3,7 +3,8 @@
  */
 module.exports = {
   appDirectory: "app",
-  browserBuildDirectory: "public/build",
+  assetsBuildDirectory: "public/build",
   publicPath: "/build/",
-  serverBuildDirectory: "server/build"
+  serverBuildDirectory: "server/build",
+  ignoredRouteFiles: [".*"]
 };

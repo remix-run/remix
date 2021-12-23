@@ -17,8 +17,7 @@ export const handle = { hydrate: true };
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx [7,11,14-16,29]
-import React from "react";
+```tsx [6,10,13-15,28]
 import {
   Meta,
   Links,
@@ -46,7 +45,7 @@ export default function App() {
       <body>
         <Outlet />
         {/* include the scripts, or not! */}
-        {includeScripts && <Scripts />}
+        {includeScripts ? <Scripts /> : null}
       </body>
     </html>
   );

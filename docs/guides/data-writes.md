@@ -81,7 +81,7 @@ If you have more fields, the browser will add them:
 </form>
 ```
 
-Depending on which checkboxes the uses clicks, the browser will navigate to URLs like:
+Depending on which checkboxes the user clicks, the browser will navigate to URLs like:
 
 ```
 /search?brand=nike&color=black
@@ -107,7 +107,7 @@ When the user submits this form, the browser will serialize the fields into a re
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
 ```js filename=app/routes/projects
-export function action({ request }) {
+export async function action({ request }) {
   const body = await request.formData();
   const project = await createProject(body);
   redirect(`/projects/${project.id}`);
@@ -206,7 +206,7 @@ We know, we know, you want to animate in nice validation errors and stuff. We'll
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-const [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(formData);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
@@ -219,7 +219,7 @@ export const action: ActionFunction = async ({
   const [errors, project] = await createProject(formData);
 
   if (errors) {
-    const values = Object.fromEntries(newProject);
+    const values = Object.fromEntries(formData);
     return { errors, values };
   }
 
@@ -254,11 +254,11 @@ export default function NewProject() {
         </label>
       </p>
 
-      {actionData?.errors.name && (
+      {actionData?.errors.name ? (
         <p style={{ color: "red" }}>
           {actionData.errors.name}
         </p>
-      )}
+      ) : null}
 
       <p>
         <label>
@@ -271,11 +271,11 @@ export default function NewProject() {
         </label>
       </p>
 
-      {actionData?.errors.description && (
+      {actionData?.errors.description ? (
         <p style={{ color: "red" }}>
           {actionData.errors.description}
         </p>
-      )}
+      ) : null}
 
       <p>
         <button type="submit">Create</button>
@@ -352,11 +352,11 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData && actionData.errors.name && (
+        {actionData && actionData.errors.name ? (
           <p style={{ color: "red" }}>
             {actionData.errors.name}
           </p>
-        )}
+        ) : null}
 
         <p>
           <label>
@@ -373,11 +373,11 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData && actionData.errors.description && (
+        {actionData && actionData.errors.description ? (
           <p style={{ color: "red" }}>
             {actionData.errors.description}
           </p>
-        )}
+        ) : null}
 
         <p>
           <button type="submit">
@@ -459,12 +459,12 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData?.errors.name && (
+        {actionData?.errors.name ? (
           <ValidationMessage
             isSubmitting={transition.state === "submitting"}
             error={actionData?.errors?.name}
           />
-        )}
+        ) : null}
 
         <p>
           <label>
@@ -506,11 +506,11 @@ Boom! Fancy UI without having to change anything about how we communicate with t
 
 - First we built the project form without JavaScript in mind. A simple form, posting to a server-side action. Welcome to 1998.
 
-- Once that worked, we used JavaScript to submit the form by changing `<form>` to `<Form>`, but we didnt' have to do anything else!
+- Once that worked, we used JavaScript to submit the form by changing `<form>` to `<Form>`, but we didn't have to do anything else!
 
 - Now that there was a stateful page with React, we added loading indicators and animation for the validation errors by simply asking Remix for the state of the transition.
 
-From your components perspective, all that happend was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple state updates. This makes it really easy to dress up any user flow.
+From your components perspective, all that happened was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple state updates. This makes it really easy to dress up any user flow.
 
 ## See also
 
