@@ -1664,7 +1664,7 @@ const cookie = createCookie("user-prefs", {
   sameSite: "lax",
   httpOnly: true,
   secure: true,
-  expires: new Date(Date.now() + 60),
+  expires: new Date(Date.now() + 60_000),
   maxAge: 60
 });
 
@@ -1724,7 +1724,7 @@ import { createCookie } from "remix";
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
   domain: "remix.run",
-  expires: new Date(Date.now() + 60),
+  expires: new Date(Date.now() + 60_000),
   httpOnly: true,
   maxAge: 60,
   path: "/",
@@ -1842,7 +1842,7 @@ const { getSession, commitSession, destroySession } =
 
       // all of these are optional
       domain: "remix.run",
-      expires: new Date(Date.now() + 60),
+      expires: new Date(Date.now() + 60_000),
       httpOnly: true,
       maxAge: 60,
       path: "/",
