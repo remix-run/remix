@@ -547,8 +547,7 @@ idle → submitting → loading → idle
 function SubmitButton() {
   const transition = useTransition();
 
-  const text =
-    : transition.state === "submitting"
+  const text = transition.state === "submitting"
     ? "Saving..."
     : transition.state === "loading"
     ? "Saved!"
