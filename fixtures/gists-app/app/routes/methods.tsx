@@ -134,6 +134,9 @@ export default function Methods() {
         <p>
           <button type="submit" id="submit-with-data" name="data" value="c">
             {method} (with data)
+            <svg id="submit-button-with-svg-element" width="10" height="10">
+              <rect width="10" height="10" style={{ fill: 'blue' }} />
+            </svg>
           </button>
           <button type="submit" id="submit">
             {method}
