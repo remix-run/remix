@@ -905,7 +905,7 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       if (!form) return;
 
       function handleClick(event: MouseEvent) {
-        if (!(event.target instanceof HTMLElement)) return;
+        if (!(event.target instanceof Element)) return;
         let submitButton = event.target.closest<
           HTMLButtonElement | HTMLInputElement
         >("button,input[type=submit]");
