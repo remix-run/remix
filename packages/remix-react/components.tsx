@@ -360,7 +360,7 @@ export function RemixRoute({ id }: { id: string }) {
 /**
  * Defines the prefetching behavior of the link:
  *
- * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
