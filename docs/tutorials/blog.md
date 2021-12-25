@@ -40,13 +40,19 @@ This might happen if you've added `ignore-scripts = true` to your `npm` configur
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-💿 Add a link to posts in `app/root.tsx`
+💿 Add a link to posts in `app/routes/index.tsx`
 
 ```tsx
 <Link to="/posts">Posts</Link>
 ```
 
 You can put it anywhere you like, you might want to just delete everything that's there.
+
+Be sure to import Link Component from remix package.
+
+```
+import { Link } from 'remix'
+```
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
