@@ -228,6 +228,7 @@ function Routes() {
 interface RemixRouteContextType {
   data: AppData;
   id: string;
+  hasLoader?: boolean;
 }
 
 const RemixRouteContext = React.createContext<
@@ -252,7 +253,7 @@ export function RemixRoute({ id }: { id: string }) {
   let { routeData, routeModules, appState } = useRemixEntryContext();
 
   let data = routeData[id];
-  let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
+  let { default: Component, CatchBoundary, ErrorBoundary, loader } = routeModules[id];
   let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
 
   let context: RemixRouteContextType = { data, id };
@@ -344,6 +345,8 @@ export function RemixRoute({ id }: { id: string }) {
       </RemixErrorBoundary>
     );
   }
+  
+  context.hasLoader = !!loader;
 
   // It's important for the route context to be above the error boundary so that
   // a call to `useLoaderData` doesn't accidentally get the parents route's data.
@@ -1194,7 +1197,11 @@ export function useMatches() {
  * Returns the data from the current route's `loader`.
  */
 export function useLoaderData<T = AppData>(): T {
-  return useRemixRouteContext().data;
+  const routeContext = useRemixRouteContext();
+
+  invariant(routeContext.hasLoader, `Looks your are using "useLoaderData" on a route where no "loader" function is being exported. Check ${routeContext.id}`)
+
+  return routeContext.data;
 }
 
 export function useActionData<T = AppData>(): T | undefined {
