@@ -22,12 +22,12 @@ export interface DataFunctionArgs {
 /**
  * A function that handles data mutations for a route.
  */
-export interface ActionFunction {
+export interface ActionFunction<Data = AppData> {
   (args: DataFunctionArgs):
     | Promise<Response>
     | Response
-    | Promise<AppData>
-    | AppData;
+    | Promise<Data>
+    | Data;
 }
 
 /**
