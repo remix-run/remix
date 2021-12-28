@@ -1270,13 +1270,23 @@ export function useFetchers(): Fetcher[] {
   return [...fetchers.values()];
 }
 
-export function LiveReload({ port = 8002 }: { port?: number }) {
-  if (process.env.NODE_ENV !== "development") return null;
+type LiveReloadProps = {
+  host?: string;
+  port?: number;
+};
+
+export function LiveReload(props: LiveReloadProps) {
+  if (process.env.NODE_ENV !== "development") 
+    return null;
+  
+  const { host = 'localhost' } = props;
+  const { port = 8002 } = props;
+  
   return (
     <script
       dangerouslySetInnerHTML={{
         __html: `
-          let ws = new WebSocket("ws://localhost:${port}/socket");
+          let ws = new WebSocket("ws://${host}:${port}/socket");
           ws.onmessage = message => {
             let event = JSON.parse(message.data);
             if (event.type === "LOG") {
