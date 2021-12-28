@@ -463,7 +463,7 @@ Now let's actually read the post from the file system.
 
 Put this function anywhere in the `app/post.ts` module:
 
-```tsx filename=app/post.ts lines=[2,4]
+```tsx filename=app/post.ts lines=[2-11]
 // ...
 export async function getPost(slug: string) {
   const filepath = path.join(postsPath, slug + ".md");
