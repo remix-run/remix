@@ -140,35 +140,6 @@ Any JavaScript or TypeScript files in the `app/routes/` directory will become ro
 
 The default export in this file is the component that is rendered at that route and will render within the `<Outlet />` rendered by the root route.
 
-#### Nested Routes
-
-<!-- prettier-ignore -->
-```markdown [3-5]
-app/
-├── routes/
-│   ├── blog/
-│   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── index.tsx
-└── root.tsx
-```
-
-<details>
-
-<summary>URL Route Matches</summary>
-
-| URL                | Matched Route                    |
-| ------------------ | -------------------------------- |
-| `/`                | `app/routes/index.tsx`           |
-| `/about`           | `app/routes/about.tsx`           |
-| `/blog`            | `app/routes/blog/index.tsx`      |
-| `/blog/categories` | `app/routes/blog/categories.tsx` |
-
-</details>
-
-Folders inside the `app/routes/` directory will create nested routes and URLs in your app. Files named `index.tsx` will render when the parent layout route's path is matched exactly.
-
 #### Dynamic Route Parameters
 
 <!-- prettier-ignore -->
@@ -234,6 +205,8 @@ See the [routing guide](../guides/routing.md) for more information.
 
 #### Layout Routes
 
+Nested routes couple URL segments, file structure, and UI hierarchy (Actually, I guess that's tripling, not coupling?). The child routes in a folder render inside the parent route's `<Outlet />` to create conventional layouts.
+
 <!-- prettier-ignore -->
 ```markdown [3,8]
 app/
@@ -262,9 +235,9 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a nested route has the same name its directory, it becomes a layout route for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "parent route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the child routes inside that directory. Similar to your [root route](#root-layout-route), the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
-#### Flat Layout Routes
+#### Pathless Layout Routes
 
 <!-- prettier-ignore -->
 ```markdown [3,7,10-11]
@@ -295,9 +268,11 @@ app/
 
 </details>
 
-You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`.
+You can also create layout routes **without adding segments to the URL** by prepending the directory and associated parent route file with double underscores: `__`.
 
 For example, all of your marketing pages could share a layout rendered in `app/routes/__marketing.tsx` as the layout, and those routes would go in the `app/routes/__marketing/` directory. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+
+<docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
 #### Dot Delimeters
 
