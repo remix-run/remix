@@ -205,8 +205,6 @@ See the [routing guide](../guides/routing.md) for more information.
 
 #### Layout Routes
 
-Nested routes couple URL segments, file structure, and UI hierarchy (Actually, I guess that's tripling, not coupling?). The child routes in a folder render inside the parent route's `<Outlet />` to create conventional layouts.
-
 <!-- prettier-ignore -->
 ```markdown [3,8]
 app/
@@ -235,7 +233,7 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "parent route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the child routes inside that directory. Similar to your [root route](#root-layout-route), the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route](#root-layout-route), the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
 #### Pathless Layout Routes
 
@@ -268,9 +266,9 @@ app/
 
 </details>
 
-You can also create layout routes **without adding segments to the URL** by prepending the directory and associated parent route file with double underscores: `__`.
+You can also create layout routes _without adding segments to the URL_ by prepending the directory and associated parent route file with double underscores: `__`.
 
-For example, all of your marketing pages could share a layout rendered in `app/routes/__marketing.tsx` as the layout, and those routes would go in the `app/routes/__marketing/` directory. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+For example, all of your marketing pages could be in `app/routes/__marketing/*` and then share a layout by creating `app/routes/__marketing.tsx`. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL because `__marketing` won't add segments to the URL, just UI hierarchy.
 
 <docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
