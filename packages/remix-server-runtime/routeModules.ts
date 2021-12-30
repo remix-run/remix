@@ -2,7 +2,7 @@ import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router-dom";
 
-import type { AppLoadContext, AppData } from "./data";
+import type { AppData, AppLoadContext } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { RouteData } from "./routeData";
 
@@ -63,12 +63,12 @@ export interface LinksFunction {
 /**
  * A function that loads data for a route.
  */
-export interface LoaderFunction {
+export interface LoaderFunction<T = AppData> {
   (args: DataFunctionArgs):
-    | Promise<Response>
+    | Promise<T>
     | Response
-    | Promise<AppData>
-    | AppData;
+    | Promise<T>
+    | T;
 }
 
 /**
