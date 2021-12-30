@@ -127,6 +127,7 @@ export function createEventHandler({
             status: 500
           })
         );
+        return;
       }
 
       event.respondWith(new Response("Internal Error", { status: 500 }));

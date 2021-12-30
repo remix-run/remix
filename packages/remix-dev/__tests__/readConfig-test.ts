@@ -55,7 +55,7 @@ describe("readConfig", () => {
             "id": "pages/test",
             "index": undefined,
             "parentId": "root",
-            "path": "programatic",
+            "path": "programmatic",
           },
           "pages/three": Object {
             "caseSensitive": undefined,
@@ -433,6 +433,8 @@ describe("readConfig", () => {
         },
         "serverBuildDirectory": Any<String>,
         "serverMode": "production",
+        "serverModuleFormat": "cjs",
+        "serverPlatform": "node",
       }
     `
     );
