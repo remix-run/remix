@@ -398,6 +398,22 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "resources/theme-css",
           },
+          "routes/route-data": Object {
+            "caseSensitive": undefined,
+            "file": "routes/route-data.tsx",
+            "id": "routes/route-data",
+            "index": undefined,
+            "parentId": "root",
+            "path": "route-data",
+          },
+          "routes/route-data/index": Object {
+            "caseSensitive": undefined,
+            "file": "routes/route-data/index.tsx",
+            "id": "routes/route-data/index",
+            "index": true,
+            "parentId": "routes/route-data",
+            "path": undefined,
+          },
           "routes/two": Object {
             "caseSensitive": undefined,
             "file": "routes/two.md",

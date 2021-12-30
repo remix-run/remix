@@ -467,6 +467,29 @@ See also:
 - [`action`][action]
 - [`useTransition`][usetransition]
 
+### `useRouteData`
+
+This hook returns the JSON parsed data from the route loader function of any matching route in the current URL.
+
+```tsx filename=app/routes/invoices.tsx
+export function loader() {
+  return fakeDb.invoices.findAll();
+}
+
+// ...
+```
+
+```tsx filename=app/routes/invoices/$invoice.tsx lines=[1,4]
+import { useRouteData } from "remix";
+
+export default function Invoices() {
+  const invoices = useRouteData<Invoice[]>("routes/parent");
+  // ...
+}
+```
+
+<docs-info>Because a route may not be rendered the type of the returned value will be the generic or `undefined` all the time, remember to always check the data is defined before using it.</docs-info>
+
 ### `useFormAction`
 
 Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
