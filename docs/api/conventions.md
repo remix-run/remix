@@ -79,7 +79,7 @@ The path to the server build, relative to remix.config.js. Defaults to "build". 
 
 ### devServerPort
 
-The port number to use for the dev server. Defaults to 8002.
+The port number to use for the dev websocket server. Defaults to 8002.
 
 ## File Name Conventions
 
