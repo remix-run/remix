@@ -151,13 +151,43 @@ async function decodeCookieValue(
 }
 
 function encodeData(value: any): string {
-  return btoa(JSON.stringify(value));
+  let stringified = JSON.stringify(value);
+  let converted = toBinary(stringified);
+  return btoa(converted);
 }
 
 function decodeData(value: string): any {
   try {
-    return JSON.parse(atob(value));
+    let decodedData = atob(value);
+    let coverted = fromBinary(decodedData);
+    return JSON.parse(coverted);
   } catch (error) {
     return {};
   }
+}
+
+function toBinary(string: string): string {
+  let codeUnits = new Uint16Array(string.length);
+  for (let i = 0; i < codeUnits.length; i++) {
+    codeUnits[i] = string.charCodeAt(i);
+  }
+  let charCodes = new Uint8Array(codeUnits.buffer);
+  let result = "";
+  for (let i = 0; i < charCodes.byteLength; i++) {
+    result += String.fromCharCode(charCodes[i]);
+  }
+  return result;
+}
+
+function fromBinary(binary: string): string {
+  let bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  let charCodes = new Uint16Array(bytes.buffer);
+  let result = "";
+  for (let i = 0; i < charCodes.length; i++) {
+    result += String.fromCharCode(charCodes[i]);
+  }
+  return result;
 }
