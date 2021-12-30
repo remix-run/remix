@@ -118,4 +118,36 @@ describe("cookies", () => {
     let setCookie2 = await cookie.serialize(value);
     expect(setCookie).not.toEqual(setCookie2);
   });
+
+  it("parses/serializes unsigned UTF8 string values", async () => {
+    let cookie = createCookie("my-cookie");
+    let setCookie = await cookie.serialize("سلام دنیا");
+    let value = await cookie.parse(getCookieFromSetCookie(setCookie));
+
+    expect(value).toEqual("سلام دنیا");
+  });
+
+  it("parses/serializes signed UTF8 string values", async () => {
+    let cookie = createCookie("my-cookie", {
+      secrets: ["secret1"]
+    });
+    let setCookie = await cookie.serialize("سلام ریمیکس");
+    let value = await cookie.parse(getCookieFromSetCookie(setCookie));
+
+    expect(value).toMatchInlineSnapshot(`"سلام ریمیکس"`);
+  });
+
+  it("parses/serializes signed object UTF8 values", async () => {
+    let cookie = createCookie("my-cookie", {
+      secrets: ["secret1"]
+    });
+    let setCookie = await cookie.serialize({ hello: "مایکل" });
+    let value = await cookie.parse(getCookieFromSetCookie(setCookie));
+
+    expect(value).toMatchInlineSnapshot(`
+      Object {
+        "hello": "مایکل",
+      }
+    `);
+  });
 });
