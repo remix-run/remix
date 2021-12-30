@@ -69,10 +69,16 @@ export interface AppConfig {
    * The port number to use for the dev server. Defaults to 8002.
    */
   devServerPort?: number;
+
   /**
    * The delay before the dev server broadcasts a reload event.
    */
   devServerBroadcastDelay?: number;
+
+  /**
+   * A list of absolute paths that Remix will include on it's file watcher.
+   */
+  devServerAdditionalDirectories?: string[];
 
   /**
    * Additional MDX remark / rehype plugins.
@@ -162,6 +168,11 @@ export interface RemixConfig {
   devServerBroadcastDelay: number;
 
   /**
+   * A list of absolute paths that Remix will include on it's file watcher.
+   */
+  devServerAdditionalDirectories: string[];
+
+  /**
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
@@ -241,6 +252,8 @@ export async function readConfig(
 
   let devServerPort = appConfig.devServerPort || 8002;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
+  let devServerAdditionalDirectories =
+    appConfig.devServerAdditionalDirectories || [];
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
@@ -277,6 +290,7 @@ export async function readConfig(
     entryServerFile,
     devServerPort,
     devServerBroadcastDelay,
+    devServerAdditionalDirectories,
     assetsBuildDirectory,
     publicPath,
     rootDirectory,

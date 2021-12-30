@@ -16,6 +16,7 @@ module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   devServerPort: 8002,
+  devServerAdditionalDirectories: [],
   publicPath: "/build/",
   serverBuildDirectory: "build",
   routes(defineRoutes) {
@@ -80,6 +81,10 @@ The path to the server build, relative to remix.config.js. Defaults to "build". 
 ### devServerPort
 
 The port number to use for the dev server. Defaults to 8002.
+
+### devServerAdditionalDirectories
+
+An optional list of absolute paths that will trigger dev server recompiles.
 
 ## File Name Conventions
 

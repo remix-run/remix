@@ -131,6 +131,11 @@ export default function Index() {
           <li>
             <Link to="/resources">Resource routes</Link>
           </li>
+          <li>
+            <Link to="/dev-server-additional-dirs">
+              Additional watched dirs
+            </Link>
+          </li>
         </ul>
       </nav>
       <Shared />

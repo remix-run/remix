@@ -179,7 +179,7 @@ export async function watch(
   }, 100);
 
   let watcher = chokidar
-    .watch(config.appDirectory, {
+    .watch([...config.devServerAdditionalDirectories, config.appDirectory], {
       persistent: true,
       ignoreInitial: true,
       awaitWriteFinish: {

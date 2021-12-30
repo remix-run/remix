@@ -10,6 +10,7 @@ module.exports = {
   publicPath: "/build/",
   serverBuildDirectory: "./build",
   devServerPort: 8002,
+  devServerAdditionalDirectories: ["./extra"],
   ignoredRouteFiles: [".*", "blargh.ts"],
 
   mdx: async filename => {
