@@ -6,7 +6,7 @@ export default function ClientOnlyRoute() {
   return (
     <>
       <ClientOnly
-        fallback={<h1 data-test-id="server-only-title">Server-Side</h1>}
+        placeholder={<h1 data-test-id="server-only-title">Server-Side</h1>}
       >
         <h1 data-test-id="client-only-title">Client Side</h1>
       </ClientOnly>
