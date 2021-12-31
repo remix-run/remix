@@ -1596,7 +1596,7 @@ export let loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany()
   };
-  return { data };
+  return data;
 };
 
 export default function Users() {
