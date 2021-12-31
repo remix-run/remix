@@ -18,7 +18,6 @@ import {
   useResolvedPath,
   useRoutes
 } from "react-router-dom";
-
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { AssetsManifest, EntryContext } from "./entry";
 import {
@@ -47,6 +46,7 @@ import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { Fetcher, Submission, Transition } from "./transition";
 import { createTransitionManager } from "./transition";
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -1333,7 +1333,7 @@ function useComposedRefs<RefValueType = any>(
 
 /**
  * Render the children only after the JS has loaded client-side.
- * Use an optional fallback component if the JS is not yet loaded.
+ * Use an optional placeholder component if the JS is not yet loaded.
  */
 export function ClientOnly({
   children,
