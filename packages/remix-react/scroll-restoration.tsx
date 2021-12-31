@@ -116,10 +116,4 @@ function useScrollRestoration() {
       window.scrollTo(0, 0);
     }, [location]);
   }
-
-  React.useEffect(() => {
-    if (transition.submission) {
-      wasSubmissionRef.current = true;
-    }
-  }, [transition]);
 }
