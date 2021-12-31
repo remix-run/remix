@@ -1337,10 +1337,10 @@ function useComposedRefs<RefValueType = any>(
  */
 export function ClientOnly({
   children,
-  fallback = null
+  placeholder = null
 }: {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
+  placeholder?: React.ReactNode;
 }) {
-  return useIsHydrated() ? <>{children}</> : <>{fallback}</>;
+  return useIsHydrated() ? <>{children}</> : <>{placeholder}</>;
 }
