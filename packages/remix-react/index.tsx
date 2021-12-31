@@ -29,6 +29,7 @@ export {
   Form,
   PrefetchPageLinks,
   LiveReload,
+  ClientOnly,
   useFormAction,
   useSubmit,
   useTransition,
@@ -37,7 +38,8 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches
+  useMatches,
+  useIsHydrated
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";

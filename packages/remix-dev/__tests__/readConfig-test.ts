@@ -222,6 +222,14 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "catchall/flat/*",
           },
+          "routes/client-only": Object {
+            "caseSensitive": undefined,
+            "file": "routes/client-only.tsx",
+            "id": "routes/client-only",
+            "index": undefined,
+            "parentId": "root",
+            "path": "client-only",
+          },
           "routes/empty": Object {
             "caseSensitive": undefined,
             "file": "routes/empty.jsx",

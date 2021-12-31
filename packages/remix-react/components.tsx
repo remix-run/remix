@@ -7,28 +7,29 @@ import type {
 } from "react";
 import * as React from "react";
 import type { Navigator } from "react-router";
+import type { LinkProps, NavLinkProps } from "react-router-dom";
 import {
-  Router,
   Link as RouterLink,
   NavLink as RouterNavLink,
-  useLocation,
-  useRoutes,
-  useNavigate,
+  Router,
   useHref,
-  useResolvedPath
+  useLocation,
+  useNavigate,
+  useResolvedPath,
+  useRoutes
 } from "react-router-dom";
-import type { LinkProps, NavLinkProps } from "react-router-dom";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
-import type { EntryContext, AssetsManifest } from "./entry";
-import type { AppState, SerializedError } from "./errors";
+import type { AssetsManifest, EntryContext } from "./entry";
 import {
-  RemixRootDefaultErrorBoundary,
+  RemixCatchBoundary,
   RemixErrorBoundary,
   RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary
+  RemixRootDefaultErrorBoundary
 } from "./errorBoundaries";
+import type { AppState, SerializedError } from "./errors";
 import invariant from "./invariant";
+import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import {
   getDataLinkHrefs,
   getLinksForMatches,
@@ -37,16 +38,15 @@ import {
   getStylesheetPrefetchLinks,
   isPageLinkDescriptor
 } from "./links";
-import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
-import type { ClientRoute } from "./routes";
-import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
+import type { HtmlMetaDescriptor, RouteModules } from "./routeModules";
+import type { ClientRoute } from "./routes";
+import { createClientRoutes } from "./routes";
+import type { Fetcher, Submission, Transition } from "./transition";
 import { createTransitionManager } from "./transition";
-import type { Transition, Fetcher, Submission } from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -663,6 +663,24 @@ export function Meta() {
  */
 let isHydrated = false;
 
+/**
+ * Return a boolean indicating if the JS has been hydrated already.
+ * When doing Server-Side Rendering, the result will always be false.
+ * When doing Client-Side Rendering, the result will always be false on the
+ * first render and true from then on. Even if a new component renders it will
+ * always start with true.
+ */
+export function useIsHydrated(): boolean {
+  let [hydrated, setHydrated] = React.useState(() => isHydrated);
+
+  React.useEffect(function hydrate() {
+    isHydrated = true;
+    setHydrated(true);
+  }, []);
+
+  return hydrated;
+}
+
 type ScriptProps = Omit<
   React.HTMLProps<HTMLScriptElement>,
   | "children"
@@ -692,9 +710,7 @@ export function Scripts(props: ScriptProps) {
     serverHandoffString
   } = useRemixEntryContext();
 
-  React.useEffect(() => {
-    isHydrated = true;
-  }, []);
+  let isHydrated = useIsHydrated();
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
@@ -1313,4 +1329,18 @@ function useComposedRefs<RefValueType = any>(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, refs);
+}
+
+/**
+ * Render the children only after the JS has loaded client-side.
+ * Use an optional fallback component if the JS is not yet loaded.
+ */
+export function ClientOnly({
+  children,
+  fallback = null
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
+  return useIsHydrated() ? <>{children}</> : <>{fallback}</>;
 }
