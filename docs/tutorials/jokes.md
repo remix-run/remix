@@ -2305,18 +2305,18 @@ Great! Our database is now ready to go.
 
 ### Auth Flow Overview
 
-So our authentication will be of the traditional username/password variety. We'll be using [`bcrypt`](https://npm.im/bcrypt) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
+So our authentication will be of the traditional username/password variety. We'll be using [`bcryptjs`](https://npm.im/bcryptjs) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
 
 💿 Go ahead and get that installed right now so we don't forget:
 
 ```sh
-npm install bcrypt
+npm install bcryptjs
 ```
 
-💿 The `bcrypt` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
+💿 The `bcryptjs` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
 
 ```sh
-npm install --save-dev @types/bcrypt
+npm install --save-dev @types/bcryptjs
 ```
 
 Let me give you a quick diagram of the flow of things:
@@ -2789,7 +2789,7 @@ Here's what we need in that file to get started:
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -2899,7 +2899,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3011,7 +3011,7 @@ So we can now check whether the user is authenticated on the server by reading t
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3267,7 +3267,7 @@ We should probably give people the ability to see that they're logged in and a w
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3546,7 +3546,7 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[13-21]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -6068,7 +6068,7 @@ Here's a demonstration of what that experience looks like:
 
 ## Deployment
 
-I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`bcrypt`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
+I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`prisma`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
 
 <docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
 
