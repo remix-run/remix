@@ -1909,7 +1909,7 @@ const joke = await db.joke.create({
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-22]
+```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-24]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 import { db } from "~/utils/db.server";
@@ -3390,7 +3390,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[10,23,33,37,59-70]
+```tsx filename=app/routes/jokes.tsx lines=[10,23,35,39,61-72]
 import { User } from "@prisma/client";
 import {
   Link,
@@ -4555,7 +4555,7 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,28-55,65-74,79-101]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,30-57,67-76,81-103]
 import type { Joke } from "@prisma/client";
 import { ActionFunction, LoaderFunction } from "remix";
 import {
@@ -5394,6 +5394,8 @@ Sweet! Now search engines and social media platforms will like our site a bit be
 Sometimes we want our routes to render something other than an HTML document. For example, maybe you have an endpoint that generates your social image for a blog post, or the image for a product, or the CSV data for a report, or an RSS feed, or sitemap, or maybe you want to implement API routes for your mobile app, or anything else.
 
 This is what [Resource Routes](../guides/resource-routes) are for. I think it'd be cool to have an RSS feed of all our jokes. I think it would make sense to be at the URL `/jokes.rss`. For that to work, you'll need to escape the `.` because that character has special meaning in Remix route filenames. Learn more about [escaping special characters here](../api/conventions#escaping-special-characters).
+
+<docs-info>Believe it or not, you've actually already made one of these. Check out your logout route! No UI necessary because it's just there to handle mutations and redirect lost souls.</docs-info>
 
 For this one, you'll probably want to at least peak at the example unless you want to go read up on the RSS spec 😅.
 
