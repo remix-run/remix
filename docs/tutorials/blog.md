@@ -324,7 +324,7 @@ export async function getPosts() {
       const file = await fs.readFile(
         path.join(postsPath, filename)
       );
-      const { attributes } = parseFrontMatter(
+      const { attributes } = parseFrontMatter<{title: string}>(
         file.toString()
       );
       return {
