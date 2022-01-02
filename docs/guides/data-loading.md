@@ -104,8 +104,8 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
 ```tsx filename=app/routes/gists.jsx lines=[2]
-export function loader() {
-  let res = fetch("https://api.github.com/gists");
+export async function loader() {
+  let res = await fetch("https://api.github.com/gists");
   return res.json();
 }
 
