@@ -35,25 +35,28 @@ export function ScrollRestoration() {
     }, [])
   );
 
+  const restoreScroll = ((STORAGE_KEY: string) => {
+    if (!window.history.state || !window.history.state.key) {
+      const key = Math.random().toString(32).slice(2);
+      window.history.replaceState({ key }, "");
+    }
+    try {
+      let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}");
+      let storedY = positions[window.history.state.key];
+      if (typeof storedY === "number") {
+        window.scrollTo(0, storedY);
+      }
+    } catch (error) {
+      console.error(error);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }).toString();
+
   return (
     <script
+      suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `
-          let STORAGE_KEY = ${JSON.stringify(STORAGE_KEY)};
-          if (!window.history.state || !window.history.state.key) {
-            window.history.replaceState({ key: Math.random().toString(32).slice(2) }, null);
-          }
-          try {
-            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}')
-            let storedY = positions[window.history.state.key];
-            if (typeof storedY === 'number') {
-              window.scrollTo(0, storedY)
-            }
-          } catch(error) {
-            console.error(error)
-            sessionStorage.removeItem(STORAGE_KEY)
-          }
-        `
+        __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`
       }}
     />
   );
