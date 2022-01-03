@@ -1626,7 +1626,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 <summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx lines=[1-3,15-17,19-24,27,51-55]
-import { LinksFunction, LoaderFunction } from "remix";
+import type { LinksFunction, LoaderFunction } from "remix";
 import { Link, Outlet, useLoaderData } from "remix";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/jokes.css";
