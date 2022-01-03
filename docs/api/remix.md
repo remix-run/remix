@@ -910,7 +910,7 @@ function useMarkAsRead({ articleId, userId }) {
       { userId },
       {
         method: "POST",
-        action: "/article/${articleID}/mark-as-read"
+        action: `/article/${articleID}/mark-as-read`
       }
     );
   });
