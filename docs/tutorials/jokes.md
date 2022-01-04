@@ -4254,7 +4254,7 @@ export function CatchBoundary() {
   if (caught.status === 404) {
     return (
       <div className="error-container">
-        Huh? What the heck is "{params.jokeId}"?
+        {`Huh? What the heck is "${params.jokeId}"?`}
       </div>
     );
   }
