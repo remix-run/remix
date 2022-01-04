@@ -1,5 +1,5 @@
 import type { LoaderFunction, MetaFunction } from "remix";
-import { Form, json, useCatch, useLoaderData } from "remix";
+import { Form, json, useCatch, useLoaderData, useLocation } from "remix";
 import type { User as UserType } from "~/data.server";
 import { users } from "~/data.server";
 
@@ -7,11 +7,11 @@ interface LoaderData {
   user: UserType;
 }
 
-export const meta: MetaFunction = ({ data }) => {
+export const meta: MetaFunction = ({ data }: { data: LoaderData | null }) => {
   if (!data) {
     return { title: "User not found!" };
   }
-  return { title: (data as LoaderData).user.name };
+  return { title: data.user.name };
 };
 
 export const loader: LoaderFunction = async ({ params }) => {
@@ -28,6 +28,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 
 export default function User() {
   const { user } = useLoaderData<LoaderData>();
+  const location = useLocation();
 
   return (
     /*
@@ -45,8 +46,12 @@ export default function User() {
      * When ever `key` changes React will unmount and remount the component
      *
      * https://reactjs.org/docs/lists-and-keys.html#keys
-     * */
-    <Form method="post" key={user.id}>
+     *
+     * We'll use the location.key so each route transition will unmount and
+     * remount this form.
+     *
+     */
+    <Form method="post" key={location.key}>
       <fieldset>
         <label>
           Name{" "}
