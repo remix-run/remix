@@ -6,7 +6,6 @@
     "start": "arc sandbox"
   },
   "dependencies": {
-    "@remix-run/architect": "*",
-    "aws-sdk": "2.796.0"
+    "@remix-run/architect": "*"
   }
 }
