@@ -43,13 +43,12 @@ Edit your `.env` file.
 SOME_SECRET=super-secret
 ```
 
-Then update your package.json dev script to this:
+Then update your entry.server.tsx and add these lines before your imports
 
-```json lines=[2] filename=package.json
-{
-  "dev": "node -r dotenv/config node_modules/.bin/remix dev",
-  "start": "remix-serve build"
-}
+```js filename=entry.server.tsx
+  if(process.env.NODE_ENV) {
+	  require('dotenv').config()
+  }
 ```
 
 Now you can access those values in your loaders/actions:
