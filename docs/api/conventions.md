@@ -690,7 +690,7 @@ export const loader = async ({ request, params }) => {
     const data: InvoiceCatchData = {
       invoiceOwnerEmail: invoice.owner.email
     };
-    throw new json(data, { status: 401 });
+    throw json(data, { status: 401 });
   }
 
   return invoice;
