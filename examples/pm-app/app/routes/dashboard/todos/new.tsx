@@ -24,7 +24,9 @@ export const action: ActionFunction = async ({ request, params }) => {
 
     try {
       const name = Sanitizer.cleanHtmlString(formData.get("name"));
-      const description = Sanitizer.cleanHtmlString(formData.get("description"));
+      const description = Sanitizer.cleanHtmlString(
+        formData.get("description")
+      );
       const order = existingTodos.length - 1;
 
       if (!name) {

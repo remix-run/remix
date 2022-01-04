@@ -4,7 +4,6 @@
  */
 
 import validator from "validator";
-import _ from "lodash";
 import { isFunction, isObject, isPlainObject } from "~/utils";
 
 export class Sanitizer {

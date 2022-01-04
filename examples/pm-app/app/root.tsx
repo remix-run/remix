@@ -1,7 +1,5 @@
-import type { LinksFunction, LoaderFunction} from "remix";
-import { redirect } from "remix";
+import type { LinksFunction, LoaderFunction } from "remix";
 import {
-  Link,
   Links,
   LiveReload,
   Meta,
@@ -12,7 +10,7 @@ import {
   useLoaderData
 } from "remix";
 
-import global from "./styles/global.css";
+import global from "~/dist/styles/global.css";
 import type { User } from "./models";
 
 export const links: LinksFunction = () => {
@@ -26,7 +24,6 @@ interface LoaderData {
 export const loader: LoaderFunction = async ({ request }) => {
   const data: LoaderData = {
     ENV: {
-      // GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
       SITE_URL: process.env.SITE_URL
     }
   };
@@ -47,7 +44,6 @@ function Document({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -71,7 +67,6 @@ export default function App() {
   const { ENV } = useLoaderData<{
     user: User | null;
     ENV: {
-      // GITHUB_CLIENT_ID: string;
       SITE_URL: string;
     };
   }>();

@@ -2,7 +2,7 @@ import * as React from "react";
 import { useFetcher, useFetchers } from "remix";
 import type { Todo } from "~/models";
 import cx from "clsx";
-import { Token, TokenDismissButton } from "~/ui/token";
+import { Token } from "~/ui/token";
 
 export function TodoList({
   className,

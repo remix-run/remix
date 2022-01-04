@@ -66,8 +66,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     throw redirect("/dashboard");
   }
 
-  const data: LoaderData = { project, user, allUsers };
-  return json(data);
+  return json<LoaderData>({ project, user, allUsers });
 };
 
 export default function ProjectRoute() {

@@ -1,4 +1,4 @@
-import type { LoaderFunction} from "remix";
+import type { LoaderFunction } from "remix";
 import { redirect } from "remix";
 import { getUser } from "~/session.server";
 

@@ -175,9 +175,9 @@ const FakeLabel = React.forwardRef<HTMLDivElement, FakeLabelProps>(
 const FieldError = React.forwardRef<HTMLDivElement, FieldErrorProps>(
   (props, ref) => {
     const context = useFieldContext();
-    let { className, alert = true, id, children, ...domProps } = props;
+    const { className, id, children, ...domProps } = props;
     const error: React.ReactNode = children || context?.error;
-    id = context && context.id ? `${context.id}-error` : id;
+    const idToUse = context && context.id ? `${context.id}-error` : id;
 
     if (!error) {
       return null;
@@ -188,7 +188,7 @@ const FieldError = React.forwardRef<HTMLDivElement, FieldErrorProps>(
         ref={ref}
         className={cx(className, "ui--form-field-error")}
         role="alert"
-        id={id}
+        id={idToUse}
         {...domProps}
       >
         {error}

@@ -24,7 +24,9 @@ export const action: ActionFunction = async ({ request, context, params }) => {
       const status = formData.get("id");
 
       const name = Sanitizer.cleanHtmlString(formData.get("name"));
-      const description = Sanitizer.cleanHtmlString(formData.get("description"));
+      const description = Sanitizer.cleanHtmlString(
+        formData.get("description")
+      );
 
       // TODO: Handle invalid inputs
       const todoUpdates: Parameters<typeof updateTodo>[1] = {};

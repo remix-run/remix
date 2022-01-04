@@ -108,7 +108,7 @@
 }
 
 .project-index__todolists > * {
-    width: 100%;
+  width: 100%;
 }
 
 @media (--viewport-sm) {
@@ -116,8 +116,6 @@
     --item-padding: var(--spaces-04);
   }
 }
-
-
 
 .project-index__todolists-item {
   position: relative;
@@ -138,10 +136,10 @@
 }
 
 .project-index__todolist-link {
-    display: block;
-    color: unset;
-    text-decoration: none;
-  }
+  display: block;
+  color: unset;
+  text-decoration: none;
+}
 
 .project-index__todolist-name {
   width: calc(100% - 2rem);
