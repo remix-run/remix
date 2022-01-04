@@ -1,4 +1,4 @@
-# Welcome to Remix
+# Outlet Form Rerender Remix Example
 
 - [Remix Docs](https://remix.run/docs)
 
@@ -10,7 +10,7 @@ For example, when the form is rendered inside a nested route, changing the route
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/outlet-form-rerender)
 
 ## Example
 
