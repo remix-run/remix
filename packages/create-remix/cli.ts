@@ -140,10 +140,31 @@ async function run() {
   }
 
   // rename dotfiles
-  await fse.move(
-    path.join(projectDir, "gitignore"),
-    path.join(projectDir, ".gitignore")
-  );
+  if (fse.existsSync(path.resolve(projectDir, ".gitignore"))) {
+    console.log(
+      `️🚨 Oops, "${relativeProjectDir}/.gitignore" already exists. Do you want to replace this file?`
+    );
+    let gitignore = await inquirer.prompt<{ replace: boolean }>([
+      {
+        type: "confirm",
+        name: "replace",
+        message: "Replace existing .gitignore?",
+        default: true
+      }
+    ]);
+    if (gitignore.replace) {
+      await fse.copy(
+        path.join(projectDir, "gitignore"),
+        path.join(projectDir, ".gitignore"),
+        { overwrite: true }
+      );
+    }
+  } else {
+    await fse.move(
+      path.join(projectDir, "gitignore"),
+      path.join(projectDir, ".gitignore")
+    );
+  }
 
   // merge package.jsons
   let appPkg = require(path.join(sharedTemplate, "package.json"));
