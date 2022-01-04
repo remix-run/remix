@@ -22,9 +22,8 @@ cd [whatever you named the project]
 npm run dev
 ```
 
-<docs-warning>It is important that you pick Remix App Server</docs-warning>
+<docs-warning>For this particuar tutorial, it is important that you pick Remix App Server. We're going to be reading/writing to the file system and not all setups are compatible with that (since things like Cloudflare Workers or AWS lambda don't have a writable filesystem).</docs-warning>
 
-We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
 Open up [http://localhost:3000](http://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
