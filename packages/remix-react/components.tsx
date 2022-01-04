@@ -1182,10 +1182,13 @@ export function useMatches() {
   return matches.map(match => {
     let { pathname, params } = match;
     return {
+      id: match.route.id,
       pathname,
       params,
       data: routeData[match.route.id],
-      handle: routeModules[match.route.id].handle
+      // if the module fails to load or an error/response is thrown, the module
+      // won't be defined.
+      handle: routeModules[match.route.id]?.handle
     };
   });
 }
