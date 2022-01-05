@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@mantine/core": "^3.5.0",
-    "@mantine/hooks": "^3.5.0",
     "@mantine/ssr": "^3.5.0",
     "@remix-run/react": "^1.1.1",
     "@remix-run/serve": "^1.1.1",
