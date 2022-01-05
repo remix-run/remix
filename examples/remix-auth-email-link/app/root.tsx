@@ -1,13 +1,37 @@
+import type {LoaderFunction} from "remix";
 import {
+  json,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
+  useLoaderData
 } from "remix";
+import { getSession, commitSession } from "./services/session.server";
+
+type LoaderData = {
+  authError: string | null
+}
+
+export const loader: LoaderFunction = async ({ request }) => {
+  const session = await getSession(request)
+  const authError = session.get('auth:error') ?? null
+  return json<LoaderData>(
+    {
+      authError,
+    },
+    {
+      headers: {
+        'Set-Cookie': await commitSession(session),
+      },
+    }
+  )
+}
 
 export default function App() {
+  const { authError } = useLoaderData<LoaderData>()
   return (
     <html lang="en">
       <head>
@@ -17,6 +41,7 @@ export default function App() {
         <Links />
       </head>
       <body>
+        {authError && (<p>{authError}</p>)}
         <Outlet />
         <ScrollRestoration />
         <Scripts />
