@@ -78,5 +78,10 @@ module.exports = {
       setupFilesAfterEnv: ["<rootDir>/fixtures/gists-app/jest/setup.js"],
       setupFiles: ["<rootDir>/jest/setupNodeGlobals.ts"]
     }
+  ],
+  watchPlugins: [
+    require.resolve("jest-watch-select-projects"),
+    require.resolve("jest-watch-typeahead/filename"),
+    require.resolve("jest-watch-typeahead/testname")
   ]
 };

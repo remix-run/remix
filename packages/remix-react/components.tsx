@@ -1273,32 +1273,40 @@ export function useFetchers(): Fetcher[] {
   return [...fetchers.values()];
 }
 
-export function LiveReload({ port = 8002 }: { port?: number }) {
-  if (process.env.NODE_ENV !== "development") return null;
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          let ws = new WebSocket("ws://localhost:${port}/socket");
-          ws.onmessage = message => {
-            let event = JSON.parse(message.data);
-            if (event.type === "LOG") {
-              console.log(event.message);
-            }
-            if (event.type === "RELOAD") {
-              console.log("💿 Reloading window ...");
-              window.location.reload();
-            }
-          };
-          ws.onerror = error => {
-            console.log("Remix dev asset server web socket error:");
-            console.error(error);
-          };
-      `
-      }}
-    />
-  );
-}
+// Dead Code Elimination magic for production builds.
+// This way devs don't have to worry about doing the NODE_ENV check themselves.
+export const LiveReload =
+  process.env.NODE_ENV !== "development"
+    ? () => null
+    : function LiveReload({
+        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002)
+      }: {
+        port?: number;
+      }) {
+        return (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+let ws = new WebSocket("ws://localhost:${port}/socket");
+ws.onmessage = message => {
+  let event = JSON.parse(message.data);
+  if (event.type === "LOG") {
+    console.log(event.message);
+  }
+  if (event.type === "RELOAD") {
+    console.log("💿 Reloading window ...");
+    window.location.reload();
+  }
+};
+ws.onerror = error => {
+  console.log("Remix dev asset server web socket error:");
+  console.error(error);
+};
+              `.trim()
+            }}
+          />
+        );
+      };
 
 function useComposedRefs<RefValueType = any>(
   ...refs: Array<React.Ref<RefValueType> | null | undefined>
