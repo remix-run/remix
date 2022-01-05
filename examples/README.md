@@ -10,6 +10,8 @@ Enjoy!
 
 ## Contributing
 
+▶️ [Watch Kent show you how to create examples](https://www.youtube.com/watch?v=10AhByQA6Q0).
+
 Thanks for your willingness to contribute an example to Remix. Examples are incredibly helpful to people like you who are trying to figure out how to use Remix to solve certain problems and integrate with other tools.
 
 What makes a good example is focus. There's certainly room for examples that show off a whole app experience and we do have some examples like that. But the vast majority of useful examples are focused on a specific use-case. Otherwise it's hard for people to know what to look for in the code.
