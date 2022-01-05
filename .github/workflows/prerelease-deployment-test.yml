@@ -1,0 +1,41 @@
+name: prerelease deployment test
+
+on:
+  release:
+    types: [prereleased]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "npm"
+
+      - run: npm ci
+        working-directory: ./examples/netlify-prerelease-deployment-test
+      - run: npm run build
+        working-directory: ./examples/netlify-prerelease-deployment-test
+
+      - name: Install Netlify cli
+        run: npm install -g netlify-cli
+
+      - name: Create Netlify site
+        id: create-site
+        run: echo "::set-output name=NETLIFY_SITE::$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-$(date +'%s') --json)"
+
+      - name: Get Netlify site ID
+        run: |
+          echo $NETLIFY_SITE | jq --raw-output '.id'
+
+      - name: Deploy to Netlify
+        run: netlify deploy --prod
+        working-directory: ./examples/netlify-prerelease-deployment-test
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
+          NETLIFY_SITE: ${{ steps.create-site.outputs.NETLIFY_SITE }}
