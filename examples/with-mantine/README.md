@@ -10,7 +10,7 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Example
 
-We wrap the app in `mantin`'s Theme and ColorMode providers so the pages can have app-wide dark/light mode. We are also creating a route to toggle between dark/light mode.
+We wrap the app in `mantin`'s theme and color providers so the pages can have app-wide dark/light mode. We are also creating a route to toggle between dark/light mode.
 
 ## Related Links
 
