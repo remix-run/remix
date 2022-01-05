@@ -25,9 +25,9 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <MatineTheme>
+        <MantineTheme>
           <Outlet />
-        </MatineTheme>
+        </MantineTheme>
 
         <ScrollRestoration />
         <Scripts />
@@ -37,7 +37,7 @@ export default function App() {
   );
 }
 
-function MatineTheme({ children }: { children: React.ReactNode }) {
+function MantineTheme({ children }: { children: React.ReactNode }) {
   const [colorScheme, setColorScheme] = useState<ColorScheme>("light");
   const toggleColorScheme = (value?: ColorScheme) =>
     setColorScheme(value || (colorScheme === "dark" ? "light" : "dark"));
