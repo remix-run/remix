@@ -1,0 +1,53 @@
+.ui--shadow-box {
+  --padding: var(--spaces-05);
+  background-color: var(--colors-white);
+  padding: var(--padding);
+  border-radius: 8px;
+  box-shadow: 0 0 hsl(var(--hsl-black) / 0%), 0 0 hsl(var(--hsl-black) / 0%),
+    0 4px 6px -1px hsl(var(--hsl-black) / 10%),
+    0 2px 4px -1px hsl(var(--hsl-black) / 6%);
+
+  @media screen and (--viewport-sm) {
+    --padding: var(--spaces-06);
+  }
+
+  @media screen and (--viewport-md) {
+    --padding: var(--spaces-07);
+  }
+}
+
+.ui--shadow-box--pad-01 {
+  --padding: var(--spaces-03);
+
+  @media screen and (--viewport-sm) {
+    --padding: var(--spaces-03);
+  }
+
+  @media screen and (--viewport-md) {
+    --padding: var(--spaces-04);
+  }
+}
+
+.ui--shadow-box--pad-02 {
+  --padding: var(--spaces-04);
+
+  @media screen and (--viewport-sm) {
+    --padding: var(--spaces-04);
+  }
+
+  @media screen and (--viewport-md) {
+    --padding: var(--spaces-05);
+  }
+}
+
+.ui--shadow-box--pad-03 {
+  --padding: var(--spaces-04);
+
+  @media screen and (--viewport-sm) {
+    --padding: var(--spaces-05);
+  }
+
+  @media screen and (--viewport-md) {
+    --padding: var(--spaces-06);
+  }
+}
