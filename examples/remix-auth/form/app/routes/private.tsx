@@ -1,6 +1,6 @@
 import type { ActionFunction, LoaderFunction } from "remix";
 import { Form, json, useLoaderData } from "remix";
-import { auth, sessionStorage } from "~/auth.server";
+import { auth } from "~/auth.server";
 
 type LoaderData = { email: string };
 
@@ -9,11 +9,6 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-  console.log("session.data", session.data);
-
   const email = await auth.isAuthenticated(request, {
     failureRedirect: "/login"
   });
