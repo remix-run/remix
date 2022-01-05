@@ -25,9 +25,10 @@ export interface HandleDocumentRequestFunction {
 export interface StreamDocumentRequestFunction {
   (
     request: Request,
-    responseStatusCode: number,
     responseHeaders: Headers,
-    onLoadersComplete: (fn: OnLoadersCompleteCallback) => void
+    getRemixContext: () => Promise<
+      Response | { context: EntryContext; status: number }
+    >
   ): Promise<Response> | Response;
 }
 

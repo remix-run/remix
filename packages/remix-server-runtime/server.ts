@@ -310,7 +310,7 @@ async function streamDocumentRequest({
     );
   }
 
-  async function onLoadersComplete(fn: (entryContext: EntryContext) => void) {
+  async function getRemixContext() {
     let routeLoaderResults = await Promise.allSettled(
       matchesToLoad.map(match =>
         match.route.module.loader
@@ -434,19 +434,6 @@ async function streamDocumentRequest({
       }
     }
 
-    // let notOkResponse =
-    //   actionStatus && actionStatus.status !== 200
-    //     ? actionStatus.status
-    //     : loaderStatusCodes.find(status => status !== 200);
-
-    // let responseStatusCode = appState.error
-    //   ? 500
-    //   : typeof notOkResponse === "number"
-    //   ? notOkResponse
-    //   : appState.catch
-    //   ? appState.catch.status
-    //   : 200;
-
     let entryMatches = createEntryMatches(
       renderableMatches,
       build.assets.routes
@@ -459,14 +446,27 @@ async function streamDocumentRequest({
       routeData
     };
 
-    let entryContext: EntryContext = {
+    let context: EntryContext = {
       ...serverHandoff,
       manifest: build.assets,
       routeModules,
       serverHandoffString: createServerHandoffString(serverHandoff)
     };
 
-    fn(entryContext);
+    let notOkResponse =
+      actionStatus && actionStatus.status !== 200
+        ? actionStatus.status
+        : loaderStatusCodes.find(status => status !== 200);
+
+    let status = appState.error
+      ? 500
+      : typeof notOkResponse === "number"
+      ? notOkResponse
+      : appState.catch
+      ? appState.catch.status
+      : 200;
+
+    return { context, status };
   }
 
   invariant(matches, "Expected matches!");
@@ -482,9 +482,8 @@ async function streamDocumentRequest({
 
   return build.entry.module.streamDocument(
     request.clone(),
-    200,
     responseHeaders,
-    onLoadersComplete
+    getRemixContext
   );
 }
 

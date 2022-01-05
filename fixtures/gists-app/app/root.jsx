@@ -25,7 +25,8 @@ export function links() {
   ];
 }
 
-export function loader({ request }) {
+export async function loader({ request }) {
+  // await new Promise(res => setTimeout(res, 1500));
   return {
     enableScripts: new URL(request.url).searchParams.get("disableJs") == null
   };

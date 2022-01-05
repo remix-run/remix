@@ -5,29 +5,42 @@ import { Response } from "@remix-run/node";
 import type { Headers } from "@remix-run/node";
 import { PassThrough } from "stream";
 
-type OnLoadersComplete = (fn: (entryContext: EntryContext) => void) => void;
+type GetRemixContext = () => Promise<{ context: EntryContext; status: number }>;
 
 export function streamDocument(
   request: Request,
-  responseStatusCode: number,
   responseHeaders: Headers,
-  onLoadersComplete: OnLoadersComplete
+  getRemixContext: GetRemixContext
 ) {
   responseHeaders.set("Content-Type", "text/html");
 
-  // PassThrough is a custom Duplex stream that just
-  // passes any data we write to it straight through
   let output = new PassThrough();
 
   let response = new Response(output, {
     headers: responseHeaders
   });
 
-  onLoadersComplete(remixContext => {
-    let body = ReactDOMServer.renderToNodeStream(
-      <RemixServer context={remixContext} url={request.url} />
-    );
-    body.pipe(output);
+  getRemixContext().then(result => {
+    if (result.status === 302) {
+      // @ts-expect-error
+      let location = result.headers.get("location");
+      let body = ReactDOMServer.renderToNodeStream(
+        <html>
+          <head>
+            <meta
+              httpEquiv="refresh"
+              content={`0;URL=${JSON.stringify(location)}`}
+            />
+          </head>
+        </html>
+      );
+      body.pipe(output);
+    } else {
+      let body = ReactDOMServer.renderToNodeStream(
+        <RemixServer context={result.context} url={request.url} />
+      );
+      body.pipe(output);
+    }
   });
 
   return response;

@@ -59,22 +59,28 @@ export function getStreamingHeaders(
     prependCookies(actionResponse.headers, headers);
   }
 
-  let scripts = getModuleLinkHrefs(matches, build.assets);
-  let preloads = getPreloadLinks(matches, routeModules);
+  let scripts = build.assets.entry.imports
+    .concat(build.assets.entry.module)
+    .concat(getModuleLinkHrefs(matches, build.assets));
+
+  let assets = getPreloadLinks(matches, routeModules);
 
   let scriptLinks = dedupeHrefs(scripts)
     .map(href => `<${href}>; rel="modulepreload"`)
     .join(",");
 
-  let assetPreloads = preloads
+  let assetLinks = assets
     .map(link => {
       let as = link.rel === "stylesheet" ? "style" : link.as;
       return `<${link.href}>; rel="preload"; as="${as}"`;
     })
     .join(",");
 
+  let manifestLink = `<${build.assets.url}>; rel="preload"; as="script"`;
+
+  headers.append("Link", manifestLink);
   headers.append("Link", scriptLinks);
-  headers.append("Link", assetPreloads);
+  headers.append("Link", assetLinks);
 
   return headers;
 }
