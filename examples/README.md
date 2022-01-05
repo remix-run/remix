@@ -25,6 +25,6 @@ Most examples should:
 - Use TypeScript
 - Be as practical as reasonable (balanced with the focus). Just, no `foo`/`bar` please.
 
-To create an example, simply copy/paste the [`example/template`](example/template) directory into a new one with a sensible name, make the changes you need for your example, update the `README.md` and open a PR!
+To create an example, simply copy/paste the [`template`](template) directory into a new one with a sensible name, make the changes you need for your example, update the `README.md` and open a PR!
 
 Thanks!
