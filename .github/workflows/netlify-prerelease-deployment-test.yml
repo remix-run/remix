@@ -1,4 +1,4 @@
-name: prerelease deployment test
+name: netlify prerelease deployment test
 
 on:
   release:
