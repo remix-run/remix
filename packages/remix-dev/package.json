@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/dev",
   "description": "Dev tools and CLI for Remix",
-  "version": "0.0.0-experimental-6e53b3b1",
+  "version": "0.0.0-experimental-935642c5",
   "license": "MIT",
   "repository": {
     "type": "git",
