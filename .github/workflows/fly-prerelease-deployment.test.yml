@@ -1,0 +1,23 @@
+name: fly prerelease deployment test
+
+on: [push]
+# on:
+#   release:
+#     types: [prereleased]
+
+env:
+  FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+
+      - name: Deploy to Fly
+        uses: superfly/flyctl-actions@1.1
+        with:
+          args: "deploy"
+        env:
+          FLY_PROJECT_PATH: "./examples/fly-prerelease-deployment-test"
