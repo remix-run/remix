@@ -1,8 +1,9 @@
 name: prerelease deployment test
 
 on:
-  release:
-    types: [prereleased]
+  push
+  # release:
+  # types: [prereleased]
 
 jobs:
   deploy:
