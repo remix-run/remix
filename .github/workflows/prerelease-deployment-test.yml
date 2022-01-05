@@ -29,6 +29,8 @@ jobs:
       - name: Create Netlify site
         id: create-site
         run: echo "::set-output name=NETLIFY_SITE::$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-$(date +'%s') --json)"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
       - name: Get Netlify site ID
         run: |
