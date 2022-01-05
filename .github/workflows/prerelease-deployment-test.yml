@@ -27,18 +27,17 @@ jobs:
         run: npm install -g netlify-cli
 
       - name: Create Netlify site
-        id: create-site
-        run: echo "::set-output name=NETLIFY_SITE::$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-$(date +'%s') --json)"
+        id: create_site
+        run: |
+          export NETLIFY_SITE_INFO="$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-$(date +'%s') --json)"
+
+          echo "::set-output name=NETLIFY_SITE::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.id')"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-
-      - name: Get Netlify site ID
-        run: |
-          echo $NETLIFY_SITE | jq --raw-output '.id'
 
       - name: Deploy to Netlify
         run: netlify deploy --prod
         working-directory: ./examples/netlify-prerelease-deployment-test
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-          NETLIFY_SITE: ${{ steps.create-site.outputs.NETLIFY_SITE }}
+          NETLIFY_SITE: ${{ steps.create_site.outputs.NETLIFY_SITE }}
