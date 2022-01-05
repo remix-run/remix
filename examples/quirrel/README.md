@@ -13,6 +13,7 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 In this example, we queue a function to run in the background when opening the index page.
 
 Relevant files:
+
 - [app/queues/greetings.server.ts](app/queues/greetings.server.ts)
 - [app/routes/queues/greetings.ts](app/routes/queues/greetings.ts)
 - [app/routes/index.tsx](app/routes/index.tsx)
