@@ -624,6 +624,21 @@ em {
 }
 ```
 
+💿 Create a declarations file
+
+```sh
+touch declarations.d.ts
+```
+
+```ts filename=declarations.d.ts
+declare module '*.css' {
+  const content: { [className: string]: string };
+  export default content;
+}
+```
+
+Before we can link the stylesheet in the admin route we need to create a declarations file which tells typescript to allow importing CSS files as modules.
+
 💿 Link to the stylesheet in the admin route
 
 ```tsx filename=app/routes/admin.tsx lines=[4,6-8]
