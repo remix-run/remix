@@ -36,8 +36,7 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
       - name: Deploy to Netlify
-        run: netlify deploy --prod
+        run: netlify deploy --prod --site ${{ steps.create_site.outputs.NETLIFY_SITE }}
         working-directory: ./examples/netlify-prerelease-deployment-test
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-          NETLIFY_SITE: ${{ steps.create_site.outputs.NETLIFY_SITE }}
