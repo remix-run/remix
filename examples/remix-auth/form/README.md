@@ -1,14 +1,12 @@
-# TODO: Title of Example
+# Remix Auth - FormStrategy
 
-TODO: Describe the use case here
+This adds an example using [Remix Auth](https://github.com/sergiodxa/remix-auth) with the [FormStrategy](https://github.com/sergiodxa/remix-auth-form) to do authentication with an email and password.
 
 ## Preview
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-<!-- TODO: update this link to the path for your example: -->
-
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/template)
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/remix-auth/form)
 
 ## Example
 
