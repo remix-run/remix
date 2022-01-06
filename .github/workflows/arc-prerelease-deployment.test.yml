@@ -1,0 +1,36 @@
+name: fly prerelease deployment test
+
+on: [push]
+# on:
+#   release:
+#     types: [prereleased]
+
+env:
+  PROJECT_PATH: "./examples/arc-prerelease-deployment-test"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: $PROJECT_PATH
+
+      - name: Build
+        run: npm run build
+        working-directory: $PROJECT_PATH
+
+      - name: Deploy to Arc
+        run: npx arc deploy
+        working-directory: $PROJECT_PATH
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
