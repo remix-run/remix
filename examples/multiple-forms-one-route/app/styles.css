@@ -1,0 +1,94 @@
+:root {
+  --background: linear-gradient(
+    90deg,
+    rgba(2, 0, 36, 1) 0%,
+    rgba(9, 9, 121, 1) 100%
+  );
+  --black: rgba(2, 0, 36, 1);
+  --white: #fff;
+  --yellow: #b4da55;
+  --lightgray: rgb(211, 211, 211);
+}
+
+body {
+  background: rgb(2, 0, 36);
+  background: var(--background);
+  color: var(--white);
+  font-size: 20px;
+  font-family: sans-serif;
+}
+
+header {
+  padding: 3rem;
+}
+h2 {
+  margin: 0 0 1rem 0;
+}
+
+.content {
+  display: -ms-grid;
+  display: grid;
+  -ms-grid-columns: 1fr;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+@media screen and (min-width: 1200px) {
+  .content {
+    -ms-grid-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.content article {
+  padding: 3rem;
+  border: 1px solid var(--yellow);
+}
+
+label {
+  margin-right: 1rem;
+  width: 80%;
+}
+input {
+  margin-left: 0.5rem;
+  width: 80%;
+  font-size: 20px;
+  line-height: 28px;
+}
+
+button {
+  background-color: var(--yellow);
+  color: back;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  margin-top: 1rem;
+  font-size: 20px;
+}
+
+hr {
+  margin: 2.5rem 0 2.5rem 0;
+}
+.results {
+  background-color: var(--lightgray);
+  color: var(--black);
+  min-height: 55px;
+  width: 100%;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+.results p {
+  margin: 0.5rem;
+}
+.error {
+  font-size: 16px;
+  font-style: italic;
+}
