@@ -7,7 +7,6 @@ on: [push]
 
 env:
   FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
-  FLY_PROJECT_PATH: examples/fly-prerelease-deployment-test
 
 jobs:
   deploy:
@@ -18,5 +17,7 @@ jobs:
 
       - name: Deploy to Fly
         uses: superfly/flyctl-actions@1.1
+        env:
+          FLY_PROJECT_PATH: examples/fly-prerelease-deployment-test
         with:
           args: "deploy --remote-only"
