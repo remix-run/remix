@@ -17,16 +17,14 @@ export const auth = new Authenticator<string>(sessionStorage);
 
 auth.use(
   new FormStrategy(async ({ form }) => {
+    const email = form.get("email");
     const password = form.get("password");
 
+    // replace the code below with your own authentication logic
     if (!password) throw new AuthorizationError("Password is required");
-
     if (password !== "test") {
       throw new AuthorizationError("Invalid credentials");
     }
-
-    const email = form.get("email");
-
     if (!email) throw new AuthorizationError("Email is required");
 
     return email as string;

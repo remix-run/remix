@@ -1,6 +1,6 @@
 # Remix Auth - FormStrategy
 
-This adds an example using [Remix Auth](https://github.com/sergiodxa/remix-auth) with the [FormStrategy](https://github.com/sergiodxa/remix-auth-form) to do authentication with an email and password.
+Password-based authentication using Remix Auth with the FormStrategy.
 
 ## Preview
 
@@ -10,8 +10,13 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Example
 
-Describe the example and how it demonstrates solving the problem. Reference any relevant files/dependencies if needed.
+This is using Remix Auth and the `remix-auth-form` packages.
+
+The `/login` route renders a form with a email and password input. After a submit it runs some validations and store the user email in the session.
+
+The `/private` routes redirects the user to `/login` if it's not logged-in, or shows the user email and a logout form if it's logged-in.
 
 ## Related Links
 
-Link to documentation or other related examples.
+- [Remix Auth](https://github.com/sergiodxa/remix-auth)
+- [Remix Auth Form](https://github.com/sergiodxa/remix-auth-form)
