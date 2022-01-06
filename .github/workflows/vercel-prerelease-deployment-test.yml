@@ -33,9 +33,8 @@ jobs:
           echo "::set-output name=PROJECT_ID::$(echo $PROJECT_INFO | jq --raw-output '.id')"
 
       - name: Deploy to Vercel
-        run: vc deploy --prod
+        run: vc deploy --prod --token ${{ secrets.TEST_VERCEL_TOKEN }}
         working-directory: ./examples/vercel-prerelease-deployment-test
         env:
-          VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
           VERCEL_PROJECT_ID: ${{ steps.project_id.outputs.PROJECT_ID }}
