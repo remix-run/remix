@@ -16,4 +16,4 @@ Check [app/root.tsx](./app/root.tsx) where tailwind is imported.
 
 ## Related Links
 
-[tailwindcss](https:/tailwindcss.com)
+[Tailwind CSS](https:/tailwindcss.com)
