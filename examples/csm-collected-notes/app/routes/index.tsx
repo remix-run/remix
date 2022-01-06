@@ -1,9 +1,10 @@
 import type { Note, Site } from "collected-notes";
+import type {
+  LoaderFunction} from "remix";
 import {
   Form,
   json,
   Link,
-  LoaderFunction,
   useLoaderData,
   useSearchParams
 } from "remix";
