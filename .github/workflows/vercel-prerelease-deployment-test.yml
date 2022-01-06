@@ -23,6 +23,7 @@ jobs:
         with:
           url: https://api.vercel.com/v8/projects?teamId={{ secrets.TEST_VERCEL_USER_ID }}
           method: POST
+          bearerToken: ${{ secrets.TEST_VERCEL_TOKEN }}
           data: '{"name":"vercel-prerelease-deployment-test","framework":"remix"}'
 
       - name: Get Project ID
