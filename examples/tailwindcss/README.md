@@ -6,7 +6,7 @@ Integrate Remix with tailwindcss.
 
 Open this example on [CodeSandbox](https://codesandbox.io/s/remix-tailwind-2x8pg):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/tailwindcss)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/tailwindcss)
 
 ## Example
 
