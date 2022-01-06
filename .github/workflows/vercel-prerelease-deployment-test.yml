@@ -21,7 +21,7 @@ jobs:
         id: create_project
         uses: fjogeleit/http-request-action@v1.8.1
         with:
-          url: https://api.vercel.com/v8/projects?teamId={{ secrets.TEST_VERCEL_USER_ID }}
+          url: https://api.vercel.com/v8/projects
           method: POST
           customHeaders: '{"Authorization":"Bearer ${{ secrets.TEST_VERCEL_TOKEN }}"}'
           data: '{"name":"vercel-prerelease-deployment-test","framework":"remix"}'
