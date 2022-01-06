@@ -1,6 +1,6 @@
 # Tailwindcss Example
 
-Integrate remix_run with tailwindcss.
+Integrate Remix with tailwindcss.
 
 ## Preview
 
