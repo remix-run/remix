@@ -15,7 +15,7 @@ jobs:
       - name: Deploy to Fly
         working-directory: ./examples/fly-prerelease-deployment-test
         run: |
-          curl -L https://fly.io/install.sh | sh
-          flyctl deploy --remote-only
+          curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
+          /usr/local/flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
