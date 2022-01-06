@@ -17,7 +17,6 @@ export function importMapPlugin(config: RemixConfig): esbuild.Plugin {
 
         let cachePlugin = cache({
           importmap: config.importMap,
-          directory: path.resolve(config.cacheDirectory, "http-imports")
         });
 
         await cachePlugin.setup(build);
