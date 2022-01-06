@@ -1,5 +1,5 @@
 @app
-remix-architect-app
+arc-prerelease-deployment-test
 
 @http
 /*
@@ -8,7 +8,6 @@ remix-architect-app
 
 @static
 
-# @aws
+@aws
 # profile default
-# region us-west-1
-  
+region us-east-1

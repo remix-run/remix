@@ -15,7 +15,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "14.x"
+          node-version: 14
 
       - name: Install dependencies
         run: npm ci
@@ -29,5 +29,6 @@ jobs:
         run: npx arc deploy
         working-directory: ./examples/arc-prerelease-deployment-test
         env:
+          CI: true
           AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
