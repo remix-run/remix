@@ -33,8 +33,7 @@ jobs:
       - name: Get Project ID
         id: project_id
         run: |
-          export PROJECT_INFO="$(echo ${{ steps.create_project.outputs.response }})"
-          echo "::set-output name=PROJECT_ID::$(echo $PROJECT_INFO | jq --raw-output '.id')"
+          echo "::set-output name=PROJECT_ID::$(echo ${{ steps.create_project.outputs.response }} | jq --raw-output '.id')"
 
       - name: Deploy to Vercel
         run: vc deploy --prod --token ${{ secrets.TEST_VERCEL_TOKEN }}
