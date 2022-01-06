@@ -1741,6 +1741,11 @@
   resolved "https://registry.npmjs.org/@types/node/-/node-16.10.1.tgz#f3647623199ca920960006b3dccf633ea905f243"
   integrity sha512-4/Z9DMPKFexZj/Gn3LylFgamNKHm4K3QDi0gz9B26Uk0c8izYf97B5fxfpspMNkWlFupblKM/nV8+NA9Ffvr+w==
 
+"@types/node@^14.11.8", "@types/node@^14.14.11":
+  version "14.18.5"
+  resolved "https://registry.npmjs.org/@types/node/-/node-14.18.5.tgz#0dd636fe7b2c6055cbed0d4ca3b7fb540f130a96"
+  integrity sha512-LMy+vDDcQR48EZdEx5wRX1q/sEl6NdGuHXPnfeL8ixkwCOSZ2qnIyIZmcCbdX0MeRqHhAcHmX+haCbrS8Run+A==
+
 "@types/normalize-package-data@^2.4.0":
   version "2.4.1"
   resolved "https://registry.npmjs.org/@types/normalize-package-data/-/normalize-package-data-2.4.1.tgz#d3357479a0fdfdd5907fe67e17e0a85c906e1301"
@@ -3520,6 +3525,22 @@ delayed-stream@~1.0.0:
   resolved "https://registry.npmjs.org/delayed-stream/-/delayed-stream-1.0.0.tgz#df3ae199acadfb7d440aaae0b29e2272b24ec619"
   integrity sha1-3zrhmayt+31ECqrgsp4icrJOxhk=
 
+deno-cache@^0.2.12:
+  version "0.2.12"
+  resolved "https://registry.npmjs.org/deno-cache/-/deno-cache-0.2.12.tgz#562967fe8fab43ee3b71bb908a101783394a95d7"
+  integrity sha512-Jv8utRPQhsm+kx9ky0OdUnTWBLKGlFcBoLjQqrpuDd9zhuciCLPmklbz1YYfdaeM0dgp1nwRoqlHu5sH3vmJGQ==
+  dependencies:
+    "@types/node" "^14.11.8"
+    "@types/node-fetch" "^2.5.7"
+    node-fetch "^2.6.1"
+
+deno-importmap@^0.1.6:
+  version "0.1.6"
+  resolved "https://registry.npmjs.org/deno-importmap/-/deno-importmap-0.1.6.tgz#04656ff12793003eafbe20c3df59ea423740a4a6"
+  integrity sha512-nZ5ZA8qW5F0Yzq1VhRp1wARpWSfD0FQvI1IUHXbE3oROO6tcYomTIWSAZGzO4LGQl1hTG6UmhPNTP3d4uMXzMg==
+  dependencies:
+    "@types/node" "^14.14.11"
+
 depd@^1.1.0, depd@~1.1.2:
   version "1.1.2"
   resolved "https://registry.npmjs.org/depd/-/depd-1.1.2.tgz#9bcd52e14c097763e749b274c4346ed2e560b5a9"
@@ -3824,6 +3845,14 @@ esbuild-openbsd-64@0.13.14:
   version "0.13.14"
   resolved "https://registry.npmjs.org/esbuild-openbsd-64/-/esbuild-openbsd-64-0.13.14.tgz#3c7453b155ebb68dc34d5aec3bd6505337bdda08"
   integrity sha512-9bzvwewHjct2Cv5XcVoE1yW5YTW12Sk838EYfA46abgnhxGoFSD1mFcaztp5HHC43AsF+hQxbSFG/RilONARUA==
+
+esbuild-plugin-cache@0.2.9:
+  version "0.2.9"
+  resolved "https://registry.npmjs.org/esbuild-plugin-cache/-/esbuild-plugin-cache-0.2.9.tgz#b4466b0803c8de9c21be4855e2dab1b99ee8eae2"
+  integrity sha512-wSYkiLbaZWuFPdepopZ16/hjIDx+fow4/KbtuD8UQPlswFssI5Efgqmzg6hhqJk87fpOk6OYn5pEPftQ5i0mkg==
+  dependencies:
+    deno-cache "^0.2.12"
+    deno-importmap "^0.1.6"
 
 esbuild-sunos-64@0.13.14:
   version "0.13.14"

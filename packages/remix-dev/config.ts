@@ -95,6 +95,16 @@ export interface AppConfig {
    * routes.
    */
   ignoredRouteFiles?: string[];
+
+  /**
+   * A import map to use for resolving modules.
+   */
+  importMap?: string;
+
+  /**
+   * Determines if http-imports defined in your import map should be bundled.
+   */
+  bundleImportMap?: boolean;
 }
 
 /**
@@ -175,6 +185,16 @@ export interface RemixConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform: "node" | "neutral";
+
+  /**
+   * A import map to use for resolving modules.
+   */
+  importMap?: { imports: Record<string, string> };
+
+  /**
+   * Determines if http-imports defined in your import map should be bundled.
+   */
+  bundleImportMap?: boolean;
 }
 
 /**
@@ -242,6 +262,16 @@ export async function readConfig(
   let devServerPort = appConfig.devServerPort || 8002;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
+  let importMap = undefined;
+  if (appConfig.importMap) {
+    let importmapJson = await fs.promises.readFile(
+      appConfig.importMap,
+      "utf-8"
+    );
+    importMap = JSON.parse(importmapJson);
+  }
+  let bundleImportMap = appConfig.bundleImportMap;
+
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
   let rootRouteFile = findEntry(appDirectory, "root");
@@ -285,7 +315,9 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverPlatform,
-    mdx
+    mdx,
+    importMap,
+    bundleImportMap
   };
 }
 

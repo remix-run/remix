@@ -14,6 +14,7 @@ import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders, getLoaderForFile } from "./compiler/loaders";
 import { mdxPlugin } from "./compiler/plugins/mdx";
+import { importMapPlugin } from "./compiler/plugins/importMap";
 import { getRouteModuleExportsCached } from "./compiler/routes";
 import { writeFileSafe } from "./compiler/utils/fs";
 
@@ -325,6 +326,7 @@ async function createBrowserBuild(
       "process.env.NODE_ENV": JSON.stringify(options.mode)
     },
     plugins: [
+      importMapPlugin(config),
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
@@ -371,7 +373,7 @@ async function createServerBuild(
       manualExternalsPlugin((id, importer) => {
         // assets.json is external because this build runs in parallel with the
         // browser build and it's not there yet.
-        if (id === "./assets.json" && importer === "<stdin>") return true;
+        if (id === "./assets.js" && importer === "<stdin>") return true;
 
         // Mark all bare imports as external. They will be require()'d (or
         // imported if ESM) at runtime from node_modules.
@@ -436,8 +438,10 @@ async function generateManifests(
       `window.__remixManifest=${JSON.stringify(assetsManifest)};`
     ),
     writeFileSafe(
-      path.join(config.serverBuildDirectory, "assets.json"),
-      JSON.stringify(assetsManifest, null, 2)
+      path.join(config.serverBuildDirectory, "assets.js"),
+      (config.serverModuleFormat === "esm"
+        ? "export default "
+        : "module.exports = ") + JSON.stringify(assetsManifest, null, 2)
     )
   ]);
 }
@@ -460,7 +464,7 @@ ${Object.keys(config.routes)
     )};`;
   })
   .join("\n")}
-export { default as assets } from "./assets.json";
+export { default as assets } from "./assets.js";
 export const entry = { module: entryServer };
 export const routes = {
   ${Object.keys(config.routes)
