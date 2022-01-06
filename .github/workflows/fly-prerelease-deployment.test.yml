@@ -18,4 +18,4 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
           FLY_PROJECT_PATH: ./examples/fly-prerelease-deployment-test
         with:
-          args: "deploy --remote-only"
+          args: "deploy --remote-only -a fly-prerelease-deployment-test"
