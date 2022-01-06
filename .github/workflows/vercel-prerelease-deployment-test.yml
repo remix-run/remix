@@ -24,7 +24,7 @@ jobs:
           url: https://api.vercel.com/v8/projects
           method: POST
           customHeaders: '{"Authorization":"Bearer ${{ secrets.TEST_VERCEL_TOKEN }}"}'
-          data: '{"name":"vercel-prerelease-deployment-test","framework":"remix"}'
+          data: '{"name":"vercel-prerelease-deployment-test-${{ github.ref }}","framework":"remix"}'
 
       - name: Get Project ID
         id: project_id
