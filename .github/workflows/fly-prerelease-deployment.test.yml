@@ -13,8 +13,8 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Deploy to Fly
-        working-directory: ./examples/fly-prerelease-deployment-test
         run: |
+          cd ./examples/fly-prerelease-deployment-test
           curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
           /usr/local/bin/flyctl deploy --remote-only
         env:
