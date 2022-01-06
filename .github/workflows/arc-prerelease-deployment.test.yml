@@ -1,4 +1,4 @@
-name: fly prerelease deployment test
+name: arc prerelease deployment test
 
 on: [push]
 # on:
