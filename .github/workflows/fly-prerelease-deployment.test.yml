@@ -1,9 +1,9 @@
 name: fly prerelease deployment test
 
-on: [push]
-# on:
-#   release:
-#     types: [prereleased]
+# on: [push]
+on:
+  release:
+    types: [prereleased]
 
 env:
   FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}

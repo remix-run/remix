@@ -5,9 +5,6 @@ on: [push]
 #   release:
 #     types: [prereleased]
 
-env:
-  PROJECT_PATH: "./examples/arc-prerelease-deployment-test"
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,15 +19,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: $PROJECT_PATH
+        working-directory: ./examples/arc-prerelease-deployment-test
 
       - name: Build
         run: npm run build
-        working-directory: $PROJECT_PATH
+        working-directory: ./examples/arc-prerelease-deployment-test
 
       - name: Deploy to Arc
         run: npx arc deploy
-        working-directory: $PROJECT_PATH
+        working-directory: ./examples/arc-prerelease-deployment-test
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
