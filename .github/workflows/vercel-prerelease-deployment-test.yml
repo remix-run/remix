@@ -24,12 +24,12 @@ jobs:
           url: https://api.vercel.com/v8/projects
           method: POST
           customHeaders: '{"Authorization":"Bearer ${{ secrets.TEST_VERCEL_TOKEN }}"}'
-          data: '{"name":"vercel-prerelease-deployment-test-${{ github.sha }}","framework":"remix"}'
+          data: '{"name":"vercel-prerelease-deployment-test-${{ github.sha }}-$(date +"%s")","framework":"remix"}'
 
       - name: Get Project ID
         id: project_id
         run: |
-          export PROJECT_INFO="${{ steps.create_project.outputs.response }}"
+          export PROJECT_INFO="$(echo ${{ steps.create_project.outputs.response }})"
           echo "::set-output name=PROJECT_ID::$(echo $PROJECT_INFO | jq --raw-output '.id')"
 
       - name: Deploy to Vercel
