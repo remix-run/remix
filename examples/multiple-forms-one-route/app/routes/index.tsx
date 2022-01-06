@@ -47,7 +47,6 @@ export const action: ActionFunction = async ({ request }) => {
 export default function Index() {
   const results = useActionData();
 
-  console.log(results);
   return (
     <div>
       <header>
