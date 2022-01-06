@@ -1,0 +1,40 @@
+name: vercel prerelease deployment test
+
+on: [push]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Create Vercel Project
+        id: create_project
+        uses: fjogeleit/http-request-action@v1.8.1
+        with:
+          url: https://api.vercel.com/v8/projects?teamId={{ secrets.TEST_VERCEL_USER_ID }}
+          method: POST
+          data: '{"name":"vercel-prerelease-deployment-test","framework":"remix"}'
+
+      - name: Get Project ID
+        id: project_id
+        run: |
+          export PROJECT_INFO="${{ steps.create_project.outputs.response }}"
+          echo "::set-output name=PROJECT_ID::$(echo $PROJECT_INFO | jq --raw-output '.id')"
+
+      - name: Deploy to Vercel
+        run: vc deploy --prod
+        working-directory: ./examples/vercel-prerelease-deployment-test
+        env:
+          VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
+          VERCEL_PROJECT_ID: ${{ steps.project_id.outputs.PROJECT_ID }}
