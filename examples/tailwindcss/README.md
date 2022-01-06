@@ -12,7 +12,10 @@ Open this example on [CodeSandbox](https://codesandbox.io/s/remix-tailwind-2x8pg
 
 This example shows how to use Tailwind CSS (v3.0) with Remix. It follows the steps outlined in the official [Remix Styling docs](https://remix.run/docs/en/v1/guides/styling#tailwind).
 
-Check [app/root.tsx](./app/root.tsx) where tailwind is imported.
+Relevant files:
+- [package.json](./package.json) where the tailwind CLI is used.
+- [tailwind.config.js](./tailwind.config.js) where tailwind is configured.
+- [app/root.tsx](./app/root.tsx) where tailwind is imported.
 
 ## Related Links
 
