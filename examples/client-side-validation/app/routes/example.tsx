@@ -2,7 +2,6 @@ import {
   ActionFunction,
   json,
   LinksFunction,
-  redirect,
   useActionData
 } from "remix";
 import stylesUrl from "../styles/index.css";
