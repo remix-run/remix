@@ -7,10 +7,12 @@ import {
   ScrollRestoration
 } from "remix";
 
+import type {
+  ColorScheme
+} from "@mantine/core";
 import {
   MantineProvider,
-  ColorSchemeProvider,
-  ColorScheme
+  ColorSchemeProvider
 } from "@mantine/core";
 
 import { useState } from "react";
