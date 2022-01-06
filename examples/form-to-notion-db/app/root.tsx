@@ -5,33 +5,34 @@ import {
   Meta,
   Scripts,
   ScrollRestoration,
-  json,
+  json
 } from "remix";
-import notion from './notion.server';
+import notion from "./notion.server";
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.formData();
-  const firstname = form.get('firstname');
-  const lastname = form.get('lastname');
-  const email = form.get('email');
+  const firstname = form.get("firstname");
+  const lastname = form.get("lastname");
+  const email = form.get("email");
   await notion.pages.create({
     parent: { database_id: process.env.NOTION_DB_ID },
     properties: {
       Firstname: {
-        title: [{
-          text: {
-            content: firstname
+        title: [
+          {
+            text: {
+              content: firstname
+            }
           }
-        }
-      ],
+        ]
       },
       Lastname: {
-        rich_text: [{ text: { content: lastname } }],
+        rich_text: [{ text: { content: lastname } }]
       },
       Email: {
-        rich_text: [{ text: { content: email } }],
-      },
-    },
+        rich_text: [{ text: { content: email } }]
+      }
+    }
   } as any);
   return json({ success: true });
 };
