@@ -25,8 +25,12 @@ jobs:
         run: npm run build
         working-directory: ./examples/arc-prerelease-deployment-test
 
+      - name: Install Arc CLI
+        run: npm i -g @architect/architect
+        working-directory: ./examples/arc-prerelease-deployment-test
+
       - name: Deploy to Arc
-        run: npx arc deploy
+        run: arc deploy
         working-directory: ./examples/arc-prerelease-deployment-test
         env:
           CI: true
