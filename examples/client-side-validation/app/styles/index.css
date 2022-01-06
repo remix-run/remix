@@ -3,11 +3,9 @@
   flex-direction: column;
   align-items: center;
   font-family: Cambria, Cochin, Georgia, Times, "Times New Roman", serif;
-}
-
-form {
   max-width: 100%;
-  min-width: 480px;
+  width: 480px;
+  margin: auto;
 }
 
 .form-control {
@@ -37,4 +35,13 @@ fieldset {
 input:invalid,
 textarea:invalid {
   box-shadow: 0 0 5px 1px red;
+}
+
+.result {
+  width: 100%;
+  word-wrap: normal;
+  white-space: pre-line;
+  padding: 1rem;
+  background-color: aquamarine;
+  box-sizing: border-box;
 }
