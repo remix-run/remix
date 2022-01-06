@@ -28,7 +28,7 @@ jobs:
       - name: Create Netlify site
         id: create_site
         run: |
-          export NETLIFY_SITE_INFO="$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-${{ github.ref }} --json)"
+          export NETLIFY_SITE_INFO="$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-${{ github.sha }} --json)"
 
           echo "::set-output name=NETLIFY_SITE::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.id')"
         env:
