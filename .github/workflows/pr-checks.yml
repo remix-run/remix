@@ -1,0 +1,33 @@
+name: PR Compliance
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+# Action should have write permission to make updates to PR
+permissions:
+  pull-requests: write
+
+jobs:
+  pr-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mtfoley/pr-compliance-action@main
+        with:
+          body-auto-close: false
+          protected-branch-auto-close: false
+          body-comment: >
+            ## Issue Reference
+
+            In order to be considered for merging, the pull request description must refer to a 
+            specific issue number. This is described in our Contributing Guide. 
+
+            The check is looking for a phrase similar to: "Fixes #XYZ" or "Resolves #XYZ" where XYZ is the issue
+            number that this PR is meant to address.
+          protected-branch-comment: >
+            ## Protected Branch
+      
+            In order to be considered for merging, the pull request changes must 
+            not be implemented on the "%branch%" branch. This is described in our Contributing Guide. 
+          watch-files: |
+            package.json
