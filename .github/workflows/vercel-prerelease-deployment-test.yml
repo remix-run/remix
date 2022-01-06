@@ -17,6 +17,10 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Get Date
+        id: date
+        run: echo "::set-output name=date::$(date +'%s')"
+
       - name: Create Vercel Project
         id: create_project
         uses: fjogeleit/http-request-action@v1.8.1
@@ -24,7 +28,7 @@ jobs:
           url: https://api.vercel.com/v8/projects
           method: POST
           customHeaders: '{"Authorization":"Bearer ${{ secrets.TEST_VERCEL_TOKEN }}"}'
-          data: '{"name":"vercel-prerelease-deployment-test-${{ github.sha }}-$(date +"%s")","framework":"remix"}'
+          data: '{"name":"vercel-prerelease-deployment-test-${{ github.sha }}-${{ steps.date.outputs.date }}","framework":"remix"}'
 
       - name: Get Project ID
         id: project_id
