@@ -81,6 +81,30 @@ The path to the server build, relative to remix.config.js. Defaults to "build". 
 
 The port number to use for the dev server. Defaults to 8002.
 
+### importMapFile
+
+A path to an [import map](https://github.com/WICG/import-maps), relative to remix.config.js. This is used at build time to resolve imports. If [bundleImportMap](#bundleimportmap) is "true", the import paths must be HTTPS URL's.
+
+A minimal import map may look something like:
+
+```json
+{
+  "imports": {
+    "@remix-run/react": "https://cdn.esm.sh/v61/@remix-run/react@1.1.1/es2021/react.bundle.js",
+    "react": "https://cdn.esm.sh/v61/react@17.0.2/es2021/react.js",
+    "react-dom": "https://cdn.esm.sh/v61/react-dom@17.0.2/X-ZGVwczpyZWFjdEAxNy4wLjI/es2021/react-dom.bundle.js",
+  }
+}
+```
+
+### bundleImportMap
+
+Determines if import maps are resolved at build time or runtime in the browser. Defaults to "true". 
+
+When set to true (default behavior) the compiler will resolve the imports from the map and bundle them as if you were using npm and node_modules. On subsequent builds the cached versions will be used and no network requests will be made.
+
+When set to false imports in your client bundle are mapped to the values in your import map and resolved at runtime in the browser. Be cautious when enabling this not to cause a huge waterfall in your network tab. Many CDN's employ a redirect strategy for versioning, when possible use pinned URLs.
+
 ## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.

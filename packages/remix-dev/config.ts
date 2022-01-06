@@ -97,12 +97,12 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A import map to use for resolving modules.
+   * An import map file to use for resolving modules in the client build.
    */
-  importMap?: string;
+  importMapFile?: string;
 
   /**
-   * Determines if http-imports defined in your import map should be bundled.
+   * Determines if http-imports defined in your import map should be bundled (defaults to true).
    */
   bundleImportMap?: boolean;
 }
@@ -187,14 +187,14 @@ export interface RemixConfig {
   serverPlatform: "node" | "neutral";
 
   /**
-   * A import map to use for resolving modules.
+   * An import map to use for resolving modules in the client build.
    */
   importMap?: { imports: Record<string, string> };
 
   /**
-   * Determines if http-imports defined in your import map should be bundled.
+   * Determines if http-imports defined in your import map should be bundled (defaults to true).
    */
-  bundleImportMap?: boolean;
+  bundleImportMap: boolean;
 }
 
 /**
@@ -263,14 +263,17 @@ export async function readConfig(
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let importMap = undefined;
-  if (appConfig.importMap) {
+  if (appConfig.importMapFile) {
     let importmapJson = await fs.promises.readFile(
-      appConfig.importMap,
+      path.resolve(rootDirectory, appConfig.importMapFile),
       "utf-8"
     );
     importMap = JSON.parse(importmapJson);
   }
-  let bundleImportMap = appConfig.bundleImportMap;
+  let bundleImportMap =
+    typeof appConfig.bundleImportMap === "boolean"
+      ? appConfig.bundleImportMap
+      : true;
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
