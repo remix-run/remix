@@ -1,6 +1,6 @@
 # Remix Auth - FormStrategy
 
-Password-based authentication using Remix Auth with the FormStrategy.
+Authentication using Remix Auth with the FormStrategy.
 
 ## Preview
 
