@@ -19,4 +19,4 @@ jobs:
       - name: Deploy to Fly
         uses: superfly/flyctl-actions@1.1
         with:
-          args: "deploy"
+          args: "deploy ./examples/fly-prerelease-deployment-test --remote-only"
