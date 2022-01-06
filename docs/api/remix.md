@@ -828,7 +828,7 @@ export function action({ request }) {
 }
 
 export default function NewsletterSignupRoute() {
-  const data = useActionData();
+  const newsletter = useActionData();
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
