@@ -1,39 +1,20 @@
 import { execSync, spawnSync } from "child_process";
-import path from "path";
 import https from "https";
 import { NetlifyAPI } from "netlify";
 
-console.log("TEST_NETLIFY_TOKEN", process.env.TEST_NETLIFY_TOKEN);
 process.env.NETLIFY_AUTH_TOKEN = process.env.TEST_NETLIFY_TOKEN;
-let client = new NetlifyAPI(process.env.TEST_NETLIFY_TOKEN);
+const client = new NetlifyAPI(process.env.TEST_NETLIFY_TOKEN);
 
 async function createSite() {
-  let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
+  const sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
   console.log(`SHA: ${sha}`);
-  let site = await client.createSite({
+  const site = await client.createSite({
     body: {
       name: `remix-prerelease-deployment-test-${Date.now()}`
     }
   });
 
   return site;
-}
-
-async function deploySite(site) {
-  let currentDir = process.cwd();
-  let exampleDir = path.join(
-    process.cwd(),
-    "./examples/netlify-prerelease-deployment-test"
-  );
-  process.chdir(exampleDir);
-
-  spawnSync(
-    "npx",
-    ["npx", "--yes", "netlify-cli", "deploy", "--site", site.id, "--prod"],
-    { stdio: "inherit" }
-  );
-
-  process.chdir(currentDir);
 }
 
 function getStatusCode(url) {
@@ -45,7 +26,7 @@ function getStatusCode(url) {
 }
 
 async function verifySite(url) {
-  let statusCode = await getStatusCode(url);
+  const statusCode = await getStatusCode(url);
   if (statusCode !== 200) {
     throw new Error(`Site verification failed. Status code: ${statusCode}`);
   } else {
@@ -54,9 +35,15 @@ async function verifySite(url) {
 }
 
 async function netlifyDeploymentTest() {
-  let site = await createSite();
+  const site = await createSite();
   console.log(`Site created: ${site.id}`);
-  await deploySite(site);
+
+  spawnSync(
+    "npx",
+    ["npx", "--yes", "netlify-cli", "deploy", "--site", site.id, "--prod"],
+    { stdio: "inherit" }
+  );
+
   console.log(`Deployed to ${site.ssl_url}`);
   await verifySite(site.ssl_url);
 }

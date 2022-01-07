@@ -25,5 +25,6 @@ jobs:
         working-directory: ./examples/netlify-prerelease-deployment-test
 
       - name: Create Netlify Site
+        working-directory: ./examples/netlify-prerelease-deployment-test
         run: |
-          node ./scripts/deployment-test/netlify.mjs
+          node ./deploy.mjs
