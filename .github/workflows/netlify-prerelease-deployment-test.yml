@@ -39,3 +39,15 @@ jobs:
         working-directory: ./examples/netlify-prerelease-deployment-test
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
+
+      - name: Verify Netlify site
+        run: |
+          export NETLIFY_SITE_URL=https://remix-prerelease-deployment-test-${{ github.sha }}.netlify.app
+          export STATUS_CODE=$(curl -LI $NETLIFY_SITE_URL -o /dev/null -w '%{http_code}\n' -s)
+          if [ $STATUS_CODE = "200" ]; then
+            echo "Site verification passed. Status code: $STATUS_CODE"
+            exit 0;
+          else
+            echo "::error::Site verification failed. Status code: $STATUS_CODE"
+            exit 1;
+          fi
