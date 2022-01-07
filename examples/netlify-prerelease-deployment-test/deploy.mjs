@@ -2,8 +2,7 @@ import { execSync, spawnSync } from "child_process";
 import https from "https";
 import { NetlifyAPI } from "netlify";
 
-process.env.NETLIFY_AUTH_TOKEN = process.env.TEST_NETLIFY_TOKEN;
-const client = new NetlifyAPI(process.env.TEST_NETLIFY_TOKEN);
+const client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
 
 async function createSite() {
   const sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);

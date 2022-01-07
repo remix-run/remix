@@ -26,5 +26,7 @@ jobs:
 
       - name: Create Netlify Site
         working-directory: ./examples/netlify-prerelease-deployment-test
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
         run: |
           node ./deploy.mjs
