@@ -32,20 +32,20 @@ jobs:
         run: |
           export NETLIFY_SITE_INFO="$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name remix-prerelease-deployment-test-${{ github.sha }} --json)"
 
-          echo "::set-output name=NETLIFY_SITE::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.id')"
+          echo "::set-output name=NETLIFY_SITE_ID::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.id')"
+          echo "::set-output name=NETLIFY_SITE_URL::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.url')"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
       - name: Deploy to Netlify
-        run: netlify deploy --prod --site ${{ steps.create_site.outputs.NETLIFY_SITE }}
+        run: netlify deploy --prod --site ${{ steps.create_site.outputs.NETLIFY_SITE_ID }}
         working-directory: ./examples/netlify-prerelease-deployment-test
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
       - name: Verify Netlify site
         run: |
-          export NETLIFY_SITE_URL=https://remix-prerelease-deployment-test-${{ github.sha }}.netlify.app
-          export STATUS_CODE=$(curl -LI $NETLIFY_SITE_URL -o /dev/null -w '%{http_code}\n' -s)
+          export STATUS_CODE=$(curl -LI ${{ steps.create_site.outputs.NETLIFY_SITE_URL }} -o /dev/null -w '%{http_code}\n' -s)
           if [ $STATUS_CODE = "200" ]; then
             echo "Site verification passed. Status code: $STATUS_CODE"
             exit 0;
