@@ -30,8 +30,6 @@ async function vercelDeploymentTest() {
   const project = await createVercelProject();
   console.log("Project created");
 
-  console.log(project);
-
   process.env.VERCEL_PROJECT_ID = project.id;
 
   spawnSync(
