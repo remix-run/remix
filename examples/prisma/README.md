@@ -10,13 +10,13 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Example
 
-Prisma is a next-generation ORM that can be used to query a database. It embraces TypeScript to avoid runtime errors and improve productivity. The type-safety it provides goes far beyond the guarantees of traditional ORMs like TypeORM or Sequelize. It integrates well with Remix. As of today, Prisma supports PostgreSQL, MySQL, SQLite, SQL Server, MongoDB.
+Prisma is a next-generation ORM that can be used to query a database. It embraces TypeScript to avoid runtime errors and improve productivity. The type-safety it provides goes far beyond the guarantees of traditional ORMs like TypeORM or Sequelize. It integrates well with Remix. Currently, Prisma supports PostgreSQL, MySQL, SQLite, SQL Server, MongoDB.
 
 ### Configuration
 
 In [/app/services/db.server.ts](app/services/db.server.ts), the database connection as a global export.
 
-Now this example is setup and ready to with SQLite, but you can also configure any of the supported databases.
+Now, this example is setup and ready to with SQLite, but you can also configure any of the supported databases.
 
 #### To configure another data source navigate to [/prisma/schema.prisma](./prisma/schema.prisma)
 

@@ -11,7 +11,7 @@ datasource db {
 }
 
 
-// Add your Prisma models.
+// Update your data models here.
 model User {
   id      Int      @id @default(autoincrement())
   email   String   @unique
