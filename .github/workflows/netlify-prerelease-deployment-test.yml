@@ -29,10 +29,11 @@ jobs:
 
       - name: Create Netlify site
         id: create_site
+        shell: bash
         run: |
           # use the commit sha as the site name
           export SITE_NAME=remix-prerelease-deployment-test-${{ github.sha }}
-          # create a new site using the netlify cli, show the output and store it in a variable
+          # create a new site using the netlify cli, show the output, and store it in a variable
           export NETLIFY_SITE_INFO"$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name $SITE_NAME --json | tee /dev/stderr)"
           # use jq to parse the json and extract the site id and site url
           echo "::set-output name=NETLIFY_SITE_ID::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.id')"
