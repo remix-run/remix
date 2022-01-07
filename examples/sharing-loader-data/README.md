@@ -15,7 +15,7 @@ This is a simple "workshop" app which has a "user" and a list of workshops. The 
 - [app/root.tsx](./app/root.tsx) - This loads the user
 - [app/routes/index.tsx](./app/routes/index.tsx) - This accesses the root loader data to display the user's name
 - [app/routes/workshops.tsx](./app/routes/workshops.tsx) - This loades the workshops to display them in a list of links
-- [app/routes/workshops/$workshopId.tsx](./app/routes/workshopId.tsx) - This accesses the workshops loader data to display the workshop details
+- [app/routes/workshops/$workshopId.tsx](./app/routes/workshops/workshopId.tsx) - This accesses the workshops loader data to display the workshop details
 
 ## Related Links
 
