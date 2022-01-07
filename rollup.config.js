@@ -518,7 +518,14 @@ function remixDeno() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"]
         }),
-        nodeResolve({ extensions: [".ts", ".tsx"] })
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+          ]
+        })
       ]
     }
   ];
