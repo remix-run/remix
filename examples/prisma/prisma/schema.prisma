@@ -11,7 +11,7 @@ datasource db {
 }
 
 
-// Update your data models here.
+//Define your data models here.
 model User {
   id      Int      @id @default(autoincrement())
   email   String   @unique

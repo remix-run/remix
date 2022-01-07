@@ -4,7 +4,7 @@ In this example, we will setup Prisma with Remix.
 
 ## Preview
 
-Open this example on [CodeSandbox](https://codesandbox.com):
+Open this example on [CodeSandbox](https://codesandbox.io/s/elegant-water-9ttu8):
 
 [![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/template)
 
