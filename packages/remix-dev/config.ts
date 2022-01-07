@@ -303,6 +303,8 @@ export async function readConfig(
     }
   }
 
+  console.log({ importMap, bundleImportMap });
+
   return {
     appDirectory,
     cacheDirectory,
