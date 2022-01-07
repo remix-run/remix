@@ -14,11 +14,11 @@ Prisma is a next-generation ORM that can be used to query a database. It embrace
 
 ### Configuration
 
-In [](app/services/db.server.ts), the database connection is export globally. You can access it anywhere from code.
+In [/app/services/db.server.ts](app/services/db.server.ts), the database connection is export globally. You can access it anywhere from code.
 
 Now this example is setup and ready to with SQLite, but you can also configure any of the supported databases.
 
-#### To configure another data source go to the [](prisma/schema.prisma)
+#### To configure another data source navigate to [/prisma/schema.prisma](./prisma/schema.prisma)
 
 ```javascript
 
@@ -48,7 +48,7 @@ generator client {
 }
 ```
 
-#### Change your environment variables
+#### Change your environment variables in [.env](.env)
 
 ```.env
 // Using SQLite default settings.
@@ -59,9 +59,9 @@ DATABASE_URL="file:./dev.db" // your database url.
 
 ```
 
-Define your own models in [](prisma/schema.prisma)
+Define your own data models in [prisma/schema.prisma](prisma/schema.prisma)
 
-Once you've updated your data model, you can execute the changes against your database with the following command:
+Once you've updated your data models, you can execute the changes against your database with the following command:
 
 ```bash
 npx prisma db push
