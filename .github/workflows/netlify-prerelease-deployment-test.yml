@@ -24,37 +24,6 @@ jobs:
       - run: npm run build
         working-directory: ./examples/netlify-prerelease-deployment-test
 
-      - name: Install Netlify cli
-        run: npm install -g netlify-cli
-
-      - name: Create Netlify site
-        id: create_site
-        shell: bash
+      - name: Create Netlify Site
         run: |
-          # use the commit sha as the site name
-          export SITE_NAME=remix-prerelease-deployment-test-${{ github.sha }}
-          # create a new site using the netlify cli, show the output, and store it in a variable
-          export NETLIFY_SITE_INFO"$(netlify sites:create --account-slug ${{ secrets.TEST_NETLIFY_ACCOUNT_SLUG }} --name $SITE_NAME --json | tee /dev/stderr)"
-          # use jq to parse the json and extract the site id and site url
-          echo "::set-output name=NETLIFY_SITE_ID::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.id')"
-          echo "::set-output name=NETLIFY_SITE_URL::$(echo $NETLIFY_SITE_INFO | jq --raw-output '.url')"
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-
-      - name: Deploy to Netlify
-        run: netlify deploy --prod --site ${{ steps.create_site.outputs.NETLIFY_SITE_ID }}
-        working-directory: ./examples/netlify-prerelease-deployment-test
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-
-      - name: Verify Netlify site
-        run: |
-          # use curl to get the site status code and verify a 200
-          export STATUS_CODE=$(curl -LI ${{ steps.create_site.outputs.NETLIFY_SITE_URL }} -o /dev/null -w '%{http_code}\n' -s)
-          if [ $STATUS_CODE = "200" ]; then
-            echo "Site verification passed. Status code: $STATUS_CODE"
-            exit 0;
-          else
-            echo "::error::Site verification failed. Status code: $STATUS_CODE"
-            exit 1;
-          fi
+          node ./scripts/deployment-test/netlify.mjs
