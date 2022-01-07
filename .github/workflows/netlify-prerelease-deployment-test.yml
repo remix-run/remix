@@ -16,11 +16,11 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: "16"
-          cache: "npm"
+          node-version: 16
 
       - run: npm ci
         working-directory: ./examples/netlify-prerelease-deployment-test
+
       - run: npm run build
         working-directory: ./examples/netlify-prerelease-deployment-test
 

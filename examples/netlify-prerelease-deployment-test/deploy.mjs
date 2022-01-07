@@ -1,10 +1,12 @@
 import { execSync, spawnSync } from "child_process";
-import https from "https";
 import { NetlifyAPI } from "netlify";
+import { installGlobals } from "@remix-run/node";
+
+installGlobals();
 
 const client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
 
-async function createSite() {
+async function createNetlifySite() {
   const sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
   console.log(`SHA: ${sha}`);
   const site = await client.createSite({
@@ -16,30 +18,21 @@ async function createSite() {
   return site;
 }
 
-function getStatusCode(url) {
-  return new Promise(resolve => {
-    https.get(url, response => {
-      resolve(response.statusCode);
-    });
-  });
-}
-
 async function verifySite(url) {
-  const statusCode = await getStatusCode(url);
-  if (statusCode !== 200) {
-    throw new Error(`Site verification failed. Status code: ${statusCode}`);
-  } else {
-    console.log(`Site verification passed. Status code: ${statusCode}`);
+  const promise = await fetch(url);
+  if (promise.status !== 200) {
+    throw new Error(`Site verification failed. Status code: ${promise.status}`);
   }
+  console.log(`Site verification passed. Status code: ${promise.status}`);
 }
 
 async function netlifyDeploymentTest() {
-  const site = await createSite();
-  console.log(`Site created: ${site.id}`);
+  const site = await createNetlifySite();
+  console.log("Site created");
 
   spawnSync(
     "npx",
-    ["npx", "--yes", "netlify-cli", "deploy", "--site", site.id, "--prod"],
+    ["--yes", "netlify-cli", "deploy", "--site", site.id, "--prod"],
     { stdio: "inherit" }
   );
 

@@ -14,26 +14,18 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: 16
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
+      - run: npm ci
+        working-directory: ./examples/netlify-prerelease-deployment-test
 
-      - name: Get Date
-        id: date
-        run: echo "::set-output name=date::$(date +'%s')"
+      - run: npm run build
+        working-directory: ./examples/netlify-prerelease-deployment-test
 
-      - name: Create Vercel Project
-        id: create_project
-        working-directory: ./examples/vercel-prerelease-deployment-test
-        run: |
-          export PROJECT_INFO=$(curl -X POST "https://api.vercel.com/v8/projects" --header "Authorization: Bearer ${{ secrets.TEST_VERCEL_TOKEN }}" --data '{"name":"vercel-prerelease-deployment-test-${{ github.sha }}-${{ steps.date.outputs.date }}","framework":"remix"}')
-
-          echo "::set-output name=PROJECT_ID::$(echo $PROJECT_INFO | jq --raw-output '.id')"
-
-      - name: Deploy to Vercel
-        run: vc deploy --prod --token ${{ secrets.TEST_VERCEL_TOKEN }}
+      - name: Create Vercel Site
         working-directory: ./examples/vercel-prerelease-deployment-test
         env:
+          VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
-          VERCEL_PROJECT_ID: ${{ steps.create_project.outputs.PROJECT_ID }}
+        run: |
+          node ./deploy.mjs
