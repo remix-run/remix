@@ -13,9 +13,9 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Deploy to Fly
-        run: |
-          cd ./examples/fly-prerelease-deployment-test
-          curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
-          /usr/local/bin/flyctl deploy --remote-only
+        uses: superfly/flyctl-actions@1.1
         env:
           FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
+          FLY_PROJECT_PATH: ./examples/fly-prerelease-deployment-test
+        with:
+          args: "deploy"
