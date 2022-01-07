@@ -14,7 +14,7 @@ export default function handleRequest(
 
   const sheet = new ServerStyleSheet();
 
-  // first pass to collect styles
+  // collecting styles
 
     renderToString(
         sheet.collectStyles(
