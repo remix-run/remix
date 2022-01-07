@@ -24,11 +24,13 @@ describe("readConfig", () => {
       Object {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
+        "bundleImportMap": true,
         "cacheDirectory": Any<String>,
         "devServerBroadcastDelay": 0,
         "devServerPort": 8002,
         "entryClientFile": "entry.client.jsx",
         "entryServerFile": "entry.server.jsx",
+        "importMap": undefined,
         "mdx": [Function],
         "publicPath": "/build/",
         "rootDirectory": Any<String>,
