@@ -1,10 +1,10 @@
 import ReactDOMServer,{renderToString} from "react-dom/server";
-
 import { RemixServer } from "remix";
 import type { EntryContext } from "remix";
-import { ServerStyleSheet } from "styled-components";
 
+import { ServerStyleSheet } from "styled-components";
 import StylesContext from "./stylesContext";
+
 export default function handleRequest(
   request: Request,
   responseStatusCode: number,
@@ -14,6 +14,8 @@ export default function handleRequest(
 
   const sheet = new ServerStyleSheet();
 
+  // first pass to collect styles
+
     renderToString(
         sheet.collectStyles(
           <StylesContext.Provider value={null}>
@@ -22,8 +24,11 @@ export default function handleRequest(
         )
       );
 
-  let styles = sheet.getStyleTags().replace(/(<([^>]+)>)/gi, "");
-  sheet.seal();
+  // Now that we've rendered, we get the styles out of the sheet
+    let styles = sheet.getStyleTags().replace(/(<([^>]+)>)/gi, ""); //removing  the <style> tags
+    sheet.seal();
+
+  //Now Rendering the extracted styles 
 
   let markup = ReactDOMServer.renderToString(
     <StylesContext.Provider value={styles}>
