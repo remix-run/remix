@@ -14,7 +14,7 @@ Prisma is a next-generation ORM that can be used to query a database. It embrace
 
 ### Configuration
 
-In [/app/services/db.server.ts](app/services/db.server.ts), the database connection is export globally. You can access it anywhere from code.
+In [/app/services/db.server.ts](app/services/db.server.ts), the database connection as a global export.
 
 Now this example is setup and ready to with SQLite, but you can also configure any of the supported databases.
 
