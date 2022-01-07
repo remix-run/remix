@@ -508,7 +508,7 @@ function remixDeno() {
       input: `${SOURCE_DIR}/index.ts`,
       output: {
         banner: createBanner("@remix-run/deno", version),
-        dir: `${OUTPUT_DIR}/esm`,
+        dir: OUTPUT_DIR,
         format: "esm",
         preserveModules: true
       },
@@ -518,7 +518,14 @@ function remixDeno() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"]
         }),
-        nodeResolve({ extensions: [".ts", ".tsx"] })
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
+          ]
+        })
       ]
     }
   ];
@@ -567,7 +574,6 @@ function remixServerAdapters() {
     getServerConfig("architect"),
     getServerConfig("cloudflare-pages"),
     getServerConfig("cloudflare-workers"),
-    getServerConfig("deno"),
     getServerConfig("express"),
     getServerConfig("vercel"),
     getServerConfig("netlify")
