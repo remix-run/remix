@@ -18,10 +18,10 @@ jobs:
           node-version: 16
 
       - run: npm ci
-        working-directory: ./examples/netlify-prerelease-deployment-test
+        working-directory: ./examples/vercel-prerelease-deployment-test
 
       - run: npm run build
-        working-directory: ./examples/netlify-prerelease-deployment-test
+        working-directory: ./examples/vercel-prerelease-deployment-test
 
       - name: Create Vercel Site
         working-directory: ./examples/vercel-prerelease-deployment-test
