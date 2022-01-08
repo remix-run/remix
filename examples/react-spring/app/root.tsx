@@ -9,6 +9,7 @@ import {
 import type { LinksFunction, MetaFunction } from "remix";
 
 import styles from "~/styles.css";
+import noScriptStyles from "~/no-script.css";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -24,6 +25,9 @@ export default function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
+        <noscript>
+          <link rel="stylesheet" href={noScriptStyles} />
+        </noscript>
       </head>
       <body>
         <Outlet />
