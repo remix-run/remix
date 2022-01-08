@@ -6,11 +6,15 @@ import {
   Scripts,
   ScrollRestoration
 } from "remix";
-import type { LinksFunction } from "remix";
+import type { LinksFunction, MetaFunction } from "remix";
 
 import styles from "~/styles.css";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
+
+export const meta: MetaFunction = () => {
+  return { title: "Remix + react-spring" };
+};
 
 export default function App() {
   return (
