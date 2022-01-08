@@ -1996,7 +1996,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -3144,7 +3144,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -4388,7 +4388,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -5910,7 +5910,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
