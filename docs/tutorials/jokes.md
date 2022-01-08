@@ -3074,7 +3074,7 @@ const storage = createCookieSessionStorage({
   }
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3332,7 +3332,7 @@ const storage = createCookieSessionStorage({
   }
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3614,7 +3614,7 @@ const storage = createCookieSessionStorage({
   }
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
