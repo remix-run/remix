@@ -27,9 +27,9 @@ with your database info.
  
  For more info check the following files:
 
- [app/routes/index.tsx](app/routes/index.tsx)
- [app/sessions.server.ts](app/sessions.server.ts)
- [app/sessions/upstash.server.ts](app/sessions/upstash.server.ts)
+- [app/routes/index.tsx](app/routes/index.tsx)
+- [app/sessions.server.ts](app/sessions.server.ts)
+- [app/sessions/upstash.server.ts](app/sessions/upstash.server.ts)
 
 ## Related Links
 
