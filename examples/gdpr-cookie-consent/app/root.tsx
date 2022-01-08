@@ -1,13 +1,23 @@
 import {
   Links,
   LiveReload,
+  LoaderFunction,
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
+  useLoaderData
 } from "remix";
+import { gdprConsent } from "./cookies";
+
+export const loader: LoaderFunction = async ({request}) => {
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie = (await gdprConsent.parse(cookieHeader)) || {};
+  return { track: cookie.gdprConsent };
+}
 
 export default function App() {
+  const {track} = useLoaderData();
   return (
     <html lang="en">
       <head>
@@ -19,6 +29,7 @@ export default function App() {
       <body>
         <Outlet />
         <ScrollRestoration />
+        { track && <script src="/dummy-analytics-script.js"></script> }
         <Scripts />
         {process.env.NODE_ENV === "development" && <LiveReload />}
       </body>
