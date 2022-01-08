@@ -421,7 +421,7 @@ Update the package scripts to generate the tailwind file during dev and for the 
   // ...
   "scripts": {
     "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -o ./app/tailwind.css",
+    "build:css": "tailwindcss -o ./app/tailwind.css --minify",
     "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
     "dev:css": "tailwindcss -o ./app/tailwind.css --watch",
     "postinstall": "remix setup node",
