@@ -8,8 +8,6 @@ Till the user doesn't click on the `Accept` button, she will see a banner prompt
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-<!-- TODO: update this link to the path for your example: -->
-
 [![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/remix-gdpr-example-e7znt?file=/app/routes/index.tsx)
 
 ## Example
