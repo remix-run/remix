@@ -1,6 +1,6 @@
-# Welcome to Remix!
+# Example app with [Framer Motion](https://www.framer.com/motion/)
 
-This is a very basic example of a simple Remix app using the Remix App Server.
+This is a very basic example of remix app with framer-motion.
 
 - [Remix Docs](https://remix.run/docs)
 
