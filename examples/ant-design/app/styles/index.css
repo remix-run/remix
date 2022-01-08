@@ -1,0 +1,11 @@
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html {
+  box-sizing: border-box;
+  font-size: 14px;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+}
