@@ -4600,28 +4600,30 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
+  if (form.get("_method") !== "delete") {
+    throw new Response("This method is not allowed", {
+      status: 405
     });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -4650,6 +4652,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 405: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -4731,28 +4740,30 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
+  if (form.get("_method") !== "delete") {
+    throw new Response("This method is not allowed", {
+      status: 405
     });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -4783,6 +4794,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 405: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5320,28 +5338,30 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
+  if (form.get("_method") !== "delete") {
+    throw new Response("This method is not allowed", {
+      status: 405
     });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -5372,6 +5392,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 405: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5738,7 +5765,6 @@ import type {
   MetaFunction
 } from "remix";
 import {
-  Link,
   useLoaderData,
   useCatch,
   redirect,
@@ -5798,28 +5824,30 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
+  if (form.get("_method") !== "delete") {
+    throw new Response("This method is not allowed", {
+      status: 405
     });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -5834,6 +5862,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 405: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
