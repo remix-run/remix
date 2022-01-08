@@ -1,9 +1,0 @@
-node_modules
-
-/.cache
-/build
-/public/build
-package-lock.json
-yarn.lock
-/prisma/dev.db
-.env
