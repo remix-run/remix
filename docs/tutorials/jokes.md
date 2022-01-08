@@ -3282,7 +3282,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[75-90,92-101]
+```ts filename=app/utils/session.server.ts lines=[75-89,91-98]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3376,9 +3376,7 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(
-    request.headers.get("Cookie")
-  );
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await storage.destroySession(session)
@@ -3660,9 +3658,7 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(
-    request.headers.get("Cookie")
-  );
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await storage.destroySession(session)
