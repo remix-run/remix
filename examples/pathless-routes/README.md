@@ -34,8 +34,6 @@ app
     └── index.tsx
 ```
 
-The above will match the routes as follows
-
 | URL             | Matched Route                           |
 | --------------- | --------------------------------------- |
 | /               | app/routes/index.tsx                    |
