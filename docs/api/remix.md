@@ -1234,6 +1234,8 @@ Another common use case is [enabling JavaScript for some routes and not others][
 
 Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
 
+For an example of how to share loader data via `useMatches`, check out [the sharing loader data example in the remix repo][example-sharing-loader-data].
+
 ### `useBeforeUnload`
 
 This hook is just a helper around `window.onbeforeunload`.
@@ -2453,3 +2455,4 @@ import type {
 [constraints]: ../other-api/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
+[example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data

@@ -138,17 +138,18 @@ export default function ProjectRoute() {
   // accidentally remove themselves on the project. We handle this on the server
   // as well, but no use in showing something in the UI if it won't work!
   // TODO: Stick this into the loader!
+  const projectMembers = project.members;
   const [membersExcludingSelf, memberIds] = React.useMemo(() => {
-    const excludingSelf: typeof project.members = [];
+    const excludingSelf: typeof projectMembers = [];
     const userIds: Array<UserSecure["id"]> = [];
-    for (const member of project.members) {
+    for (const member of projectMembers) {
       userIds.push(member.id);
       if (member.id !== user.id) {
         excludingSelf.push(member);
       }
     }
     return [excludingSelf, userIds] as const;
-  }, [project.members, user.id]);
+  }, [projectMembers, user.id]);
 
   const [optimisticMembersExcludingSelf, optimisticMemberIds] =
     React.useMemo(() => {

@@ -46,7 +46,13 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 <Link to="/posts">Posts</Link>
 ```
 
-You can put it anywhere you like, you might want to just delete everything that's there.
+You can put it anywhere you like, you might want to just delete everything that's there. 
+
+💿 Either way you will also need to import `Link`:
+
+```tsx
+import { Link } from "remix";
+```
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
