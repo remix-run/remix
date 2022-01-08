@@ -2781,7 +2781,7 @@ Here's what we need in that file to get started:
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts
+```ts filename=app/utils/session.server.ts
 import bcrypt from "bcryptjs";
 
 import { db } from "./db.server";
@@ -2898,7 +2898,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
+```ts filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -5005,7 +5005,7 @@ export default function Index() {
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,25-31]
+```tsx filename=app/routes/login.tsx lines=[4,24-30]
 import type {
   ActionFunction,
   LinksFunction,
