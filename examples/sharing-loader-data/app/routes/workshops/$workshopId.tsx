@@ -18,7 +18,7 @@ export const loader: LoaderFunction = async ({ params }) => {
   return null;
 };
 
-export default function Workshop() {
+export default function WorkshopRoute() {
   const parentData = useMatches().find(m => m.pathname === "/workshops")
     ?.data as {
     workshops: Array<Workshop>;
