@@ -1,6 +1,4 @@
-import {
-	createCookie,
-} from "remix";
+import { createCookie } from "remix";
 import { createUpstashSessionStorage } from "~/sessions/upstash.server";
 
 // This will set the length of the session.
@@ -11,15 +9,12 @@ const expires = new Date();
 expires.setSeconds(expires.getSeconds() + EXPIRATION_DURATION_IN_SECONDS);
 
 const sessionCookie = createCookie("__session", {
-	secrets: ["r3m1xr0ck1"],
-	sameSite: true,
-	expires
+  secrets: ["r3m1xr0ck1"],
+  sameSite: true,
+  expires
 });
 
-
-const { getSession, commitSession, destroySession } = createUpstashSessionStorage(
-	{ cookie: sessionCookie }
-);
-
+const { getSession, commitSession, destroySession } =
+  createUpstashSessionStorage({ cookie: sessionCookie });
 
 export { getSession, commitSession, destroySession };

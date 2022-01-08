@@ -1,7 +1,4 @@
-import type {
-  ActionFunction,
-  LinksFunction,
-  LoaderFunction} from "remix";
+import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
 import {
   json,
   Links,
