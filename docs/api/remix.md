@@ -753,11 +753,13 @@ fetcher.submit({ some: "values" }, { method: "post" });
 
 #### `fetcher.load()`
 
-Loads data from a route loader.
+Loads data from a route loader. Must be called from within a `useEffect` or a callback, since there is no way to `await` the fetch during the server render.
 
 ```tsx
 const fetcher = useFetcher();
-fetcher.load("/some/route");
+useEffect(() => {
+  fetcher.load("/some/route");
+}, [fetcher.load]);
 fetcher.data; // the data from the loader
 ```
 
