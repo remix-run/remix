@@ -2696,7 +2696,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -2724,7 +2724,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -2734,7 +2734,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -3878,7 +3878,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -3906,7 +3906,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -3916,7 +3916,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -5191,7 +5191,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -5219,7 +5219,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -5229,7 +5229,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
