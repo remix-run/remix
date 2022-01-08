@@ -1,5 +1,5 @@
 import { Outlet } from "react-router-dom";
-import { ActionFunction, LoaderFunction, redirect, useLoaderData } from "remix";
+import { ActionFunction, Form, LoaderFunction, redirect, useLoaderData } from "remix";
 import { gdprConsent } from "~/cookies";
 
 export const action: ActionFunction = async ({request}) => {
@@ -35,12 +35,11 @@ export default function() {
       position: 'fixed',
       bottom: 0,
      }}>
-       {/* Using `form` and not `Form` to do a full refresh (to load tracking script on app/root.tsx) */}
-        <form method="post">
+        <Form method="post" reloadDocument>
          We use Cookies...
          {/* You can pass values on the submission button  */}
          <button name="accept-gdpr" value="true" type="submit">Accept</button>
-       </form>
+       </Form>
     </div>}
   </div>)
 }
