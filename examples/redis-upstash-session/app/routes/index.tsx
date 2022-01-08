@@ -1,4 +1,4 @@
-import type { LoaderFunction} from "remix";
+import type { LoaderFunction } from "remix";
 import { json, useLoaderData } from "remix";
 import { commitSession, getSession } from "~/sessions.server";
 

@@ -1,6 +1,6 @@
 import { Form, json, useLoaderData, redirect } from "remix";
 import type { LoaderFunction, ActionFunction } from "remix";
-import type { Invitation} from "~/data.server";
+import type { Invitation } from "~/data.server";
 import { sendInvitation } from "~/data.server";
 import {
   getInvitations,
