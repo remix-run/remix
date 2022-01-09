@@ -1,4 +1,5 @@
 import { createCookieSessionStorage } from "remix";
+import type { Session } from "remix";
 
 const ONE_YEAR = 1000 * 60 * 60 * 24 * 365;
 
@@ -14,22 +15,14 @@ const { commitSession, getSession } = createCookieSessionStorage({
   }
 });
 
-const setSuccessMessage = async (request: Request, message: string) => {
-  const session = await getSession(request.headers.get("cookie"));
-
+const setSuccessMessage = (session: Session, message: string) => {
   session.flash("message", message);
   session.flash("type", "success");
-
-  return session;
 };
 
-const setErrorMessage = async (request: Request, message: string) => {
-  const session = await getSession(request.headers.get("cookie"));
-
+const setErrorMessage = async (session: Session, message: string) => {
   session.flash("message", message);
   session.flash("type", "error");
-
-  return session;
 };
 
 export { setErrorMessage, setSuccessMessage, commitSession, getSession };

@@ -2,17 +2,19 @@ import type { ActionFunction } from "remix";
 import { json } from "remix";
 import {
   commitSession,
+  getSession,
   setErrorMessage,
   setSuccessMessage
 } from "~/message.server";
 
 export const action: ActionFunction = async ({ request }) => {
+  const session = await getSession(request.headers.get("cookie"));
   const formData = await request.formData();
 
   const number = formData.get("number");
 
   if (!number) {
-    const session = await setErrorMessage(request, "Number is required!");
+    setErrorMessage(session, "Number is required!");
     return json(
       { ok: false },
       {
@@ -22,7 +24,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   if (Number(number) === 10) {
-    const session = await setSuccessMessage(request, "Awesome");
+    setSuccessMessage(session, "Awesome");
     return json(
       { ok: true },
       {
@@ -30,7 +32,7 @@ export const action: ActionFunction = async ({ request }) => {
       }
     );
   } else {
-    const session = await setErrorMessage(request, "Wrong! Guess again");
+    setErrorMessage(session, "Wrong! Guess again");
     return json(
       { ok: false },
       {

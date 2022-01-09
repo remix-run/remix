@@ -2,29 +2,31 @@ import { Form, redirect, useFetcher } from "remix";
 import type { ActionFunction } from "remix";
 import {
   commitSession,
+  getSession,
   setErrorMessage,
   setSuccessMessage
 } from "~/message.server";
 
 export const action: ActionFunction = async ({ request }) => {
+  const session = await getSession(request.headers.get("cookie"));
   const formData = await request.formData();
 
   const number = formData.get("number");
 
   if (!number) {
-    const session = await setErrorMessage(request, "Number is required!");
+    setErrorMessage(session, "Number is required!");
     return redirect("/", {
       headers: { "Set-Cookie": await commitSession(session) }
     });
   }
 
   if (Number(number) === 10) {
-    const session = await setSuccessMessage(request, "Awesome");
+    setSuccessMessage(session, "Awesome");
     return redirect("/", {
       headers: { "Set-Cookie": await commitSession(session) }
     });
   } else {
-    const session = await setErrorMessage(request, "Wrong! Guess again");
+    setErrorMessage(session, "Wrong! Guess again");
     return redirect("/", {
       headers: { "Set-Cookie": await commitSession(session) }
     });
