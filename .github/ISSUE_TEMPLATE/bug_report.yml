@@ -31,6 +31,7 @@ body:
         - label: "`remix` (Remix core)"
         - label: "`create-remix`"
         - label: "`@remix-run/architect`"
+        - label: "`@remix-run/cloudflare-pages`"
         - label: "`@remix-run/cloudflare-workers`"
         - label: "`@remix-run/dev`"
         - label: "`@remix-run/express`"
