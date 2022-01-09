@@ -13,7 +13,7 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 ## Example
 
 Users will be presented with a GDPR consent form on every page [app/root.tsx](app/root.tsx) till they submit the accept button.
-Once they submit the consent form, a dummy tracking [scripts](public/dummy-analytics-script.js) at the [app/root.tsx](app/root.tsx)  will start tracking the user`s data (open the browser console too see the dummy tracking message).
+Once they submit the consent form, a dummy tracking [script](public/dummy-analytics-script.js) at the [app/root.tsx](app/root.tsx)  will start tracking the user`s data (open the browser console too see the dummy tracking message).
 
 > If you want to reset the example delete the `gdpr-consent` cookie in the `Application`/`cookies` in the browser's developer tools.
 
