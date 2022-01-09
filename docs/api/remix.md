@@ -13,7 +13,7 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx lines=[1,9-10,14]
+```tsx lines=[1,8-9,13]
 import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
@@ -616,7 +616,7 @@ This tells you what the next location is going to be. It's most useful when matc
 
 For example, this `Link` knows when its page is loading and about to become active:
 
-```tsx [6-8]
+```tsx [7-9]
 import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
@@ -1608,7 +1608,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```js filename=app/routes/index.js lines=[2,6,14,18]
+```js filename=app/routes/index.js lines=[2,6-7,13-14,18]
 import { useLoaderData, json, redirect } from "remix";
 import { userPrefs } from "~/cookies";
 
