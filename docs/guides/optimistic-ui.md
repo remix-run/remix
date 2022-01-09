@@ -174,7 +174,7 @@ One of the hardest parts about implementing optimistic UI is how to handle failu
 
 If you want to have more control over the UI when an error occurs and put the user right back where they were without losing any state, you can catch your own error and send it down through action data.
 
-```js filename=app/routes/projects/new.js lines=[5,6,14-22,27,46]
+```js filename=app/routes/projects/new.js lines=[5,6,16-24,29,48]
 import {
   Form,
   redirect,
