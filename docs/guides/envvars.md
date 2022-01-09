@@ -46,8 +46,8 @@ SOME_SECRET=super-secret
 Then update your entry.server.tsx and add these lines before your imports
 
 ```js filename=entry.server.tsx
-  if(process.env.NODE_ENV = 'development') {
-    require('dotenv').config()
+  if(process.env.NODE_ENV === "development") {
+    require("dotenv").config()
   }
 ```
 
