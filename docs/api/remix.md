@@ -2309,7 +2309,7 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
-```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-41,50-54,65]
+```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-43,52-56,67]
 import type { LoaderData } from "remix";
 import {
   json,
