@@ -245,7 +245,11 @@ export async function readConfig(
 
   let appConfig: AppConfig;
   try {
-    appConfig = require(configFile);
+    appConfig = await import(configFile);
+
+    if('default' in appConfig) {
+      appConfig = appConfig.default;
+    }
   } catch (error) {
     throw new Error(`Error loading Remix config in ${configFile}`);
   }
