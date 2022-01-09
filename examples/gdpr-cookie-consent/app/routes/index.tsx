@@ -1,45 +1,8 @@
-import { Outlet } from "react-router-dom";
-import { ActionFunction, Form, LoaderFunction, redirect, useLoaderData } from "remix";
-import { gdprConsent } from "~/cookies";
-
-export const action: ActionFunction = async ({request}) => {
-  const formData = await request.formData();
-  const cookieHeader = request.headers.get("Cookie");
-  const cookie = (await gdprConsent.parse(cookieHeader)) || {};
-
-  if (formData.get("accept-gdpr") === "true") {
-    cookie.gdprConsent = true;
-  }
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await gdprConsent.serialize(cookie)
-    }
-  });
-}
-
-export const loader: LoaderFunction = async ({request}) => {
-  const cookieHeader = request.headers.get("Cookie");
-  const cookie = (await gdprConsent.parse(cookieHeader)) || {};
-  return { showGdprBanner: !cookie.gdprConsent };
-}
-
 export default function() {
-  const {showGdprBanner} = useLoaderData()
   return (
   <div>
-    <Outlet/>
-    {showGdprBanner && <div style={{
-      backgroundColor: '#ccc',
-      padding: 10,
-      position: 'fixed',
-      bottom: 0,
-     }}>
-        <Form method="post" reloadDocument>
-         We use Cookies...
-         {/* You can pass values on the submission button  */}
-         <button name="accept-gdpr" value="true" type="submit">Accept</button>
-       </Form>
-    </div>}
+    <h2>Example of content on your app.</h2>
+    <p>If you don't see the GDPR banner, open your browser's console to see a dummy tacking message.</p>
+    <p>If you want to see the banner again, clear the `gdpr-consent` cookie in the `Application`/`cookies` in the browser's developer tools.</p>
   </div>)
 }

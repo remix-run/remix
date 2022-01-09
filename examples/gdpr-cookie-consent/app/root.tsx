@@ -6,7 +6,10 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData
+  useLoaderData,
+  ActionFunction,
+  redirect,
+  Form
 } from "remix";
 import { gdprConsent } from "./cookies";
 
@@ -14,6 +17,22 @@ export const loader: LoaderFunction = async ({request}) => {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = (await gdprConsent.parse(cookieHeader)) || {};
   return { track: cookie.gdprConsent };
+}
+
+export const action: ActionFunction = async ({request}) => {
+  const formData = await request.formData();
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie = (await gdprConsent.parse(cookieHeader)) || {};
+
+  if (formData.get("accept-gdpr") === "true") {
+    cookie.gdprConsent = true;
+  }
+
+  return redirect("/", {
+    headers: {
+      "Set-Cookie": await gdprConsent.serialize(cookie)
+    }
+  });
 }
 
 export default function App() {
@@ -28,6 +47,18 @@ export default function App() {
       </head>
       <body>
         <Outlet />
+        {!track && <div style={{
+      backgroundColor: '#ccc',
+      padding: 10,
+      position: 'fixed',
+      bottom: 0,
+     }}>
+        <Form method="post" reloadDocument>
+         We use Cookies...
+         {/* You can pass values on the submission button  */}
+         <button name="accept-gdpr" value="true" type="submit">Accept</button>
+       </Form>
+    </div>}
         <ScrollRestoration />
         { track && <script src="/dummy-analytics-script.js"></script> }
         <Scripts />
