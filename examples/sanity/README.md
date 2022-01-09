@@ -1,7 +1,8 @@
-# Welcome to Remix!
+# Sanity Example!
 
 - [Remix Docs](https://docs.remix.run)
 - [Customer Dashboard](https://remix.run/dashboard)
+- [Sanity Docs](https://www.sanity.io/docs/overview-introduction)
 
 ## Development
 
@@ -10,6 +11,17 @@ From your terminal:
 ```sh
 npm run dev
 ```
+In another terminal:
+```sh
+cd studio
+npm install
+sanity start
+```
+
+## Note
+
+Get your ProjectID from **studio/sanity.json** and paste it in **app/lib/config.js**
+
 
 This starts your app in development mode, rebuilding assets on file changes.
 
