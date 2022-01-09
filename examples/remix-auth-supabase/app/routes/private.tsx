@@ -5,7 +5,7 @@ import { authenticator, supabaseStrategy } from "~/auth.server";
 type LoaderData = { email?: string };
 
 export const action: ActionFunction = async ({ request }) => {
-  await authenticator.logout(request, { redirectTo: "/login" });
+  await authenticator.logout(request, { redirectTo: "/" });
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
