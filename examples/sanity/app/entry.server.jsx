@@ -1,14 +1,16 @@
-import { renderToString } from "react-dom/server";
+import ReactDOMServer from "react-dom/server";
 import { RemixServer } from "remix";
-import type { EntryContext } from "remix";
+import dotenv from 'dotenv'
 
 export default function handleRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  remixContext: EntryContext
+  request,
+  responseStatusCode,
+  responseHeaders,
+  remixContext
 ) {
-  const markup = renderToString(
+  dotenv.config()
+
+  let markup = ReactDOMServer.renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
