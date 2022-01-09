@@ -19,9 +19,10 @@ export const supabaseStrategy = new SupabaseStrategy(
   {
     supabaseClient,
     sessionStorage,
-    sessionKey: "sb:session",
-    sessionErrorKey: "sb:error"
+    sessionKey: "sb:session", // if not set, default is sb:session
+    sessionErrorKey: "sb:error" // if not set, default is sb:error
   },
+  // simple verify example for email/password auth
   async ({ req, supabaseClient }) => {
     const form = await req.formData();
     const email = form?.get("email");
@@ -49,8 +50,8 @@ export const supabaseStrategy = new SupabaseStrategy(
 );
 
 export const authenticator = new Authenticator<Session>(sessionStorage, {
-  sessionKey: supabaseStrategy.sessionKey,
-  sessionErrorKey: supabaseStrategy.sessionErrorKey
+  sessionKey: supabaseStrategy.sessionKey, // keep in sync
+  sessionErrorKey: supabaseStrategy.sessionErrorKey // keep in sync
 });
 
 authenticator.use(supabaseStrategy);
