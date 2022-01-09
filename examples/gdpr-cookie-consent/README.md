@@ -17,7 +17,9 @@ Once they submit the consent form, a dummy tracking [script](public/dummy-analyt
 
 > If you want to reset the example delete the `gdpr-consent` cookie in the `Application`/`cookies` in the browser's developer tools.
 
-The example is using [Remix Cookie API.]([https://link](https://remix.run/docs/en/v1/api/remix#cookies)) 
+The example is using [Remix Cookie API](https://remix.run/docs/en/v1/api/remix#cookies).
+
+
 
 ## Related Links
 
