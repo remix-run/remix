@@ -6,6 +6,10 @@
 [dev]
   command = "remix watch"
   port = 3000
+  autoLaunch = false
+
+[context.dev]
+  environment = { NODE_ENV = "development" }
 
 [[redirects]]
   from = "/*"
