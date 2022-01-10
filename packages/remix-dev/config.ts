@@ -243,7 +243,8 @@ export async function readConfig(
   let rootDirectory = path.resolve(remixRoot);
   let configFile = path.resolve(rootDirectory, "remix.config.js");
 
-  let appConfig: AppConfig;
+  let appConfig: AppConfig | { default: AppConfig };
+  
   try {
     appConfig = await import(configFile);
 
