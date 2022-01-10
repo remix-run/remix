@@ -1613,14 +1613,14 @@ export let loader: LoaderFunction = async () => {
   let data: LoaderData = {
     users: await prisma.user.findMany()
   };
-  return { data };
+  return data;
 };
 
 export default function Users() {
-  let data = useLoaderData<LoaderData>();
+  let { users } = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.map(user => (
+      {users.map(user => (
         <li>{user.name}</li>
       ))}
     </ul>
