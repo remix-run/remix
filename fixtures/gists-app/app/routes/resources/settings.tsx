@@ -41,7 +41,7 @@ export default function Settings() {
     if (state === "loading" && submission) {
       reloadCss();
     }
-  }, [state]);
+  }, [state, submission]);
 
   return (
     <section>

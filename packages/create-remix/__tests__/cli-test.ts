@@ -22,15 +22,23 @@ const createRemix = path.resolve(
   "../../../build/node_modules/create-remix/cli.js"
 );
 
+const DEFAULT_JEST_TIMEOUT = 5000;
+
 describe("create-remix cli", () => {
   beforeAll(() => {
+    jest.setTimeout(DEFAULT_JEST_TIMEOUT * 3);
     if (!fs.existsSync(createRemix)) {
       // TODO: Consider runnuing the build here instead of throwing
       throw new Error(`Cannot run Remix CLI tests without building Remix`);
     }
   });
 
-  it("guides the user through the process", async done => {
+  afterAll(() => {
+    jest.setTimeout(DEFAULT_JEST_TIMEOUT);
+  });
+
+  // TODO: Rewrite this test
+  it.skip("guides the user through the process", async done => {
     let cli = spawn("node", [createRemix], {});
     let promptCount = 0;
     let previousPrompt: string;
@@ -70,7 +78,8 @@ describe("create-remix cli", () => {
             "Fly.io",
             "Netlify",
             "Vercel",
-            "Cloudflare Workers"
+            "Cloudflare Workers",
+            "Cloudflare Pages"
           ]);
           cli.stdin.write(keys.enter);
           break;

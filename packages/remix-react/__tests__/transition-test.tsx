@@ -2,18 +2,26 @@ import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
 import type { Submission, TransitionManagerInit } from "../transition";
-import { IDLE_FETCHER, IDLE_TRANSITION } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
-  TransitionRedirect
+  TransitionRedirect,
+  IDLE_FETCHER,
+  IDLE_TRANSITION
 } from "../transition";
 
 describe("init", () => {
   it("initializes with initial values", async () => {
     let tm = createTransitionManager({
       routes: [
-        { element: {}, id: "root", path: "/", ErrorBoundary: {}, module: "" }
+        {
+          element: {},
+          id: "root",
+          path: "/",
+          ErrorBoundary: {},
+          module: "",
+          hasLoader: false
+        }
       ],
       location: createLocation("/"),
       loaderData: { root: "LOADER DATA" },
@@ -50,6 +58,7 @@ describe("init", () => {
             "route": Object {
               "ErrorBoundary": Object {},
               "element": Object {},
+              "hasLoader": false,
               "id": "root",
               "module": "",
               "path": "/",
@@ -193,6 +202,7 @@ describe("shouldReload", () => {
         {
           path: "",
           id: "root",
+          hasLoader: true,
           loader: rootLoader,
           shouldReload,
           element: {},
@@ -203,11 +213,13 @@ describe("shouldReload", () => {
               id: "index",
               action: () => null,
               element: {},
-              module: ""
+              module: "",
+              hasLoader: false
             },
             {
               path: "/child",
               id: "child",
+              hasLoader: true,
               loader: childLoader,
               action: () => null,
               element: {},
@@ -287,6 +299,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "index",
                 "loader": [MockFunction],
                 "module": "",
@@ -295,6 +308,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "foo",
                 "loader": [MockFunction],
                 "module": "",
@@ -303,6 +317,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "bar",
                 "loader": [MockFunction],
                 "module": "",
@@ -311,6 +326,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "baz",
                 "loader": [MockFunction],
                 "module": "",
@@ -319,6 +335,7 @@ describe("no route match", () => {
               Object {
                 "action": [MockFunction],
                 "element": Object {},
+                "hasLoader": true,
                 "id": "param",
                 "loader": [MockFunction],
                 "module": "",
@@ -326,6 +343,7 @@ describe("no route match", () => {
               },
             ],
             "element": Object {},
+            "hasLoader": true,
             "id": "root",
             "loader": [MockFunction],
             "module": "",
@@ -351,6 +369,7 @@ describe("errors on navigation", () => {
             id: "parent",
             element: {},
             module: "",
+            hasLoader: false,
             children: [
               {
                 path: "/child",
@@ -358,6 +377,7 @@ describe("errors on navigation", () => {
                 element: {},
                 module: "",
                 ErrorBoundary: FakeComponent,
+                hasLoader: true,
                 loader
               }
             ]
@@ -386,6 +406,7 @@ describe("errors on navigation", () => {
         id: "child",
         element: {},
         module: "",
+        hasLoader: true,
         loader
       };
       let parent = {
@@ -394,7 +415,8 @@ describe("errors on navigation", () => {
         element: {},
         module: "",
         ErrorBoundary: FakeComponent,
-        children: [child]
+        children: [child],
+        hasLoader: false
       };
 
       let tm = createTestTransitionManager("/", {
@@ -422,12 +444,14 @@ describe("errors on navigation", () => {
             id: "root",
             element: {},
             module: "",
+            hasLoader: false,
             children: [
               {
                 path: "/",
                 id: "parent",
                 element: {},
                 module: "",
+                hasLoader: false,
                 children: [
                   {
                     path: "/child",
@@ -435,6 +459,7 @@ describe("errors on navigation", () => {
                     element: {},
                     module: "",
                     ErrorBoundary: FakeComponent,
+                    hasLoader: true,
                     loader
                   }
                 ]
@@ -483,6 +508,7 @@ describe("errors on navigation", () => {
           element: {},
           module: "",
           loader: loaderA,
+          hasLoader: true,
           children: [
             {
               path: "/b",
@@ -490,6 +516,7 @@ describe("errors on navigation", () => {
               element: {},
               module: "",
               loader: loaderB,
+              hasLoader: true,
               ErrorBoundary: FakeComponent,
               children: [
                 {
@@ -497,6 +524,7 @@ describe("errors on navigation", () => {
                   id: "c",
                   element: {},
                   module: "",
+                  hasLoader: true,
                   loader: loaderC
                 }
               ]
@@ -630,6 +658,7 @@ describe("action errors", () => {
             id: "parent",
             element: {},
             module: "",
+            hasLoader: false,
             children: [
               {
                 path: "/child",
@@ -637,6 +666,7 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 ErrorBoundary: FakeComponent,
+                hasLoader: false,
                 action
               }
             ]
@@ -668,6 +698,7 @@ describe("action errors", () => {
             id: "parent",
             element: {},
             module: "",
+            hasLoader: true,
             loader: parentLoader,
             children: [
               {
@@ -676,6 +707,7 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 ErrorBoundary: FakeComponent,
+                hasLoader: false,
                 action
               }
             ]
@@ -712,12 +744,14 @@ describe("action errors", () => {
             element: {},
             module: "",
             ErrorBoundary: FakeComponent,
+            hasLoader: false,
             children: [
               {
                 path: "/child",
                 id: "child",
                 element: {},
                 module: "",
+                hasLoader: false,
                 action
               }
             ]
@@ -754,6 +788,7 @@ describe("action errors", () => {
             element: {},
             module: "",
             ErrorBoundary: FakeComponent,
+            hasLoader: false,
             children: [
               {
                 path: "/parent",
@@ -761,6 +796,7 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 loader: parentLoader,
+                hasLoader: true,
                 children: [
                   {
                     path: "/parent/child",
@@ -768,6 +804,7 @@ describe("action errors", () => {
                     element: {},
                     module: "",
                     action,
+                    hasLoader: false,
                     ErrorBoundary: FakeComponent
                   }
                 ]
@@ -1047,6 +1084,30 @@ describe("fetcher states", () => {
     expect(fetcher.data).toBe("A DATA");
   });
 
+  test("loader re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.get("/foo", key);
+    await A.loader.resolve("A DATA");
+    let fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("A DATA");
+
+    let B = t.fetch.get("/foo", key);
+    fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("loading");
+    expect(fetcher.type).toBe("normalLoad");
+    expect(fetcher.data).toBe("A DATA");
+
+    await B.loader.resolve("B DATA");
+    fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("B DATA");
+  });
+
   test("loader submission fetch", async () => {
     let t = setup({ url: "/foo" });
 
@@ -1059,6 +1120,19 @@ describe("fetcher states", () => {
     fetcher = t.getFetcher(A.key);
     expect(fetcher.state).toBe("idle");
     expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("A DATA");
+  });
+
+  test("loader submission re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.submitGet("/foo", key);
+    await A.loader.resolve("A DATA");
+    t.fetch.submitGet("/foo", key);
+    let fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
     expect(fetcher.data).toBe("A DATA");
   });
 
@@ -1087,6 +1161,19 @@ describe("fetcher states", () => {
         "root": "ROOT",
       }
     `);
+  });
+
+  test("action re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.post("/foo", key);
+    await A.action.resolve("A ACTION");
+    await A.loader.resolve("A DATA");
+    t.fetch.post("/foo", key);
+    let fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.data).toBe("A ACTION");
   });
 });
 
@@ -1235,9 +1322,13 @@ describe("fetcher resubmissions/re-gets", () => {
     let key = "KEY";
     let A = t.fetch.get("/foo", key);
     let B = t.fetch.get("/foo", key);
-    t.fetch.get("/foo", key);
+    await A.loader.resolve(null);
+    let C = t.fetch.get("/foo", key);
+    await B.loader.resolve(null);
+    await C.loader.resolve(null);
     expect(A.loader.abortMock.calls.length).toBe(1);
     expect(B.loader.abortMock.calls.length).toBe(1);
+    expect(C.loader.abortMock.calls.length).toBe(0);
   });
 
   it("aborts re-get-submissions", async () => {
@@ -1284,7 +1375,7 @@ describe("fetcher resubmissions/re-gets", () => {
 
       let B = t.fetch.post("/foo", key);
       expect(A.loader.abortMock.calls.length).toBe(1);
-      expect(t.getFetcher(key).data).toBeUndefined();
+      expect(t.getFetcher(key).data).toBe("A ACTION");
 
       await A.loader.resolve("A LOADER");
       expect(t.getState().loaderData.foo).toBeUndefined();
@@ -1293,7 +1384,7 @@ describe("fetcher resubmissions/re-gets", () => {
       expect(B.action.abortMock.calls.length).toBe(1);
 
       await B.action.resolve("B ACTION");
-      expect(t.getFetcher(key).data).toBeUndefined();
+      expect(t.getFetcher(key).data).toBe("A ACTION");
 
       await C.action.resolve("C ACTION");
       expect(t.getFetcher(key).data).toBe("C ACTION");
@@ -1771,11 +1862,13 @@ let setup = ({ url } = { url: "/" }) => {
       module: "",
       ErrorBoundary: FakeComponent,
       CatchBoundary: FakeComponent,
+      hasLoader: true,
       loader: rootLoader,
       children: [
         {
           path: "/",
           id: "index",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1784,6 +1877,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/foo",
           id: "foo",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1792,6 +1886,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/bar",
           id: "bar",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1800,6 +1895,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/baz",
           id: "baz",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
@@ -1808,6 +1904,7 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/p/:param",
           id: "param",
+          hasLoader: true,
           loader: createLoader(),
           action: createAction(),
           element: {},
