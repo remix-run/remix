@@ -17,6 +17,9 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request)
+  // When there is any error while doing authentication, a flash error message 
+  // will be set to auth:error.
+  // Here we are getting that error and showing it as toast.
   const authError = session.get('auth:error') ?? null
   return json<LoaderData>(
     {
@@ -41,6 +44,7 @@ export default function App() {
         <Links />
       </head>
       <body>
+        {/* This can be a toast. */}
         {authError && (<p>{authError}</p>)}
         <Outlet />
         <ScrollRestoration />

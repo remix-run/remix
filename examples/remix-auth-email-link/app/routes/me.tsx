@@ -2,7 +2,7 @@ import type { LoaderFunction} from "remix";
 import { Form} from "remix";
 import { useLoaderData} from "remix";
 import { json } from "remix"
-import type { User } from "~/models/User"
+import type { User } from "~/data.server";
 import { authenticator } from "~/services/auth.server"
 
 type LoaderData = {
@@ -10,6 +10,8 @@ type LoaderData = {
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
+  // This is a protected route.
+  // If the user is not logged in, redirect to /login to login first.
   const user = await authenticator.isAuthenticated(request, {
     failureRedirect: '/login',
   })

@@ -5,5 +5,8 @@ export type User = {
 
 export async function getUser({email}: {email: string}): Promise<User> {
   // You should create/fetch this user from your db
-  return Promise.resolve({email})
+  const user: User = {
+    email
+  }
+  return Promise.resolve(user)
 }

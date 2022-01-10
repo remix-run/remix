@@ -1,7 +1,7 @@
 import type { LoaderFunction} from "remix";
 import { Form, Link, useLoaderData} from "remix";
 import { json } from "remix"
-import type { User } from "~/models/User"
+import type { User } from "~/data.server";
 import { authenticator } from "~/services/auth.server"
 
 type LoaderData = {

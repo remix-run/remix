@@ -9,10 +9,12 @@ type LoaderData = {
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
+  // If the user is already logged in, redirect to /me
   await authenticator.isAuthenticated(request, {
-    successRedirect: '/dashboard',
+    successRedirect: '/me',
   })
   const session = await getSession(request)
+  // If the magic link is sent to the email, auth:magiclink will be present in session
   const loaderData: LoaderData = {
     magicLinkSent: session.has('auth:magiclink'),
   }
