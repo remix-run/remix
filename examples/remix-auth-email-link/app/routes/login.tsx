@@ -1,5 +1,5 @@
-import type { ActionFunction, LoaderFunction } from 'remix'
-import { useLoaderData, json } from 'remix'
+import type { ActionFunction, LoaderFunction } from 'remix';
+import { Form, useLoaderData, json } from 'remix'
 
 import { authenticator, EMAIL_LINK } from '~/services/auth.server'
 import { getSession } from '~/services/session.server'
@@ -33,10 +33,10 @@ export default function LoginPage(): JSX.Element {
   return (
     <>
       {magicLinkSent && 'Sent the verification email!'}
-      <form method="post">
+      <Form method="post">
         <input type="text" name="email" id="email" />
         <button type="submit">Login</button>
-      </form>
+      </Form>
     </>
   )
 }

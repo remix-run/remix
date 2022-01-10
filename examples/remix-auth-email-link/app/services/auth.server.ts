@@ -1,7 +1,7 @@
 import { Authenticator } from 'remix-auth'
 import { EmailLinkStrategy } from 'remix-auth-email-link'
-import type { User } from '~/models/User';
-import { getUser } from '~/models/User'
+import type { User} from '~/data.server';
+import { getUser } from '~/data.server'
 import { mySessionStorage } from '~/services/session.server'
 
 export const authenticator = new Authenticator<User>(mySessionStorage)
