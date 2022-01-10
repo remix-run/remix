@@ -26,4 +26,5 @@ createApp(buildPath).then(server => {
     }
 
     console.log(`Remix App Server started at http://${address}:${port}`);
-})});
+  });
+});

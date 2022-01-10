@@ -244,11 +244,11 @@ export async function readConfig(
   let configFile = path.resolve(rootDirectory, "remix.config.js");
 
   let appConfig: AppConfig | { default: AppConfig };
-  
+
   try {
     appConfig = await import(configFile);
 
-    if('default' in appConfig) {
+    if ("default" in appConfig) {
       appConfig = appConfig.default;
     }
   } catch (error) {
