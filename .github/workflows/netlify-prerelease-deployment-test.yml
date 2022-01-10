@@ -1,8 +1,9 @@
 name: netlify prerelease deployment test
 
-on:
-  release:
-    types: [prereleased]
+on: push
+# on:
+#   release:
+#     types: [prereleased]
 
 jobs:
   deploy:
