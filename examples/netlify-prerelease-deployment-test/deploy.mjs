@@ -8,10 +8,9 @@ const client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
 
 async function createNetlifySite() {
   const sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
-  console.log(`SHA: ${sha}`);
   const site = await client.createSite({
     body: {
-      name: `remix-prerelease-deployment-test-${Date.now()}`
+      name: `remix-prerelease-deployment-test-${sha}-${Date.now()}`
     }
   });
 
