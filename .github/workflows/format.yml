@@ -16,6 +16,8 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_BOT_TOKEN }}
 
       - name: Use Node.js
         uses: actions/setup-node@v2
@@ -39,5 +41,5 @@ jobs:
             exit 0
           fi
           git commit -m "chore: format" -m "formatted $GITHUB_SHA"
-          git push https://${{ secrets.GH_BOT_TOKEN }}@github.com/$GITHUB_REPOSITORY.git
+          git push
           echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
