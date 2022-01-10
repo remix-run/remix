@@ -1600,10 +1600,10 @@ export let loader: LoaderFunction = async () => {
 };
 
 export default function Users() {
-  const { users } = useLoaderData<LoaderData>();
+  const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {users.map(user => (
+      {data.users.map(user => (
         <li>{user.name}</li>
       ))}
     </ul>
