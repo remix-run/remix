@@ -18,6 +18,7 @@ export type RemixMdxConfigFunction = (
 
 export type ServerBuildTarget =
   | "node-cjs"
+  | "node-esm"
   | "arc"
   | "netlify"
   | "vercel"
@@ -236,6 +237,10 @@ export async function readConfig(
     remixRoot = process.env.REMIX_ROOT || process.cwd();
   }
 
+  let packageJson = await import(`${remixRoot}/package.json`);
+  let moduleFormat: ServerModuleFormat =
+    packageJson.type === "module" ? "esm" : "cjs";
+
   if (!isValidServerMode(serverMode)) {
     throw new Error(`Invalid server mode "${serverMode}"`);
   }
@@ -259,7 +264,7 @@ export async function readConfig(
   let serverBuildTarget: ServerBuildTarget | undefined =
     appConfig.serverBuildTarget;
   let serverModuleFormat: ServerModuleFormat =
-    appConfig.serverModuleFormat || "cjs";
+    appConfig.serverModuleFormat || moduleFormat;
   let serverPlatform: ServerPlatform = appConfig.serverPlatform || "node";
   switch (appConfig.serverBuildTarget) {
     case "cloudflare-pages":
@@ -267,6 +272,8 @@ export async function readConfig(
       serverModuleFormat = "esm";
       serverPlatform = "neutral";
       break;
+    case "node-esm":
+      serverModuleFormat = "esm";
   }
 
   let mdx = appConfig.mdx;
