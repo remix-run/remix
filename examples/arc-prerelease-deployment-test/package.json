@@ -5,22 +5,32 @@
   "license": "",
   "scripts": {
     "build": "remix build",
-    "dev": "remix watch",
+    "dev:arc": "arc sandbox",
+    "dev:remix": "remix watch",
+    "dev": "concurrently \"npm run dev:remix\" \"npm run dev:arc\"",
     "postinstall": "remix setup node",
-    "start": "arc sandbox"
+    "ci": "start-server-and-test dev http://localhost:3333 test",
+    "cy:run": "cypress run",
+    "cy:open": "cypress open",
+    "test:e2e:dev": "start-server-and-test dev http://localhost:3333 cy:open",
+    "test:e2e:run": "start-server-and-test dev http://localhost:3333 cy:run"
   },
   "dependencies": {
+    "@remix-run/architect": "^1.1.1",
     "@remix-run/react": "^1.1.1",
+    "aws-sdk": "2.796.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "^1.1.1",
-    "@remix-run/architect": "^1.1.1",
-    "aws-sdk": "2.796.0"
+    "remix": "^1.1.1"
   },
   "devDependencies": {
     "@remix-run/dev": "^1.1.1",
+    "@testing-library/cypress": "8.0.2",
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
+    "concurrently": "7.0.0",
+    "cypress": "9.2.0",
+    "start-server-and-test": "1.14.0",
     "typescript": "^4.1.2"
   },
   "engines": {

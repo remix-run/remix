@@ -20,6 +20,9 @@ jobs:
         run: npm ci
         working-directory: ./examples/arc-prerelease-deployment-test
 
+      - run: npm run test:e2e:run
+        working-directory: ./examples/arc-prerelease-deployment-test
+
       - name: Build
         run: npm run build
         working-directory: ./examples/arc-prerelease-deployment-test
