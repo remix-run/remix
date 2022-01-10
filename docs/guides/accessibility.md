@@ -23,7 +23,7 @@ With a traditional multi-page website we don't have to think about route changes
 When the client scripts in Remix are loaded, React Router takes control of routing and prevents the browser's default behavior. Remix doesn't make any assumptions about your UI as the route changes. There are some important features you'll want to consider as a result, including:
 
 - **Focus management:** What element receives focus when the route changes? This is important for keyboard users and can be helpful for screen-reader users.
-- **Live-region announcements:** Screen-reader users also benefit from announcements when a route has changed. You may want to also notify them during certain transition states depending on the nature of the change and how long loading is expeted to take.
+- **Live-region announcements:** Screen-reader users also benefit from announcements when a route has changed. You may want to also notify them during certain transition states depending on the nature of the change and how long loading is expected to take.
 
 In 2019, [Marcy Sutton led and published findings from user research](https://www.gatsbyjs.com/blog/2019-07-11-user-testing-accessible-client-routing/) to help developers build accessible client-side routing experiences. We encourage you to read the article in detail. We are actively investigating and testing internal solutions as well as new APIs to simplify this process.
 

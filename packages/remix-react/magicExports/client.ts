@@ -50,5 +50,6 @@ export {
   useOutlet,
   useParams,
   useResolvedPath,
-  useSearchParams
+  useSearchParams,
+  useOutletContext
 } from "@remix-run/react";

@@ -1,6 +1,5 @@
 import type { LoaderFunction } from "remix";
-import { Form, json, useActionData, useLoaderData } from "remix";
-import { Outlet } from "remix";
+import { Form, json, Outlet, useActionData, useLoaderData } from "remix";
 
 export let loader: LoaderFunction = ({ request }) => {
   let value = new URL(request.url).searchParams.get("value");
@@ -24,7 +23,7 @@ export default function NestedFormsIndexLayout() {
 
       <Form method="get">
         {loaderData ? <p>{loaderData}</p> : null}
-        <input type="hidden" name="value" value="data from get submition" />
+        <input type="hidden" name="value" value="data from get submission" />
         <button type="submit">Submit Nested GET Form</button>
       </Form>
 

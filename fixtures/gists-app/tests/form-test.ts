@@ -148,6 +148,23 @@ describe("form", () => {
     `);
   });
 
+  it("posts with the correct checkbox data", async () => {
+    await page.goto(`${testServer}/methods`);
+    await reactIsHydrated(page);
+
+    page.click("button#submit-with-data");
+
+    let res = await page.waitForRequest(
+      req => req.method().toLowerCase() === "post"
+    );
+
+    let postData = res.postData();
+    expect(postData).toEqual(expect.any(String));
+    expect(postData!.includes(encodeURI("multiple[]=a&multiple[]=b"))).toBe(
+      true
+    );
+  });
+
   describe("with keyboard events", () => {
     it("posts to a loader with button data", async () => {
       await page.goto(`${testServer}/methods`);

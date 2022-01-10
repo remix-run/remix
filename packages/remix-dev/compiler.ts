@@ -51,7 +51,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
     }
   }
 
-  console.error(failure?.message || "An unknown build error occured");
+  console.error(failure?.message || "An unknown build error occurred");
 }
 
 interface BuildOptions extends Partial<BuildConfig> {
@@ -344,19 +344,26 @@ async function createServerBuild(
       resolveDir: config.serverBuildDirectory
     },
     outfile: path.resolve(config.serverBuildDirectory, "index.js"),
-    platform: "node",
-    format: "cjs",
+    platform: config.serverPlatform,
+    format: config.serverModuleFormat,
+    mainFields:
+      config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
     target: options.target,
     inject: [reactShim],
     loader: loaders,
     bundle: true,
     logLevel: "silent",
     incremental: options.incremental,
-    sourcemap: true,
+    sourcemap: options.sourcemap ? "inline" : false,
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(options.mode)
+    },
     plugins: [
       mdxPlugin(config),
       serverRouteModulesPlugin(config),
@@ -366,7 +373,7 @@ async function createServerBuild(
         // browser build and it's not there yet.
         if (id === "./assets.json" && importer === "<stdin>") return true;
 
-        // Mark all bare imports as external. They will be require()'d at
+        // Mark all bare imports as external. They will be require()'d (or imported if esm) at
         // runtime from node_modules.
         if (isBareModuleId(id)) {
           let packageName = getNpmPackageName(id);
@@ -384,8 +391,13 @@ async function createServerBuild(
             );
           }
 
-          // allow importing css files for bundling / hashing from node_modules.
+          // include .css files from node_modules in the build
+          // so we can get a hashed file name to put into the HTML
           if (id.endsWith(".css")) return false;
+
+          // include "remix" in the build so the server runtime (node) doesn't have to try
+          // to find the magic exports
+          if (packageName === "remix") return false;
 
           return true;
         }

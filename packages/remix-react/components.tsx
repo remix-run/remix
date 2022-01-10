@@ -5,7 +5,7 @@ import type {
   MouseEventHandler,
   TouchEventHandler
 } from "react";
-import React from "react";
+import * as React from "react";
 import type { Navigator } from "react-router";
 import {
   Router,
@@ -19,10 +19,9 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 
-import type { AppData } from "./data";
-import type { FormEncType, FormMethod } from "./data";
+import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
-import type { ComponentDidCatchEmulator, SerializedError } from "./errors";
+import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary,
@@ -32,12 +31,13 @@ import {
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
+  getLinksForMatches,
   getModuleLinkHrefs,
   getNewMatchesForLinks,
-  getStylesheetPrefetchLinks
+  getStylesheetPrefetchLinks,
+  isPageLinkDescriptor
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
-import { getLinksForMatches, isPageLinkDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
@@ -48,8 +48,6 @@ import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
-export { ScrollRestoration } from "./scroll-restoration";
-
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
@@ -59,7 +57,7 @@ interface RemixEntryContextType {
   routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
   pendingLocation?: Location;
-  componentDidCatchEmulator: ComponentDidCatchEmulator;
+  appState: AppState;
   routeModules: RouteModules;
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
@@ -95,7 +93,7 @@ export function RemixEntry({
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
-    componentDidCatchEmulator: entryComponentDidCatchEmulator
+    appState: entryComponentDidCatchEmulator
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -176,7 +174,7 @@ export function RemixEntry({
       value={{
         matches,
         manifest,
-        componentDidCatchEmulator: clientState,
+        appState: clientState,
         routeModules,
         serverHandoffString,
         clientRoutes,
@@ -251,8 +249,7 @@ function DefaultRouteComponent({ id }: { id: string }): React.ReactElement {
 
 export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
-  let { routeData, routeModules, componentDidCatchEmulator } =
-    useRemixEntryContext();
+  let { routeData, routeModules, appState } = useRemixEntryContext();
 
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
@@ -264,16 +261,15 @@ export function RemixRoute({ id }: { id: string }) {
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerCaught =
-      componentDidCatchEmulator.catch &&
-      componentDidCatchEmulator.catchBoundaryRouteId === id
-        ? componentDidCatchEmulator.catch
+      appState.catch && appState.catchBoundaryRouteId === id
+        ? appState.catch
         : undefined;
 
     // This needs to run after we check for the error from a previous render,
     // otherwise we will incorrectly render this boundary for a loader error
     // deeper in the tree.
-    if (componentDidCatchEmulator.trackCatchBoundaries) {
-      componentDidCatchEmulator.catchBoundaryRouteId = id;
+    if (appState.trackCatchBoundaries) {
+      appState.catchBoundaryRouteId = id;
     }
 
     context = maybeServerCaught
@@ -315,17 +311,17 @@ export function RemixRoute({ id }: { id: string }) {
     // If we tried to render and failed, and this route threw the error, find it
     // and pass it to the ErrorBoundary to emulate `componentDidCatch`
     let maybeServerRenderError =
-      componentDidCatchEmulator.error &&
-      (componentDidCatchEmulator.renderBoundaryRouteId === id ||
-        componentDidCatchEmulator.loaderBoundaryRouteId === id)
-        ? deserializeError(componentDidCatchEmulator.error)
+      appState.error &&
+      (appState.renderBoundaryRouteId === id ||
+        appState.loaderBoundaryRouteId === id)
+        ? deserializeError(appState.error)
         : undefined;
 
     // This needs to run after we check for the error from a previous render,
     // otherwise we will incorrectly render this boundary for a loader error
     // deeper in the tree.
-    if (componentDidCatchEmulator.trackBoundaries) {
-      componentDidCatchEmulator.renderBoundaryRouteId = id;
+    if (appState.trackBoundaries) {
+      appState.renderBoundaryRouteId = id;
     }
 
     context = maybeServerRenderError
@@ -451,7 +447,7 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...prefetchHandlers}
           {...props}
         />
-        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
   }
@@ -472,7 +468,7 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...prefetchHandlers}
           {...props}
         />
-        {shouldPrefetch && <PrefetchPageLinks page={href} />}
+        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
   }
@@ -637,13 +633,12 @@ export function Meta() {
 
   return (
     <>
-      {Object.keys(meta).map(name => {
-        let value = meta[name];
+      {Object.entries(meta).map(([name, value]) => {
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
         let isOpenGraphTag = name.startsWith("og:");
         return name === "title" ? (
-          <title key="title">{meta[name]}</title>
+          <title key="title">{value}</title>
         ) : Array.isArray(value) ? (
           value.map(content =>
             isOpenGraphTag ? (
@@ -661,6 +656,12 @@ export function Meta() {
     </>
   );
 }
+
+/**
+ * Tracks whether Remix has finished hydrating or not, so scripts can be skipped
+ * during client-side updates.
+ */
+let isHydrated = false;
 
 type ScriptProps = Omit<
   React.HTMLProps<HTMLScriptElement>,
@@ -690,6 +691,10 @@ export function Scripts(props: ScriptProps) {
     clientRoutes,
     serverHandoffString
   } = useRemixEntryContext();
+
+  React.useEffect(() => {
+    isHydrated = true;
+  }, []);
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
@@ -762,7 +767,7 @@ window.__remixRouteModules = {${matches
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {initialScripts}
+      {isHydrated ? null : initialScripts}
     </>
   );
 }
@@ -1079,11 +1084,11 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
           if (target instanceof URLSearchParams) {
             for (let [name, value] of target) {
-              formData.set(name, value);
+              formData.append(name, value);
             }
           } else if (target != null) {
             for (let name of Object.keys(target)) {
-              formData.set(name, target[name]);
+              formData.append(name, target[name]);
             }
           }
         }
@@ -1095,7 +1100,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       if (method.toLowerCase() === "get") {
         for (let [name, value] of formData) {
           if (typeof value === "string") {
-            url.searchParams.set(name, value);
+            url.searchParams.append(name, value);
           } else {
             throw new Error(`Cannot submit binary form data using GET`);
           }
