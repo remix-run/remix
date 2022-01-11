@@ -9,7 +9,6 @@
     "dev:remix": "remix watch",
     "dev": "concurrently \"npm run dev:remix\" \"npm run dev:arc\"",
     "postinstall": "remix setup node",
-    "ci": "start-server-and-test dev http://localhost:3333 test",
     "cy:run": "cypress run",
     "cy:open": "cypress open",
     "test:e2e:dev": "start-server-and-test dev http://localhost:3333 cy:open",

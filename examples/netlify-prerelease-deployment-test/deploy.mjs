@@ -37,6 +37,10 @@ async function netlifyDeploymentTest() {
 
   console.log(`Deployed to ${site.ssl_url}`);
   await verifySite(site.ssl_url);
+
+  process.env.BASE_URL = site.ssl_url;
+
+  spawnSync("npm", ["run", "cy:run"], { stdio: "inherit" });
 }
 
 try {

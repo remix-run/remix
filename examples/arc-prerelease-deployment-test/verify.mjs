@@ -1,3 +1,4 @@
+import { spawnSync } from "child_process";
 import aws from "aws-sdk";
 import { installGlobals } from "@remix-run/node";
 
@@ -31,6 +32,10 @@ async function arcDeploymentTest() {
   }
 
   await verifySite(deployment.ApiEndpoint);
+
+  process.env.BASE_URL = deployment.ApiEndpoint;
+
+  spawnSync("npm", ["run", "cy:run"], { stdio: "inherit" });
 }
 
 try {

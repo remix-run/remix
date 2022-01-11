@@ -49,6 +49,10 @@ async function vercelDeploymentTest() {
 
   console.log(`Deployed to ${url}`);
   await verifySite(url);
+
+  process.env.BASE_URL = url;
+
+  spawnSync("npm", ["run", "cy:run"], { stdio: "inherit" });
 }
 
 async function verifySite(url) {

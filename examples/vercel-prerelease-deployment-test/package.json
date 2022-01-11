@@ -7,7 +7,6 @@
     "build": "remix build",
     "dev": "remix dev",
     "postinstall": "remix setup node",
-    "ci": "start-server-and-test dev http://localhost:3000 test",
     "cy:run": "cypress run",
     "cy:open": "cypress open",
     "test:e2e:dev": "start-server-and-test dev http://localhost:3000 cy:open",

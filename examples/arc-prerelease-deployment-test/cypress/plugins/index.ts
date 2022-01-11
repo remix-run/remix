@@ -2,9 +2,8 @@ module.exports = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions
 ) => {
-  const port = process.env.PORT ?? 3333;
   const configOverrides: Partial<Cypress.PluginConfigOptions> = {
-    baseUrl: `http://localhost:${port}`,
+    baseUrl: process.env.BASE_URL ?? "http://localhost:3333",
     viewportWidth: 1030,
     viewportHeight: 800,
     integrationFolder: "cypress/e2e",

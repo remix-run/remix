@@ -6,3 +6,5 @@ node_modules
 
 sam.json
 sam.yaml
+
+/cypress/videos
