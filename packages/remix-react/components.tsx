@@ -1279,7 +1279,7 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
     <script
       dangerouslySetInnerHTML={{
         __html: `
-          let ws = new WebSocket("ws://localhost:${port}/socket");
+          let ws = new WebSocket("ws://${window.location.host.split(':')[0]}:${port}/socket");
           ws.onmessage = message => {
             let event = JSON.parse(message.data);
             if (event.type === "LOG") {
