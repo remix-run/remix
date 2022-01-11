@@ -74,6 +74,13 @@ export async function handleAsset(
         edgeTTL: 31536000,
         browserTTL: 31536000
       };
+    } else {
+      // Assets are not necessarily hashed in the request URL, so we cannot cache in the browser
+      // But they are hashed in KV storage, so we can cache on the edge
+      cacheControl = {
+        bypassCache: false,
+        edgeTTL: 31536000
+      };
     }
 
     return await getAssetFromKV(event, {
