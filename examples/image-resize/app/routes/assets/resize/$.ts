@@ -12,14 +12,16 @@
  * Further improvements could be done by implementing ETags, but that is out of scope for this demo.
  */
 
-import { LoaderFunction } from "remix";
-import { Params } from "react-router";
+import type { LoaderFunction } from "remix";
+import type { Params } from "react-router";
 
 import path from "path";
-import { createReadStream, ReadStream, statSync } from "fs";
+import type { ReadStream} from "fs";
+import { createReadStream, statSync } from "fs";
 import { PassThrough } from "stream";
 
-import sharp, { FitEnum } from "sharp";
+import type { FitEnum } from "sharp";
+import sharp from "sharp";
 
 const ASSETS_ROOT = "assets";
 
