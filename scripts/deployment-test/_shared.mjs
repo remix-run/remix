@@ -4,11 +4,34 @@ import jsonfile from "jsonfile";
 
 let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
 
-async function updatePackageConfig(packageName, transform) {
-  let file = path.join(packageName, "package.json");
+async function updatePackageConfig(directory, transform) {
+  let file = path.join(directory, "package.json");
   let json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
+}
+
+async function addCypress(directory) {
+  let rootPkgJson = await jsonfile.readFile(
+    path.join(process.cwd(), "package.json")
+  );
+
+  await updatePackageConfig(directory, config => {
+    config.devDependencies["start-server-and-test"] =
+      rootPkgJson.dependencies["start-server-and-test"];
+    config.devDependencies["cypress"] = rootPkgJson.dependencies["cypress"];
+    config.devDependencies["@testing-library/cypress"] =
+      rootPkgJson.dependencies["@testing-library/cypress"];
+
+    config.scripts["cy:run"] = "cypress run";
+    config.scripts["cy:open"] = "cypress open";
+    config.scripts[
+      "test:e2e:dev"
+    ] = `start-server-and-test dev http://localhost:3333 cy:open`;
+    config.scripts[
+      "test:e2e:run"
+    ] = `start-server-and-test dev http://localhost:3333 cy:run`;
+  });
 }
 
 let spawnOpts = { stdio: "inherit" };
@@ -41,4 +64,4 @@ function runCypress(dev, url) {
   }
 }
 
-export { sha, updatePackageConfig, spawnOpts, runCypress };
+export { sha, updatePackageConfig, spawnOpts, runCypress, addCypress };

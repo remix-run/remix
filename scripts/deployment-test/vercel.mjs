@@ -1,10 +1,9 @@
 import path from "path";
 import { spawnSync } from "child_process";
-import jsonfile from "jsonfile";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 
-import { sha, updatePackageConfig, spawnOpts, runCypress } from "./_shared.mjs";
+import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-vercel-${sha}`;
@@ -63,10 +62,6 @@ async function getVercelDeploymentUrl(projectId) {
 }
 
 try {
-  let rootPkgJson = await jsonfile.readFile(
-    path.join(process.cwd(), "package.json")
-  );
-
   await createNewVercelApp();
 
   await fse.copy(
@@ -79,22 +74,7 @@ try {
     path.join(PROJECT_DIR, "cypress.json")
   );
 
-  await updatePackageConfig(PROJECT_DIR, config => {
-    config.devDependencies["start-server-and-test"] =
-      rootPkgJson.dependencies["start-server-and-test"];
-    config.devDependencies["cypress"] = rootPkgJson.dependencies["cypress"];
-    config.devDependencies["@testing-library/cypress"] =
-      rootPkgJson.dependencies["@testing-library/cypress"];
-
-    config.scripts["cy:run"] = "cypress run";
-    config.scripts["cy:open"] = "cypress open";
-    config.scripts[
-      "test:e2e:dev"
-    ] = `start-server-and-test dev http://localhost:3000 cy:open`;
-    config.scripts[
-      "test:e2e:run"
-    ] = `start-server-and-test dev http://localhost:3000 cy:run`;
-  });
+  await addCypress(PROJECT_DIR);
 
   process.chdir(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
