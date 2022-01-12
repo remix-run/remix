@@ -103,7 +103,11 @@ try {
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
-  let arcDeployCommand = spawnSync("arc", ["deploy", "--prune"], spawnOpts);
+  let arcDeployCommand = spawnSync(
+    "npx",
+    ["arc", "deploy", "--prune"],
+    spawnOpts
+  );
   if (arcDeployCommand.status !== 0) {
     throw new Error("Deployment failed");
   }
