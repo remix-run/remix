@@ -113,6 +113,15 @@ try {
   let project = await createVercelProject();
   console.log("Project created");
 
+  console.log("npx", [
+    "--yes",
+    "vercel",
+    "deploy",
+    "--prod",
+    "--token",
+    process.env.VERCEL_TOKEN
+  ]);
+
   // deploy to vercel
   let vercelDeployCommand = spawnSync(
     "npx",
