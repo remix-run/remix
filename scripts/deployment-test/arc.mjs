@@ -38,12 +38,10 @@ async function getArcDeployment() {
     item => item.Name === AWS_STACK_NAME
   );
 
-  if (!deployment) {
-    throw new Error("Deployment not found");
-  }
-
   return deployment;
 }
+
+let spawnOpts = { stdio: "inherit" };
 
 try {
   let rootPkgJson = await jsonfile.readFile(
@@ -87,12 +85,15 @@ try {
   });
 
   process.chdir(PROJECT_DIR);
-  spawnSync("npm", ["install"], { stdio: "inherit" });
-  spawnSync("npm", ["run", "build"], { stdio: "inherit" });
+  spawnSync("npm", ["install"], spawnOpts);
+  spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run the tests against the dev server
   process.env.CYPRESS_BASE_URL = `http://localhost:3333`;
-  spawnSync("npm", ["run", "test:e2e:run"], { stdio: "inherit" });
+  let cypressDevCommand = spawnSync("npm", ["run", "test:e2e:run"], spawnOpts);
+  if (cypressDevCommand.status !== 0) {
+    throw new Error("Cypress tests failed on dev server");
+  }
 
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
@@ -101,12 +102,21 @@ try {
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
-  spawnSync("npx", ["arc", "deploy", "--prune"], { stdio: "inherit" });
+  let arcDeployCommand = spawnSync("arc", ["deploy", "--prune"], spawnOpts);
+  if (arcDeployCommand.status !== 0) {
+    throw new Error("Deployment failed");
+  }
   let deployment = await getArcDeployment();
+  if (!deployment) {
+    throw new Error("Deployment not found");
+  }
 
   // run the tests against the deployed app
   process.env.CYPRESS_BASE_URL = deployment.ApiEndpoint;
-  spawnSync("npm", ["run", "cy:run"], { stdio: "inherit" });
+  let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], spawnOpts);
+  if (cypressProdCommand.status !== 0) {
+    throw new Error("Cypress tests failed on deployed app");
+  }
 
   process.exit(0);
 } catch (error) {
