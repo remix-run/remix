@@ -16,7 +16,7 @@ import type { LoaderFunction } from "remix";
 import type { Params } from "react-router";
 
 import path from "path";
-import type { ReadStream} from "fs";
+import type { ReadStream } from "fs";
 import { createReadStream, statSync } from "fs";
 import { PassThrough } from "stream";
 
