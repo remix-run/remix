@@ -11,4 +11,6 @@ async function updatePackageConfig(packageName, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
-export { sha, updatePackageConfig };
+let spawnOpts = { stdio: "inherit" };
+
+export { sha, updatePackageConfig, spawnOpts };

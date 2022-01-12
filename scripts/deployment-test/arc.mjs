@@ -6,10 +6,10 @@ import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
 
-import { sha, updatePackageConfig } from "./_shared.mjs";
+import { sha, updatePackageConfig, spawnOpts } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-deployment-test-${sha}`;
+let APP_NAME = `remix-arc-${sha}`;
 let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
@@ -40,8 +40,6 @@ async function getArcDeployment() {
 
   return deployment;
 }
-
-let spawnOpts = { stdio: "inherit" };
 
 try {
   let rootPkgJson = await jsonfile.readFile(
@@ -96,6 +94,7 @@ try {
   if (cypressDevCommand.status !== 0) {
     throw new Error("Cypress tests failed on dev server");
   }
+
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
   let parsed = arcParser(fileContents);
