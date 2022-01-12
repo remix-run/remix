@@ -74,7 +74,7 @@ try {
     path.join(PROJECT_DIR, "cypress.json")
   );
 
-  await addCypress(PROJECT_DIR);
+  await addCypress(PROJECT_DIR, "3000");
 
   process.chdir(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);

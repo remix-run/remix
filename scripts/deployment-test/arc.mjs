@@ -62,7 +62,7 @@ try {
     path.join(PROJECT_DIR, "cypress.json")
   );
 
-  await addCypress(PROJECT_DIR);
+  await addCypress(PROJECT_DIR, "3333");
 
   await updatePackageConfig(PROJECT_DIR, config => {
     config.devDependencies["concurrently"] =
