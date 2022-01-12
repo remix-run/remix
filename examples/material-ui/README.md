@@ -1,4 +1,4 @@
-# Welcome to Remix!
+# Material-UI Example
 
 - [Remix Docs](https://remix.run/docs)
 
