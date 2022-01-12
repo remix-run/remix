@@ -7,7 +7,6 @@ let date = Date.now();
 
 async function updatePackageConfig(packageName, transform) {
   let file = path.join(packageName, "package.json");
-  console.log(`Updating ${file}`);
   let json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });

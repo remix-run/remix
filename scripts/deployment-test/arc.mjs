@@ -59,22 +59,26 @@ try {
   );
 
   await updatePackageConfig(PROJECT_DIR, config => {
-    // prettier-ignore
-    config.devDependencies["start-server-and-test"] = rootPkgJson.dependencies["start-server-and-test"];
+    config.devDependencies["start-server-and-test"] =
+      rootPkgJson.dependencies["start-server-and-test"];
     config.devDependencies["cypress"] = rootPkgJson.dependencies["cypress"];
-    // prettier-ignore
-    config.devDependencies["concurrently"] = rootPkgJson.dependencies["concurrently"];
+    config.devDependencies["concurrently"] =
+      rootPkgJson.dependencies["concurrently"];
+    config.devDependencies["@testing-library/cypress"] =
+      rootPkgJson.dependencies["@testing-library/cypress"];
 
     config.scripts["dev:arc"] = "arc sandbox";
     config.scripts["dev:remix"] = "remix watch";
-    // prettier-ignore
-    config.scripts["dev"] = 'concurrently "npm run dev:remix" "npm run dev:arc"';
+    config.scripts["dev"] =
+      'concurrently "npm run dev:remix" "npm run dev:arc"';
     config.scripts["cy:run"] = "cypress run";
     config.scripts["cy:open"] = "cypress open";
-    // prettier-ignore
-    config.scripts["test:e2e:dev"] = `start-server-and-test dev http://localhost:3333 cy:open`;
-    // prettier-ignore
-    config.scripts["test:e2e:run"] = `start-server-and-test dev http://localhost:3333 cy:run`;
+    config.scripts[
+      "test:e2e:dev"
+    ] = `start-server-and-test dev http://localhost:3333 cy:open`;
+    config.scripts[
+      "test:e2e:run"
+    ] = `start-server-and-test dev http://localhost:3333 cy:run`;
   });
 
   process.chdir(PROJECT_DIR);
@@ -82,7 +86,7 @@ try {
   spawnSync("npm", ["run", "build"], { stdio: "inherit" });
 
   // run the tests against the dev server
-  process.env.BASE_URL = `http://localhost:3333`;
+  process.env.CYPRESS_BASE_URL = `http://localhost:3333`;
   spawnSync("npm", ["run", "test:e2e:run"], { stdio: "inherit" });
 
   // deploy to the staging environment
@@ -90,7 +94,7 @@ try {
   let deployment = await getArcDeployment();
 
   // run the tests against the deployed app
-  process.env.BASE_URL = deployment.ApiEndpoint;
+  process.env.CYPRESS_BASE_URL = deployment.ApiEndpoint;
   spawnSync("npm", ["run", "cy:run"], { stdio: "inherit" });
 
   process.exit(0);

@@ -1,11 +1,15 @@
 {
-  "exclude": ["../node_modules/@types/jest"],
+  "exclude": [
+    "../node_modules/@types/jest",
+    "../node_modules/@testing-library/jest-dom"
+  ],
   "include": [
     "./index.ts",
     "e2e/**/*",
     "plugins/**/*",
     "support/**/*",
-    "../node_modules/cypress"
+    "../node_modules/cypress",
+    "../node_modules/@testing-library/cypress"
   ],
   "compilerOptions": {
     "baseUrl": ".",
