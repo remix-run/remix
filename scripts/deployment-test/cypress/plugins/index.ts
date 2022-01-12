@@ -3,7 +3,6 @@ module.exports = (
   config: Cypress.PluginConfigOptions
 ) => {
   const configOverrides: Partial<Cypress.PluginConfigOptions> = {
-    baseUrl: "http://localhost:3333",
     viewportWidth: 1030,
     viewportHeight: 800,
     integrationFolder: "cypress/e2e",
