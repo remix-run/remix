@@ -10,7 +10,7 @@ import { date, sha, updatePackageConfig } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-deployment-test-${sha}-${date}`;
-let AWS_STACK_NAME = toLogicalID(APP_NAME);
+let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 
