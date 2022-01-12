@@ -89,12 +89,13 @@ try {
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run the tests against the dev server
-  process.env.CYPRESS_BASE_URL = `http://localhost:3333`;
-  let cypressDevCommand = spawnSync("npm", ["run", "test:e2e:run"], spawnOpts);
+  let cypressDevCommand = spawnSync("npm", ["run", "test:e2e:run"], {
+    ...spawnOpts,
+    env: { ...process.env, CYPRESS_BASE_URL: `http://localhost:3333` }
+  });
   if (cypressDevCommand.status !== 0) {
     throw new Error("Cypress tests failed on dev server");
   }
-
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
   let parsed = arcParser(fileContents);
@@ -106,14 +107,17 @@ try {
   if (arcDeployCommand.status !== 0) {
     throw new Error("Deployment failed");
   }
+
   let deployment = await getArcDeployment();
   if (!deployment) {
     throw new Error("Deployment not found");
   }
 
   // run the tests against the deployed app
-  process.env.CYPRESS_BASE_URL = deployment.ApiEndpoint;
-  let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], spawnOpts);
+  let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], {
+    ...spawnOpts,
+    env: { ...process.env, CYPRESS_BASE_URL: deployment.ApiEndpoint }
+  });
   if (cypressProdCommand.status !== 0) {
     throw new Error("Cypress tests failed on deployed app");
   }
