@@ -38,6 +38,8 @@ jobs:
       - name: Build
         run: yarn build
 
+      - run: mkdir -p deployment-test
+
       - name: Deploy to Arc
         run: node ./scripts/deployment-test/arc.mjs
         env:
