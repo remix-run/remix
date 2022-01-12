@@ -125,10 +125,10 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
   res.writeHead(response.status, response.headers.raw());
 
   if (Buffer.isBuffer(response.body)) {
-    return res.end(response.body);
+    res.end(response.body);
   } else if (response.body?.pipe) {
-    return res.end(response.body.pipe(res));
+    response.body.pipe(res);
+  } else {
+    res.end();
   }
-
-  return res.end();
 }

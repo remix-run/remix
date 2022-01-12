@@ -3,6 +3,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/se
 import { createRequest } from "node-mocks-http";
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
 import type { VercelRequest } from "@vercel/node";
+import { PassThrough } from "stream";
 
 import {
   createRemixHeaders,
@@ -67,6 +68,25 @@ describe("vercel createRequestHandler", () => {
       let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
 
       expect(res.status).toBe(200);
+    });
+
+    it("handles body as stream", async () => {
+      // create a stream to be used as body of the Response
+      const stream = new PassThrough();
+      stream.push('hello world');
+      stream.end();
+      stream.destroy();
+
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response(stream as unknown as ReadableStream<any>, { status: 200 });
+      });
+
+      let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toBe("hello world");
     });
 
     it("handles status codes", async () => {
