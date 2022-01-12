@@ -199,7 +199,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>Remix: So great, it's funny!</title>
       </head>
       <body>
@@ -285,7 +285,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>Remix: So great, it's funny!</title>
       </head>
       <body>
@@ -499,7 +499,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>Remix: So great, it's funny!</title>
         <Links />
       </head>
@@ -1208,7 +1208,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>Remix: So great, it's funny!</title>
         <Links />
       </head>
@@ -3985,7 +3985,7 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>{title}</title>
         <Links />
       </head>
@@ -4152,7 +4152,7 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>{title}</title>
         <Links />
       </head>
@@ -4879,7 +4879,7 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <Meta />
         <title>{title}</title>
         <Links />
@@ -5588,7 +5588,7 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <Meta />
         <title>{title}</title>
         <Links />

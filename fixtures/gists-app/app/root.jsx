@@ -49,7 +49,7 @@ export default function Root() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <Meta />
         <Links />
       </head>
@@ -90,7 +90,7 @@ export function CatchBoundary() {
       return (
         <html lang="en">
           <head>
-            <meta charSet="utf-8" />
+            <meta charset="utf-8" />
             <title>404 Not Found</title>
             <Links />
           </head>
@@ -108,7 +108,7 @@ export function CatchBoundary() {
       return (
         <html lang="en">
           <head>
-            <meta charSet="utf-8" />
+            <meta charset="utf-8" />
             <title>{caught.status} Uh-oh!</title>
             <Links />
           </head>
@@ -141,7 +141,7 @@ export function ErrorBoundary({ error }) {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <title>Oops!</title>
         <Links />
       </head>

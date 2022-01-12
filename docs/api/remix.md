@@ -20,7 +20,7 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <Meta />
         <Links />
       </head>
@@ -1200,7 +1200,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
      return (
        <html lang="en">
          <head>
-           <meta charSet="utf-8" />
+           <meta charset="utf-8" />
            <Links />
          </head>
          <body>

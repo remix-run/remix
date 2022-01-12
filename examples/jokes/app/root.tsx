@@ -45,7 +45,7 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <Meta />
         {title ? <title>{title}</title> : null}
         <Links />
