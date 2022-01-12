@@ -4,7 +4,7 @@ import { NetlifyAPI } from "netlify";
 import jsonfile from "jsonfile";
 import fse from "fs-extra";
 
-import { sha, updatePackageConfig, spawnOpts } from "./_shared.mjs";
+import { sha, updatePackageConfig, spawnOpts, runCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-netlify-${sha}`;
@@ -68,13 +68,7 @@ try {
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run the tests against the dev server
-  let cypressDevCommand = spawnSync("npm", ["run", "test:e2e:run"], {
-    ...spawnOpts,
-    env: { ...process.env, CYPRESS_BASE_URL: `http://localhost:3000` }
-  });
-  if (cypressDevCommand.status !== 0) {
-    throw new Error("Cypress tests failed on dev server");
-  }
+  runCypress(true, "http://localhost:3000");
 
   // create a new site on netlify
   let site = await createNetlifySite();
@@ -92,14 +86,7 @@ try {
 
   console.log(`Deployed to ${site.ssl_url}`);
 
-  // run the tests against the deployed server
-  let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], {
-    ...spawnOpts,
-    env: { ...process.env, CYPRESS_BASE_URL: site.ssl_url }
-  });
-  if (cypressProdCommand.status !== 0) {
-    throw new Error("Cypress tests failed on deployed server");
-  }
+  runCypress(false, site.ssl_url);
 
   process.exit(0);
 } catch (error) {
