@@ -6,6 +6,12 @@ import {
   Scripts,
   ScrollRestoration
 } from "remix";
+import type { LinksFunction } from "remix";
+import globalStyles from "./styles/global.css";
+
+export const links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: globalStyles }];
+};
 
 export default function App() {
   return (
