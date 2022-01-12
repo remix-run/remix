@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile
 
+      - name: Build
+        run: yarn build
+
       - name: Deploy to Arc
         run: node ./scripts/deployment-test/arc.mjs
         env:
