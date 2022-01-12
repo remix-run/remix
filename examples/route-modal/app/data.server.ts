@@ -6,7 +6,7 @@ export type Invoice = {
   date: Date;
 };
 
-export let invoices: Invoice[] = [
+export const invoices: Invoice[] = [
   {
     id: 1,
     company: "Remix",

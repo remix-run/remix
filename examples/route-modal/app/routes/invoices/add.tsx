@@ -1,8 +1,9 @@
 import Dialog from "@reach/dialog";
-import {
+import type {
   ActionFunction,
+  LinksFunction} from "remix";
+import {
   json,
-  LinksFunction,
   redirect,
   useActionData
 } from "remix";
@@ -12,7 +13,7 @@ import styles from "@reach/dialog/styles.css";
 import stylesUrl from "~/styles/invoices/dialog.css";
 import { createInvoice } from "~/data.server";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
@@ -67,7 +68,7 @@ type ActionData = {
 };
 
 const badRequest = (data: ActionData) => json(data, { status: 400 });
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const form = await request.formData();
   const company = form.get("company");
   const description = form.get("description");
