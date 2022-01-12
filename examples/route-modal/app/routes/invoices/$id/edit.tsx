@@ -10,7 +10,7 @@ import styles from "@reach/dialog/styles.css";
 import stylesUrl from "~/styles/invoices/dialog.css";
 import { getInvoices } from "~/data.server";
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
@@ -23,7 +23,7 @@ export let links: LinksFunction = () => {
   ];
 };
 
-export let loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = ({ params }) => {
   const id = params.id;
   if (!id) return null;
 
@@ -32,7 +32,7 @@ export let loader: LoaderFunction = ({ params }) => {
   return json(invoice);
 };
 
-export let action: ActionFunction = ({ request }) => {
+export const action: ActionFunction = ({ request }) => {
   console.log(request);
   return null;
 };

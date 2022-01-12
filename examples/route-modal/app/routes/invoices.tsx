@@ -1,14 +1,16 @@
+import type {
+  LoaderFunction} from "remix";
 import {
   json,
   Link,
   LinksFunction,
-  LoaderFunction,
   Outlet,
   useLoaderData
 } from "remix";
-import { getInvoices, Invoice } from "~/data.server";
+import type { Invoice } from "~/data.server";
+import { getInvoices } from "~/data.server";
 
-export let loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({ params }) => {
   return json(getInvoices());
 };
 
