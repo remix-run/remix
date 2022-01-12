@@ -3,12 +3,15 @@ import { spawnSync } from "child_process";
 import aws from "aws-sdk";
 import jsonfile from "jsonfile";
 import fse from "fs-extra";
+import arcParser from "@architect/parser";
 
 import { date, sha, updatePackageConfig } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `arc-${sha}-${date}`;
+let AWS_APP_NAME = `Arc${sha}${date}Staging`;
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 
 async function createNewArcApp() {
   await createApp({
@@ -30,9 +33,7 @@ const client = new aws.ApiGatewayV2({
 
 async function getArcDeployment() {
   const deployments = await client.getApis().promise();
-  const deployment = deployments.Items.find(
-    item => item.Name === "RemixArchitectAppStaging"
-  );
+  const deployment = deployments.Items.find(item => item.Name === AWS_APP_NAME);
 
   if (!deployment) {
     throw new Error("Deployment not found");
@@ -89,6 +90,12 @@ try {
   // run the tests against the dev server
   process.env.CYPRESS_BASE_URL = `http://localhost:3333`;
   spawnSync("npm", ["run", "test:e2e:run"], { stdio: "inherit" });
+
+  // update our app.arc deployment name
+  let fileContents = await fse.readFile(ARC_CONFIG_PATH);
+  let parsed = arcParser(fileContents);
+  parsed.app = [APP_NAME];
+  await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
   spawnSync("npx", ["arc", "deploy", "--prune"], { stdio: "inherit" });
