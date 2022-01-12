@@ -8,6 +8,7 @@ import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-vercel-${sha}`;
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let CYPRESS_DEV_URL = "http://localhost:3000";
 
 async function createNewVercelApp() {
   await createApp({
@@ -74,13 +75,13 @@ try {
     path.join(PROJECT_DIR, "cypress.json")
   );
 
-  await addCypress(PROJECT_DIR, "3000");
+  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
 
   process.chdir(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
-  runCypress(true, "http://localhost:3000");
+  runCypress(true, CYPRESS_DEV_URL);
 
   // create a new project on vercel
   let project = await createVercelProject();

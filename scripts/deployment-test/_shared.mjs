@@ -11,7 +11,7 @@ async function updatePackageConfig(directory, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
-async function addCypress(directory, devPort) {
+async function addCypress(directory, url) {
   let rootPkgJson = await jsonfile.readFile(
     path.join(process.cwd(), "package.json")
   );
@@ -25,12 +25,8 @@ async function addCypress(directory, devPort) {
 
     config.scripts["cy:run"] = "cypress run";
     config.scripts["cy:open"] = "cypress open";
-    config.scripts[
-      "test:e2e:dev"
-    ] = `start-server-and-test dev http://localhost:${devPort} cy:open`;
-    config.scripts[
-      "test:e2e:run"
-    ] = `start-server-and-test dev http://localhost:${devPort} cy:run`;
+    config.scripts["test:e2e:dev"] = `start-server-and-test dev ${url} cy:open`;
+    config.scripts["test:e2e:run"] = `start-server-and-test dev ${url} cy:run`;
   });
 }
 

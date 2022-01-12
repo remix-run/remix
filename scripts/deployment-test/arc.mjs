@@ -19,6 +19,7 @@ let APP_NAME = `remix-arc-${sha}`;
 let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
+let CYPRESS_DEV_URL = "http://localhost:3333";
 
 async function createNewArcApp() {
   await createApp({
@@ -62,7 +63,7 @@ try {
     path.join(PROJECT_DIR, "cypress.json")
   );
 
-  await addCypress(PROJECT_DIR, "3333");
+  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
 
   await updatePackageConfig(PROJECT_DIR, config => {
     config.devDependencies["concurrently"] =
@@ -79,7 +80,7 @@ try {
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
-  runCypress(true, `http://localhost:3333`);
+  runCypress(true, CYPRESS_DEV_URL);
 
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
