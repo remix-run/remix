@@ -93,10 +93,13 @@ try {
   console.log(`Deployed to ${site.ssl_url}`);
 
   // run the tests against the deployed server
-  spawnSync("npm", ["run", "cy:run"], {
+  let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], {
     ...spawnOpts,
     env: { ...process.env, CYPRESS_BASE_URL: site.ssl_url }
   });
+  if (cypressProdCommand.status !== 0) {
+    throw new Error("Cypress tests failed on deployed server");
+  }
 
   process.exit(0);
 } catch (error) {

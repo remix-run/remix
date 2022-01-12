@@ -113,15 +113,6 @@ try {
   let project = await createVercelProject();
   console.log("Project created");
 
-  console.log("npx", [
-    "--yes",
-    "vercel",
-    "deploy",
-    "--prod",
-    "--token",
-    process.env.VERCEL_TOKEN
-  ]);
-
   // deploy to vercel
   let vercelDeployCommand = spawnSync(
     "npx",
@@ -153,10 +144,13 @@ try {
   console.log(`Deployed to ${fullUrl}`);
 
   // run the tests against the deployed server
-  spawnSync("npm", ["run", "cy:run"], {
+  let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], {
     ...spawnOpts,
     env: { ...process.env, CYPRESS_BASE_URL: fullUrl }
   });
+  if (cypressProdCommand.status !== 0) {
+    throw new Error("Cypress tests failed on deployed server");
+  }
 
   process.exit(0);
 } catch (error) {
