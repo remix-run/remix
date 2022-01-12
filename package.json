@@ -33,6 +33,7 @@
   ],
   "dependencies": {
     "@architect/parser": "5.0.2",
+    "@architect/utils": "3.0.4",
     "@babel/core": "^7.10.4",
     "@babel/eslint-parser": "^7.16.3",
     "@babel/plugin-proposal-export-namespace-from": "^7.10.4",

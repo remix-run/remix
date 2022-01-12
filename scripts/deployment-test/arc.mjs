@@ -4,12 +4,13 @@ import aws from "aws-sdk";
 import jsonfile from "jsonfile";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
+import { toLogicalID } from "@architect/utils";
 
 import { date, sha, updatePackageConfig } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `arc-${sha}-${date}`;
-let AWS_APP_NAME = `Arc${sha}${date}Staging`;
+let APP_NAME = `remix-deployment-test-${sha}-${date}`;
+let AWS_STACK_NAME = toLogicalID(APP_NAME);
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 
@@ -33,7 +34,9 @@ const client = new aws.ApiGatewayV2({
 
 async function getArcDeployment() {
   const deployments = await client.getApis().promise();
-  const deployment = deployments.Items.find(item => item.Name === AWS_APP_NAME);
+  const deployment = deployments.Items.find(
+    item => item.Name === AWS_STACK_NAME
+  );
 
   if (!deployment) {
     throw new Error("Deployment not found");
