@@ -828,7 +828,7 @@ export function action({ request }) {
 }
 
 export default function NewsletterSignupRoute() {
-  const data = useActionData();
+  const newsletter = useActionData();
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
@@ -1233,6 +1233,8 @@ Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we c
 Another common use case is [enabling JavaScript for some routes and not others][disabling-javascript].
 
 Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
+
+For an example of how to share loader data via `useMatches`, check out [the sharing loader data example in the remix repo][example-sharing-loader-data].
 
 ### `useBeforeUnload`
 
@@ -2141,7 +2143,7 @@ For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-wo
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
-// app/sessions.js
+// app/sessions.server.js
 import {
   createCookie,
   createCloudflareKVSessionStorage
@@ -2453,3 +2455,4 @@ import type {
 [constraints]: ../other-api/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
+[example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data

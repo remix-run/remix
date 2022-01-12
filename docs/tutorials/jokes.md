@@ -1909,7 +1909,7 @@ const joke = await db.joke.create({
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-22]
+```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-24]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 import { db } from "~/utils/db.server";
@@ -2305,18 +2305,18 @@ Great! Our database is now ready to go.
 
 ### Auth Flow Overview
 
-So our authentication will be of the traditional username/password variety. We'll be using [`bcrypt`](https://npm.im/bcrypt) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
+So our authentication will be of the traditional username/password variety. We'll be using [`bcryptjs`](https://npm.im/bcryptjs) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
 
 💿 Go ahead and get that installed right now so we don't forget:
 
 ```sh
-npm install bcrypt
+npm install bcryptjs
 ```
 
-💿 The `bcrypt` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
+💿 The `bcryptjs` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
 
 ```sh
-npm install --save-dev @types/bcrypt
+npm install --save-dev @types/bcryptjs
 ```
 
 Let me give you a quick diagram of the flow of things:
@@ -2789,7 +2789,7 @@ Here's what we need in that file to get started:
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -2899,7 +2899,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3011,7 +3011,7 @@ So we can now check whether the user is authenticated on the server by reading t
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3267,7 +3267,7 @@ We should probably give people the ability to see that they're logged in and a w
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3390,7 +3390,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[10,23,33,37,59-70]
+```tsx filename=app/routes/jokes.tsx lines=[10,23,35,39,61-72]
 import { User } from "@prisma/client";
 import {
   Link,
@@ -3546,7 +3546,7 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[13-21]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -4096,7 +4096,7 @@ Sometimes users do things we can anticipate. I'm not talking about validation ne
 
 It might help to think of the unexpected errors as 500-level errors ([server errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses)) and the expected errors as 400-level errors ([client errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#client_error_responses)).
 
-For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `loader` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCaught` hook. This will return the `Response` that was thrown.
+For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `loader` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCatch` hook. This will return the `Response` that was thrown.
 
 One last thing, this isn't for form validations and stuff. We already discussed that earlier with `useActionData`. This is just for situations where the user did something that means we can't reasonably render our default component so we want to render something else instead.
 
@@ -4555,7 +4555,7 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,28-55,65-74,79-101]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,30-57,67-76,81-103]
 import type { Joke } from "@prisma/client";
 import { ActionFunction, LoaderFunction } from "remix";
 import {
@@ -4993,8 +4993,8 @@ import type {
 import {
   useActionData,
   json,
-  Link,
-  useSearchParams
+  useSearchParams,
+  Link
 } from "remix";
 import { db } from "~/utils/db.server";
 import {
@@ -5251,10 +5251,10 @@ export default function Login() {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```ts filename=app/routes/jokes/$jokeId.tsx lines=[4,17-32]
+```ts filename=app/routes/jokes/$jokeId.tsx lines=[4,20-35]
 import type {
-  LoaderFunction,
   ActionFunction,
+  LoaderFunction,
   MetaFunction
 } from "remix";
 import {
@@ -5266,7 +5266,10 @@ import {
 } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
-import { requireUserId } from "~/utils/session.server";
+import {
+  getUserId,
+  requireUserId
+} from "~/utils/session.server";
 
 export const meta: MetaFunction = ({
   data
@@ -5285,11 +5288,13 @@ export const meta: MetaFunction = ({
   };
 };
 
-type LoaderData = { joke: Joke };
+type LoaderData = { joke: Joke; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
+  request,
   params
 }) => {
+  const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId }
   });
@@ -5298,7 +5303,10 @@ export const loader: LoaderFunction = async ({
       status: 404
     });
   }
-  const data: LoaderData = { joke };
+  const data: LoaderData = {
+    joke,
+    isOwner: userId === joke.jokesterId
+  };
   return data;
 };
 
@@ -5339,16 +5347,18 @@ export default function JokeRoute() {
       <p>Here's your hilarious joke:</p>
       <p>{data.joke.content}</p>
       <Link to=".">{data.joke.name} Permalink</Link>
-      <form method="post">
-        <input
-          type="hidden"
-          name="_method"
-          value="delete"
-        />
-        <button type="submit" className="button">
-          Delete
-        </button>
-      </form>
+      {data.isOwner ? (
+        <form method="post">
+          <input
+            type="hidden"
+            name="_method"
+            value="delete"
+          />
+          <button type="submit" className="button">
+            Delete
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }
@@ -5394,6 +5404,8 @@ Sweet! Now search engines and social media platforms will like our site a bit be
 Sometimes we want our routes to render something other than an HTML document. For example, maybe you have an endpoint that generates your social image for a blog post, or the image for a product, or the CSV data for a report, or an RSS feed, or sitemap, or maybe you want to implement API routes for your mobile app, or anything else.
 
 This is what [Resource Routes](../guides/resource-routes) are for. I think it'd be cool to have an RSS feed of all our jokes. I think it would make sense to be at the URL `/jokes.rss`. For that to work, you'll need to escape the `.` because that character has special meaning in Remix route filenames. Learn more about [escaping special characters here](../api/conventions#escaping-special-characters).
+
+<docs-info>Believe it or not, you've actually already made one of these. Check out your logout route! No UI necessary because it's just there to handle mutations and redirect lost souls.</docs-info>
 
 For this one, you'll probably want to at least peak at the example unless you want to go read up on the RSS spec 😅.
 
@@ -6068,7 +6080,7 @@ Here's a demonstration of what that experience looks like:
 
 ## Deployment
 
-I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`bcrypt`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
+I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`prisma`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
 
 <docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
 
