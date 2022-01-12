@@ -23,7 +23,7 @@ async function createNewArcApp() {
   });
 }
 
-const client = new aws.ApiGatewayV2({
+let client = new aws.ApiGatewayV2({
   region: "us-west-2",
   apiVersion: "latest",
   credentials: {
@@ -33,10 +33,8 @@ const client = new aws.ApiGatewayV2({
 });
 
 async function getArcDeployment() {
-  const deployments = await client.getApis().promise();
-  const deployment = deployments.Items.find(
-    item => item.Name === AWS_STACK_NAME
-  );
+  let deployments = await client.getApis().promise();
+  let deployment = deployments.Items.find(item => item.Name === AWS_STACK_NAME);
 
   return deployment;
 }
