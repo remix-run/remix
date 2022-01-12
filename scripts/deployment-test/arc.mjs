@@ -66,6 +66,7 @@ try {
       rootPkgJson.dependencies["concurrently"];
     config.devDependencies["@testing-library/cypress"] =
       rootPkgJson.dependencies["@testing-library/cypress"];
+    config.devDependencies["@architect/architect"] = "latest";
 
     config.scripts["dev:arc"] = "arc sandbox";
     config.scripts["dev:remix"] = "remix watch";
