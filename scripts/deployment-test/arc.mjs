@@ -71,7 +71,7 @@ try {
     config.scripts["dev:arc"] = "arc sandbox";
     config.scripts["dev:remix"] = "remix watch";
     config.scripts["dev"] =
-      'concurrently "npm run dev:remix" "npm run dev:arc"';
+      'concurrently "npm run dev:remix" "npm run dev:arc" --kill-others-on-fail';
     config.scripts["cy:run"] = "cypress run";
     config.scripts["cy:open"] = "cypress open";
     config.scripts[
