@@ -2143,7 +2143,7 @@ For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-wo
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
-// app/sessions.js
+// app/sessions.server.js
 import {
   createCookie,
   createCloudflareKVSessionStorage
