@@ -40,6 +40,9 @@ jobs:
 
       - run: mkdir -p deployment-test
 
+      - name: Install latest version of npm
+        run: npm install -g npm@latest
+
       - name: Deploy to Arc
         run: node ./scripts/deployment-test/arc.mjs
         env:
