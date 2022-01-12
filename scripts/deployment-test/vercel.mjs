@@ -19,13 +19,23 @@ async function createNewVercelApp() {
   });
 }
 
-async function createVercelProject() {
-  let promise = await fetch(`https://api.vercel.com/v8/projects`, {
-    method: "POST",
+function vercelClient(input, init) {
+  let url = new URL(input, "https://api.vercel.com");
+  let opts = {
+    ...init,
     headers: {
-      Authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
-      "Content-Type": "application/json"
-    },
+      ...init.headers,
+      Authorization: `Bearer ${process.env.VERCEL_TOKEN}`
+    }
+  };
+
+  return fetch(url, opts);
+}
+
+async function createVercelProject() {
+  let promise = await vercelClient(`/v8/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       framework: "remix",
       name: APP_NAME
@@ -38,6 +48,18 @@ async function createVercelProject() {
 
   let project = await promise.json();
   return project;
+}
+
+async function getVercelDeploymentUrl(projectId) {
+  let promise = await vercelClient(`/v8/projects/${projectId}`);
+
+  if (promise.status !== 200) {
+    throw new Error(`Error fetching project: ${promise.status}`);
+  }
+
+  let project = await promise.json();
+
+  return project.targets?.production?.url;
 }
 
 try {
@@ -111,14 +133,20 @@ try {
     throw new Error("Vercel deploy failed");
   }
 
-  let url = `https://${project.name}.vercel.app`;
+  let url = await getVercelDeploymentUrl(project.id);
 
-  console.log(`Deployed to ${url}`);
+  if (!url) {
+    throw new Error("No deployment url found");
+  }
+
+  let fullUrl = `https://${url}`;
+
+  console.log(`Deployed to ${fullUrl}`);
 
   // run the tests against the deployed server
   spawnSync("npm", ["run", "cy:run"], {
     ...spawnOpts,
-    env: { ...process.env, CYPRESS_BASE_URL: url }
+    env: { ...process.env, CYPRESS_BASE_URL: fullUrl }
   });
 
   process.exit(0);
