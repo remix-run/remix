@@ -1,12 +1,5 @@
-import type {
-  LoaderFunction} from "remix";
-import {
-  json,
-  Link,
-  LinksFunction,
-  Outlet,
-  useLoaderData
-} from "remix";
+import type { LoaderFunction } from "remix";
+import { json, Link, LinksFunction, Outlet, useLoaderData } from "remix";
 import type { Invoice } from "~/data.server";
 import { getInvoices } from "~/data.server";
 
