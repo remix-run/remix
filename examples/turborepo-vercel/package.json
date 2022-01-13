@@ -23,7 +23,9 @@
           "^build"
         ],
         "outputs": [
-          "dist/**"
+          "dist/**",
+          "api/_build/**",
+          "public/build/**"
         ]
       },
       "dev": {
