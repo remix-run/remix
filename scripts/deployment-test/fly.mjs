@@ -75,6 +75,8 @@ try {
   flyToml.services = flyToml.services || [];
   flyToml.services[0].internal_port = "8080";
   await fse.writeFile(flyTomlPath, toml.stringify(flyToml));
+  let flyUrl = `https://${flyToml.app}.fly.dev`;
+  console.log(`Fly app url: ${flyUrl}`);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -93,7 +95,6 @@ try {
   await new Promise(resolve => setTimeout(() => resolve(), 60_000));
 
   // run cypress against the deployed server
-  let flyUrl = `https://${flyToml.app}.fly.dev`;
   runCypress(false, flyUrl);
 
   process.exit(0);
