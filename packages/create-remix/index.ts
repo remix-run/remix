@@ -7,6 +7,7 @@ import cliPkgJson from "./package.json";
 export type Server =
   | "arc"
   | "cloudflare-workers"
+  | "cloudflare-pages"
   | "express"
   | "fly"
   | "netlify"
