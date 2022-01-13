@@ -49,7 +49,7 @@ try {
 
   // create a new app on fly
   let flyLaunchCommand = spawnSync(
-    "fly",
+    "flyctl",
     [
       "launch",
       "--name",
