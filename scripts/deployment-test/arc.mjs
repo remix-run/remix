@@ -1,7 +1,6 @@
 import path from "path";
 import { spawnSync } from "child_process";
 import aws from "aws-sdk";
-import jsonfile from "jsonfile";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
@@ -11,7 +10,8 @@ import {
   updatePackageConfig,
   spawnOpts,
   runCypress,
-  addCypress
+  addCypress,
+  getRootPackageJson
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -45,9 +45,7 @@ async function getArcDeployment() {
 }
 
 try {
-  let rootPkgJson = await jsonfile.readFile(
-    path.join(process.cwd(), "package.json")
-  );
+  let rootPkgJson = await getRootPackageJson();
 
   await createNewApp();
 

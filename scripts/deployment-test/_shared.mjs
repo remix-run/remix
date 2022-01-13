@@ -11,10 +11,12 @@ async function updatePackageConfig(directory, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
+async function getRootPackageJson() {
+  return jsonfile.readFile(path.join(process.cwd(), "package.json"));
+}
+
 async function addCypress(directory, url) {
-  let rootPkgJson = await jsonfile.readFile(
-    path.join(process.cwd(), "package.json")
-  );
+  let rootPkgJson = await getRootPackageJson();
 
   await updatePackageConfig(directory, config => {
     config.devDependencies["start-server-and-test"] =
@@ -60,4 +62,11 @@ function runCypress(dev, url) {
   }
 }
 
-export { sha, updatePackageConfig, spawnOpts, runCypress, addCypress };
+export {
+  sha,
+  updatePackageConfig,
+  spawnOpts,
+  runCypress,
+  addCypress,
+  getRootPackageJson
+};
