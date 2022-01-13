@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
 
 jobs:
   format:
@@ -29,7 +30,7 @@ jobs:
 
       - name: Commit
         run: |
-          git config --local user.email "github-actions@remix.run"
+          git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
 
           git add .

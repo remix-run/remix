@@ -96,7 +96,7 @@ Each route can add style links to the page, for example:
 import styles from "~/styles/dashboard.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -104,7 +104,7 @@ export function links() {
 import styles from "~/styles/accounts.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -112,7 +112,7 @@ export function links() {
 import styles from "~/styles/sales.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -405,9 +405,7 @@ Initialize a tailwind config so we can tell it which files to generate classes f
 
 ```js filename=tailwind.config.js lines=[2,3]
 module.exports = {
-  mode: "jit",
-  purge: ["./app/**/*.{ts,tsx}"],
-  darkMode: "media", // or 'media' or 'class'
+  content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
     extend: {}
   },
@@ -465,7 +463,7 @@ Then alter how tailwind is generating css:
   // ...
   "scripts": {
     "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --minify",
     "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
     "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
     "postinstall": "remix setup node",

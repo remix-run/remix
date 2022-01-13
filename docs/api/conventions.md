@@ -14,7 +14,7 @@ This file has a few build and development configuration options, but does not ac
 ```tsx filename=remix.config.js
 module.exports = {
   appDirectory: "app",
-  browserBuildDirectory: "public/build",
+  assetsBuildDirectory: "public/build",
   devServerPort: 8002,
   publicPath: "/build/",
   serverBuildDirectory: "build",
@@ -44,28 +44,27 @@ A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`. Both sets of routes will be merged.
 
 ```tsx
-exports.routes = async (defineRoutes) => {
+exports.routes = async defineRoutes => {
   // If you need to do async work, do it before calling `defineRoutes`, we use
   // the call stack of `route` inside to set nesting.
 
-  return defineRoutes((route) => {
+  return defineRoutes(route => {
     // A common use for this is catchall routes.
     // - The first argument is the React Router path to match against
     // - The second is the relative filename of the route handler
-    route("/some/path/*", "catchall.tsx")
+    route("/some/path/*", "catchall.tsx");
 
     // if you want to nest routes, use the optional callback argument
     route("some/:path", "some/route/file.js", () => {
       // - path is relative to parent path
       // - filenames are still relative to the app directory
-      route("relative/path", "some/other/file")
+      route("relative/path", "some/other/file");
     });
-
-  }
-}
+  });
+};
 ```
 
-### browserBuildDirectory
+### assetsBuildDirectory
 
 The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
 
@@ -79,11 +78,13 @@ The path to the server build, relative to remix.config.js. Defaults to "build". 
 
 ### devServerPort
 
-The port number to use for the dev server. Defaults to 8002.
+The port number to use for the dev websocket server. Defaults to 8002.
 
 ## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.
+
+<docs-info>[Dilum Sanjaya](https://twitter.com/DilumSanjaya) made [an awesome visualization](https://remix-routing-demo.netlify.app/) of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
 ### Special Files
 
@@ -138,35 +139,6 @@ Any JavaScript or TypeScript files in the `app/routes/` directory will become ro
 
 The default export in this file is the component that is rendered at that route and will render within the `<Outlet />` rendered by the root route.
 
-#### Nested Routes
-
-<!-- prettier-ignore -->
-```markdown [3-5]
-app/
-├── routes/
-│   ├── blog/
-│   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── index.tsx
-└── root.tsx
-```
-
-<details>
-
-<summary>URL Route Matches</summary>
-
-| URL                | Matched Route                    |
-| ------------------ | -------------------------------- |
-| `/`                | `app/routes/index.tsx`           |
-| `/about`           | `app/routes/about.tsx`           |
-| `/blog`            | `app/routes/blog/index.tsx`      |
-| `/blog/categories` | `app/routes/blog/categories.tsx` |
-
-</details>
-
-Folders inside the `app/routes/` directory will create nested routes and URLs in your app. Files named `index.tsx` will render when the parent layout route's path is matched exactly.
-
 #### Dynamic Route Parameters
 
 <!-- prettier-ignore -->
@@ -202,7 +174,7 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 - `/blog/once-upon-a-time`
 - `/blog/how-to-ride-a-bike`
 
-On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId`) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
+On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app](https://github.com/remix-run/remix/tree/main/examples/multiple-params)) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
 import { useParams } from "remix";
@@ -260,9 +232,9 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a nested route has the same name its directory, it becomes a layout route for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route](#root-layout-route), the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
-#### Flat Layout Routes
+#### Pathless Layout Routes
 
 <!-- prettier-ignore -->
 ```markdown [3,7,10-11]
@@ -293,9 +265,11 @@ app/
 
 </details>
 
-You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`.
+You can also create layout routes _without adding segments to the URL_ by prepending the directory and associated parent route file with double underscores: `__`.
 
-For example, all of your marketing pages could share a layout rendered in `app/routes/__marketing.tsx` as the layout, and those routes would go in the `app/routes/__marketing/` directory. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+For example, all of your marketing pages could be in `app/routes/__marketing/*` and then share a layout by creating `app/routes/__marketing.tsx`. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL because `__marketing` won't add segments to the URL, just UI hierarchy.
+
+<docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
 #### Dot Delimeters
 
@@ -409,7 +383,7 @@ import Remix from "@remix-run/react/browser";
 ReactDOM.hydrate(<Remix />, document);
 ```
 
-As you can see, you have full control over hydration. This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client-side libraries, setup things like `window.history.scrollRestoration`, etc.
+This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.
 
 ### entry.server.tsx
 
@@ -933,6 +907,15 @@ export const meta: MetaFunction = () => {
   };
 };
 ```
+
+#### Page context in `meta` function
+
+`meta` function is passed an object that has following data:
+
+- `data` is whatever exported by `loader` function
+- `location` is a `window.location`-like object that has some data about the current route
+- `params` is an object containing route params
+- `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
 
 ### `links`
 

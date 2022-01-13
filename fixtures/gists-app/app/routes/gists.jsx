@@ -1,5 +1,4 @@
-import { Outlet } from "remix";
-import { Link, useLoaderData, useTransition, json } from "remix";
+import { json, Link, Outlet, useLoaderData, useTransition } from "remix";
 
 import Shared from "~/components/Shared";
 import stylesHref from "~/styles/gists.css";
@@ -45,11 +44,11 @@ export default function Gists() {
           {users.map(user => (
             <li key={user.id}>
               <Link
-                prefetch="intent"
+                // prefetch="intent"
                 to={user.id}
                 className="text-blue-700 underline"
               >
-                {user.name} {locationPending && "..."}
+                {user.name} {locationPending ? "..." : null}
               </Link>
             </li>
           ))}

@@ -15,7 +15,7 @@ export const loader: LoaderFunction = () => {
     resources: [
       {
         name: "Remix Docs",
-        url: "https://docs.remix.run"
+        url: "https://remix.run/docs"
       },
       {
         name: "React Router Docs",

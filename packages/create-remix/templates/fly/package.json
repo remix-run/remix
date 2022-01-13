@@ -3,7 +3,7 @@
     "postinstall": "remix setup node",
     "build": "remix build",
     "dev": "remix dev",
-    "deploy": "flyctl deploy",
+    "deploy": "fly deploy --remote-only",
     "start": "remix-serve build"
   },
   "dependencies": {

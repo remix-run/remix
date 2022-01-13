@@ -206,7 +206,7 @@ We know, we know, you want to animate in nice validation errors and stuff. We'll
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-const [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(formData);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
@@ -219,7 +219,7 @@ export const action: ActionFunction = async ({
   const [errors, project] = await createProject(formData);
 
   if (errors) {
-    const values = Object.fromEntries(newProject);
+    const values = Object.fromEntries(formData);
     return { errors, values };
   }
 
@@ -254,11 +254,11 @@ export default function NewProject() {
         </label>
       </p>
 
-      {actionData?.errors.name && (
+      {actionData?.errors.name ? (
         <p style={{ color: "red" }}>
           {actionData.errors.name}
         </p>
-      )}
+      ) : null}
 
       <p>
         <label>
@@ -271,11 +271,11 @@ export default function NewProject() {
         </label>
       </p>
 
-      {actionData?.errors.description && (
+      {actionData?.errors.description ? (
         <p style={{ color: "red" }}>
           {actionData.errors.description}
         </p>
-      )}
+      ) : null}
 
       <p>
         <button type="submit">Create</button>
@@ -352,11 +352,11 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData && actionData.errors.name && (
+        {actionData && actionData.errors.name ? (
           <p style={{ color: "red" }}>
             {actionData.errors.name}
           </p>
-        )}
+        ) : null}
 
         <p>
           <label>
@@ -373,11 +373,11 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData && actionData.errors.description && (
+        {actionData && actionData.errors.description ? (
           <p style={{ color: "red" }}>
             {actionData.errors.description}
           </p>
-        )}
+        ) : null}
 
         <p>
           <button type="submit">
@@ -459,12 +459,12 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData?.errors.name && (
+        {actionData?.errors.name ? (
           <ValidationMessage
             isSubmitting={transition.state === "submitting"}
             error={actionData?.errors?.name}
           />
-        )}
+        ) : null}
 
         <p>
           <label>
