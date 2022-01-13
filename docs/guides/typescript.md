@@ -19,7 +19,7 @@ The remix compiler will not do any type checking (it simply removes the types). 
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   },
