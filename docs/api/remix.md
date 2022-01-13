@@ -777,7 +777,9 @@ export async function action({ request }) {
     return json({ error: error.message });
   }
 }
+```
 
+```tsx filename=components/footer.tsx
 function NewsletterSignup() {
   const newsletter = useFetcher();
   const ref = useRef();
