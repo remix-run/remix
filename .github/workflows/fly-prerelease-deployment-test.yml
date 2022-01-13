@@ -43,7 +43,7 @@ jobs:
         run: npm install -g npm@latest
 
       - name: Install the Fly CLI
-        run: curl -L https://fly.io/install.sh | sh
+        run: curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
 
       - name: Deploy to Fly
         run: node ./scripts/deployment-test/fly.mjs
