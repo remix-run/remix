@@ -10,7 +10,7 @@ let APP_NAME = `remix-vercel-${sha}`;
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
-async function createNewVercelApp() {
+async function createNewApp() {
   await createApp({
     install: false,
     lang: "ts",
@@ -63,7 +63,7 @@ async function getVercelDeploymentUrl(projectId) {
 }
 
 try {
-  await createNewVercelApp();
+  await createNewApp();
 
   await fse.copy(
     path.join(process.cwd(), "scripts/deployment-test/cypress"),

@@ -21,7 +21,7 @@ let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 let CYPRESS_DEV_URL = "http://localhost:3333";
 
-async function createNewArcApp() {
+async function createNewApp() {
   await createApp({
     install: false,
     lang: "ts",
@@ -41,9 +41,7 @@ let client = new aws.ApiGatewayV2({
 
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
-  let deployment = deployments.Items.find(item => item.Name === AWS_STACK_NAME);
-
-  return deployment;
+  return deployments.Items.find(item => item.Name === AWS_STACK_NAME);
 }
 
 try {
@@ -51,7 +49,7 @@ try {
     path.join(process.cwd(), "package.json")
   );
 
-  await createNewArcApp();
+  await createNewApp();
 
   await fse.copy(
     path.join(process.cwd(), "scripts/deployment-test/cypress"),
