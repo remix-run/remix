@@ -41,6 +41,7 @@
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-react": "^7.16.0",
     "@babel/preset-typescript": "^7.12.7",
+    "@iarna/toml": "2.2.5",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "@rushstack/eslint-patch": "^1.1.0",

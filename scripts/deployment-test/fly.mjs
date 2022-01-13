@@ -1,7 +1,7 @@
 import path from "path";
 import { spawnSync } from "child_process";
 import fse from "fs-extra";
-import fetch from "node-fetch";
+import toml from "@iarna/toml";
 
 import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
@@ -17,35 +17,6 @@ async function createNewApp() {
     server: "fly",
     projectDir: PROJECT_DIR
   });
-}
-
-async function getFlyAppUrl() {
-  let promise = await fetch(`https://api.fly.io/graphql`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.FLY_TOKEN}`
-    },
-    body: JSON.stringify({
-      operationName: "GET_FLY_APP",
-      query: `
-        query GET_FLY_APP {
-          app(name: "remix-fly-app") {
-            hostname
-          }
-        }
-      `
-    })
-  });
-
-  if (!promise.ok) {
-    throw new Error(`Failed to get app url: ${promise.statusText}`);
-  }
-
-  let response = await promise.json();
-
-  let { hostname } = response.data.app;
-  return `https://${hostname}`;
 }
 
 try {
@@ -81,8 +52,9 @@ try {
     "fly",
     [
       "launch",
+      "--name",
+      APP_NAME,
       "--no-deploy",
-      "--generate-name",
       "--org",
       "personal",
       "--region",
@@ -93,6 +65,16 @@ try {
   if (flyLaunchCommand.status !== 0) {
     throw new Error(`Failed to launch fly app: ${flyLaunchCommand.stderr}`);
   }
+
+  // we need to add a PORT env variable to our fly.toml
+  let flyTomlPath = path.join(PROJECT_DIR, "fly.toml");
+  let flyTomlContent = await fse.readFile(flyTomlPath);
+  let flyToml = toml.parse(flyTomlContent);
+  flyToml.env = flyToml.env || {};
+  flyToml.env.PORT = "8080";
+  flyToml.services = flyToml.services || [];
+  flyToml.services[0].internal_port = "8080";
+  await fse.writeFile(flyTomlPath, toml.stringify(flyToml));
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -106,11 +88,13 @@ try {
     throw new Error("Deployment failed");
   }
 
-  // get the deployment url
-  let url = await getFlyAppUrl();
+  // fly deployments can take a sec to start
+  // ... or a minute...
+  await new Promise(resolve => setTimeout(() => resolve(), 60_000));
 
   // run cypress against the deployed server
-  runCypress(false, url);
+  let flyUrl = `https://${flyToml.app}.fly.dev`;
+  runCypress(false, flyUrl);
 
   process.exit(0);
 } catch (error) {
