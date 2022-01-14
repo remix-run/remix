@@ -5885,7 +5885,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[12,89-109]
+```tsx filename=app/routes/jokes/new.tsx lines=[9,12,89-109]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
