@@ -1,53 +1,33 @@
-# Welcome to Remix!
+# Example app with [Stitches](https://stitches.dev/)
 
-- [Remix Docs](https://remix.run/docs)
+This example features how to use [Stitches](https://stitches.dev/) with Remix.
 
-## Development
+## Preview
 
-From your terminal:
+Open this example on [CodeSandbox](https://codesandbox.io/):
 
-```sh
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/stitches)
+
+## Getting Started
+
+First, run the development server:
+
+```bash
 npm run dev
+# or
+yarn dev
 ```
 
-This starts your app in development mode, rebuilding assets on file changes.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Deployment
+You can start editing the page by modifying `app/routes/index.tsx`. The page auto-updates as you edit the file.
 
-First, build your app for production:
+## Commands
 
-```sh
-npm run build
-```
+- `dev`: runs your application on `localhost:3000`
+- `build`: creates the production build version
+- `start`: starts a simple server with the build production code
 
-Then run the app in production mode:
+## Related Links
 
-```sh
-npm start
-```
-
-Now you'll need to pick a host to deploy it to.
-
-### DIY
-
-If you're familiar with deploying node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `remix build`
-
-- `build/`
-- `public/build/`
-
-### Using a Template
-
-When you ran `npx create-remix@latest` there were a few choices for hosting. You can run that again to create a new project, then copy over your `app/` folder to the new project that's pre-configured for your target server.
-
-```sh
-cd ..
-# create a new project, and pick a pre-configured host
-npx create-remix@latest
-cd my-new-remix-app
-# remove the new project's app (not the old one!)
-rm -rf app
-# copy your app over
-cp -R ../my-old-remix-app/app app
-```
+[Stitches](https://stitches.dev/)
