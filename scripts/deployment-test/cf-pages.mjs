@@ -120,12 +120,12 @@ try {
   spawnSync("git", ["init"], spawnOpts);
   spawnSync(
     "git",
-    ["config", "--local", "user.email", "hello@remix.run"],
+    ["config", "--global", "user.email", "hello@remix.run"],
     spawnOpts
   );
   spawnSync(
     "git",
-    ["config", "--local", "user.name", "Remix Run Bot"],
+    ["config", "--global", "user.name", "Remix Run Bot"],
     spawnOpts
   );
   spawnSync("git", ["add", "."], spawnOpts);
