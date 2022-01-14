@@ -1,8 +1,8 @@
 name: cloudflare workers prerelease deployment test
 
-on: push
-#   release:
-#     types: [prereleased]
+on:
+  release:
+    types: [prereleased]
 
 jobs:
   deploy:
