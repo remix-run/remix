@@ -128,7 +128,7 @@ try {
     ["config", "--global", "user.name", "Remix Run Bot"],
     spawnOpts
   );
-  spawnOpts("git", ["branch", "-m", "main"], spawnOpts);
+  spawnSync("git", ["branch", "-m", "main"], spawnOpts);
   spawnSync("git", ["add", "."], spawnOpts);
   spawnSync("git", ["commit", "-m", "initial commit"], spawnOpts);
   spawnSync(
