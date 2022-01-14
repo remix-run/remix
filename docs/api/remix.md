@@ -1603,7 +1603,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
 ```js filename=app/routes/index.js lines=[2,6,14,18]
-import { useLoaderData, json, redirect } from "remix";
+import { useLoaderData, json, redirect, Form } from "remix";
 import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
