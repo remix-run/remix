@@ -58,6 +58,13 @@ try {
   // change to the project directory
   process.chdir(PROJECT_DIR);
 
+  // install deps
+  spawnSync("npm", ["install"], spawnOpts);
+  spawnSync("npm", ["run", "build"], spawnOpts);
+
+  // run cypress against the dev server
+  runCypress(true, CYPRESS_DEV_URL);
+
   // we need to update the workers name
   let wranglerTomlPath = path.join(PROJECT_DIR, "wrangler.toml");
   let wranglerTomlContent = await fse.readFile(wranglerTomlPath);
@@ -67,18 +74,11 @@ try {
   let url = `https://${APP_NAME}.remix--run.workers.dev`;
   console.log(`worker url: ${url}`);
 
-  // install deps
-  spawnSync("npm", ["install"], spawnOpts);
-  spawnSync("npm", ["run", "build"], spawnOpts);
-
   // deploy the app
   let deployCommand = spawnSync("npx", ["wrangler", "publish"], spawnOpts);
   if (deployCommand.status !== 0) {
     throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
   }
-
-  // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
 
   // run cypress against the deployed server
   runCypress(false, url);

@@ -11,13 +11,11 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v2
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v1
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          # Miniflare requires at least Node.js 16.7.0.
+          node-version: 16
 
       - run: echo "::set-output name=dir::$(yarn cache dir)"
         id: yarn-cache

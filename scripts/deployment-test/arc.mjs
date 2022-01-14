@@ -72,10 +72,14 @@ try {
       'concurrently "npm run dev:remix" "npm run dev:arc" --kill-others-on-fail';
   });
 
+  // change to the project directory
   process.chdir(PROJECT_DIR);
+
+  // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
+  // run cypress against the dev server
   runCypress(true, CYPRESS_DEV_URL);
 
   // update our app.arc deployment name
@@ -99,6 +103,7 @@ try {
     throw new Error("Deployment not found");
   }
 
+  // run cypress against the deployed server
   runCypress(false, deployment.ApiEndpoint);
 
   process.exit(0);
