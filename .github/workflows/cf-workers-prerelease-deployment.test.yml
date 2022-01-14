@@ -41,7 +41,11 @@ jobs:
       - name: Install latest version of npm
         run: npm install -g npm@latest
 
+      - name: Install Wrangler
+        run: npm install -g @cloudflare/wrangler
+
       - name: Deploy to Cloudflare Workers
         run: node ./scripts/deployment-test/cf-workers.mjs
         env:
-          WORKERS_API_KEY: ${{ secrets.TEST_CF_WORKERS_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.TEST_TEST_CF_API_TOKEN }}

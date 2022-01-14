@@ -64,15 +64,15 @@ try {
   let wranglerToml = toml.parse(wranglerTomlContent);
   wranglerToml.name = APP_NAME;
   await fse.writeFile(wranglerTomlPath, toml.stringify(wranglerToml));
-  let flyUrl = `https://${APP_NAME}.loganmcansh.workers.dev`;
-  console.log(`worker url: ${flyUrl}`);
+  let url = `https://${APP_NAME}.remix--run.workers.dev`;
+  console.log(`worker url: ${url}`);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // deploy the app
-  let deployCommand = spawnSync("npm", ["run", "deploy"], spawnOpts);
+  let deployCommand = spawnSync("npx", ["wrangler", "deploy"], spawnOpts);
   if (deployCommand.status !== 0) {
     throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
   }
@@ -81,7 +81,7 @@ try {
   runCypress(true, CYPRESS_DEV_URL);
 
   // run cypress against the deployed server
-  // runCypress(false, flyUrl);
+  runCypress(false, url);
 
   process.exit(0);
 } catch (error) {
