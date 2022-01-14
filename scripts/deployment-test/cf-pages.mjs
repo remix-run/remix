@@ -146,7 +146,8 @@ try {
   await createCloudflareProject();
   await createCloudflareDeployment();
   console.log(
-    "Successfully created cloudflare pages project, the build is in progress, but will take a bit before it's ready to run cypress against it"
+    "Successfully created cloudflare pages project, the build is in progress, but will take a bit before it's ready to run cypress against it",
+    "we'll sleep for 5 minutes to give it time to build"
   );
 
   // sleep for 5 minutes to be safe...
