@@ -72,7 +72,7 @@ try {
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // deploy the app
-  let deployCommand = spawnSync("npx", ["wrangler", "deploy"], spawnOpts);
+  let deployCommand = spawnSync("npx", ["wrangler", "publish"], spawnOpts);
   if (deployCommand.status !== 0) {
     throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
   }
