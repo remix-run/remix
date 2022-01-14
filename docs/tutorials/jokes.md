@@ -1588,6 +1588,7 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
 import type { LoaderFunction } from "remix";
+import { useLoaderData } from "remix";
 import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
 
@@ -1626,7 +1627,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 <summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx lines=[2,3,15-17,19-24,27,51-55]
-import { LinksFunction, LoaderFunction } from "remix";
+import type { LinksFunction, LoaderFunction } from "remix";
 import { Link, Outlet, useLoaderData } from "remix";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/jokes.css";
