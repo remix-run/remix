@@ -1,9 +1,8 @@
 name: cloudflare pages prerelease deployment test
 
 on:
-  - push
-#   release:
-#     types: [prereleased]
+  release:
+    types: [prereleased]
 
 jobs:
   deploy:
