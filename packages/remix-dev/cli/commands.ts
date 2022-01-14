@@ -136,7 +136,7 @@ export async function watch(
     wss.close();
     await closeWatcher();
     fse.emptyDirSync(config.assetsBuildDirectory);
-    fse.emptyDirSync(config.serverBuildDirectory);
+    fse.rmSync(config.serverBuildPath);
   });
 }
 
@@ -160,10 +160,10 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   let app = express();
   app.use((_, __, next) => {
-    purgeAppRequireCache(config.serverBuildDirectory);
+    purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildDirectory, mode));
+  app.use(createApp(config.serverBuildPath, mode));
 
   let server: Server | null = null;
 

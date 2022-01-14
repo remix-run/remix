@@ -9,7 +9,7 @@
     "predev": "yarn run install_remix",
     "dev": "pm2-dev pm2.config.js",
     "prestart": "yarn run install_remix",
-    "start": "node server.js",
+    "start": "node ./build",
     "preroutes": "yarn run install_remix",
     "routes": "node node_modules/@remix-run/dev/cli.js routes"
   },
