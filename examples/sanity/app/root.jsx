@@ -38,7 +38,7 @@ function Document({ children, title }) {
 }
 
 export default function App() {
-  let data = useLoaderData();
+  const data = useLoaderData();
 
   return (
     <Document>
@@ -48,7 +48,7 @@ export default function App() {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   switch (caught.status) {
     case 401:

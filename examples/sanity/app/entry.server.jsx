@@ -1,6 +1,6 @@
 import ReactDOMServer from "react-dom/server";
 import { RemixServer } from "remix";
-import 'dotenv/config';
+import "dotenv/config";
 
 export default function handleRequest(
   request,
@@ -8,8 +8,7 @@ export default function handleRequest(
   responseHeaders,
   remixContext
 ) {
-
-  let markup = ReactDOMServer.renderToString(
+  const markup = ReactDOMServer.renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 

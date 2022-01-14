@@ -23,12 +23,12 @@ export async function loader({ request, params }) {
     preview,
     // If `preview` mode is active, we'll need these for live updates
     query: preview ? query : null,
-    queryParams: preview ? queryParams : null,
+    queryParams: preview ? queryParams : null
   };
 }
 
 export default function Movie() {
-  let { initialData, preview, query, queryParams } = useLoaderData();
+  const { initialData, preview, query, queryParams } = useLoaderData();
 
   // If `preview` mode is active, its component update this state for us
   const [data, setData] = useState(initialData);

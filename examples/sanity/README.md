@@ -11,7 +11,9 @@ From your terminal:
 ```sh
 npm run dev
 ```
+
 In another terminal:
+
 ```sh
 cd studio
 npm install
@@ -21,7 +23,6 @@ sanity start
 ## Note
 
 Get your ProjectID from **studio/sanity.json** and paste it in **app/lib/config.js**
-
 
 This starts your app in development mode, rebuilding assets on file changes.
 
@@ -49,5 +50,3 @@ Make sure to deploy the output of `remix build`
 
 - `build/`
 - `public/build/`
-
-

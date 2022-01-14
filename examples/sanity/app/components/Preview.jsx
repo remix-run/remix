@@ -5,7 +5,7 @@ import { usePreviewSubscription } from "~/lib/sanity/usePreviewSubscription";
 export default function Preview({ data, setData, query, queryParams }) {
   const { data: previewData } = usePreviewSubscription(query, {
     params: queryParams,
-    initialData: data,
+    initialData: data
   });
 
   useEffect(() => setData(previewData), [previewData]);

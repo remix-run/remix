@@ -8,7 +8,7 @@ import stylesUrl from "../styles/index.css";
 export function meta() {
   return {
     title: "Remix Starter",
-    description: "Welcome to remix!",
+    description: "Welcome to remix!"
   };
 }
 
@@ -25,13 +25,13 @@ export async function loader() {
 }
 
 export default function Index() {
-  let { movies } = useLoaderData();
+  const { movies } = useLoaderData();
 
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
       {movies?.length > 1
-        ? movies.map((movie) => (
-            <div style={{padding: 10}} key={movie._id}>
+        ? movies.map(movie => (
+            <div style={{ padding: 10 }} key={movie._id}>
               <Link to={movie.slug.current}>{movie.title}</Link>
             </div>
           ))
