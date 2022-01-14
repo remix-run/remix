@@ -24,7 +24,6 @@ try {
   await createNewApp();
 
   // add cypress to the project
-  // and a dockerfile
   await Promise.all([
     fse.copy(
       path.join(process.cwd(), "scripts/deployment-test/cypress"),
@@ -36,12 +35,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
-
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/fly-dockerfile"),
-      path.join(PROJECT_DIR, "Dockerfile")
-    )
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
 
   // change to the project directory
