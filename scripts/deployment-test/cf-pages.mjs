@@ -154,7 +154,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 60_000 * 5));
 
   // run cypress against the cloudflare pages server
-  runCypress(false);
+  runCypress(false, `https://${APP_NAME}.pages.dev`);
 
   process.exit(0);
 } catch (error) {
