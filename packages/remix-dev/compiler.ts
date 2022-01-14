@@ -327,7 +327,8 @@ async function createBrowserBuild(
     plugins: [
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
+      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+      ...config.projectEsbuildPlugins,
     ]
   });
 }
@@ -403,7 +404,8 @@ async function createServerBuild(
         }
 
         return false;
-      })
+      }),
+      ...config.projectEsbuildPlugins,
     ]
   });
 }

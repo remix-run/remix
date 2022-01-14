@@ -95,6 +95,12 @@ export interface AppConfig {
    * routes.
    */
   ignoredRouteFiles?: string[];
+
+  /**
+   * Additional plugins to use while compiling.
+   * It will run for both client/server compilations.
+   */
+  projectEsbuildPlugins: any[],
 }
 
 /**
@@ -175,6 +181,12 @@ export interface RemixConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform: "node" | "neutral";
+
+  /**
+   * Additional plugins to use while compiling.
+   * It will run for both client/server compilations.
+   */
+   projectEsbuildPlugins: any[],
 }
 
 /**
@@ -243,6 +255,7 @@ export async function readConfig(
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
+  let projectEsbuildPlugins  = appConfig.projectEsbuildPlugins || [];
 
   let rootRouteFile = findEntry(appDirectory, "root");
   if (!rootRouteFile) {
@@ -285,7 +298,8 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverPlatform,
-    mdx
+    mdx,
+    projectEsbuildPlugins
   };
 }
 
