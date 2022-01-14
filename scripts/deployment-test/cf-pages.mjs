@@ -117,6 +117,7 @@ try {
   // run cypress against the dev server
   runCypress(true, CYPRESS_DEV_URL);
 
+  spawnSync("git", ["init"], spawnOpts);
   spawnSync(
     "git",
     ["config", "--local", "user.email", "hello@remix.run"],
@@ -127,8 +128,6 @@ try {
     ["config", "--local", "user.name", "Remix Run Bot"],
     spawnOpts
   );
-
-  spawnSync("git", ["init"], spawnOpts);
   spawnSync("git", ["add", "."], spawnOpts);
   spawnSync("git", ["commit", "-m", "Initial commit"], spawnOpts);
   spawnSync(
