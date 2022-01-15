@@ -17,7 +17,7 @@ describe("readConfig", () => {
         rootDirectory: expect.any(String),
         appDirectory: expect.any(String),
         cacheDirectory: expect.any(String),
-        serverBuildDirectory: expect.any(String),
+        serverBuildPath: expect.any(String),
         assetsBuildDirectory: expect.any(String)
       },
       `
@@ -25,6 +25,7 @@ describe("readConfig", () => {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
         "cacheDirectory": Any<String>,
+        "customServer": "./server.js",
         "devServerBroadcastDelay": 0,
         "devServerPort": 8002,
         "entryClientFile": "entry.client.jsx",
@@ -447,7 +448,9 @@ describe("readConfig", () => {
             "path": "two",
           },
         },
-        "serverBuildDirectory": Any<String>,
+        "serverBuildPath": Any<String>,
+        "serverBuildTarget": undefined,
+        "serverBuildTargetEntryModule": "export * from \\"@remix-run/server-build\\";",
         "serverMode": "production",
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",

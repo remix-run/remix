@@ -158,6 +158,16 @@ export async function dev(remixRoot: string, modeArg?: string) {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   let port = process.env.PORT || 3000;
 
+  if (config.customServer) {
+    console.warn(
+      "Remix dev is not supported for custom servers. Starting server with @remix-run/serve."
+    );
+    config.customServer = undefined;
+    config.serverBuildTarget = "node-cjs";
+    config.serverModuleFormat = "cjs";
+    config.serverPlatform = "node";
+  }
+
   let app = express();
   app.use((_, __, next) => {
     purgeAppRequireCache(config.serverBuildPath);

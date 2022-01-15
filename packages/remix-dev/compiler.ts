@@ -368,44 +368,8 @@ async function createServerBuild(
   if (config.customServer) {
     entryPoints = [config.customServer];
   } else {
-    let contents = `export * from "@remix-run/server-build";`;
-
-    switch (config.serverBuildTarget) {
-      case "arc":
-        contents = `import { createRequestHandler } from "@remix-run/architect";
-import * as build from "@remix-run/server-build";
-export const handler = createRequestHandler({ build, mode: process.env.NODE_ENV });`;
-        break;
-      case "cloudflare-pages":
-        contents = `import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
-import * as build from "@remix-run/server-build";
-const handleRequest = createPagesFunctionHandler({ build });
-export function onRequest(context) {
-  return handleRequest(context);
-}`;
-        break;
-      case "cloudflare-workers":
-        contents = `import { createEventHandler } from "@remix-run/cloudflare-workers";
-import * as build from "@remix-run/server-build";
-addEventListener("fetch", createEventHandler({ build, mode: process.env.NODE_ENV }));`;
-        break;
-      case "deno":
-        contents = ``;
-        break;
-      case "netlify":
-        contents = `import { createRequestHandler } from "@remix-run/netlify";
-import * as build from "@remix-run/server-build";
-export const handler = createRequestHandler({ build, mode: process.env.NODE_ENV });`;
-        break;
-      case "vercel":
-        contents = `import { createRequestHandler } from "@remix-run/vercel";
-import * as build from "@remix-run/server-build";
-export default createRequestHandler({ build, mode: process.env.NODE_ENV });`;
-        break;
-    }
-
     stdin = {
-      contents,
+      contents: config.serverBuildTargetEntryModule,
       loader: "js"
     };
   }
@@ -450,15 +414,15 @@ export default createRequestHandler({ build, mode: process.env.NODE_ENV });`;
         .mkdir(path.dirname(config.serverBuildPath), { recursive: true })
         .catch(() => {});
 
-      await Promise.all(
-        buildResult.outputFiles.map(async file => {
-          console.log(file.path);
-          if (file.path !== config.serverBuildPath) {
-            return;
-          }
-          await fsp.writeFile(file.path, file.contents);
-        })
-      );
+      // manually write files to exclude assets from server build
+      for (let file of buildResult.outputFiles) {
+        if (file.path !== config.serverBuildPath) {
+          continue;
+        }
+        await fsp.writeFile(file.path, file.contents);
+        break;
+      }
+
       return buildResult;
     });
 }
