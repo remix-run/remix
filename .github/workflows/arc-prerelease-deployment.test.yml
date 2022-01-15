@@ -1,9 +1,6 @@
 name: arc prerelease deployment test
 
 on:
-  push:
-    branches:
-      - jacob/platform-entry
   release:
     types: [prereleased]
 
