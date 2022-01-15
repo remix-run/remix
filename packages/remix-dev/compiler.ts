@@ -23,6 +23,7 @@ import { serverEntryModulesPlugin } from "./compiler/plugins/serverEntryModulesP
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
 import type { AssetsManifest } from "@remix-run/server-runtime/entry";
+import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -185,12 +186,28 @@ export async function watch(
       .then(build => generateManifests(config, build.metafile!));
     ref.current = clientBuildPromise;
 
-    await Promise.all([clientBuildPromise, serverBuild.rebuild()]).catch(
-      err => {
-        disposeBuilders();
-        onBuildFailure(err);
-      }
-    );
+    await Promise.all([
+      clientBuildPromise,
+      serverBuild.rebuild().then(async buildResult => {
+        await fsp
+          .mkdir(path.dirname(config.serverBuildPath), { recursive: true })
+          .catch(() => {});
+
+        // manually write files to exclude assets from server build
+        for (let file of buildResult.outputFiles!) {
+          if (file.path !== config.serverBuildPath) {
+            continue;
+          }
+          await fsp.writeFile(file.path, file.contents);
+          break;
+        }
+
+        return buildResult;
+      })
+    ]).catch(err => {
+      disposeBuilders();
+      onBuildFailure(err);
+    });
     if (onRebuildFinish) onRebuildFinish();
   }, 100);
 
@@ -338,6 +355,7 @@ async function createBrowserBuild(
     sourcemap: options.sourcemap,
     metafile: true,
     incremental: options.incremental,
+    treeShaking: true,
     minify: options.mode === BuildMode.Production,
     entryNames: "[dir]/[name]-[hash]",
     chunkNames: "_shared/[name]-[hash]",
@@ -370,18 +388,32 @@ async function createServerBuild(
   } else {
     stdin = {
       contents: config.serverBuildTargetEntryModule,
-      loader: "js"
+      loader: "js",
+      resolveDir: config.rootDirectory
     };
+  }
+
+  let additionalPlugins: esbuild.Plugin[] = [];
+  if (config.serverPlatform !== "node" && config.serverBuildTarget !== "deno") {
+    additionalPlugins.push(NodeModulesPolyfillPlugin());
   }
 
   return esbuild
     .build({
+      absWorkingDir: config.rootDirectory,
       stdin,
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
+      treeShaking: true,
+      minify:
+        options.mode === BuildMode.Production &&
+        !!config.serverBuildTarget &&
+        ["cloudflare-workers", "cloudflare-pages"].includes(
+          config.serverBuildTarget
+        ),
       mainFields:
         config.serverModuleFormat === "esm"
           ? ["module", "main"]
@@ -401,6 +433,7 @@ async function createServerBuild(
         "process.env.NODE_ENV": JSON.stringify(options.mode)
       },
       plugins: [
+        ...additionalPlugins,
         mdxPlugin(config),
         emptyModulesPlugin(config, /\.client\.[tj]sx?$/),
         serverRouteModulesPlugin(config),

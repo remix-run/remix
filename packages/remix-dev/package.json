@@ -15,6 +15,7 @@
     "remix": "cli.js"
   },
   "dependencies": {
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
     "esbuild": "0.13.14",
