@@ -765,7 +765,7 @@ fetcher.data; // the data from the loader
 
 **Newsletter Signup Form**
 
-Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create an API-only route:
+Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create a Resource Route:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
 export async function action({ request }) {
