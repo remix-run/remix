@@ -102,13 +102,13 @@ export interface AppConfig {
    * The output format of the server build. Defaults to "cjs".
    * * @deprecated Use {@link ServerConfig.serverTarget} instead.
    */
-  serverModuleFormat?: "esm" | "cjs";
+  serverModuleFormat?: ServerModuleFormat;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
    * @deprecated Use {@link ServerConfig.serverTarget} instead.
    */
-  serverPlatform?: "node" | "neutral";
+  serverPlatform?: ServerPlatform;
 
   /**
    * The target of the server build. Defaults to "node-cjs".
