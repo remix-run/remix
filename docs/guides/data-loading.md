@@ -666,4 +666,4 @@ export default function RouteComp() {
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#userloaderdata
+[useloaderdata]: ../api/remix#useloaderdata
