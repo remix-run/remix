@@ -166,6 +166,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
     config.serverBuildTarget = "node-cjs";
     config.serverModuleFormat = "cjs";
     config.serverPlatform = "node";
+    config.serverBuildTargetEntryModule = `export * from "@remix-run/server-build";`;
   }
 
   let app = express();

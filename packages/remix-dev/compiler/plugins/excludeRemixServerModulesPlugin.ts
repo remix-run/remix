@@ -7,10 +7,10 @@ export function excludeRemixServerModulesPlugin(): Plugin {
       build.onResolve({ filter: /^@remix-run\/.*$/ }, ({ path }) => {
         if (
           path.endsWith("/server-runtime") ||
-          path.endsWith("node") ||
-          path.endsWith("cloudflare-pages") ||
-          path.endsWith("cloudflare-workers") ||
-          path.endsWith("cloudflare-deno")
+          path.endsWith("/node") ||
+          path.endsWith("/cloudflare-pages") ||
+          path.endsWith("/cloudflare-workers") ||
+          path.endsWith("/deno")
         ) {
           return {
             path,
