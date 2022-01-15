@@ -1,5 +1,4 @@
 {
-  "main": "dist/worker.js",
   "scripts": {
     "postinstall": "remix setup cloudflare-pages",
     "build": "cross-env NODE_ENV=production remix build",
