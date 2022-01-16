@@ -1,0 +1,36 @@
+{
+  "private": true,
+  "name": "remix-app",
+  "description": "",
+  "license": "",
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix watch",
+    "postinstall": "remix setup node",
+    "start": "cross-env NODE_ENV=production node server/index.js",
+    "start:dev": "cross-env NODE_ENV=development node server/index.js"
+  },
+  "dependencies": {
+    "@remix-run/express": "^1.1.1",
+    "@remix-run/react": "^1.1.1",
+    "compression": "^1.7.4",
+    "cross-env": "^7.0.3",
+    "express": "^4.17.2",
+    "morgan": "^1.10.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "^1.1.1",
+    "socket.io": "^4.4.1",
+    "socket.io-client": "^4.4.1"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^1.1.1",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "typescript": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": false
+}
