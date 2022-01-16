@@ -607,6 +607,7 @@ You should recognize a lot of that code from the posts route. We set up some ext
 💿 Create an admin stylesheet
 
 ```sh
+mkdir app/styles
 touch app/styles/admin.css
 ```
 
