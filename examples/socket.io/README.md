@@ -4,7 +4,7 @@ Socket.io is the simples way to work with WebSockets in Node.js
 
 This examples shows how to setup socket.io inside a Express server and together with a Remix app and how to connect from the browser.
 
-> Note: The code here needs the Express adapter and because of that it needs Node.js. This is not deployable to any platform not supporting a persistent running process like Serverless platforms.
+> Note: The code here needs the Express adapter and because of that it needs Node.js. This is only deployable to platforms supporting a persistent running process (unlike Serverless platforms).
 
 ## Preview
 
