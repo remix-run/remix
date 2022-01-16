@@ -884,6 +884,41 @@ export const action: ActionFunction = async ({
 
 Notice we don't return a redirect this time, we actually return the errors. These errors are available to the component via `useActionData`. It's just like `useLoaderData` but the data comes from the action after a form POST.
 
+TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
+
+```tsx filename=app/routes/admin/new.tsx lines=[2,4-8,15,24-26]
+//...
+import invariant from "tiny-invariant";
+
+type PostError = {
+  title?: boolean;
+  slug?: boolean;
+  markdown?: boolean;
+};
+
+export const action: ActionFunction = async ({
+  request
+}) => {
+  // ...
+
+  const errors: PostError = {};
+  if (!title) errors.title = true;
+  if (!slug) errors.slug = true;
+  if (!markdown) errors.markdown = true;
+
+  if (Object.keys(errors).length) {
+    return errors;
+  }
+
+  invariant(typeof title === "string");
+  invariant(typeof slug === "string");
+  invariant(typeof markdown === "string");
+  await createPost({ title, slug, markdown });
+
+  return redirect("/admin");
+};
+```
+
 💿 Add validation messages to the UI
 
 ```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-15,20-22,26-28]
@@ -927,41 +962,6 @@ export default function NewPost() {
     </Form>
   );
 }
-```
-
-TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
-
-```tsx filename=app/routes/admin/new.tsx lines=[2,4-8,15,24-26]
-//...
-import invariant from "tiny-invariant";
-
-type PostError = {
-  title?: boolean;
-  slug?: boolean;
-  markdown?: boolean;
-};
-
-export const action: ActionFunction = async ({
-  request
-}) => {
-  // ...
-
-  const errors: PostError = {};
-  if (!title) errors.title = true;
-  if (!slug) errors.slug = true;
-  if (!markdown) errors.markdown = true;
-
-  if (Object.keys(errors).length) {
-    return errors;
-  }
-
-  invariant(typeof title === "string");
-  invariant(typeof slug === "string");
-  invariant(typeof markdown === "string");
-  await createPost({ title, slug, markdown });
-
-  return redirect("/admin");
-};
 ```
 
 For some real fun, disable JavaScript in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser. But that's not the point. Let's slow this down and add some "pending UI" to our form.
