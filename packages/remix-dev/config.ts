@@ -312,6 +312,10 @@ export async function readConfig(
     );
   }
 
+  if (appConfig.serverBuildPath) {
+    serverBuildPath = path.resolve(rootDirectory, appConfig.serverBuildPath);
+  }
+
   let assetsBuildDirectory = path.resolve(
     rootDirectory,
     appConfig.assetsBuildDirectory ||
