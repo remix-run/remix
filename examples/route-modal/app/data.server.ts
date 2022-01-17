@@ -28,6 +28,9 @@ export function getInvoices() {
 }
 
 export function createInvoice(invoice: Invoice) {
-  const newId = invoices.length + 1;
-  invoices.push({ ...invoice, id: newId });
+  return invoice;
+}
+
+export function updateInvoice(invoice: Invoice) {
+  return invoice;
 }

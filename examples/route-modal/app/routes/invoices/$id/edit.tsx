@@ -1,6 +1,6 @@
 import * as React from "react";
 import Dialog from "@reach/dialog";
-import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
+import { ActionFunction, LinksFunction, LoaderFunction, redirect } from "remix";
 import { useLoaderData } from "remix";
 import { json } from "remix";
 import { Form } from "remix";
@@ -8,7 +8,7 @@ import { useNavigate } from "remix";
 import styles from "@reach/dialog/styles.css";
 
 import stylesUrl from "~/styles/invoices/dialog.css";
-import { getInvoices } from "~/data.server";
+import { getInvoices, updateInvoice } from "~/data.server";
 
 export const links: LinksFunction = () => {
   return [
@@ -32,9 +32,36 @@ export const loader: LoaderFunction = ({ params }) => {
   return json(invoice);
 };
 
-export const action: ActionFunction = ({ request }) => {
-  console.log(request);
-  return null;
+type ActionData = {
+  formError?: string;
+};
+const badRequest = (data: ActionData) => json(data, { status: 400 });
+export const action: ActionFunction = async ({ request }) => {
+  const form = await request.formData();
+  const company = form.get("company");
+  const description = form.get("description");
+  const amount = form.get("amount");
+  const date = form.get("date");
+
+  if (
+    typeof company !== "string" ||
+    typeof description !== "string" ||
+    typeof amount !== "string" ||
+    typeof date !== "string"
+  ) {
+    return badRequest({
+      formError: "Invalid form data"
+    });
+  }
+
+  const invoice = updateInvoice({
+    company,
+    description,
+    date: new Date(date),
+    amount: parseFloat(amount)
+  });
+
+  return redirect("/invoices");
 };
 
 export default function Edit() {

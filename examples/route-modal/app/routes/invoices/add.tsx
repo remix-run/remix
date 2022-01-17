@@ -1,12 +1,6 @@
 import Dialog from "@reach/dialog";
-import type {
-  ActionFunction,
-  LinksFunction} from "remix";
-import {
-  json,
-  redirect,
-  useActionData
-} from "remix";
+import { ActionFunction, LinksFunction, useTransition } from "remix";
+import { json, redirect, useActionData } from "remix";
 import { Form } from "remix";
 import { useNavigate } from "remix";
 import styles from "@reach/dialog/styles.css";
@@ -105,16 +99,26 @@ export const action: ActionFunction = async ({ request }) => {
     amount: parseFloat(amount)
   });
 
-  return redirect(`/invoices/`);
+  // This is just so we can see the transition
+  return new Promise(resolve =>
+    setTimeout(() => {
+      resolve(redirect(`/invoices/`));
+    }, 2000)
+  );
 };
 
 export default function Add() {
   const navigate = useNavigate();
   const actionData = useActionData<ActionData>();
+  const transition = useTransition();
 
   function onDismiss() {
     navigate("/invoices");
   }
+
+  const disabled =
+    transition.state === "submitting" || transition.state === "loading";
+
   return (
     <Dialog
       className="dialog"
@@ -122,6 +126,7 @@ export default function Add() {
       aria-label="Add invoice"
       onDismiss={onDismiss}
     >
+      {transition.state === "submitting" && <div>Saving...</div>}
       <Form className="form" method="post" replace>
         <label className="label" htmlFor="company">
           Company
@@ -178,8 +183,10 @@ export default function Add() {
           </p>
         ) : null}
         <div className="actions">
-          <button type="submit">Add</button>
-          <button type="button" onClick={onDismiss}>
+          <button type="submit" disabled={disabled}>
+            Add
+          </button>
+          <button type="button" onClick={onDismiss} disabled={disabled}>
             Cancel
           </button>
         </div>
