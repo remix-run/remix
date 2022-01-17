@@ -44,8 +44,8 @@ async function createCloudflareProject() {
         },
         build_config: {
           build_command: "npm run build",
-          destination_dir: "build",
-          root_dir: "/"
+          destination_dir: "public",
+          root_dir: ""
         }
       })
     }
