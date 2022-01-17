@@ -3,7 +3,11 @@ import type { RollupOutput } from "rollup";
 
 import { BuildMode, BuildTarget } from "../build";
 import type { BuildOptions } from "../compiler";
-import { build, generate } from "../compiler";
+import {
+  build,
+  // @ts-expect-error export does not exist anymore
+  generate
+} from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 

@@ -2,6 +2,7 @@ import path from "path";
 
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
+import { BuildMode } from "../build";
 
 const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
 
@@ -11,6 +12,21 @@ describe("readConfig", () => {
     config = await readConfig(remixRoot);
   });
 
+  it("allows to change esbuildConfig", () => {
+    const esbuildConfig = {
+      plugins: []
+    };
+
+    expect(config.esbuildConfig(esbuildConfig, BuildMode.Production)).toEqual({
+      minify: true,
+      plugins: []
+    });
+
+    expect(config.esbuildConfig(esbuildConfig, BuildMode.Development)).toEqual({
+      plugins: []
+    });
+  });
+
   it("generates a config", async () => {
     expect(config).toMatchInlineSnapshot(
       {
@@ -18,7 +34,8 @@ describe("readConfig", () => {
         appDirectory: expect.any(String),
         cacheDirectory: expect.any(String),
         serverBuildDirectory: expect.any(String),
-        assetsBuildDirectory: expect.any(String)
+        assetsBuildDirectory: expect.any(String),
+        esbuildConfig: expect.any(Function)
       },
       `
       Object {
@@ -29,6 +46,7 @@ describe("readConfig", () => {
         "devServerPort": 8002,
         "entryClientFile": "entry.client.jsx",
         "entryServerFile": "entry.server.jsx",
+        "esbuildConfig": Any<Function>,
         "mdx": [Function],
         "publicPath": "/build/",
         "rootDirectory": Any<String>,

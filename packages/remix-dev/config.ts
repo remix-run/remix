@@ -1,10 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
+import type { BuildOptions } from "esbuild";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
+import type { BuildMode } from "./build";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -14,6 +16,11 @@ export interface RemixMdxConfig {
 export type RemixMdxConfigFunction = (
   filename: string
 ) => Promise<RemixMdxConfig | undefined> | RemixMdxConfig | undefined;
+
+export type EsbuildConfigFunction = (
+  config: BuildOptions,
+  mode: BuildMode
+) => BuildOptions;
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -95,6 +102,11 @@ export interface AppConfig {
    * routes.
    */
   ignoredRouteFiles?: string[];
+
+  /**
+   * A callback to directly manipulate the esbuild config.
+   */
+  esbuildConfig?: EsbuildConfigFunction;
 }
 
 /**
@@ -175,6 +187,11 @@ export interface RemixConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform: "node" | "neutral";
+
+  /**
+   * A callback to directly manipulate the esbuild config.
+   */
+  esbuildConfig: EsbuildConfigFunction;
 }
 
 /**
@@ -285,7 +302,8 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverPlatform,
-    mdx
+    mdx,
+    esbuildConfig: appConfig.esbuildConfig ?? (config => config)
   };
 }
 

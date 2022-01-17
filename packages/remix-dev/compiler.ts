@@ -54,7 +54,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
   console.error(failure?.message || "An unknown build error occurred");
 }
 
-interface BuildOptions extends Partial<BuildConfig> {
+export interface BuildOptions extends Partial<BuildConfig> {
   onWarning?(message: string, key: string): void;
   onBuildFailure?(failure: Error | esbuild.BuildFailure): void;
 }
@@ -302,34 +302,39 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  return esbuild.build({
-    entryPoints,
-    outdir: config.assetsBuildDirectory,
-    platform: "browser",
-    format: "esm",
-    external: externals,
-    inject: [reactShim],
-    loader: loaders,
-    bundle: true,
-    logLevel: "silent",
-    splitting: true,
-    sourcemap: options.sourcemap,
-    metafile: true,
-    incremental: options.incremental,
-    minify: options.mode === BuildMode.Production,
-    entryNames: "[dir]/[name]-[hash]",
-    chunkNames: "_shared/[name]-[hash]",
-    assetNames: "_assets/[name]-[hash]",
-    publicPath: config.publicPath,
-    define: {
-      "process.env.NODE_ENV": JSON.stringify(options.mode)
-    },
-    plugins: [
-      mdxPlugin(config),
-      browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
-    ]
-  });
+  return esbuild.build(
+    config.esbuildConfig(
+      {
+        entryPoints,
+        outdir: config.assetsBuildDirectory,
+        platform: "browser",
+        format: "esm",
+        external: externals,
+        inject: [reactShim],
+        loader: loaders,
+        bundle: true,
+        logLevel: "silent",
+        splitting: true,
+        sourcemap: options.sourcemap,
+        metafile: true,
+        incremental: options.incremental,
+        minify: options.mode === BuildMode.Production,
+        entryNames: "[dir]/[name]-[hash]",
+        chunkNames: "_shared/[name]-[hash]",
+        assetNames: "_assets/[name]-[hash]",
+        publicPath: config.publicPath,
+        define: {
+          "process.env.NODE_ENV": JSON.stringify(options.mode)
+        },
+        plugins: [
+          mdxPlugin(config),
+          browserRouteModulesPlugin(config, /\?browser$/),
+          emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
+        ]
+      },
+      options.mode ?? BuildMode.Production
+    )
+  );
 }
 
 async function createServerBuild(
@@ -338,76 +343,81 @@ async function createServerBuild(
 ): Promise<esbuild.BuildResult> {
   let dependencies = Object.keys(await getAppDependencies(config));
 
-  return esbuild.build({
-    stdin: {
-      contents: getServerEntryPointModule(config, options),
-      resolveDir: config.serverBuildDirectory
-    },
-    outfile: path.resolve(config.serverBuildDirectory, "index.js"),
-    platform: config.serverPlatform,
-    format: config.serverModuleFormat,
-    mainFields:
-      config.serverModuleFormat === "esm"
-        ? ["module", "main"]
-        : ["main", "module"],
-    target: options.target,
-    inject: [reactShim],
-    loader: loaders,
-    bundle: true,
-    logLevel: "silent",
-    incremental: options.incremental,
-    sourcemap: options.sourcemap ? "inline" : false,
-    // The server build needs to know how to generate asset URLs for imports
-    // of CSS and other files.
-    assetNames: "_assets/[name]-[hash]",
-    publicPath: config.publicPath,
-    define: {
-      "process.env.NODE_ENV": JSON.stringify(options.mode)
-    },
-    plugins: [
-      mdxPlugin(config),
-      serverRouteModulesPlugin(config),
-      emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
-      manualExternalsPlugin((id, importer) => {
-        // assets.json is external because this build runs in parallel with the
-        // browser build and it's not there yet.
-        if (id === "./assets.json" && importer === "<stdin>") return true;
+  return esbuild.build(
+    config.esbuildConfig(
+      {
+        stdin: {
+          contents: getServerEntryPointModule(config, options),
+          resolveDir: config.serverBuildDirectory
+        },
+        outfile: path.resolve(config.serverBuildDirectory, "index.js"),
+        platform: config.serverPlatform,
+        format: config.serverModuleFormat,
+        mainFields:
+          config.serverModuleFormat === "esm"
+            ? ["module", "main"]
+            : ["main", "module"],
+        target: options.target,
+        inject: [reactShim],
+        loader: loaders,
+        bundle: true,
+        logLevel: "silent",
+        incremental: options.incremental,
+        sourcemap: options.sourcemap ? "inline" : false,
+        // The server build needs to know how to generate asset URLs for imports
+        // of CSS and other files.
+        assetNames: "_assets/[name]-[hash]",
+        publicPath: config.publicPath,
+        define: {
+          "process.env.NODE_ENV": JSON.stringify(options.mode)
+        },
+        plugins: [
+          mdxPlugin(config),
+          serverRouteModulesPlugin(config),
+          emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
+          manualExternalsPlugin((id, importer) => {
+            // assets.json is external because this build runs in parallel with the
+            // browser build and it's not there yet.
+            if (id === "./assets.json" && importer === "<stdin>") return true;
 
-        // Mark all bare imports as external. They will be require()'d (or
-        // imported if ESM) at runtime from node_modules.
-        if (isBareModuleId(id)) {
-          let packageName = getNpmPackageName(id);
-          if (
-            !/\bnode_modules\b/.test(importer) &&
-            !nodeBuiltins.includes(packageName) &&
-            !dependencies.includes(packageName)
-          ) {
-            options.onWarning(
-              `The path "${id}" is imported in ` +
-                `${path.relative(process.cwd(), importer)} but ` +
-                `${packageName} is not listed in your package.json dependencies. ` +
-                `Did you forget to install it?`,
-              packageName
-            );
-          }
+            // Mark all bare imports as external. They will be require()'d (or
+            // imported if ESM) at runtime from node_modules.
+            if (isBareModuleId(id)) {
+              let packageName = getNpmPackageName(id);
+              if (
+                !/\bnode_modules\b/.test(importer) &&
+                !nodeBuiltins.includes(packageName) &&
+                !dependencies.includes(packageName)
+              ) {
+                options.onWarning(
+                  `The path "${id}" is imported in ` +
+                    `${path.relative(process.cwd(), importer)} but ` +
+                    `${packageName} is not listed in your package.json dependencies. ` +
+                    `Did you forget to install it?`,
+                  packageName
+                );
+              }
 
-          // Include .css files from node_modules in the build so we can get a
-          // hashed file name to put into the HTML.
-          if (id.endsWith(".css")) return false;
+              // Include .css files from node_modules in the build so we can get a
+              // hashed file name to put into the HTML.
+              if (id.endsWith(".css")) return false;
 
-          // Include "remix" in the build so the server runtime (node) doesn't
-          // have to try to find the magic exports at runtime. This essentially
-          // translates all `import x from "remix"` statements into `import x
-          // from "@remix-run/x"` in the build.
-          if (packageName === "remix") return false;
+              // Include "remix" in the build so the server runtime (node) doesn't
+              // have to try to find the magic exports at runtime. This essentially
+              // translates all `import x from "remix"` statements into `import x
+              // from "@remix-run/x"` in the build.
+              if (packageName === "remix") return false;
 
-          return true;
-        }
+              return true;
+            }
 
-        return false;
-      })
-    ]
-  });
+            return false;
+          })
+        ]
+      },
+      options.mode
+    )
+  );
 }
 
 function isBareModuleId(id: string): boolean {

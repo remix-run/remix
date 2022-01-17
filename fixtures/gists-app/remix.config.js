@@ -43,5 +43,11 @@ module.exports = {
         route(":messageId", "pages/child.jsx");
       });
     });
+  },
+  esbuildConfig: (config, mode) => {
+    if (mode === "development") {
+      return config;
+    }
+    return { ...config, minify: true };
   }
 };
