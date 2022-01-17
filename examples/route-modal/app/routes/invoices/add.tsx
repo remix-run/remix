@@ -1,5 +1,6 @@
 import Dialog from "@reach/dialog";
-import { ActionFunction, LinksFunction, useTransition } from "remix";
+import type { ActionFunction, LinksFunction} from "remix";
+import { useTransition } from "remix";
 import { json, redirect, useActionData } from "remix";
 import { Form } from "remix";
 import { useNavigate } from "remix";

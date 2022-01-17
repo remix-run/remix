@@ -1,6 +1,7 @@
 import * as React from "react";
 import Dialog from "@reach/dialog";
-import { ActionFunction, LinksFunction, LoaderFunction, redirect } from "remix";
+import type { ActionFunction, LinksFunction, LoaderFunction} from "remix";
+import { redirect } from "remix";
 import { useLoaderData } from "remix";
 import { json } from "remix";
 import { Form } from "remix";
