@@ -18,7 +18,7 @@ export type RemixMdxConfigFunction = (
 ) => Promise<RemixMdxConfig | undefined> | RemixMdxConfig | undefined;
 
 export type EsbuildConfigFunction = (
-  config: BuildOptions,
+  config: BuildOptions & Required<Pick<BuildOptions, "plugins">>,
   mode: BuildMode
 ) => BuildOptions;
 
