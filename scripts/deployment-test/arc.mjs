@@ -10,8 +10,7 @@ import {
   updatePackageConfig,
   spawnOpts,
   runCypress,
-  addCypress,
-  getRootPackageJson
+  addCypress
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -45,8 +44,6 @@ async function getArcDeployment() {
 }
 
 try {
-  let rootPkgJson = await getRootPackageJson();
-
   await createNewApp();
 
   await fse.copy(
@@ -62,14 +59,7 @@ try {
   await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
 
   await updatePackageConfig(PROJECT_DIR, config => {
-    config.devDependencies["concurrently"] =
-      rootPkgJson.dependencies["concurrently"];
     config.devDependencies["@architect/architect"] = "latest";
-
-    config.scripts["dev:arc"] = "arc sandbox";
-    config.scripts["dev:remix"] = "remix watch";
-    config.scripts["dev"] =
-      'concurrently "npm run dev:remix" "npm run dev:arc" --kill-others-on-fail';
   });
 
   // change to the project directory

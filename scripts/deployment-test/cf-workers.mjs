@@ -3,14 +3,7 @@ import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
 
-import {
-  sha,
-  spawnOpts,
-  runCypress,
-  addCypress,
-  updatePackageConfig,
-  getRootPackageJson
-} from "./_shared.mjs";
+import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-cf-workers-${sha}`;
@@ -27,8 +20,6 @@ async function createNewApp() {
 }
 
 try {
-  let rootPkgJson = await getRootPackageJson();
-
   // create a new remix app
   await createNewApp();
 
@@ -46,14 +37,6 @@ try {
 
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
-
-  // update package.json so we can run both commands at once
-  await updatePackageConfig(PROJECT_DIR, config => {
-    config.devDependencies["concurrently"] =
-      rootPkgJson.dependencies["concurrently"];
-    config.scripts["dev"] =
-      'concurrently "remix watch" "npm run start" --kill-others-on-fail';
-  });
 
   // change to the project directory
   process.chdir(PROJECT_DIR);
