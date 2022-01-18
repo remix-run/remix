@@ -540,7 +540,7 @@ export async function getPost(slug: string) {
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
   );
-  const html = marked(body);
+  const html = marked(body, { sanitize: true });
   return { slug, html, title: attributes.title };
 }
 ```
