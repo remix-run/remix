@@ -1590,8 +1590,10 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
+import { useLoaderData } from "remix";
 
 type LoaderData = { users: Array<User> };
+
 export let loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany()
