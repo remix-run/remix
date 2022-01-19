@@ -1,0 +1,49 @@
+name: cloudflare workers prerelease deployment test
+
+on:
+  release:
+    types: [prereleased]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+
+      - name: Setup node
+        uses: actions/setup-node@v1
+        with:
+          # Miniflare requires at least Node.js 16.7.0.
+          node-version: 16
+
+      - run: echo "::set-output name=dir::$(yarn cache dir)"
+        id: yarn-cache
+
+      - name: Restore dependency cache
+        uses: actions/cache@v2
+        with:
+          path: "${{ steps.yarn-cache.outputs.dir }}"
+          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-cache-
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - run: mkdir -p deployment-test
+
+      - name: Install latest version of npm
+        run: npm install -g npm@latest
+
+      - name: Install Wrangler
+        run: npm install -g @cloudflare/wrangler
+
+      - name: Deploy to Cloudflare Workers
+        run: node ./scripts/deployment-test/cf-workers.mjs
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}

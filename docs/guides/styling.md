@@ -604,28 +604,57 @@ npm add -D concurrently
 
 ## CSS-in-JS libraries
 
-You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will effect performance in a significant way, React is pretty fast.
+You can use CSS-in-JS libraries like Styled Components. Some of them require you to "collect styles" during rendering and then insert those styles into the HTML.
 
-Here's some sample code to show how you might use Styled Components with Remix:
+Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples directory][styled-components-example]):
 
-1. First you'll need some context to put your styles on so that your root route can render them.
+1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
-   ```tsx filename=app/StylesContext.tsx
-   // app/StylesContext.tsx
-   import { createContext } from "react";
-   export default createContext<null | string>(null);
+   ```tsx filename=app/root.tsx lines=[21-23]
+   import {
+     Links,
+     LiveReload,
+     Meta,
+     Outlet,
+     Scripts,
+     ScrollRestoration
+   } from "remix";
+
+   export default function App() {
+     return (
+       <html lang="en">
+         <head>
+           <meta charSet="utf-8" />
+           <meta
+             name="viewport"
+             content="width=device-width,initial-scale=1"
+           />
+           <Meta />
+           <Links />
+           {typeof document === "undefined"
+             ? "__STYLES__"
+             : null}
+         </head>
+         <body>
+           <Outlet />
+           <ScrollRestoration />
+           <Scripts />
+           {process.env.NODE_ENV === "development" && (
+             <LiveReload />
+           )}
+         </body>
+       </html>
+     );
+   }
    ```
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx lines=6,7,16,20-26,29-30,35,37
-   // app/entry.server.tsx
+   ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
    import ReactDOMServer from "react-dom/server";
-   import type { EntryContext } from "remix";
    import { RemixServer } from "remix";
-   import { renderToString } from "react-dom/server";
+   import type { EntryContext } from "remix";
    import { ServerStyleSheet } from "styled-components";
-   import StylesContext from "./StylesContext";
 
    export default function handleRequest(
      request: Request,
@@ -633,36 +662,18 @@ Here's some sample code to show how you might use Styled Components with Remix:
      responseHeaders: Headers,
      remixContext: EntryContext
    ) {
-     // set up the Styled Components sheet
      const sheet = new ServerStyleSheet();
 
-     // This render is thrown away, it's here simply to let styled components
-     // extract the styles used
-     renderToString(
+     let markup = ReactDOMServer.renderToString(
        sheet.collectStyles(
-         <StylesContext.Provider value={null}>
-           <RemixServer
-             context={remixContext}
-             url={request.url}
-           />
-         </StylesContext.Provider>
-       )
-     );
-
-     // Now that we've rendered, we get the styles out of the sheet
-     const styles = sheet.getStyleTags();
-     sheet.seal();
-
-     // Finally, we render a second time, but this time we have styles to apply,
-     // make sure to pass them to `<StylesContext.Provider value>`
-     const markup = ReactDOMServer.renderToString(
-       <StylesContext.Provider value={styles}>
          <RemixServer
            context={remixContext}
            url={request.url}
          />
-       </StylesContext.Provider>
+       )
      );
+     const styles = sheet.getStyleTags();
+     markup = markup.replace("__STYLES__", styles);
 
      responseHeaders.set("Content-Type", "text/html");
 
@@ -673,33 +684,13 @@ Here's some sample code to show how you might use Styled Components with Remix:
    }
    ```
 
-3. Finally, access and render the styles in your root route.
+Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please [contribute an example][examples]!
 
-   ```tsx filename=app/root.tsx lines=3,4,7,13
-   // app/root.tsx
-   import { Meta, Scripts } from "remix";
-   import { useContext } from "react";
-   import StylesContext from "./StylesContext";
-
-   export default function Root() {
-     const styles = useContext(StylesContext);
-
-     return (
-       <html>
-         <head>
-           <Meta />
-           {styles}
-         </head>
-         <body>
-           <Scripts />
-         </body>
-       </html>
-     );
-   }
-   ```
-
-Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please create a GitHub repo and add a link to it in this document!
+NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
 [route-module-links]: ../api/conventions#links
+[styled-components-example]: https://github.com/remix-run/remix/tree/dev/examples/styled-components
+[examples]: https://github.com/remix-run/remix/tree/dev/examples
+[styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
