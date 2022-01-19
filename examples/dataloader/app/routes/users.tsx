@@ -1,14 +1,13 @@
 import type { LoaderFunction } from "remix";
 import type { User } from "~/data.server";
 import { Outlet, useLoaderData } from "remix";
-import { usersById } from "~/loaders/userLoader.server";
 
 interface LoaderData {
   users: User[];
 }
 
-export const loader: LoaderFunction = async () => {
-  const users = await usersById.loadMany([
+export const loader: LoaderFunction = async ({ context }) => {
+  const users = await context.loaders.usersById.loadMany([
     "ef3fcb93-0623-4d10-adbf-4dd865d6688c",
     "2cbad877-2da6-422d-baa6-c6a96a9e085f"
   ]);
