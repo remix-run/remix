@@ -21,7 +21,7 @@ export function getDocumentHeaders(
         ? typeof routeModule.headers === "function"
           ? routeModule.headers({ loaderHeaders, parentHeaders, actionHeaders })
           : routeModule.headers
-        : undefined
+        : parentHeaders
     );
 
     // Automatically preserve Set-Cookie headers that were set either by the
