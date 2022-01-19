@@ -84,7 +84,7 @@ Remix makes writing plain CSS a viable option even for apps with a lot of UI. In
 
 - how and when to load CSS, so it was usually all loaded on every page
 - if the class names and selectors you were using were accidentally styling other UI in the app
-- if some rules were even used anymore as the css source code grew over time
+- if some rules were even used anymore as the CSS source code grew over time
 
 Remix alleviates these issues with route-based stylesheets. Nested routes can each add their own stylesheets to the page and Remix will automatically prefetch, load, and unload them with the route. When the scope of concern is limited to just the active routes, the risks of these problems are reduced significantly. The only chances for conflicts are with the parent routes' styles (and even then, you will likely see the conflict since the parent route is also rendering).
 
@@ -96,7 +96,7 @@ Each route can add style links to the page, for example:
 import styles from "~/styles/dashboard.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -104,7 +104,7 @@ export function links() {
 import styles from "~/styles/accounts.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -112,7 +112,7 @@ export function links() {
 import styles from "~/styles/sales.css";
 
 export function links() {
-  return [{ rel: stylesheet, href: styles }];
+  return [{ rel: "stylesheet", href: styles }];
 }
 ```
 
@@ -324,7 +324,7 @@ While that's a bit of boilerplate it enables a lot:
 - The only CSS ever loaded is the CSS that's used on the current page
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
-- When one compoenent's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
+- When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
 - When a component's JavaScript changes but it's styles don't, the cache is not broken for the styles
 
 #### Asset Preloads
@@ -393,7 +393,7 @@ export function links() {
 
 ## Tailwind
 
-Perhaps the most popular way to style a Remix application in the community is to use tailwind. It has the benefits of inline-style colocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+Perhaps the most popular way to style a Remix application in the community is to use tailwind. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
 First install a couple dev dependencies:
 
@@ -405,9 +405,7 @@ Initialize a tailwind config so we can tell it which files to generate classes f
 
 ```js filename=tailwind.config.js lines=[2,3]
 module.exports = {
-  mode: "jit",
-  purge: ["./app/**/*.{ts,tsx}"],
-  darkMode: "media", // or 'media' or 'class'
+  content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
     extend: {}
   },
@@ -465,7 +463,7 @@ Then alter how tailwind is generating css:
   // ...
   "scripts": {
     "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --minify",
     "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
     "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
     "postinstall": "remix setup node",
@@ -604,7 +602,11 @@ npm add -D concurrently
 
 ## CSS-in-JS libraries
 
+<<<<<<< HEAD
 You can use CSS-in-JS libraries like Styled Components. Some of them require you to "collect styles" during rendering and then insert those styles into the HTML.
+=======
+You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
+>>>>>>> main
 
 Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples directory][styled-components-example]):
 
