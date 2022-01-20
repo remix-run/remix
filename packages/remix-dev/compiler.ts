@@ -383,7 +383,7 @@ async function createServerBuild(
   } else {
     stdin = {
       contents: config.serverBuildTargetEntryModule,
-      loader: "js",
+      loader: "ts",
       resolveDir: config.rootDirectory
     };
   }
