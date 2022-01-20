@@ -1,0 +1,35 @@
+{
+  "name": "remix-with-sass",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build:remix": "remix build",
+    "build:css": "sass styles/:app/styles/ --style=compressed",
+    "build": "run-s build:*",
+    "dev:remix": "remix dev",
+    "dev:css": "sass styles/:app/styles/ --watch ",
+    "dev": "run-p dev:*",
+    "postinstall": "remix setup node",
+    "start": "remix-serve build"
+  },
+  "dependencies": {
+    "@remix-run/react": "1.1.2",
+    "@remix-run/serve": "1.1.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "1.1.2"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "1.1.2",
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "npm-run-all": "4.1.5",
+    "sass": "1.45.0",
+    "typescript": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

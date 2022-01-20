@@ -1596,14 +1596,14 @@ export let loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany()
   };
-  return { data };
+  return data;
 };
 
 export default function Users() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.map(user => (
+      {data.users.map(user => (
         <li>{user.name}</li>
       ))}
     </ul>
