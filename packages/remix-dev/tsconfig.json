@@ -14,9 +14,6 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/dev",
-    "rootDir": ".",
-    "paths": {
-      "@remix-run/server-build": ["./serverBuildModule.d.ts"]
-    }
+    "rootDir": "."
   }
 }

@@ -380,7 +380,7 @@ export async function readConfig(
     try {
       let entryModulePath = path.resolve(
         __dirname,
-        `compiler/shims/${serverBuildTarget}EntryModule.ts`
+        `compiler/shims/entry/${serverBuildTarget}.ts`
       );
       serverBuildTargetEntryModule = await fse.readFile(
         entryModulePath,
