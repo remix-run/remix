@@ -24,6 +24,17 @@ interface CreateAppArgs {
 }
 
 async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
+  // Check the host's node version
+  const versions = process.versions;
+  if (versions && versions.node) {
+    if (parseInt(versions.node) < 14) {
+      console.log(
+        `️🚨 Oops, Node  v"${versions.node}" Remix requires a Node version greater than 14.`
+      );
+      process.exit(1);
+    }
+  }
+
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
