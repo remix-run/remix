@@ -702,7 +702,7 @@ export default function InvoiceRoute() {
 
 export function CatchBoundary() {
   // this returns { status, statusText, data }
-  const caught = useCatch<ThrownResponses>();
+  const invoiceCatch = useCatch<ThrownResponses>();
 
   switch (caught.status) {
     case 401:
