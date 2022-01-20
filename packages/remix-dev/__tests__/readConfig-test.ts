@@ -25,7 +25,7 @@ describe("readConfig", () => {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
         "cacheDirectory": Any<String>,
-        "customServer": "./server.js",
+        "customServerEntryPoint": "./server.js",
         "devServerBroadcastDelay": 0,
         "devServerPort": 8002,
         "entryClientFile": "entry.client.jsx",
