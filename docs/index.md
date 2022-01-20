@@ -13,7 +13,7 @@ Holy smokes you're here! Let's do this. Welcome to the v1 stable release of Remi
 ## Getting Started
 
 ```sh
-npx create-remix@latest
+npx create-remix@latest (Requires NodeJS)
 ```
 
 We **strongly encourage you** to do one of the tutorials before anything else. Remix is different. The tutorials will show you how to start with web fundamentals and then progressively enhance your app to the modern UX you're after.
