@@ -6,6 +6,8 @@ import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 
+import virtualModules from "./compiler/virtualModules";
+
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
   remarkPlugins?: any[];
@@ -221,7 +223,7 @@ export interface RemixConfig {
   /**
    * Custom server entrypoint relative to the root directory that becomes your server's main module.
    */
-  customServer?: string;
+  customServerEntryPoint?: string;
 }
 
 /**
@@ -250,7 +252,7 @@ export async function readConfig(
     throw new Error(`Error loading Remix config in ${configFile}`);
   }
 
-  let customServer = appConfig.customServer;
+  let customServerEntryPoint = appConfig.customServer;
   let serverBuildTarget: ServerBuildTarget | undefined =
     appConfig.serverBuildTarget;
   let serverModuleFormat: ServerModuleFormat =
@@ -361,9 +363,9 @@ export async function readConfig(
     }
   }
 
-  let serverBuildTargetEntryModule = `export * from "@remix-run/server-build";`;
-
-  // TODO: load from shims directory
+  let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
+    virtualModules.serverBuildVirutalModule.path
+  )};`;
 
   if (
     serverBuildTarget &&
@@ -408,7 +410,7 @@ export async function readConfig(
     serverPlatform,
     serverBuildTarget,
     serverBuildTargetEntryModule,
-    customServer,
+    customServerEntryPoint,
     mdx
   };
 }

@@ -4,6 +4,7 @@ import { isAbsolute, relative } from "path";
 import type { Plugin } from "esbuild";
 
 import { RemixConfig } from "../../config";
+import virtualModules from "../virtualModules";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -17,7 +18,7 @@ export function serverBareModulesPlugin(
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
   return {
-    name: "bare-modules",
+    name: "server-bare-modules",
     setup(build) {
       build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
         // If it's not a bare module ID, bundle it.
@@ -34,8 +35,8 @@ export function serverBareModulesPlugin(
         // These are our virutal modules, always bundle the because there is no
         // "real" file on disk to externalize.
         if (
-          path === "@remix-run/server-entry" ||
-          path === "@remix-run/assets-manifest"
+          path === virtualModules.serverBuildVirutalModule.path ||
+          path === virtualModules.assetsManifestVirtualModule.path
         ) {
           return undefined;
         }

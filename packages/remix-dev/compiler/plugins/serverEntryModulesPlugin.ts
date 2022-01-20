@@ -2,6 +2,7 @@ import * as path from "path";
 import type { Plugin } from "esbuild";
 
 import { RemixConfig } from "../../config";
+import virtualModules from "../virtualModules";
 
 /**
  * Creates a virtual module called `@remix-run/server-build` that exports the
@@ -11,7 +12,7 @@ import { RemixConfig } from "../../config";
  */
 export function serverEntryModulesPlugin(
   remixConfig: RemixConfig,
-  filter: RegExp = /^@remix-run\/server-build$/
+  filter: RegExp = virtualModules.serverBuildVirutalModule.filter
 ): Plugin {
   return {
     name: "server-entry",
@@ -39,7 +40,9 @@ ${Object.keys(remixConfig.routes)
     )};`;
   })
   .join("\n")}
-  export { default as assets } from "@remix-run/assets-manifest";
+  export { default as assets } from ${JSON.stringify(
+    virtualModules.assetsManifestVirtualModule.path
+  )};
   export const entry = { module: entryServer };
   export const routes = {
     ${Object.keys(remixConfig.routes)

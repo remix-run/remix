@@ -378,8 +378,8 @@ async function createServerBuild(
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
 
-  if (config.customServer) {
-    entryPoints = [config.customServer];
+  if (config.customServerEntryPoint) {
+    entryPoints = [config.customServerEntryPoint];
   } else {
     stdin = {
       contents: config.serverBuildTargetEntryModule,
