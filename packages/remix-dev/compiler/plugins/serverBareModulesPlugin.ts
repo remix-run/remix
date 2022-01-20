@@ -8,9 +8,8 @@ import virtualModules from "../virtualModules";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
- * This includes externalizing for node based plaforms, bundling for single file
- * environments such as cloudflare, and resolving node built-ins to denoland
- * URL's when possible.
+ * This includes externalizing for node based plaforms, and bundling for single file
+ * environments such as cloudflare.
  */
 export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
@@ -69,17 +68,6 @@ export function serverBareModulesPlugin(
           // Always bundle everything for cloudflare.
           case "cloudflare-pages":
           case "cloudflare-workers":
-            return undefined;
-          case "deno":
-            // Externalize node builtins with denoland polyfills.
-            if (isNodeBuiltIn(packageName)) {
-              return {
-                path: `https://deno.land/std/node/${path}.ts`,
-                external: true
-              };
-            }
-
-            // Bundle everything else for deno.
             return undefined;
         }
 

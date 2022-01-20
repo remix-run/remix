@@ -389,7 +389,7 @@ async function createServerBuild(
   }
 
   let plugins: esbuild.Plugin[] = [];
-  if (config.serverPlatform !== "node" && config.serverBuildTarget !== "deno") {
+  if (config.serverPlatform !== "node") {
     plugins.push(NodeModulesPolyfillPlugin());
   }
 
