@@ -602,11 +602,7 @@ npm add -D concurrently
 
 ## CSS-in-JS libraries
 
-<<<<<<< HEAD
-You can use CSS-in-JS libraries like Styled Components. Some of them require you to "collect styles" during rendering and then insert those styles into the HTML.
-=======
 You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
->>>>>>> main
 
 Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples directory][styled-components-example]):
 
