@@ -1,22 +1,23 @@
 import { useEffect, useRef } from "react";
+import type {
+  ActionFunction} from "remix";
 import {
-  ActionFunction,
   Form,
   Link,
   useActionData,
   useTransition,
 } from "remix";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   await new Promise((res) => setTimeout(res, 1000));
-  let formData = await request.formData();
-  let email = formData.get("email");
+  const formData = await request.formData();
+  const email = formData.get("email");
 
   const API_KEY = "...";
   const FORM_ID = "...";
   const API = "https://api.convertkit.com/v3";
 
-  let res = await fetch(`${API}/forms/${FORM_ID}/subscribe`, {
+  const res = await fetch(`${API}/forms/${FORM_ID}/subscribe`, {
     method: "post",
     body: JSON.stringify({ email, api_key: API_KEY }),
     headers: {
@@ -28,9 +29,9 @@ export let action: ActionFunction = async ({ request }) => {
 };
 
 export default function Newsletter() {
-  let actionData = useActionData();
-  let transition = useTransition();
-  let state: "idle" | "success" | "error" | "submitting" = transition.submission
+  const actionData = useActionData();
+  const transition = useTransition();
+  const state: "idle" | "success" | "error" | "submitting" = transition.submission
     ? "submitting"
     : actionData?.subscription
     ? "success"
@@ -38,9 +39,9 @@ export default function Newsletter() {
     ? "error"
     : "idle";
 
-  let inputRef = useRef<HTMLInputElement>(null);
-  let successRef = useRef<HTMLHeadingElement>(null);
-  let mounted = useRef<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const successRef = useRef<HTMLHeadingElement>(null);
+  const mounted = useRef<boolean>(false);
 
   useEffect(() => {
     if (state === "error") {
