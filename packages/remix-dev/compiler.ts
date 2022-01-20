@@ -1,7 +1,7 @@
-import * as fsp from "fs/promises";
 import * as path from "path";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
+import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 
@@ -14,10 +14,9 @@ import { getAppDependencies } from "./compiler/dependencies";
 import { loaders } from "./compiler/loaders";
 import { browserRouteModulesPlugin } from "./compiler/plugins/browserRouteModulesPlugin";
 import { emptyModulesPlugin } from "./compiler/plugins/emptyModulesPlugin";
-import { excludeRemixServerModulesPlugin } from "./compiler/plugins/excludeRemixServerModulesPlugin";
 import { mdxPlugin } from "./compiler/plugins/mdx";
 import { serverAssetsPlugin } from "./compiler/plugins/serverAssetsPlugin";
-import type { ClientManifestPromiseRef } from "./compiler/plugins/serverAssetsPlugin";
+import type { BrowserManifestPromiseRef } from "./compiler/plugins/serverAssetsPlugin";
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
 import { serverEntryModulesPlugin } from "./compiler/plugins/serverEntryModulesPlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
@@ -77,7 +76,7 @@ export async function build(
     onBuildFailure = defaultBuildFailureHandler
   }: BuildOptions = {}
 ): Promise<void> {
-  let ref: ClientManifestPromiseRef = {};
+  let ref: BrowserManifestPromiseRef = {};
 
   await buildEverything(config, ref, {
     mode,
@@ -121,8 +120,12 @@ export async function watch(
     onWarning,
     incremental: true
   };
-  let ref: ClientManifestPromiseRef = {};
-  let [browserBuild, serverBuild] = await buildEverything(config, ref, options);
+  let browserManifestPromiseRef: BrowserManifestPromiseRef = {};
+  let [browserBuild, serverBuild] = await buildEverything(
+    config,
+    browserManifestPromiseRef,
+    options
+  );
 
   let initialBuildComplete = !!browserBuild && !!serverBuild;
   if (initialBuildComplete) {
@@ -147,7 +150,11 @@ export async function watch(
 
     config = newConfig;
     if (onRebuildStart) onRebuildStart();
-    let builders = await buildEverything(config, ref, options);
+    let builders = await buildEverything(
+      config,
+      browserManifestPromiseRef,
+      options
+    );
     if (onRebuildFinish) onRebuildFinish();
     browserBuild = builders[0];
     serverBuild = builders[1];
@@ -162,7 +169,7 @@ export async function watch(
       try {
         [browserBuild, serverBuild] = await buildEverything(
           config,
-          ref,
+          browserManifestPromiseRef,
           options
         );
 
@@ -181,29 +188,16 @@ export async function watch(
 
     // If we get here and can't call rebuild something went wrong and we
     // should probably blow as it's not really recoverable.
-    let clientBuildPromise = browserBuild
+    let browserBuildPromise = browserBuild
       .rebuild()
       .then(build => generateManifests(config, build.metafile!));
-    ref.current = clientBuildPromise;
+    // Do not await the client build, instead assign the promise to a ref
+    // so the server build can await it to gain access to the client manifest.
+    browserManifestPromiseRef.current = browserBuildPromise;
 
     await Promise.all([
-      clientBuildPromise,
-      serverBuild.rebuild().then(async buildResult => {
-        await fsp
-          .mkdir(path.dirname(config.serverBuildPath), { recursive: true })
-          .catch(() => {});
-
-        // manually write files to exclude assets from server build
-        for (let file of buildResult.outputFiles!) {
-          if (file.path !== config.serverBuildPath) {
-            continue;
-          }
-          await fsp.writeFile(file.path, file.contents);
-          break;
-        }
-
-        return buildResult;
-      })
+      browserBuildPromise,
+      serverBuild.rebuild().then(writeServerBuildResult(config))
     ]).catch(err => {
       disposeBuilders();
       onBuildFailure(err);
@@ -276,7 +270,7 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 async function buildEverything(
   config: RemixConfig,
-  clientManifestPromiseRef: ClientManifestPromiseRef,
+  browserManifestPromiseRef: BrowserManifestPromiseRef,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   // TODO:
@@ -292,11 +286,13 @@ async function buildEverything(
     let manifestPromise = browserBuildPromise.then(build => {
       return generateManifests(config, build.metafile!);
     });
-    clientManifestPromiseRef.current = manifestPromise;
+    // Do not await the client build, instead assign the promise to a ref
+    // so the server build can await it to gain access to the client manifest.
+    browserManifestPromiseRef.current = manifestPromise;
     let serverBuildPromise = createServerBuild(
       config,
       options,
-      clientManifestPromiseRef
+      browserManifestPromiseRef
     );
 
     return await Promise.all([
@@ -367,8 +363,7 @@ async function createBrowserBuild(
     plugins: [
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-      excludeRemixServerModulesPlugin()
+      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
     ]
   });
 }
@@ -376,7 +371,7 @@ async function createBrowserBuild(
 async function createServerBuild(
   config: RemixConfig,
   options: Required<BuildOptions> & { incremental?: boolean },
-  clientManifestPromiseRef: ClientManifestPromiseRef
+  browserManifestPromiseRef: BrowserManifestPromiseRef
 ): Promise<esbuild.BuildResult> {
   let dependencies = await getAppDependencies(config);
 
@@ -393,10 +388,19 @@ async function createServerBuild(
     };
   }
 
-  let additionalPlugins: esbuild.Plugin[] = [];
+  let plugins: esbuild.Plugin[] = [];
   if (config.serverPlatform !== "node" && config.serverBuildTarget !== "deno") {
-    additionalPlugins.push(NodeModulesPolyfillPlugin());
+    plugins.push(NodeModulesPolyfillPlugin());
   }
+
+  plugins.push(
+    mdxPlugin(config),
+    emptyModulesPlugin(config, /\.client\.[tj]sx?$/),
+    serverRouteModulesPlugin(config),
+    serverEntryModulesPlugin(config),
+    serverAssetsPlugin(browserManifestPromiseRef),
+    serverBareModulesPlugin(config, dependencies)
+  );
 
   return esbuild
     .build({
@@ -432,32 +436,9 @@ async function createServerBuild(
       define: {
         "process.env.NODE_ENV": JSON.stringify(options.mode)
       },
-      plugins: [
-        ...additionalPlugins,
-        mdxPlugin(config),
-        emptyModulesPlugin(config, /\.client\.[tj]sx?$/),
-        serverRouteModulesPlugin(config),
-        serverEntryModulesPlugin(config),
-        serverAssetsPlugin(clientManifestPromiseRef),
-        serverBareModulesPlugin(config, dependencies)
-      ]
+      plugins
     })
-    .then(async buildResult => {
-      await fsp
-        .mkdir(path.dirname(config.serverBuildPath), { recursive: true })
-        .catch(() => {});
-
-      // manually write files to exclude assets from server build
-      for (let file of buildResult.outputFiles) {
-        if (file.path !== config.serverBuildPath) {
-          continue;
-        }
-        await fsp.writeFile(file.path, file.contents);
-        break;
-      }
-
-      return buildResult;
-    });
+    .then(writeServerBuildResult(config));
 }
 
 async function generateManifests(
@@ -475,4 +456,21 @@ async function generateManifests(
   );
 
   return assetsManifest as AssetsManifest;
+}
+
+function writeServerBuildResult(config: RemixConfig) {
+  return async (buildResult: esbuild.BuildResult) => {
+    await fse.ensureDir(path.dirname(config.serverBuildPath));
+
+    // manually write files to exclude assets from server build
+    for (let file of buildResult.outputFiles!) {
+      if (file.path !== config.serverBuildPath) {
+        continue;
+      }
+      await fse.writeFile(file.path, file.contents);
+      break;
+    }
+
+    return buildResult;
+  };
 }

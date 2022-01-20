@@ -7,9 +7,10 @@ import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
 
 /**
- * This plugin loads route modules for the server build.
+ * This plugin loads route modules for the server build and prevents errors
+ * while adding new files in development mode.
  */
- export function serverRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
+export function serverRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
   return {
     name: "server-route-modules",
     setup(build) {

@@ -1,5 +1,5 @@
-import * as fs from "fs";
 import * as path from "path";
+import * as fse from "fs-extra";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -60,7 +60,7 @@ export interface AppConfig {
 
   /**
    * The path to the server build file. This file should end in a `.js`. Defaults
-   * are based on {@link ServerConfig.serverTarget}.
+   * are based on {@link ServerConfig.serverBuildTarget}.
    */
   serverBuildPath?: string;
 
@@ -74,7 +74,7 @@ export interface AppConfig {
    * The path to the browser build, relative to remix.config.js. Defaults to
    * "public/build".
    *
-   * @deprecated Use `assetsBuildDirectory` instead
+   * @deprecated Use `{@link ServerConfig.assetsBuildDirectory}` instead
    */
   browserBuildDirectory?: string;
 
@@ -100,13 +100,13 @@ export interface AppConfig {
 
   /**
    * The output format of the server build. Defaults to "cjs".
-   * * @deprecated Use {@link ServerConfig.serverTarget} instead.
+   * * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
    */
   serverModuleFormat?: ServerModuleFormat;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
-   * @deprecated Use {@link ServerConfig.serverTarget} instead.
+   * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
    */
   serverPlatform?: ServerPlatform;
 
@@ -164,7 +164,7 @@ export interface RemixConfig {
 
   /**
    * The path to the server build file. This file should end in a `.js`. Defaults
-   * are based on {@link ServerConfig.serverTarget}.
+   * are based on {@link ServerConfig.serverBuildTarget}.
    */
   serverBuildPath: string;
 
@@ -330,6 +330,7 @@ export async function readConfig(
   switch (serverBuildTarget) {
     case "arc":
       defaultPublicPath = "/_static/build/";
+      break;
   }
 
   let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
@@ -342,7 +343,7 @@ export async function readConfig(
   let routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile }
   };
-  if (fs.existsSync(path.resolve(appDirectory, "routes"))) {
+  if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = defineConventionalRoutes(
       appDirectory,
       appConfig.ignoredRouteFiles
@@ -362,38 +363,32 @@ export async function readConfig(
 
   let serverBuildTargetEntryModule = `export * from "@remix-run/server-build";`;
 
-  switch (serverBuildTarget) {
-    case "arc":
-      serverBuildTargetEntryModule = `import { createRequestHandler } from "@remix-run/architect";
-import * as build from "@remix-run/server-build";
-export const handler = createRequestHandler({ build, mode: process.env.NODE_ENV });`;
-      break;
-    case "cloudflare-pages":
-      serverBuildTargetEntryModule = `import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
-import * as build from "@remix-run/server-build";
-const handleRequest = createPagesFunctionHandler({ build, mode: process.env.NODE_ENV });
-export function onRequest(context) {
-  return handleRequest(context);
-}`;
-      break;
-    case "cloudflare-workers":
-      serverBuildTargetEntryModule = `import { createEventHandler } from "@remix-run/cloudflare-workers";
-import * as build from "@remix-run/server-build";
-addEventListener("fetch", createEventHandler({ build, mode: process.env.NODE_ENV }));`;
-      break;
-    case "deno":
-      serverBuildTargetEntryModule = ``;
-      break;
-    case "netlify":
-      serverBuildTargetEntryModule = `import { createRequestHandler } from "@remix-run/netlify";
-import * as build from "@remix-run/server-build";
-export const handler = createRequestHandler({ build, mode: process.env.NODE_ENV });`;
-      break;
-    case "vercel":
-      serverBuildTargetEntryModule = `import { createRequestHandler } from "@remix-run/vercel";
-import * as build from "@remix-run/server-build";
-export default createRequestHandler({ build, mode: process.env.NODE_ENV });`;
-      break;
+  // TODO: load from shims directory
+
+  if (
+    serverBuildTarget &&
+    [
+      "arc",
+      "cloudflare-pages",
+      "cloudflare-workers",
+      "netlify",
+      "vercel"
+    ].includes(serverBuildTarget)
+  ) {
+    try {
+      let entryModulePath = path.resolve(
+        __dirname,
+        `compiler/shims/${serverBuildTarget}EntryModule.ts`
+      );
+      serverBuildTargetEntryModule = await fse.readFile(
+        entryModulePath,
+        "utf8"
+      );
+    } catch (error) {
+      console.error(
+        `Error loading server entry module for serverBuildTarget "${serverBuildTarget}".`
+      );
+    }
   }
 
   return {
@@ -427,7 +422,7 @@ const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 function findEntry(dir: string, basename: string): string | undefined {
   for (let ext of entryExts) {
     let file = path.resolve(dir, basename + ext);
-    if (fs.existsSync(file)) return path.relative(dir, file);
+    if (fse.existsSync(file)) return path.relative(dir, file);
   }
 
   return undefined;

@@ -41,7 +41,7 @@ export function createRequestHandler({
   mode = process.env.NODE_ENV
 }: {
   build: ServerBuild;
-  getLoadContext: GetLoadContextFunction;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
   let platform: ServerPlatform = { formatServerError };

@@ -5,6 +5,12 @@ import type { Plugin } from "esbuild";
 
 import { RemixConfig } from "../../config";
 
+/**
+ * A plugin responsible for resolving bare module ids based on server target.
+ * This includes externalizing for node based plaforms, bundling for single file
+ * environments such as cloudflare, and resolving node built-ins to denoland
+ * URL's when possible.
+ */
 export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
   dependencies: Record<string, string>,
@@ -14,21 +20,34 @@ export function serverBareModulesPlugin(
     name: "bare-modules",
     setup(build) {
       build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
+        // If it's not a bare module ID, bundle it.
+        if (!isBareModuleId(path)) {
+          return undefined;
+        }
+
+        // To prevent `import xxx from "remix"` from ending up in the bundle
+        // we "bundle" remix but the other modules where the code lives.
+        if (path === "remix") {
+          return undefined;
+        }
+
+        // These are our virutal modules, always bundle the because there is no
+        // "real" file on disk to externalize.
         if (
-          !isBareModuleId(path) ||
-          path === "remix" ||
           path === "@remix-run/server-entry" ||
-          path === "@remix-run/assets"
+          path === "@remix-run/assets-manifest"
         ) {
           return undefined;
         }
 
+        // Always bundle CSS files so we get immutable fingerprinted asset URLs.
         if (path.endsWith(".css")) {
           return undefined;
         }
 
         let packageName = getNpmPackageName(path);
 
+        // Warn if we can't find an import for a package.
         if (
           onWarning &&
           !isNodeBuiltIn(packageName) &&
@@ -46,25 +65,27 @@ export function serverBareModulesPlugin(
         }
 
         switch (remixConfig.serverBuildTarget) {
+          // Always bundle everything for cloudflare.
           case "cloudflare-pages":
           case "cloudflare-workers":
             return undefined;
           case "deno":
+            // Externalize node builtins with denoland polyfills.
             if (isNodeBuiltIn(packageName)) {
               return {
                 path: `https://deno.land/std/node/${path}.ts`,
-                external: true,
-                namespace: "external"
+                external: true
               };
             }
 
+            // Bundle everything else for deno.
             return undefined;
         }
 
+        // Externalize everything else if we've gotten here.
         return {
           path,
-          external: true,
-          namespace: "external"
+          external: true
         };
       });
     }

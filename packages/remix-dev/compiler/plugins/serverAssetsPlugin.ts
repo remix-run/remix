@@ -2,13 +2,15 @@ import type { Plugin } from "esbuild";
 import jsesc from "jsesc";
 import invariant from "../../invariant";
 
-export type ClientManifestPromiseRef = { current?: Promise<unknown> };
+export type BrowserManifestPromiseRef = { current?: Promise<unknown> };
+import type { serverEntryModulesPlugin } from "./serverEntryModulesPlugin";
 
 /**
  * Creates a virtual module of the asset manifest for consumption.
+ * See {@link serverEntryModulesPlugin} for consumption.
  */
 export function serverAssetsPlugin(
-  clientManifestPromiseRef: ClientManifestPromiseRef,
+  browserManifestPromiseRef: BrowserManifestPromiseRef,
   filter: RegExp = /^@remix-run\/assets-manifest$/
 ): Plugin {
   return {
@@ -22,10 +24,10 @@ export function serverAssetsPlugin(
       });
       build.onLoad({ filter }, async () => {
         invariant(
-          clientManifestPromiseRef.current,
-          "Missing client manifest assets ref in server build."
+          browserManifestPromiseRef.current,
+          "Missing browser manifest assets ref in server build."
         );
-        let manifest = await clientManifestPromiseRef.current;
+        let manifest = await browserManifestPromiseRef.current;
 
         return {
           contents: `export default ${jsesc(manifest, { es6: true })};`,

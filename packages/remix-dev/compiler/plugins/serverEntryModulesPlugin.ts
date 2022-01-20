@@ -9,17 +9,21 @@ import { RemixConfig } from "../../config";
  * for you to consume the build in a custom server entry that is also fed through
  * the compiler.
  */
-export function serverEntryModulesPlugin(remixConfig: RemixConfig): Plugin {
+export function serverEntryModulesPlugin(
+  remixConfig: RemixConfig,
+  filter: RegExp = /^@remix-run\/server-build$/
+): Plugin {
   return {
     name: "server-entry",
     setup(build) {
-      build.onResolve({ filter: /^@remix-run\/server-build$/ }, ({ path }) => {
+      build.onResolve({ filter }, ({ path }) => {
         return {
           path,
           namespace: "server-entry"
         };
       });
-      build.onLoad({ filter: /^@remix-run\/server-build$/ }, async () => {
+
+      build.onLoad({ filter }, async () => {
         return {
           resolveDir: remixConfig.appDirectory,
           loader: "js",

@@ -1,6 +1,6 @@
 {
   "include": ["../../types/mdx-js__mdx.d.ts", "**/*"],
-  "exclude": ["__tests__"],
+  "exclude": ["__tests__", "./compiler/shims/*"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
@@ -14,6 +14,9 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/dev",
-    "rootDir": "."
+    "rootDir": ".",
+    "paths": {
+      "@remix-run/server-build": ["./serverBuildModule.d.ts"]
+    }
   }
 }
