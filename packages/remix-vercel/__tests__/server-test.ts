@@ -3,7 +3,8 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/se
 import { createRequest } from "node-mocks-http";
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
 import type { VercelRequest } from "@vercel/node";
-import { PassThrough } from "stream";
+import { Response as NodeResponse } from "@remix-run/node";
+import { Readable } from "stream";
 
 import {
   createRemixHeaders,
@@ -70,15 +71,11 @@ describe("vercel createRequestHandler", () => {
       expect(res.status).toBe(200);
     });
 
+    // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
     it("handles body as stream", async () => {
-      // create a stream to be used as body of the Response
-      const stream = new PassThrough();
-      stream.push('hello world');
-      stream.end();
-      stream.destroy();
-
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response(stream as unknown as ReadableStream<any>, { status: 200 });
+        const stream = Readable.from("hello world");
+        return new NodeResponse(stream, { status: 200 }) as unknown as Response;
       });
 
       let request = supertest(createApp());
