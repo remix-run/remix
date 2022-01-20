@@ -45,17 +45,29 @@ export async function getPost(slug: string) {
   return { slug, html, title: attributes.title };
 }
 
+
 export async function getPosts() {
-  const dir = await fs.readdir(postsPath);
-  return Promise.all(
-    dir.map(async filename => {
-      const file = await fs.readFile(path.join(postsPath, filename));
-      const { attributes } = parseFrontMatter(file.toString());
-      invariant(isValidPostAttributes(attributes));
-      return {
-        slug: filename.replace(/\.md$/, ""),
-        title: attributes.title
-      };
-    })
+  const postOrSeriesBasenames = await fs.readdir(
+    `${__dirname}/../../../posts`,
+    { withFileTypes: true }
   );
+
+  const posts = await Promise.all(
+    postOrSeriesBasenames
+      .map(async (dirent) => {
+        const file = await fs.readFile(
+          path.join(`${__dirname}/../../../posts`, dirent.name)
+        );
+        const { attributes } = parseFrontMatter(file.toString());
+        invariant(isValidPostAttributes(attributes));
+        return {
+          slug: dirent.name.replace(/\.md/, ""),
+          title: attributes.title,
+        };
+
+      })
+  );
+
+  return posts;
 }
+
