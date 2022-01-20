@@ -120,6 +120,38 @@ function remix() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
+function remixServerBuild() {
+  let SOURCE_DIR = "packages/remix-server-build";
+  let OUTPUT_DIR = "build/node_modules/@remix-run/server-build";
+  let version = getVersion(SOURCE_DIR);
+
+  return [
+    {
+      input: `${SOURCE_DIR}/index.ts`,
+      output: {
+        banner: createBanner("@remix-run/server-build", version),
+        dir: OUTPUT_DIR,
+        format: "esm"
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"]
+        }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
+          ]
+        })
+      ]
+    }
+  ];
+}
+
+/** @returns {import("rollup").RollupOptions[]} */
 function remixDev() {
   let SOURCE_DIR = "packages/remix-dev";
   let OUTPUT_DIR = "build/node_modules/@remix-run/dev";
@@ -717,6 +749,7 @@ export default function rollup(options) {
     ...remix(options),
     ...remixDev(options),
     ...remixServerRuntime(options),
+    ...remixServerBuild(options),
     ...remixNode(options),
     ...remixCloudflarePages(options),
     ...remixCloudflareWorkers(options),
