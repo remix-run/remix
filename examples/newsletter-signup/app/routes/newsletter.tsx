@@ -1,12 +1,6 @@
 import { useEffect, useRef } from "react";
-import type {
-  ActionFunction} from "remix";
-import {
-  Form,
-  Link,
-  useActionData,
-  useTransition,
-} from "remix";
+import type { ActionFunction } from "remix";
+import { Form, Link, useActionData, useTransition } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
   await new Promise((res) => setTimeout(res, 1000));
@@ -31,13 +25,14 @@ export const action: ActionFunction = async ({ request }) => {
 export default function Newsletter() {
   const actionData = useActionData();
   const transition = useTransition();
-  const state: "idle" | "success" | "error" | "submitting" = transition.submission
-    ? "submitting"
-    : actionData?.subscription
-    ? "success"
-    : actionData?.error
-    ? "error"
-    : "idle";
+  const state: "idle" | "success" | "error" | "submitting" =
+    transition.submission
+      ? "submitting"
+      : actionData?.subscription
+      ? "success"
+      : actionData?.error
+      ? "error"
+      : "idle";
 
   const inputRef = useRef<HTMLInputElement>(null);
   const successRef = useRef<HTMLHeadingElement>(null);
