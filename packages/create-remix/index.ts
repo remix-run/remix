@@ -29,7 +29,7 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
   if (versions && versions.node) {
     if (parseInt(versions.node) < 14) {
       console.log(
-        `️🚨 Oops, Node  v"${versions.node}" Remix requires a Node version greater than 14.`
+        `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
       );
       process.exit(1);
     }
