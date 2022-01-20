@@ -1,7 +1,7 @@
 import type { ActionFunction, LoaderFunction } from 'remix'
 import { Form, json, useLoaderData } from 'remix'
 import { authenticator, sessionStorage, supabaseStrategy } from '~/auth.server'
-import { supabaseClient } from '~/supabase'
+import { signInWithGithub } from '~/supabase.client'
 
 type LoaderData = {
   error: { message: string } | null
@@ -33,12 +33,6 @@ export const loader: LoaderFunction = async({ request }) => {
 export default function Screen() {
   const { error } = useLoaderData<LoaderData>()
 
-  const signInWithGithub = async() => {
-    await supabaseClient.auth.signIn({
-      provider: 'github',
-    }, { redirectTo: 'http://localhost:3000/oauth' })
-  }
-
   return (
     <>
       <Form method="post">
@@ -57,7 +51,7 @@ export default function Screen() {
 
       </Form>
       <p>
-        <button onClick={signInWithGithub}>Sign in with Github</button>
+        <button onClick={() => signInWithGithub()}>Sign in with Github</button>
       </p>
     </>
 
