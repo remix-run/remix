@@ -25,6 +25,5 @@
   "engines": {
     "node": ">=14"
   },
-  "prettier": {},
   "sideEffects": false
 }

@@ -3,7 +3,7 @@ import type { ActionFunction } from "remix";
 import { Form, Link, useActionData, useTransition } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
-  await new Promise((res) => setTimeout(res, 1000));
+  await new Promise(res => setTimeout(res, 1000));
   const formData = await request.formData();
   const email = formData.get("email");
 
@@ -15,8 +15,8 @@ export const action: ActionFunction = async ({ request }) => {
     method: "post",
     body: JSON.stringify({ email, api_key: API_KEY }),
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
-    },
+      "Content-Type": "application/json; charset=utf-8"
+    }
   });
 
   return res.json();
@@ -59,7 +59,7 @@ export default function Newsletter() {
       <Form replace method="post" aria-hidden={state === "success"}>
         <h2>Subscribe!</h2>
         <p>Don't miss any of the action!</p>
-        <fieldset>
+        <fieldset disabled={state === "submitting"}>
           <input
             aria-label="Email address"
             aria-describedby="error-message"
@@ -67,8 +67,9 @@ export default function Newsletter() {
             type="email"
             name="email"
             placeholder="you@example.com"
+            tabIndex={state === "success" ? -1 : 0}
           />
-          <button type="submit">
+          <button type="submit" tabIndex={state === "success" ? -1 : 0}>
             {state === "submitting" ? "Subscribing..." : "Subscribe"}
           </button>
         </fieldset>
@@ -83,7 +84,9 @@ export default function Newsletter() {
           You're subscribed!
         </h2>
         <p>Please check your email to confirm your subscription.</p>
-        <Link to=".">Start over</Link>
+        <Link to="." tabIndex={state === "success" ? 0 : -1}>
+          Start over
+        </Link>
       </div>
     </main>
   );
