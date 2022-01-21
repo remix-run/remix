@@ -365,32 +365,6 @@ export async function readConfig(
     virtualModules.serverBuildVirutalModule.path
   )};`;
 
-  if (
-    serverBuildTarget &&
-    [
-      "arc",
-      "cloudflare-pages",
-      "cloudflare-workers",
-      "netlify",
-      "vercel"
-    ].includes(serverBuildTarget)
-  ) {
-    try {
-      let entryModulePath = path.resolve(
-        __dirname,
-        `compiler/shims/entry/${serverBuildTarget}.ts`
-      );
-      serverBuildTargetEntryModule = await fse.readFile(
-        entryModulePath,
-        "utf8"
-      );
-    } catch (error) {
-      console.error(
-        `Error loading server entry module for serverBuildTarget "${serverBuildTarget}".`
-      );
-    }
-  }
-
   return {
     appDirectory,
     cacheDirectory,
