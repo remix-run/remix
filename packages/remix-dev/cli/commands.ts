@@ -162,12 +162,6 @@ export async function dev(remixRoot: string, modeArg?: string) {
     throw new Error("remix dev is not supported for custom servers.");
   }
 
-  if (config.serverBuildTarget !== "node-cjs") {
-    throw new Error(
-      "remix dev is not supported for non node-cjs serverBuildTarget."
-    );
-  }
-
   let app = express();
   app.use((_, __, next) => {
     purgeAppRequireCache(config.serverBuildPath);
