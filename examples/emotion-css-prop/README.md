@@ -1,19 +1,24 @@
-# TODO: Title of Example
+# Example app with [Emotion](https://emotion.sh/docs/introduction) CSS Prop
 
-TODO: Describe the use case here
+This example features how to use [Emotion](https://emotion.sh/docs/introduction) CSS Prop with Remix.
 
 ## Preview
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-<!-- TODO: update this link to the path for your example: -->
-
-[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/template)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/emotion-css-prop)
 
 ## Example
 
-Describe the example and how it demonstrates solving the problem. Reference any relevant files/dependencies if needed.
+This example shows how to use Emotion CSS Prop with Remix.
+
+Relevant files:
+
+- [app/root.tsx](./app/root.tsx) - This is where we render the app and if we're rendering on the server we have placeholder text of __STYLES__.
+- [app/entry.server.tsx](./app/entry.server.tsx) - This is where we render the app on the server and replace __STYLES__ with the styles that emotion collect.
+- [app/routes/index.tsx](./app/routes/index.tsx)  - Here's where we use the css prop to styling component.
+- [tsconfig.json](./tsconfig.json) - Add `jsxImportSource` to use the css prop in tsx file.
 
 ## Related Links
 
-Link to documentation or other related examples.
+- [Emotion](https://emotion.sh/docs/introduction)
