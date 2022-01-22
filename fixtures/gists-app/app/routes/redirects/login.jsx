@@ -1,9 +1,4 @@
-import {
-  redirect,
-  json,
-  Form,
-  useLoaderData
-} from "remix";
+import { redirect, json, Form, useLoaderData } from "remix";
 
 import { sessionStorage } from "~/redirects.server";
 
