@@ -192,6 +192,25 @@ function remixDev() {
         }),
         nodeResolve({ extensions: [".ts"] })
       ]
+    },
+    {
+      external() {
+        return true;
+      },
+      input: `${SOURCE_DIR}/server-build.ts`,
+      output: {
+        banner: executableBanner + createBanner("@remix-run/dev", version),
+        dir: OUTPUT_DIR,
+        format: "cjs"
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"]
+        }),
+        nodeResolve({ extensions: [".ts"] })
+      ]
     }
   ];
 }

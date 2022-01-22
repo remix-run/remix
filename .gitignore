@@ -6,6 +6,7 @@
 node_modules/
 yarn-error.log
 
+/jacob
 /MICHAEL_TODOS.md
 /fixtures/cloudflare
 /fixtures/test

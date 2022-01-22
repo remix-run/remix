@@ -1,20 +1,11 @@
 import {
   redirect,
-  createCookieSessionStorage,
   json,
   Form,
   useLoaderData
 } from "remix";
 
-let sessionStorage = createCookieSessionStorage({
-  cookie: {
-    name: "redirectslogin",
-    path: "/",
-    httpOnly: true,
-    sameSite: true,
-    secure: process.env.NODE_ENV !== "development"
-  }
-});
+import { sessionStorage } from "~/redirects.server";
 
 export let action = async ({ request }) => {
   let session = await sessionStorage.getSession(request.headers.get("Cookie"));

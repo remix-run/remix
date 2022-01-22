@@ -65,6 +65,9 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
 
   // merge package.jsons
   let appPkg = require(path.join(sharedTemplate, "package.json"));
+  appPkg.scripts = appPkg.scripts || {};
+  appPkg.dependencies = appPkg.dependencies || {};
+  appPkg.devDependencies = appPkg.devDependencies || {};
   let serverPkg = require(path.join(serverTemplate, "package.json"));
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
