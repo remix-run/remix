@@ -19,6 +19,7 @@ export default function handleRequest(
 ) {
   let markup = renderToString(
     <CacheProvider value={cache}>
+      {/* Set the global style. */}
       <Global
         styles={css`
           ${emotionReset}
