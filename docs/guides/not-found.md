@@ -4,7 +4,7 @@ title: Not Found Handling
 
 # Not Found (404) Handling
 
-When a document isn't found on a web server, it should send a [404 status code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404). This indicates to machines that the document is there: search engines won't index it, CDNS won't cache it, etc. Most SPAs today just serve everything as 200 whether the page exists or not, but for you that stops today!
+When a document isn't found on a web server, it should send a [404 status code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404). This indicates to machines that the document is not there: search engines won't index it, CDNS won't cache it, etc. Most SPAs today just serve everything as 200 whether the page exists or not, but for you that stops today!
 
 There are two primary cases where a Remix site should send a 404:
 
