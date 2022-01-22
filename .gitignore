@@ -15,3 +15,5 @@ yarn-error.log
 .eslintcache
 
 /deployment-test
+
+/.idea/

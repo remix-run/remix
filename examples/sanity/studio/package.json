@@ -1,0 +1,31 @@
+{
+  "name": "remixstarter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "package.json",
+  "author": "Anish Prashun <anishprashun118@gmail.com>",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "sanity start",
+    "build": "sanity build"
+  },
+  "keywords": [
+    "sanity"
+  ],
+  "dependencies": {
+    "@sanity/base": "^2.23.3",
+    "@sanity/core": "^2.23.2",
+    "@sanity/default-layout": "^2.23.3",
+    "@sanity/default-login": "^2.23.2",
+    "@sanity/desk-tool": "^2.23.4",
+    "@sanity/google-maps-input": "^2.23.3",
+    "@sanity/vision": "^2.23.3",
+    "prop-types": "^15.7",
+    "react": "^17.0",
+    "react-dom": "^17.0",
+    "react-icons": "^3.11.0",
+    "styled-components": "^5.2.0"
+  },
+  "devDependencies": {}
+}
