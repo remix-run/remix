@@ -13,12 +13,13 @@ export interface ServerBuild {
   assets: AssetsManifest;
 }
 
-export interface HandleDocumentRequestFunction {
+export interface HandleDocumentRequestFunction<Context = unknown> {
   (
     request: Request,
     responseStatusCode: number,
     responseHeaders: Headers,
-    context: EntryContext
+    context: EntryContext,
+    loadContext: Context
   ): Promise<Response> | Response;
 }
 
