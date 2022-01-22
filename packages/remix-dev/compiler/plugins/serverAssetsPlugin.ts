@@ -1,9 +1,10 @@
 import type { Plugin } from "esbuild";
 import jsesc from "jsesc";
 import invariant from "../../invariant";
+import virtualModules from "../virtualModules";
+import type { serverEntryModulesPlugin } from "./serverEntryModulesPlugin";
 
 export type BrowserManifestPromiseRef = { current?: Promise<unknown> };
-import type { serverEntryModulesPlugin } from "./serverEntryModulesPlugin";
 
 /**
  * Creates a virtual module of the asset manifest for consumption.
@@ -11,7 +12,7 @@ import type { serverEntryModulesPlugin } from "./serverEntryModulesPlugin";
  */
 export function serverAssetsPlugin(
   browserManifestPromiseRef: BrowserManifestPromiseRef,
-  filter: RegExp = /^@remix-run\/assets-manifest$/
+  filter: RegExp = virtualModules.assetsManifestVirtualModule.filter
 ): Plugin {
   return {
     name: "server-assets",

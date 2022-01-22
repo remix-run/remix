@@ -2,7 +2,7 @@
  * @type {import('@remix-run/dev/config').AppConfig}
  */
 module.exports = {
-  customServer: "./server.js",
+  server: "./server.js",
   ignoredRouteFiles: [".*"],
   devServerBroadcastDelay: 1000,
   // appDirectory: "app",

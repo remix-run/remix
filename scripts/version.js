@@ -9,17 +9,10 @@ const semver = require("semver");
 let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
-let virtualModules = ["server-build"];
 let adapters = ["architect", "express", "netlify", "vercel"];
 let runtimes = ["cloudflare-workers", "cloudflare-pages", "node"];
 let core = ["dev", "server-runtime", "react", "eslint-config"];
-let allPackages = [
-  ...virtualModules,
-  ...adapters,
-  ...runtimes,
-  ...core,
-  "serve"
-];
+let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
 /**
  * @param {string} packageName

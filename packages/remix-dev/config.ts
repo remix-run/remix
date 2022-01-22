@@ -117,9 +117,9 @@ export interface AppConfig {
   serverBuildTarget?: ServerBuildTarget;
 
   /**
-   * Custom server entrypoint relative to the root directory that becomes your server's main module.
+   * A server entrypoint relative to the root directory that becomes your server's main module.
    */
-  customServer?: string;
+  server?: string;
 
   /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
@@ -220,9 +220,9 @@ export interface RemixConfig {
   serverBuildTargetEntryModule: string;
 
   /**
-   * Custom server entrypoint relative to the root directory that becomes your server's main module.
+   * A server entrypoint relative to the root directory that becomes your server's main module.
    */
-  customServerEntryPoint?: string;
+  serverEntryPoint?: string;
 }
 
 /**
@@ -251,7 +251,7 @@ export async function readConfig(
     throw new Error(`Error loading Remix config in ${configFile}`);
   }
 
-  let customServerEntryPoint = appConfig.customServer;
+  let customServerEntryPoint = appConfig.server;
   let serverBuildTarget: ServerBuildTarget | undefined =
     appConfig.serverBuildTarget;
   let serverModuleFormat: ServerModuleFormat =
@@ -382,7 +382,7 @@ export async function readConfig(
     serverPlatform,
     serverBuildTarget,
     serverBuildTargetEntryModule,
-    customServerEntryPoint,
+    serverEntryPoint: customServerEntryPoint,
     mdx
   };
 }

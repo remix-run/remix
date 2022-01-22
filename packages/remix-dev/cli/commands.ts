@@ -158,7 +158,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   let port = process.env.PORT || 3000;
 
-  if (config.customServerEntryPoint) {
+  if (config.serverEntryPoint) {
     throw new Error("remix dev is not supported for custom servers.");
   }
 

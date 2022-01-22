@@ -34,7 +34,6 @@ async function run() {
   for (let name of [
     "dev",
     "server-runtime", // publish before platforms
-    "server-build",
     "cloudflare-pages",
     "cloudflare-workers",
     "node", // publish node before node servers

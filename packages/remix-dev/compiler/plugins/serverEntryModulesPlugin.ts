@@ -5,7 +5,7 @@ import { RemixConfig } from "../../config";
 import virtualModules from "../virtualModules";
 
 /**
- * Creates a virtual module called `@remix-run/server-build` that exports the
+ * Creates a virtual module called `@remix-run/dev/server-build` that exports the
  * compiled server build for consumption in remix request handlers. This allows
  * for you to consume the build in a custom server entry that is also fed through
  * the compiler.

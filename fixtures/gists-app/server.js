@@ -58,7 +58,7 @@ if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
 app.all(
   "*",
   createRequestHandler({
-    build: require("@remix-run/server-build"),
+    build: require("@remix-run/dev/server-build"),
     getLoadContext() {
       return { userId: 4 };
     }
