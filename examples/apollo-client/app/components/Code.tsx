@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 export interface CodeProps {
-    data: any;
-    summary: string;
+  data: any;
+  summary: string;
 }
 
 /**

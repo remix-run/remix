@@ -1,10 +1,8 @@
 import * as React from 'react';
 import { ApolloClient, InMemoryCache } from '@apollo/client';
 
-const IS_BROWSER = typeof window !== 'undefined';
-const GRAPHQL_URL = "https://rickandmortyapi.com/graphql"
-
-const initialState = IS_BROWSER ? window.__APOLLO_STATE__ : {};
+const isBrowser = typeof window !== 'undefined';
+const initialState = isBrowser ? window.__APOLLO_STATE__ : {};
 
 export const initApollo = (isServer = true, _env: any = {}) => {
   const headers: any = {};
@@ -13,7 +11,7 @@ export const initApollo = (isServer = true, _env: any = {}) => {
     cache: new InMemoryCache().restore(initialState),
     headers,
     ssrMode: isServer,
-    uri: GRAPHQL_URL
+    uri: "https://rickandmortyapi.com/graphql"
   });
 };
 
