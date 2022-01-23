@@ -7,7 +7,7 @@ export interface CodeProps {
 
 /**
  * @name Code
- * @description tbd...
+ * @description Simple component to render out our JSON response.
  */
 export const Code: React.FC<CodeProps> = (props) => {
   const { data, summary } = props;

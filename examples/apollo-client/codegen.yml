@@ -4,6 +4,9 @@
 #       https://www.graphql-code-generator.com/docs/getting-started/index
 #
 ###############################################################################
+config:
+  scalars:
+    Upload: 'any'
 documents: 'app/**/*.graphql'
 overwrite: true
 schema:
@@ -12,7 +15,15 @@ schema:
 generates:
   app/generated/hooks.ts:
     config:
+      avoidOptionals: true
+      # enumsAsTypes: true
+      # immutableTypes: true
+      # strictScalars: true
+      useImplementingTypes: true
+      useTypeImports: true
       withHooks: true
     plugins:
       - typescript
+      - typescript-operations
       - typescript-react-apollo
+      - typescript-resolvers

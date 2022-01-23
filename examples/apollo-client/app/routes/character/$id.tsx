@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { Character } from '~/components/Character';
+import { CharacterDetail } from '~/components/CharacterDetail';
 import { Code } from '~/components/Code';
 import { useGetCharacterQuery } from '~/generated/hooks';
 
@@ -25,7 +25,7 @@ export default function () {
         generated from our ".graphql" files.
       </p>
       <Code data={data} summary='Apollo Hooks' />
-      {loading ? <div>Loading...</div> : <Character data={data} />}
+      {loading ? <div>Loading...</div> : <CharacterDetail data={data?.character} />}
     </main>
   );
 };
