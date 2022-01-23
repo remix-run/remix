@@ -25,7 +25,10 @@ export default function () {
         generated from our ".graphql" files.
       </p>
       <Code data={data} summary='Apollo Hooks' />
-      {loading ? <div>Loading...</div> : <CharacterDetail data={data?.character} />}
+      {loading && <div>Loading...</div>}
+
+      {/* Render our results out */}
+      {data?.character && <CharacterDetail data={data.character} />}
     </main>
   );
 };

@@ -2,14 +2,11 @@ import * as React from 'react';
 import { GetCharacterFieldsFragment } from '~/generated/hooks';
 
 export interface CharacterDetailProps {
-  data?: GetCharacterFieldsFragment;
+  data: GetCharacterFieldsFragment;
 }
 
 export const CharacterDetail: React.FC<CharacterDetailProps> = (props) => {
   const { data } = props;
-
-  // 🔌 Short Circuit
-  if (!data) return null;
 
   return (
     <div className="character">
