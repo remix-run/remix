@@ -7,7 +7,18 @@ export function createApp(buildPath: string, mode = "production") {
   let app = express();
 
   app.use(compression());
-  app.use(express.static("public", { immutable: true, maxAge: "1h" }));
+  if (mode === "production") {
+    // Remix fingerprints its assets so we can cache forever
+    app.use(
+      "/build",
+      express.static("public/build", { immutable: true, maxAge: "1y" })
+    );
+    // Any other assets such as favicons.
+    app.use(express.static("public", { maxAge: "1h" }));
+  } else {
+    // No caching needed
+    app.use(express.static("public"));
+  }
 
   app.use(morgan("tiny"));
   app.all(
