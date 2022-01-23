@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { GetCharacterFieldsFragment } from '~/generated/hooks';
+import { CharacterFieldsFragment } from '~/generated/hooks';
 
 export interface CharacterDetailProps {
-  data: GetCharacterFieldsFragment;
+  data: CharacterFieldsFragment;
 }
 
 export const CharacterDetail: React.FC<CharacterDetailProps> = (props) => {

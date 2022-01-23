@@ -204,7 +204,7 @@ export type QueryLocationsByIdsArgs = {
   ids: Array<Scalars['ID']>;
 };
 
-export type GetCharacterFieldsFragment = { __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined };
+export type CharacterFieldsFragment = { __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined };
 
 export type GetCharacterQueryVariables = Exact<{
   id: Scalars['ID'];
@@ -213,17 +213,17 @@ export type GetCharacterQueryVariables = Exact<{
 
 export type GetCharacterQuery = { __typename?: 'Query', character: { __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined } | null | undefined };
 
-export type GetCharactersFieldsFragment = { __typename?: 'Characters', info: { __typename?: 'Info', count: number | null | undefined, next: number | null | undefined, pages: number | null | undefined, prev: number | null | undefined } | null | undefined, results: Array<{ __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined } | null | undefined> | null | undefined };
+export type GetCharactersFieldsFragment = { __typename?: 'Characters', results: Array<{ __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined } | null | undefined> | null | undefined };
 
 export type GetCharactersQueryVariables = Exact<{
   page: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type GetCharactersQuery = { __typename?: 'Query', characters: { __typename?: 'Characters', info: { __typename?: 'Info', count: number | null | undefined, next: number | null | undefined, pages: number | null | undefined, prev: number | null | undefined } | null | undefined, results: Array<{ __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined } | null | undefined> | null | undefined } | null | undefined };
+export type GetCharactersQuery = { __typename?: 'Query', characters: { __typename?: 'Characters', results: Array<{ __typename?: 'Character', gender: string | null | undefined, id: string | null | undefined, image: string | null | undefined, name: string | null | undefined, species: string | null | undefined, status: string | null | undefined, type: string | null | undefined, origin: { __typename?: 'Location', dimension: string | null | undefined, name: string | null | undefined, type: string | null | undefined } | null | undefined } | null | undefined> | null | undefined } | null | undefined };
 
-export const GetCharacterFieldsFragmentDoc = gql`
-    fragment GetCharacterFields on Character {
+export const CharacterFieldsFragmentDoc = gql`
+    fragment CharacterFields on Character {
   gender
   id
   image
@@ -240,35 +240,18 @@ export const GetCharacterFieldsFragmentDoc = gql`
     `;
 export const GetCharactersFieldsFragmentDoc = gql`
     fragment GetCharactersFields on Characters {
-  info {
-    count
-    next
-    pages
-    prev
-  }
   results {
-    gender
-    id
-    image
-    name
-    origin {
-      dimension
-      name
-      type
-    }
-    species
-    status
-    type
+    ...CharacterFields
   }
 }
-    `;
+    ${CharacterFieldsFragmentDoc}`;
 export const GetCharacterDocument = gql`
     query getCharacter($id: ID!) {
   character(id: $id) {
-    ...GetCharacterFields
+    ...CharacterFields
   }
 }
-    ${GetCharacterFieldsFragmentDoc}`;
+    ${CharacterFieldsFragmentDoc}`;
 
 /**
  * __useGetCharacterQuery__

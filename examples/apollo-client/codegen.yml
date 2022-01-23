@@ -16,9 +16,6 @@ generates:
   app/generated/hooks.ts:
     config:
       avoidOptionals: true
-      # enumsAsTypes: true
-      # immutableTypes: true
-      # strictScalars: true
       useImplementingTypes: true
       useTypeImports: true
       withHooks: true

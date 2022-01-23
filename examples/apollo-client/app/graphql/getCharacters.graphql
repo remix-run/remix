@@ -1,23 +1,21 @@
-fragment GetCharactersFields on Characters {
-  info {
-    count
-    next
-    pages
-    prev
-  }
-  results {
-    gender
-    id
-    image
+fragment CharacterFields on Character {
+  gender
+  id
+  image
+  name
+  origin {
+    dimension
     name
-    origin {
-      dimension
-      name
-      type
-    }
-    species
-    status
     type
+  }
+  species
+  status
+  type
+}
+
+fragment GetCharactersFields on Characters {
+  results {
+    ...CharacterFields
   }
 }
 

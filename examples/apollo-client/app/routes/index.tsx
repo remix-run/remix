@@ -25,7 +25,7 @@ export default function () {
   const { data, error } = useLoaderData<GetCharactersQueryResult>();
 
   // Setup
-  const characters = data?.characters?.results
+  const characters = data?.characters?.results ?? [];
 
   // 🔌 Short Circuit
   if (error) return <div>Error: {error.message}</div>;
@@ -40,7 +40,7 @@ export default function () {
       </p>
 
       <Code data={data} summary='Loader data' />
-      <CharacterList data={characters} />
+      {characters && <CharacterList data={characters} />}
     </main>
   );
 };

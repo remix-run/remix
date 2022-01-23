@@ -1,17 +1,17 @@
 import * as React from 'react';
 import { Link } from 'remix';
-import { Character } from '~/generated/hooks';
+import { CharacterFieldsFragment } from '~/generated/hooks';
 
 export interface CharacterListProps {
-  data: Character[];
+  data: CharacterFieldsFragment[];
 }
 
 export const CharacterList: React.FC<CharacterListProps> = (props) => {
   const { data } = props;
 
   // Markup
-  const renderCharacter = (character: Character) => {
-    const { image } = character
+  const renderCharacter = (character: CharacterFieldsFragment) => {
+    const { image } = character;
     const to = `/character/${character.id}`;
 
     return (

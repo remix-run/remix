@@ -1,4 +1,4 @@
-fragment GetCharacterFields on Character {
+fragment CharacterFields on Character {
   gender
   id
   image
@@ -15,6 +15,6 @@ fragment GetCharacterFields on Character {
 
 query getCharacter($id: ID!) {
   character(id: $id) {
-    ...GetCharacterFields
+    ...CharacterFields
   }
 }
