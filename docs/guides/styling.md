@@ -398,7 +398,7 @@ Perhaps the most popular way to style a Remix application in the community is to
 First install a couple dev dependencies:
 
 ```sh
-npm add -D concurrently tailwindcss
+npm add -D concurrently tailwindcss postcss autoprefixer
 ```
 
 Initialize a tailwind config so we can tell it which files to generate classes from.
