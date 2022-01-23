@@ -1,0 +1,18 @@
+###############################################################################
+#
+#   CODE GENERATOR
+#       https://www.graphql-code-generator.com/docs/getting-started/index
+#
+###############################################################################
+documents: 'app/**/*.graphql'
+overwrite: true
+schema:
+  - "https://rickandmortyapi.com/graphql"
+
+generates:
+  app/generated/hooks.ts:
+    config:
+      withHooks: true
+    plugins:
+      - typescript
+      - typescript-react-apollo

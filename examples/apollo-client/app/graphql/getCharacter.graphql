@@ -1,0 +1,20 @@
+fragment GetCharacterFields on Character {
+  gender
+  id
+  image
+  name
+  origin {
+    dimension
+    name
+    type
+  }
+  species
+  status
+  type
+}
+
+query getCharacter($id: ID!) {
+  character(id: $id) {
+    ...GetCharacterFields
+  }
+}

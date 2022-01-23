@@ -1,0 +1,28 @@
+fragment GetCharactersFields on Characters {
+  info {
+    count
+    next
+    pages
+    prev
+  }
+  results {
+    gender
+    id
+    image
+    name
+    origin {
+      dimension
+      name
+      type
+    }
+    species
+    status
+    type
+  }
+}
+
+query getCharacters($page: Int) {
+  characters(page: $page) {
+    ...GetCharactersFields
+  }
+}
