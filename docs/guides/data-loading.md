@@ -161,6 +161,29 @@ export default function ProductCategory() {
 }
 ```
 
+If you are using TypeScript, you can use Prisma Client generated types to get better type safety and intellisense when writing your code to load data.
+
+```tsx filename=tsx filename=app/routes/products/$productId.tsx
+import { useLoaderData } from "remix";
+import type { LoaderFunction } from "remix";
+import type { Product } from "@prisma/client";
+
+type LoaderData = Product;
+
+// Loader function implementation...
+
+export default function Product() {
+  let product = useLoaderData<LoaderData>();
+  return (
+    <div>
+      <p>Product {product.id}</p>
+      {/* ... */}
+    </div>
+  );
+}
+
+```
+
 ## Cloudflare KV
 
 If you picked Cloudflare Workers as you environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
