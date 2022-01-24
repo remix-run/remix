@@ -34,7 +34,7 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
       );
       process.exit(1);
     } else {
-      await fse.mkdir(projectDir);
+      await fse.mkdirp(projectDir);
     }
   }
 
