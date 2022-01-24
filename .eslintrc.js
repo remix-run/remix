@@ -1,4 +1,5 @@
 module.exports = {
+  root: true,
   extends: [
     require.resolve("./packages/remix-eslint-config/index.js"),
     require.resolve("./packages/remix-eslint-config/jest.js")

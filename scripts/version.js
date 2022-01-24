@@ -144,15 +144,15 @@ async function run(args) {
       if (!stat.isDirectory()) continue;
 
       await updateExamplesPackageConfig(example, config => {
-        if (config.dependencies["remix"]) {
+        if (config.dependencies?.["remix"]) {
           config.dependencies["remix"] = nextVersion;
         }
 
         for (let pkg of allPackages) {
-          if (config.dependencies[`@remix-run/${pkg}`]) {
+          if (config.dependencies?.[`@remix-run/${pkg}`]) {
             config.dependencies[`@remix-run/${pkg}`] = nextVersion;
           }
-          if (config.devDependencies[`@remix-run/${pkg}`]) {
+          if (config.devDependencies?.[`@remix-run/${pkg}`]) {
             config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
           }
         }

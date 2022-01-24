@@ -48,6 +48,12 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 
 You can put it anywhere you like, you might want to just delete everything that's there.
 
+💿 Either way you will also need to import `Link`:
+
+```tsx
+import { Link } from "remix";
+```
+
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
 💿 Create a new file in `app/routes/posts/index.tsx`
@@ -79,7 +85,7 @@ You might need to refresh the browser to see our new, bare-bones posts route.
 
 ## Loading Data
 
-Data loading is built in to Remix.
+Data loading is built into Remix.
 
 If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
@@ -148,7 +154,7 @@ TypeScript is mad, so let's help it out:
 ```tsx filename=app/routes/posts/index.tsx lines=[3-6,9,19,23]
 import { Link, useLoaderData } from "remix";
 
-type Post = {
+export type Post = {
   slug: string;
   title: string;
 };
@@ -264,7 +270,7 @@ title: My First Post
 Isn't it great?
 ```
 
-```md filename=posts/90s-mix-cdr.md
+```md filename=posts/90s-mixtape.md
 ---
 title: 90s Mixtape
 ---
@@ -400,7 +406,7 @@ Now let's make a route to actually view the post. We want these URLs to work:
 
 ```
 /posts/my-first-post
-/posts/90s-mix-cdr
+/posts/90s-mixtape
 ```
 
 Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
@@ -601,6 +607,7 @@ You should recognize a lot of that code from the posts route. We set up some ext
 💿 Create an admin stylesheet
 
 ```sh
+mkdir app/styles
 touch app/styles/admin.css
 ```
 
@@ -671,7 +678,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/admin.tsx lines=[1,19]
+```tsx filename=app/routes/admin.tsx lines=[1,21]
 import { Outlet, Link, useLoaderData } from "remix";
 
 //...
@@ -719,7 +726,7 @@ Now click the link from the index route and watch the `<Outlet/>` automatically 
 
 ## Actions
 
-We're gonna get serious now. Let's build a form to create a new post in the our new "new" route.
+We're gonna get serious now. Let's build a form to create a new post in our new "new" route.
 
 💿 Add a form to the new route
 
@@ -795,7 +802,7 @@ export default function NewPost() {
 }
 ```
 
-That's it. Remix (and the browser) will take of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
+That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
 In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`.
 
@@ -879,13 +886,9 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,6-7,17-18,24-25,30-31]
-import {
-  useActionData,
-  Form,
-  redirect,
-  ActionFunction
-} from "remix";
+```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-15,20-22,26-28]
+import { useActionData, Form, redirect } from "remix";
+import type { ActionFunction } from "remix";
 
 // ...
 
@@ -928,7 +931,7 @@ export default function NewPost() {
 
 TypeScript is still mad, so let's add some invariants and a new type for the error object to make it happy.
 
-```tsx filename=app/routes/admin/new.tsx lines=[4-8,15,24-26]
+```tsx filename=app/routes/admin/new.tsx lines=[2,4-8,15,24-26]
 //...
 import invariant from "tiny-invariant";
 
@@ -1016,6 +1019,6 @@ export default function NewPost() {
 
 Now the user gets an enhanced experience than if we had just done this without JavaScript in the browser at all. Some other things that you could do to make it better is automatically slugify the title into the slug field or let the user override it (maybe we'll add that later).
 
-That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.ts` and `app/routes/posts/new.ts`. You just gotta put it together.
+That's it for today! Your homework is to make an `/admin/edit` page for your posts. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/admin/new.tsx`. You just gotta put it together.
 
 We hope you love Remix!

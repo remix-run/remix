@@ -11,6 +11,7 @@ module.exports = {
   serverBuildDirectory: "./build",
   devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
+  server: "./server.js",
 
   mdx: async filename => {
     const [rehypeHighlight, remarkToc] = await Promise.all([
