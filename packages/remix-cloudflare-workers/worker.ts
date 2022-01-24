@@ -69,6 +69,8 @@ export async function handleAsset(
     let requestpath = url.pathname.split("/").slice(0, -1).join("/");
 
     if (requestpath.startsWith(assetpath)) {
+      // Assets are hashed by Remix so are safe to cache in the browser
+      // And they're also hashed in KV storage, so are safe to cache on the edge
       cacheControl = {
         bypassCache: false,
         edgeTTL: 31536000,
