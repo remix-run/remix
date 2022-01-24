@@ -148,9 +148,10 @@ export async function dev(remixRoot: string, modeArg?: string) {
     let serve = require("@remix-run/serve");
     createApp = serve.createApp;
     express = require("express");
-  } catch (err) {
+  } catch (err: any) {
+    const missingModule = err.message.split('\n')[0];
     throw new Error(
-      "Could not locate @remix-run/serve. Please verify you have it installed to use the dev command."
+      `${missingModule}. Please verify you have it installed to use the dev command.`
     );
   }
 
