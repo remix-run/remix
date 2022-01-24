@@ -21,6 +21,7 @@
     "packages/remix-architect",
     "packages/remix-cloudflare-pages",
     "packages/remix-cloudflare-workers",
+    "packages/remix-deno",
     "packages/remix-dev",
     "packages/remix-eslint-config",
     "packages/remix-express",
