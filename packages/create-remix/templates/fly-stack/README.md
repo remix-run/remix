@@ -22,11 +22,17 @@ echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 
 ## The Database
 
-In development, it's better to use a local database, on macOS the easiest way to do this is to use [Postgres.app][postgresapp]. On Windows you can use the official Postgres [installer][windows_postgres]. If you'd prefer, you can also use Fly's Wireguard VPN to connect to a development database (or even your production database). You can find the instructions to set up Wireguard [here][fly_wireguard], and the instructions for creating a development database [here][fly_postgres].
+In development, it's better to use a local database, The easiest way to do this is using [Docker][docker]. To start your postgres database, run the following command:
+
+```sh
+docker-compose up
+```
+
+If you'd prefer not to use Docker, you can also use Fly's Wireguard VPN to connect to a development database (or even your production database). You can find the instructions to set up Wireguard [here][fly_wireguard], and the instructions for creating a development database [here][fly_postgres].
 
 ## Development
 
-From your terminal:
+From a new tab in your terminal:
 
 ```sh
 npm run dev
@@ -45,8 +51,7 @@ fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.staging.toml
 fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.production.toml
 ```
 
-[postgresapp]: https://postgresapp.com/
-[windows_postgres]: https://www.postgresql.org/download/windows/
+[docker]: https://www.docker.com/get-started
 [fly_wireguard]: https://fly.io/docs/reference/private-networking/#install-your-wireguard-app
 [fly_postgres]: https://fly.io/docs/reference/postgres/
 [fly_new_access_token]: https://web.fly.io/user/personal_access_tokens/new
