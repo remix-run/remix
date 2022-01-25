@@ -17,6 +17,7 @@ flyctl auth signup
 4. You'll need to create a .env file in your project root for your SESSION_SECRET
 
 ```sh
+cp .env.example .env
 echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 ```
 
