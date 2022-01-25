@@ -1,8 +1,9 @@
 node_modules
 
 /.cache
-/server/build
+/src/build
 /public/build
+/.esbuild
 
 sam.json
 sam.yaml

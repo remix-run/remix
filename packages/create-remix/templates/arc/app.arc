@@ -1,12 +1,18 @@
 @app
 remix-architect-app
 
+@esbuild
+entryFilePattern index.js
+
 @http
 /*
   method any
-  src server
+  src src
 
 @static
+
+@plugins
+arc-plugin-esbuild
 
 # @aws
 # profile default
