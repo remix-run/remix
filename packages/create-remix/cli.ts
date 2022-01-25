@@ -110,13 +110,3 @@ async function run() {
     install: answers.install
   });
 }
-
-type Server =
-  | "arc"
-  | "cloudflare-workers"
-  | "express"
-  | "fly"
-  | "koa"
-  | "netlify"
-  | "remix"
-  | "vercel";

@@ -9,6 +9,7 @@ export type Server =
   | "cloudflare-workers"
   | "cloudflare-pages"
   | "express"
+  | "koa"
   | "fly"
   | "netlify"
   | "remix"
