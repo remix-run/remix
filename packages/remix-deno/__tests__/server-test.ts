@@ -6,7 +6,7 @@ import {
   serveStaticFiles
 } from "../server";
 
-jest.mock("@remix-run/server-runtime/server");
+jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
