@@ -1,5 +1,9 @@
 import { installGlobals } from "./globals";
 
-export { createRequestHandlerWithStaticFiles } from "./server";
+export {
+  createRequestHandler,
+  createRequestHandlerWithStaticFiles,
+  serveStaticFiles
+} from "./server";
 
 installGlobals();
