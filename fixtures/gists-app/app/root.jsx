@@ -57,7 +57,7 @@ export default function Root() {
         <header>
           <ol className="breadcrumbs">
             {matches
-              .filter(match => match.handle && match.handle.breadcrumb)
+              .filter(match => match.handle?.breadcrumb)
               .map((match, index) => (
                 <li key={index}>{match.handle.breadcrumb(match)}</li>
               ))}

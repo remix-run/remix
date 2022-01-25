@@ -94,7 +94,7 @@ export function createRemixRequest(
       : event.body;
   }
 
-  return new NodeRequest(url.toString(), init);
+  return new NodeRequest(url.href, init);
 }
 
 export function createRemixHeaders(

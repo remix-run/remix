@@ -171,7 +171,7 @@ export function getLinksForMatches(
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
-      return (module.links && module.links()) || [];
+      return module.links?.() || [];
     })
     .flat(1);
 
@@ -346,7 +346,7 @@ export function getDataLinkHrefs(
       .map(match => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
-        searchParams.append("_data", match.route.id);
+        searchParams.set("_data", match.route.id);
         return `${pathname}?${searchParams}`;
       })
   );

@@ -6,11 +6,15 @@
 node_modules/
 yarn-error.log
 
+/jacob
 /MICHAEL_TODOS.md
 /fixtures/cloudflare
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
-/fixtures/my-remix-app
 
 .eslintcache
+
+/deployment-test
+
+/.idea/

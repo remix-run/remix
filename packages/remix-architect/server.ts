@@ -41,7 +41,7 @@ export function createRequestHandler({
   mode = process.env.NODE_ENV
 }: {
   build: ServerBuild;
-  getLoadContext: GetLoadContextFunction;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
   let platform: ServerPlatform = { formatServerError };
@@ -115,7 +115,7 @@ export function createRemixRequest(
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let url = new URL(event.rawPath + search, `https://${host}`);
 
-  return new NodeRequest(url.toString(), {
+  return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
     body:

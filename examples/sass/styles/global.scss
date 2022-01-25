@@ -1,0 +1,9 @@
+$font-stack: system-ui, sans-serif;
+$primary-color: #333;
+$line-height: 1.4;
+
+:root {
+  color: $primary-color;
+  font-family: $font-stack;
+  line-height: $line-height;
+}

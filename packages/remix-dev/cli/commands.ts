@@ -1,6 +1,7 @@
 import * as path from "path";
+import os from "os";
 import * as fse from "fs-extra";
-import signalExit from "signal-exit";
+import exitHook from "exit-hook";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 import type { Server } from "http";
@@ -105,7 +106,7 @@ export async function watch(
     onInitialBuild,
     onRebuildStart() {
       start = Date.now();
-      onRebuildStart && onRebuildStart();
+      onRebuildStart?.();
       log("Rebuilding...");
     },
     onRebuildFinish() {
@@ -126,7 +127,7 @@ export async function watch(
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
 
   let resolve: () => void;
-  signalExit(() => {
+  exitHook(() => {
     resolve();
   });
   return new Promise<void>(r => {
@@ -135,7 +136,7 @@ export async function watch(
     wss.close();
     await closeWatcher();
     fse.emptyDirSync(config.assetsBuildDirectory);
-    fse.emptyDirSync(config.serverBuildDirectory);
+    fse.rmSync(config.serverBuildPath);
   });
 }
 
@@ -157,20 +158,32 @@ export async function dev(remixRoot: string, modeArg?: string) {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
   let port = process.env.PORT || 3000;
 
+  if (config.serverEntryPoint) {
+    throw new Error("remix dev is not supported for custom servers.");
+  }
+
   let app = express();
   app.use((_, __, next) => {
-    purgeAppRequireCache(config.serverBuildDirectory);
+    purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildDirectory, mode));
+  app.use(createApp(config.serverBuildPath, mode));
 
   let server: Server | null = null;
 
   try {
     await watch(config, mode, {
       onInitialBuild: () => {
+        let address = Object.values(os.networkInterfaces())
+          .flat()
+          .find(ip => ip?.family == "IPv4" && !ip.internal)?.address;
+
+        if (!address) {
+          throw new Error("Could not find an IPv4 address.");
+        }
+
         server = app.listen(port, () => {
-          console.log(`Remix App Server started at http://localhost:${port}`);
+          console.log(`Remix App Server started at http://${address}:${port}`);
         });
       }
     });

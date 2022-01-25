@@ -80,3 +80,74 @@ app/routes/reports/$id/[.pdf].ts
 # or like this, the resulting URL is the same
 app/routes/reports/$id.[.pdf].ts
 ```
+
+## Handling different request methods
+
+To handle `GET` requests export a loader function:
+
+```ts
+import type { LoaderFunction } from "remix";
+
+export const loader: LoaderFunction = ({ request }) => {
+  // handle "GET" request
+
+  return json({ success: true }, 200);
+};
+```
+
+To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
+
+```ts
+import type { ActionFunction } from "remix";
+
+export const action: ActionFunction = ({ request }) => {
+  switch (request.method) {
+    case "POST": {
+      /* handle "POST" */
+    }
+    case "PUT": {
+      /* handle "PUT" */
+    }
+    case "PATCH": {
+      /* handle "PATCH" */
+    }
+    case "DELETE": {
+      /* handle "DELETE" */
+    }
+  }
+};
+```
+
+## Webhooks
+
+Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
+
+```ts
+import { ActionFunction, json } from "remix";
+import crypto from "crypto";
+
+export const action: ActionFunction = async ({
+  request
+}) => {
+  if (request.method !== "POST") {
+    return json({ message: "Method not allowed" }, 405);
+  }
+  const payload = await request.json();
+
+  /* Validate the webhook */
+  const signature = request.headers.get(
+    "X-Hub-Signature-256"
+  );
+  const generatedSignature = `sha256=${crypto
+    .createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET)
+    .update(JSON.stringify(payload))
+    .digest("hex")}`;
+  if (signature !== generatedSignature) {
+    return json({ message: "Signature mismatch" }, 401);
+  }
+
+  /* process the webhook (e.g. enqueue a background job) */
+
+  return json({ success: true }, 200);
+};
+```
