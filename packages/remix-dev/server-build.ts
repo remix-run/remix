@@ -1,8 +1,8 @@
 import type { ServerBuild } from "@remix-run/server-runtime";
 
 throw new Error(
-  "This module is not meant to be used directly from node_modules." +
-    " It is used to provide type definitions for a virtual module provided" +
+  "@remix-run/dev/server-build is not meant to be used directly from node_modules." +
+    " It is exists to provide type definitions for a virtual module provided" +
     " the Remix compiler at build time."
 );
 
