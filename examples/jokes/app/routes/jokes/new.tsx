@@ -6,6 +6,7 @@ import {
   Form,
   redirect,
   useTransition,
+  json,
 } from "remix";
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
@@ -40,16 +41,21 @@ type ActionData = {
   };
 };
 
-export const action: ActionFunction = async ({
-  request,
-}): Promise<Response | ActionData> => {
+/**
+ * This helper function gives us typechecking for our ActionData return
+ * statements, while still returning the accurate HTTP status, 400 Bad Request,
+ * to the client.
+ */
+const badRequest = (data: ActionData) => json(data, { status: 400 });
+
+export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
 
   const form = await request.formData();
   const name = form.get("name");
   const content = form.get("content");
   if (typeof name !== "string" || typeof content !== "string") {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({ formError: `Form not submitted correctly.` });
   }
 
   const fieldErrors = {
@@ -57,7 +63,9 @@ export const action: ActionFunction = async ({
     content: validateJokeContent(content),
   };
   const fields = { name, content };
-  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, fields };
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return badRequest({ fieldErrors, fields });
+  }
 
   const joke = await db.joke.create({
     data: { ...fields, jokesterId: userId },
@@ -66,7 +74,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<ActionData | undefined>();
+  const actionData = useActionData<ActionData>();
   const transition = useTransition();
 
   if (transition.submission) {

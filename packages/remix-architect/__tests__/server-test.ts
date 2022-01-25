@@ -242,7 +242,7 @@ describe("architect createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      RemixRequest {
+      NodeRequest {
         "abortController": undefined,
         "agent": undefined,
         "compress": true,

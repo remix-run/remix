@@ -358,7 +358,7 @@ describe("action", () => {
     expect(html).toMatchInlineSnapshot(`
       "<div id=\\"actions-error-boundary\\">
         <h1>Actions Error Boundary</h1>
-        <p>Field \\"file\\" exceeded upload size of 1234 bytes.</p>
+        <p>Unexpected Server Error</p>
       </div>
       "
     `);

@@ -44,7 +44,7 @@ export default function Gists() {
           {users.map(user => (
             <li key={user.id}>
               <Link
-                prefetch="intent"
+                // prefetch="intent"
                 to={user.id}
                 className="text-blue-700 underline"
               >

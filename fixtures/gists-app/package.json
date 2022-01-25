@@ -9,7 +9,7 @@
     "predev": "yarn run install_remix",
     "dev": "pm2-dev pm2.config.js",
     "prestart": "yarn run install_remix",
-    "start": "node server.js",
+    "start": "node ./build",
     "preroutes": "yarn run install_remix",
     "routes": "node node_modules/@remix-run/dev/cli.js routes"
   },
@@ -25,7 +25,7 @@
     "postcss-nested": "^5.0.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-router-dom": "^6.0.2"
+    "react-router-dom": "^6.2.1"
   },
   "devDependencies": {
     "@types/react": "^17.0.24",

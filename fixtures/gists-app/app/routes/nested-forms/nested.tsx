@@ -23,7 +23,7 @@ export default function NestedFormsIndexLayout() {
 
       <Form method="get">
         {loaderData ? <p>{loaderData}</p> : null}
-        <input type="hidden" name="value" value="data from get submition" />
+        <input type="hidden" name="value" value="data from get submission" />
         <button type="submit">Submit Nested GET Form</button>
       </Form>
 

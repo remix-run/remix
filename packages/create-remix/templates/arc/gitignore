@@ -1,7 +1,7 @@
 node_modules
 
 /.cache
-/server/build
+/server/index.js
 /public/build
 
 sam.json
