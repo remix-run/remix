@@ -188,7 +188,7 @@ Open up that URL and you should be presented with a minimal page pointing to som
 - `app/routes`
 - `app/styles`
 
-We're going to trim this down the the bare bones and introduce things incrementally.
+We're going to trim this down the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
