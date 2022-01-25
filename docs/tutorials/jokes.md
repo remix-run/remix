@@ -405,7 +405,7 @@ Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should di
 
 ### Parameterized Routes
 
-Soon we'll add a database that stores our jokes by an ID, so lets add one more route that's a little more unique, a parameterized route:
+Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
 `/jokes/:jokeId`
 
