@@ -515,6 +515,41 @@ function remixCloudflarePages() {
   ];
 }
 
+function remixDeno() {
+  let SOURCE_DIR = "packages/remix-deno";
+  let OUTPUT_DIR = "build/node_modules/@remix-run/deno";
+  let version = getVersion(SOURCE_DIR);
+  return [
+    {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: `${SOURCE_DIR}/index.ts`,
+      output: {
+        banner: createBanner("@remix-run/deno", version),
+        dir: OUTPUT_DIR,
+        format: "esm",
+        preserveModules: true
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"]
+        }),
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
+            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
+          ]
+        })
+      ]
+    }
+  ];
+}
+
 /** @return {import("rollup").RollupOptions} */
 function getServerConfig(name) {
   let LIBRARY_NAME = `@remix-run/${name}`;
@@ -735,6 +770,7 @@ export default function rollup(options) {
     ...createRemix(options),
     ...remix(options),
     ...remixDev(options),
+    ...remixDeno(options),
     ...remixServerRuntime(options),
     ...remixNode(options),
     ...remixCloudflarePages(options),

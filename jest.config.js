@@ -12,6 +12,19 @@ module.exports = {
       testMatch: ["<rootDir>/packages/create-remix/**/*-test.[jt]s?(x)"]
     },
     {
+      displayName: "deno",
+      testEnvironment: "jsdom",
+      testMatch: ["<rootDir>/packages/remix-deno/**/*-test.[jt]s?(x)"],
+      moduleNameMapper: {
+        "https://deno.land/std/path/mod.ts":
+          "<rootDir>/packages/remix-deno/__tests__/pathmock.js"
+      },
+      setupFiles: [
+        "<rootDir>/jest/setupNodeGlobals.ts",
+        "<rootDir>/packages/remix-deno/__tests__/setupJest.js"
+      ]
+    },
+    {
       displayName: "dev",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-dev/**/*-test.[jt]s?(x)"]
