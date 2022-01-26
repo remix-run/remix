@@ -41,7 +41,10 @@ export function createFileSessionStorage({
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions
         // with existing ids when creating new sessions, which speeds things up.
-        let id = new TextDecoder().decode(randomBytes);
+        let id = "";
+        for (let i = 0; i < randomBytes.length; ++i) {
+          id += ("0" + randomBytes[i].toString(16)).slice(-2);
+        }
 
         try {
           let file = getFile(dir, id);
