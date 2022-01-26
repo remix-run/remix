@@ -18,7 +18,7 @@ The first case is already handled by Remix, you don't have to do anything. It kn
 As soon as you know you don't have what the user is looking for you should _throw a response_.
 
 ```tsx filename=routes/page/$slug.js
-export function loader({ params }) {
+export async function loader({ params }) {
   const page = await db.page.findOne({
     where: { slug: params.slug }
   });
@@ -71,7 +71,7 @@ Just like [errors], nested routes can export their own catch boundary to handle 
 ```tsx filename=app/routes/pages/$pageId.tsx
 import { Form, useLoaderData, useParams } from "remix";
 
-export function loader({ params }) {
+export async function loader({ params }) {
   const page = await db.page.findOne({
     where: { slug: params.slug }
   });
