@@ -1,0 +1,9 @@
+html {
+  --background-colour: white;
+
+  background-color: var(--background-colour);
+}
+
+html.dark {
+  --background-colour: black;
+}
