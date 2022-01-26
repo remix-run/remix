@@ -4,7 +4,8 @@ import { redirect } from "remix";
 import Alert from "@reach/alert";
 
 import { getSession, sessionStorage } from "~/session.server";
-import { verifyUser } from "~/models/user";
+import { getUserByEmail } from "~/models/user";
+import { bcrypt } from "~/db.server";
 
 const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -40,10 +41,20 @@ const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const [errors, user] = await verifyUser(email, password);
+  const user = await getUserByEmail(email);
+  if (!user) {
+    return json<ActionData>(
+      { errors: { email: "Email does not exist" } },
+      { status: 400 }
+    );
+  }
 
-  if (errors) {
-    return json<ActionData>({ errors }, { status: 400 });
+  const authorized = await bcrypt.verify(password, user.password);
+  if (!authorized) {
+    return json<ActionData>(
+      { errors: { password: "Password is incorrect" } },
+      { status: 400 }
+    );
   }
 
   session.set("user", { email: user.email });
