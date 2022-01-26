@@ -50,10 +50,10 @@ export async function serveStaticFiles(
     assetsPublicPath?: string;
   }
 ) {
-  const url = new URL(request.url);
+  let url = new URL(request.url);
 
-  const headers = new Headers();
-  const contentType = mime.getType(url.pathname);
+  let headers = new Headers();
+  let contentType = mime.getType(url.pathname);
   if (contentType) {
     headers.set("Content-Type", contentType);
   }
@@ -67,7 +67,7 @@ export async function serveStaticFiles(
   }
 
   // @ts-expect-error
-  const file = await Deno.readFile(path.join(publicDir, url.pathname));
+  let file = await Deno.readFile(path.join(publicDir, url.pathname));
 
   return new Response(file, { headers });
 }
