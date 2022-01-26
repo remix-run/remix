@@ -1,11 +1,12 @@
-import {
+import type {
   ActionFunction,
+  LoaderFunction,
+  MetaFunction} from "remix";
+import {
   Form,
   json,
   Link,
-  LoaderFunction,
-  MetaFunction,
-  useActionData,
+  useActionData
 } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
@@ -13,8 +14,8 @@ import Alert from "@reach/alert";
 import { arc, bcrypt } from "~/db.server";
 import { getSession, sessionStorage } from "~/session.server";
 
-let loader: LoaderFunction = async ({ request }) => {
-  let session = await getSession(request);
+const loader: LoaderFunction = async ({ request }) => {
+  const session = await getSession(request);
   if (session.has("user")) return redirect("/");
   return {};
 };
@@ -26,14 +27,14 @@ interface ActionData {
   };
 }
 
-let action: ActionFunction = async ({ request }) => {
-  let session = await getSession(request);
-  let formData = await request.formData();
+const action: ActionFunction = async ({ request }) => {
+  const session = await getSession(request);
+  const formData = await request.formData();
 
-  let email = formData.get("email");
-  let password = formData.get("password");
+  const email = formData.get("email");
+  const password = formData.get("password");
 
-  let errors: ActionData["errors"] = {};
+  const errors: ActionData["errors"] = {};
   if (typeof email !== "string") {
     errors.email = "Email is required";
   }
@@ -46,12 +47,10 @@ let action: ActionFunction = async ({ request }) => {
     return json<ActionData>({ errors }, { status: 400 });
   }
 
-  let client = await arc.tables();
-  let people = client.people;
-
-  let result = await people.query({
-    KeyConditionExpression: "email = :email",
-    ExpressionAttributeValues: { ":email": email },
+  const db = await arc.tables();
+  const result = await db.people.query({
+    KeyConditionExpression: "pk = :pk",
+    ExpressionAttributeValues: { ":pk": `email#${email}` }
   });
 
   console.log(result.Items);
@@ -63,9 +62,9 @@ let action: ActionFunction = async ({ request }) => {
     );
   }
 
-  let [user] = result.Items;
+  const [user] = result.Items;
 
-  let authorized = await bcrypt.verify(String(password), user.password);
+  const authorized = await bcrypt.verify(String(password), user.password);
   console.log({ authorized });
 
   if (!authorized) {
@@ -79,17 +78,17 @@ let action: ActionFunction = async ({ request }) => {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session),
-    },
+      "Set-Cookie": await sessionStorage.commitSession(session)
+    }
   });
 };
 
-let meta: MetaFunction = () => ({
-  title: "Login",
+const meta: MetaFunction = () => ({
+  title: "Login"
 });
 
 function LoginPage() {
-  let actionData = useActionData<ActionData>();
+  const actionData = useActionData<ActionData>();
 
   return (
     <>
@@ -111,8 +110,7 @@ function LoginPage() {
         <button type="submit">Log in</button>
       </Form>
       <div>
-        Don't have an account?
-        <Link to="/join">Join</Link>
+        Don't have an account? <Link to="/join">Join</Link>
       </div>
     </>
   );

@@ -1,9 +1,10 @@
-import { createCookieSessionStorage, Session } from "remix";
+import type { Session } from "remix";
+import { createCookieSessionStorage } from "remix";
 import invariant from "tiny-invariant";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
-let sessionStorage = createCookieSessionStorage({
+const sessionStorage = createCookieSessionStorage({
   cookie: {
     name: "__session",
     httpOnly: true,
@@ -11,12 +12,12 @@ let sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: [process.env.SESSION_SECRET],
-    secure: process.env.NODE_ENV === "production",
-  },
+    secure: process.env.NODE_ENV === "production"
+  }
 });
 
 async function getSession(input: string | Request | null): Promise<Session> {
-  let cookieHeader =
+  const cookieHeader =
     input instanceof Request ? input.headers.get("Cookie") : input;
 
   return sessionStorage.getSession(cookieHeader);

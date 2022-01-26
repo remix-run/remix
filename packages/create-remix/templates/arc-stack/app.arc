@@ -13,8 +13,8 @@ region us-east-1
 
 @tables
 people
-  email *String
+  pk *String
 
 notes
-  id **String
-  userEmail *String
+  pk **String
+  sk *String

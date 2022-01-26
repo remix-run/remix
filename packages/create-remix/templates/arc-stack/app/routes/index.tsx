@@ -1,12 +1,13 @@
-import {
+import type {
   ActionFunction,
+  LoaderFunction} from "remix";
+import {
   Form,
   json,
-  LoaderFunction,
   redirect,
   useActionData,
   useLoaderData,
-  useLocation,
+  useLocation
 } from "remix";
 import cuid from "cuid";
 
@@ -15,52 +16,52 @@ import { getSession } from "~/session.server";
 
 import Alert from "@reach/alert";
 
-let loader: LoaderFunction = async ({ request }) => {
-  let session = await getSession(request);
-  let user = session.get("user");
+const loader: LoaderFunction = async ({ request }) => {
+  const session = await getSession(request);
+  const user = session.get("user");
   if (!user) return redirect("/login");
 
-  let data = await arc.tables();
-  let result = await data.notes.query({
-    KeyConditionExpression: "userEmail = :userEmail",
-    ExpressionAttributeValues: {
-      ":userEmail": user.email,
-    },
+  const data = await arc.tables();
+  const result = await data.notes.query({
+    KeyConditionExpression: "sk = :sk",
+    ExpressionAttributeValues: { ":sk": `email#${user.email}` }
   });
 
   return json({ notes: result.Items });
 };
 
-let action: ActionFunction = async ({ request }) => {
-  let session = await getSession(request);
-  let user = session.get("user");
+const action: ActionFunction = async ({ request }) => {
+  const session = await getSession(request);
+  const user = session.get("user");
   if (!user) return redirect("/login");
 
-  let formData = await request.formData();
+  const formData = await request.formData();
 
-  let actionType = formData.get("_action");
+  const actionType = formData.get("_action");
 
   switch (actionType) {
     case "delete-note": {
-      let id = formData.get("id");
+      const id = formData.get("id");
 
       if (typeof id !== "string") {
         throw new Response("Id must be a string", { status: 400 });
       }
 
-      let client = await arc.tables();
-      let notes = client.notes;
+      const db = await arc.tables();
 
-      await notes.delete({ id, userEmail: user.email });
+      await db.notes.delete({
+        pk: `note#${id}`,
+        sk: `email#${user.email}`
+      });
 
       return redirect("/");
     }
 
     case "create-note": {
-      let title = formData.get("title");
-      let body = formData.get("body");
+      const title = formData.get("title");
+      const body = formData.get("body");
 
-      let errors: Record<string, string> = {};
+      const errors: Record<string, string> = {};
       if (typeof title !== "string") {
         errors.title = "Title is required";
       }
@@ -73,25 +74,26 @@ let action: ActionFunction = async ({ request }) => {
         return json({ errors }, { status: 400 });
       }
 
-      let data = await arc.tables();
+      const data = await arc.tables();
       await data.notes.put({
-        userEmail: user.email,
+        sk: `email#${user.email}`,
         title: title,
         body: body,
-        id: cuid(),
+        pk: `note#${cuid()}`
       });
-
       return redirect("/");
     }
-  }
 
-  throw new Response("Invalid action", { status: 400 });
+    default: {
+      throw new Response("Invalid action", { status: 400 });
+    }
+  }
 };
 
 function Index() {
-  let location = useLocation();
-  let data = useLoaderData();
-  let validation = useActionData();
+  const location = useLocation();
+  const data = useLoaderData();
+  const validation = useActionData();
 
   return (
     <div>

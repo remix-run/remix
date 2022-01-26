@@ -1,11 +1,12 @@
-import {
+import type {
   ActionFunction,
+  LoaderFunction,
+  MetaFunction} from "remix";
+import {
   Form,
   json,
   Link,
-  LoaderFunction,
-  MetaFunction,
-  useActionData,
+  useActionData
 } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
@@ -13,8 +14,8 @@ import Alert from "@reach/alert";
 import { arc, bcrypt } from "~/db.server";
 import { getSession, sessionStorage } from "~/session.server";
 
-let loader: LoaderFunction = async ({ request }) => {
-  let session = await getSession(request);
+const loader: LoaderFunction = async ({ request }) => {
+  const session = await getSession(request);
   if (session.has("user")) return redirect("/");
   return {};
 };
@@ -26,14 +27,14 @@ interface ActionData {
   };
 }
 
-let action: ActionFunction = async ({ request }) => {
-  let session = await getSession(request);
-  let formData = await request.formData();
+const action: ActionFunction = async ({ request }) => {
+  const session = await getSession(request);
+  const formData = await request.formData();
 
-  let email = formData.get("email");
-  let password = formData.get("password");
+  const email = formData.get("email");
+  const password = formData.get("password");
 
-  let errors: Record<string, string> = {};
+  const errors: Record<string, string> = {};
   if (typeof email !== "string") {
     errors.email = "Email is required";
   }
@@ -46,29 +47,29 @@ let action: ActionFunction = async ({ request }) => {
     return json<ActionData>({ errors }, { status: 400 });
   }
 
-  let hashedPassword = await bcrypt.hash(String(password));
+  const hashedPassword = await bcrypt.hash(String(password));
 
-  let db = await arc.tables();
-  let user = await db.people.put({
-    email,
-    password: hashedPassword,
+  const db = await arc.tables();
+  const user = await db.people.put({
+    pk: `email#${email}`,
+    password: hashedPassword
   });
 
   session.set("user", { email: user.email });
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session),
-    },
+      "Set-Cookie": await sessionStorage.commitSession(session)
+    }
   });
 };
 
-let meta: MetaFunction = () => ({
-  title: "Join",
+const meta: MetaFunction = () => ({
+  title: "Join"
 });
 
 function JoinPage() {
-  let validation = useActionData<ActionData>();
+  const validation = useActionData<ActionData>();
 
   return (
     <>
@@ -90,8 +91,7 @@ function JoinPage() {
         <button type="submit">Join</button>
       </Form>
       <div>
-        Already have an account?
-        <Link to="/login">Log in</Link>
+        Already have an account? <Link to="/login">Log in</Link>
       </div>
     </>
   );
