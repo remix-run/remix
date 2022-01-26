@@ -3,8 +3,8 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import { arc, bcrypt } from "~/db.server";
 import { getSession, sessionStorage } from "~/session.server";
+import { createUser, getUserByEmail } from "~/models/user";
 
 const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -26,26 +26,30 @@ const action: ActionFunction = async ({ request }) => {
   const email = formData.get("email");
   const password = formData.get("password");
 
-  const errors: Record<string, string> = {};
   if (typeof email !== "string") {
-    errors.email = "Email is required";
+    return json<ActionData>(
+      { errors: { email: "Email is required" } },
+      { status: 400 }
+    );
   }
 
   if (typeof password !== "string") {
-    errors.password = "Password is required";
+    return json<ActionData>(
+      { errors: { password: "Password is required" } },
+      { status: 400 }
+    );
   }
 
-  if (errors.email || errors.password) {
-    return json<ActionData>({ errors }, { status: 400 });
+  const existingUser = await getUserByEmail(email);
+
+  if (existingUser) {
+    return json<ActionData>(
+      { errors: { email: "Email already exists" } },
+      { status: 400 }
+    );
   }
 
-  const hashedPassword = await bcrypt.hash(String(password));
-
-  const db = await arc.tables();
-  const user = await db.people.put({
-    pk: `email#${email}`,
-    password: hashedPassword
-  });
+  const user = await createUser(email, password);
 
   session.set("user", { email: user.email });
 

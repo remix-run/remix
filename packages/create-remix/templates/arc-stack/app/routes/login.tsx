@@ -3,8 +3,8 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import { arc, bcrypt } from "~/db.server";
 import { getSession, sessionStorage } from "~/session.server";
+import { verifyUser } from "~/models/user";
 
 const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -26,44 +26,24 @@ const action: ActionFunction = async ({ request }) => {
   const email = formData.get("email");
   const password = formData.get("password");
 
-  const errors: ActionData["errors"] = {};
   if (typeof email !== "string") {
-    errors.email = "Email is required";
+    return json<ActionData>(
+      { errors: { email: "Email is required" } },
+      { status: 400 }
+    );
   }
 
   if (typeof password !== "string") {
-    errors.password = "Password is required";
+    return json<ActionData>(
+      { errors: { password: "Password is required" } },
+      { status: 400 }
+    );
   }
 
-  if (errors.email || errors.password) {
+  const [errors, user] = await verifyUser(email, password);
+
+  if (errors) {
     return json<ActionData>({ errors }, { status: 400 });
-  }
-
-  const db = await arc.tables();
-  const result = await db.people.query({
-    KeyConditionExpression: "pk = :pk",
-    ExpressionAttributeValues: { ":pk": `email#${email}` }
-  });
-
-  console.log(result.Items);
-
-  if (!result.Items.length) {
-    return json<ActionData>(
-      { errors: { email: "Invalid Email" } },
-      { status: 400 }
-    );
-  }
-
-  const [user] = result.Items;
-
-  const authorized = await bcrypt.verify(String(password), user.password);
-  console.log({ authorized });
-
-  if (!authorized) {
-    return json<ActionData>(
-      { errors: { password: "Invalid password" } },
-      { status: 400 }
-    );
   }
 
   session.set("user", { email: user.email });
