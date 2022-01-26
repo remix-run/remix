@@ -2,7 +2,6 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/se
 import type { ServerBuild } from "@remix-run/server-runtime";
 // @ts-expect-error
 import * as path from "https://deno.land/std/path/mod.ts";
-
 import mime from "mime";
 
 function defaultCacheControl(url: URL, assetsPublicPath: string = "/build/") {
