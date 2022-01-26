@@ -1,12 +1,13 @@
-import { ActionFunction, redirect } from "remix";
+import type { ActionFunction} from "remix";
+import { redirect } from "remix";
 import { getSession, sessionStorage } from "~/session.server";
 
-export let action: ActionFunction = async ({ request }) => {
-  let session = await getSession(request);
+export const action: ActionFunction = async ({ request }) => {
+  const session = await getSession(request);
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await sessionStorage.destroySession(session),
-    },
+      "Set-Cookie": await sessionStorage.destroySession(session)
+    }
   });
 };
