@@ -12,7 +12,7 @@ function IconBox({
     <div
       className={cx(
         className,
-        "flex items-center justify-center flex-grow-0 flex-shrink-0",
+        "flex flex-shrink-0 flex-grow-0 items-center justify-center",
         {
           "w-12": !(className && /\bw-[\d]/g.test(className)),
           "h-12": !(className && /\bh-[\d]/g.test(className)),

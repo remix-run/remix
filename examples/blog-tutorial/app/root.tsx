@@ -79,7 +79,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
   return (
     <div className="remix-app">
       <header className="remix-app__header">
-        <div className="container remix-app__header-content">
+        <div className="remix-app__header-content container">
           <Link to="/" title="Remix" className="remix-app__header-home-link">
             <RemixLogo />
           </Link>
@@ -102,10 +102,10 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
         </div>
       </header>
       <main className="remix-app__main">
-        <div className="container remix-app__main-content">{children}</div>
+        <div className="remix-app__main-content container">{children}</div>
       </main>
       <footer className="remix-app__footer">
-        <div className="container remix-app__footer-content">
+        <div className="remix-app__footer-content container">
           <p>&copy; You!</p>
         </div>
       </footer>

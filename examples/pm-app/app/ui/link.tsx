@@ -60,7 +60,7 @@ const ArrowLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
       >
         <span className="mr-3">{children}</span>
         <IconArrowRight
-          className="transform translate-x-0 group-hover:translate-x-1 transition-transform duration-300"
+          className="translate-x-0 transform transition-transform duration-300 group-hover:translate-x-1"
           aria-hidden
         />
       </CustomLink>
