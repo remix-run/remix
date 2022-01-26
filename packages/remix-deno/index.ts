@@ -6,4 +6,6 @@ export {
   serveStaticFiles
 } from "./server";
 
+export { createFileSessionStorage } from "./sessions/fileStorage";
+
 installGlobals();

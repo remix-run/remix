@@ -22,7 +22,8 @@ export type ServerBuildTarget =
   | "netlify"
   | "vercel"
   | "cloudflare-pages"
-  | "cloudflare-workers";
+  | "cloudflare-workers"
+  | "deno";
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
@@ -259,6 +260,7 @@ export async function readConfig(
   switch (appConfig.serverBuildTarget) {
     case "cloudflare-pages":
     case "cloudflare-workers":
+    case "deno":
       serverModuleFormat = "esm";
       serverPlatform = "neutral";
       break;

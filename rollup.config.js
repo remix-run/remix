@@ -546,6 +546,24 @@ function remixDeno() {
           ]
         })
       ]
+    },
+    {
+      external() {
+        return true;
+      },
+      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      output: {
+        banner: createBanner("@remix-run/deno", version),
+        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        format: "esm"
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"]
+        })
+      ]
     }
   ];
 }
