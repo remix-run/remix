@@ -6,8 +6,7 @@ import {
   Scripts,
   ScrollRestoration
 } from "remix";
-import type { MetaFunction ,
-  LinksFunction} from "remix";
+import type { MetaFunction, LinksFunction } from "remix";
 import globalStyles from "./styles/global.css";
 
 export const links: LinksFunction = () => {

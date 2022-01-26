@@ -1,13 +1,5 @@
-import type {
-  ActionFunction,
-  LoaderFunction,
-  MetaFunction} from "remix";
-import {
-  Form,
-  json,
-  Link,
-  useActionData
-} from "remix";
+import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
+import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 

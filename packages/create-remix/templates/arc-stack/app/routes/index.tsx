@@ -1,6 +1,4 @@
-import type {
-  ActionFunction,
-  LoaderFunction} from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
 import {
   Form,
   json,
@@ -41,17 +39,21 @@ const action: ActionFunction = async ({ request }) => {
 
   switch (actionType) {
     case "delete-note": {
-      const id = formData.get("id");
+      const pk = formData.get("pk");
+      const sk = formData.get("sk");
 
-      if (typeof id !== "string") {
-        throw new Response("Id must be a string", { status: 400 });
+      if (typeof pk !== "string") {
+        throw new Response("pk must be a string", { status: 400 });
+      }
+
+      if (typeof sk !== "string") {
+        throw new Response("sk must be a string", { status: 400 });
       }
 
       const db = await arc.tables();
-
       await db.notes.delete({
-        pk: `note#${id}`,
-        sk: `email#${user.email}`
+        pk,
+        sk
       });
 
       return redirect("/");
@@ -74,8 +76,8 @@ const action: ActionFunction = async ({ request }) => {
         return json({ errors }, { status: 400 });
       }
 
-      const data = await arc.tables();
-      await data.notes.put({
+      const db = await arc.tables();
+      await db.notes.put({
         sk: `email#${user.email}`,
         title: title,
         body: body,
@@ -129,11 +131,12 @@ function Index() {
       ) : (
         <ul>
           {data.notes.map((note: any) => (
-            <li key={note.id}>
+            <li key={note.pk}>
               <h3>{note.title}</h3>
               <p>{note.body}</p>
               <Form method="post">
-                <input type="hidden" name="id" value={note.id} />
+                <input type="hidden" name="pk" value={note.pk} />
+                <input type="hidden" name="sk" value={note.sk} />
                 <button type="submit" name="_action" value="delete-note">
                   Delete
                 </button>
