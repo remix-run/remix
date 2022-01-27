@@ -869,6 +869,35 @@ export function headers({ loaderHeaders, parentHeaders }) {
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
+Note that you can also add headers in your `entry.server` file for things that should be global, for example:
+
+```tsx lines=[16]
+import { renderToString } from "react-dom/server";
+import { RemixServer } from "remix";
+import type { EntryContext } from "remix";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const markup = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  responseHeaders.set("Content-Type", "text/html");
+  responseHeaders.set("X-Powered-By", "Hugs");
+
+  return new Response("<!DOCTYPE html>" + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders
+  });
+}
+```
+
+Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
+
 ### `meta`
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
@@ -1262,3 +1291,4 @@ export default function Page() {
 [form action]: ./remix#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
 [minimatch]: https://www.npmjs.com/package/minimatch
+[handledatarequest]: #entryservertsx
