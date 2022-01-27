@@ -12,7 +12,7 @@ We wrap everything up in one small component that we then can use to render mark
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/render-md-sync-dgdze)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/render-md-server-side)
 
 ## Example
 
