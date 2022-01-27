@@ -5,7 +5,7 @@ import {
   AUTH0_CLIENT_ID,
   AUTH0_LOGOUT_URL,
   AUTH0_RETURN_TO_URL
-} from "~/constants";
+} from "~/constants/index.server";
 
 export const action: ActionFunction = async ({ request }) => {
   const session = await getSession(request.headers.get("Cookie"));
