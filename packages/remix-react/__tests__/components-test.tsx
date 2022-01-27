@@ -1,6 +1,7 @@
 import * as React from "react";
-import { LiveReload as ActualLiveReload } from "../components";
 import { render } from "@testing-library/react";
+
+import type { LiveReload as ActualLiveReload } from "../components";
 import "@testing-library/jest-dom/extend-expect";
 
 describe("<LiveReload />", () => {
