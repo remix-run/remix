@@ -22,6 +22,7 @@ $ npm i -g @architect/architect@RC aws-sdk
 ## Development
 
 ```sh
+$ echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 $ npm run dev
 ```
 
@@ -32,6 +33,13 @@ The database that comes with `arc sandbox` is an in memory database, so if you r
 This Remix Stack comes with two GitHub actions that handle automatically deploying your app to production and staging environments.
 
 Prior to your first deployment, you'll need to make sure you have your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` saved to your GitHub repo's secrets. To do this, you can go to your AWS [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", then you can copy those and add them to your repo's secrets.
+
+Along with your AWS credentials, you'll also need to give your CloudFormation a `SESSION_SECRET` variable of its own for both staging and production environments.
+
+```sh
+$ arc env staging SESSION_SECRET $(openssl rand -hex 32)
+$ arc env production SESSION_SECRET $(openssl rand -hex 32)
+```
 
 ## Where the crap do I find my CloudFormation?
 
