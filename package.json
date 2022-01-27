@@ -79,6 +79,8 @@
     "express": "^4.17.1",
     "glob": "^7.1.6",
     "jest": "^26.0.1",
+    "jest-watch-select-projects": "^2.0.0",
+    "jest-watch-typeahead": "^0.6.5",
     "jsonfile": "^6.0.1",
     "meow": "^7.1.1",
     "netlify": "10.1.1",
