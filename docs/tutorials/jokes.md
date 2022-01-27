@@ -204,9 +204,7 @@ export default function App() {
       </head>
       <body>
         Hello world
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -290,9 +288,7 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -505,9 +501,7 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -1214,9 +1208,7 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -3948,7 +3940,7 @@ Remember that the `app/root.tsx` module is responsible for rendering our `<html>
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[59-68]
+```tsx filename=app/root.tsx lines=[57-67]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet } from "remix";
 
@@ -3991,9 +3983,7 @@ function Document({
       </head>
       <body>
         {children}
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -4115,7 +4105,7 @@ With that understanding, we're going to add a `CatchBoundary` component to the f
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[2,59-73]
+```tsx filename=app/root.tsx lines=[2,57-71]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet, useCatch } from "remix";
 
@@ -4158,9 +4148,7 @@ function Document({
       </head>
       <body>
         {children}
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -4886,9 +4874,7 @@ function Document({
       </head>
       <body>
         {children}
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -5530,7 +5516,7 @@ Ok, so let's load JavaScript on this page now 😆
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[8,65,99]
+```tsx filename=app/root.tsx lines=[8,65,97]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
@@ -5596,9 +5582,7 @@ function Document({
       <body>
         {children}
         <Scripts />
-        {process.env.NODE_ENV === "development" ? (
-          <LiveReload />
-        ) : null}
+        <LiveReload />
       </body>
     </html>
   );
