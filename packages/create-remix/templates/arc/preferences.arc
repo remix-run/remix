@@ -6,8 +6,8 @@ testing
 
 staging
   REMIX_ENV production
-  NODE_ENV development
+  NODE_ENV production
 
 production
   REMIX_ENV production
-  NODE_ENV development
+  NODE_ENV production
