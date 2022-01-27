@@ -197,7 +197,7 @@ Without JavaScript, Remix will turn non-get requests into "post", but you'll sti
 
 #### `<Form encType>`
 
-Defaults to `application/x-www-urlencoded`, which is also the only supported value right now.
+Defaults to `application/x-www-urlencoded`. You can specify `multipart/form-data` for form uploads.
 
 #### `<Form replace>`
 
