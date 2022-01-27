@@ -11,7 +11,7 @@
     "dev": "run-p dev:*"
   },
   "dependencies": {
-    "@architect/functions": "^4.1.1",
+    "@architect/functions": "5.0.0-RC.1",
     "@node-rs/bcrypt": "^1.5.5",
     "@reach/alert": "^0.16.0",
     "@remix-run/architect": "^1.1.3",
