@@ -19,9 +19,19 @@ $ npm i -g @architect/architect aws-sdk
 - Set up some database tables
   - open up `app.arc` to get started
 
+## Development
+
+```sh
+$ npm run dev
+```
+
+The database that comes with `arc sandbox` is an in memory database, so if you restart the server, you'll lose your data. Production environments won't behave this way.
+
 ## Deployment
 
-- Deploys to a staging environment happen automatically when you push your code to the `main` branch.
+This Remix Stack comes with two GitHub actions that handle automatically deploying your app to production and staging environments.
+
+Prior to your first deployment, you'll need to make sure you have your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` saved to your GitHub repo's secrets. To do this, you can go to your AWS [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", then you can copy those and add them to your repo's secrets.
 
 ## Where the crap do I find my CloudFormation?
 
@@ -37,3 +47,4 @@ To find your deployed lambda functions, you can search for [Lambda][lambda] (mak
 [cloudformation]: https://console.aws.amazon.com/cloudformation/home
 [apigateway]: https://console.aws.amazon.com/apigateway/main/apis
 [lambda]: https://console.aws.amazon.com/lambda/home
+[aws_access_key_id]: https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials
