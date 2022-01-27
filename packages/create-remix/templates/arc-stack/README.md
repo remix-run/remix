@@ -10,7 +10,7 @@ When deploying to AWS Lambda with Architect, you'll need:
 Architect recommends installing these globally:
 
 ```sh
-$ npm i -g @architect/architect aws-sdk
+$ npm i -g @architect/architect@RC aws-sdk
 ```
 
 ## Stack Setup
