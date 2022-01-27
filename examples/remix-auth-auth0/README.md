@@ -1,6 +1,6 @@
 # Remix Auth - Auth0Strategy
 
-Authentication using Remix Auth with the GitHubStrategy.
+Authentication using Remix Auth with the Auth0Strategy.
 
 ## Preview
 
