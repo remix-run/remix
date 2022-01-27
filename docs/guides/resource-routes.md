@@ -86,7 +86,7 @@ app/routes/reports/$id.[.pdf].ts
 To handle `GET` requests export a loader function:
 
 ```ts
-import type { LoaderFunction } from "remix";
+import type { json, LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = ({ request }) => {
   // handle "GET" request
