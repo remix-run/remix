@@ -18,6 +18,7 @@ module.exports = {
   devServerPort: 8002,
   publicPath: "/build/",
   serverBuildDirectory: "build",
+  ignoredRouteFiles: [".*"],
   routes(defineRoutes) {
     return defineRoutes(route => {
       route("/somewhere/cool/*", "catchall.tsx");
@@ -75,6 +76,10 @@ The URL prefix of the browser build with a trailing slash. Defaults to "/build/"
 ### serverBuildDirectory
 
 The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
+
+### ignoredRouteFiles
+
+This is an array of globs (via [minimatch][minimatch]) that Remix will match to files while reading your `app/routes` directory. If a file matches, it will be ignored rather that treated like a route module. This is useful for ignoring dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 
 ### devServerPort
 
@@ -1256,3 +1261,4 @@ export default function Page() {
 [form]: ./remix#form
 [form action]: ./remix#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[minimatch]: https://www.npmjs.com/package/minimatch
