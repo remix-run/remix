@@ -64,7 +64,9 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)
+| [![YouTube: Multiple Forms and Single Button Mutations](https://img.youtube.com/vi/9cYxSdc/0.jpg)](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix) |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|                                         [Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)                                         |
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
