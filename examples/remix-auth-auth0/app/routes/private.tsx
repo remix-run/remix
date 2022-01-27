@@ -1,13 +1,9 @@
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { LoaderFunction } from "remix";
 import { Form, json, useLoaderData } from "remix";
 import type { Auth0Profile } from "remix-auth-auth0";
 import { auth } from "~/utils/auth.server";
 
 type LoaderData = { profile: Auth0Profile };
-
-export const action: ActionFunction = async ({ request }) => {
-  await auth.logout(request, { redirectTo: "/" });
-};
 
 export const loader: LoaderFunction = async ({ request }) => {
   const profile = await auth.isAuthenticated(request, {
@@ -21,7 +17,7 @@ export default function Screen() {
   const { profile } = useLoaderData<LoaderData>();
   return (
     <>
-      <Form method="post">
+      <Form method="post" action="/logout">
         <button>Log Out</button>
       </Form>
 
