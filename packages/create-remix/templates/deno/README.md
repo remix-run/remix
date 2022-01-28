@@ -7,7 +7,7 @@
 You will be utlizing Deno in watch mode. This is already wired up in your package.json as the `dev` script:
 
 ```sh
-# start the remix dev server and wrangler
+# start the remix dev server and your deno app in watch mode
 $ npm run dev
 ```
 

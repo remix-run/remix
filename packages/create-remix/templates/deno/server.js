@@ -5,9 +5,10 @@ import * as build from "@remix-run/dev/server-build";
 
 const remixHandler = createRequestHandlerWithStaticFiles({
   build,
-  mode: process.env.NODE_ENV
+  mode: process.env.NODE_ENV,
+  getLoadContext: () => ({})
 });
 
 const port = Deno.env.get("PORT") || "8000";
 console.log(`Listening on http://localhost:${port}`);
-serve(remixHandler, { port: parseInt(port) });
+serve(remixHandler, { addr: `:${port}` });

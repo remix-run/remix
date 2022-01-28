@@ -65,7 +65,6 @@ export async function serveStaticFiles(
     headers.set("Cache-Control", defaultCacheControl(url, assetsPublicPath));
   }
 
-  // @ts-expect-error
   let file = await Deno.readFile(path.join(publicDir, url.pathname));
 
   return new Response(file, { headers });
@@ -94,7 +93,11 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
   return async (request: Request) => {
     try {
       return await serveStaticFiles(request, staticFiles);
-    } catch (e) {}
+    } catch (error: any) {
+      if (error.code !== "EISDIR" && error.code !== "ENOENT") {
+        throw error;
+      }
+    }
 
     return remixHandler(request);
   };

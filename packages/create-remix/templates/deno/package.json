@@ -3,7 +3,7 @@
     "postinstall": "remix setup deno",
     "build": "cross-env NODE_ENV=production remix build",
     "dev:remix": "cross-env NODE_ENV=development remix watch",
-    "dev:wrangler": "cross-env NODE_ENV=development deno run --watch --allow-net --allow-read --allow-env ./build/index.js",
+    "dev:deno": "cross-env NODE_ENV=development deno run --watch --allow-net --allow-read --allow-env ./build/index.js",
     "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
     "start": "cross-env NODE_ENV=production deno run --allow-net --allow-read --allow-env ./build/index.js"
   },

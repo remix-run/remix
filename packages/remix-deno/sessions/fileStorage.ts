@@ -48,18 +48,16 @@ export function createFileSessionStorage({
 
         try {
           let file = getFile(dir, id);
-          // @ts-expect-error
           let exists = await Deno.stat(file)
             .then((s: any) => s.isFile)
             .catch(() => false);
           if (exists) continue;
 
-          // @ts-expect-error
           await Deno.mkdir(path.dirname(file), { recursive: true }).catch(
             () => {}
           );
-          // @ts-expect-error
           await Deno.writeFile(file, new TextEncoder().encode(content));
+
           return id;
         } catch (error: any) {
           if (error.code !== "EEXIST") throw error;
@@ -69,7 +67,6 @@ export function createFileSessionStorage({
     async readData(id) {
       try {
         let file = getFile(dir, id);
-        // @ts-expect-error
         let content = JSON.parse(await Deno.readTextFile(file));
         let data = content.data;
         let expires =
@@ -82,7 +79,6 @@ export function createFileSessionStorage({
         }
 
         // Remove expired session data.
-        // @ts-expect-error
         if (expires) await Deno.remove(file);
 
         return null;
@@ -94,14 +90,11 @@ export function createFileSessionStorage({
     async updateData(id, data, expires) {
       let content = JSON.stringify({ data, expires });
       let file = getFile(dir, id);
-      // @ts-expect-error
       await Deno.mkdir(path.dirname(file), { recursive: true }).catch(() => {});
-      // @ts-expect-error
       await Deno.writeTextFile(file, content);
     },
     async deleteData(id) {
       try {
-        // @ts-expect-error
         await Deno.remove(getFile(dir, id));
       } catch (error: any) {
         if (error.code !== "ENOENT") throw error;
