@@ -9,7 +9,7 @@
 2. Sign up and log in to Fly
 
 ```sh
-$ flyctl auth signup
+flyctl auth signup
 ```
 
 3. You'll need to create a .env file in your project root for your SESSION_SECRET
