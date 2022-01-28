@@ -12,9 +12,7 @@
 $ flyctl auth signup
 ```
 
-3. Set up your app. Change the `app` name in fly.product.toml and fly.staging.toml
-
-4. You'll need to create a .env file in your project root for your SESSION_SECRET
+3. You'll need to create a .env file in your project root for your SESSION_SECRET
 
 ```sh
 $ cp .env.example .env
@@ -53,17 +51,24 @@ This Remix Stack comes with two GitHub actions that handle automatically deployi
 
 Prior to your first deployment, you'll need to do a few thing:
 
+- Create two apps on Fly, one for staging and one for production:
+
+  ```sh
+  $ fly create remix-fly-stack-staging
+  $ fly create remix-fly-stack
+  ```
+
 - Make sure you have a `FLY_API_KEY` added to your GitHub repo, to do this, go to your user settings on Fly and create a new [token][fly_new_access_token], then add it to your repo secrets with the name `FLY_API_KEY`. Finally you'll need to add a `SESSION_SECRET` to your fly app secrets, to do this you can run the following commands:
 
   ```sh
-  fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.staging.toml
-  fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.production.toml
+  $ fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.staging.toml
+  $ fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.production.toml
   ```
 
 - Create a database for both your staging and production environments. Run the following for both of your environments and follow the prompts:
 
   ```sh
-    $ fly postgres create
+  $ fly postgres create
   ```
 
   afterwards, you'll need to connect your database to each of your apps
