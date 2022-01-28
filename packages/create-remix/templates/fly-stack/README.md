@@ -74,7 +74,7 @@ Prior to your first deployment, you'll need to do a few thing:
   afterwards, you'll need to connect your database to each of your apps
 
   ```sh
-  $ fly postgres attach --postgres-app <the name of your db> --app <the name of your app>
+  fly postgres attach --postgres-app <the name of your db> --app <the name of your app>
   ```
 
   Fly will take care of setting the DATABASE_URL secret for you.
