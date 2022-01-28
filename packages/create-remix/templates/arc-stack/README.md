@@ -41,7 +41,7 @@ $ arc env staging SESSION_SECRET $(openssl rand -hex 32)
 $ arc env production SESSION_SECRET $(openssl rand -hex 32)
 ```
 
-## Where the crap do I find my CloudFormation?
+## Where do I find my CloudFormation?
 
 You can find the CloudFormation template that Architect generated for you in the sam.yaml file.
 
