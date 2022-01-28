@@ -1350,7 +1350,11 @@ export const LiveReload =
           <script
             dangerouslySetInnerHTML={{
               __html: `
-let ws = new WebSocket("ws://localhost:${port}/socket");
+let protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+let host = location.hostname;
+let socketPath = protocol + '//' + host + ':${port}/socket';
+
+let ws = new WebSocket(socketPath);
 ws.onmessage = message => {
   let event = JSON.parse(message.data);
   if (event.type === "LOG") {
