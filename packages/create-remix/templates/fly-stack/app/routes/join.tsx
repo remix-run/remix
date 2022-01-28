@@ -1,11 +1,10 @@
-import { Form, redirect } from "remix";
+import { Form, Link, redirect } from "remix";
 import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
 
 import { sessionStorage, USER_SESSION_KEY } from "~/session.server";
 
 import { createUser } from "~/models/user.server";
 import invariant from "tiny-invariant";
-import { Link } from "react-router-dom";
 
 const loader: LoaderFunction = async ({ request }) => {
   const session = await sessionStorage.getSession(
