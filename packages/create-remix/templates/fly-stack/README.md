@@ -21,7 +21,7 @@ echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 
 ## The Database
 
-In development, it's better to use a local database, The easiest way to do this is using [Docker][docker]. To start your postgres database, run the following command:
+In development, it's better to use a local database, The easiest way to do this is using [Docker][docker]. To start your postgres database, first make sure you have docker running, then run the following command:
 
 ```sh
 docker-compose up
