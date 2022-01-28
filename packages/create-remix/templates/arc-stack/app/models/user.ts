@@ -11,7 +11,7 @@ async function getUserByEmail(email: string) {
 }
 
 async function createUser(email: string, password: string) {
-  const hashedPassword = await bcrypt.hash(String(password));
+  const hashedPassword = await bcrypt.hash(password, 10);
   const db = await arc.tables();
   return db.people.put({
     pk: `email#${email}`,

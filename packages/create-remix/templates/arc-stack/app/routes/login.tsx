@@ -49,7 +49,7 @@ const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const authorized = await bcrypt.verify(password, user.password);
+  const authorized = await bcrypt.compare(password, user.password);
   if (!authorized) {
     return json<ActionData>(
       { errors: { password: "Password is incorrect" } },
