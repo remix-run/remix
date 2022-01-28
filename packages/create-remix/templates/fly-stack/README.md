@@ -37,7 +37,7 @@ If you'd prefer not to use Docker, you can also use Fly's Wireguard VPN to conne
 
 ## Development
 
-From a new tab in your terminal:
+With your postgres database up and running in one tab and setup with tables for your data model via prisma, you're ready to start the dev server. Run this in a new tab in your terminal:
 
 ```sh
 npm run dev
