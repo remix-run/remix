@@ -65,7 +65,7 @@ Prior to your first deployment, you'll need to do a few thing:
   fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.production.toml
   ```
 
-- Create a database for both your staging and production environments. Run the following for both of your environments and follow the prompts:
+- Create a database for both your staging and production environments. Run the following for both of your environments and follow the prompts (your App name is "[YOUR_APP_NAME]-db"):
 
   ```sh
   $ fly postgres create
