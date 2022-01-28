@@ -27,7 +27,7 @@ In development, it's better to use a local database, The easiest way to do this 
 docker-compose up
 ```
 
-That may take a moment to start up as it needs to get the postgres image from the Docker registry, after it's done, you'll need to migrate your database
+That may take a moment to start up as it needs to get the postgres image from the Docker registry, after it's done, you'll need to migrate your database. With the database ready to accept connections, open a new tab and run this:
 
 ```sh
 npx prisma migrate deploy
