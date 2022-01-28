@@ -2285,6 +2285,16 @@ function getJokes() {
   ];
 }
 ```
+💿 If you want to generate your own password you can do it on Node repl using `bcrypt` hashing algorithm
+```sh
+cd your-project
+NODE_PATH=$(npm root -g) node
+const bcrypt = require("bcrypt")
+bcrypt.hash('YOUR_CUSTOM_PASSWORD', 10, (err, hash) => { console.log('HASH', hash) })
+> HASH $2b$10$ObOPfPihqlXcejqf2mNjp.AogcDQVigadPRYO8NYEn0MgzlzNtxly
+```
+Copy the hash in your `seed.ts` file and you are done : )
+
 
 💿 Great, now run the seed again:
 
