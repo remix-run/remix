@@ -40,7 +40,7 @@ If you'd prefer not to use Docker, you can also use Fly's Wireguard VPN to conne
 From a new tab in your terminal:
 
 ```sh
-$ npm run dev
+npm run dev
 ```
 
 This starts your app in development mode, rebuilding assets on file changes.
