@@ -68,7 +68,7 @@ Prior to your first deployment, you'll need to do a few thing:
 - Create a database for both your staging and production environments. Run the following for both of your environments and follow the prompts (your App name is "[YOUR_APP_NAME]-db"):
 
   ```sh
-  $ fly postgres create
+  fly postgres create
   ```
 
   afterwards, you'll need to connect your database to each of your apps
