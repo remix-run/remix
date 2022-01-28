@@ -13,7 +13,7 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx lines=[1,9-10,14]
+```tsx lines=[1,8-9,13]
 import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
