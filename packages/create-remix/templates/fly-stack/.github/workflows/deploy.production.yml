@@ -21,4 +21,4 @@ jobs:
       - name: Deploy to Production
         uses: superfly/flyctl-actions@1.1
         with:
-          args: "deploy --config ./fly.staging.toml"
+          args: "deploy --config ./fly.production.toml"
