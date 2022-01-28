@@ -41,7 +41,7 @@ export async function requireUserSession(request) {
 And now in any loader or action that requires a user session, you can call the function.
 
 ```tsx filename=app/routes/projects.jsx lines=[3]
-export function loader({ request }) {
+export async function loader({ request }) {
   // if the user isn't authenticated, this will redirect to login
   const session = await requireUserSession(request);
 
