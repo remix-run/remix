@@ -58,11 +58,35 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
   let serverExportsDir = path.resolve(serverPkgJsonFile, "..", "magicExports");
   let clientExportsDir = path.resolve(clientPkgJsonFile, "..", "magicExports");
 
-  await Promise.all([
-    fse.copy(platformExportsDir, remixPkgDir),
-    fse.copy(serverExportsDir, remixPkgDir),
-    fse.copy(clientExportsDir, remixPkgDir)
+  let magicCJS = await combineJsFilesInDirs([
+    platformExportsDir,
+    serverExportsDir,
+    clientExportsDir
   ]);
+
+  let magicESM = await combineJsFilesInDirs([
+    path.join(platformExportsDir, "esm"),
+    path.join(serverExportsDir, "esm"),
+    path.join(clientExportsDir, "esm")
+  ]);
+
+  await fse.writeFile(path.join(remixPkgDir, "index.js"), magicCJS);
+  await fse.writeFile(path.join(remixPkgDir, "esm/index.js"), magicESM);
+}
+
+async function combineJsFilesInDirs(dirs: string[]): Promise<string> {
+  let combined = "";
+  for (let dir of dirs) {
+    let files = await fse.readdir(dir);
+    for (let file of files) {
+      if (!file.endsWith(".js")) {
+        continue;
+      }
+      let contents = await fse.readFile(path.join(dir, file), "utf8");
+      combined += contents + "\n";
+    }
+  }
+  return combined;
 }
 
 function resolvePackageJsonFile(packageName: string): string {
