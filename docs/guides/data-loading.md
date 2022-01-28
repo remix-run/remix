@@ -169,8 +169,8 @@ If you picked Cloudflare Workers as you environment, [Cloudflare Key Value][clou
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = async ({ params }) => {
-  return PRODUCTS_KV.get(`product-${params.productId}`, {
+export let loader: LoaderFunction = async ({ env, params }) => {
+  return env.PRODUCTS_KV.get(`product-${params.productId}`, {
     type: "json"
   });
 };
