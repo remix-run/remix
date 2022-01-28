@@ -62,7 +62,7 @@ export default function App() {
         <ScrollRestoration />
         { track && <script src="/dummy-analytics-script.js"></script> }
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );
