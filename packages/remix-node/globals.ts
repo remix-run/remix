@@ -10,9 +10,9 @@ import {
   Headers as NodeHeaders,
   Request as NodeRequest,
   Response as NodeResponse,
+  FormData as NodeFormData,
   fetch as nodeFetch
 } from "./fetch";
-import { FormData as NodeFormData } from "./formData";
 
 declare global {
   namespace NodeJS {

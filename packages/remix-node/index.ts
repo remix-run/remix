@@ -8,9 +8,7 @@ export type {
   RequestInit,
   ResponseInit
 } from "./fetch";
-export { Headers, Request, Response, fetch } from "./fetch";
-
-export { FormData } from "./formData";
+export { Headers, Request, Response, FormData, fetch } from "./fetch";
 
 export { installGlobals } from "./globals";
 

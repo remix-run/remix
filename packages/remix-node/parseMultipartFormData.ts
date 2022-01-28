@@ -1,107 +1,103 @@
-import { Readable } from "stream";
+import type { Readable } from "stream";
+
 import Busboy from "busboy";
 
 import type { Request as NodeRequest } from "./fetch";
-import type { UploadHandler } from "./formData";
-import { FormData as NodeFormData } from "./formData";
+
+export type UploadHandlerArgs = {
+  name: string;
+  stream: Readable;
+  filename: string;
+  encoding: string;
+  mimetype: string;
+};
+
+export type UploadHandler = (
+  args: UploadHandlerArgs
+) => Promise<string | File | undefined>;
 
 export function parseMultipartFormData(
   request: Request,
   uploadHandler: UploadHandler
 ) {
-  return (request as unknown as NodeRequest).formData(uploadHandler);
+  return internalParseFormData(
+    request as unknown as NodeRequest,
+    uploadHandler
+  );
 }
 
 export async function internalParseFormData(
-  contentType: string,
-  body: string | Buffer | Readable,
-  abortController?: AbortController,
+  request: NodeRequest,
   uploadHandler?: UploadHandler
 ) {
-  let formData = new NodeFormData();
-  let fileWorkQueue: Promise<void>[] = [];
-
-  let stream: Readable;
-  if (typeof body === "string" || Buffer.isBuffer(body)) {
-    stream = Readable.from(body.toString());
-  } else {
-    stream = body;
+  const contentType = request.headers.get("Content-Type") || "";
+  // If mimeType’s essence is not "multipart/form-data" fallback to native
+  // fetch behavior:
+  if (!/multipart\/form-data/.test(contentType)) {
+    return request.formData();
   }
 
-  await new Promise<void>(async (resolve, reject) => {
-    let busboy = new Busboy({
-      highWaterMark: 2 * 1024 * 1024,
-      headers: {
-        "content-type": contentType
-      }
-    });
+  const formData = new FormData();
 
-    let aborted = false;
-    function abort(error?: Error) {
-      if (aborted) return;
-      aborted = true;
-
-      stream.unpipe();
-      stream.removeAllListeners();
-      busboy.removeAllListeners();
-
-      abortController?.abort();
-      reject(error || new Error("failed to parse form data"));
+  // 1. Setup a parser for the body’s stream.
+  const parser = Busboy({ headers: { "content-type": contentType } });
+  let resolve: () => void, reject: (err: any) => void;
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  const toWaitOn: Promise<void>[] = [];
+  parser.once("close", () => {
+    resolve();
+  });
+  parser.once("error", error => {
+    console.log("SIGNAL PARSERs", request.signal);
+    request.signal?.dispatchEvent(new Event("abort", { error } as any));
+    reject(error);
+  });
+  parser.on("field", (key, value) => {
+    formData.append(key, value);
+  });
+  parser.on("file", (name, stream, filename, encoding, mimetype) => {
+    if (!uploadHandler) {
+      stream.resume();
+      return;
     }
 
-    busboy.on("field", (name, value) => {
-      formData.append(name, value);
-    });
+    toWaitOn.push(
+      (async () => {
+        try {
+          let value = await uploadHandler({
+            name,
+            stream,
+            filename,
+            encoding,
+            mimetype
+          });
 
-    busboy.on("file", (name, filestream, filename, encoding, mimetype) => {
-      if (uploadHandler) {
-        fileWorkQueue.push(
-          (async () => {
-            try {
-              let value = await uploadHandler({
-                name,
-                stream: filestream,
-                filename,
-                encoding,
-                mimetype
-              });
-
-              if (typeof value !== "undefined") {
-                formData.append(name, value);
-              }
-            } catch (error: any) {
-              // Emit error to busboy to bail early if possible
-              busboy.emit("error", error);
-              // It's possible that the handler is doing stuff and fails
-              // *after* busboy has finished. Rethrow the error for surfacing
-              // in the Promise.all(fileWorkQueue) below.
-              throw error;
-            } finally {
-              filestream.resume();
-            }
-          })()
-        );
-      } else {
-        filestream.resume();
-      }
-
-      if (!uploadHandler) {
-        console.warn(
-          `Tried to parse multipart file upload for field "${name}" but no uploadHandler was provided.` +
-            " Read more here: https://remix.run/api/remix#parseMultipartFormData-node"
-        );
-      }
-    });
-
-    stream.on("error", abort);
-    stream.on("aborted", abort);
-    busboy.on("error", abort);
-    busboy.on("finish", resolve);
-
-    stream.pipe(busboy);
+          console.log({ value });
+          if (typeof value !== "undefined") {
+            formData.append(name, value);
+          }
+        } catch (error) {
+          console.log("SIGNAL", request.signal);
+          request.signal?.dispatchEvent(new Event("abort", { error } as any));
+          throw error;
+        } finally {
+          stream.resume();
+        }
+      })()
+    );
   });
 
-  await Promise.all(fileWorkQueue);
+  if (request.body) {
+    for await (const chunk of request.body) {
+      parser.write(chunk);
+    }
+  }
+  parser.end();
 
+  await promise;
+  await Promise.all(toWaitOn);
   return formData;
 }

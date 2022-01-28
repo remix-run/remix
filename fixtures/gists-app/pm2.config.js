@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "Express",
-      script: "./build/index.js",
+      script: "build/index.js",
       watch: ["build/index.js"],
       watch_options: {
         followSymlinks: false

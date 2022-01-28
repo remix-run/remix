@@ -63,7 +63,7 @@ export function createRequestHandler({
       response.headers.set("Connection", "close");
     }
 
-    sendRemixResponse(res, response);
+    await sendRemixResponse(res, response);
   };
 }
 
@@ -86,6 +86,8 @@ export function createRemixHeaders(
   return headers;
 }
 
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
 export function createRemixRequest(
   req: VercelRequest,
   abortController?: AbortController
@@ -95,23 +97,22 @@ export function createRemixRequest(
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(req.url!, `${protocol}://${host}`);
 
-  let init: NodeRequestInit = {
+  let init: Writeable<NodeRequestInit> = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    abortController,
     signal: abortController?.signal
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req;
+    init.body = req as any;
   }
 
   return new NodeRequest(url.href, init);
 }
 
-function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
+async function sendRemixResponse(res: VercelResponse, response: NodeResponse) {
   let arrays = new Map();
-  for (let [key, value] of response.headers.entries()) {
+  for (let [key, value] of Array.from(response.headers)) {
     if (arrays.has(key)) {
       let newValue = arrays.get(key).concat(value);
       res.setHeader(key, newValue);
@@ -122,12 +123,15 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
     }
   }
 
-  res.writeHead(response.status, response.headers.raw());
+  res.writeHead(response.status, Array.from(response.headers));
 
   if (Buffer.isBuffer(response.body)) {
     res.end(response.body);
-  } else if (response.body?.pipe) {
-    response.body.pipe(res);
+  } else if (response.body?.[Symbol.asyncIterator]) {
+    for await (let chunk of response.body) {
+      res.write(chunk);
+    }
+    res.end();
   } else {
     res.end();
   }

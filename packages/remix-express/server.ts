@@ -65,7 +65,7 @@ export function createRequestHandler({
         loadContext
       )) as unknown as NodeResponse;
 
-      sendRemixResponse(res, response, abortController);
+      await sendRemixResponse(res, response, abortController);
     } catch (error) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
@@ -94,6 +94,8 @@ export function createRemixHeaders(
   return headers;
 }
 
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
 export function createRemixRequest(
   req: express.Request,
   abortController?: AbortController
@@ -101,31 +103,28 @@ export function createRemixRequest(
   let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
 
-  let init: NodeRequestInit = {
+  let init: Writeable<NodeRequestInit> = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    signal: abortController?.signal,
-    abortController
+    signal: abortController?.signal
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
+    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 })) as any;
   }
 
   return new NodeRequest(url.href, init);
 }
 
-function sendRemixResponse(
+async function sendRemixResponse(
   res: express.Response,
   response: NodeResponse,
   abortController: AbortController
-): void {
+) {
   res.status(response.status);
 
-  for (let [key, values] of Object.entries(response.headers.raw())) {
-    for (const value of values) {
-      res.append(key, value);
-    }
+  for (let [key, value] of Array.from(response.headers)) {
+    res.append(key, value);
   }
 
   if (abortController.signal.aborted) {
@@ -134,8 +133,11 @@ function sendRemixResponse(
 
   if (Buffer.isBuffer(response.body)) {
     res.end(response.body);
-  } else if (response.body?.pipe) {
-    response.body.pipe(res);
+  } else if (response.body?.[Symbol.asyncIterator]) {
+    for await (let chunk of response.body) {
+      res.write(chunk);
+    }
+    res.end();
   } else {
     res.end();
   }

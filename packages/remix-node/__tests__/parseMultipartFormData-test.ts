@@ -1,12 +1,11 @@
 import { Blob, File } from "@web-std/file";
 
-import { Request as NodeRequest } from "../fetch";
-import { FormData as NodeFormData } from "../formData";
+import { FormData as NodeFormData, Request as NodeRequest } from "../fetch";
 import { internalParseFormData } from "../parseMultipartFormData";
 import { createMemoryUploadHandler } from "../upload/memoryUploadHandler";
 
 describe("internalParseFormData", () => {
-  it("plays nice with node-fetch", async () => {
+  it("plays nice with undici", async () => {
     let formData = new NodeFormData();
     formData.set("a", "value");
     formData.set("blob", new Blob(["blob"]), "blob.txt");
@@ -18,12 +17,7 @@ describe("internalParseFormData", () => {
     });
 
     let uploadHandler = createMemoryUploadHandler({});
-    let parsedFormData = await internalParseFormData(
-      req.headers.get("Content-Type"),
-      req.body as any,
-      undefined,
-      uploadHandler
-    );
+    let parsedFormData = await internalParseFormData(req, uploadHandler);
 
     expect(parsedFormData.get("a")).toBe("value");
     let blob = parsedFormData.get("blob") as Blob;

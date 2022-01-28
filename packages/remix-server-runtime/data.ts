@@ -121,13 +121,41 @@ function stripIndexParam(request: Request) {
     url.searchParams.append("index", toKeep);
   }
 
-  return new Request(url.href, request);
+  // Not sure why I have to do this, but without it headers
+  // and whatnot are not on the new request.
+  return new Request(url.href, {
+    body: request.body,
+    cache: request.cache,
+    credentials: request.credentials,
+    headers: request.headers,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    method: request.method,
+    mode: request.mode,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    signal: request.signal
+  });
 }
 
 function stripDataParam(request: Request) {
   let url = new URL(request.url);
   url.searchParams.delete("_data");
-  return new Request(url.href, request);
+  return new Request(url.href, {
+    body: request.body,
+    cache: request.cache,
+    credentials: request.credentials,
+    headers: request.headers,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    method: request.method,
+    mode: request.mode,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    signal: request.signal
+  });
 }
 
 export function extractData(response: Response): Promise<unknown> {

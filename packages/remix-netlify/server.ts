@@ -59,13 +59,23 @@ export function createRequestHandler({
       response.headers.set("Connection", "close");
     }
 
+    let multiValueHeaders: Record<string, string[]> = {};
+    for (let [key, value] of response.headers) {
+      if (key in multiValueHeaders) {
+        multiValueHeaders[key].push(value);
+      } else {
+        multiValueHeaders[key] = [value];
+      }
+    }
     return {
       statusCode: response.status,
-      multiValueHeaders: response.headers.raw(),
+      multiValueHeaders,
       body: await response.text()
     };
   };
 }
+
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
 export function createRemixRequest(
   event: HandlerEvent,
@@ -81,10 +91,9 @@ export function createRemixRequest(
     url = new URL(rawPath, `http://${origin}`);
   }
 
-  let init: NodeRequestInit = {
+  let init: Writeable<NodeRequestInit> = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
-    abortController,
     signal: abortController?.signal
   };
 
