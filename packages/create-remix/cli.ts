@@ -63,16 +63,41 @@ async function run() {
   );
 
   let answers = await inquirer.prompt<{
+    appType: "stack" | "basic";
     server: Server;
     lang: "ts" | "js";
     install: boolean;
   }>([
+    {
+      type: "list",
+      name: "appType",
+      message: "What type of app do you want to create?",
+      choices: [
+        { name: "A pre-configured stack ready to be deployed", value: "stack" },
+        { name: "Just the basics", value: "basic" }
+      ]
+    },
+    {
+      name: "server",
+      type: "list",
+      message: "Where do you want to deploy your stack?",
+      loop: false,
+      when(answers) {
+        return answers.appType === "stack";
+      },
+      choices: [
+        { name: "Architect (AWS Lambda) + DynamoDB", value: "arc-stack" }
+      ]
+    },
     {
       name: "server",
       type: "list",
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
+      when(answers) {
+        return answers.appType === "basic";
+      },
       choices: [
         { name: "Remix App Server", value: "remix" },
         { name: "Express Server", value: "express" },
@@ -91,7 +116,10 @@ async function run() {
       choices: [
         { name: "TypeScript", value: "ts" },
         { name: "JavaScript", value: "js" }
-      ]
+      ],
+      when(answers) {
+        return answers.appType === "basic";
+      }
     },
     {
       name: "install",
@@ -103,7 +131,7 @@ async function run() {
 
   await createApp({
     projectDir,
-    lang: answers.lang,
+    lang: answers.lang ?? "ts",
     server: answers.server,
     install: answers.install
   });
