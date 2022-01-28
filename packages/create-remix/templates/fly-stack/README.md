@@ -54,8 +54,8 @@ Prior to your first deployment, you'll need to do a few thing:
 - Create two apps on Fly, one for staging and one for production:
 
   ```sh
-  $ fly create remix-fly-stack-staging
-  $ fly create remix-fly-stack
+  fly create [YOUR_APP_NAME]-staging
+  fly create [YOUR_APP_NAME]
   ```
 
 - Make sure you have a `FLY_API_TOKEN` added to your GitHub repo, to do this, go to your user settings on Fly and create a new [token][fly_new_access_token], then add it to your repo secrets with the name `FLY_API_TOKEN`. Finally you'll need to add a `SESSION_SECRET` to your fly app secrets, to do this you can run the following commands:
