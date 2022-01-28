@@ -29,6 +29,12 @@ In development, it's better to use a local database, The easiest way to do this 
 $ docker-compose up
 ```
 
+That may take a moment to start up as it needs to get the postgres image from the Docker registry, after it's done, you'll need to migrate your database
+
+```sh
+$ prisma migrate deploy
+```
+
 If you'd prefer not to use Docker, you can also use Fly's Wireguard VPN to connect to a development database (or even your production database). You can find the instructions to set up Wireguard [here][fly_wireguard], and the instructions for creating a development database [here][fly_postgres].
 
 ## Development
