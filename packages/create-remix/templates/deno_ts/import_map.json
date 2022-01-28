@@ -1,0 +1,13 @@
+{
+  "imports": {
+    "react": "./node_modules/@types/react/index.d.ts",
+    "react-dom": "./node_modules/@types/react-dom/index.d.ts",
+    "react-dom/server": "./node_modules/@types/react-dom/server.d.ts",
+
+    "remix": "./node_modules/remix/index.d.ts",
+    "@remix-run/dev/server-build": "./node_modules/@remix-run/dev/server-build.d.ts",
+    "@remix-run/deno": "./node_modules/@remix-run/deno/index.d.ts",
+    "@remix-run/react": "./node_modules/@remix-run/react/index.d.ts",
+    "@remix-run/server-runtime": "./node_modules/@remix-run/server-runtime/index.d.ts"
+  }
+}
