@@ -71,6 +71,8 @@ Prior to your first deployment, you'll need to do a few thing:
   fly secrets set SESSION_SECRET=$(openssl rand -hex 32) -c fly.production.toml
   ```
 
+  If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
+
 - Create a database for both your staging and production environments. Run the following for both of your environments and follow the prompts (your App name is "[YOUR_APP_NAME]-db"):
 
   ```sh
@@ -91,3 +93,4 @@ Now that every is set up you can commit and push your changes to your repo. Ever
 [fly_wireguard]: https://fly.io/docs/reference/private-networking/#install-your-wireguard-app
 [fly_postgres]: https://fly.io/docs/reference/postgres/
 [fly_new_access_token]: https://web.fly.io/user/personal_access_tokens/new
+[generate_password]: https://1password.com/generate-password
