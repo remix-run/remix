@@ -104,7 +104,42 @@ export async function callRouteLoader({
     );
   }
 
-  return isResponse(result) ? result : json(result);
+  return isResponse(result)
+    ? result
+    : isLoaderHeaders(result)
+    ? parseLoaderHeadersData(result)
+    : json(result);
+}
+
+function isLoaderHeaders(
+  value: any
+): value is { headers: { [key: string]: string } } {
+  return value != null && typeof value.headers === "object";
+}
+
+function parseLoaderHeadersData(
+  data: { headers: { [key: string]: string } },
+  init: number | ResponseInit = {}
+): Response {
+  let responseInit: any = init;
+  if (typeof init === "number") {
+    responseInit = { status: init };
+  }
+
+  let headers = new Headers(responseInit.headers);
+
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json; charset=utf-8");
+  }
+
+  Object.entries(data.headers).forEach(([key, value]) => {
+    headers.set(key, value);
+  });
+
+  return new Response(JSON.stringify(data), {
+    ...responseInit,
+    headers
+  });
 }
 
 function stripIndexParam(request: Request) {
