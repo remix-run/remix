@@ -33,6 +33,10 @@ That may take a moment to start up as it needs to get the postgres image from th
 npx prisma migrate deploy
 ```
 
+When this finishes successfully, it will say:
+
+> "All migrations have been successfully applied."
+
 If you'd prefer not to use Docker, you can also use Fly's Wireguard VPN to connect to a development database (or even your production database). You can find the instructions to set up Wireguard [here][fly_wireguard], and the instructions for creating a development database [here][fly_postgres].
 
 ## Development
@@ -50,6 +54,8 @@ This starts your app in development mode, rebuilding assets on file changes.
 This Remix Stack comes with two GitHub actions that handle automatically deploying your app to production and staging environments.
 
 Prior to your first deployment, you'll need to do a few thing:
+
+- Create a new [GitHub Repository](https://repo.new)
 
 - Create two apps on Fly, one for staging and one for production:
 
@@ -78,6 +84,8 @@ Prior to your first deployment, you'll need to do a few thing:
   ```
 
   Fly will take care of setting the DATABASE_URL secret for you.
+
+Now that every is set up you can commit and push your changes to your repo. Every commit to your `main` branch will trigger a deployment to your production environment, and every commit to your `dev` branch will trigger a deployment to your staging environment.
 
 [docker]: https://www.docker.com/get-started
 [fly_wireguard]: https://fly.io/docs/reference/private-networking/#install-your-wireguard-app
