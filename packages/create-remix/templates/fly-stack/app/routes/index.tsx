@@ -5,28 +5,20 @@ import type { ActionFunction, LoaderFunction } from "remix";
 
 import { prisma } from "~/db.server";
 import { createNote } from "~/models/note.server";
-import { sessionStorage } from "~/session.server";
+import { requireUserId } from "~/session.server";
 
 interface LoaderData {
   notes: Array<Note>;
 }
 
 const loader: LoaderFunction = async ({ request }) => {
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-  const userId = session.get("userId");
-  if (!userId) throw redirect("/login");
+  const userId = await requireUserId(request);
   const notes = await prisma.note.findMany({ where: { userId: userId } });
   return json<LoaderData>({ notes });
 };
 
 const action: ActionFunction = async ({ request }) => {
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-  const userId = session.get("userId");
-  if (!userId) redirect("/login");
+  const userId = await requireUserId(request);
 
   const formData = await request.formData();
   const title = formData.get("title");
@@ -46,7 +38,10 @@ function Index() {
 
   return (
     <div>
-      <h1>Welcome to Remix</h1>
+      <h1>Welcome to Remix Notes</h1>
+      <Form method="post" reloadDocument>
+        <button type="submit">Log out</button>
+      </Form>
       <Form method="post" key={location.key}>
         <label>
           <span>Title</span>

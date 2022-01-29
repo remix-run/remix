@@ -1,26 +1,18 @@
-import { Form, Link, redirect } from "remix";
+import { Form, Link, redirect, useSearchParams } from "remix";
 import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
 
-import { sessionStorage, USER_SESSION_KEY } from "~/session.server";
+import { getUserId, createUserSession } from "~/session.server";
 
 import { createUser } from "~/models/user.server";
 import invariant from "tiny-invariant";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-  if (session.has(USER_SESSION_KEY)) {
-    return redirect("/");
-  }
+  const userId = await getUserId(request);
+  if (userId) return redirect("/");
   return {};
 };
 
 const action: ActionFunction = async ({ request }) => {
-  const session = await sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-
   const formData = await request.formData();
   const email = formData.get("email");
   const password = formData.get("password");
@@ -34,12 +26,7 @@ const action: ActionFunction = async ({ request }) => {
     return redirect("/login");
   }
 
-  session.set(USER_SESSION_KEY, user.id);
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
-  });
+  return createUserSession(request, user.id, "/");
 };
 
 const meta: MetaFunction = () => ({
@@ -47,6 +34,9 @@ const meta: MetaFunction = () => ({
 });
 
 function JoinPage() {
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("redirectTo") ?? undefined;
+
   return (
     <div>
       <div>
@@ -54,6 +44,7 @@ function JoinPage() {
       </div>
 
       <Form method="post">
+        <input type="hidden" name="redirectTo" value={returnTo} />
         <label>
           <span>Email address</span>
           <input name="email" type="email" autoComplete="email" />
@@ -72,7 +63,14 @@ function JoinPage() {
       </Form>
 
       <p>
-        <Link to="/login">Already have an account?</Link>
+        <Link
+          to={{
+            pathname: "/login",
+            search: returnTo ? `?returnTo=${returnTo}` : undefined
+          }}
+        >
+          Already have an account?
+        </Link>
       </p>
     </div>
   );
