@@ -212,10 +212,10 @@ describe("architect createRemixHeaders", () => {
 
     it("handles cookies", () => {
       expect(
-          createRemixHeaders({ "x-something-else": "true" }, [
-            "__session=some_value",
-            "__other=some_other_value"
-          ])
+        createRemixHeaders({ "x-something-else": "true" }, [
+          "__session=some_value",
+          "__other=some_other_value"
+        ])
       ).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
