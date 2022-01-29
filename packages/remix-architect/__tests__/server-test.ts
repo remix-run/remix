@@ -212,16 +212,15 @@ describe("architect createRemixHeaders", () => {
 
     it("handles cookies", () => {
       expect(
-        createRemixHeaders({ "x-something-else": "true" }, [
-          "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-          "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
-        ])
+          createRemixHeaders({ "x-something-else": "true" }, [
+            "__session=some_value",
+            "__other=some_other_value"
+          ])
       ).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
             "Cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+              "__session=some_value; __other=some_other_value",
             ],
             "x-something-else": Array [
               "true",
