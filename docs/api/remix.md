@@ -1509,7 +1509,7 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 **Example:**
 
 ```tsx
-import type { UploadHandler } from "remix";
+import type { UploadHandler } from "@remix-run/node/formData";
 
 export let action: ActionFunction = async ({ request }) => {
   const userId = getUserId(request);
@@ -1565,7 +1565,7 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
 ```tsx
-import type { UploadHandler } from "remix";
+import type { UploadHandler } from "@remix-run/node/formData";
 import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
