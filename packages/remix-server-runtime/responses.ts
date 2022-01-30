@@ -15,10 +15,22 @@ export function json<Data>(
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
 
+  if (hasAdditionalHeaders(data)) {
+    Object.entries(data.headers).forEach(([key, value]) => {
+      headers.set(key, value);
+    });
+  }
+
   return new Response(JSON.stringify(data), {
     ...responseInit,
     headers
   });
+}
+
+function hasAdditionalHeaders(
+  value: any
+): value is { headers: { [key: string]: string } } {
+  return value != null && typeof value.headers === "object";
 }
 
 /**

@@ -34,6 +34,17 @@ describe("json", () => {
     let response = json({}, 201);
     expect(response.status).toEqual(201);
   });
+
+  it("accepts additional headers for LoaderHeaders", async () => {
+    let response = json({
+      headers: { "Cache-Control": "some param", "X-Awesome-Key": "key-param" }
+    });
+    expect(response.headers.get("Content-Type")).toEqual(
+      "application/json; charset=utf-8"
+    );
+    expect(response.headers.get("Cache-Control")).toEqual("some param");
+    expect(response.headers.get("X-Awesome-Key")).toEqual("key-param");
+  });
 });
 
 describe("redirect", () => {
