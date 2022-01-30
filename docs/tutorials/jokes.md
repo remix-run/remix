@@ -2229,10 +2229,10 @@ With this change, we're going to start experiencing some TypeScript errors in ou
 
 ```ts filename=prisma/seed.ts lines=[5-12,15-16]
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
 async function seed() {
-  const kody = await prisma.user.create({
+  const kody = await db.user.create({
     data: {
       username: "kody",
       // this is a hashed version of "twixrox"
@@ -2243,7 +2243,7 @@ async function seed() {
   await Promise.all(
     getJokes().map(joke => {
       const data = { jokesterId: kody.id, ...joke };
-      return prisma.joke.create({ data });
+      return db.joke.create({ data });
     })
   );
 }
@@ -3000,7 +3000,7 @@ And now every request the browser makes to our server will include that cookie (
 
 ![Request headers showing the Cookie](/jokes-tutorial/img/cookie-header-on-request.png)
 
-So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `prisma.joke.create` call.
+So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `db.joke.create` call.
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
@@ -3109,7 +3109,7 @@ We'll cover this more in the error handling sections later.
 
 You may also notice that our solution makes use of the `login` route's `redirectTo` feature we had earlier.
 
-💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `prisma.joke.create` call.
+💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `db.joke.create` call.
 
 <details>
 
