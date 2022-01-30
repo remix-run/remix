@@ -15,6 +15,10 @@ This uses TypeScript, but we always pepper the types on after we write the code.
 
 💿 Initialize a new Remix project
 
+<docs-warning>
+Make sure you are running at least Node v14 or greater
+</docs-warning>
+
 ```sh
 npx create-remix@latest
 # choose Remix App Server
