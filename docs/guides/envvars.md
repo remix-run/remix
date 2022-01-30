@@ -55,7 +55,7 @@ Then update your package.json dev script to this:
 Now you can access those values in your loaders/actions:
 
 ```js
-export function loader() {
+export async function loader() {
   console.log(process.env.SOME_SECRET);
 }
 ```
@@ -77,7 +77,7 @@ Instead we recommend keeping all of your environment variables on the server (al
 1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
 
    ```tsx [3-6]
-   export function loader() {
+   export async function loader() {
      return {
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
@@ -105,7 +105,7 @@ Instead we recommend keeping all of your environment variables on the server (al
 2. **Put `ENV` on window** - This is how we hand off the values from the server to the client. Make sure to put this before `<Scripts/>`
 
    ```tsx [10, 19-25]
-   export function loader() {
+   export async function loader() {
      return {
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY

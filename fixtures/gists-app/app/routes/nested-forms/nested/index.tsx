@@ -2,12 +2,12 @@ import type { ActionFunction, LoaderFunction } from "remix";
 import { Form, json, useActionData, useLoaderData } from "remix";
 import { Outlet } from "remix";
 
-export let loader: LoaderFunction = ({ request }) => {
+export let loader: LoaderFunction = async ({ request }) => {
   let value = new URL(request.url).searchParams.get("subvalue");
   return json(value);
 };
 
-export let action: ActionFunction = () => {
+export let action: ActionFunction = async () => {
   return json("nested index action data");
 };
 

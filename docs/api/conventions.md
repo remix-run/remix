@@ -511,7 +511,7 @@ Route params are passed to your loader. If you have a loader at `data/invoices/$
 
 ```js
 // if the user visits /invoices/123
-export const loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({ params }) => {
   params.invoiceId; // "123"
 };
 ```
@@ -523,7 +523,7 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -560,7 +560,7 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = ({ context }) => {
+export const loader: LoaderFunction = async ({ context }) => {
   const { expressUser } = context;
   // ...
 };
@@ -1161,7 +1161,7 @@ Here are a couple of common use-cases:
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
 ```js [10]
-export const loader = () => {
+export const loader = async () => {
   return {
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
@@ -1206,7 +1206,7 @@ And lets say the UI looks something like this:
 The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
-export function loader({ request, params }) {
+export async function loader({ request, params }) {
   const url = new URL(request.url);
   return exampleDb.activity.findAll({
     where: {
@@ -1224,7 +1224,7 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   return fakedb.findProject(params.projectId);
 }
 ```

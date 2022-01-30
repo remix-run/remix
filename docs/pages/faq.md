@@ -82,7 +82,7 @@ We find option (1) to be the simplest because you don't have to mess around with
 HTML buttons can send a value, so it's the easiest way to implement this:
 
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
-export function action({ request }) {
+export async function action({ request }) {
   let formData = await request.formData();
   let action = formData.get("_action");
   switch (action) {

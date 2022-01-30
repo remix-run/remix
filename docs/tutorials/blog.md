@@ -98,7 +98,7 @@ So let's get to it and provide some data to our component.
 ```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
-export const loader = () => {
+export const loader = async () => {
   return [
     {
       slug: "my-first-post",
@@ -159,7 +159,7 @@ export type Post = {
   title: string;
 };
 
-export const loader = () => {
+export const loader = async () => {
   const posts: Post[] = [
     {
       slug: "my-first-post",
@@ -232,7 +232,7 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 
@@ -576,7 +576,7 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 

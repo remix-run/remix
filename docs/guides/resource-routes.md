@@ -21,7 +21,7 @@ If a route doesn't export a default component, it can be used as a Resource Rout
 For example, consider a UI Route that renders a report, note the link:
 
 ```tsx lines=[10-12] filename=app/routes/reports/$id.js
-export function loader({ params }) {
+export async function loader({ params }) {
   return getReport(params.id);
 }
 
@@ -42,7 +42,7 @@ export default function Report() {
 It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
 ```tsx filename=app/routes/reports/$id/pdf.ts
-export function loader({ params }) {
+export async function loader({ params }) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {
@@ -88,7 +88,7 @@ To handle `GET` requests export a loader function:
 ```ts
 import type { json, LoaderFunction } from "remix";
 
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   // handle "GET" request
 
   return json({ success: true }, 200);
@@ -100,7 +100,7 @@ To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 ```ts
 import type { ActionFunction } from "remix";
 
-export const action: ActionFunction = ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   switch (request.method) {
     case "POST": {
       /* handle "POST" */

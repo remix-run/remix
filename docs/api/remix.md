@@ -259,7 +259,7 @@ This hook returns the JSON parsed data from your route loader function.
 ```tsx lines=[1,8]
 import { useLoaderData } from "remix";
 
-export function loader() {
+export async function loader() {
   return fakeDb.invoices.findAll();
 }
 
@@ -839,7 +839,7 @@ Because `useFetcher` doesn't cause a navigation, it won't automatically work if 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-export function action({ request }) {
+export async function action({ request }) {
   // just like before
 }
 
@@ -938,7 +938,7 @@ function useMarkAsRead({ articleId, userId }) {
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
 ```tsx filename=routes/user/$id/details.tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   return fakeDb.user.find({ where: { id: params.id } });
 }
 
@@ -975,7 +975,7 @@ function UserAvatar({ partialUser }) {
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
 ```tsx filename=routes/city-search.tsx
-export function loader({ request }) {
+export async function loader({ request }) {
   const url = new URL(request.url);
   return searchCities(url.searchParams.get("city-query"));
 }
@@ -1298,7 +1298,7 @@ This is a shortcut for creating `application/json` responses. It assumes you are
 import type { LoaderFunction } from "remix";
 import { json } from "remix";
 
-export const loader: LoaderFunction = () => {
+export const loader: LoaderFunction = async () => {
   // So you can write this:
   return json({ any: "thing" });
 
@@ -1314,7 +1314,7 @@ export const loader: LoaderFunction = () => {
 You can also pass a status code and headers:
 
 ```ts [4-9]
-export const loader: LoaderFunction = () => {
+export const loader: LoaderFunction = async () => {
   return json(
     { not: "coffee" },
     {
