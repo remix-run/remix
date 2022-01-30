@@ -31,7 +31,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   return data;
 };
 
-export function App() {
+function App() {
   const data = useLoaderData<LoaderData>();
 
   const [theme] = useTheme();
