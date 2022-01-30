@@ -555,10 +555,10 @@ function SubmitButton() {
 
   const text =
     transition.state === "submitting"
-    ? "Saving..."
-    : transition.state === "loading"
-    ? "Saved!"
-    : "Go"
+      ? "Saving..."
+      : transition.state === "loading"
+      ? "Saved!"
+      : "Go";
 
   return <button type="submit">{text}</button>;
 }
