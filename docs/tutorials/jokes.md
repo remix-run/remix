@@ -2778,7 +2778,7 @@ Here's what we need in that file to get started:
 - Export a function called `login` that accepts the `username` and `password`
 - Queries prisma for a user with the `username`
 - If there is no user, return `null`
-- Use `bcrypt.compare` to compare the give `password` to the user's `passwordHash`
+- Use `bcrypt.compare` to compare the given `password` to the user's `passwordHash`
 - If the passwords don't match, return `null`
 - If the passwords match, return the user
 
