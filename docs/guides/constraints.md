@@ -23,7 +23,7 @@ import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
-export function loader() {
+export async function loader() {
   return prisma.post.findMany();
 }
 
@@ -80,7 +80,7 @@ import { prisma } from "../db";
 
 console.log(prisma);
 
-export function loader() {
+export async function loader() {
   return prisma.post.findMany();
 }
 
@@ -122,7 +122,7 @@ import { useLoaderData } from "remix";
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
-export function loader() {
+export async function loader() {
   console.log(prisma);
   return prisma.post.findMany();
 }
@@ -193,7 +193,7 @@ And then use it like this:
 ```js bad filename=app/root.js
 import { removeTrailingSlash } from "~/http";
 
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
   return { some: "data" };
 };
@@ -203,7 +203,7 @@ It reads much nicer as well when you've got a lot of these:
 
 ```ts
 // this
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, session => {
       return requireUser(session, user => {
@@ -214,7 +214,7 @@ export const loader = ({ request }) => {
 };
 
 // vs. this
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);

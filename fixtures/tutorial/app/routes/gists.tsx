@@ -1,7 +1,7 @@
 import type { LoaderFunction, ActionFunction } from "remix";
 import { redirect, useLoaderData } from "remix";
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   return fetch("https://api.github.com/gists");
 };
 

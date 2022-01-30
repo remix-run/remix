@@ -1,6 +1,6 @@
 import { Form, json, redirect, useCatch } from "remix";
 
-export function action() {
+export async function action() {
   return redirect("/action-catches-from-loader-self-boundary?catch");
 }
 
@@ -9,7 +9,7 @@ export function action() {
  * @param {{request:Request}} param0
  * @returns
  */
-export function loader({ request }) {
+export async function loader({ request }) {
   if (new URL(request.url).searchParams.get("catch") != null) {
     throw json("loader catch data!", { status: 401 });
   }

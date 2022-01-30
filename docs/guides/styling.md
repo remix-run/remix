@@ -263,7 +263,7 @@ export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 
-export function loader({ params }) {
+export async function loader({ params }) {
   return getProductsForCategory(params.category);
 }
 
