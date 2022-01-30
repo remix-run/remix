@@ -554,7 +554,7 @@ function SubmitButton() {
   const transition = useTransition();
 
   const text =
-    : transition.state === "submitting"
+    transition.state === "submitting"
     ? "Saving..."
     : transition.state === "loading"
     ? "Saved!"
