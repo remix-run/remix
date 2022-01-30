@@ -363,6 +363,34 @@ describe("shared server runtime", () => {
       expect((await result.text()).includes(message)).toBe(true);
       expect(spy.console.mock.calls.length).toBe(1);
     });
+
+    test("headers should be correctly passed to the loaderHeaders", async () => {
+      let rootLoader = jest.fn(() => {
+        return "root";
+      });
+      let resourceLoader = jest.fn(() => {
+        return { headers: { "x-some-header": "value" } };
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader
+        },
+        "routes/resource": {
+          loader: resourceLoader,
+          path: "resource"
+        }
+      });
+      let handler = createRequestHandler(build, {}, ServerMode.Test);
+
+      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+
+      let result = await handler(request);
+      expect(result.status).toBe(200);
+      expect(result.headers.get("x-some-header")).toBe("value");
+      expect(rootLoader.mock.calls.length).toBe(0);
+      expect(resourceLoader.mock.calls.length).toBe(1);
+    });
   });
 
   describe("data requests", () => {
