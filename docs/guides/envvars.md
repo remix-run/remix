@@ -45,7 +45,7 @@ SOME_SECRET=super-secret
 
 Then add the following line to the imports of your `app/entry.server.tsx`:
 
-```tsx
+```tsx filename=app/entry.server.tsx
 import "dotenv/config";
 ```
 
