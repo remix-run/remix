@@ -161,16 +161,17 @@ export default function ProductCategory() {
 }
 ```
 
-If you are using TypeScript, you can use Prisma Client generated types to get better type safety and intellisense when writing your code to load data.
+If you are using TypeScript, you can use type inference to use Primsa Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
 
 ```tsx filename=tsx filename=app/routes/products/$productId.tsx
 import { useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
-import type { Product } from "@prisma/client";
+import { db } from "~/db.server";
 
-type LoaderData = Product;
+type LoaderData = Awaited<ReturnType<typeof loader>>
 
-// Loader function implementation...
+export let loader = async ({ params }) => {
+  return db.product.findMany({});
+};
 
 export default function Product() {
   let product = useLoaderData<LoaderData>();
