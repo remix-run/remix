@@ -1168,7 +1168,7 @@ function isInputElement(object: any): object is HTMLInputElement {
  * Note: The `callback` argument should be a function created with
  * `React.useCallback()`.
  */
-export function useBeforeUnload(callback: () => any): void {
+export function useBeforeUnload(callback: (event: BeforeUnloadEvent) => any): void {
   React.useEffect(() => {
     window.addEventListener("beforeunload", callback);
     return () => {
