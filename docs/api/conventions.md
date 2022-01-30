@@ -511,7 +511,9 @@ Route params are passed to your loader. If you have a loader at `data/invoices/$
 
 ```js
 // if the user visits /invoices/123
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   params.invoiceId; // "123"
 };
 ```
@@ -523,7 +525,9 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request
+}) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -560,7 +564,9 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = async ({ context }) => {
+export const loader: LoaderFunction = async ({
+  context
+}) => {
   const { expressUser } = context;
   // ...
 };
