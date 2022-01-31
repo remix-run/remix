@@ -3,6 +3,7 @@ import type {
   InternalUnsignFunctionDoNotUseMe
 } from "@remix-run/server-runtime/cookieSigning";
 import { Blob as NodeBlob, File as NodeFile } from "@web-std/file";
+import { AbortController as NodeAbortController } from "abort-controller";
 
 import { atob, btoa } from "./base64";
 import { sign as remixSign, unsign as remixUnsign } from "./cookieSigning";
@@ -37,6 +38,8 @@ declare global {
       // and provide the webcrypto API instead.
       sign: InternalSignFunctionDoNotUseMe;
       unsign: InternalUnsignFunctionDoNotUseMe;
+
+      AbortController: typeof AbortController;
     }
   }
 }
@@ -56,4 +59,6 @@ export function installGlobals() {
 
   global.sign = remixSign;
   global.unsign = remixUnsign;
+
+  global.AbortController = NodeAbortController;
 }
