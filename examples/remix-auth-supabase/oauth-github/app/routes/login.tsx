@@ -1,37 +1,37 @@
-import type { ActionFunction, LoaderFunction } from 'remix'
-import { Form, json, useLoaderData } from 'remix'
-import { authenticator, sessionStorage, supabaseStrategy } from '~/auth.server'
-import { signInWithGithub } from '~/supabase.client'
+import type { ActionFunction, LoaderFunction } from "remix";
+import { Form, json, useLoaderData } from "remix";
+import { authenticator, sessionStorage, supabaseStrategy } from "~/auth.server";
+import { signInWithGithub } from "~/supabase.client";
 
 type LoaderData = {
-  error: { message: string } | null
-}
+  error: { message: string } | null;
+};
 
-export const action: ActionFunction = async({ request }) => {
-  await authenticator.authenticate('sb', request, {
-    successRedirect: '/private',
-    failureRedirect: '/login',
-  })
-}
+export const action: ActionFunction = async ({ request }) => {
+  await authenticator.authenticate("sb", request, {
+    successRedirect: "/private",
+    failureRedirect: "/login"
+  });
+};
 
-export const loader: LoaderFunction = async({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   await supabaseStrategy.checkSession(request, {
-    successRedirect: '/private',
-  })
+    successRedirect: "/private"
+  });
 
   const session = await sessionStorage.getSession(
-    request.headers.get('Cookie'),
-  )
+    request.headers.get("Cookie")
+  );
 
   const error = session.get(
-    authenticator.sessionErrorKey,
-  ) as LoaderData['error']
+    authenticator.sessionErrorKey
+  ) as LoaderData["error"];
 
-  return json<LoaderData>({ error })
-}
+  return json<LoaderData>({ error });
+};
 
 export default function Screen() {
-  const { error } = useLoaderData<LoaderData>()
+  const { error } = useLoaderData<LoaderData>();
 
   return (
     <>
@@ -48,12 +48,10 @@ export default function Screen() {
         </div>
 
         <button>Log In</button>
-
       </Form>
       <p>
         <button onClick={() => signInWithGithub()}>Sign in with Github</button>
       </p>
     </>
-
-  )
+  );
 }
