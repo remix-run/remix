@@ -5,6 +5,7 @@ import * as build from "@remix-run/dev/server-build";
 
 const remixHandler = createRequestHandlerWithStaticFiles({
   build,
+  // process.env.NODE_ENV is provided by Remix at compile time
   mode: process.env.NODE_ENV,
   getLoadContext: () => ({})
 });
