@@ -2824,9 +2824,14 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
+```tsx filename=app/routes/login.tsx lines=[9,20-27] nocopy
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, json, Link } from "remix";
+import {
+  useActionData,
+  json,
+  Link,
+  useSearchParams
+} from "remix";
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
 import stylesUrl from "../styles/login.css";
