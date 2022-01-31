@@ -1,10 +1,11 @@
-import { renderToString } from "react-dom/server";
-import { RemixServer } from "remix";
-import createEmotionServer from "@emotion/server/create-instance";
 import createCache from "@emotion/cache";
-import { css, CacheProvider, Global } from "@emotion/react";
+import { CacheProvider, css, Global } from "@emotion/react";
+import createEmotionServer from "@emotion/server/create-instance";
 import emotionReset from "emotion-reset";
+import { renderToString } from "react-dom/server";
 import type { EntryContext } from "remix";
+import { RemixServer } from "remix";
+import { StylesProvider } from "./styles-context";
 
 const key = "emotion";
 const cache = createCache({ key });
@@ -17,8 +18,19 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  let markup = renderToString(
+  const html = renderToString(
     <CacheProvider value={cache}>
+      <StylesProvider value={null}>
+        <RemixServer context={remixContext} url={request.url} />
+      </StylesProvider>
+    </CacheProvider>
+  );
+
+  const chunks = extractCriticalToChunks(html);
+  const styles = constructStyleTagsFromChunks(chunks);
+
+  const markup = renderToString(
+    <StylesProvider value={styles}>
       {/* Set the global style. */}
       <Global
         styles={css`
@@ -32,13 +44,8 @@ export default function handleRequest(
         `}
       />
       <RemixServer context={remixContext} url={request.url} />
-    </CacheProvider>
+    </StylesProvider>
   );
-
-  const chunks = extractCriticalToChunks(markup);
-
-  const styles = constructStyleTagsFromChunks(chunks);
-  markup = markup.replace("__STYLES__", styles);
 
   responseHeaders.set("Content-Type", "text/html");
 

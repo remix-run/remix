@@ -6,8 +6,10 @@ import {
   Scripts,
   ScrollRestoration
 } from "remix";
+import { useStyles } from "./styles-context";
 
 export default function App() {
+  const styles = useStyles();
   return (
     <html lang="en">
       <head>
@@ -15,7 +17,7 @@ export default function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
-        {typeof document === "undefined" ? "__STYLES__" : null}
+        {typeof document === "undefined" ? null : styles}
       </head>
       <body>
         <Outlet />
