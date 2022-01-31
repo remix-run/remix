@@ -356,7 +356,7 @@ async function createBrowserBuild(
     sourcemap: options.sourcemap,
     metafile: true,
     incremental: options.incremental,
-    mainFields: ["module", "browser", "main"],
+    mainFields: ["browser", "module", "main"],
     treeShaking: true,
     minify: options.mode === BuildMode.Production,
     entryNames: "[dir]/[name]-[hash]",
