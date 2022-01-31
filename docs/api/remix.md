@@ -606,7 +606,7 @@ function SubmitButton() {
       ? loadTexts[transition.type] || "Loading..."
       : "Go";
 
-  return <button type="submit"></button>;
+  return <button type="submit">{text}</button>;
 }
 ```
 
