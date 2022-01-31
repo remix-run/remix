@@ -1,6 +1,5 @@
 .DS_Store
 .vscode
-.DS_Store
 
 /build/
 node_modules/
@@ -13,6 +12,7 @@ yarn-error.log
 /fixtures/deno-app
 
 .eslintcache
+.tmp
 
 /deployment-test
 

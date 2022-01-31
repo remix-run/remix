@@ -1,11 +1,20 @@
 module.exports = {
-  modulePathIgnorePatterns: ["<rootDir>/examples"],
+  modulePathIgnorePatterns: ["<rootDir>/examples", "<rootDir>/.tmp"],
   projects: [
     {
       displayName: "create-remix",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/create-remix/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/jest/buildRemix.ts",
+      setupFilesAfterEnv: [
+        "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts"
+      ]
+    },
+    {
+      displayName: "integration",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
+      globalSetup: "<rootDir>/integration/global-setup.ts",
       setupFilesAfterEnv: [
         "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts"
       ]

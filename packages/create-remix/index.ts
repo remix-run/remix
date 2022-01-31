@@ -17,14 +17,21 @@ export type Server =
 
 export type Lang = "ts" | "js";
 
-interface CreateAppArgs {
+export interface CreateAppArgs {
   projectDir: string;
   lang: Lang;
   server: Server;
   install: boolean;
+  quiet?: boolean;
 }
 
-async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
+async function createApp({
+  projectDir,
+  lang,
+  server,
+  install,
+  quiet
+}: CreateAppArgs) {
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -99,17 +106,19 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
-  } else {
-    console.log(
-      `💿 That's it! \`cd\` into "${path.relative(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
-    );
+  if (!quiet) {
+    if (projectDirIsCurrentDir) {
+      console.log(
+        `💿 That's it! Check the README for development and deploy instructions!`
+      );
+    } else {
+      console.log(
+        `💿 That's it! \`cd\` into "${path.relative(
+          process.cwd(),
+          projectDir
+        )}" and check the README for development and deploy instructions!`
+      );
+    }
   }
 }
 
