@@ -18,6 +18,7 @@ module.exports = {
   devServerPort: 8002,
   publicPath: "/build/",
   serverBuildDirectory: "build",
+  ignoredRouteFiles: [".*"],
   routes(defineRoutes) {
     return defineRoutes(route => {
       route("/somewhere/cool/*", "catchall.tsx");
@@ -75,6 +76,10 @@ The URL prefix of the browser build with a trailing slash. Defaults to "/build/"
 ### serverBuildDirectory
 
 The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
+
+### ignoredRouteFiles
+
+This is an array of globs (via [minimatch][minimatch]) that Remix will match to files while reading your `app/routes` directory. If a file matches, it will be ignored rather that treated like a route module. This is useful for ignoring dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 
 ### devServerPort
 
@@ -456,6 +461,8 @@ export default function SomeRouteComponent() {
 
 ### `loader`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
+
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
 ```tsx
@@ -504,7 +511,9 @@ Route params are passed to your loader. If you have a loader at `data/invoices/$
 
 ```js
 // if the user visits /invoices/123
-export const loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   params.invoiceId; // "123"
 };
 ```
@@ -516,7 +525,9 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request
+}) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -553,7 +564,9 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = ({ context }) => {
+export const loader: LoaderFunction = async ({
+  context
+}) => {
   const { expressUser } = context;
   // ...
 };
@@ -732,6 +745,8 @@ export function CatchBoundary() {
 
 ### `action`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a> and <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a></docs-success>
+
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
 Actions have the same API as loaders, the only difference is when they are called.
@@ -863,6 +878,35 @@ export function headers({ loaderHeaders, parentHeaders }) {
 ```
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
+
+Note that you can also add headers in your `entry.server` file for things that should be global, for example:
+
+```tsx lines=[16]
+import { renderToString } from "react-dom/server";
+import { RemixServer } from "remix";
+import type { EntryContext } from "remix";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const markup = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  responseHeaders.set("Content-Type", "text/html");
+  responseHeaders.set("X-Powered-By", "Hugs");
+
+  return new Response("<!DOCTYPE html>" + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders
+  });
+}
+```
+
+Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
 
 ### `meta`
 
@@ -1123,7 +1167,7 @@ Here are a couple of common use-cases:
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
 ```js [10]
-export const loader = () => {
+export const loader = async () => {
   return {
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
@@ -1168,7 +1212,7 @@ And lets say the UI looks something like this:
 The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
-export function loader({ request, params }) {
+export async function loader({ request, params }) {
   const url = new URL(request.url);
   return exampleDb.activity.findAll({
     where: {
@@ -1186,7 +1230,7 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   return fakedb.findProject(params.projectId);
 }
 ```
@@ -1256,3 +1300,5 @@ export default function Page() {
 [form]: ./remix#form
 [form action]: ./remix#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[minimatch]: https://www.npmjs.com/package/minimatch
+[handledatarequest]: #entryservertsx

@@ -49,7 +49,7 @@ In development, `remix-serve` will ensure the latest code is run on each request
     console.log(Date.now());
   }, 1000);
 
-  export function loader() {
+  export async function loader() {
     // ...
   }
   ```

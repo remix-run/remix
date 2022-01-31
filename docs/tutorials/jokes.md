@@ -167,7 +167,7 @@ Building Remix app in production mode...
 Built in 132ms
 ```
 
-Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
+Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
 
 💿 Let's run the built app now:
 
@@ -188,7 +188,7 @@ Open up that URL and you should be presented with a minimal page pointing to som
 - `app/routes`
 - `app/styles`
 
-We're going to trim this down the the bare bones and introduce things incrementally.
+We're going to trim this down the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
@@ -405,7 +405,7 @@ Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should di
 
 ### Parameterized Routes
 
-Soon we'll add a database that stores our jokes by an ID, so lets add one more route that's a little more unique, a parameterized route:
+Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
 `/jokes/:jokeId`
 
@@ -1596,14 +1596,14 @@ export let loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany()
   };
-  return { data };
+  return data;
 };
 
 export default function Users() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.map(user => (
+      {data.users.map(user => (
         <li>{user.name}</li>
       ))}
     </ul>
@@ -1987,7 +1987,7 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
@@ -2229,10 +2229,10 @@ With this change, we're going to start experiencing some TypeScript errors in ou
 
 ```ts filename=prisma/seed.ts lines=[5-12,15-16]
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
 async function seed() {
-  const kody = await prisma.user.create({
+  const kody = await db.user.create({
     data: {
       username: "kody",
       // this is a hashed version of "twixrox"
@@ -2243,7 +2243,7 @@ async function seed() {
   await Promise.all(
     getJokes().map(joke => {
       const data = { jokesterId: kody.id, ...joke };
-      return prisma.joke.create({ data });
+      return db.joke.create({ data });
     })
   );
 }
@@ -2778,7 +2778,7 @@ Here's what we need in that file to get started:
 - Export a function called `login` that accepts the `username` and `password`
 - Queries prisma for a user with the `username`
 - If there is no user, return `null`
-- Use `bcrypt.compare` to compare the give `password` to the user's `passwordHash`
+- Use `bcrypt.compare` to compare the given `password` to the user's `passwordHash`
 - If the passwords don't match, return `null`
 - If the passwords match, return the user
 
@@ -3000,7 +3000,7 @@ And now every request the browser makes to our server will include that cookie (
 
 ![Request headers showing the Cookie](/jokes-tutorial/img/cookie-header-on-request.png)
 
-So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `prisma.joke.create` call.
+So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `db.joke.create` call.
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
@@ -3109,7 +3109,7 @@ We'll cover this more in the error handling sections later.
 
 You may also notice that our solution makes use of the `login` route's `redirectTo` feature we had earlier.
 
-💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `prisma.joke.create` call.
+💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `db.joke.create` call.
 
 <details>
 
