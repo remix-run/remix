@@ -19,4 +19,18 @@ async function createUser(email: string, password: string) {
   });
 }
 
-export { getUserByEmail, createUser };
+async function verifyLogin(email: string, password: string) {
+  const user = await getUserByEmail(email);
+  if (!user) {
+    return undefined;
+  }
+
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) {
+    return undefined;
+  }
+
+  return user;
+}
+
+export { getUserByEmail, createUser, verifyLogin };

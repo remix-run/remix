@@ -7,12 +7,12 @@ import {
   useLoaderData,
   useLocation
 } from "remix";
-import cuid from "cuid";
 
 import { arc } from "~/db.server";
 import { getSession } from "~/session.server";
 
 import Alert from "@reach/alert";
+import { createNote, deleteNote } from "~/models/note";
 
 const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
@@ -50,11 +50,7 @@ const action: ActionFunction = async ({ request }) => {
         throw new Response("sk must be a string", { status: 400 });
       }
 
-      const db = await arc.tables();
-      await db.notes.delete({
-        pk,
-        sk
-      });
+      await deleteNote(pk, sk);
 
       return redirect("/");
     }
@@ -63,26 +59,15 @@ const action: ActionFunction = async ({ request }) => {
       const title = formData.get("title");
       const body = formData.get("body");
 
-      const errors: Record<string, string> = {};
       if (typeof title !== "string") {
-        errors.title = "Title is required";
+        throw new Response("title must be a string", { status: 400 });
       }
 
       if (typeof body !== "string") {
-        errors.body = "Body is required";
+        throw new Response("body must be a string", { status: 400 });
       }
 
-      if (errors.title || errors.body) {
-        return json({ errors }, { status: 400 });
-      }
-
-      const db = await arc.tables();
-      await db.notes.put({
-        sk: `email#${user.email}`,
-        title: title,
-        body: body,
-        pk: `note#${cuid()}`
-      });
+      await createNote({ title, body, email: user.email });
       return redirect("/");
     }
 

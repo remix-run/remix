@@ -3,13 +3,18 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import { getSession, sessionStorage } from "~/session.server";
-import { getUserByEmail } from "~/models/user";
+import {
+  createUserSession,
+  getSession,
+  getUserId,
+  sessionStorage
+} from "~/session.server";
+import { getUserByEmail, verifyLogin } from "~/models/user";
 import { bcrypt } from "~/db.server";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const session = await getSession(request);
-  if (session.has("user")) return redirect("/");
+  const userId = await getUserId(request);
+  if (userId) return redirect("/");
   return {};
 };
 
@@ -21,7 +26,6 @@ interface ActionData {
 }
 
 const action: ActionFunction = async ({ request }) => {
-  const session = await getSession(request);
   const formData = await request.formData();
 
   const email = formData.get("email");
@@ -41,29 +45,16 @@ const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const user = await getUserByEmail(email);
+  const user = await verifyLogin(email, password);
+
   if (!user) {
     return json<ActionData>(
-      { errors: { email: "Email does not exist" } },
+      { errors: { email: "Invalid email or password" } },
       { status: 400 }
     );
   }
 
-  const authorized = await bcrypt.compare(password, user.password);
-  if (!authorized) {
-    return json<ActionData>(
-      { errors: { password: "Password is incorrect" } },
-      { status: 400 }
-    );
-  }
-
-  session.set("user", { email: user.email });
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
-  });
+  return createUserSession(request, user, "/");
 };
 
 const meta: MetaFunction = () => ({

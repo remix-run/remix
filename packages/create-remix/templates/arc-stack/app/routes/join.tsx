@@ -3,12 +3,12 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import { getSession, sessionStorage } from "~/session.server";
+import { createUserSession, getUserId } from "~/session.server";
 import { createUser, getUserByEmail } from "~/models/user";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const session = await getSession(request);
-  if (session.has("user")) return redirect("/");
+  const userId = await getUserId(request);
+  if (userId) return redirect("/");
   return {};
 };
 
@@ -20,7 +20,6 @@ interface ActionData {
 }
 
 const action: ActionFunction = async ({ request }) => {
-  const session = await getSession(request);
   const formData = await request.formData();
 
   const email = formData.get("email");
@@ -51,13 +50,7 @@ const action: ActionFunction = async ({ request }) => {
 
   const user = await createUser(email, password);
 
-  session.set("user", { email: user.email });
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
-  });
+  return createUserSession(request, user, "/");
 };
 
 const meta: MetaFunction = () => ({
