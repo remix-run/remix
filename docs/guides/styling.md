@@ -637,9 +637,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
            <Outlet />
            <ScrollRestoration />
            <Scripts />
-           {process.env.NODE_ENV === "development" && (
-             <LiveReload />
-           )}
+           <LiveReload />
          </body>
        </html>
      );
