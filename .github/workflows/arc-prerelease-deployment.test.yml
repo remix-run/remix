@@ -1,6 +1,9 @@
 name: arc prerelease deployment test
 
 on:
+  push:
+    branches:
+      - logan/prerelease
   release:
     types: [prereleased]
 
