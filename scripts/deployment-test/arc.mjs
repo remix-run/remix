@@ -8,7 +8,7 @@ import { toLogicalID } from "@architect/utils";
 import {
   sha,
   updatePackageConfig,
-  spawnOpts,
+  getSpawnOpts,
   runCypress,
   addCypress
 } from "./_shared.mjs";
@@ -62,15 +62,14 @@ try {
     config.devDependencies["@architect/architect"] = "latest";
   });
 
-  // change to the project directory
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
@@ -94,7 +93,7 @@ try {
   }
 
   // run cypress against the deployed server
-  runCypress(false, deployment.ApiEndpoint);
+  runCypress(PROJECT_DIR, false, deployment.ApiEndpoint);
 
   process.exit(0);
 } catch (error) {

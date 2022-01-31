@@ -3,7 +3,7 @@ import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
 
-import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-fly-${sha}`;
@@ -38,8 +38,7 @@ try {
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
 
-  // change to the project directory
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // create a new app on fly
   let flyLaunchCommand = spawnSync(
@@ -76,7 +75,7 @@ try {
   spawnSync("npm", ["install"], spawnOpts);
 
   // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // deploy to fly
   let flyDeployCommand = spawnSync("fly", ["deploy"], spawnOpts);
@@ -89,7 +88,7 @@ try {
   await new Promise(resolve => setTimeout(() => resolve(), 60_000));
 
   // run cypress against the deployed server
-  runCypress(false, flyUrl);
+  runCypress(PROJECT_DIR, false, flyUrl);
 
   process.exit(0);
 } catch (error) {
