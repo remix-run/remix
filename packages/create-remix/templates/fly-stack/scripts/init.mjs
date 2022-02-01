@@ -16,6 +16,11 @@ const DIR_NAME = path.basename(path.resolve(PROJECT_DIR));
 const SUFFIX = crypto.randomBytes(2).toString("hex");
 const APP_NAME = DIR_NAME + "-" + SUFFIX;
 
+function escapeRegExp(string) {
+  // $& means the whole matched string
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function main() {
   const [prodContent, stagingContent, readme, pkgJSONContent] =
     await Promise.all([
@@ -30,7 +35,10 @@ async function main() {
   prodToml.app = prodToml.app.replace(REPLACER, APP_NAME);
   stagingToml.app = stagingToml.app.replace(REPLACER, APP_NAME);
 
-  const newReadme = readme.replaceAll(REPLACER, APP_NAME);
+  const newReadme = readme.replace(
+    new RegExp(escapeRegExp(REPLACER), "g"),
+    APP_NAME
+  );
 
   const pkgJSON = JSON.parse(pkgJSONContent);
 
