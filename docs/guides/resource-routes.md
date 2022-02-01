@@ -78,7 +78,7 @@ app/routes/reports/$id/pdf.ts
 app/routes/reports/$id/[.pdf].ts
 
 # or like this, the resulting URL is the same
-app/routes/reports/$id.[.pdf].ts
+app/routes/reports/$id[.pdf].ts
 ```
 
 ## Handling different request methods
