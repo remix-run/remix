@@ -41,7 +41,7 @@ export function createPagesFunctionHandler<Env = any>({
     let response: Response | undefined;
 
     // https://github.com/cloudflare/wrangler2/issues/117
-    context.request.headers.delete("If-None-Match");
+    context.request.headers.delete("if-none-match");
 
     try {
       response = await (context.env as any).ASSETS.fetch(

@@ -61,7 +61,7 @@ You can follow along with this tutorial on [CodeSandbox](https://codesandbox.com
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor ([VSCode](https://code.visualstudio.com/) is a nice one)
 
-If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io) (note, currently hosting sqlite on fly will cost a few bucks a month).
+If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io).
 
 We'll also be executing commands in your system command line/terminal interface. So you'll want to be familiar with that.
 
@@ -167,7 +167,7 @@ Building Remix app in production mode...
 Built in 132ms
 ```
 
-Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
+Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
 
 💿 Let's run the built app now:
 
@@ -188,7 +188,7 @@ Open up that URL and you should be presented with a minimal page pointing to som
 - `app/routes`
 - `app/styles`
 
-We're going to trim this down the the bare bones and introduce things incrementally.
+We're going to trim this down the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
@@ -405,7 +405,7 @@ Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should di
 
 ### Parameterized Routes
 
-Soon we'll add a database that stores our jokes by an ID, so lets add one more route that's a little more unique, a parameterized route:
+Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
 `/jokes/:jokeId`
 
@@ -1596,14 +1596,14 @@ export let loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany()
   };
-  return { data };
+  return data;
 };
 
 export default function Users() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.map(user => (
+      {data.users.map(user => (
         <li>{user.name}</li>
       ))}
     </ul>
@@ -1909,7 +1909,7 @@ const joke = await db.joke.create({
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-22]
+```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-24]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 import { db } from "~/utils/db.server";
@@ -1987,7 +1987,7 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
@@ -2229,10 +2229,10 @@ With this change, we're going to start experiencing some TypeScript errors in ou
 
 ```ts filename=prisma/seed.ts lines=[5-12,15-16]
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
 async function seed() {
-  const kody = await prisma.user.create({
+  const kody = await db.user.create({
     data: {
       username: "kody",
       // this is a hashed version of "twixrox"
@@ -2243,7 +2243,7 @@ async function seed() {
   await Promise.all(
     getJokes().map(joke => {
       const data = { jokesterId: kody.id, ...joke };
-      return prisma.joke.create({ data });
+      return db.joke.create({ data });
     })
   );
 }
@@ -2305,18 +2305,18 @@ Great! Our database is now ready to go.
 
 ### Auth Flow Overview
 
-So our authentication will be of the traditional username/password variety. We'll be using [`bcrypt`](https://npm.im/bcrypt) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
+So our authentication will be of the traditional username/password variety. We'll be using [`bcryptjs`](https://npm.im/bcryptjs) to hash our passwords so nobody will be able to reasonably brute-force their way into an account.
 
 💿 Go ahead and get that installed right now so we don't forget:
 
 ```sh
-npm install bcrypt
+npm install bcryptjs
 ```
 
-💿 The `bcrypt` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
+💿 The `bcryptjs` library has TypeScript definitions in DefinitelyTyped, so let's install those as well:
 
 ```sh
-npm install --save-dev @types/bcrypt
+npm install --save-dev @types/bcryptjs
 ```
 
 Let me give you a quick diagram of the flow of things:
@@ -2778,7 +2778,7 @@ Here's what we need in that file to get started:
 - Export a function called `login` that accepts the `username` and `password`
 - Queries prisma for a user with the `username`
 - If there is no user, return `null`
-- Use `bcrypt.compare` to compare the give `password` to the user's `passwordHash`
+- Use `bcrypt.compare` to compare the given `password` to the user's `passwordHash`
 - If the passwords don't match, return `null`
 - If the passwords match, return the user
 
@@ -2789,7 +2789,7 @@ Here's what we need in that file to get started:
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -2824,9 +2824,14 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
+```tsx filename=app/routes/login.tsx lines=[9,20-27] nocopy
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, json, Link } from "remix";
+import {
+  useActionData,
+  json,
+  Link,
+  useSearchParams
+} from "remix";
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
 import stylesUrl from "../styles/login.css";
@@ -2899,7 +2904,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3000,7 +3005,7 @@ And now every request the browser makes to our server will include that cookie (
 
 ![Request headers showing the Cookie](/jokes-tutorial/img/cookie-header-on-request.png)
 
-So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `prisma.joke.create` call.
+So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `db.joke.create` call.
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
@@ -3011,7 +3016,7 @@ So we can now check whether the user is authenticated on the server by reading t
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3109,7 +3114,7 @@ We'll cover this more in the error handling sections later.
 
 You may also notice that our solution makes use of the `login` route's `redirectTo` feature we had earlier.
 
-💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `prisma.joke.create` call.
+💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `db.joke.create` call.
 
 <details>
 
@@ -3267,7 +3272,7 @@ We should probably give people the ability to see that they're logged in and a w
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -3390,7 +3395,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[10,23,33,37,59-70]
+```tsx filename=app/routes/jokes.tsx lines=[10,23,35,39,61-72]
 import { User } from "@prisma/client";
 import {
   Link,
@@ -3546,7 +3551,7 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 <summary>app/utils/session.server.ts</summary>
 
 ```tsx filename=app/utils/session.server.ts lines=[13-21]
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
@@ -4096,7 +4101,7 @@ Sometimes users do things we can anticipate. I'm not talking about validation ne
 
 It might help to think of the unexpected errors as 500-level errors ([server errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses)) and the expected errors as 400-level errors ([client errors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#client_error_responses)).
 
-For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `loader` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCaught` hook. This will return the `Response` that was thrown.
+For client error responses, Remix offers something similar to Error Boundaries. It's called [`Catch Boundaries`](../api/conventions#catchboundary) and it works almost exactly the same. In this case, when your server code detects a problem, it'll throw a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) object. Remix then catches that thrown response and renders your `CatchBoundary`. Just like the `useLoaderData` hook to get data from the `loader` and the `useActionData` hook to get data from the `action`, the `CatchBoundary` gets its data from the `useCatch` hook. This will return the `Response` that was thrown.
 
 One last thing, this isn't for form validations and stuff. We already discussed that earlier with `useActionData`. This is just for situations where the user did something that means we can't reasonably render our default component so we want to render something else instead.
 
@@ -4555,7 +4560,7 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,28-55,65-74,79-101]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,30-57,67-76,81-103]
 import type { Joke } from "@prisma/client";
 import { ActionFunction, LoaderFunction } from "remix";
 import {
@@ -4993,8 +4998,8 @@ import type {
 import {
   useActionData,
   json,
-  Link,
-  useSearchParams
+  useSearchParams,
+  Link
 } from "remix";
 import { db } from "~/utils/db.server";
 import {
@@ -5251,10 +5256,10 @@ export default function Login() {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```ts filename=app/routes/jokes/$jokeId.tsx lines=[4,17-32]
+```ts filename=app/routes/jokes/$jokeId.tsx lines=[4,20-35]
 import type {
-  LoaderFunction,
   ActionFunction,
+  LoaderFunction,
   MetaFunction
 } from "remix";
 import {
@@ -5266,7 +5271,10 @@ import {
 } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
-import { requireUserId } from "~/utils/session.server";
+import {
+  getUserId,
+  requireUserId
+} from "~/utils/session.server";
 
 export const meta: MetaFunction = ({
   data
@@ -5285,11 +5293,13 @@ export const meta: MetaFunction = ({
   };
 };
 
-type LoaderData = { joke: Joke };
+type LoaderData = { joke: Joke; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
+  request,
   params
 }) => {
+  const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
     where: { id: params.jokeId }
   });
@@ -5298,7 +5308,10 @@ export const loader: LoaderFunction = async ({
       status: 404
     });
   }
-  const data: LoaderData = { joke };
+  const data: LoaderData = {
+    joke,
+    isOwner: userId === joke.jokesterId
+  };
   return data;
 };
 
@@ -5339,16 +5352,18 @@ export default function JokeRoute() {
       <p>Here's your hilarious joke:</p>
       <p>{data.joke.content}</p>
       <Link to=".">{data.joke.name} Permalink</Link>
-      <form method="post">
-        <input
-          type="hidden"
-          name="_method"
-          value="delete"
-        />
-        <button type="submit" className="button">
-          Delete
-        </button>
-      </form>
+      {data.isOwner ? (
+        <form method="post">
+          <input
+            type="hidden"
+            name="_method"
+            value="delete"
+          />
+          <button type="submit" className="button">
+            Delete
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }
@@ -5394,6 +5409,8 @@ Sweet! Now search engines and social media platforms will like our site a bit be
 Sometimes we want our routes to render something other than an HTML document. For example, maybe you have an endpoint that generates your social image for a blog post, or the image for a product, or the CSV data for a report, or an RSS feed, or sitemap, or maybe you want to implement API routes for your mobile app, or anything else.
 
 This is what [Resource Routes](../guides/resource-routes) are for. I think it'd be cool to have an RSS feed of all our jokes. I think it would make sense to be at the URL `/jokes.rss`. For that to work, you'll need to escape the `.` because that character has special meaning in Remix route filenames. Learn more about [escaping special characters here](../api/conventions#escaping-special-characters).
+
+<docs-info>Believe it or not, you've actually already made one of these. Check out your logout route! No UI necessary because it's just there to handle mutations and redirect lost souls.</docs-info>
 
 For this one, you'll probably want to at least peak at the example unless you want to go read up on the RSS spec 😅.
 
@@ -6068,11 +6085,11 @@ Here's a demonstration of what that experience looks like:
 
 ## Deployment
 
-I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`bcrypt`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
-
-<docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
+I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`prisma`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
 
 💿 Before proceeding, you're going to need to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
+
+<docs-info>Fly.io asks you a credit card number at account creation (see why in [their blog article](https://fly.io/blog/free-postgres/#a-note-about-credit-cards)) but there are free tiers that cover the needs of this app hosted as a simple side project.</docs-info>
 
 💿 Once you've done that, run this command from within your project directory:
 
@@ -6090,7 +6107,7 @@ Detected a Remix app
 Automatically selected personal organization: Kent C. Dodds
 ? Select region: dfw (Dallas, Texas (US))
 Created app remix-jokes in organization personal
-Created a 10GB volume vol_18l524yj27947zmp in the dfw region
+Created a 1GB volume vol_18l524yj27947zmp in the dfw region
 Wrote config file fly.toml
 
 This launch configuration uses SQLite on a single, dedicated volume. It will not scale beyond a single VM. Look into 'fly postgres' for a more robust production database.
@@ -6103,7 +6120,7 @@ You'll want to choose a different app name because I already took `remix-jokes` 
 
 It also allowed you to select a region, I recommend choosing one that's close to you. If you decide to deploy a real app on Fly in the future, you may decide to scale up your fly to multiple regions.
 
-Fly also detected that this project is using sqlite with prisma and created a persistence volume for us (this is the part that costs money).
+Fly also detected that this project is using sqlite with prisma and created a persistence volume for us.
 
 We don't want to deploy right now because we have an environment variable we need to set! So choose "No".
 
