@@ -325,7 +325,7 @@ export async function action({ request }) {
   }
 
   // otherwise create the user and redirect
-  await createUser(body);
+  await createUser(form);
   return redirect("/dashboard");
 }
 
