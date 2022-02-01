@@ -40,6 +40,10 @@ export const loader: LoaderFunction = async (args) => {
   return res.json()
 }
 
+/**
+ * @description This route fetches the details of a single character using
+ * the Remix loader & route params.
+ */
 export default function () {
   const loader = useLoaderData<LoaderData>();
   const { data } = loader;

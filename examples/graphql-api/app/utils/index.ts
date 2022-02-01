@@ -7,7 +7,7 @@ import { GRAPHQL_API } from "~/config";
  * Check out the link above for more information.
  */
  export const fetchFromGraphQL = async (
-    operation: 'query' | 'mutation',
+    operation: 'mutation' | 'query',
     payload: any,
     variables?: any
   ) => {

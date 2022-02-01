@@ -40,9 +40,12 @@ export const loader: LoaderFunction = async (_args) => {
   return res.json()
 }
 
+/**
+ * @description This route triggers an error of type "ApolloError" which is
+ * an array of errors coming back from the GraphQL API.
+ */
 export default function () {
   const loader = useLoaderData<LoaderData>();
-  const { data } = loader
 
   return (
     <main className="ui-main">

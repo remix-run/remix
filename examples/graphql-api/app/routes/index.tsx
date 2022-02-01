@@ -3,14 +3,10 @@ import { LoaderFunction, useLoaderData } from 'remix';
 import { CharacterList } from '~/components/CharacterList';
 import { Code } from '~/components/Code';
 import { fetchFromGraphQL } from '~/utils/index';
-import { Character } from '~/generated/types';
+import { Characters } from '~/generated/types';
 
 type LoaderData = {
-  data: {
-    characters: {
-      results: Character[];
-    }
-  },
+  data: { characters: Characters; },
   errors?: ApolloError[];
 };
 
@@ -50,7 +46,8 @@ export const loader: LoaderFunction = async () => {
 }
 
 /**
- * @description tbd...
+ * @description This route demonstrates fetching a list of characters from
+ * a GraphQL API.
  */
 export default function () {
   const loader = useLoaderData<LoaderData>();
