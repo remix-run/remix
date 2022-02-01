@@ -2,6 +2,14 @@
 
 - [Remix Docs](https://remix.run/docs)
 
+## Before you get started
+
+Run this command to update relevant files with the name of your app (the current directory)
+
+```sh
+node scripts/init.mjs
+```
+
 ## Fly Setup
 
 1. [Install Fly](https://fly.io/docs/getting-started/installing-flyctl/)
@@ -90,7 +98,7 @@ Prior to your first deployment, you'll need to do a few thing:
   afterwards, you'll need to connect your database to each of your apps
 
   ```sh
-  fly postgres attach --postgres-app <the name of your db> --app <the name of your app>
+  fly postgres attach --postgres-app [YOUR_APP_NAME]-db --app [YOUR_APP_NAME]
   ```
 
   Fly will take care of setting the DATABASE_URL secret for you.

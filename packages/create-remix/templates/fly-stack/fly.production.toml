@@ -1,4 +1,4 @@
-app = "remix-fly-stack"
+app = "[YOUR_APP_NAME]"
 
 kill_signal = "SIGINT"
 kill_timeout = 5
