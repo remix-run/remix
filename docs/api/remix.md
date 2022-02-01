@@ -765,7 +765,11 @@ Loads data from a route loader.
 
 ```tsx
 const fetcher = useFetcher();
-fetcher.load("/some/route");
+React.useEffect(() => {
+  if (fetcher.type === 'init') {
+    fetcher.load('/some/route');
+  }
+}, [fetcher]);
 fetcher.data; // the data from the loader
 ```
 
