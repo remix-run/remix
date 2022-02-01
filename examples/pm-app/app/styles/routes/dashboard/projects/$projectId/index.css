@@ -1,0 +1,186 @@
+@import "../../../../_defs.css";
+
+.project-index {
+  position: relative;
+}
+
+.project-index__options-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.project-index__header {
+  width: 100%;
+  margin-bottom: var(--spaces-06);
+  padding-bottom: var(--spaces-06);
+}
+
+.project-index__header:not(:last-child) {
+  border-bottom: 1px solid var(--colors-gray-08);
+}
+
+@media (--viewport-md) {
+  .project-index__header {
+    padding-bottom: var(--spaces-08);
+    margin-bottom: var(--spaces-08);
+  }
+}
+
+.project-index__header-inner {
+  max-width: 34rem;
+}
+
+.project-index__heading {
+  max-width: calc(100% - var(--spaces-08));
+  margin-bottom: var(--spaces-04);
+}
+
+.project-index__member-list {
+  display: flex;
+  gap: var(--spaces-02);
+  flex-wrap: wrap;
+  margin-top: var(--spaces-05);
+}
+
+.project-index__member-list > * {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.project-index__member {
+}
+
+.project-index__member-add {
+  --size: 2.5rem;
+  --border-size: 2px;
+  border-radius: 9999px;
+  color: var(--colors-gray-11);
+  border: 2px solid currentColor;
+  width: var(--size);
+  height: var(--size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-index__member-add svg {
+  width: calc(var(--size) - var(--spaces-04));
+  height: calc(var(--size) - var(--spaces-04));
+}
+
+@media (--viewport-lg) {
+  .project-index__member-add {
+    --size: 3rem;
+  }
+
+  .project-index__member-add svg {
+    width: calc(var(--size) - var(--spaces-05));
+    height: calc(var(--size) - var(--spaces-05));
+  }
+}
+
+.project-index__section-heading {
+  margin-bottom: var(--spaces-04);
+}
+
+.project-index__edit-form-wrapper,
+.project-index__edit-form-inner,
+.project-index__member-form-wrapper {
+  display: flex;
+  flex: 0 0 100%;
+  flex-direction: column;
+  gap: var(--spaces-04);
+}
+
+.project-index__edit-form-wrapper > *,
+.project-index__edit-form-inner > *,
+.project-index__member-form-wrapper > * {
+  width: 100%;
+  flex: 0 0 100%;
+}
+
+.project-index__todolists {
+  --item-padding: var(--spaces-04);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaces-03);
+}
+
+.project-index__todolists > * {
+  width: 100%;
+}
+
+@media (--viewport-sm) {
+  .project-index__todolists {
+    --item-padding: var(--spaces-04);
+  }
+}
+
+.project-index__todolists-item {
+  position: relative;
+}
+
+.project-index__todolist-item--more a {
+  display: inline-block;
+  font-size: var(--font-sizes-sm);
+  font-weight: bold;
+  margin-left: var(--spaces-02);
+}
+
+.project-index__todolist-box {
+  display: flex;
+  flex-direction: column;
+  padding: var(--item-padding);
+  height: 100%;
+}
+
+.project-index__todolist-link {
+  display: block;
+  color: unset;
+  text-decoration: none;
+}
+
+.project-index__todolist-name {
+  width: calc(100% - 2rem);
+  font-weight: bold;
+}
+
+.project-index__create-link {
+  --border-size: 4px;
+  display: block;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+  border: 4px dotted currentColor;
+  padding: calc(var(--item-padding) - var(--border-size));
+  color: var(--colors-gray-12);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.project-index__create-link:hover {
+  color: var(--colors-gray-14);
+}
+
+.project-index__flexer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaces-04);
+}
+
+@media (--viewport-lg) {
+  .project-index__flexer {
+    flex-direction: row;
+  }
+}
+
+.project-index__flexer > * {
+  width: 100%;
+}
+
+@media (--viewport-lg) {
+  .project-index__flexer > * {
+    height: 100%;
+  }
+}
