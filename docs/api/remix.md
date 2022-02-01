@@ -758,8 +758,9 @@ Loads data from a route loader.
 ```tsx
 const fetcher = useFetcher();
 React.useEffect(() => {
-  if (fetcher.type === 'init')
+  if (fetcher.type === 'init') {
     fetcher.load('/some/route');
+  }
 }, [fetcher]);
 fetcher.data; // the data from the loader
 ```
