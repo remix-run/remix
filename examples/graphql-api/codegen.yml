@@ -1,0 +1,19 @@
+###############################################################################
+#
+#   CODE GENERATOR
+#       https://www.graphql-code-generator.com/docs/getting-started/index
+#
+###############################################################################
+overwrite: true
+schema:
+  - "https://rickandmortyapi.com/graphql"
+
+generates:
+  app/generated/types.ts:
+    config:
+      avoidOptionals: true
+      useImplementingTypes: true
+      useTypeImports: true
+    plugins:
+      - typescript
+      - typescript-operations
