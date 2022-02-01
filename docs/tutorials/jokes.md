@@ -61,7 +61,7 @@ You can follow along with this tutorial on [CodeSandbox](https://codesandbox.com
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor ([VSCode](https://code.visualstudio.com/) is a nice one)
 
-If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io) (note, currently hosting sqlite on fly will cost a few bucks a month).
+If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io).
 
 We'll also be executing commands in your system command line/terminal interface. So you'll want to be familiar with that.
 
@@ -6082,9 +6082,9 @@ Here's a demonstration of what that experience looks like:
 
 I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`prisma`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
 
-<docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
-
 💿 Before proceeding, you're going to need to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
+
+<docs-info>Fly.io asks you a credit card number at account creation (see why in [their blog article](https://fly.io/blog/free-postgres/#a-note-about-credit-cards)) but there are free tiers that cover the needs of this app hosted as a simple side project.</docs-info>
 
 💿 Once you've done that, run this command from within your project directory:
 
@@ -6102,7 +6102,7 @@ Detected a Remix app
 Automatically selected personal organization: Kent C. Dodds
 ? Select region: dfw (Dallas, Texas (US))
 Created app remix-jokes in organization personal
-Created a 10GB volume vol_18l524yj27947zmp in the dfw region
+Created a 1GB volume vol_18l524yj27947zmp in the dfw region
 Wrote config file fly.toml
 
 This launch configuration uses SQLite on a single, dedicated volume. It will not scale beyond a single VM. Look into 'fly postgres' for a more robust production database.
@@ -6115,7 +6115,7 @@ You'll want to choose a different app name because I already took `remix-jokes` 
 
 It also allowed you to select a region, I recommend choosing one that's close to you. If you decide to deploy a real app on Fly in the future, you may decide to scale up your fly to multiple regions.
 
-Fly also detected that this project is using sqlite with prisma and created a persistence volume for us (this is the part that costs money).
+Fly also detected that this project is using sqlite with prisma and created a persistence volume for us.
 
 We don't want to deploy right now because we have an environment variable we need to set! So choose "No".
 
