@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { spawnSync } from "child_process";
+import crypto from "crypto";
 import toml from "@iarna/toml";
 
 const PROJECT_DIR = process.cwd();
@@ -11,7 +12,9 @@ const FLY_TOML_PRODUCTION_PATH = path.join(PROJECT_DIR, "fly.production.toml");
 const FLY_TOML_STAGING_PATH = path.join(PROJECT_DIR, "fly.staging.toml");
 const REPLACER = "[YOUR_APP_NAME]";
 
-const APP_NAME = path.basename(path.resolve(PROJECT_DIR));
+const DIR_NAME = path.basename(path.resolve(PROJECT_DIR));
+const SUFFIX = crypto.randomBytes(2).toString("hex");
+const APP_NAME = DIR_NAME + "-" + SUFFIX;
 
 async function main() {
   const [prodContent, stagingContent, readme, pkgJSONContent] =
@@ -33,7 +36,7 @@ async function main() {
 
   pkgJSON.devDependencies = Object.fromEntries(
     Object.entries(pkgJSON.devDependencies).filter(
-      ([key]) => key !== "@iarna/toml"
+      ([key]) => !["@iarna/toml"].includes(key)
     )
   );
 
@@ -49,7 +52,7 @@ async function main() {
     stdio: "inherit"
   });
 
-  fs.rm(THIS_FILE_PATH);
+  await fs.rm(THIS_FILE_PATH);
 }
 
 try {

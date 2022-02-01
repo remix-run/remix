@@ -4,7 +4,7 @@
 
 ## Before you get started
 
-Note apps on Fly require a globally unique name, in this repo our initializer script will use the name of the current directory. Run this command to update relevant files with the name of your app (the current directory)
+Note apps on Fly require a globally unique name, in this repo our initializer script will use the name of the current directory, plus 4 random characters, you can change this at anytime BEFORE you deploy. Run this command to update relevant files with the name of your app (the current directory)
 
 ```sh
 node scripts/init.mjs
