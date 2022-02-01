@@ -26,6 +26,11 @@ try {
   // add cypress to the project
   await Promise.all([
     fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/.npmrc"),
+      path.join(PROJECT_DIR, ".npmrc")
+    ),
+
+    fse.copy(
       path.join(process.cwd(), "scripts/deployment-test/cypress"),
       path.join(PROJECT_DIR, "cypress")
     ),
