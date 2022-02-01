@@ -67,16 +67,6 @@ try {
   flyToml.env.PORT = "8080";
   flyToml.services = flyToml.services || [];
   flyToml.services[0].internal_port = "8080";
-  flyToml.services[0].http_checks = flyToml.services[0].http_checks || [];
-  flyToml.services[0].http_checks[0] = {
-    interval: 10000,
-    grace_period: "5s",
-    method: "get",
-    path: "/",
-    protocol: "http",
-    timeout: 2000,
-    tls_skip_verify: false
-  };
 
   await fse.writeFile(flyTomlPath, toml.stringify(flyToml));
   let flyUrl = `https://${flyToml.app}.fly.dev`;
@@ -96,7 +86,9 @@ try {
 
   // fly deployments can take a sec to start
   // ... or a minute...
-  await new Promise(resolve => setTimeout(() => resolve(), 60_000));
+  // ... or a few minutes...
+  console.log(`Fly app deployed, waiting for dns...`);
+  await new Promise(resolve => setTimeout(() => resolve(), 60_000 * 5));
 
   // run cypress against the deployed server
   runCypress(PROJECT_DIR, false, flyUrl);
