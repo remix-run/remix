@@ -5,13 +5,7 @@
   "scripts": {
     "postinstall": "node scripts/install_remix.js && node node_modules/@remix-run/dev/cli.js setup",
     "build": "node node_modules/@remix-run/dev/cli.js build",
-<<<<<<< HEAD
     "dev": "pm2-dev pm2.config.js",
-=======
-    "predev": "yarn run install_remix",
-    "dev": "node node_modules/@remix-run/dev/cli.js build && pm2-dev pm2.config.js",
-    "prestart": "yarn run install_remix",
->>>>>>> dev
     "start": "node ./build",
     "routes": "node node_modules/@remix-run/dev/cli.js routes"
   },
