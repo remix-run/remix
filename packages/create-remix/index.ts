@@ -8,6 +8,7 @@ export type Server =
   | "arc"
   | "cloudflare-workers"
   | "cloudflare-pages"
+  | "deno"
   | "express"
   | "fly"
   | "netlify"

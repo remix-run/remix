@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as fse from "fs-extra";
+import getPort from "get-port";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -22,7 +23,8 @@ export type ServerBuildTarget =
   | "netlify"
   | "vercel"
   | "cloudflare-pages"
-  | "cloudflare-workers";
+  | "cloudflare-workers"
+  | "deno";
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
@@ -259,6 +261,7 @@ export async function readConfig(
   switch (appConfig.serverBuildTarget) {
     case "cloudflare-pages":
     case "cloudflare-workers":
+    case "deno":
       serverModuleFormat = "esm";
       serverPlatform = "neutral";
       break;
@@ -322,7 +325,7 @@ export async function readConfig(
       path.join("public", "build")
   );
 
-  let devServerPort = appConfig.devServerPort || 8002;
+  let devServerPort = await getPort({ port: appConfig.devServerPort || 8002 });
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let defaultPublicPath = "/build/";

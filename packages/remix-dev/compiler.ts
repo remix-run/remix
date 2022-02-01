@@ -356,6 +356,7 @@ async function createBrowserBuild(
     sourcemap: options.sourcemap,
     metafile: true,
     incremental: options.incremental,
+    mainFields: ["browser", "module", "main"],
     treeShaking: true,
     minify: options.mode === BuildMode.Production,
     entryNames: "[dir]/[name]-[hash]",
@@ -363,7 +364,10 @@ async function createBrowserBuild(
     assetNames: "_assets/[name]-[hash]",
     publicPath: config.publicPath,
     define: {
-      "process.env.NODE_ENV": JSON.stringify(options.mode)
+      "process.env.NODE_ENV": JSON.stringify(options.mode),
+      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+        config.devServerPort
+      )
     },
     plugins: [
       mdxPlugin(config),
@@ -439,7 +443,10 @@ async function createServerBuild(
       assetNames: "_assets/[name]-[hash]",
       publicPath: config.publicPath,
       define: {
-        "process.env.NODE_ENV": JSON.stringify(options.mode)
+        "process.env.NODE_ENV": JSON.stringify(options.mode),
+        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+          config.devServerPort
+        )
       },
       plugins
     })

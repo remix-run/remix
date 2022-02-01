@@ -2,7 +2,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/se
 import type { ServerBuild } from "@remix-run/server-runtime";
 // @ts-expect-error
 import * as path from "https://deno.land/std/path/mod.ts";
-import mime from "mime";
+import { getType } from "mime";
 
 function defaultCacheControl(url: URL, assetsPublicPath: string = "/build/") {
   if (url.pathname.startsWith(assetsPublicPath)) {
@@ -52,7 +52,7 @@ export async function serveStaticFiles(
   let url = new URL(request.url);
 
   let headers = new Headers();
-  let contentType = mime.getType(url.pathname);
+  let contentType = getType(url.pathname);
   if (contentType) {
     headers.set("Content-Type", contentType);
   }
@@ -65,7 +65,6 @@ export async function serveStaticFiles(
     headers.set("Cache-Control", defaultCacheControl(url, assetsPublicPath));
   }
 
-  // @ts-expect-error
   let file = await Deno.readFile(path.join(publicDir, url.pathname));
 
   return new Response(file, { headers });
@@ -94,9 +93,9 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
   return async (request: Request) => {
     try {
       return await serveStaticFiles(request, staticFiles);
-    } catch (e: any) {
-      if (e.code !== "EISDIR" && e.code !== "ENOENT") {
-        throw e;
+    } catch (error: any) {
+      if (error.code !== "EISDIR" && error.code !== "ENOENT") {
+        throw error;
       }
     }
 
