@@ -8,7 +8,7 @@ import { toLogicalID } from "@architect/utils";
 import {
   sha,
   updatePackageConfig,
-  spawnOpts,
+  getSpawnOpts,
   runCypress,
   addCypress
 } from "./_shared.mjs";
@@ -46,31 +46,32 @@ async function getArcDeployment() {
 try {
   await createNewApp();
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress"),
-    path.join(PROJECT_DIR, "cypress")
-  );
+  await Promise.all([
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress"),
+      path.join(PROJECT_DIR, "cypress")
+    ),
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-    path.join(PROJECT_DIR, "cypress.json")
-  );
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
+      path.join(PROJECT_DIR, "cypress.json")
+    ),
 
-  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
 
-  await updatePackageConfig(PROJECT_DIR, config => {
-    config.devDependencies["@architect/architect"] = "latest";
-  });
+    updatePackageConfig(PROJECT_DIR, config => {
+      config.devDependencies["@architect/architect"] = "latest";
+    })
+  ]);
 
-  // change to the project directory
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
@@ -94,7 +95,7 @@ try {
   }
 
   // run cypress against the deployed server
-  runCypress(false, deployment.ApiEndpoint);
+  runCypress(PROJECT_DIR, false, deployment.ApiEndpoint);
 
   process.exit(0);
 } catch (error) {

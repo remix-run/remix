@@ -32,9 +32,15 @@ async function addCypress(directory, url) {
   });
 }
 
-let spawnOpts = { stdio: "inherit" };
+function getSpawnOpts(dir) {
+  return {
+    cwd: dir,
+    stdio: "inherit"
+  };
+}
 
-function runCypress(dev, url) {
+function runCypress(dir, dev, url) {
+  let spawnOpts = getSpawnOpts(dir);
   let cypressSpawnOpts = {
     ...spawnOpts,
     env: { ...process.env, CYPRESS_BASE_URL: url }
@@ -65,7 +71,7 @@ function runCypress(dev, url) {
 export {
   sha,
   updatePackageConfig,
-  spawnOpts,
+  getSpawnOpts,
   runCypress,
   addCypress,
   getRootPackageJson

@@ -4,7 +4,7 @@ import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 
-import { addCypress, runCypress, sha, spawnOpts } from "./_shared.mjs";
+import { addCypress, runCypress, sha, getSpawnOpts } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-cf-pages-${sha}`;
@@ -108,14 +108,14 @@ try {
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
 
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   spawnSync("git", ["init"], spawnOpts);
   spawnSync(
@@ -154,7 +154,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 60_000 * 5));
 
   // run cypress against the cloudflare pages server
-  runCypress(false, `https://${APP_NAME}.pages.dev`);
+  runCypress(PROJECT_DIR, false, `https://${APP_NAME}.pages.dev`);
 
   process.exit(0);
 } catch (error) {
