@@ -82,7 +82,7 @@ async function run() {
         { name: "Vercel", value: "vercel" },
         { name: "Cloudflare Pages", value: "cloudflare-pages" },
         { name: "Cloudflare Workers", value: "cloudflare-workers" },
-        { name: "Deno", value: "deno" },
+        { name: "Deno", value: "deno" }
       ]
     },
     {
