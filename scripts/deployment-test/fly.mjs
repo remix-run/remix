@@ -67,6 +67,17 @@ try {
   flyToml.env.PORT = "8080";
   flyToml.services = flyToml.services || [];
   flyToml.services[0].internal_port = "8080";
+  flyToml.services[0].http_checks = flyToml.services[0].http_checks || [];
+  flyToml.services[0].http_checks[0] = {
+    interval: 10000,
+    grace_period: "5s",
+    method: "get",
+    path: "/",
+    protocol: "http",
+    timeout: 2000,
+    tls_skip_verify: false
+  };
+
   await fse.writeFile(flyTomlPath, toml.stringify(flyToml));
   let flyUrl = `https://${flyToml.app}.fly.dev`;
   console.log(`Fly app url: ${flyUrl}`);
