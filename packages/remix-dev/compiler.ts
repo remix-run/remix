@@ -397,19 +397,18 @@ async function createServerBuild(
     };
   }
 
-  let plugins: esbuild.Plugin[] = [];
-  if (config.serverPlatform !== "node") {
-    plugins.push(NodeModulesPolyfillPlugin());
-  }
-
-  plugins.push(
+  let plugins: esbuild.Plugin[] = [
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client\.[tj]sx?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulesPlugin(config),
     serverAssetsPlugin(browserManifestPromiseRef),
     serverBareModulesPlugin(config, dependencies)
-  );
+  ];
+
+  if (config.serverPlatform !== "node") {
+    plugins.push(NodeModulesPolyfillPlugin());
+  }
 
   return esbuild
     .build({
