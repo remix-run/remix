@@ -3,14 +3,8 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import {
-  createUserSession,
-  getSession,
-  getUserId,
-  sessionStorage
-} from "~/session.server";
-import { getUserByEmail, verifyLogin } from "~/models/user";
-import { bcrypt } from "~/db.server";
+import { createUserSession, getUserId } from "~/session.server";
+import { verifyLogin } from "~/models/user";
 
 const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
@@ -69,14 +63,18 @@ function LoginPage() {
       <Form method="post">
         <label>
           <span>Email</span>
-          <input type="email" name="email" />
+          <input type="email" name="email" autoComplete="email" />
           {actionData?.errors?.email && (
             <Alert style={{ color: "red" }}>{actionData.errors.email}</Alert>
           )}
         </label>
         <label>
           <span>Password</span>
-          <input type="password" name="password" />
+          <input
+            type="password"
+            name="password"
+            autoComplete="current-password"
+          />
           {actionData?.errors?.password && (
             <Alert style={{ color: "red" }}>{actionData.errors.password}</Alert>
           )}

@@ -65,14 +65,14 @@ function JoinPage() {
       <Form method="post">
         <label>
           <span>Email</span>
-          <input type="email" name="email" />
+          <input type="email" name="email" autoComplete="email" />
           {validation?.errors?.email && (
             <Alert style={{ color: "red" }}>{validation.errors.email}</Alert>
           )}
         </label>
         <label>
           <span>Password</span>
-          <input type="password" name="password" />
+          <input type="password" name="password" autoComplete="new-password" />
           {validation?.errors?.password && (
             <Alert style={{ color: "red" }}>{validation.errors.password}</Alert>
           )}
