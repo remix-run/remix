@@ -1,4 +1,5 @@
 module.exports = {
+  modulePathIgnorePatterns: ["<rootDir>/examples"],
   projects: [
     {
       displayName: "create-remix",
