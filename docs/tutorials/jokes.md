@@ -5412,7 +5412,7 @@ This is what [Resource Routes](../guides/resource-routes) are for. I think it'd 
 
 <docs-info>Believe it or not, you've actually already made one of these. Check out your logout route! No UI necessary because it's just there to handle mutations and redirect lost souls.</docs-info>
 
-For this one, you'll probably want to at least peak at the example unless you want to go read up on the RSS spec 😅.
+For this one, you'll probably want to at least peek at the example unless you want to go read up on the RSS spec 😅.
 
 💿 Make a `/jokes.rss` route.
 
