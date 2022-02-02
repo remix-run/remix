@@ -72,7 +72,7 @@ async function createApp({
   let serverTemplate = path.resolve(
     __dirname,
     "templates",
-    stack ? stack : server
+    stack ? `${stack}-stack` : server
   );
   if (fse.existsSync(serverTemplate)) {
     await fse.copy(serverTemplate, projectDir, { overwrite: true });
@@ -88,9 +88,16 @@ async function createApp({
   }
 
   // rename dotfiles
-  await fse.move(
-    path.join(projectDir, "gitignore"),
-    path.join(projectDir, ".gitignore")
+  let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
+  await Promise.all(
+    dotfiles.map(async dotfile => {
+      if (fse.existsSync(path.join(projectDir, dotfile))) {
+        return fse.rename(
+          path.join(projectDir, dotfile),
+          path.join(projectDir, `.${dotfile}`)
+        );
+      }
+    })
   );
 
   // merge package.jsons
