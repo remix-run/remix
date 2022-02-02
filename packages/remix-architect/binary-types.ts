@@ -62,7 +62,7 @@ let binaryTypes = [
 
 function isBinaryType(contentType: string | null | undefined) {
   if (!contentType) return false;
-  return binaryTypes.includes(contentType);
+  return binaryTypes.some(t => contentType.includes(t));
 }
 
 export { isBinaryType };

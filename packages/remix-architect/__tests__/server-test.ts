@@ -80,7 +80,9 @@ describe("architect createRequestHandler", () => {
 
     it("handles requests", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async req => {
-        return new Response(`URL: ${new URL(req.url).pathname}`);
+        return new Response(`URL: ${new URL(req.url).pathname}`, {
+          headers: { "content-type": "text/plain" }
+        });
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
@@ -317,7 +319,7 @@ describe("sendRemixResponse", () => {
     let json = JSON.stringify({ foo: "bar" });
     let response = new NodeResponse(json, {
       headers: {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "content-length": json.length.toString()
       }
     });

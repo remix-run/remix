@@ -128,27 +128,19 @@ export async function sendRemixResponse(
   }
 
   let isBinary = isBinaryType(response.headers.get("content-type"));
-
-  let body = isBinary
-    ? (await bufferStream(response.body)).toString()
-    : await response.text();
+  let isString = typeof response.body === "string";
+  let isBuffer = response.body && response.body instanceof Buffer;
+  let isBase64Encoded = isBuffer || (isBinary && isString);
+  let body =
+    isBuffer && isBinary
+      ? Buffer.from(response.body as any).toString("base64")
+      : await response.text();
 
   return {
     statusCode: response.status,
     headers: Object.fromEntries(response.headers),
     cookies,
     body,
-    isBase64Encoded: isBinary
+    isBase64Encoded
   };
-}
-
-function bufferStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
-  return new Promise((accept, reject) => {
-    let chunks: Array<any> = [];
-
-    stream
-      .on("error", reject)
-      .on("data", chunk => chunks.push(chunk))
-      .on("end", () => accept(Buffer.concat(chunks)));
-  });
 }

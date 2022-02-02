@@ -53,7 +53,9 @@ describe("netlify createRequestHandler", () => {
 
     it("handles requests", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async req => {
-        return new Response(`URL: ${new URL(req.url).pathname}`);
+        return new Response(`URL: ${new URL(req.url).pathname}`, {
+          headers: { "content-type": "text/plain" }
+        });
       });
 
       // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
