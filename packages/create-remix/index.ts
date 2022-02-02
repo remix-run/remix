@@ -15,12 +15,14 @@ export type Server =
   | "remix"
   | "vercel";
 
-export type Stack = "fly";
+export type Stack = "fly-stack";
 
-export enum AppType {
-  basic = "basic",
-  stack = "stack"
-}
+export let appType = {
+  basic: "basic",
+  stack: "stack"
+} as const;
+
+export type AppType = typeof appType[keyof typeof appType];
 
 export type Lang = "ts" | "js";
 
@@ -72,7 +74,7 @@ async function createApp({
   let serverTemplate = path.resolve(
     __dirname,
     "templates",
-    stack ? `${stack}-stack` : server
+    stack ? stack : server
   );
   if (fse.existsSync(serverTemplate)) {
     await fse.copy(serverTemplate, projectDir, { overwrite: true });

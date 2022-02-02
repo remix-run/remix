@@ -3,9 +3,8 @@ import chalkAnimation from "chalk-animation";
 import inquirer from "inquirer";
 import meow from "meow";
 
-import type { Server, Stack } from ".";
-import type { Lang } from ".";
-import { AppType } from ".";
+import type { Lang, Server, Stack } from ".";
+import { appType } from ".";
 import { createApp } from ".";
 
 const help = `
@@ -66,14 +65,14 @@ async function run() {
 
   let answers = await inquirer.prompt<
     | {
-        appType: AppType.basic;
+        appType: "basic";
         stack?: never;
         server: Server;
         lang: Lang;
         install: boolean;
       }
     | {
-        appType: AppType.stack;
+        appType: "stack";
         stack: Stack;
         server?: never;
         install: boolean;
@@ -100,9 +99,9 @@ async function run() {
       message: "Where do you want to deploy your stack?",
       loop: false,
       when(answers) {
-        return answers.appType === AppType.stack;
+        return answers.appType === appType.stack;
       },
-      choices: [{ name: "Fly.io", value: "fly" }]
+      choices: [{ name: "Fly.io", value: "fly-stack" }]
     },
     {
       name: "server",
@@ -111,7 +110,7 @@ async function run() {
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
       when(answers) {
-        return answers.appType === AppType.basic;
+        return answers.appType === appType.basic;
       },
       choices: [
         { name: "Remix App Server", value: "remix" },
@@ -130,7 +129,7 @@ async function run() {
       type: "list",
       message: "TypeScript or JavaScript?",
       when(answers) {
-        return answers.appType === AppType.basic;
+        return answers.appType === appType.basic;
       },
       choices: [
         { name: "TypeScript", value: "ts" },
