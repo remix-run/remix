@@ -47,11 +47,11 @@ type CreateAppArgs =
 async function createApp({
   projectDir,
   lang,
-  server,
-  stack,
   install,
-  quiet
+  quiet,
+  ...rest
 }: CreateAppArgs) {
+  let server = rest.stack ? rest.stack : rest.server;
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -71,11 +71,7 @@ async function createApp({
   await fse.copy(sharedTemplate, projectDir);
 
   // copy the server template
-  let serverTemplate = path.resolve(
-    __dirname,
-    "templates",
-    stack ? stack : server
-  );
+  let serverTemplate = path.resolve(__dirname, "templates", server);
   if (fse.existsSync(serverTemplate)) {
     await fse.copy(serverTemplate, projectDir, { overwrite: true });
   }
