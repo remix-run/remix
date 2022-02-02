@@ -8,7 +8,8 @@ import {
 import type {
   APIGatewayProxyEventHeaders,
   APIGatewayProxyEventV2,
-  APIGatewayProxyHandlerV2
+  APIGatewayProxyHandlerV2,
+  APIGatewayProxyStructuredResultV2
 } from "aws-lambda";
 import type {
   AppLoadContext,
@@ -64,10 +65,49 @@ export function createRequestHandler({
   };
 }
 
+export function createRemixRequest(
+  event: APIGatewayProxyEventV2,
+  abortController?: AbortController
+): NodeRequest {
+  let host = event.headers["x-forwarded-host"] || event.headers.host;
+  let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
+  let url = new URL(event.rawPath + search, `https://${host}`);
+
+  return new NodeRequest(url.href, {
+    method: event.requestContext.http.method,
+    headers: createRemixHeaders(event.headers, event.cookies),
+    body:
+      event.body && event.isBase64Encoded
+        ? Buffer.from(event.body, "base64").toString()
+        : event.body,
+    abortController,
+    signal: abortController?.signal
+  });
+}
+
+export function createRemixHeaders(
+  requestHeaders: APIGatewayProxyEventHeaders,
+  requestCookies?: string[]
+): NodeHeaders {
+  let headers = new NodeHeaders();
+
+  for (let [header, value] of Object.entries(requestHeaders)) {
+    if (value) {
+      headers.append(header, value);
+    }
+  }
+
+  if (requestCookies) {
+    headers.append("Cookie", requestCookies.join("; "));
+  }
+
+  return headers;
+}
+
 export async function sendRemixResponse(
   response: NodeResponse,
   abortController: AbortController
-) {
+): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
   // Arc/AWS API Gateway will send back set-cookies outside of response headers.
@@ -100,45 +140,6 @@ export async function sendRemixResponse(
     body,
     isBase64Encoded: isBinary
   };
-}
-
-export function createRemixHeaders(
-  requestHeaders: APIGatewayProxyEventHeaders,
-  requestCookies?: string[]
-): NodeHeaders {
-  let headers = new NodeHeaders();
-
-  for (let [header, value] of Object.entries(requestHeaders)) {
-    if (value) {
-      headers.append(header, value);
-    }
-  }
-
-  if (requestCookies) {
-    headers.append("Cookie", requestCookies.join("; "));
-  }
-
-  return headers;
-}
-
-export function createRemixRequest(
-  event: APIGatewayProxyEventV2,
-  abortController?: AbortController
-): NodeRequest {
-  let host = event.headers["x-forwarded-host"] || event.headers.host;
-  let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
-  let url = new URL(event.rawPath + search, `https://${host}`);
-
-  return new NodeRequest(url.href, {
-    method: event.requestContext.http.method,
-    headers: createRemixHeaders(event.headers, event.cookies),
-    body:
-      event.body && event.isBase64Encoded
-        ? Buffer.from(event.body, "base64").toString()
-        : event.body,
-    abortController,
-    signal: abortController?.signal
-  });
 }
 
 function bufferStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
