@@ -14,16 +14,41 @@ export type Server =
   | "remix"
   | "vercel";
 
-export type Lang = "ts" | "js";
+export type Stack = "fly";
 
-interface CreateAppArgs {
-  projectDir: string;
-  lang: Lang;
-  server: Server;
-  install: boolean;
+export enum AppType {
+  basic = "basic",
+  stack = "stack"
 }
 
-async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
+export enum Lang {
+  ts = "ts",
+  js = "js"
+}
+
+type CreateAppArgs =
+  | {
+      projectDir: string;
+      lang: Lang;
+      server: Server;
+      stack?: never;
+      install: boolean;
+    }
+  | {
+      projectDir: string;
+      lang: Lang;
+      server?: never;
+      stack: Stack;
+      install: boolean;
+    };
+
+async function createApp({
+  projectDir,
+  lang,
+  server,
+  stack,
+  install
+}: CreateAppArgs) {
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -43,7 +68,11 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
   await fse.copy(sharedTemplate, projectDir);
 
   // copy the server template
-  let serverTemplate = path.resolve(__dirname, "templates", server);
+  let serverTemplate = path.resolve(
+    __dirname,
+    "templates",
+    stack ? stack : server
+  );
   if (fse.existsSync(serverTemplate)) {
     await fse.copy(serverTemplate, projectDir, { overwrite: true });
   }
