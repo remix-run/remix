@@ -14,7 +14,7 @@ module.exports = {
       displayName: "integration",
       testEnvironment: "node",
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
-      globalSetup: "<rootDir>/integration/global-setup.ts",
+      globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
       setupFilesAfterEnv: [
         "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts"
       ]
