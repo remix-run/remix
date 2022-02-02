@@ -372,7 +372,8 @@ async function createBrowserBuild(
     plugins: [
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/)
+      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+      NodeModulesPolyfillPlugin()
     ]
   });
 }

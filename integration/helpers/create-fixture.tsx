@@ -63,12 +63,20 @@ export async function createFixture(init: FixtureInit) {
     });
   };
 
+  let getBrowserAsset = async (asset: string) => {
+    return fs.readFile(
+      path.join(projectDir, "public", asset.replace(/^\//, "")),
+      "utf8"
+    );
+  };
+
   return {
     projectDir,
     build: app,
     requestDocument,
     requestData,
-    postDocument
+    postDocument,
+    getBrowserAsset
   };
 }
 
@@ -249,4 +257,8 @@ export function selectHtml(source: string, selector: string) {
 
 export function prettyHtml(source: string): string {
   return prettier.format(source, { parser: "html" });
+}
+
+export function js(strings: TemplateStringsArray, ...args: any[]) {
+  return strings.reduce((acc, str, i) => acc + str + (args[i] || ""), "");
 }
