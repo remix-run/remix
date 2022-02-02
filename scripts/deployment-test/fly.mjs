@@ -79,7 +79,11 @@ try {
   runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // deploy to fly
-  let flyDeployCommand = spawnSync("fly", ["deploy", "--remote-only"], spawnOpts);
+  let flyDeployCommand = spawnSync(
+    "fly",
+    ["deploy", "--remote-only"],
+    spawnOpts
+  );
   if (flyDeployCommand.status !== 0) {
     throw new Error("Deployment failed");
   }
