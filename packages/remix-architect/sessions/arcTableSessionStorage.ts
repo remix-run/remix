@@ -69,7 +69,7 @@ export function createArcTableSessionStorage({
           .map(x => x.toString(16).padStart(2, "0"))
           .join("");
 
-        if (await table.get({[props.idx]: id})) {
+        if (await table.get({ [props.idx]: id })) {
           continue;
         }
 
@@ -89,7 +89,7 @@ export function createArcTableSessionStorage({
     },
     async readData(id) {
       const table = await getTable();
-      let data = await table.get({[props.idx]: id});
+      let data = await table.get({ [props.idx]: id });
       if (data) {
         delete data[props.idx];
         if (props.ttl) delete data[props.ttl];

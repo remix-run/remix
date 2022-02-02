@@ -2202,11 +2202,11 @@ const sessionCookie = createCookie("__session", {
 const { getSession, commitSession, destroySession } =
   createArcTableSessionStorage({
     // The name of the table (should match app.arc)
-    table: 'sessions',
+    table: "sessions",
     // The name of the key used to store the session ID (should match app.arc)
-    idx: '_idx',
+    idx: "_idx",
     // The name of the key used to store the expiration time (should match app.arc)
-    ttl: '_ttl',
+    ttl: "_ttl",
     cookie: sessionCookie
   });
 
