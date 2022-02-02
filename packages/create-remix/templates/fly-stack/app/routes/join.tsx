@@ -30,7 +30,7 @@ const action: ActionFunction = async ({ request }) => {
 };
 
 const meta: MetaFunction = () => ({
-  title: "Join",
+  title: "Join"
 });
 
 function JoinPage() {
@@ -62,7 +62,7 @@ function JoinPage() {
         <Link
           to={{
             pathname: "/login",
-            search: returnTo ? `?returnTo=${returnTo}` : undefined,
+            search: returnTo ? `?returnTo=${returnTo}` : undefined
           }}
         >
           Already have an account?

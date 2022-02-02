@@ -25,7 +25,7 @@ const action: ActionFunction = async ({ request }) => {
 
   switch (actionType) {
     case "delete-note": {
-      let noteId = formData.get("noteId");
+      const noteId = formData.get("noteId");
       if (typeof noteId !== "string") {
         throw new Response("noteId must be a string", { status: 400 });
       }
@@ -87,7 +87,7 @@ function Index() {
         <p>No notes yet</p>
       ) : (
         <ul>
-          {data.notes.map((note) => (
+          {data.notes.map(note => (
             <li key={note.id}>
               <h3>{note.title}</h3>
               <p>{note.body}</p>
