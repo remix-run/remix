@@ -64,7 +64,7 @@ interface RemixEntryContextType {
   transitionManager: ReturnType<typeof createTransitionManager>;
 }
 
-const RemixEntryContext = React.createContext<
+export const RemixEntryContext = React.createContext<
   RemixEntryContextType | undefined
 >(undefined);
 
@@ -444,8 +444,8 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
         <RouterNavLink
           ref={forwardedRef}
           to={to}
-          {...prefetchHandlers}
           {...props}
+          {...prefetchHandlers}
         />
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
@@ -465,8 +465,8 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
         <RouterLink
           ref={forwardedRef}
           to={to}
-          {...prefetchHandlers}
           {...props}
+          {...prefetchHandlers}
         />
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
