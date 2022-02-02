@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix-app",
+  "name": "remix-auth-github",
   "description": "",
   "license": "",
   "scripts": {
