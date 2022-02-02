@@ -1,11 +1,14 @@
 import type { Session } from "remix";
-import { redirect } from "remix";
-import { createCookieSessionStorage } from "remix";
+import { redirect /*, createArcTableSessionStorage*/ } from "remix";
 import invariant from "tiny-invariant";
+import { createArcTableSessionStorage } from "../../../../../build/node_modules/@remix-run/architect";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
-const sessionStorage = createCookieSessionStorage({
+const sessionStorage = createArcTableSessionStorage({
+  table: "arc-sessions",
+  ttl: "_ttl",
+  idx: "_idx",
   cookie: {
     name: "__session",
     httpOnly: true,
