@@ -8,6 +8,7 @@ export type Server =
   | "arc"
   | "cloudflare-workers"
   | "cloudflare-pages"
+  | "deno"
   | "express"
   | "fly"
   | "netlify"
@@ -33,6 +34,7 @@ type CreateAppArgs =
       server: Server;
       stack?: never;
       install: boolean;
+      quiet?: boolean;
     }
   | {
       projectDir: string;
@@ -40,6 +42,7 @@ type CreateAppArgs =
       server?: never;
       stack: Stack;
       install: boolean;
+      quiet?: boolean;
     };
 
 async function createApp({
@@ -47,7 +50,8 @@ async function createApp({
   lang,
   server,
   stack,
-  install
+  install,
+  quiet
 }: CreateAppArgs) {
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
@@ -127,17 +131,19 @@ async function createApp({
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
-  } else {
-    console.log(
-      `💿 That's it! \`cd\` into "${path.relative(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
-    );
+  if (!quiet) {
+    if (projectDirIsCurrentDir) {
+      console.log(
+        `💿 That's it! Check the README for development and deploy instructions!`
+      );
+    } else {
+      console.log(
+        `💿 That's it! \`cd\` into "${path.relative(
+          process.cwd(),
+          projectDir
+        )}" and check the README for development and deploy instructions!`
+      );
+    }
   }
 }
 

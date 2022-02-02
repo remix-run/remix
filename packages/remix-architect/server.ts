@@ -99,9 +99,7 @@ export function createRemixHeaders(
   }
 
   if (requestCookies) {
-    for (let cookie of requestCookies) {
-      headers.append("Cookie", cookie);
-    }
+    headers.append("Cookie", requestCookies.join("; "));
   }
 
   return headers;

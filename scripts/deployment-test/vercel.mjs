@@ -3,7 +3,7 @@ import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 
-import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-vercel-${sha}`;
@@ -65,23 +65,25 @@ async function getVercelDeploymentUrl(projectId) {
 try {
   await createNewApp();
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress"),
-    path.join(PROJECT_DIR, "cypress")
-  );
+  await Promise.all([
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress"),
+      path.join(PROJECT_DIR, "cypress")
+    ),
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-    path.join(PROJECT_DIR, "cypress.json")
-  );
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
+      path.join(PROJECT_DIR, "cypress.json")
+    ),
 
-  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+  ]);
 
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // create a new project on vercel
   let project = await createVercelProject();
@@ -117,7 +119,7 @@ try {
 
   console.log(`Deployed to ${fullUrl}`);
 
-  runCypress(false, fullUrl);
+  runCypress(PROJECT_DIR, false, fullUrl);
 
   process.exit(0);
 } catch (error) {

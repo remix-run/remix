@@ -1,9 +1,10 @@
-const path = require("path");
-const cp = require("child_process");
+import * as path from "path";
+import type { ChildProcess } from "child_process";
+import { spawn } from "child_process";
 
-function installDeps(dir) {
+function installDeps(dir: string): Promise<void> {
   return new Promise((accept, reject) => {
-    cp.spawn("yarn", ["install"], {
+    spawn("yarn", ["install"], {
       cwd: dir,
       stdio: "inherit"
     })
@@ -14,9 +15,9 @@ function installDeps(dir) {
   });
 }
 
-function runBuild(dir) {
+function runBuild(dir: string): Promise<void> {
   return new Promise((accept, reject) => {
-    cp.spawn("yarn", ["build"], {
+    spawn("yarn", ["build"], {
       cwd: dir,
       stdio: "inherit"
     })
@@ -27,9 +28,9 @@ function runBuild(dir) {
   });
 }
 
-async function startServer(dir) {
+async function startServer(dir: string): Promise<ChildProcess> {
   return new Promise(accept => {
-    let proc = cp.spawn("yarn", ["start"], {
+    let proc = spawn("yarn", ["start"], {
       cwd: dir,
       stdio: "inherit"
     });
@@ -37,13 +38,15 @@ async function startServer(dir) {
     // Give the server some time to be ready.
     setTimeout(() => {
       accept(proc);
-    }, 200);
+    }, 2000);
   });
 }
 
-module.exports = async () => {
+export default async function () {
   let rootDir = path.dirname(__dirname);
   await installDeps(rootDir);
   await runBuild(rootDir);
+
+  // @ts-ignore
   global.testServerProc = await startServer(rootDir);
-};
+}
