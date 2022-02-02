@@ -4,7 +4,7 @@ import inquirer from "inquirer";
 import meow from "meow";
 
 import type { Server, Stack } from ".";
-import { Lang } from ".";
+import type { Lang } from ".";
 import { AppType } from ".";
 import { createApp } from ".";
 
@@ -148,7 +148,7 @@ async function run() {
   if (answers.stack) {
     await createApp({
       projectDir,
-      lang: Lang.ts,
+      lang: "ts",
       stack: answers.stack,
       install: answers.install
     });

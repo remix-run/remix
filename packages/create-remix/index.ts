@@ -22,10 +22,7 @@ export enum AppType {
   stack = "stack"
 }
 
-export enum Lang {
-  ts = "ts",
-  js = "js"
-}
+export type Lang = "ts" | "js";
 
 type CreateAppArgs =
   | {
