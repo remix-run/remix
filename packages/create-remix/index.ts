@@ -15,23 +15,43 @@ export type Server =
   | "remix"
   | "vercel";
 
+export type Stack = "fly-stack";
+
+export let appType = {
+  basic: "basic",
+  stack: "stack"
+} as const;
+
+export type AppType = typeof appType[keyof typeof appType];
+
 export type Lang = "ts" | "js";
 
-export interface CreateAppArgs {
-  projectDir: string;
-  lang: Lang;
-  server: Server;
-  install: boolean;
-  quiet?: boolean;
-}
+type CreateAppArgs =
+  | {
+      projectDir: string;
+      lang: Lang;
+      server: Server;
+      stack?: never;
+      install: boolean;
+      quiet?: boolean;
+    }
+  | {
+      projectDir: string;
+      lang: Lang;
+      server?: never;
+      stack: Stack;
+      install: boolean;
+      quiet?: boolean;
+    };
 
 async function createApp({
   projectDir,
   lang,
-  server,
   install,
-  quiet
+  quiet,
+  ...rest
 }: CreateAppArgs) {
+  let server = rest.stack ? rest.stack : rest.server;
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -66,9 +86,16 @@ async function createApp({
   }
 
   // rename dotfiles
-  await fse.move(
-    path.join(projectDir, "gitignore"),
-    path.join(projectDir, ".gitignore")
+  let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
+  await Promise.all(
+    dotfiles.map(async dotfile => {
+      if (fse.existsSync(path.join(projectDir, dotfile))) {
+        return fse.rename(
+          path.join(projectDir, dotfile),
+          path.join(projectDir, `.${dotfile}`)
+        );
+      }
+    })
   );
 
   // merge package.jsons

@@ -3,7 +3,8 @@ import chalkAnimation from "chalk-animation";
 import inquirer from "inquirer";
 import meow from "meow";
 
-import type { Server } from ".";
+import type { Lang, Server, Stack } from ".";
+import { appType } from ".";
 import { createApp } from ".";
 
 const help = `
@@ -62,17 +63,55 @@ async function run() {
         ).dir
   );
 
-  let answers = await inquirer.prompt<{
-    server: Server;
-    lang: "ts" | "js";
-    install: boolean;
-  }>([
+  let answers = await inquirer.prompt<
+    | {
+        appType: "basic";
+        stack?: never;
+        server: Server;
+        lang: Lang;
+        install: boolean;
+      }
+    | {
+        appType: "stack";
+        stack: Stack;
+        server?: never;
+        install: boolean;
+      }
+  >([
+    {
+      name: "appType",
+      type: "list",
+      message: "What type of app do you want to create?",
+      choices: [
+        {
+          name: "A pre-configured stack ready for production",
+          value: "stack"
+        },
+        {
+          name: "Just the basics",
+          value: "basic"
+        }
+      ]
+    },
+    {
+      name: "stack",
+      type: "list",
+      message: "Where do you want to deploy your stack?",
+      loop: false,
+      when(answers) {
+        return answers.appType === appType.stack;
+      },
+      choices: [{ name: "Fly.io", value: "fly-stack" }]
+    },
     {
       name: "server",
       type: "list",
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
+      when(answers) {
+        return answers.appType === appType.basic;
+      },
       choices: [
         { name: "Remix App Server", value: "remix" },
         { name: "Express Server", value: "express" },
@@ -89,6 +128,9 @@ async function run() {
       name: "lang",
       type: "list",
       message: "TypeScript or JavaScript?",
+      when(answers) {
+        return answers.appType === appType.basic;
+      },
       choices: [
         { name: "TypeScript", value: "ts" },
         { name: "JavaScript", value: "js" }
@@ -102,10 +144,19 @@ async function run() {
     }
   ]);
 
-  await createApp({
-    projectDir,
-    lang: answers.lang,
-    server: answers.server,
-    install: answers.install
-  });
+  if (answers.stack) {
+    await createApp({
+      projectDir,
+      lang: "ts",
+      stack: answers.stack,
+      install: answers.install
+    });
+  } else {
+    await createApp({
+      projectDir,
+      lang: answers.lang,
+      server: answers.server,
+      install: answers.install
+    });
+  }
 }
