@@ -1,7 +1,6 @@
 import type { Session } from "remix";
-import { redirect /*, createArcTableSessionStorage*/ } from "remix";
+import { redirect, createArcTableSessionStorage } from "remix";
 import invariant from "tiny-invariant";
-import { createArcTableSessionStorage } from "../../../../../build/node_modules/@remix-run/architect";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
