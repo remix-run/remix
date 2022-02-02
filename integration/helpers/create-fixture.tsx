@@ -27,6 +27,8 @@ interface FixtureInit {
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
+export let js = String.raw;
+
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let app: ServerBuild = await import(path.resolve(projectDir, "build"));
@@ -286,7 +288,7 @@ function writeTestFiles(init: FixtureInit, dir: string) {
 
 export async function getHtml(page: Page, selector?: string) {
   let html = await page.content();
-  return prettyHtml(selector ? selectHtml(html, selector) : html).trim();
+  return selector ? selectHtml(html, selector) : prettyHtml(html);
 }
 
 export function selectHtml(source: string, selector: string) {
@@ -296,7 +298,7 @@ export function selectHtml(source: string, selector: string) {
     throw new Error(`No element matches selector "${selector}"`);
   }
 
-  return cheerio.html(el);
+  return prettyHtml(cheerio.html(el)).trim();
 }
 
 export function prettyHtml(source: string): string {

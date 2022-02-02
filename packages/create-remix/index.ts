@@ -26,7 +26,7 @@ export type AppType = typeof appType[keyof typeof appType];
 
 export type Lang = "ts" | "js";
 
-type CreateAppArgs =
+export type CreateAppArgs =
   | {
       projectDir: string;
       lang: Lang;
