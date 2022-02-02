@@ -1,23 +1,18 @@
 # Remix Architect (AWS) Stack
 
+- [Remix Docs](https://remix.run/docs)
+
 ## Architect Setup
 
-When deploying to AWS Lambda with Architect, you'll need:
-
-- Architect (`arc`) CLI
-- AWS SDK
-
-Architect recommends installing these globally:
+1. Globally install Architect and the AWS SDK
 
 ```sh
-$ npm i -g @architect/architect@RC aws-sdk
+$ npm i -g @architect/architect aws-sdk
 ```
 
-## Stack Setup
-
-- Sign up for an AWS account. [AWS][signup]
-- Set up some database tables
-  - open up `app.arc` to get started
+2. [Sign up][signup] and login to your AWS account
+   - To login with the CLI, you'll need to generate `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, you can do so from your [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", and then download and open the credentials file.
+   - Next, run `aws configure` and paste in your credentials.
 
 ## Development
 
