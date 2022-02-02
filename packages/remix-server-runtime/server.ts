@@ -12,7 +12,12 @@ import { matchServerRoutes } from "./routeMatching";
 import { ServerMode, isServerMode } from "./mode";
 import type { ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
-import { json, isRedirectResponse, isCatchResponse } from "./responses";
+import {
+  json,
+  isRedirectResponse,
+  isCatchResponse,
+  isSkipRenderResponse
+} from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 /**
@@ -334,6 +339,7 @@ async function renderDocumentRequest({
     let error = result.status === "rejected" ? result.reason : undefined;
     let response = result.status === "fulfilled" ? result.value : undefined;
     let isRedirect = response ? isRedirectResponse(response) : false;
+    let isSkipRender = response ? isSkipRenderResponse(response) : false;
     let isCatch = response ? isCatchResponse(response) : false;
 
     // If a parent loader has already caught or error'd, bail because
@@ -342,12 +348,18 @@ async function renderDocumentRequest({
       break;
     }
 
-    // If there is a response and it's a redirect, do it unless there
+    // If there is a response and it's a redirect or it's marked to
+    // to skip the default render, return it immediately unless there
     // is an action error or catch state, those action boundary states
     // take precedence over loader sates, this means if a loader redirects
     // after an action catches or errors we won't follow it, and instead
     // render the boundary caused by the action.
-    if (!actionCatch && !actionError && response && isRedirect) {
+    if (
+      !actionCatch &&
+      !actionError &&
+      response &&
+      (isRedirect || isSkipRender)
+    ) {
       return response;
     }
 

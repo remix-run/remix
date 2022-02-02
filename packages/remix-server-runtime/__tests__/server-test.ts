@@ -788,6 +788,74 @@ describe("shared server runtime", () => {
       expect(entryContext.routeData).toEqual({});
     });
 
+    test("skip-render response returns from root loader", async () => {
+      let rootLoader = jest.fn(() => {
+        throw new Response(null, {
+          status: 400,
+          headers: { "X-Remix-Skip-Render": "yes" }
+        });
+      });
+      let indexLoader = jest.fn(() => {
+        return "route";
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader,
+          CatchBoundary: {}
+        },
+        "routes/index": {
+          parentId: "root",
+          index: true,
+          default: {},
+          loader: indexLoader
+        }
+      });
+      let handler = createRequestHandler(build, {}, ServerMode.Test);
+
+      let request = new Request(`${baseUrl}/`, { method: "get" });
+
+      let result = await handler(request);
+      expect(result.status).toBe(400);
+      expect(rootLoader.mock.calls.length).toBe(1);
+      expect(indexLoader.mock.calls.length).toBe(1);
+      expect(build.entry.module.default.mock.calls.length).toBe(0);
+    });
+
+    test("skip-render response returns from route loader", async () => {
+      let rootLoader = jest.fn(() => {
+        return "route";
+      });
+      let indexLoader = jest.fn(() => {
+        throw new Response(null, {
+          status: 400,
+          headers: { "X-Remix-Skip-Render": "yes" }
+        });
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader,
+          CatchBoundary: {}
+        },
+        "routes/index": {
+          parentId: "root",
+          index: true,
+          default: {},
+          loader: indexLoader
+        }
+      });
+      let handler = createRequestHandler(build, {}, ServerMode.Test);
+
+      let request = new Request(`${baseUrl}/`, { method: "get" });
+
+      let result = await handler(request);
+      expect(result.status).toBe(400);
+      expect(rootLoader.mock.calls.length).toBe(1);
+      expect(indexLoader.mock.calls.length).toBe(1);
+      expect(build.entry.module.default.mock.calls.length).toBe(0);
+    });
+
     test("thrown loader responses bubble up", async () => {
       let rootLoader = jest.fn(() => {
         return "root";

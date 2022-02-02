@@ -64,6 +64,10 @@ export function isCatchResponse(response: Response) {
   return response.headers.get("X-Remix-Catch") != null;
 }
 
+export function isSkipRenderResponse(response: Response) {
+  return response.headers.get("X-Remix-Skip-Render") != null;
+}
+
 export function extractData(response: Response): Promise<unknown> {
   let contentType = response.headers.get("Content-Type");
 
