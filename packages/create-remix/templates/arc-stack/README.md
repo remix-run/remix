@@ -21,6 +21,8 @@ $ echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 $ npm run dev
 ```
 
+> If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
+
 This starts your app in development mode, rebuilding assets on file changes.
 
 This is a pretty simple note-taking app, but it's a good example of how you can build a full stack app with Architect and Remix. The main functionality is creating users, logging in and out, and creating and deleting notes.
@@ -41,7 +43,7 @@ Prior to your first deployment, you'll need to do a few things:
 
 - Create a new [GitHub repo](https://repo.new)
 
-- Make sure you have your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` saved to your GitHub repo's secrets. To do this, you can go to your AWS [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", then you can copy those and add them to your repo's secrets.
+- Make sure you have your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` saved to your GitHub repo's secrets. You can re-use the ones you used for the AWS CLI or you can go to your AWS [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", then you can copy those and add them to your repo's secrets.
 
 Along with your AWS credentials, you'll also need to give your CloudFormation a `SESSION_SECRET` variable of its own for both staging and production environments.
 
@@ -49,6 +51,8 @@ Along with your AWS credentials, you'll also need to give your CloudFormation a 
 $ arc env staging SESSION_SECRET $(openssl rand -hex 32)
 $ arc env production SESSION_SECRET $(openssl rand -hex 32)
 ```
+
+> If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
 
 ## Where do I find my CloudFormation?
 
