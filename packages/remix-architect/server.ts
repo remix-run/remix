@@ -17,8 +17,8 @@ import type {
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { Response as NodeResponse } from "@remix-run/node";
-// @ts-expect-error - should we add this directly to our adapter?
-import binaryTypes from "@architect/functions/src/http/helpers/binary-types";
+
+import { isBinaryType } from "./binary-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -87,11 +87,7 @@ export async function sendRemixResponse(
     response.headers.set("Connection", "close");
   }
 
-  let isBinary: boolean = false;
-  let contentType = response.headers.get("content-type");
-  if (contentType) {
-    isBinary = binaryTypes.includes(contentType);
-  }
+  let isBinary = isBinaryType(response.headers.get("content-type"));
 
   let body = isBinary
     ? (await bufferStream(response.body)).toString()
