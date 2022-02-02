@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "client-only-components",
+  "name": "remix-example-client-only-components",
   "description": "",
   "license": "",
   "scripts": {

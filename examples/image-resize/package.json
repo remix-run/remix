@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "image-resize",
+  "name": "remix-example-image-resize",
   "description": "A image resize example",
   "author": "Leon Radley <leon>",
   "scripts": {

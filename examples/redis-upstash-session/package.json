@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "redis-upstash-session",
+  "name": "remix-example-redis-upstash-session",
   "description": "",
   "license": "",
   "scripts": {

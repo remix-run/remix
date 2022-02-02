@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "client-side-validation",
+  "name": "remix-example-client-side-validation",
   "description": "",
   "license": "",
   "scripts": {

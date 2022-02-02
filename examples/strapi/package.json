@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "strapi",
+  "name": "remix-example-strapi",
   "description": "",
   "license": "",
   "scripts": {

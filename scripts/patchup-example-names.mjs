@@ -11,7 +11,7 @@ dir.forEach(async name => {
     let pkgPath = path.join(fullPath, "package.json");
     let pkg = await fs.readFile(pkgPath);
     let obj = JSON.parse(pkg);
-    obj.name = name;
+    obj.name = `remix-example-${name}`;
     await fs.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
   }
 });

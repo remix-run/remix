@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "socket.io",
+  "name": "remix-example-socket.io",
   "description": "",
   "license": "",
   "scripts": {

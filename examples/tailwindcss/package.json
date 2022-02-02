@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "tailwindcss",
+  "name": "remix-example-tailwindcss",
   "description": "",
   "license": "",
   "scripts": {

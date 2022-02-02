@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "jokes",
+  "name": "remix-example-jokes",
   "description": "",
   "license": "",
   "prisma": {

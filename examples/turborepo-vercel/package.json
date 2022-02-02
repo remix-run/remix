@@ -1,5 +1,5 @@
 {
-  "name": "turborepo-vercel",
+  "name": "remix-example-turborepo-vercel",
   "version": "0.0.0",
   "private": true,
   "workspaces": [
