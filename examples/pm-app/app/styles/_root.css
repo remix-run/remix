@@ -1,0 +1,450 @@
+/* thank you https://www.radix-ui.com/colors 💚 */
+:root {
+  --hsl-white: 0 0% 100%;
+  --hsl-black: 0 0% 9%;
+
+  --hsl-gray-01: 0 0% 99%;
+  --hsl-gray-02: 0 0% 97.3%;
+  --hsl-gray-03: 0 0% 95.1%;
+  --hsl-gray-04: 0 0% 93%;
+  --hsl-gray-05: 0 0% 90.9%;
+  --hsl-gray-06: 0 0% 88.7%;
+  --hsl-gray-07: 0 0% 85.8%;
+  --hsl-gray-08: 0 0% 83.3%;
+  --hsl-gray-09: 0 0% 78%;
+  --hsl-gray-10: 0 0% 56.1%;
+  --hsl-gray-11: 0 0% 52.3%;
+  --hsl-gray-12: 0 0% 43.5%;
+  --hsl-gray-13: 0 0% 32%;
+  --hsl-gray-13: 0 0% 18.7%;
+  --hsl-gray-14: 0 0% 9%;
+
+  /* red */
+  --hsl-red-01: 10deg 100% 99.4%;
+  --hsl-red-02: 8deg 100% 98.4%;
+  --hsl-red-03: 8deg 100% 96.6%;
+  --hsl-red-04: 8deg 100% 94.3%;
+  --hsl-red-05: 8deg 92.8% 91%;
+  --hsl-red-06: 9deg 84.7% 86.3%;
+  --hsl-red-07: 10deg 77.3% 79.5%;
+  --hsl-red-08: 10deg 71.6% 71%;
+  --hsl-red-09: 10deg 78% 54%;
+  --hsl-red-10: 10deg 71.5% 50%;
+  --hsl-red-11: 10deg 82% 43.5%;
+  --hsl-red-12: 10deg 50% 13.5%;
+
+  --hsl-pink-01: 322deg 100% 99.4%;
+  --hsl-pink-02: 323deg 100% 98.4%;
+  --hsl-pink-03: 323deg 86.3% 96.5%;
+  --hsl-pink-04: 323deg 78.7% 94.2%;
+  --hsl-pink-05: 323deg 72.2% 91.1%;
+  --hsl-pink-06: 323deg 66.3% 86.6%;
+  --hsl-pink-07: 323deg 62% 80.1%;
+  --hsl-pink-08: 323deg 60.3% 72.4%;
+  --hsl-pink-09: 322deg 65% 54.5%;
+  --hsl-pink-10: 322deg 63.9% 50.7%;
+  --hsl-pink-11: 322deg 75% 46%;
+  --hsl-pink-12: 320deg 70% 13.5%;
+
+  --hsl-purple-01: 292deg 90% 99.4%;
+  --hsl-purple-02: 300deg 100% 98.6%;
+  --hsl-purple-03: 299deg 71.2% 96.4%;
+  --hsl-purple-04: 299deg 62% 93.8%;
+  --hsl-purple-05: 298deg 56.1% 90.5%;
+  --hsl-purple-06: 296deg 51.3% 85.8%;
+  --hsl-purple-07: 295deg 48.2% 78.9%;
+  --hsl-purple-08: 292deg 47.7% 70.8%;
+  --hsl-purple-09: 292deg 45% 51%;
+  --hsl-purple-10: 292deg 50.2% 46.9%;
+  --hsl-purple-11: 292deg 60% 42.5%;
+  --hsl-purple-12: 291deg 66% 14%;
+
+  --hsl-blue-01: 225deg 60% 99.4%;
+  --hsl-blue-02: 223deg 100% 98.6%;
+  --hsl-blue-03: 223deg 98.4% 97.1%;
+  --hsl-blue-04: 223deg 92.9% 95%;
+  --hsl-blue-05: 224deg 87.1% 92%;
+  --hsl-blue-06: 224deg 81.9% 87.8%;
+  --hsl-blue-07: 225deg 77.4% 82.1%;
+  --hsl-blue-08: 226deg 75.4% 74.5%;
+  --hsl-blue-09: 226deg 70% 55.5%;
+  --hsl-blue-10: 226deg 58.6% 51.3%;
+  --hsl-blue-11: 226deg 55% 45%;
+  --hsl-blue-12: 226deg 62% 17%;
+  --hsl-blue-13: 226deg 64% 9.5%;
+
+  --hsl-cyan-01: 185deg 60% 98.7%;
+  --hsl-cyan-02: 185deg 73.3% 97.1%;
+  --hsl-cyan-03: 186deg 70.2% 94.4%;
+  --hsl-cyan-04: 186deg 63.8% 90.6%;
+  --hsl-cyan-05: 187deg 58.3% 85.4%;
+  --hsl-cyan-06: 188deg 54.6% 78.4%;
+  --hsl-cyan-07: 189deg 53.7% 68.7%;
+  --hsl-cyan-08: 189deg 60.3% 52.5%;
+  --hsl-cyan-09: 190deg 95% 39%;
+  --hsl-cyan-10: 191deg 91.2% 36.8%;
+  --hsl-cyan-11: 192deg 85% 31%;
+  --hsl-cyan-12: 192deg 88% 12.5%;
+
+  --hsl-green-01: 116deg 50% 98.9%;
+  --hsl-green-02: 120deg 60% 97.1%;
+  --hsl-green-03: 120deg 53.6% 94.8%;
+  --hsl-green-04: 121deg 47.5% 91.4%;
+  --hsl-green-05: 122deg 42.6% 86.5%;
+  --hsl-green-06: 124deg 39% 79.7%;
+  --hsl-green-07: 126deg 37.1% 70.2%;
+  --hsl-green-08: 131deg 38.1% 56.3%;
+  --hsl-green-09: 131deg 41% 46.5%;
+  --hsl-green-10: 132deg 43.1% 42.2%;
+  --hsl-green-11: 133deg 50% 32.5%;
+  --hsl-green-12: 130deg 30% 14.9%;
+
+  --hsl-yellow-01: 39deg 70% 99%;
+  --hsl-yellow-02: 40deg 100% 96.5%;
+  --hsl-yellow-03: 44deg 100% 91.7%;
+  --hsl-yellow-04: 43deg 100% 86.8%;
+  --hsl-yellow-05: 42deg 100% 81.8%;
+  --hsl-yellow-06: 38deg 99.7% 76.3%;
+  --hsl-yellow-07: 36deg 86.1% 67.1%;
+  --hsl-yellow-08: 35deg 85.2% 55.1%;
+  --hsl-yellow-09: 39deg 100% 57%;
+  --hsl-yellow-10: 35deg 100% 55.5%;
+  --hsl-yellow-11: 30deg 100% 34%;
+  --hsl-yellow-12: 20deg 80% 17%;
+
+  --hsl-orange-01: 24deg 70% 99%;
+  --hsl-orange-02: 24deg 83.3% 97.6%;
+  --hsl-orange-03: 24deg 100% 95.3%;
+  --hsl-orange-04: 25deg 100% 92.2%;
+  --hsl-orange-05: 25deg 100% 88.2%;
+  --hsl-orange-06: 25deg 100% 82.8%;
+  --hsl-orange-07: 24deg 100% 75.3%;
+  --hsl-orange-08: 24deg 94.5% 64.3%;
+  --hsl-orange-09: 24deg 94% 50%;
+  --hsl-orange-10: 24deg 100% 46.5%;
+  --hsl-orange-11: 24deg 100% 37%;
+  --hsl-orange-12: 15deg 60% 17%;
+
+  --colors-white: hsl(var(--hsl-white));
+  --colors-black: hsl(var(--hsl-black));
+
+  --colors-gray-01: hsl(var(--hsl-gray-01));
+  --colors-gray-02: hsl(var(--hsl-gray-02));
+  --colors-gray-03: hsl(var(--hsl-gray-03));
+  --colors-gray-04: hsl(var(--hsl-gray-04));
+  --colors-gray-05: hsl(var(--hsl-gray-05));
+  --colors-gray-06: hsl(var(--hsl-gray-06));
+  --colors-gray-07: hsl(var(--hsl-gray-07));
+  --colors-gray-08: hsl(var(--hsl-gray-08));
+  --colors-gray-09: hsl(var(--hsl-gray-09));
+  --colors-gray-10: hsl(var(--hsl-gray-10));
+  --colors-gray-11: hsl(var(--hsl-gray-11));
+  --colors-gray-12: hsl(var(--hsl-gray-12));
+  --colors-gray-13: hsl(var(--hsl-gray-13));
+  --colors-gray-14: hsl(var(--hsl-gray-14));
+
+  /* red */
+  --colors-red-01: hsl(var(--hsl-red-01));
+  --colors-red-02: hsl(var(--hsl-red-02));
+  --colors-red-03: hsl(var(--hsl-red-03));
+  --colors-red-04: hsl(var(--hsl-red-04));
+  --colors-red-05: hsl(var(--hsl-red-05));
+  --colors-red-06: hsl(var(--hsl-red-06));
+  --colors-red-07: hsl(var(--hsl-red-07));
+  --colors-red-08: hsl(var(--hsl-red-08));
+  --colors-red-09: hsl(var(--hsl-red-09));
+  --colors-red-10: hsl(var(--hsl-red-10));
+  --colors-red-11: hsl(var(--hsl-red-11));
+  --colors-red-12: hsl(var(--hsl-red-12));
+
+  --colors-pink-01: hsl(var(--hsl-pink-01));
+  --colors-pink-02: hsl(var(--hsl-pink-02));
+  --colors-pink-03: hsl(var(--hsl-pink-03));
+  --colors-pink-04: hsl(var(--hsl-pink-04));
+  --colors-pink-05: hsl(var(--hsl-pink-05));
+  --colors-pink-06: hsl(var(--hsl-pink-06));
+  --colors-pink-07: hsl(var(--hsl-pink-07));
+  --colors-pink-08: hsl(var(--hsl-pink-08));
+  --colors-pink-09: hsl(var(--hsl-pink-09));
+  --colors-pink-10: hsl(var(--hsl-pink-10));
+  --colors-pink-11: hsl(var(--hsl-pink-11));
+  --colors-pink-12: hsl(var(--hsl-pink-12));
+
+  --colors-purple-01: hsl(var(--hsl-purple-01));
+  --colors-purple-02: hsl(var(--hsl-purple-02));
+  --colors-purple-03: hsl(var(--hsl-purple-03));
+  --colors-purple-04: hsl(var(--hsl-purple-04));
+  --colors-purple-05: hsl(var(--hsl-purple-05));
+  --colors-purple-06: hsl(var(--hsl-purple-06));
+  --colors-purple-07: hsl(var(--hsl-purple-07));
+  --colors-purple-08: hsl(var(--hsl-purple-08));
+  --colors-purple-09: hsl(var(--hsl-purple-09));
+  --colors-purple-10: hsl(var(--hsl-purple-10));
+  --colors-purple-11: hsl(var(--hsl-purple-11));
+  --colors-purple-12: hsl(var(--hsl-purple-12));
+
+  --colors-blue-01: hsl(var(--hsl-blue-01));
+  --colors-blue-02: hsl(var(--hsl-blue-02));
+  --colors-blue-03: hsl(var(--hsl-blue-03));
+  --colors-blue-04: hsl(var(--hsl-blue-04));
+  --colors-blue-05: hsl(var(--hsl-blue-05));
+  --colors-blue-06: hsl(var(--hsl-blue-06));
+  --colors-blue-07: hsl(var(--hsl-blue-07));
+  --colors-blue-08: hsl(var(--hsl-blue-08));
+  --colors-blue-09: hsl(var(--hsl-blue-09));
+  --colors-blue-10: hsl(var(--hsl-blue-10));
+  --colors-blue-11: hsl(var(--hsl-blue-11));
+  --colors-blue-12: hsl(var(--hsl-blue-12));
+  --colors-blue-13: hsl(var(--hsl-blue-13));
+
+  --colors-cyan-01: hsl(var(--hsl-cyan-01));
+  --colors-cyan-02: hsl(var(--hsl-cyan-02));
+  --colors-cyan-03: hsl(var(--hsl-cyan-03));
+  --colors-cyan-04: hsl(var(--hsl-cyan-04));
+  --colors-cyan-05: hsl(var(--hsl-cyan-05));
+  --colors-cyan-06: hsl(var(--hsl-cyan-06));
+  --colors-cyan-07: hsl(var(--hsl-cyan-07));
+  --colors-cyan-08: hsl(var(--hsl-cyan-08));
+  --colors-cyan-09: hsl(var(--hsl-cyan-09));
+  --colors-cyan-10: hsl(var(--hsl-cyan-10));
+  --colors-cyan-11: hsl(var(--hsl-cyan-11));
+  --colors-cyan-12: hsl(var(--hsl-cyan-12));
+
+  --colors-green-01: hsl(var(--hsl-green-01));
+  --colors-green-02: hsl(var(--hsl-green-02));
+  --colors-green-03: hsl(var(--hsl-green-03));
+  --colors-green-04: hsl(var(--hsl-green-04));
+  --colors-green-05: hsl(var(--hsl-green-05));
+  --colors-green-06: hsl(var(--hsl-green-06));
+  --colors-green-07: hsl(var(--hsl-green-07));
+  --colors-green-08: hsl(var(--hsl-green-08));
+  --colors-green-09: hsl(var(--hsl-green-09));
+  --colors-green-10: hsl(var(--hsl-green-10));
+  --colors-green-11: hsl(var(--hsl-green-11));
+  --colors-green-12: hsl(var(--hsl-green-12));
+
+  --colors-yellow-01: hsl(var(--hsl-yellow-01));
+  --colors-yellow-02: hsl(var(--hsl-yellow-02));
+  --colors-yellow-03: hsl(var(--hsl-yellow-03));
+  --colors-yellow-04: hsl(var(--hsl-yellow-04));
+  --colors-yellow-05: hsl(var(--hsl-yellow-05));
+  --colors-yellow-06: hsl(var(--hsl-yellow-06));
+  --colors-yellow-07: hsl(var(--hsl-yellow-07));
+  --colors-yellow-08: hsl(var(--hsl-yellow-08));
+  --colors-yellow-09: hsl(var(--hsl-yellow-09));
+  --colors-yellow-10: hsl(var(--hsl-yellow-10));
+  --colors-yellow-11: hsl(var(--hsl-yellow-11));
+  --colors-yellow-12: hsl(var(--hsl-yellow-12));
+
+  --colors-orange-01: hsl(var(--colors-orange-01));
+  --colors-orange-02: hsl(var(--colors-orange-02));
+  --colors-orange-03: hsl(var(--colors-orange-03));
+  --colors-orange-04: hsl(var(--colors-orange-04));
+  --colors-orange-05: hsl(var(--colors-orange-05));
+  --colors-orange-06: hsl(var(--colors-orange-06));
+  --colors-orange-07: hsl(var(--colors-orange-07));
+  --colors-orange-08: hsl(var(--colors-orange-08));
+  --colors-orange-09: hsl(var(--colors-orange-09));
+  --colors-orange-10: hsl(var(--colors-orange-10));
+  --colors-orange-11: hsl(var(--colors-orange-11));
+  --colors-orange-12: hsl(var(--colors-orange-12));
+
+  --colors-shadow-light: hsl(206deg 22% 7% / 35%);
+  --colors-shadow-dark: hsl(206deg 22% 7% / 20%);
+
+  --fonts-sans: SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica,
+    -apple-system, sans-serif, system-ui;
+  --fonts-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    ui-monospace, monospace;
+
+  --fonts-mono-light: lighter;
+  --fonts-mono-normal: normal;
+  --fonts-mono-bold: bold;
+
+  --spaces-01: 0.25rem;
+  --spaces-02: 0.5rem;
+  --spaces-03: 0.75rem;
+  --spaces-04: 1rem;
+  --spaces-05: 1.5rem;
+  --spaces-06: 2rem;
+  --spaces-07: 3rem;
+  --spaces-08: 4rem;
+  --spaces-09: 5rem;
+  --spaces-10: 6.5rem;
+
+  --font-sizes-01: 0.75rem;
+  --font-sizes-02: 0.875rem;
+  --font-sizes-03: 1rem;
+  --font-sizes-04: 1.125rem;
+  --font-sizes-05: 1.25rem;
+  --font-sizes-06: 1.5rem;
+  --font-sizes-07: 1.75rem;
+  --font-sizes-08: 2rem;
+  --font-sizes-09: 2.75rem;
+  --font-sizes-10: 3.5rem;
+  --font-sizes-11: 4.5rem;
+  --font-sizes-12: 6rem;
+  --font-sizes-13: 7.5rem;
+  --font-sizes-sm: var(--font-sizes-02);
+  --font-sizes-md: var(--font-sizes-03);
+  --font-sizes-lg: var(--font-sizes-04);
+  --font-sizes-xl: var(--font-sizes-06);
+}
+
+html {
+  font-family: var(--fonts-sans);
+  font-weight: normal;
+}
+
+body {
+  background-color: var(--colors-gray-04);
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--colors-blue-09);
+  outline-offset: 1px;
+}
+
+pre,
+code,
+kbd,
+samp {
+  font-family: var(--fonts-mono);
+}
+
+.h-title,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-family: var(--fonts-sans);
+  font-weight: bold;
+}
+
+.h-title {
+  font-size: var(--font-sizes-09);
+  line-height: 1;
+}
+
+h1,
+.h1 {
+  font-size: var(--font-sizes-07);
+  line-height: 1.125;
+}
+
+h2,
+.h2 {
+  font-size: var(--font-sizes-05);
+  line-height: 1.25;
+}
+
+h3,
+.h3 {
+  font-size: var(--font-sizes-04);
+  line-height: 1.625;
+}
+
+h4,
+.h4 {
+  font-size: var(--font-sizes-03);
+  line-height: 1.5;
+}
+
+h5,
+.h5,
+h6,
+.h6 {
+  font-size: var(--font-sizes-02);
+  line-height: 1.25;
+}
+
+@media screen and (--viewport-md) {
+  .h-title {
+    font-size: var(--font-sizes-11);
+    line-height: 1;
+  }
+
+  h1,
+  .h1 {
+    font-size: var(--font-sizes-08);
+    line-height: 1;
+  }
+
+  h2,
+  .h2 {
+    font-size: var(--font-sizes-07);
+    line-height: 1.125;
+  }
+
+  h3,
+  .h3 {
+    font-size: var(--font-sizes-05);
+    line-height: 1.25;
+  }
+
+  h4,
+  .h4 {
+    font-size: var(--font-sizes-04);
+    line-height: 1.625;
+  }
+}
+
+@media screen and (--viewport-lg) {
+  .h-title {
+    font-size: var(--font-sizes-13);
+    line-height: 1;
+  }
+
+  h1,
+  .h1 {
+    font-size: var(--font-sizes-10);
+    line-height: 1;
+  }
+
+  h2,
+  .h2 {
+    font-size: var(--font-sizes-08);
+    line-height: 1;
+  }
+
+  h3,
+  .h3 {
+    font-size: var(--font-sizes-06);
+    line-height: 1.25;
+  }
+
+  h4,
+  .h4 {
+    font-size: var(--font-sizes-05);
+    line-height: 1.25;
+  }
+
+  h5,
+  .h5,
+  h6,
+  .h6 {
+    font-size: var(--font-sizes-03);
+    line-height: 1.5;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

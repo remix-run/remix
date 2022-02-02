@@ -1,0 +1,14 @@
+@import "../../../_defs.css";
+
+.new-project__header {
+  margin-bottom: 2rem;
+}
+
+.new-project__form > :not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+.member-selection-wrapper {
+  min-height: 3rem;
+  margin-top: 0.5rem;
+}
