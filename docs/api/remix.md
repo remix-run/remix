@@ -1832,6 +1832,7 @@ Remix comes with several pre-built session storage options for common scenarios,
 - `createMemorySessionStorage`
 - `createFileSessionStorage` (node)
 - `createCloudflareKVSessionStorage` (cloudflare-workers)
+- `createArcTableSessionStorage` (architect, Amazon DynamoDB)
 - custom storage with `createSessionStorage`
 
 ### Using Sessions
@@ -2165,6 +2166,47 @@ const { getSession, commitSession, destroySession } =
   createCloudflareKVSessionStorage({
     // The KV Namespace where you want to store sessions
     kv: YOUR_NAMESPACE,
+    cookie: sessionCookie
+  });
+
+export { getSession, commitSession, destroySession };
+```
+
+### `createArcTableSessionStorage` (architect, Amazon DynamoDB)
+
+For [Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/) backed sessions, use `createArcTableSessionStorage()`.
+
+The advantage of DynamoDB backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
+
+```
+# app.arc
+sessions
+  _idx *String
+  _ttl TTL
+```
+
+```js
+// app/sessions.server.js
+import {
+  createCookie,
+  createArcTableSessionStorage
+} from "remix";
+
+// In this example the Cookie is created separately.
+const sessionCookie = createCookie("__session", {
+  secrets: ["r3m1xr0ck5"],
+  maxAge: 3600,
+  sameSite: true
+});
+
+const { getSession, commitSession, destroySession } =
+  createArcTableSessionStorage({
+    // The name of the table (should match app.arc)
+    table: 'sessions',
+    // The name of the key used to store the session ID (should match app.arc)
+    idx: '_idx',
+    // The name of the key used to store the expiration time (should match app.arc)
+    ttl: '_ttl',
     cookie: sessionCookie
   });
 
