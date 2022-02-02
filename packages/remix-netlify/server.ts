@@ -15,7 +15,14 @@ import {
   Headers as NodeHeaders,
   Request as NodeRequest
 } from "@remix-run/node";
-import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import type {
+  Handler,
+  HandlerEvent,
+  HandlerContext,
+  HandlerResponse
+} from "@netlify/functions";
+
+import { isBinaryType } from "./binary-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -55,15 +62,7 @@ export function createRequestHandler({
       loadContext
     )) as unknown as NodeResponse;
 
-    if (abortController.signal.aborted) {
-      response.headers.set("Connection", "close");
-    }
-
-    return {
-      statusCode: response.status,
-      multiValueHeaders: response.headers.raw(),
-      body: await response.text()
-    };
+    return sendRemixResponse(response, abortController);
   };
 }
 
@@ -136,4 +135,37 @@ function getRawPath(event: HandlerEvent): string {
   if (rawParams) rawPath += `?${rawParams}`;
 
   return rawPath;
+}
+
+export async function sendRemixResponse(
+  response: NodeResponse,
+  abortController: AbortController
+): Promise<HandlerResponse> {
+  if (abortController.signal.aborted) {
+    response.headers.set("Connection", "close");
+  }
+
+  let isBinary = isBinaryType(response.headers.get("content-type"));
+
+  let body = isBinary
+    ? (await bufferStream(response.body)).toString()
+    : await response.text();
+
+  return {
+    statusCode: response.status,
+    multiValueHeaders: response.headers.raw(),
+    body,
+    isBase64Encoded: isBinary
+  };
+}
+
+function bufferStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  return new Promise((accept, reject) => {
+    let chunks: Array<any> = [];
+
+    stream
+      .on("error", reject)
+      .on("data", chunk => chunks.push(chunk))
+      .on("end", () => accept(Buffer.concat(chunks)));
+  });
 }
