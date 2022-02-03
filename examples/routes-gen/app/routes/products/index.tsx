@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { LoaderFunction} from "remix";
+import type { LoaderFunction } from "remix";
 import { useLoaderData } from "remix";
 import { route } from "routes-gen";
 
