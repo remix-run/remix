@@ -36,27 +36,56 @@ beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+      "app/routes/start.jsx": js`
+        import { json, useLoaderData, Link, Form, redirect } from "remix";
 
         export function loader() {
           return json("pizza");
         }
+        export async function action({ request }) {
+          let formData = await request.formData();
+          return redirect(formData.get('_action')?.toString() ?? '/no-value');
+        }
 
         export default function Index() {
-          let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <form method="post">
+                <button type="submit" name="_action" value="/value-from-normal-button"><span id="span-button-normal">Normal Button</span></button>
+                <button type="submit" name="_action" value="/value-from-svg">
+                  <svg height="100" width="100">
+                    <circle id="svg-button-normal" cx="50" cy="50" r="40" stroke="black" strokeWidth="3" fill="red" />
+                  </svg> 
+                </button>
+              </form>
+              <Form method="post">
+                <button type="submit" name="_action" value="/value-from-normal-button"><span id="span-button-enhanced">Normal Button</span></button>
+                <button type="submit" name="_action" value="/value-from-svg">
+                  <svg height="100" width="100">
+                    <circle id="svg-button-enhanced" cx="50" cy="50" r="40" stroke="black" strokeWidth="3" fill="red" />
+                  </svg> 
+                </button>
+              </Form>
             </div>
           )
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/no-value.jsx": js`
         export default function Index() {
-          return <div>cheeseburger</div>;
+          return <div id="result">No value</div>;
+        }
+      `,
+
+      "app/routes/value-from-svg.jsx": js`
+        export default function Index() {
+          return <div id="result">Value from SVG button</div>;
+        }
+      `,
+
+      "app/routes/value-from-normal-button.jsx": js`
+        export default function Index() {
+          return <div id="result">Value from normal button</div>;
         }
       `
     }
@@ -64,6 +93,9 @@ beforeAll(async () => {
 
   // This creates an interactive app using puppeteer.
   app = await createAppFixture(fixture);
+  if (!app) {
+    console.error("unable to create app");
+  }
 });
 
 afterAll(async () => app.close());
@@ -73,21 +105,29 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+it("button value submitted for normal button via HTML form element", async () => {
+  await app.goto("/start");
+  await app.clickElement("#span-button-normal");
+  expect(await app.getHtml("#result")).toMatch('<div id="result">Value from normal button</div>');
+});
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+it("button value submitted for button with SVG via HTML form element", async () => {
+  await app.goto("/start");
+  await app.clickElement("#svg-button-normal");
+  expect(await app.getHtml("#result")).toMatch('<div id="result">Value from SVG button</div>');
+});
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+it("button value submitted for normal button via Remix-enhanced Form element", async () => {
+  await app.goto("/start");
+  await app.clickElement("#span-button-enhanced");
+  expect(await app.getHtml("#result")).toMatch('<div id="result">Value from normal button</div>');
+});
 
-  // Go check out the other tests to see what else you can do.
+// failing test - then Remix-enhanced Form element doesn't submit the button that was clicked if the event.target is not a HTMLElement
+it("button value submitted for button with SVG via Remix-enhanced Form element", async () => {
+  await app.goto("/start");
+  await app.clickElement("#svg-button-enhanced");
+  expect(await app.getHtml("#result")).toMatch('<div id="result">Value from SVG button</div>');
 });
 
 ////////////////////////////////////////////////////////////////////////////////
