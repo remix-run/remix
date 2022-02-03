@@ -1,10 +1,24 @@
 import type { LoaderFunction } from "remix";
-import { json, Link, LinksFunction, Outlet, useLoaderData } from "remix";
-import type { Invoice } from "~/data.server";
-import { getInvoices } from "~/data.server";
+import { json, Link, Outlet, useLoaderData } from "remix";
 
 export const loader: LoaderFunction = async ({ params }) => {
-  return json(getInvoices());
+  const invoices = [
+    {
+      id: 1,
+      company: "Remix",
+      description: "Remix license",
+      amount: 200,
+      date: new Date(2021, 8, 1)
+    },
+    {
+      id: 2,
+      company: "Amazon",
+      description: "AWS bill",
+      amount: 340,
+      date: new Date(2022, 8, 1)
+    }
+  ];
+  return json(invoices);
 };
 
 export default function Invoices() {
@@ -26,7 +40,7 @@ export default function Invoices() {
           </tr>
         </thead>
         <tbody>
-          {data.map((invoice: Invoice) => (
+          {data.map((invoice: any) => (
             <tr key={invoice.id}>
               <td>{invoice.id}</td>
               <td>{invoice.company}</td>
