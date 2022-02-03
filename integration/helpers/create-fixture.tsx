@@ -326,17 +326,40 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     writeTestFiles(init, projectDir),
     installRemix(projectDir)
   ]);
-  build(projectDir);
+  await build(projectDir);
 
   return projectDir;
 }
 
-function build(projectDir: string) {
+/// this is probably not really the way to get the output from running these commands, but it was good enough to help me find my compile errors
+function spawnAsyncWithOutput(command: string, args: readonly string[], options: cp.SpawnOptions): Promise<void> {
+  let resolve;
+  let reject;
+  let result = new Promise<void>((pResolve, pReject) =>  { resolve = pResolve, reject = pReject });
+  let proc = cp.spawn(command, args, options);
+  proc.stdout.on('data', (data) => {
+    console.log(data.toString());
+  });
+  
+  proc.stderr.on('data', (data) => {
+    console.error(data.toString());
+  });
+  
+  proc.on('close', (code) => {
+    console.log(`child process exited with code ${code}`);
+    if (code === 0) { resolve(); }
+    else { reject(); }
+  });
+  
+  return result;
+}
+
+async function build(projectDir: string) {
   // TODO: log errors (like syntax errors in the fixture file strings)
-  cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
+  await spawnAsyncWithOutput("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
     cwd: projectDir
   });
-  cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
+  await spawnAsyncWithOutput("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
     cwd: projectDir
   });
 }
