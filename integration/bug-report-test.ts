@@ -53,6 +53,32 @@ beforeAll(async () => {
           )
         }
       `,
+      "app/routes/test.jsx": js`
+        import { Form, redirect, useFetcher, useTransition} from "remix";
+        
+        export const action = async ({ request }) => {
+          return redirect("/test");
+        };
+
+        export const loader = async ({ request }) => {
+          return {};
+        };
+        export default function Testd() {
+          const fetcher = useFetcher();
+
+          return (
+            <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }}>
+              <span>{fetcher.state}</span>
+              <fetcher.Form method="post" action="/test">
+                <input type="hidden" name="source" value="fetcher" />
+                <button type="submit" name="_action" value="add">
+                  Submit
+                </button>
+              </fetcher.Form>
+            </div>
+          );
+        }
+      `,
 
       "app/routes/burgers.jsx": js`
         export default function Index() {
@@ -73,21 +99,12 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+it("useFetcher state should return to the idle when redirect from an action", async () => {
+  await app.goto("/test");
+  expect(await app.getHtml("span")).toMatch("idle");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  await app.clickSubmitButton("/test");
+  expect(await app.getHtml("span")).toMatch("idle");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
