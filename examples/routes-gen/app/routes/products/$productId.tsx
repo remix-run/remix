@@ -1,8 +1,8 @@
 import { useParams } from "react-router-dom";
-import { RouteParams } from "routes-gen";
+import type { RouteParams } from "routes-gen";
 
 export default function Product() {
-  const params = useParams<RouteParams['/products/:productId']>();
+  const params = useParams<RouteParams["/products/:productId"]>();
 
   return (
     <main>
