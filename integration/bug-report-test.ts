@@ -36,23 +36,6 @@ beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
-
-        export function loader() {
-          return json("pizza");
-        }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
-      `,
       "app/routes/test.jsx": js`
         import { Form, redirect, useFetcher, useTransition} from "remix";
         
@@ -77,12 +60,6 @@ beforeAll(async () => {
               </fetcher.Form>
             </div>
           );
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `
     }
