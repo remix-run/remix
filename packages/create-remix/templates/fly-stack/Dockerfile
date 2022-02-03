@@ -35,7 +35,7 @@ ADD prisma .
 RUN npx prisma generate
 
 ADD . .
-RUN npm run postinall
+RUN npm run postinstall
 RUN npm run build
 
 # Finally, build the production image with minimal footprint
