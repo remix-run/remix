@@ -61,7 +61,7 @@ You can follow along with this tutorial on [CodeSandbox](https://codesandbox.com
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor ([VSCode](https://code.visualstudio.com/) is a nice one)
 
-If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io) (note, currently hosting sqlite on fly will cost a few bucks a month).
+If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io).
 
 We'll also be executing commands in your system command line/terminal interface. So you'll want to be familiar with that.
 
@@ -167,7 +167,7 @@ Building Remix app in production mode...
 Built in 132ms
 ```
 
-Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
+Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
 
 💿 Let's run the built app now:
 
@@ -188,7 +188,7 @@ Open up that URL and you should be presented with a minimal page pointing to som
 - `app/routes`
 - `app/styles`
 
-We're going to trim this down the the bare bones and introduce things incrementally.
+We're going to trim this down the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
@@ -405,7 +405,7 @@ Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should di
 
 ### Parameterized Routes
 
-Soon we'll add a database that stores our jokes by an ID, so lets add one more route that's a little more unique, a parameterized route:
+Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
 `/jokes/:jokeId`
 
@@ -1987,7 +1987,7 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
@@ -2229,10 +2229,10 @@ With this change, we're going to start experiencing some TypeScript errors in ou
 
 ```ts filename=prisma/seed.ts lines=[5-12,15-16]
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
 async function seed() {
-  const kody = await prisma.user.create({
+  const kody = await db.user.create({
     data: {
       username: "kody",
       // this is a hashed version of "twixrox"
@@ -2243,7 +2243,7 @@ async function seed() {
   await Promise.all(
     getJokes().map(joke => {
       const data = { jokesterId: kody.id, ...joke };
-      return prisma.joke.create({ data });
+      return db.joke.create({ data });
     })
   );
 }
@@ -2778,7 +2778,7 @@ Here's what we need in that file to get started:
 - Export a function called `login` that accepts the `username` and `password`
 - Queries prisma for a user with the `username`
 - If there is no user, return `null`
-- Use `bcrypt.compare` to compare the give `password` to the user's `passwordHash`
+- Use `bcrypt.compare` to compare the given `password` to the user's `passwordHash`
 - If the passwords don't match, return `null`
 - If the passwords match, return the user
 
@@ -2824,9 +2824,14 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
+```tsx filename=app/routes/login.tsx lines=[9,20-27] nocopy
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, json, Link } from "remix";
+import {
+  useActionData,
+  json,
+  Link,
+  useSearchParams
+} from "remix";
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
 import stylesUrl from "../styles/login.css";
@@ -3000,7 +3005,7 @@ And now every request the browser makes to our server will include that cookie (
 
 ![Request headers showing the Cookie](/jokes-tutorial/img/cookie-header-on-request.png)
 
-So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `prisma.joke.create` call.
+So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `db.joke.create` call.
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
@@ -3109,7 +3114,7 @@ We'll cover this more in the error handling sections later.
 
 You may also notice that our solution makes use of the `login` route's `redirectTo` feature we had earlier.
 
-💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `prisma.joke.create` call.
+💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `db.joke.create` call.
 
 <details>
 
@@ -6082,9 +6087,9 @@ Here's a demonstration of what that experience looks like:
 
 I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`prisma`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
 
-<docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
-
 💿 Before proceeding, you're going to need to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
+
+<docs-info>Fly.io asks you a credit card number at account creation (see why in [their blog article](https://fly.io/blog/free-postgres/#a-note-about-credit-cards)) but there are free tiers that cover the needs of this app hosted as a simple side project.</docs-info>
 
 💿 Once you've done that, run this command from within your project directory:
 
@@ -6102,7 +6107,7 @@ Detected a Remix app
 Automatically selected personal organization: Kent C. Dodds
 ? Select region: dfw (Dallas, Texas (US))
 Created app remix-jokes in organization personal
-Created a 10GB volume vol_18l524yj27947zmp in the dfw region
+Created a 1GB volume vol_18l524yj27947zmp in the dfw region
 Wrote config file fly.toml
 
 This launch configuration uses SQLite on a single, dedicated volume. It will not scale beyond a single VM. Look into 'fly postgres' for a more robust production database.
@@ -6115,7 +6120,7 @@ You'll want to choose a different app name because I already took `remix-jokes` 
 
 It also allowed you to select a region, I recommend choosing one that's close to you. If you decide to deploy a real app on Fly in the future, you may decide to scale up your fly to multiple regions.
 
-Fly also detected that this project is using sqlite with prisma and created a persistence volume for us (this is the part that costs money).
+Fly also detected that this project is using sqlite with prisma and created a persistence volume for us.
 
 We don't want to deploy right now because we have an environment variable we need to set! So choose "No".
 

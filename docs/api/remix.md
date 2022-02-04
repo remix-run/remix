@@ -13,7 +13,7 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx lines=[1,9-10,14]
+```tsx lines=[1,8-9,13]
 import { Meta, Links, Scripts, Outlet } from "remix";
 
 export default function App() {
@@ -142,6 +142,8 @@ function NavList() {
 
 ### `<Form>`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a>, <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a> and <a href="https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Clearing Inputs After Form Submissions</a></docs-success>
+
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
 ```js
@@ -197,7 +199,7 @@ Without JavaScript, Remix will turn non-get requests into "post", but you'll sti
 
 #### `<Form encType>`
 
-Defaults to `application/x-www-urlencoded`, which is also the only supported value right now.
+Defaults to `application/x-www-form-urlencoded`, use `multipart/form-data` for file uploads.
 
 #### `<Form replace>`
 
@@ -250,12 +252,14 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 
 ### `useLoaderData`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
+
 This hook returns the JSON parsed data from your route loader function.
 
 ```tsx lines=[1,8]
 import { useLoaderData } from "remix";
 
-export function loader() {
+export async function loader() {
   return fakeDb.invoices.findAll();
 }
 
@@ -496,6 +500,8 @@ function useSessionTimeout() {
 
 ### `useTransition`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=y4VLIFjFq8k&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Pending UI</a>, <a href="https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Clearing Inputs After Form Submissions</a>, and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
+
 This hook tells you everything you need to know about a page transition to build pending navigation indicators and optimistic UI on data mutations. Things like:
 
 - Global loading spinners
@@ -548,11 +554,11 @@ function SubmitButton() {
   const transition = useTransition();
 
   const text =
-    : transition.state === "submitting"
-    ? "Saving..."
-    : transition.state === "loading"
-    ? "Saved!"
-    : "Go"
+    transition.state === "submitting"
+      ? "Saving..."
+      : transition.state === "loading"
+      ? "Saved!"
+      : "Go";
 
   return <button type="submit">{text}</button>;
 }
@@ -642,6 +648,8 @@ Note that this link will not appear "pending" if a form is being submitted to th
 ### `useFetcher`
 
 <docs-error>This hook is for advanced cases that most features of your app don't need. It does not work with server rendering, usually requires JavaScript in the browser, and requires you to deal with pending states.</docs-error>
+
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Concurrent Mutations w/ useFetcher</a> and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
 
 It is common for Remix newcomers to see this hook and think it is the primary way to interact with the server for data loading and updates, but it is not! Remix was specifically designed to avoid this type of interaction with the server and has better ways of handling typical data loading and updating workflows, you probably want one of these:
 
@@ -757,11 +765,17 @@ Loads data from a route loader.
 
 ```tsx
 const fetcher = useFetcher();
-fetcher.load("/some/route");
+React.useEffect(() => {
+  if (fetcher.type === "init") {
+    fetcher.load("/some/route");
+  }
+}, [fetcher]);
 fetcher.data; // the data from the loader
 ```
 
 #### Examples
+
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=jd_bin5HPrw&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Remix Newsletter Signup Form</a></docs-success>
 
 **Newsletter Signup Form**
 
@@ -829,7 +843,7 @@ Because `useFetcher` doesn't cause a navigation, it won't automatically work if 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-export function action({ request }) {
+export async function action({ request }) {
   // just like before
 }
 
@@ -928,7 +942,7 @@ function useMarkAsRead({ articleId, userId }) {
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
 ```tsx filename=routes/user/$id/details.tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   return fakeDb.user.find({ where: { id: params.id } });
 }
 
@@ -965,7 +979,7 @@ function UserAvatar({ partialUser }) {
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
 ```tsx filename=routes/city-search.tsx
-export function loader({ request }) {
+export async function loader({ request }) {
   const url = new URL(request.url);
   return searchCities(url.searchParams.get("city-query"));
 }
@@ -1288,7 +1302,7 @@ This is a shortcut for creating `application/json` responses. It assumes you are
 import type { LoaderFunction } from "remix";
 import { json } from "remix";
 
-export const loader: LoaderFunction = () => {
+export const loader: LoaderFunction = async () => {
   // So you can write this:
   return json({ any: "thing" });
 
@@ -1304,7 +1318,7 @@ export const loader: LoaderFunction = () => {
 You can also pass a status code and headers:
 
 ```ts [4-9]
-export const loader: LoaderFunction = () => {
+export const loader: LoaderFunction = async () => {
   return json(
     { not: "coffee" },
     {
@@ -1672,7 +1686,7 @@ const cookie = createCookie("user-prefs", {
   sameSite: "lax",
   httpOnly: true,
   secure: true,
-  expires: new Date(Date.now() + 60),
+  expires: new Date(Date.now() + 60_000),
   maxAge: 60
 });
 
@@ -1732,7 +1746,7 @@ import { createCookie } from "remix";
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
   domain: "remix.run",
-  expires: new Date(Date.now() + 60),
+  expires: new Date(Date.now() + 60_000),
   httpOnly: true,
   maxAge: 60,
   path: "/",
@@ -1850,7 +1864,7 @@ const { getSession, commitSession, destroySession } =
 
       // all of these are optional
       domain: "remix.run",
-      expires: new Date(Date.now() + 60),
+      expires: new Date(Date.now() + 60_000),
       httpOnly: true,
       maxAge: 60,
       path: "/",
