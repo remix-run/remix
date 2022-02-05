@@ -4,7 +4,12 @@ This project demonstrates how to use Firebase (Auth and Firestore) with Remix.
 
 ## Preview
 
-![Screen Recoring]("./screen_recording.gif")
+
+See the screen recording at `./screen_recording.gif` or Open this example on [CodeSandbox](https://codesandbox.com):
+
+<!-- TODO: update this link to the path for your example: -->
+
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/firebase-auth-firestore)
 
 ## Example
 
