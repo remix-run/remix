@@ -207,6 +207,7 @@ function incrementVersion(version) {
  * @param {{ pullFirst?: boolean }} [opts]
  */
 async function gitMerge(from, to, opts = {}) {
+  let initialBranch = getCurrentBranch();
   execSync(`git checkout ${from}`);
   if (opts.pullFirst) {
     await gitPull(from);
@@ -223,6 +224,8 @@ async function gitMerge(from, to, opts = {}) {
     console.error(chalk.red("Merge failed.\n"));
     throw Error(resp);
   }
+
+  execSync(`git checkout ${initialBranch}`);
 }
 
 /**
