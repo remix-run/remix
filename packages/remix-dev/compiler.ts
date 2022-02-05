@@ -296,7 +296,7 @@ async function createBrowserBuild(
   };
   for (let id of Object.keys(config.routes)) {
     // All route entry points are virtual modules that will be loaded by the
-    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+    // browserEntryPointsPlugin. This devcompilallows us to tree-shake server-only code
     // that we don't want to run in the browser (i.e. action & loader).
     entryPoints[id] =
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
@@ -391,6 +391,8 @@ async function createServerBuild(
             );
           }
 
+          // Include files added by transpileModules config
+          if (config.transpileModules.includes(id)) return false;
           // Include .css files from node_modules in the build so we can get a
           // hashed file name to put into the HTML.
           if (id.endsWith(".css")) return false;

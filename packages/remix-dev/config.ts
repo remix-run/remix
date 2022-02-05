@@ -270,6 +270,8 @@ export async function readConfig(
     }
   }
 
+  if (config.transpileModules.includes(id)) return false;
+
   return {
     appDirectory,
     cacheDirectory,
@@ -285,7 +287,8 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverPlatform,
-    mdx
+    mdx,
+    transpileModules
   };
 }
 
