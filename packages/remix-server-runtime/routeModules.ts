@@ -20,14 +20,15 @@ export interface DataFunctionArgs {
 }
 
 /**
+ * Return type of both LoaderFunction and ActionFunction
+ */
+export type DataFunctionResponse = Promise<Response> | Response | Promise<AppData> | AppData;
+
+/**
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: DataFunctionArgs): DataFunctionResponse;
 }
 
 /**
@@ -64,11 +65,7 @@ export interface LinksFunction {
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: DataFunctionArgs): DataFunctionResponse;
 }
 
 /**
