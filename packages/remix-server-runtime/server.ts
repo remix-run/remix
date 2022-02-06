@@ -15,6 +15,42 @@ import { createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
+interface Instrumentation {
+  name: string;
+  description: string;
+  start: number;
+  end: number;
+}
+
+class Instrumentor {
+  instrumentations: Instrumentation[] = [];
+
+  instrument = (name: string, description: string, fn: Function) => {
+    let start = performance.now();
+    let result = fn();
+    Promise.resolve(result).finally(() => {
+      let end = performance.now();
+      this.instrumentations.push({ name, description, start, end });
+      console.log(
+        `${name}${description ? ` (${description})` : ""}: ${(end - start).toFixed(2)}ms`
+      );
+    });
+
+    return result;
+  };
+
+  serverTimingHeader() {
+    return this.instrumentations
+      .map(({ name, description, start, end }) => {
+        return `${name};dur=${(end - start).toFixed(2)}${
+          description ? `;desc="${description}"` : ""
+        }`;
+      })
+      .join(",");
+  }
+}
+export type instrument = Instrumentor["instrument"];
+
 /**
  * The main request handler for a Remix server. This handler runs in the context
  * of a cloud provider's server (e.g. Express on Firebase) or locally via their
@@ -40,36 +76,45 @@ export function createRequestHandler(
     let matches = matchServerRoutes(routes, url.pathname);
     let requestType = getRequestType(url, matches);
 
-    let response: Response;
-    switch (requestType) {
-      case "data":
-        response = await handleDataRequest({
-          request,
-          loadContext,
-          matches: matches!,
-          handleDataRequest: build.entry.module.handleDataRequest,
-          serverMode
-        });
-        break;
-      case "document":
-        response = await renderDocumentRequest({
-          build,
-          loadContext,
-          matches,
-          request,
-          routes,
-          serverMode
-        });
-        break;
-      case "resource":
-        response = await handleResourceRequest({
-          request,
-          loadContext,
-          matches: matches!,
-          serverMode
-        });
-        break;
-    }
+    let instrumentor = new Instrumentor();
+
+    let response: Response = await instrumentor.instrument(
+      `${requestType}Response`,
+      "",
+      () => {
+        switch (requestType) {
+          case "data":
+            return handleDataRequest({
+              request,
+              loadContext,
+              matches: matches!,
+              handleDataRequest: build.entry.module.handleDataRequest,
+              serverMode,
+              instrument: instrumentor.instrument
+            });
+          case "document":
+            return renderDocumentRequest({
+              build,
+              loadContext,
+              matches,
+              request,
+              routes,
+              serverMode,
+              instrument: instrumentor.instrument
+            });
+          case "resource":
+            return handleResourceRequest({
+              request,
+              loadContext,
+              matches: matches!,
+              serverMode,
+              instrument: instrumentor.instrument
+            });
+        }
+      }
+    );
+
+    response.headers.append("Server-Timing", instrumentor.serverTimingHeader());
 
     if (request.method.toLowerCase() === "head") {
       return new Response(null, {
@@ -79,6 +124,7 @@ export function createRequestHandler(
       });
     }
 
+
     return response;
   };
 }
@@ -87,13 +133,15 @@ async function handleDataRequest({
   loadContext,
   matches,
   request,
-  serverMode
+  serverMode,
+  instrument
 }: {
   handleDataRequest?: HandleDataRequestFunction;
   loadContext: unknown;
   matches: RouteMatch<ServerRoute>[];
   request: Request;
   serverMode: ServerMode;
+  instrument: instrument;
 }): Promise<Response> {
   if (!isValidRequestMethod(request)) {
     return errorBoundaryError(
@@ -120,7 +168,8 @@ async function handleDataRequest({
       response = await callRouteAction({
         loadContext,
         match,
-        request: request
+        request,
+        instrument
       });
     } else {
       let routeId = url.searchParams.get("_data");
@@ -137,7 +186,12 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      response = await callRouteLoader({ loadContext, match, request });
+      response = await callRouteLoader({
+        loadContext,
+        match,
+        request,
+        instrument
+      });
     }
 
     if (isRedirectResponse(response)) {
@@ -182,7 +236,8 @@ async function renderDocumentRequest({
   matches,
   request,
   routes,
-  serverMode
+  serverMode,
+  instrument
 }: {
   build: ServerBuild;
   loadContext: unknown;
@@ -190,6 +245,7 @@ async function renderDocumentRequest({
   request: Request;
   routes: ServerRoute[];
   serverMode?: ServerMode;
+  instrument: instrument;
 }): Promise<Response> {
   let url = new URL(request.url);
 
@@ -232,7 +288,8 @@ async function renderDocumentRequest({
       actionResponse = await callRouteAction({
         loadContext,
         match: actionMatch,
-        request: request
+        request,
+        instrument
       });
 
       if (isRedirectResponse(actionResponse)) {
@@ -304,7 +361,8 @@ async function renderDocumentRequest({
         ? callRouteLoader({
             loadContext,
             match,
-            request
+            request,
+            instrument
           })
         : Promise.resolve(undefined)
     )
@@ -513,20 +571,22 @@ async function handleResourceRequest({
   loadContext,
   matches,
   request,
-  serverMode
+  serverMode,
+  instrument
 }: {
   request: Request;
   loadContext: unknown;
   matches: RouteMatch<ServerRoute>[];
   serverMode: ServerMode;
+  instrument: instrument;
 }): Promise<Response> {
   let match = matches.slice(-1)[0];
 
   try {
     if (isActionRequest(request)) {
-      return await callRouteAction({ match, loadContext, request });
+      return await callRouteAction({ match, loadContext, request, instrument });
     } else {
-      return await callRouteLoader({ match, loadContext, request });
+      return await callRouteLoader({ match, loadContext, request, instrument });
     }
   } catch (error: any) {
     if (serverMode !== ServerMode.Test) {

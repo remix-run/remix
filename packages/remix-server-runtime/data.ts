@@ -1,5 +1,6 @@
 import type { RouteMatch } from "./routeMatching";
 import type { ServerRoute } from "./routes";
+import type { instrument } from "./server";
 import { json, isResponse, isRedirectResponse } from "./responses";
 
 /**
@@ -16,11 +17,13 @@ export type AppData = any;
 export async function callRouteAction({
   loadContext,
   match,
-  request
+  request,
+  instrument
 }: {
   loadContext: unknown;
   match: RouteMatch<ServerRoute>;
   request: Request;
+  instrument: instrument;
 }) {
   let action = match.route.module.action;
 
@@ -34,11 +37,16 @@ export async function callRouteAction({
 
   let result;
   try {
-    result = await action({
-      request: stripDataParam(stripIndexParam(request.clone())),
-      context: loadContext,
-      params: match.params
-    });
+    result = await instrument(
+      "action",
+      match.route.id,
+      () =>
+        action && action({
+          request: stripDataParam(stripIndexParam(request.clone())),
+          context: loadContext,
+          params: match.params
+        })
+    );
   } catch (error: unknown) {
     if (!isResponse(error)) {
       throw error;
@@ -63,11 +71,13 @@ export async function callRouteAction({
 export async function callRouteLoader({
   loadContext,
   match,
-  request
+  request,
+  instrument
 }: {
   request: Request;
   match: RouteMatch<ServerRoute>;
   loadContext: unknown;
+  instrument: instrument;
 }) {
   let loader = match.route.module.loader;
 
@@ -81,11 +91,16 @@ export async function callRouteLoader({
 
   let result;
   try {
-    result = await loader({
-      request: stripDataParam(stripIndexParam(request.clone())),
-      context: loadContext,
-      params: match.params
-    });
+    result = await instrument(
+      "loader",
+      match.route.id,
+      () =>
+        loader && loader({
+          request: stripDataParam(stripIndexParam(request.clone())),
+          context: loadContext,
+          params: match.params
+        })
+    );
   } catch (error: unknown) {
     if (!isResponse(error)) {
       throw error;
