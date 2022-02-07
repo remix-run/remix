@@ -54,7 +54,7 @@ If you need a bug fixed and nobody is fixing it, your best bet is to provide a f
 
 ## Making a Pull Request?
 
-> **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch. If you are submitting a PR that touches any code, this should be the `dev` branch. Pull releases that only change documentation can be merged into `main`.
+> **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch. If you are submitting a PR that touches any code, this should be the `dev` branch. Pull requests that only change documentation can be merged into `main`.
 >
 > You can set the base in GitHub when authoring the PR with the dropdown below the "Compare changes" heading:
 >
