@@ -3,6 +3,7 @@ import type {
   SessionStorage,
   SessionIdStorageStrategy,
   CreateSessionStorageFunction,
+  FlashSessionData,
 } from "../sessions";
 
 interface MemorySessionStorageOptions {
@@ -13,9 +14,9 @@ interface MemorySessionStorageOptions {
   cookie?: SessionIdStorageStrategy["cookie"];
 }
 
-export type CreateMemorySessionStorageFunction = (
+export type CreateMemorySessionStorageFunction = <Data = SessionData>(
   options?: MemorySessionStorageOptions
-) => SessionStorage;
+) => SessionStorage<Data>;
 
 /**
  * Creates and returns a simple in-memory SessionStorage object, mostly useful
@@ -30,9 +31,14 @@ export const createMemorySessionStorageFactory =
   (
     createSessionStorage: CreateSessionStorageFunction
   ): CreateMemorySessionStorageFunction =>
-  ({ cookie } = {}) => {
+  <Data = SessionData>({
+    cookie,
+  }: MemorySessionStorageOptions = {}): SessionStorage<Data> => {
     let uniqueId = 0;
-    let map = new Map<string, { data: SessionData; expires?: Date }>();
+    let map = new Map<
+      string,
+      { data: FlashSessionData<Data>; expires?: Date }
+    >();
 
     return createSessionStorage({
       cookie,

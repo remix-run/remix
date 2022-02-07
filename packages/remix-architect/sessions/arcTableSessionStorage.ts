@@ -44,10 +44,10 @@ interface ArcTableSessionStorageOptions {
  *     _idx *String
  *     _ttl TTL
  */
-export function createArcTableSessionStorage({
+export function createArcTableSessionStorage<Data = SessionData>({
   cookie,
   ...props
-}: ArcTableSessionStorageOptions): SessionStorage {
+}: ArcTableSessionStorageOptions): SessionStorage<Data> {
   async function getTable() {
     if (typeof props.table === "string") {
       let tables = await arc.tables();
@@ -74,7 +74,7 @@ export function createArcTableSessionStorage({
           continue;
         }
 
-        let params = {
+        let params: Record<string, unknown> = {
           [props.idx]: id,
           ...data,
         };
@@ -99,7 +99,7 @@ export function createArcTableSessionStorage({
     },
     async updateData(id, data, expires) {
       let table = await getTable();
-      let params = {
+      let params: Record<string, unknown> = {
         [props.idx]: id,
         ...data,
       };

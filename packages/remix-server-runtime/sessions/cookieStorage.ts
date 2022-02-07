@@ -1,6 +1,10 @@
 import type { CreateCookieFunction } from "../cookies";
 import { isCookie } from "../cookies";
-import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
+import type {
+  SessionStorage,
+  SessionIdStorageStrategy,
+  SessionData,
+} from "../sessions";
 import { warnOnceAboutSigningSessionCookie, createSession } from "../sessions";
 
 interface CookieSessionStorageOptions {
@@ -11,9 +15,9 @@ interface CookieSessionStorageOptions {
   cookie?: SessionIdStorageStrategy["cookie"];
 }
 
-export type CreateCookieSessionStorageFunction = (
+export type CreateCookieSessionStorageFunction = <Data = SessionData>(
   options?: CookieSessionStorageOptions
-) => SessionStorage;
+) => SessionStorage<Data>;
 
 /**
  * Creates and returns a SessionStorage object that stores all session data
