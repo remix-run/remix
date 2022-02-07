@@ -647,18 +647,28 @@ Note that this link will not appear "pending" if a form is being submitted to th
 
 ### `useFetcher`
 
-<docs-error>This hook is for advanced cases that most features of your app don't need. It does not work with server rendering, usually requires JavaScript in the browser, and requires you to deal with pending states.</docs-error>
-
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Concurrent Mutations w/ useFetcher</a> and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
 
-It is common for Remix newcomers to see this hook and think it is the primary way to interact with the server for data loading and updates, but it is not! Remix was specifically designed to avoid this type of interaction with the server and has better ways of handling typical data loading and updating workflows, you probably want one of these:
+In HTML/HTTP, data mutations and loads are modeled with navigation: `<a href>` and `<form action>`. Both cause a navigation in the browser. The Remix equivalents are `<Link>` and `<Form>`.
+
+But sometimes you want to call a loader outside of navigation, or call an action (and get the routes to reload) but you don't want the URL to change. Many interactions with the server aren't navigation events. This hook lets you plug your UI into your actions and loaders without navigating.
+
+This is useful when you need to:
+
+- fetch data not associated with UI routes (popovers, dynamic forms, etc.)
+- submit data to actions without navigating (shared components like a newsletter sign ups)
+- handle multiple concurrent submissions in a list (typical "todo app" list where you can click multiple buttons and all be pending at the same time)
+- infinite scroll containers
+- and more!
+
+It is common for Remix newcomers to see this hook and think it is the primary way to interact with the server for data loading and updates--because it looks like what you might have done outside of Remix. If your use case can be modeled as "navigation", it's recommended you use one of the core data APIs before reaching for `useFetcher`:
 
 - [`useLoaderData`][useloaderdata]
 - [`Form`][form]
 - [`useActionData`][useactiondata]
 - [`useTransition`][usetransition]
 
-This hook will call loaders and actions without navigating. It's similar to `useFetch()` wrappers found in many React apps but with extra behavior specific to Remix (like capturing data updates automatically across the whole page).
+If you're building a highly interactive, "app like" user interface, you will `useFetcher` often.
 
 ```tsx
 import { useFetcher } from "remix";
@@ -668,8 +678,11 @@ function SomeComponent() {
 
   // trigger the fetch with these
   <fetcher.Form {...formOptions} />;
-  fetcher.submit(data, options);
-  fetcher.load(href);
+
+  useEffect(() => {
+    fetcher.submit(data, options);
+    fetcher.load(href);
+  }, []);
 
   // build UI with these
   fetcher.state;
@@ -678,12 +691,6 @@ function SomeComponent() {
   fetcher.data;
 }
 ```
-
-In HTML/HTTP, data mutations and loads are modeled with navigation: `<a href>` and `<form action>` both cause a navigation in the browser. The remix equivalents are `<Link>` and `<Form>`.
-
-In Remix, when the user submits a `<Form>` the action is called and then the loaders for the routes on the page are called again to get fresh data.
-
-But sometimes you want to call an action to update data (and get the routes to reload) but you don't want the URL to change. Many interactions with the server aren't navigation events. This hook lets you plug your UI into your actions and loaders without navigating.
 
 Notes about how it works:
 
