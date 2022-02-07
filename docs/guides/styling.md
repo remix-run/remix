@@ -226,9 +226,9 @@ export const PrimaryButton = React.forwardRef(
 );
 ```
 
-Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know it's dependencies (just like JavaScript imports).
+Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know its dependencies (just like JavaScript imports).
 
-Because these buttons are not routes, and therefore not associate with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
+Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
 Consider that `routes/index.js` uses the primary button component:
 
@@ -249,7 +249,7 @@ export function links() {
 
 Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-button.css`, and the route's `index.css`.
 
-An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so its not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
+An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
 ```tsx filename=app/routes/$category.js lines=[1-4,19-26]
 import { TileGrid } from "~/components/tile-grid";
@@ -325,7 +325,7 @@ While that's a bit of boilerplate it enables a lot:
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
-- When a component's JavaScript changes but it's styles don't, the cache is not broken for the styles
+- When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
 #### Asset Preloads
 
@@ -363,7 +363,7 @@ Not only will this make the asset high priority in the network tab, but Remix wi
 
 ### Link Media Queries
 
-Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you you can do the following:
+Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you can do the following:
 
 ```tsx lines=[10,15,20]
 export function links() {
