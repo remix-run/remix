@@ -23,7 +23,7 @@ function isUser(user: unknown): user is User {
  * Or return undefined if data is optional and not found.
  */
 export default function useOptionalUser(): User | undefined {
-  const user = useMatchesData("root", "user");
+  const { user } = useMatchesData("root");
   /*
    * You can make use of tiny-invariant here to throw runtime errors
    * if the loader data is required and not optional
