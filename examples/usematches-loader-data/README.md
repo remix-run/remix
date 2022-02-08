@@ -2,9 +2,9 @@
 
 Use the `useMatches` hook to access loader data across your application.
 
-With Remix, you don't need global React contexts anymore to access your
-React state. Instead, you can use `useMatches` to access loader
-data across your application.
+With Remix, you don't need global React contexts anymore to access your application state. Instead, you can use `useMatches` to access loader data across your application.
+
+Note: if you have UI state (non-persisted state managed by React) then you'd probably want to look into [the `context` prop on `<Outlet />`](https://remix.run/docs/en/v1/api/remix#outlet-context-) combined with [the `useOutletContext` hook](https://remix.run/docs/en/v1/api/remix#useoutletcontext).
 
 ## Preview
 
