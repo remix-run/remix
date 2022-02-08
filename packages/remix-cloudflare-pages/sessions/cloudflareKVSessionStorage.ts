@@ -23,7 +23,7 @@ interface KVSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
  *
- * @see https://remix.run/docs/en/v1/api/remix#createcloudflarekvsessionstorage-cloudflare-workers
+ * @see https://remix.run/api/remix#createcloudflarekvsessionstorage-cloudflare-workers
  */
 export function createCloudflareKVSessionStorage({
   cookie,
