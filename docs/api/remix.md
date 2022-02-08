@@ -622,7 +622,7 @@ This tells you what the next location is going to be. It's most useful when matc
 
 For example, this `Link` knows when its page is loading and about to become active:
 
-```tsx [6-8]
+```tsx [7-9]
 import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
@@ -1629,7 +1629,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```js filename=app/routes/index.js lines=[2,6,14,18]
+```js filename=app/routes/index.js lines=[2,6-7,13-14,18]
 import { useLoaderData, json, redirect } from "remix";
 import { userPrefs } from "~/cookies";
 
@@ -2330,7 +2330,7 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
-```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-41,50-54,65]
+```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-43,52-56,67]
 import type { LoaderData } from "remix";
 import {
   json,

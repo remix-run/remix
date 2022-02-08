@@ -88,7 +88,7 @@ export default function NewProject() {
 
 At this point, typically you'd render a busy spinner on the page while the user waits for the project to be sent to the server, added to the database, and sent back to the browser and then redirected to the project. Remix makes that pretty easy:
 
-```js filename=app/routes/projects/new.js lines=[1,12,24,26-28]
+```js filename=app/routes/projects/new.js lines=[1,14,26,28-30]
 import { Form, redirect, useTransition } from "remix";
 import { createProject } from "~/utils";
 
@@ -128,7 +128,7 @@ export default function NewProject() {
 
 Since we know that almost every time this form is submitted it's going to succeed, we can just skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
 
-```js filename=app/routes/projects/new.js lines=[3,14-20]
+```js filename=app/routes/projects/new.js lines=[3,15-21]
 import { Form, redirect, useTransition } from "remix";
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
