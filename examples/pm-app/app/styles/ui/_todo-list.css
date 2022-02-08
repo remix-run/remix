@@ -1,0 +1,9 @@
+.ui--todo-list {
+  padding: 0;
+  list-style: none;
+}
+
+.ui--todo-list__checkbox {
+  margin-right: var(--spaces-02);
+  accent-color: var(--colors-blue-09);
+}

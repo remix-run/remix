@@ -59,7 +59,12 @@ export default function Methods() {
 
   return (
     <div data-test-id="/methods">
-      <Form action="/methods" method={method} encType={enctype}>
+      <Form
+        action="/methods"
+        method={method}
+        encType={enctype}
+        id="methods-form"
+      >
         <p>
           <label>
             Method:{" "}
@@ -135,6 +140,15 @@ export default function Methods() {
           </button>
         </p>
       </Form>
+      <button
+        type="submit"
+        id="submit-with-data-outside-form"
+        name="data"
+        value="d"
+        form="methods-form"
+      >
+        {method} (with data)
+      </button>
       <div
         id="results"
         style={{

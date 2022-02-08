@@ -10,7 +10,7 @@ let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
 let adapters = ["architect", "express", "netlify", "vercel"];
-let runtimes = ["cloudflare-workers", "cloudflare-pages", "node"];
+let runtimes = ["cloudflare-workers", "cloudflare-pages", "deno", "node"];
 let core = ["dev", "server-runtime", "react", "eslint-config"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
@@ -144,15 +144,15 @@ async function run(args) {
       if (!stat.isDirectory()) continue;
 
       await updateExamplesPackageConfig(example, config => {
-        if (config.dependencies["remix"]) {
+        if (config.dependencies?.["remix"]) {
           config.dependencies["remix"] = nextVersion;
         }
 
         for (let pkg of allPackages) {
-          if (config.dependencies[`@remix-run/${pkg}`]) {
+          if (config.dependencies?.[`@remix-run/${pkg}`]) {
             config.dependencies[`@remix-run/${pkg}`] = nextVersion;
           }
-          if (config.devDependencies[`@remix-run/${pkg}`]) {
+          if (config.devDependencies?.[`@remix-run/${pkg}`]) {
             config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
           }
         }
