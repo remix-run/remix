@@ -192,6 +192,19 @@ export async function createAppFixture(fixture: Fixture) {
       },
 
       /**
+       * Find the input element and fill for file uploads.
+       * @param inputSelector The selector of the input you want to fill
+       * @param filePaths The paths to the files you want to upload
+       */
+      uploadFile: async (inputSelector: string, ...filePaths: string[]) => {
+        let el = await page.$(inputSelector);
+        if (!el) {
+          throw new Error(`Could not find input for: ${inputSelector}`);
+        }
+        await el.uploadFile(...filePaths);
+      },
+
+      /**
        * Finds the first submit button with `formAction` that matches the
        * `action` supplied, clicks it, and optionally waits for the network to
        * be idle before contininuing.
@@ -355,7 +368,10 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
     Object.keys(init.files).map(async filename => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fs.writeFile(filePath, init.files[filename]);
+      await fs.writeFile(
+        filePath,
+        init.files[filename].replace(/__FIXTURE_DIR__/, JSON.stringify(dir))
+      );
     })
   );
   await renamePkgJsonApp(dir);
