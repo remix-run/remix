@@ -7,8 +7,8 @@
     "postinstall": "remix setup node",
     "build": "remix build",
     "dev:remix": "remix watch",
-    "dev:arc": "cross-env ARC_LOCAL=1 ARC_TABLES_PORT=5555 arc sandbox",
-    "dev": "run-p dev:*"
+    "dev:arc": "arc sandbox",
+    "dev": "cross-env ARC_LOCAL=1 ARC_TABLES_PORT=5555 run-p dev:*"
   },
   "dependencies": {
     "@architect/functions": "5.0.0-RC.1",

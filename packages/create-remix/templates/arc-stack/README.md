@@ -17,6 +17,7 @@ npm i -g @architect/architect aws-sdk
 ## Development
 
 ```sh
+echo "NODE_ENV=development" >> .env
 echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 npm run dev
 ```
