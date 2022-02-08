@@ -7,7 +7,7 @@
 1. Globally install Architect and the AWS SDK
 
 ```sh
-$ npm i -g @architect/architect aws-sdk
+npm i -g @architect/architect aws-sdk
 ```
 
 2. [Sign up][signup] and login to your AWS account
@@ -17,8 +17,8 @@ $ npm i -g @architect/architect aws-sdk
 ## Development
 
 ```sh
-$ echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
-$ npm run dev
+echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
+npm run dev
 ```
 
 > If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
@@ -48,8 +48,8 @@ Prior to your first deployment, you'll need to do a few things:
 Along with your AWS credentials, you'll also need to give your CloudFormation a `SESSION_SECRET` variable of its own for both staging and production environments.
 
 ```sh
-$ arc env staging SESSION_SECRET $(openssl rand -hex 32)
-$ arc env production SESSION_SECRET $(openssl rand -hex 32)
+arc env staging SESSION_SECRET $(openssl rand -hex 32)
+arc env production SESSION_SECRET $(openssl rand -hex 32)
 ```
 
 > If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
