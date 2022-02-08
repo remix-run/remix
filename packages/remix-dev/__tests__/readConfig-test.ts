@@ -206,6 +206,14 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "empty",
           },
+          "routes/esm-libs": Object {
+            "caseSensitive": undefined,
+            "file": "routes/esm-libs.jsx",
+            "id": "routes/esm-libs",
+            "index": undefined,
+            "parentId": "root",
+            "path": "esm-libs",
+          },
           "routes/fetchers": Object {
             "caseSensitive": undefined,
             "file": "routes/fetchers.tsx",
@@ -414,6 +422,11 @@ describe("readConfig", () => {
         "serverMode": "production",
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",
+        "transpileModules": Array [
+          "cssfn.js",
+          /@cssfn\\\\//,
+          /@nodestrap\\\\//,
+        ],
       }
     `
     );
