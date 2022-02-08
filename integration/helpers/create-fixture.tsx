@@ -368,10 +368,7 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
     Object.keys(init.files).map(async filename => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fs.writeFile(
-        filePath,
-        init.files[filename].replace(/__FIXTURE_DIR__/, JSON.stringify(dir))
-      );
+      await fs.writeFile(filePath, init.files[filename]);
     })
   );
   await renamePkgJsonApp(dir);

@@ -16,7 +16,7 @@ describe("file-uploads", () => {
           import { unstable_createFileUploadHandler as createFileUploadHandler } from "remix";
 
           export let uploadHandler = createFileUploadHandler({
-            directory: path.join(__FIXTURE_DIR__, "uploads"),
+            directory: path.resolve(__dirname, "..", "uploads"),
             maxFileSize: 3000000, // 3MB
             // you probably want to avoid conflicts in production
             // do not set to false or passthrough filename in real
