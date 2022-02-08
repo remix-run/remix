@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix-app",
+  "name": "remix-example-redis-upstash-session",
   "description": "",
   "license": "",
   "scripts": {

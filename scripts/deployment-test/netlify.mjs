@@ -3,7 +3,7 @@ import { spawnSync } from "child_process";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";
 
-import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-netlify-${sha}`;
@@ -32,24 +32,26 @@ function createNetlifySite() {
 try {
   await createNewApp();
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress"),
-    path.join(PROJECT_DIR, "cypress")
-  );
+  await Promise.all([
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress"),
+      path.join(PROJECT_DIR, "cypress")
+    ),
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-    path.join(PROJECT_DIR, "cypress.json")
-  );
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
+      path.join(PROJECT_DIR, "cypress.json")
+    ),
 
-  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+  ]);
 
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run the tests against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // create a new site on netlify
   let site = await createNetlifySite();
@@ -67,7 +69,7 @@ try {
 
   console.log(`Deployed to ${site.ssl_url}`);
 
-  runCypress(false, site.ssl_url);
+  runCypress(PROJECT_DIR, false, site.ssl_url);
 
   process.exit(0);
 } catch (error) {

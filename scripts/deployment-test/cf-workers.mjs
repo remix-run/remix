@@ -3,7 +3,7 @@ import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
 
-import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = `remix-cf-workers-${sha}`;
@@ -38,15 +38,14 @@ try {
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
 
-  // change to the project directory
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // we need to update the workers name
   let wranglerTomlPath = path.join(PROJECT_DIR, "wrangler.toml");
@@ -64,7 +63,7 @@ try {
   }
 
   // run cypress against the deployed server
-  runCypress(false, url);
+  runCypress(PROJECT_DIR, false, url);
 
   process.exit(0);
 } catch (error) {

@@ -64,7 +64,7 @@ interface RemixEntryContextType {
   transitionManager: ReturnType<typeof createTransitionManager>;
 }
 
-const RemixEntryContext = React.createContext<
+export const RemixEntryContext = React.createContext<
   RemixEntryContextType | undefined
 >(undefined);
 
@@ -444,8 +444,8 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
         <RouterNavLink
           ref={forwardedRef}
           to={to}
-          {...prefetchHandlers}
           {...props}
+          {...prefetchHandlers}
         />
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
@@ -465,8 +465,8 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
         <RouterLink
           ref={forwardedRef}
           to={to}
-          {...prefetchHandlers}
           {...props}
+          {...prefetchHandlers}
         />
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
@@ -880,14 +880,18 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
           HTMLButtonElement | HTMLInputElement
         >("button,input[type=submit]");
 
-        if (submitButton && submitButton.type === "submit") {
+        if (
+          submitButton &&
+          submitButton.form === form &&
+          submitButton.type === "submit"
+        ) {
           clickedButtonRef.current = submitButton;
         }
       }
 
-      form.addEventListener("click", handleClick);
+      window.addEventListener("click", handleClick);
       return () => {
-        form && form.removeEventListener("click", handleClick);
+        window.removeEventListener("click", handleClick);
       };
     }, []);
 

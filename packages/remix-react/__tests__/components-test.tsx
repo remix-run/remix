@@ -1,7 +1,10 @@
 import * as React from "react";
-import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, act } from "@testing-library/react";
 
 import type { LiveReload as ActualLiveReload } from "../components";
+import { Link, NavLink, RemixEntryContext } from "../components";
+
 import "@testing-library/jest-dom/extend-expect";
 
 describe("<LiveReload />", () => {
@@ -54,4 +57,105 @@ describe("<LiveReload />", () => {
       );
     });
   });
+});
+
+const setIntentEvents = ["focus", "mouseEnter", "touchStart"] as const;
+type PrefetchEventHandlerProps = {
+  [Property in `on${Capitalize<typeof setIntentEvents[number]>}`]?: Function;
+};
+
+function itPrefetchesPageLinks<
+  Props extends { to: any; prefetch?: any } & PrefetchEventHandlerProps
+>(Component: React.ComponentType<Props>) {
+  describe('prefetch="intent"', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    function withContext(stuff: JSX.Element) {
+      const context = {
+        routeModules: { idk: { default: () => null } },
+        manifest: {
+          routes: {
+            idk: {
+              hasLoader: true,
+              hasAction: false,
+              hasCatchBoundary: false,
+              hasErrorBoundary: false,
+              id: "idk",
+              module: "idk"
+            }
+          },
+          entry: { imports: [], module: "" },
+          url: "",
+          version: ""
+        },
+        matches: [],
+        clientRoutes: [
+          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" }
+        ],
+        routeData: {},
+        appState: {} as any,
+        transitionManager: {} as any
+      };
+      return (
+        <RemixEntryContext.Provider value={context}>
+          <MemoryRouter>{stuff}</MemoryRouter>
+        </RemixEntryContext.Provider>
+      );
+    }
+
+    setIntentEvents.forEach(event => {
+      it(`prefetches page links on ${event}`, () => {
+        const { container, unmount } = render(
+          withContext(
+            <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
+          )
+        );
+
+        fireEvent[event](container.firstChild);
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        expect(container.querySelector("link[rel=prefetch]")).toBeTruthy();
+        unmount();
+      });
+
+      it(`prefetches page links and calls explicit handler on ${event}`, () => {
+        let ranHandler = false;
+        const eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
+        const { container, unmount } = render(
+          withContext(
+            <Component
+              {...({
+                to: "idk",
+                prefetch: "intent",
+                [eventHandler]: () => {
+                  ranHandler = true;
+                }
+              } as any)}
+            />
+          )
+        );
+
+        fireEvent[event](container.firstChild);
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        expect(container.querySelector("link[rel=prefetch]")).toBeTruthy();
+        expect(ranHandler).toBe(true);
+        unmount();
+      });
+    });
+  });
+}
+
+describe("<Link />", () => {
+  itPrefetchesPageLinks(Link);
+});
+
+describe("<NavLink />", () => {
+  itPrefetchesPageLinks(NavLink);
 });
