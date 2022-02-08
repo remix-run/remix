@@ -8,6 +8,7 @@ on:
 
 jobs:
   format:
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
 
     steps:
