@@ -433,7 +433,7 @@ Update the package scripts to generate the tailwind file during dev and for the 
 
 Finally, import the generated CSS file into your app:
 
-```tsx filename=root.tsx
+```tsx filename=app/root.tsx
 // ...
 import styles from "./tailwind.css";
 
@@ -458,7 +458,7 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 
 Then alter how tailwind is generating css:
 
-```json filename="package.json lines=[4-7]
+```json filename=package.json lines=[4-7]
 {
   // ...
   "scripts": {
