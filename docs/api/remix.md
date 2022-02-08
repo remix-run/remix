@@ -1893,7 +1893,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 A login form might look something like this:
 
 ```tsx filename=app/routes/login.js lines=2,5-7,9,14,18,24-26,37,42,47,52
-import { json, redirect } from "remix";
+import { json, redirect, useLoaderData } from "remix";
 import { getSession, commitSession } from "../sessions";
 
 export async function loader({ request }) {
