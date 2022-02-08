@@ -11,6 +11,13 @@ We're going to be short on words and quick on code in this quickstart. If you're
 
 This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, cut once!).
 
+## Prerequisites
+
+If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
+- [Node.js](https://nodejs.org) 14 or greater
+- [npm](https://www.npmjs.com) 7 or greater
+- A code editor
+
 ## Creating the project
 
 💿 Initialize a new Remix project
