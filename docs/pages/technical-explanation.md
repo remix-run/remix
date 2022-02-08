@@ -84,7 +84,7 @@ More often than not, a Remix route module can contain both the UI and the intera
 
 Route modules have three primary exports: `loader`, `action`, and `default` (component).
 
-```js
+```jsx
 // Loaders only run on the server and provide data
 // to your component on GET requests
 export async function loader() {
@@ -165,7 +165,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server side form validation fails
 3. Animate in the error messages
 
-```js nocopy lines=[4-6,8-12,21,22,28-30]
+```jsx nocopy lines=[4-6,8-12,21,22,28-30]
 export default function Projects() {
   const projects = useLoaderData();
   const actionData = useActionData();

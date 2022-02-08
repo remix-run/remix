@@ -128,7 +128,8 @@ export const action: ActionFunction = async ({
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```ts
-import { ActionFunction, json } from "remix";
+import type { ActionFunction } from "remix";
+import { json } from "remix";
 import crypto from "crypto";
 
 export const action: ActionFunction = async ({
