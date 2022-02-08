@@ -6,7 +6,9 @@ on:
 
 jobs:
   deploy:
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repo
         uses: actions/checkout@v2
