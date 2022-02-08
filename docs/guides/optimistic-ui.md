@@ -26,7 +26,7 @@ Consider the workflow for viewing and creating a new project. The project route 
 import { useLoaderData } from "remix";
 import { ProjectView } from "~/components/project";
 
-export function loader({ params }) {
+export async function loader({ params }) {
   return findProject(params.id);
 }
 

@@ -139,7 +139,7 @@ import * as build from "../build";
 const handleRequest = createRequestHandler({ build });
 
 const handleEvent = async (event: FetchEvent) => {
-  const response = await handleAsset(event, build);
+  let response = await handleAsset(event, build);
 
   if (!response) {
     response = await handleRequest(event);
