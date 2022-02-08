@@ -50,7 +50,7 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 <Link to="/posts">Posts</Link>
 ```
 
-You can put it anywhere you like or you might want to just delete everything that's there. However, `<Outlet />` is required for proper routing in this tutorial.
+You can put it anywhere you like. Make sure not to delete the Remix specific components like `<Outlet />` and `<Scripts/>`.
 
 💿 Either way you will also need to import `Link`:
 
