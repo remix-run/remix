@@ -188,7 +188,7 @@ export default function Product() {
 
 ## Not Found
 
-While loading data its common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
 export let loader: LoaderFunction = async ({
@@ -337,7 +337,7 @@ export default function ProductFilters() {
         id="adidas"
         name="brand"
         value="adidas"
-        defaultChecked={brands.includes("nike")}
+        defaultChecked={brands.includes("adidas")}
       />
 
       <button type="submit">Update</button>
