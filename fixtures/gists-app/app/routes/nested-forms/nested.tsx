@@ -1,12 +1,12 @@
 import type { LoaderFunction } from "remix";
 import { Form, json, Outlet, useActionData, useLoaderData } from "remix";
 
-export let loader: LoaderFunction = ({ request }) => {
+export let loader: LoaderFunction = async ({ request }) => {
   let value = new URL(request.url).searchParams.get("value");
   return json(value);
 };
 
-export function action() {
+export async function action() {
   return json("nested layout action data");
 }
 

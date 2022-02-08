@@ -13,7 +13,7 @@ In general, you don't need the concept of "API Routes" at all. But we knew you'd
 Consider this route:
 
 ```tsx filename=routes/teams.js
-export function loader() {
+export async function loader() {
   return getTeams();
 }
 
@@ -33,7 +33,7 @@ You can `useFetcher` for cases like this. And once again, since Remix in the bro
 For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
-export function loader({ request }) {
+export async function loader({ request }) {
   const url = new URL(request.url);
   return searchCities(url.searchParams.get("q"));
 }
@@ -89,7 +89,7 @@ function CitySearchCombobox() {
 In other cases, you may need routes that are part of your application, but aren't part of your application's UI. Maybe you want a loader that renders a report as a PDF:
 
 ```tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {
