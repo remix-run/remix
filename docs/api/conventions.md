@@ -662,7 +662,7 @@ export function getInvoice(id, user) {
 import { redirect } from "remix";
 import { getSession } from "./session";
 
-function requireUserSession(request) {
+export async function requireUserSession(request) {
   const session = await getSession(
     request.headers.get("cookie")
   );
