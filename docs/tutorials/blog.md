@@ -14,6 +14,7 @@ This uses TypeScript, but we always pepper the types on after we write the code.
 ## Prerequisites
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
+
 - [Node.js](https://nodejs.org) 14 or greater
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor
