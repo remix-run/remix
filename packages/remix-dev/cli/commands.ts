@@ -123,7 +123,8 @@ export async function watch(
     },
     onFileDeleted(file) {
       log(`File deleted: ${path.relative(process.cwd(), file)}`);
-    }
+    },
+    externals: config.externals,
   });
 
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);

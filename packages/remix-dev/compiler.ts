@@ -33,6 +33,7 @@ interface BuildConfig {
   mode: BuildMode;
   target: BuildTarget;
   sourcemap: boolean;
+  externals: string[];
 }
 
 function defaultWarningHandler(message: string, key: string) {
@@ -72,6 +73,7 @@ export async function build(
     mode = BuildMode.Production,
     target = BuildTarget.Node14,
     sourcemap = false,
+    externals = [],
     onWarning = defaultWarningHandler,
     onBuildFailure = defaultBuildFailureHandler
   }: BuildOptions = {}
@@ -82,6 +84,7 @@ export async function build(
     mode,
     target,
     sourcemap,
+    externals,
     onWarning,
     onBuildFailure
   });
@@ -102,6 +105,7 @@ export async function watch(
     mode = BuildMode.Development,
     target = BuildTarget.Node14,
     sourcemap = true,
+    externals = [],
     onWarning = defaultWarningHandler,
     onBuildFailure = defaultBuildFailureHandler,
     onRebuildStart,
@@ -116,6 +120,7 @@ export async function watch(
     mode,
     target,
     sourcemap,
+    externals,
     onBuildFailure,
     onWarning,
     incremental: true
@@ -320,6 +325,10 @@ async function createBrowserBuild(
   // on node built-ins in browser bundles.
   let dependencies = Object.keys(await getAppDependencies(config));
   let externals = nodeBuiltins.filter(mod => !dependencies.includes(mod));
+  if (options.externals) {
+    externals = [...externals, ...options.externals];
+  }
+
   let fakeBuiltins = nodeBuiltins.filter(mod => dependencies.includes(mod));
 
   if (fakeBuiltins.length > 0) {
@@ -387,6 +396,8 @@ async function createServerBuild(
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
 
+  let externals = options.externals || [];
+
   if (config.serverEntryPoint) {
     entryPoints = [config.serverEntryPoint];
   } else {
@@ -419,6 +430,7 @@ async function createServerBuild(
       write: false,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
+      external: externals,
       treeShaking: true,
       minify:
         options.mode === BuildMode.Production &&
