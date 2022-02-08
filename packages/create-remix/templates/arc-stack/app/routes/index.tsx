@@ -46,7 +46,6 @@ const action: ActionFunction = async ({ request }) => {
       }
 
       await deleteNote({ email: pk, noteId: sk });
-
       return redirect("/");
     }
 
@@ -111,7 +110,7 @@ function Index() {
       ) : (
         <ul>
           {data.notes.map((note: any) => (
-            <li key={note.pk}>
+            <li key={`${note.pk}-${note.sk}`}>
               <h3>{note.title}</h3>
               <p>{note.body}</p>
               <Form method="post">
