@@ -26,6 +26,6 @@ In the `routes/index` file it access it to listen for more events and renders a 
 
 ## Related Links
 
-- [Express adapter](https://remix.run/docs/en/v1/other-api/adapter#createrequesthandler)
+- [Express adapter](https://remix.run/other-api/adapter#createrequesthandler)
 - [socket.io](https://socket.io/)
 - [socket.io-client](https://www.npmjs.com/package/socket.io-client)
