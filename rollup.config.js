@@ -26,7 +26,7 @@ function getVersion(sourceDir) {
   return require(`./${sourceDir}/package.json`).version;
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function createRemix() {
   let SOURCE_DIR = "packages/create-remix";
   let OUTPUT_DIR = "build/node_modules/create-remix";
@@ -37,7 +37,7 @@ function createRemix() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/cli.ts`,
+      input: [`${SOURCE_DIR}/cli.ts`, `${SOURCE_DIR}/index.ts`],
       output: {
         format: "cjs",
         dir: OUTPUT_DIR,
@@ -66,7 +66,7 @@ function createRemix() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remix() {
   let SOURCE_DIR = "packages/remix";
   let OUTPUT_DIR = "build/node_modules/remix";
@@ -119,7 +119,7 @@ function remix() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixDev() {
   let SOURCE_DIR = "packages/remix-dev";
   let OUTPUT_DIR = "build/node_modules/@remix-run/dev";
@@ -196,7 +196,7 @@ function remixDev() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixServerRuntime() {
   let SOURCE_DIR = "packages/remix-server-runtime";
   let OUTPUT_DIR = "build/node_modules/@remix-run/server-runtime";
@@ -290,7 +290,7 @@ function remixServerRuntime() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixNode() {
   let SOURCE_DIR = "packages/remix-node";
   let OUTPUT_DIR = "build/node_modules/@remix-run/node";
@@ -364,7 +364,7 @@ function remixNode() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflareWorkers() {
   let SOURCE_DIR = "packages/remix-cloudflare-workers";
   let OUTPUT_DIR = "build/node_modules/@remix-run/cloudflare-workers";
@@ -430,7 +430,7 @@ function remixCloudflareWorkers() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflarePages() {
   let SOURCE_DIR = "packages/remix-cloudflare-pages";
   let OUTPUT_DIR = "build/node_modules/@remix-run/cloudflare-pages";
@@ -533,7 +533,7 @@ function getServerConfig(name) {
   };
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixServerAdapters() {
   return [
     getServerConfig("architect"),
@@ -545,7 +545,7 @@ function remixServerAdapters() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixReact() {
   let SOURCE_DIR = "packages/remix-react";
   let OUTPUT_DIR = "build/node_modules/@remix-run/react";
@@ -606,7 +606,7 @@ function remixReact() {
     ]
   };
 
-  /** @type {import("rollup").RollupOptions[]} */
+  /** @returns {import("rollup").RollupOptions[]} */
   let remixReactMagicExportsCJS = {
     external() {
       return true;
@@ -626,7 +626,7 @@ function remixReact() {
     ]
   };
 
-  /** @type {import("rollup").RollupOptions[]} */
+  /** @returns {import("rollup").RollupOptions[]} */
   let remixReactMagicExportsESM = {
     external() {
       return true;
@@ -654,7 +654,7 @@ function remixReact() {
   ];
 }
 
-/** @type {import("rollup").RollupOptions[]} */
+/** @returns {import("rollup").RollupOptions[]} */
 function remixServe() {
   let SOURCE_DIR = "packages/remix-serve";
   let OUTPUT_DIR = "build/node_modules/@remix-run/serve";
@@ -665,7 +665,7 @@ function remixServe() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: [`${SOURCE_DIR}/index.ts`, `${SOURCE_DIR}/env.ts`],
       output: {
         banner: createBanner("@remix-run/serve", version),
         dir: OUTPUT_DIR,

@@ -33,4 +33,4 @@ npm start
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic)
