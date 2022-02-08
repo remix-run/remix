@@ -88,6 +88,7 @@ export default function Edit() {
         <input
           type="text"
           name="company"
+          id="company"
           value={formData.company}
           onChange={handleChange}
         />
@@ -95,20 +96,22 @@ export default function Edit() {
         <label htmlFor="description">Description</label>
         <textarea
           name="description"
+          id="description"
           value={formData.description}
           onChange={handleChange}
           rows={10}
         />
 
-        <label>Amount</label>
+        <label htmlFor="amount">Amount</label>
         <input
           type="number"
           name="amount"
+          id="amount"
           value={formData.amount}
           onChange={handleChange}
         />
-        <label>Date</label>
-        <input defaultValue={formData.date} type="date" name="date" />
+        <label htmlFor="date">Date</label>
+        <input defaultValue={formData.date} type="date" name="date" id="date" />
         <div>
           <button type="submit">Save</button>
           <button type="button" onClick={onDismiss}>

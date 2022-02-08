@@ -53,26 +53,30 @@ export default function Add() {
           defaultValue={actionData?.fields?.company}
           type="text"
           name="company"
+          id="company"
         />
 
         <label htmlFor="description">Description</label>
         <textarea
           defaultValue={actionData?.fields?.description}
           name="description"
+          id="description"
           rows={10}
         />
 
-        <label>Amount</label>
+        <label htmlFor="amount">Amount</label>
         <input
           defaultValue={actionData?.fields?.amount}
           type="number"
           name="amount"
+          id="amount"
         />
-        <label>Date</label>
+        <label htmlFor="date">Date</label>
         <input
           defaultValue={actionData?.fields?.date}
           type="date"
           name="date"
+          id="date"
         />
         <div>
           <button type="submit" disabled={disabled}>
