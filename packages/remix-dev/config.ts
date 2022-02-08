@@ -379,8 +379,6 @@ export async function readConfig(
 
   let externals = appConfig.externals || [];
 
-  console.log('EXTERNALS', externals)
-
   return {
     appDirectory,
     cacheDirectory,
