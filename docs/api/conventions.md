@@ -265,7 +265,7 @@ app/
 | ----------------- | -------------------------------------- | ---------------------------- |
 | `/`               | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
 | `/product`        | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
-| `/dashboard`       | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
+| `/dashboard`      | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
 | `/chance/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
 
 </details>
