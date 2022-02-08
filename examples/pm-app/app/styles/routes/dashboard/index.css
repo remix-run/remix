@@ -1,0 +1,125 @@
+@import "../../_defs.css";
+
+.dashboard__header {
+  border-bottom: 1px solid var(--colors-gray-08);
+  padding-bottom: var(--spaces-06);
+  margin-bottom: var(--spaces-06);
+}
+
+@media (--viewport-md) {
+  .dashboard__header {
+    padding-bottom: var(--spaces-08);
+    margin-bottom: var(--spaces-08);
+  }
+}
+
+.dashboard__header-inner {
+  max-width: 34rem;
+}
+
+.dashboard__section-heading {
+  margin-bottom: var(--spaces-06);
+}
+
+.dashboard__project-list {
+  --item-padding: var(--spaces-04);
+  display: grid;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-template-columns: repeat(1, 1fr);
+  gap: var(--spaces-04);
+}
+
+@media (--viewport-sm) {
+  .dashboard__project-list {
+    --item-padding: var(--spaces-04);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (--viewport-md) {
+  .dashboard__project-list {
+    --item-padding: var(--spaces-05);
+    grid-auto-rows: minmax(9rem, auto);
+  }
+}
+
+@media (--viewport-lg) {
+  .dashboard__project-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.dashboard__project {
+  position: relative;
+}
+
+.dashboard__project-opts-menu {
+  --touch-gap: var(--spaces-01);
+  position: absolute;
+  z-index: 10;
+  top: calc(var(--item-padding) - var(--touch-gap));
+  right: calc(var(--item-padding) - var(--touch-gap));
+}
+
+.dashboard__project-opts-button {
+  opacity: 0;
+}
+
+.dashboard__project:focus-within .dashboard__project-opts-button,
+.dashboard__project:hover .dashboard__project-opts-button,
+.dashboard__project-opts-button[data-state="open"],
+.dashboard__project-opts-button[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.dashboard__project-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--item-padding);
+  height: 100%;
+}
+
+.dashboard__project-heading {
+  width: calc(100% - 2rem);
+}
+
+.dashboard__project-block-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  color: unset;
+  text-decoration: none;
+}
+
+.dashboard__create-link {
+  --border-size: 4px;
+  display: block;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+  border: 4px dotted currentColor;
+  padding: calc(var(--item-padding) - var(--border-size));
+  color: var(--colors-gray-12);
+  text-decoration: none;
+}
+
+.dashboard__create-link:hover {
+  color: var(--colors-gray-14);
+}
+
+.dashboard__member-list {
+  display: flex;
+}
+
+.dashboard__member {
+  transition: transform 250ms ease-out;
+  transform: translateX(calc(var(--spaces-04) * -1 * var(--n)));
+  border: 2px solid var(--colors-white);
+}
+
+.dashboard__project:focus-within .dashboard__member,
+.dashboard__project:hover .dashboard__member {
+  transform: translateX(calc(var(--spaces-01) / 2 * var(--n)));
+}
