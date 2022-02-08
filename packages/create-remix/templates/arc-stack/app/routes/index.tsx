@@ -8,24 +8,19 @@ import {
   useLocation
 } from "remix";
 
-import { arc } from "~/db.server";
 import { getSession } from "~/session.server";
 
 import Alert from "@reach/alert";
-import { createNote, deleteNote } from "~/models/note";
+import { createNote, deleteNote, getNotes } from "~/models/note";
 
 const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request);
   const user = session.get("user");
   if (!user) return redirect("/login");
 
-  const data = await arc.tables();
-  const result = await data.notes.query({
-    KeyConditionExpression: "sk = :sk",
-    ExpressionAttributeValues: { ":sk": `email#${user.email}` }
-  });
+  const notes = await getNotes(user.pk);
 
-  return json({ notes: result.Items });
+  return json({ notes });
 };
 
 const action: ActionFunction = async ({ request }) => {
@@ -50,7 +45,7 @@ const action: ActionFunction = async ({ request }) => {
         throw new Response("sk must be a string", { status: 400 });
       }
 
-      await deleteNote(pk, sk);
+      await deleteNote({ email: pk, noteId: sk });
 
       return redirect("/");
     }
@@ -67,7 +62,7 @@ const action: ActionFunction = async ({ request }) => {
         throw new Response("body must be a string", { status: 400 });
       }
 
-      await createNote({ title, body, email: user.email });
+      await createNote({ title, body, email: user.pk });
       return redirect("/");
     }
 

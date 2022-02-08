@@ -1,7 +1,18 @@
 import cuid from "cuid";
 import { arc } from "~/db.server";
 
-async function createNote({
+export async function getNotes(email: string) {
+  const db = await arc.tables();
+
+  const result = await db.notes.query({
+    KeyConditionExpression: "pk = :pk",
+    ExpressionAttributeValues: { ":pk": email }
+  });
+
+  return result.Items;
+}
+
+export async function createNote({
   title,
   body,
   email
@@ -11,20 +22,24 @@ async function createNote({
   email: string;
 }) {
   const db = await arc.tables();
+
   return db.notes.put({
-    sk: `email#${email}`,
+    // our primary key is the email
+    // and it already has the `email#` prefix
+    pk: email,
+    sk: `note#${cuid()}`,
     title: title,
-    body: body,
-    pk: `note#${cuid()}`
+    body: body
   });
 }
 
-async function deleteNote(noteID: string, email: string) {
+export async function deleteNote({
+  noteId,
+  email
+}: {
+  noteId: string;
+  email: string;
+}) {
   const db = await arc.tables();
-  return db.notes.delete({
-    pk: noteID,
-    sk: email
-  });
+  return db.notes.delete({ pk: email, sk: noteId });
 }
-
-export { createNote, deleteNote };

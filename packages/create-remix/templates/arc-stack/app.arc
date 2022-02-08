@@ -13,11 +13,11 @@ region us-east-1
 
 @tables
 people
-  pk *String
+  pk *String  # email
 
 notes
-  pk **String
-  sk *String
+  pk *String  # user's email
+  sk **String # noteId
 
 arc-sessions
   _idx *String
