@@ -5,6 +5,8 @@ describe("compiler", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
+  const RESOURCE_ROUTE = "routes/resource/route";
+
   beforeAll(async () => {
     fixture = await createFixture({
       files: {
@@ -19,6 +21,7 @@ describe("compiler", () => {
             return <div id="index">{Object.keys(fake).length}</div>
           }
         `,
+
         "app/routes/built-ins.jsx": js`
           import { useLoaderData } from "remix";
           import * as path from "path";
@@ -31,12 +34,23 @@ describe("compiler", () => {
             return <div id="built-ins">{useLoaderData()}</div>
           }
         `,
+
         "app/routes/built-ins-polyfill.jsx": js`
           import { useLoaderData } from "remix";
           import * as path from "path";
 
           export default function BuiltIns() {
             return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>
+          }
+        `,
+
+        [`app/${RESOURCE_ROUTE}.js`]: js`
+          export function loader() {
+            return "loader";
+          }
+
+          export function action() {
+            return "action";
           }
         `
       }
@@ -47,6 +61,10 @@ describe("compiler", () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it("does not bundle resource routes", async () => {
+    expect(fixture.build.assets.routes[RESOURCE_ROUTE]).toBeUndefined();
   });
 
   it("removes server code with `*.server` files", async () => {
