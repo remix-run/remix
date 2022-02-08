@@ -1646,7 +1646,7 @@ export async function action({ request }) {
     (await userPrefs.parse(cookieHeader)) || {};
   const bodyParams = await request.formData();
 
-  if (bodyParams.get("banner") === "hidden") {
+  if (bodyParams.get("bannerVisibility") === "hidden") {
     cookie.showBanner = false;
   }
 
