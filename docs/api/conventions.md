@@ -723,8 +723,8 @@ export function CatchBoundary() {
         <div>
           <p>You don't have access to this invoice.</p>
           <p>
-            Contact {caught.data.invoiceOwnerEmail} to
-            get access
+            Contact {caught.data.invoiceOwnerEmail} to get
+            access
           </p>
         </div>
       );
