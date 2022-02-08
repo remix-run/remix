@@ -11,9 +11,21 @@ We're going to be short on words and quick on code in this quickstart. If you're
 
 This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, cut once!).
 
+## Prerequisites
+
+If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
+
+- [Node.js](https://nodejs.org) 14 or greater
+- [npm](https://www.npmjs.com) 7 or greater
+- A code editor
+
 ## Creating the project
 
 💿 Initialize a new Remix project
+
+<docs-warning>
+Make sure you are running at least Node v14 or greater
+</docs-warning>
 
 ```sh
 npx create-remix@latest
@@ -46,7 +58,13 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 <Link to="/posts">Posts</Link>
 ```
 
-You can put it anywhere you like, you might want to just delete everything that's there.
+You can put it anywhere you like. Make sure not to delete the Remix specific components like `<Outlet />` and `<Scripts/>`.
+
+💿 Either way you will also need to import `Link`:
+
+```tsx
+import { Link } from "remix";
+```
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
@@ -92,7 +110,7 @@ So let's get to it and provide some data to our component.
 ```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
-export const loader = () => {
+export const loader = async () => {
   return [
     {
       slug: "my-first-post",
@@ -153,7 +171,7 @@ export type Post = {
   title: string;
 };
 
-export const loader = () => {
+export const loader = async () => {
   const posts: Post[] = [
     {
       slug: "my-first-post",
@@ -226,7 +244,7 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 
@@ -570,7 +588,7 @@ import { Link, useLoaderData } from "remix";
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 
@@ -601,6 +619,7 @@ You should recognize a lot of that code from the posts route. We set up some ext
 💿 Create an admin stylesheet
 
 ```sh
+mkdir app/styles
 touch app/styles/admin.css
 ```
 
@@ -879,7 +898,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-15,20-22,26-28]
+```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-16,22-23,28-31]
 import { useActionData, Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
 

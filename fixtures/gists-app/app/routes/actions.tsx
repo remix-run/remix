@@ -9,7 +9,7 @@ import type { HeadersFunction, ActionFunction } from "remix";
 
 import { uploadHandler } from "../uploadHandler.server";
 
-export function loader() {
+export async function loader() {
   return "ay! data from the loader!";
 }
 

@@ -4,7 +4,7 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export][route-module-links] at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
@@ -136,7 +136,7 @@ Websites large and small usually have a set of shared components used throughout
 
 #### Shared stylesheet
 
-The first is approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
+The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
 /* scope with class names */
@@ -226,9 +226,9 @@ export const PrimaryButton = React.forwardRef(
 );
 ```
 
-Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know it's dependencies (just like JavaScript imports).
+Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know its dependencies (just like JavaScript imports).
 
-Because these buttons are not routes, and therefore not associate with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
+Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
 Consider that `routes/index.js` uses the primary button component:
 
@@ -249,7 +249,7 @@ export function links() {
 
 Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-button.css`, and the route's `index.css`.
 
-An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so its not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
+An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
 ```tsx filename=app/routes/$category.js lines=[1-4,19-26]
 import { TileGrid } from "~/components/tile-grid";
@@ -263,7 +263,7 @@ export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 
-export function loader({ params }) {
+export async function loader({ params }) {
   return getProductsForCategory(params.category);
 }
 
@@ -325,7 +325,7 @@ While that's a bit of boilerplate it enables a lot:
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
-- When a component's JavaScript changes but it's styles don't, the cache is not broken for the styles
+- When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
 #### Asset Preloads
 
@@ -363,7 +363,7 @@ Not only will this make the asset high priority in the network tab, but Remix wi
 
 ### Link Media Queries
 
-Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you you can do the following:
+Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you can do the following:
 
 ```tsx lines=[10,15,20]
 export function links() {
@@ -405,7 +405,7 @@ Initialize a tailwind config so we can tell it which files to generate classes f
 
 ```js filename=tailwind.config.js lines=[2,3]
 module.exports = {
-  content: ["./app/**/*.{ts,tsx}"],
+  content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
     extend: {}
   },
@@ -433,7 +433,7 @@ Update the package scripts to generate the tailwind file during dev and for the 
 
 Finally, import the generated CSS file into your app:
 
-```tsx filename=root.tsx
+```tsx filename=app/root.tsx
 // ...
 import styles from "./tailwind.css";
 
@@ -458,7 +458,7 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 
 Then alter how tailwind is generating css:
 
-```json filename="package.json lines=[4-7]
+```json filename=package.json lines=[4-7]
 {
   // ...
   "scripts": {
@@ -604,26 +604,55 @@ npm add -D concurrently
 
 You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
 
-Here's some sample code to show how you might use Styled Components with Remix:
+Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples directory][styled-components-example]):
 
-1. First you'll need some context to put your styles on so that your root route can render them.
+1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
-   ```tsx filename=app/StylesContext.tsx
-   // app/StylesContext.tsx
-   import { createContext } from "react";
-   export default createContext<null | string>(null);
+   ```tsx filename=app/root.tsx lines=[21-23]
+   import {
+     Links,
+     LiveReload,
+     Meta,
+     Outlet,
+     Scripts,
+     ScrollRestoration
+   } from "remix";
+
+   export default function App() {
+     return (
+       <html lang="en">
+         <head>
+           <meta charSet="utf-8" />
+           <meta
+             name="viewport"
+             content="width=device-width,initial-scale=1"
+           />
+           <Meta />
+           <Links />
+           {typeof document === "undefined"
+             ? "__STYLES__"
+             : null}
+         </head>
+         <body>
+           <Outlet />
+           <ScrollRestoration />
+           <Scripts />
+           {process.env.NODE_ENV === "development" && (
+             <LiveReload />
+           )}
+         </body>
+       </html>
+     );
+   }
    ```
 
 2. Your `entry.server.tsx` will look something like this:
 
-   ```tsx filename=entry.server.tsx lines=6,7,16,20-26,29-30,35,37
-   // app/entry.server.tsx
+   ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
    import ReactDOMServer from "react-dom/server";
-   import type { EntryContext } from "remix";
    import { RemixServer } from "remix";
-   import { renderToString } from "react-dom/server";
+   import type { EntryContext } from "remix";
    import { ServerStyleSheet } from "styled-components";
-   import StylesContext from "./StylesContext";
 
    export default function handleRequest(
      request: Request,
@@ -631,36 +660,18 @@ Here's some sample code to show how you might use Styled Components with Remix:
      responseHeaders: Headers,
      remixContext: EntryContext
    ) {
-     // set up the Styled Components sheet
      const sheet = new ServerStyleSheet();
 
-     // This render is thrown away, it's here simply to let styled components
-     // extract the styles used
-     renderToString(
+     let markup = ReactDOMServer.renderToString(
        sheet.collectStyles(
-         <StylesContext.Provider value={null}>
-           <RemixServer
-             context={remixContext}
-             url={request.url}
-           />
-         </StylesContext.Provider>
-       )
-     );
-
-     // Now that we've rendered, we get the styles out of the sheet
-     const styles = sheet.getStyleTags();
-     sheet.seal();
-
-     // Finally, we render a second time, but this time we have styles to apply,
-     // make sure to pass them to `<StylesContext.Provider value>`
-     const markup = ReactDOMServer.renderToString(
-       <StylesContext.Provider value={styles}>
          <RemixServer
            context={remixContext}
            url={request.url}
          />
-       </StylesContext.Provider>
+       )
      );
+     const styles = sheet.getStyleTags();
+     markup = markup.replace("__STYLES__", styles);
 
      responseHeaders.set("Content-Type", "text/html");
 
@@ -671,33 +682,13 @@ Here's some sample code to show how you might use Styled Components with Remix:
    }
    ```
 
-3. Finally, access and render the styles in your root route.
+Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please [contribute an example][examples]!
 
-   ```tsx filename=app/root.tsx lines=3,4,7,13
-   // app/root.tsx
-   import { Meta, Scripts } from "remix";
-   import { useContext } from "react";
-   import StylesContext from "./StylesContext";
-
-   export default function Root() {
-     const styles = useContext(StylesContext);
-
-     return (
-       <html>
-         <head>
-           <Meta />
-           {styles}
-         </head>
-         <body>
-           <Scripts />
-         </body>
-       </html>
-     );
-   }
-   ```
-
-Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framework working well with Remix, please create a GitHub repo and add a link to it in this document!
+NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
 [route-module-links]: ../api/conventions#links
+[styled-components-example]: https://github.com/remix-run/remix/tree/dev/examples/styled-components
+[examples]: https://github.com/remix-run/remix/tree/dev/examples
+[styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
