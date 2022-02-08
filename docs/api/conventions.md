@@ -1209,7 +1209,7 @@ And lets say the UI looks something like this:
 └──────────────────────────────┘
 ```
 
-The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
 export async function loader({ request, params }) {
