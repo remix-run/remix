@@ -432,6 +432,11 @@ function usePrefetchBehavior(
   ];
 }
 
+/**
+ * A special kind of `<Link>` that knows whether or not it is "active".
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#navlink
+ */
 export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
@@ -453,6 +458,12 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   }
 );
 
+/**
+ * This component renders an anchor tag and is the primary way the user will
+ * navigate around your website.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#link
+ */
 export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
@@ -490,6 +501,8 @@ export function composeEventHandlers<
 
 /**
  * Renders the `<link>` tags for the current routes.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#meta-links-scripts
  */
 export function Links() {
   let { matches, routeModules, manifest } = useRemixEntryContext();
@@ -512,6 +525,15 @@ export function Links() {
   );
 }
 
+/**
+ * This component renders all of the `<link rel="prefetch">` and
+ * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
+ * a given page.
+ *
+ * @param props
+ * @param props.page
+ * @see https://remix.run/docs/en/v1/api/remix#prefetchpagelinks-
+ */
 export function PrefetchPageLinks({
   page,
   ...dataLinkProps
@@ -605,6 +627,8 @@ function PrefetchPageLinksImpl({
 
 /**
  * Renders the `<title>` and `<meta>` tags for the current routes.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#meta-links-scripts
  */
 export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
@@ -682,6 +706,8 @@ type ScriptProps = Omit<
  * @param props Additional properties to add to each script tag that is rendered.
  * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
  * property if provided.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#meta-links-scripts
  */
 export function Scripts(props: ScriptProps) {
   let {
@@ -823,6 +849,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
  * interaction with the server is with `fetch` instead of new document
  * requests, allowing components to add nicer UX to the page as the form is
  * submitted and returns with data.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#form
  */
 export let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
   return <FormImpl {...props} ref={ref} />;
@@ -934,6 +962,8 @@ function isActionRequestMethod(method: string): boolean {
 
 /**
  * Resolves a `<form action>` path relative to the current route.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#useformaction
  */
 export function useFormAction(
   action = ".",
@@ -1014,6 +1044,8 @@ export interface SubmitFunction {
 /**
  * Returns a function that may be used to programmatically submit a form (or
  * some arbitrary data) to the server.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#usesubmit
  */
 export function useSubmit(): SubmitFunction {
   return useSubmitImpl();
@@ -1171,6 +1203,8 @@ function isInputElement(object: any): object is HTMLInputElement {
  *
  * Note: The `callback` argument should be a function created with
  * `React.useCallback()`.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#usebeforeunload
  */
 export function useBeforeUnload(callback: () => any): void {
   React.useEffect(() => {
@@ -1181,6 +1215,12 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
+/**
+ * Returns the current route matches on the page. This is useful for creating
+ * layout abstractions with your current routes.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#usematches
+ */
 export function useMatches() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   return matches.map(match => {
@@ -1198,12 +1238,19 @@ export function useMatches() {
 }
 
 /**
- * Returns the data from the current route's `loader`.
+ * Returns the JSON parsed data from the current route's `loader`.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#useloaderdata
  */
 export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
+/**
+ * Returns the JSON parsed data from the current route's `action`.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#useactiondata
+ */
 export function useActionData<T = AppData>(): T | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
@@ -1211,6 +1258,12 @@ export function useActionData<T = AppData>(): T | undefined {
   return actionData ? actionData[routeId] : undefined;
 }
 
+/**
+ * Returns everything you need to know about a page transition to build pending
+ * navigation indicators and optimistic UI on data mutations.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#usetransition
+ */
 export function useTransition(): Transition {
   let { transitionManager } = useRemixEntryContext();
   return transitionManager.getState().transition;
@@ -1234,6 +1287,8 @@ type FetcherWithComponents<TData> = Fetcher<TData> & {
 /**
  * Interacts with route loaders and actions without causing a navigation. Great
  * for any interaction that stays on the same page.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#usefetcher
  */
 export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   let { transitionManager } = useRemixEntryContext();
@@ -1270,6 +1325,8 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
 /**
  * Provides all fetchers currently on the page. Useful for layouts and parent
  * routes that need to provide pending/optimistic UI regarding the fetch.
+ *
+ * @see https://remix.run/docs/en/v1/api/remix#usefetchers
  */
 export function useFetchers(): Fetcher[] {
   let { transitionManager } = useRemixEntryContext();
