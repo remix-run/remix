@@ -128,6 +128,11 @@ export interface AppConfig {
    * routes.
    */
   ignoredRouteFiles?: string[];
+
+  /** 
+   * A list of modules to skip when bundling.
+   */
+  externals?: string[];
 }
 
 /**
@@ -224,6 +229,11 @@ export interface RemixConfig {
    * A server entrypoint relative to the root directory that becomes your server's main module.
    */
   serverEntryPoint?: string;
+
+  /** 
+   * A list of modules to skip when bundling.
+   */
+  externals?: string[];
 }
 
 /**
@@ -367,6 +377,8 @@ export async function readConfig(
     serverBuildVirtualModule.id
   )};`;
 
+  let externals = appConfig.externals || [];
+
   return {
     appDirectory,
     cacheDirectory,
@@ -385,7 +397,8 @@ export async function readConfig(
     serverBuildTarget,
     serverBuildTargetEntryModule,
     serverEntryPoint: customServerEntryPoint,
-    mdx
+    mdx,
+    externals,
   };
 }
 
