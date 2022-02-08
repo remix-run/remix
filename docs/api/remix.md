@@ -1831,7 +1831,7 @@ console.log(cookie.isSigned); // true
 
 #### `cookie.expires`
 
-The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
+The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
 const cookie = createCookie("user-prefs", {
