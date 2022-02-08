@@ -15,13 +15,13 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Example
 
-This example implements a `useLoaderStore` hook as an abstraction of `useMatches`.
-You can further build custom hooks (`useProjects`, `useUser`, etc.) around the `useLoaderStore` hook for convenient access to your application data. 
+This example implements a `useMatchesData` hook as an abstraction of `useMatches`.
+You can further build custom hooks (`useProjects`, `useUser`, etc.) around the `useMatchesData` hook for convenient access to your application data. 
 
 No need to use global React contexts anymore to access your React state.
 
-- Check out the [useLoaderStore](app/useLoaderStore.ts) implementation to see how we use `useMatches`.
-- Check out the [useUser](app/useUser.ts) implementation to see how to implement `useLoaderStore` internally in custom hooks.
+- Check out the [useMatchesData](app/useMatchesData.ts) implementation to see how we use `useMatches`.
+- Check out the [useOptionalUser](app/useOptionalUser.ts) implementation to see how to implement `useMatchesData` internally in custom hooks.
 - Check out the [root](app/root.tsx) loader function, to see that we use loaders to return json data server-side for our routes.
 - Check out the [index](app/routes/index.tsx) route, as an example for how to access loader data of parent and child routes across our application with our custom hooks.
 

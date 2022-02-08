@@ -1,7 +1,7 @@
-import useUser from "~/useUser";
+import useOptionalUser from "~/useOptionalUser";
 
 export default function Index() {
-  const user = useUser();
+  const user = useOptionalUser();
 
   return (
     <div>
