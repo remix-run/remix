@@ -2111,7 +2111,7 @@ This storage keeps all the cookie information in your server's memory.
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage
+  createMemorySessionStorage
 } from "remix";
 
 // In this example the Cookie is created separately.
@@ -2121,10 +2121,7 @@ const sessionCookie = createCookie("__session", {
 });
 
 const { getSession, commitSession, destroySession } =
-  createFileSessionStorage({
-    // The root directory where you want to store the files.
-    // Make sure it's writable!
-    dir: "/app/sessions",
+  createMemorySessionStorage({
     cookie: sessionCookie
   });
 
