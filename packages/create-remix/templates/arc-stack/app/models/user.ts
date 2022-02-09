@@ -1,4 +1,5 @@
-import { arc, bcrypt } from "~/db.server";
+import arc from "@architect/functions";
+import bcrypt from "bcryptjs";
 
 async function getUserByEmail(email: string) {
   const db = await arc.tables();

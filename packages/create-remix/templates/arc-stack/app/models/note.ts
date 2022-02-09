@@ -1,5 +1,5 @@
 import cuid from "cuid";
-import { arc } from "~/db.server";
+import arc from "@architect/functions";
 
 export async function getNotes(email: string) {
   const db = await arc.tables();
