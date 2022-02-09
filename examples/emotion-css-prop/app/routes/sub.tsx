@@ -1,7 +1,7 @@
 /** @jsx jsx */
 import { css, jsx } from "@emotion/react";
 import { useEffect, useState } from "react";
-import { Link, useCatch } from "remix";
+import { Link } from "remix";
 
 // Object Styles
 const wrapperStyle = {
@@ -14,7 +14,7 @@ const wrapperStyle = {
 // String Styles
 const headingStyle = css`
   font-size: 2rem;
-  color: hotpink;
+  color: blue;
   transition: color 0.5s 0s ease;
 `;
 
@@ -38,7 +38,7 @@ export default function Index() {
       </header>
       <div css={wrapperStyle}>
         <h1 css={state ? headingStyle : headingDefaultStyle}>
-          Welcome to Remix (With Emotion css Prop)
+          Welcome to SubPage (With Emotion css Prop)
         </h1>
       </div>
     </div>
