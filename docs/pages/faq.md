@@ -186,11 +186,13 @@ Using the same input name and `formData.getAll()` covers most cases for wanting 
 If you still want to submit nested structures as well, you can use non-standard form field naming conventions and the [`query-string`][query-string] package from npm:
 
 ```tsx
-// arrays with []
-<input name="category[]" value="comedy" />
-<input name="category[]" value="comedy" />
-// nested structures parentKey[childKey]
-<input name="user[name]" value="Ryan" />
+<>
+  // arrays with []
+  <input name="category[]" value="comedy" />
+  <input name="category[]" value="comedy" />
+  // nested structures parentKey[childKey]
+  <input name="user[name]" value="Ryan" />
+</>
 ```
 
 And then in your action:
