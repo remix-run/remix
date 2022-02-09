@@ -111,7 +111,7 @@ async function run(args) {
 
 /**
  * @param {string} givenVersion
- * @param {{ tags: string[]; initialBranch: string }} git
+ * @param {GitAttributes} git
  * @returns {Promise<string>}
  */
 async function initStart(givenVersion, git) {
@@ -127,11 +127,11 @@ async function initStart(givenVersion, git) {
 }
 
 /**
- * @param {{ tags: string[]; initialBranch: string }} git
+ * @param {GitAttributes} git
  * @returns {Promise<string>}
  */
 async function initBump(git) {
-  ensureLatestReleaseBranch(git.initialBranch);
+  ensureLatestReleaseBranch(git.initialBranch, git);
   let versionFromBranch = getVersionFromReleaseBranch(git.initialBranch);
   let currentVersion = git.tags
     .filter(tag => tag.startsWith("v" + versionFromBranch))
@@ -141,11 +141,11 @@ async function initBump(git) {
 }
 
 /**
- * @param {{ tags: string[]; initialBranch: string }} git
+ * @param {GitAttributes} git
  * @returns {Promise<string>}
  */
 async function initFinish(git) {
-  ensureLatestReleaseBranch(git.initialBranch);
+  ensureLatestReleaseBranch(git.initialBranch, git);
   let nextVersion = getVersionFromReleaseBranch(git.initialBranch);
   return nextVersion;
 }
@@ -183,7 +183,7 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
 
 /**
  * @param {string} nextVersion
- * @param {{ tags: string[]; initialBranch: string }} git
+ * @param {GitAttributes} git
  */
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
@@ -203,7 +203,7 @@ Run ${chalk.bold(`git push origin ${git.initialBranch} --follow-tags`)}`)
 
 /**
  * @param {string} nextVersion
- * @param {{ tags: string[]; initialBranch: string }} git
+ * @param {GitAttributes} git
  */
 async function execFinish(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
@@ -352,6 +352,7 @@ function ensureReleaseBranch(branch) {
 
 /**
  * @param {string} branch
+ * @param {GitAttributes} git
  */
 function ensureLatestReleaseBranch(branch, git) {
   let versionFromBranch = ensureReleaseBranch(branch);
@@ -390,3 +391,7 @@ const getReleaseBranch = version =>
  * @param {string} version
  */
 const versionExists = (tags, version) => tags.includes(getVersionTag(version));
+
+/**
+ * @typedef {{ tags: string[]; initialBranch: string }} GitAttributes
+ */
