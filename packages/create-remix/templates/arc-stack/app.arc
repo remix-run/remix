@@ -8,9 +8,6 @@ remix-aws-stack
 
 @static
 
-@aws
-region us-east-1
-
 @tables
 people
   pk *String  # email

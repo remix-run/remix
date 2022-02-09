@@ -34,11 +34,11 @@ This is a pretty simple note-taking app, but it's a good example of how you can 
 - user sessions, and verifying them [./app/session.server.ts](./app/session.server.ts)
 - creating, and deleting notes [./app/models/note.server.ts](./app/models/note.server.ts)
 
-The database that comes with `arc sandbox` is an in memory database, so if you restart the server, you'll lose your data. Production environments won't behave this way.
+The database that comes with `arc sandbox` is an in memory database, so if you restart the server, you'll lose your data. The Staging and Production environments won't behave this way, instead they'll persist the data in dynamoDB between deployments and Lambda executions.
 
 ## Deployment
 
-This Remix Stack comes with two GitHub actions that handle automatically deploying your app to production and staging environments.
+This Remix Stack comes with two GitHub actions that handle automatically deploying your app to production and staging environments. By default, Arc will deploy to the `us-west-2` region, if you wish to deploy to a different region, you'll need to change your [`app.arc`](https://arc.codes/docs/en/reference/project-manifest/aws)
 
 Prior to your first deployment, you'll need to do a few things:
 
@@ -59,14 +59,9 @@ arc env production SESSION_SECRET $(openssl rand -hex 32)
 
 You can find the CloudFormation template that Architect generated for you in the sam.yaml file.
 
-To find it on AWS, you can search for [CloudFormation][cloudformation] (make sure you're looking at the correct region!) and find the name of your stack that matches what's in `app.arc`
-
-To find your deployed api, you can search for [APIGateway][apigateway] (make sure you're looking at the correct region!)
-
-To find your deployed lambda functions, you can search for [Lambda][lambda] (make sure you're looking at the correct region!)
+To find it on AWS, you can search for [CloudFormation][cloudformation] (make sure you're looking at the correct region!) and find the name of your stack (the name is a PascalCased version of what you have in `app.arc`, so by default it's RemixAwsStackStaging) that matches what's in `app.arc`, you can find all of your app's resources under the "Resources" tab.
 
 [signup]: https://portal.aws.amazon.com/billing/signup#/start
 [cloudformation]: https://console.aws.amazon.com/cloudformation/home
-[apigateway]: https://console.aws.amazon.com/apigateway/main/apis
-[lambda]: https://console.aws.amazon.com/lambda/home
-[aws_access_key_id]: https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials
+[aws_access_key_id]: https://console.aws.amazon.com/iam/home?region=us-west-2#/security_credentials
+[generate_password]: https://1password.com/password-generator
