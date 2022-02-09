@@ -2,11 +2,17 @@ const fsp = require("fs").promises;
 const path = require("path");
 const { execSync } = require("child_process");
 const chalk = require("chalk");
-const Confirm = require("prompt-confirm");
 const jsonfile = require("jsonfile");
 const semver = require("semver");
 
-let rootDir = path.resolve(__dirname, "..");
+const {
+  ensureCleanWorkingDirectory,
+  getPackageVersion,
+  packageJson,
+  prompt,
+  rootDir
+} = require("./utils");
+
 let examplesDir = path.resolve(rootDir, "examples");
 
 let adapters = ["architect", "express", "netlify", "vercel"];
@@ -15,25 +21,11 @@ let core = ["dev", "server-runtime", "react", "eslint-config"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
 /**
- * @param {string} packageName
- * @param {string} [directory]
- * @returns {string}
+ * @param {string} currentVersion
+ * @param {string} givenVersion
+ * @param {string} [prereleaseId]
+ * @returns
  */
-function packageJson(packageName, directory) {
-  return path.join(rootDir, directory, packageName, "package.json");
-}
-
-function ensureCleanWorkingDirectory() {
-  let status = execSync(`git status --porcelain`).toString().trim();
-  let lines = status.split("\n");
-  if (!lines.every(line => line === "" || line.startsWith("?"))) {
-    console.error(
-      "Working directory is not clean. Please commit or stash your changes."
-    );
-    process.exit(1);
-  }
-}
-
 function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
   if (givenVersion == null) {
     console.error("Missing next version. Usage: node version.js [nextVersion]");
@@ -45,6 +37,7 @@ function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
     let hash = execSync(`git rev-parse --short HEAD`).toString().trim();
     nextVersion = `0.0.0-experimental-${hash}`;
   } else {
+    // @ts-ignore
     nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
   }
 
@@ -56,18 +49,10 @@ function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
   return nextVersion;
 }
 
-async function prompt(question) {
-  let confirm = new Confirm(question);
-  let answer = await confirm.run();
-  return answer;
-}
-
-async function getPackageVersion(packageName) {
-  let file = packageJson(packageName, "packages");
-  let json = await jsonfile.readFile(file);
-  return json.version;
-}
-
+/**
+ * @param {string} packageName
+ * @param {(json: import('type-fest').PackageJson) => any} transform
+ */
 async function updatePackageConfig(packageName, transform) {
   let file = packageJson(packageName, "packages");
   let json = await jsonfile.readFile(file);
@@ -77,7 +62,7 @@ async function updatePackageConfig(packageName, transform) {
 
 /**
  * @param {string} example
- * @param {(json: string) => any} transform
+ * @param {(json: import('type-fest').PackageJson) => any} transform
  */
 async function updateExamplesPackageConfig(example, transform) {
   let file = packageJson(example, "examples");
@@ -88,6 +73,9 @@ async function updateExamplesPackageConfig(example, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
+/**
+ * @param {string[]} args
+ */
 async function run(args) {
   let givenVersion = args[0];
   let prereleaseId = args[1];
@@ -187,8 +175,8 @@ run(process.argv.slice(2)).then(
  */
 async function fileExists(filePath) {
   try {
-    let stat = await fsp.stat(filePath);
-    return stat.code !== "ENOENT";
+    await fsp.stat(filePath);
+    return true;
   } catch (_) {
     return false;
   }
