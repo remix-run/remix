@@ -1,4 +1,4 @@
-import useOptionalUser from "~/useOptionalUser";
+import { useOptionalUser } from "~/useUser";
 
 export default function Index() {
   const user = useOptionalUser();

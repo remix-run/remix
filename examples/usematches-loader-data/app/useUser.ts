@@ -1,4 +1,4 @@
-import useMatchesData from "./useMatchesData";
+import { useMatchesData } from "./useMatchesData";
 
 interface User {
   name: string;
@@ -22,16 +22,22 @@ function isUser(user: unknown): user is User {
  * to require data on runtime.
  * Or return undefined if data is optional and not found.
  */
-export default function useOptionalUser(): User | undefined {
-  const { user } = useMatchesData("root");
-  /*
-   * You can make use of tiny-invariant here to throw runtime errors
-   * if the loader data is required and not optional
-   */
-  if (!isUser(user)) {
+export function useOptionalUser(): User | undefined {
+  const data = useMatchesData("root");
+  if (!data || !isUser(data.user)) {
     return undefined;
   }
-  return user;
+  return data.user;
+}
+
+export function useUser(): User {
+  const maybeUser = useOptionalUser();
+  if (!maybeUser) {
+    throw new Error(
+      "No user found in root loader, but user is required by useUser. If user is optional, try useOptionalUser instead."
+    );
+  }
+  return maybeUser;
 }
 
 export type { User };

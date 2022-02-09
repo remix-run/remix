@@ -1,4 +1,4 @@
-import type { User } from "./useOptionalUser";
+import type { User } from "./useUser";
 
 /**
  * Mock db/session function
