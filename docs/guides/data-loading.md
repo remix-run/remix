@@ -161,6 +161,41 @@ export default function ProductCategory() {
 }
 ```
 
+If you are using TypeScript, you can use type inference to use Primsa Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
+
+```tsx filename=tsx filename=app/routes/products/$productId.tsx
+import { useLoaderData, json } from "remix";
+import { db } from "~/db.server";
+
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>
+
+async function getLoaderData() {
+  const products = await db.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      imgSrc: true,
+    }
+  })
+  return { products }
+}
+
+export let loader = async () => {
+  return json<LoaderData>(await getLoaderData());
+};
+
+export default function Product() {
+  let product = useLoaderData<LoaderData>();
+  return (
+    <div>
+      <p>Product {product.id}</p>
+      {/* ... */}
+    </div>
+  );
+}
+
+```
+
 ## Cloudflare KV
 
 If you picked Cloudflare Workers as you environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
