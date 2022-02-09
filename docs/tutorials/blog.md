@@ -29,12 +29,21 @@ Make sure you are running at least Node v14 or greater
 
 ```sh
 npx create-remix@latest
-# choose Remix App Server
+# IMPORTANT: Choose "Remix App Server" when prompted
 cd [whatever you named the project]
 npm run dev
 ```
 
-<docs-warning>It is important that you pick Remix App Server</docs-warning>
+<docs-warning>
+
+If you are following along with this tutorial, it's important to choose Remix
+App Server at this stage. If you plan to deploy your app, you may need to update
+your code before deploying depending on your deployment target.
+
+When you are ready to deploy, see the `README` in the adapter you choose for
+platform-specific instructions.
+
+</docs-warning>
 
 We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
