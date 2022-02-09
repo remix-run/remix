@@ -1070,9 +1070,19 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           options as any
         ).submissionTrigger;
 
-        method = options.method || target.method;
-        action = options.action || target.action;
-        encType = options.encType || target.enctype;
+        // Named inputs are added to their owner form instance as properties and
+        // can overwrite native properties. The form submission will still use
+        // the values set by the form attributes (or the default value if none
+        // is set).
+        // https://linear.app/remix-run/issue/REM-716/add-check-for-input-name=action
+        method = options.method || target.getAttribute("method") || "get";
+        action =
+          options.action || target.getAttribute("action") || defaultAction;
+        encType =
+          options.encType ||
+          target.getAttribute("enctype") ||
+          "application/x-www-form-urlencoded";
+
         formData = new FormData(target);
 
         if (submissionTrigger && submissionTrigger.name) {
