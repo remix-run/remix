@@ -12,11 +12,10 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 [![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/usematches-loader-data)
 
-
 ## Example
 
 This example implements a `useMatchesData` hook as an abstraction of `useMatches`.
-You can further build custom hooks (`useProjects`, `useUser`, etc.) around the `useMatchesData` hook for convenient access to your application data. 
+You can further build custom hooks (`useProjects`, `useUser`, etc.) around the `useMatchesData` hook for convenient access to your application data.
 
 No need to use global React contexts anymore to access your React state.
 
