@@ -131,7 +131,7 @@ async function initStart(givenVersion, git) {
  * @returns {Promise<string>}
  */
 async function initBump(git) {
-  ensureReleaseBranch(git.initialBranch);
+  ensureLatestReleaseBranch(git.initialBranch);
   let versionFromBranch = getVersionFromReleaseBranch(git.initialBranch);
   let currentVersion = git.tags
     .filter(tag => tag.startsWith("v" + versionFromBranch))
@@ -145,7 +145,7 @@ async function initBump(git) {
  * @returns {Promise<string>}
  */
 async function initFinish(git) {
-  ensureReleaseBranch(git.initialBranch);
+  ensureLatestReleaseBranch(git.initialBranch);
   let nextVersion = getVersionFromReleaseBranch(git.initialBranch);
   return nextVersion;
 }
@@ -169,7 +169,16 @@ async function execStart(nextVersion) {
 
   await gitMerge("main", releaseBranch, { pullFirst: true });
   incrementVersion(nextVersion);
-  execSync(`git push origin ${releaseBranch} --follow-tags`);
+  // TODO: After testing a few times, execute git push as a part of the flow and
+  // remove the silly message
+  console.log(
+    chalk.green(`Version ${nextVersion} is ready to roll.`) +
+      "\n" +
+      chalk.yellow(`Ryan says since I'm just a 👶 script you probably shouldn't trust me *too* much just yet (he's right, I know!)
+
+Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
+  );
+  // execSync(`git push origin ${releaseBranch} --follow-tags`);
 }
 
 /**
@@ -180,7 +189,16 @@ async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge("main", git.initialBranch, { pullFirst: true });
   incrementVersion(nextVersion);
-  execSync(`git push origin ${git.initialBranch} --follow-tags`);
+  // TODO: After testing a few times, execute git push as a part of the flow and
+  // remove the silly message
+  console.log(
+    chalk.green(`Version ${nextVersion} is ready to roll.`) +
+      "\n" +
+      chalk.yellow(`Ryan says since I'm just a 👶 script you probably shouldn't trust me *too* much just yet (he's right, I know!)
+
+Run ${chalk.bold(`git push origin ${git.initialBranch} --follow-tags`)}`)
+  );
+  // execSync(`git push origin ${git.initialBranch} --follow-tags`);
 }
 
 /**
@@ -327,6 +345,23 @@ function ensureReleaseBranch(branch) {
   if (version == null || !semver.valid(version)) {
     throw Error(
       "You must be on a valid release branch when continuing the release process."
+    );
+  }
+  return version;
+}
+
+/**
+ * @param {string} branch
+ */
+function ensureLatestReleaseBranch(branch, git) {
+  let versionFromBranch = ensureReleaseBranch(branch);
+  let taggedVersions = git.tags
+    .filter(tag => /^v\d/.test(tag))
+    .sort(semver.compare)[0];
+  let latestTaggedVersion = taggedVersions[taggedVersions.length - 1];
+  if (semver.compare(latestTaggedVersion, versionFromBranch) > 0) {
+    throw Error(
+      "You must be on the latest release branch when continuing the release process."
     );
   }
 }
