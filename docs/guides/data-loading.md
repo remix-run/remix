@@ -140,6 +140,7 @@ And then your routes can import it and make queries against it:
 ```tsx filename=app/routes/products/$categoryId.tsx
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
+
 import { db } from "~/db.server";
 
 export let loader: LoaderFunction = async ({ params }) => {
@@ -495,7 +496,7 @@ export default function ProductFilters() {
   // (form submission or link click)
   React.useEffect(() => {
     setNikeChecked(brands.includes("nike"));
-  }, [searchParams]);
+  }, [brands, searchParams]);
 
   return (
     <Form method="get">
@@ -539,7 +540,7 @@ function SearchCheckbox({ name, value }) {
 
   React.useEffect(() => {
     setChecked(all.includes(value));
-  }, [searchParams]);
+  }, [all, searchParams, value]);
 
   return (
     <input

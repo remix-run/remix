@@ -58,10 +58,12 @@ export default function GlobalNav() {
 In our effort to remove all loading states from your UI, `Link` can automatically prefetch all the resources the next page needs: JavaScript modules, stylesheets, and data. This prop controls if and when that happens.
 
 ```tsx
-<Link /> // defaults to "none"
-<Link prefetch="none" />
-<Link prefetch="intent" />
-<Link prefetch="render" />
+<>
+  <Link /> // defaults to "none"
+  <Link prefetch="none" />
+  <Link prefetch="intent" />
+  <Link prefetch="render" />
+</>
 ```
 
 - **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
@@ -99,7 +101,7 @@ function NavList() {
   let activeStyle = {
     textDecoration: "underline"
   };
-  let activeClassName = "underline"
+  let activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -124,14 +126,16 @@ function NavList() {
           </NavLink>
         </li>
         <li>
-          <NavLink
-            to="tasks"
-          >
+          <NavLink to="tasks">
             {({ isActive }) => (
-              <span className={isActive ? activeClassName : undefined}>
+              <span
+                className={
+                  isActive ? activeClassName : undefined
+                }
+              >
                 Tasks
               </span>
-            ))}
+            )}
           </NavLink>
         </li>
       </ul>
@@ -170,7 +174,7 @@ Most of the time you can omit this prop. Forms without an action prop (`<Form me
 
 If you need to post to a different route, then add an action prop:
 
-```js
+```jsx
 <Form action="/projects/new" method="post" />
 ```
 
@@ -187,7 +191,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
-```js
+```jsx
 <Form method="post" />
 ```
 
@@ -424,12 +428,16 @@ See also:
 Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
 
 ```tsx
-<button
-  formAction={useFormAction("destroy")}
-  formMethod="DELETE"
->
-  Delete
-</button>
+function SomeComponent() {
+  return (
+    <button
+      formAction={useFormAction("destroy")}
+      formMethod="DELETE"
+    >
+      Delete
+    </button>
+  );
+}
 ```
 
 (Yes, HTML buttons can change the action of their form!)
@@ -476,7 +484,7 @@ function UserPreferences() {
 
 This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case, we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
 
-```tsx [1,10,15]
+```tsx lines=[1,10,15]
 import { useSubmit, useTransition } from "remix";
 import { useEffect } from "react";
 
@@ -493,8 +501,9 @@ function useSessionTimeout() {
     const timer = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
+
     return () => clearTimeout(timer);
-  }, [transition]);
+  }, [submit, transition]);
 }
 ```
 
@@ -622,7 +631,7 @@ This tells you what the next location is going to be. It's most useful when matc
 
 For example, this `Link` knows when its page is loading and about to become active:
 
-```tsx [7-9]
+```tsx lines=[7-9]
 import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
@@ -682,7 +691,7 @@ function SomeComponent() {
   useEffect(() => {
     fetcher.submit(data, options);
     fetcher.load(href);
-  }, []);
+  }, [fetcher]);
 
   // build UI with these
   fetcher.state;
@@ -747,7 +756,7 @@ The returned response data from your loader or action is stored here. Once the d
 Just like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
 
 ```tsx
-function SomeComp() {
+function SomeComponent() {
   const fetcher = useFetcher();
   return (
     <fetcher.Form method="post" action="/some/route">
@@ -762,8 +771,14 @@ function SomeComp() {
 Just like `useSubmit` except it doesn't cause a navigation.
 
 ```tsx
-const fetcher = useFetcher();
-fetcher.submit({ some: "values" }, { method: "post" });
+function SomeComponent() {
+  const fetcher = useFetcher();
+
+  const onClick = () =>
+    fetcher.submit({ some: "values" }, { method: "post" });
+
+  // ...
+}
 ```
 
 #### `fetcher.load()`
@@ -771,13 +786,17 @@ fetcher.submit({ some: "values" }, { method: "post" });
 Loads data from a route loader.
 
 ```tsx
-const fetcher = useFetcher();
-React.useEffect(() => {
-  if (fetcher.type === "init") {
-    fetcher.load("/some/route");
-  }
-}, [fetcher]);
-fetcher.data; // the data from the loader
+function SomeComponent() {
+  const fetcher = useFetcher();
+
+  useEffect(() => {
+    if (fetcher.type === "init") {
+      fetcher.load("/some/route");
+    }
+  }, [fetcher]);
+
+  fetcher.data; // the data from the loader
+}
 ```
 
 #### Examples
@@ -908,8 +927,9 @@ export function NewsletterForm({
 And now you could reuse the same form, but it gets data from a different hook for the no-js experience:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-import { NewsletterForm } from "~/NewsletterSignup";
 import { Form } from "remix";
+
+import { NewsletterForm } from "~/NewsletterSignup";
 
 export default function NewsletterSignupRoute() {
   const data = useActionData();
@@ -937,7 +957,7 @@ function useMarkAsRead({ articleId, userId }) {
       { userId },
       {
         method: "post",
-        action: "/article/${articleID}/mark-as-read"
+        action: `/article/${articleID}/mark-as-read`
       }
     );
   });
@@ -961,7 +981,7 @@ function UserAvatar({ partialUser }) {
     if (showDetails && userDetails.type === "init") {
       userDetails.load(`/users/${user.id}/details`);
     }
-  }, [showDetails]);
+  }, [showDetails, userDetails]);
 
   return (
     <div
@@ -1164,7 +1184,11 @@ function ProjectTaskCount({ project }) {
 Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
 
 ```js
-const matches = useMatches();
+function SomeComponent() {
+  const matches = useMatches();
+
+  // ...
+}
 ```
 
 `matches` has the following shape:
@@ -1273,7 +1297,7 @@ In this situation, you may need to save important application state on the page 
 
 Remix or not, this is a good practice. The user can change the url, accidentally close the browser window, etc.
 
-```tsx [1,7-11]
+```tsx lines=[1,7-11]
 import { useBeforeUnload } from "remix";
 
 function SomeForm() {
@@ -1282,7 +1306,7 @@ function SomeForm() {
   // save it off before the automatic page reload
   useBeforeUnload(
     React.useCallback(() => {
-      localStorage.stuff = state
+      localStorage.stuff = state;
     }, [state])
   );
 
@@ -1291,11 +1315,9 @@ function SomeForm() {
     if (state === null && localStorage.stuff != null) {
       setState(localStorage.stuff);
     }
-  }, []);
+  }, [state]);
 
-  return (
-    // ...
-  );
+  return <>{/*... */}</>;
 }
 ```
 
@@ -1305,7 +1327,7 @@ function SomeForm() {
 
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
-```ts [2,6]
+```ts lines=[2,6]
 import type { LoaderFunction } from "remix";
 import { json } from "remix";
 
@@ -1324,7 +1346,7 @@ export const loader: LoaderFunction = async () => {
 
 You can also pass a status code and headers:
 
-```ts [4-9]
+```ts lines=[4-9]
 export const loader: LoaderFunction = async () => {
   return json(
     { not: "coffee" },
@@ -1342,7 +1364,7 @@ export const loader: LoaderFunction = async () => {
 
 This is shortcut for sending 30x responses.
 
-```ts [2,8]
+```ts lines=[2,8]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
@@ -1411,7 +1433,7 @@ It's to be used in place of `request.formData()`.
 
 For example:
 
-```tsx [2-5,7,23]
+```tsx lines=[2-5,7,23]
 export let action: ActionFunction = async ({ request }) => {
   let formData = await parseMultipartFormData(
     request,
@@ -1629,8 +1651,9 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```js filename=app/routes/index.js lines=[2,6-7,13-14,18]
+```tsx filename=app/routes/index.tsx lines=[3,7-8,14-15,19]
 import { useLoaderData, json, redirect } from "remix";
+
 import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
@@ -1820,7 +1843,7 @@ new Response("...", {
 Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 
 ```js
-const cookie = createCookie("user-prefs");
+let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
 cookie = createCookie("user-prefs", {
@@ -1834,7 +1857,7 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-const cookie = createCookie("user-prefs", {
+let cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01")
 });
 
@@ -1892,8 +1915,9 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=2,5-7,9,14,18,24-26,37,42,47,52
+```tsx filename=app/routes/login.js lines=[3,6-8,10,15,19,25-27,38,43,48,53]
 import { json, redirect, useLoaderData } from "remix";
+
 import { getSession, commitSession } from "../sessions";
 
 export async function loader({ request }) {
@@ -2312,11 +2336,15 @@ session.unset("name");
 <docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
 ```js
-return json(data, {
-  headers: {
-    "Set-Cookie": await commitSession(session)
-  }
-});
+export async function loader({ request }) {
+  // ...
+
+  return json(data, {
+    headers: {
+      "Set-Cookie": await commitSession(session)
+    }
+  });
+}
 ```
 
 ### `<Outlet context />`
@@ -2327,8 +2355,7 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
-```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-43,52-56,67]
-import type { LoaderData } from "remix";
+```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
 import {
   json,
   useLoaderData,
@@ -2341,7 +2368,9 @@ import {
   AccordionButton,
   AccordionPanel
 } from "@reach/accordion";
-import { getCompanies, Companies } from "~/utils/companies";
+
+import type { Companies } from "~/utils/companies";
+import { getCompanies } from "~/utils/companies";
 
 type LoaderData = {
   companies: Array<Companies>;
@@ -2411,13 +2440,14 @@ This hook returns the context from the `<Outlet />` that rendered you.
 
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
-```tsx filename=app/routes/companies/$companyId.tsx lines=[5,7,24,26-29]
+```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
 import type { LoaderFunction } from "remix";
 import {
   json,
   useLoaderData,
   useOutletContext
 } from "remix";
+
 import type { ContextType } from "../companies";
 
 type LoaderData = {

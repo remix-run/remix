@@ -254,9 +254,8 @@ An initial reaction to this is that routes have to know more than you want them 
 ```tsx filename=app/routes/$category.js lines=[1-4,19-26]
 import { TileGrid } from "~/components/tile-grid";
 import { ProductTile } from "~/components/product-tile";
-import { ProductDetails} from "~/components/product-details";
+import { ProductDetails } from "~/components/product-details";
 import { AddFavoriteButton } from "~/components/add-favorite-button";
-
 import styles from "~/styles/$category.css";
 
 export function links() {
@@ -274,7 +273,7 @@ export default function Category() {
       {products.map(product => (
         <ProductTile key={product.id}>
           <ProductDetails product={product} />
-          <AddFavoriteButton id={product.id}>
+          <AddFavoriteButton id={product.id} />
         </ProductTile>
       ))}
     </TileGrid>
@@ -284,7 +283,7 @@ export default function Category() {
 
 The component imports are already there, we just need to surface the assets:
 
-```tsx filename=app/routes/$category.js lines=[3,7,11,15,22-25]
+```js filename=app/routes/$category.js lines=[3,7,11,15,22-25]
 import {
   TileGrid,
   links as tileGridLinks
@@ -301,7 +300,6 @@ import {
   AddFavoriteButton,
   links as addFavoriteLinks
 } from "~/components/add-favorite-button";
-
 import styles from "~/styles/$category.css";
 
 export function links() {
@@ -579,6 +577,7 @@ Here's how to set it up:
 
    ```tsx filename=root.tsx
    import type { LinksFunction } from "remix";
+
    import styles from "./styles/app.css";
 
    export const links: LinksFunction = () => {

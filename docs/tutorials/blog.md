@@ -241,6 +241,7 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
@@ -497,11 +498,12 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,14,17]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,10-11,15,18]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
-import { getPost } from "~/post";
 import invariant from "tiny-invariant";
+
+import { getPost } from "~/post";
 
 export const loader: LoaderFunction = async ({
   params
@@ -585,6 +587,7 @@ touch app/routes/admin.tsx
 
 ```tsx filename=app/routes/admin.tsx
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
@@ -647,6 +650,7 @@ em {
 
 ```tsx filename=app/routes/admin.tsx lines=[4,6-8]
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 import adminStyles from "~/styles/admin.css";
@@ -793,8 +797,9 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
+```tsx filename=app/routes/admin/new.tsx lines=[1,3,5-15]
 import { redirect, Form } from "remix";
+
 import { createPost } from "~/post";
 
 export const action = async ({ request }) => {
@@ -842,9 +847,10 @@ export async function createPost(post: NewPost) {
 //...
 ```
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,5]
+```tsx filename=app/routes/admin/new.tsx lines=[2,6]
 import { Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
+
 import { createPost } from "~/post";
 
 export const action: ActionFunction = async ({
