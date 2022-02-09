@@ -25,10 +25,13 @@ interface WorkersKVSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
  */
-export function createWorkersKVSessionStorage<Data = SessionData>({
+export function createWorkersKVSessionStorage<
+  Data = SessionData,
+  FlashData = Data
+>({
   cookie,
   kv,
-}: WorkersKVSessionStorageOptions): SessionStorage<Data> {
+}: WorkersKVSessionStorageOptions): SessionStorage<Data, FlashData> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

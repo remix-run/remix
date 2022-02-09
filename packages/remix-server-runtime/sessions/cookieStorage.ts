@@ -15,9 +15,12 @@ interface CookieSessionStorageOptions {
   cookie?: SessionIdStorageStrategy["cookie"];
 }
 
-export type CreateCookieSessionStorageFunction = <Data = SessionData>(
+export type CreateCookieSessionStorageFunction = <
+  Data = SessionData,
+  FlashData = Data
+>(
   options?: CookieSessionStorageOptions
-) => SessionStorage<Data>;
+) => SessionStorage<Data, FlashData>;
 
 /**
  * Creates and returns a SessionStorage object that stores all session data

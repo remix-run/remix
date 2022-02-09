@@ -30,10 +30,10 @@ interface FileSessionStorageOptions {
  *
  * @see https://remix.run/utils/sessions#createfilesessionstorage-node
  */
-export function createFileSessionStorage<Data = SessionData>({
+export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
   cookie,
   dir,
-}: FileSessionStorageOptions): SessionStorage<Data> {
+}: FileSessionStorageOptions): SessionStorage<Data, FlashData> {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
