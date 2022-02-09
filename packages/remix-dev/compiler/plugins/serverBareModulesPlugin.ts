@@ -82,7 +82,7 @@ export function serverBareModulesPlugin(
             return undefined;
         }
 
-        for (let transpileMatcher of remixConfig.transpileModules) {
+        for (let transpileMatcher of remixConfig.serverDependenciesToBundle) {
           // bundle it if the path matches the transpile matcher
           if (
             typeof transpileMatcher === "string"

@@ -134,7 +134,7 @@ export interface AppConfig {
    * is transpiled and included in the server bundle. This can be useful when
    * consuming ESM only packages in a CJS build.
    */
-  transpileModules?: Array<string | RegExp>;
+  serverDependenciesToBundle?: Array<string | RegExp>;
 }
 
 /**
@@ -237,7 +237,7 @@ export interface RemixConfig {
    * is transpiled and included in the server bundle. This can be useful when
    * consuming ESM only packages in a CJS build.
    */
-  transpileModules: Array<string | RegExp>;
+  serverDependenciesToBundle: Array<string | RegExp>;
 }
 
 /**
@@ -381,7 +381,7 @@ export async function readConfig(
     serverBuildVirtualModule.id
   )};`;
 
-  let transpileModules = appConfig.transpileModules || [];
+  let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
   return {
     appDirectory,
@@ -401,7 +401,7 @@ export async function readConfig(
     serverBuildTarget,
     serverBuildTargetEntryModule,
     serverEntryPoint: customServerEntryPoint,
-    transpileModules,
+    serverDependenciesToBundle,
     mdx
   };
 }

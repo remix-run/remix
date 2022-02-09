@@ -12,7 +12,7 @@ module.exports = {
   devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
   server: "./server.js",
-  transpileModules: [
+  serverDependenciesToBundle: [
     "cssfn.js",
     /@cssfn\//,
     /@nodestrap\//

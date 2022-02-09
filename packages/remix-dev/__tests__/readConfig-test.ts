@@ -418,15 +418,15 @@ describe("readConfig", () => {
         "serverBuildPath": Any<String>,
         "serverBuildTarget": undefined,
         "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",
-        "serverEntryPoint": "./server.js",
-        "serverMode": "production",
-        "serverModuleFormat": "cjs",
-        "serverPlatform": "node",
-        "transpileModules": Array [
+        "serverDependenciesToBundle": Array [
           "cssfn.js",
           /@cssfn\\\\//,
           /@nodestrap\\\\//,
         ],
+        "serverEntryPoint": "./server.js",
+        "serverMode": "production",
+        "serverModuleFormat": "cjs",
+        "serverPlatform": "node",
       }
     `
     );
