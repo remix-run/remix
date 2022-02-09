@@ -8,7 +8,8 @@ import {
 import type {
   APIGatewayProxyEventHeaders,
   APIGatewayProxyEventV2,
-  APIGatewayProxyHandlerV2
+  APIGatewayProxyHandlerV2,
+  APIGatewayProxyStructuredResultV2
 } from "aws-lambda";
 import type {
   AppLoadContext,
@@ -17,6 +18,8 @@ import type {
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { Response as NodeResponse } from "@remix-run/node";
+
+import { isBinaryType } from "./binary-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -58,32 +61,28 @@ export function createRequestHandler({
       loadContext
     )) as unknown as NodeResponse;
 
-    let cookies: string[] = [];
-
-    // Arc/AWS API Gateway will send back set-cookies outside of response headers.
-    for (let [key, values] of Object.entries(response.headers.raw())) {
-      if (key.toLowerCase() === "set-cookie") {
-        for (let value of values) {
-          cookies.push(value);
-        }
-      }
-    }
-
-    if (cookies.length) {
-      response.headers.delete("set-cookie");
-    }
-
-    if (abortController.signal.aborted) {
-      response.headers.set("Connection", "close");
-    }
-
-    return {
-      statusCode: response.status,
-      headers: Object.fromEntries(response.headers),
-      cookies,
-      body: await response.text()
-    };
+    return sendRemixResponse(response, abortController);
   };
+}
+
+export function createRemixRequest(
+  event: APIGatewayProxyEventV2,
+  abortController?: AbortController
+): NodeRequest {
+  let host = event.headers["x-forwarded-host"] || event.headers.host;
+  let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
+  let url = new URL(event.rawPath + search, `https://${host}`);
+
+  return new NodeRequest(url.href, {
+    method: event.requestContext.http.method,
+    headers: createRemixHeaders(event.headers, event.cookies),
+    body:
+      event.body && event.isBase64Encoded
+        ? Buffer.from(event.body, "base64").toString()
+        : event.body,
+    abortController,
+    signal: abortController?.signal
+  });
 }
 
 export function createRemixHeaders(
@@ -105,22 +104,43 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(
-  event: APIGatewayProxyEventV2,
-  abortController?: AbortController
-): NodeRequest {
-  let host = event.headers["x-forwarded-host"] || event.headers.host;
-  let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
-  let url = new URL(event.rawPath + search, `https://${host}`);
+export async function sendRemixResponse(
+  response: NodeResponse,
+  abortController: AbortController
+): Promise<APIGatewayProxyStructuredResultV2> {
+  let cookies: string[] = [];
 
-  return new NodeRequest(url.href, {
-    method: event.requestContext.http.method,
-    headers: createRemixHeaders(event.headers, event.cookies),
-    body:
-      event.body && event.isBase64Encoded
-        ? Buffer.from(event.body, "base64").toString()
-        : event.body,
-    abortController,
-    signal: abortController?.signal
-  });
+  // Arc/AWS API Gateway will send back set-cookies outside of response headers.
+  for (let [key, values] of Object.entries(response.headers.raw())) {
+    if (key.toLowerCase() === "set-cookie") {
+      for (let value of values) {
+        cookies.push(value);
+      }
+    }
+  }
+
+  if (cookies.length) {
+    response.headers.delete("set-cookie");
+  }
+
+  if (abortController.signal.aborted) {
+    response.headers.set("Connection", "close");
+  }
+
+  let isBinary = isBinaryType(response.headers.get("content-type"));
+  let isString = typeof response.body === "string";
+  let isBuffer = response.body && response.body instanceof Buffer;
+  let isBase64Encoded = isBuffer || (isBinary && isString);
+  let body =
+    isBuffer && isBinary
+      ? Buffer.from(response.body as any).toString("base64")
+      : await response.text();
+
+  return {
+    statusCode: response.status,
+    headers: Object.fromEntries(response.headers),
+    cookies,
+    body,
+    isBase64Encoded
+  };
 }
