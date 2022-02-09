@@ -167,17 +167,17 @@ If you are using TypeScript, you can use type inference to use Primsa Client gen
 import { useLoaderData, json } from "remix";
 import { db } from "~/db.server";
 
-type LoaderData = Awaited<ReturnType<typeof getLoaderData>>
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 async function getLoaderData() {
   const products = await db.product.findMany({
     select: {
       id: true,
       name: true,
-      imgSrc: true,
+      imgSrc: true
     }
-  })
-  return { products }
+  });
+  return { products };
 }
 
 export let loader = async () => {
@@ -193,7 +193,6 @@ export default function Product() {
     </div>
   );
 }
-
 ```
 
 ## Cloudflare KV
