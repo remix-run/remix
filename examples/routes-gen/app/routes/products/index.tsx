@@ -19,7 +19,7 @@ const posts: Post[] = [
   }
 ];
 
-export const loader: LoaderFunction = () => {
+export const loader: LoaderFunction = async () => {
   return posts;
 };
 
