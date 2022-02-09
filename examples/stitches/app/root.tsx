@@ -6,17 +6,15 @@ import {
   Scripts,
   ScrollRestoration
 } from "remix";
-import { useContext } from "react";
-import StylesContext from "./StylesContext";
 import type { MetaFunction } from "remix";
+
+import { getCssText } from "./styles/stitches.config";
 
 export const meta: MetaFunction = () => {
   return { title: "New Remix App" };
 };
 
 export default function App() {
-  const styles = useContext(StylesContext);
-
   return (
     <html lang="en">
       <head>
@@ -24,7 +22,11 @@ export default function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
-        {styles}
+        <style
+          id="stitches"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: getCssText() }}
+        />
       </head>
       <body>
         <Outlet />
