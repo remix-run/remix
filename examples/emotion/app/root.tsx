@@ -6,8 +6,6 @@ import {
   Scripts,
   ScrollRestoration
 } from "remix";
-import { useContext } from "react";
-import StylesContext from "./StylesContext";
 import type { MetaFunction } from "remix";
 
 export const meta: MetaFunction = () => {
@@ -15,8 +13,6 @@ export const meta: MetaFunction = () => {
 };
 
 export default function App() {
-  const styles = useContext(StylesContext);
-
   return (
     <html lang="en">
       <head>
@@ -24,7 +20,7 @@ export default function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
-        {styles}
+        {typeof document === "undefined" ? "__STYLES__" : null}
       </head>
       <body>
         <Outlet />

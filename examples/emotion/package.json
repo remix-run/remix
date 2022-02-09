@@ -13,6 +13,7 @@
     "@emotion/react": "^11.7.1",
     "@emotion/server": "^11.4.0",
     "@emotion/styled": "^11.6.0",
+    "@emotion/cache": "^11.7.1",
     "@remix-run/react": "^1.1.1",
     "@remix-run/serve": "^1.1.1",
     "react": "^17.0.2",

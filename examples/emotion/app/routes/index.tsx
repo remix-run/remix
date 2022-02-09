@@ -1,5 +1,10 @@
 import styled from "@emotion/styled";
 
+const Container = styled("div")`
+  font-family: "system-ui, sans-serif";
+  line-height: 1.4;
+`;
+
 export default function Index() {
   return (
     <Container>
@@ -32,8 +37,3 @@ export default function Index() {
     </Container>
   );
 }
-
-const Container = styled("div")`
-  font-family: "system-ui, sans-serif";
-  line-height: 1.4;
-`;
