@@ -1,11 +1,14 @@
 {
   "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
+    "declaration": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "moduleResolution": "node",
     "target": "ES2020",
-    "module": "ES2020",
+    "module": "CommonJS",
     "baseUrl": ".",
     "strict": true,
     "paths": {
@@ -13,6 +16,6 @@
     },
 
     // Remix takes care of building everything in `remix build`.
-    "noEmit": true
+    "noEmit": true,
   }
 }
