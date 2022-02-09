@@ -1,10 +1,5 @@
-import "./firebase.server";
 import { UserRecord } from "firebase-admin/auth";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { destroySession, getSession } from "~/sessions";
 import { redirect, Session } from "remix";
 import { auth } from "./firebase.server";
@@ -46,11 +41,8 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signUp = async (name: string, email: string, password: string) => {
-  const { user } = await createUserWithEmailAndPassword(
-    auth.client,
-    email,
-    password
-  );
-  await updateProfile(user, { displayName: name });
+  await auth.server.createUser({
+    email, password, displayName: name,
+  })
   return await signIn(email, password);
 };
