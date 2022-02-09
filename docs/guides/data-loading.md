@@ -164,13 +164,24 @@ export default function ProductCategory() {
 If you are using TypeScript, you can use type inference to use Primsa Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
 
 ```tsx filename=tsx filename=app/routes/products/$productId.tsx
-import { useLoaderData } from "remix";
+import { useLoaderData, json } from "remix";
 import { db } from "~/db.server";
 
-type LoaderData = Awaited<ReturnType<typeof loader>>
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>
 
-export let loader = async ({ params }) => {
-  return db.product.findMany({});
+async function getLoaderData() {
+  const products = await db.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      imgSrc: true,
+    }
+  })
+  return { products }
+}
+
+export let loader = async () => {
+  return json<LoaderData>(await getLoaderData());
 };
 
 export default function Product() {
