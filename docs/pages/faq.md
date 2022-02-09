@@ -142,4 +142,93 @@ You can also use a hidden input field:
 
 You may wonder why we used `<button name="_action">` instead of `<button name="action">`. You can use whatever you want, but just not `"action"`!
 
-Without getting into browser decisions decades ago, form elements have the `form.action` property in the DOM to know where to post to, as well as a property for every one of it's input element descendants by name. In our case: `form._action`. If you use `action`, there's a conflict and the submission will fail.
+Without getting into browser decisions decades ago, form elements have the `form.action` property in the DOM to know where to post to. In our case: `form._action`. If you use `action`, there's a conflict and the submission will fail.
+
+## How can I have structured data in a form?
+
+If you're used to doing a fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different than JSON.
+
+- It can't have nested data, it's just "key value".
+- It _can_ have multiple entries on one key, unlike JSON.
+
+If you're wanting to send structured data simply to post arrays, you can use the same key on multiple inputs:
+
+```jsx
+<Form method="post">
+  <p>Select the categories for this video:</p>
+  <label>
+    <input type="checkbox" name="category" value="comedy" />{" "}
+    Comedy
+  </label>
+  <label>
+    <input type="checkbox" name="category" value="music" />{" "}
+    Music
+  </label>
+  <label>
+    <input type="checkbox" name="category" value="howto" />{" "}
+    How-To
+  </label>
+</Form>
+```
+
+Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. In your, action you can access them all with `formData.getAll()`
+
+```tsx
+export function action({ request }) {
+  const formData = await request.formData();
+  let categories = formData.getAll("category");
+  // ["comedy", "music"]
+}
+```
+
+Using the same input name and `formData.getAll()` covers most cases for wanting to submit structured data in your forms.
+
+If you still want to submit nested structures as well, you can use non-standard form field naming conventions and the [`query-string`][query-string] package from npm:
+
+```tsx
+// arrays with []
+<input name="category[]" value="comedy" />
+<input name="category[]" value="comedy" />
+// nested structures parentKey[childKey]
+<input name="user[name]" value="Ryan" />
+```
+
+And then in your action:
+
+```tsx
+import queryString from "query-string";
+
+// in your action:
+export function action({ request }) {
+  // use `request.text()`, not `request.formData` to get the form data as a url
+  // encoded form query string
+  let formQueryString = await request.text();
+
+  // parse it into an object
+  let obj = queryString.parse(formQueryString);
+}
+```
+
+Some folks even dump their JSON into a hidden field, we don't know if we recommend this approach but it certainly works!
+
+```tsx
+<input
+  type="hidden"
+  name="json"
+  value={JSON.stringify(obj)}
+/>
+```
+
+And then parse it in the action:
+
+```tsx
+export function action({ request }) {
+  let formData = await request.formData();
+  let obj = JSON.parse(formData.get("json"));
+}
+```
+
+Again, often `formData.getAll()` is all you need, we encourage you to give it a shot!
+
+[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[query-string]: https://www.npmjs.com/package/query-string
