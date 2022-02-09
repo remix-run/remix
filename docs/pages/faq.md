@@ -146,7 +146,7 @@ Without getting into browser decisions decades ago, form elements have the `form
 
 ## How can I have structured data in a form?
 
-If you're used to doing a fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different than JSON.
+If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different than JSON.
 
 - It can't have nested data, it's just "key value".
 - It _can_ have multiple entries on one key, unlike JSON.
@@ -171,7 +171,7 @@ If you're wanting to send structured data simply to post arrays, you can use the
 </Form>
 ```
 
-Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. In your, action you can access them all with `formData.getAll()`
+Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. Access the checkbox values with `formData.getAll()` in your action.
 
 ```tsx
 export function action({ request }) {
