@@ -209,7 +209,7 @@ export function action({ request }) {
 }
 ```
 
-Some folks even dump their JSON into a hidden field, we don't know if we recommend this approach but it certainly works!
+Some folks even dump their JSON into a hidden field. Note that this approach won't work with progressive enhancement. If that's not important to your app, this is an easy way to send structured data.
 
 ```tsx
 <input
@@ -228,7 +228,7 @@ export function action({ request }) {
 }
 ```
 
-Again, often `formData.getAll()` is all you need, we encourage you to give it a shot!
+Again, `formData.getAll()` is often all you need, we encourage you to give it a shot!
 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
