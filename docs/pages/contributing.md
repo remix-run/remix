@@ -15,7 +15,7 @@ When it comes to open source, there are many different kinds of contributions th
 
 If you'd like to contribute something—whether it's a bug fix to scratch your own itch or a typo in the docs—we'd be happy to have your contribution. We need you to "sign" a contributor license agreement (CLA) first that assigns us ownership so we are able to include it in this software.
 
-When you start a pull request, the remix-cla-bot will prompt you to review the [CLA](https://github.com/remix-run/remix/blob/main/docs/contributing.md) and sign it by adding your name to `contributors.yml`.
+When you start a pull request, the remix-cla-bot will prompt you to review the [CLA](https://github.com/remix-run/remix/blob/main/CLA.md) and sign it by adding your name to `contributors.yml`.
 
 ## Setup
 
@@ -42,11 +42,13 @@ git checkout dev
 
 ## Think You Found a Bug?
 
-Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
+Please send a PR with a failing test. It's really easy if you follow the instructions in [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts)
 
 ## Proposing New or Changed API?
 
-Please provide thoughtful comments and some sample code that show what you'd like to do with Remix in your app. It helps the conversation if you can show us how you're limited by the current API first before jumping to a conclusion about what needs to be changed and/or added.
+Before you put in the work to add your feature and send a pull request, please open a GitHub Discussion so we can get on the same page and give a thumbs up or thumbs down on it. We'd hate for you to spend a bunch of time on something we ultimately don't want to add to Remix!
+
+But hey, who are we to tell you how to spend your time? Go ahead and build the feature if you want if it helps the discussion, but please don't be upset if we don't end up merging it :)
 
 ## Issue Not Getting Attention?
 
@@ -54,7 +56,7 @@ If you need a bug fixed and nobody is fixing it, your best bet is to provide a f
 
 ## Making a Pull Request?
 
-> **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch. If you are submitting a PR that touches any code, this should be the `dev` branch. Pull releases that only change documentation can be merged into `main`.
+> **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch. If you are submitting a PR that touches any code, this should be the `dev` branch. Pull requests that only change documentation can be merged into `main`.
 >
 > You can set the base in GitHub when authoring the PR with the dropdown below the "Compare changes" heading:
 >
