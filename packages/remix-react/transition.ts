@@ -568,6 +568,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
         type: "fetchAction"
       };
       init.onRedirect(result.value.location, locationState);
+      let doneFetcher: FetcherStates["Done"] = {
+        state: "idle",
+        type: "done",
+        data: result.value,
+        submission: undefined
+      };
+      state.fetchers.set(key, doneFetcher);
+      update({ fetchers: new Map(state.fetchers) });
       return;
     }
 
