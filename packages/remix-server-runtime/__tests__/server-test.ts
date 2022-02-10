@@ -1679,37 +1679,4 @@ describe("shared server runtime", () => {
       expect(spy.console.mock.calls.length).toBe(1);
     });
   });
-
-  describe("header requests", () => {
-    test("can access loader headers if parent doesn't have a loader itself", async () => {
-      let indexLoader = jest.fn(() => {
-        return new Response(null, { headers: { "X-Test": "SUCCESS" } });
-      });
-      let indexHeaders = jest.fn(({ loaderHeaders }) => {
-        return {
-          "X-Test": loaderHeaders.get("X-Test") || "FAILED"
-        };
-      });
-      let build = mockServerBuild({
-        root: {
-          default: {}
-        },
-        "routes/index": {
-          loader: indexLoader,
-          parentId: "root",
-          index: true,
-          headers: indexHeaders,
-          default: {}
-        }
-      });
-      let handler = createRequestHandler(build, {}, ServerMode.Test);
-
-      let request = new Request(`${baseUrl}/`, { method: "get" });
-
-      let result = await handler(request);
-
-      expect(result.headers.get("X-Test")).toBe("SUCCESS");
-      expect(indexHeaders.mock.calls.length).toBe(1);
-    });
-  });
 });
