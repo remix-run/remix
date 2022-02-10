@@ -44,7 +44,7 @@ export function ScrollRestoration() {
             window.history.replaceState({ key: Math.random().toString(32).slice(2) }, null);
           }
           try {
-            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}')
+            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}')
             let storedY = positions[window.history.state.key];
             if (typeof storedY === 'number') {
               window.scrollTo(0, storedY)
