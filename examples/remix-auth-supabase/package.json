@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix-app",
+  "name": "remix-example-remix-auth-supabase",
   "description": "",
   "license": "",
   "scripts": {

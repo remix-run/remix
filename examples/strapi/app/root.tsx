@@ -17,7 +17,7 @@ const App: React.FC = () => {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
+        <LiveReload />
       </body>
     </html>
   );

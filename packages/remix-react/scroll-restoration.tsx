@@ -14,6 +14,12 @@ if (typeof document !== "undefined") {
   }
 }
 
+/**
+ * This component will emulate the browser's scroll restoration on location
+ * changes.
+ *
+ * @see https://remix.run/api/remix#scrollrestoration
+ */
 export function ScrollRestoration() {
   useScrollRestoration();
 
@@ -99,7 +105,7 @@ function useScrollRestoration() {
 
       // try to scroll to the hash
       if (location.hash) {
-        let el = document.querySelector(location.hash);
+        let el = document.getElementById(location.hash.slice(1));
         if (el) {
           el.scrollIntoView();
           return;

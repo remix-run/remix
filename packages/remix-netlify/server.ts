@@ -1,13 +1,3 @@
-import type {
-  AppLoadContext,
-  ServerBuild,
-  ServerPlatform
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type {
-  Response as NodeResponse,
-  RequestInit as NodeRequestInit
-} from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
   AbortController,
@@ -15,7 +5,24 @@ import {
   Headers as NodeHeaders,
   Request as NodeRequest
 } from "@remix-run/node";
-import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type {
+  Handler,
+  HandlerEvent,
+  HandlerContext,
+  HandlerResponse
+} from "@netlify/functions";
+import type {
+  Response as NodeResponse,
+  RequestInit as NodeRequestInit
+} from "@remix-run/node";
+
+import { isBinaryType } from "./binary-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -55,15 +62,7 @@ export function createRequestHandler({
       loadContext
     )) as unknown as NodeResponse;
 
-    if (abortController.signal.aborted) {
-      response.headers.set("Connection", "close");
-    }
-
-    return {
-      statusCode: response.status,
-      multiValueHeaders: response.headers.raw(),
-      body: await response.text()
-    };
+    return sendRemixResponse(response, abortController);
   };
 }
 
@@ -136,4 +135,29 @@ function getRawPath(event: HandlerEvent): string {
   if (rawParams) rawPath += `?${rawParams}`;
 
   return rawPath;
+}
+
+export async function sendRemixResponse(
+  response: NodeResponse,
+  abortController: AbortController
+): Promise<HandlerResponse> {
+  if (abortController.signal.aborted) {
+    response.headers.set("Connection", "close");
+  }
+
+  let isBinary = isBinaryType(response.headers.get("content-type"));
+  let isString = typeof response.body === "string";
+  let isBuffer = response.body && response.body instanceof Buffer;
+  let isBase64Encoded = isBuffer || (isBinary && isString);
+  let body =
+    isBuffer && isBinary
+      ? Buffer.from(response.body as any).toString("base64")
+      : await response.text();
+
+  return {
+    statusCode: response.status,
+    multiValueHeaders: response.headers.raw(),
+    body,
+    isBase64Encoded
+  };
 }
