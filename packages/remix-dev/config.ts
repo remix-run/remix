@@ -19,6 +19,7 @@ export type RemixMdxConfigFunction = (
 
 export type ServerBuildTarget =
   | "node-cjs"
+  | "node-esm"
   | "arc"
   | "netlify"
   | "vercel"
@@ -247,7 +248,8 @@ export async function readConfig(
 
   let appConfig: AppConfig;
   try {
-    appConfig = require(configFile);
+    let appConfigMod = await import(configFile);
+    appConfig = appConfigMod.default ? appConfigMod.default : appConfigMod;
   } catch (error) {
     throw new Error(`Error loading Remix config in ${configFile}`);
   }
@@ -259,6 +261,9 @@ export async function readConfig(
     appConfig.serverModuleFormat || "cjs";
   let serverPlatform: ServerPlatform = appConfig.serverPlatform || "node";
   switch (appConfig.serverBuildTarget) {
+    case "node-esm":
+      serverModuleFormat = "esm";
+      break;
     case "cloudflare-pages":
     case "cloudflare-workers":
     case "deno":

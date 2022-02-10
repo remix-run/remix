@@ -13,6 +13,7 @@ export type Server =
   | "fly"
   | "netlify"
   | "remix"
+  | "remix-esm"
   | "vercel";
 
 export type Stack = "fly-stack";
@@ -109,6 +110,7 @@ async function createApp({
   });
 
   appPkg.main = serverPkg.main;
+  appPkg.type = serverPkg.type;
 
   // add current versions of remix deps
   ["dependencies", "devDependencies"].forEach(pkgKey => {

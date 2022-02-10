@@ -15,14 +15,16 @@ if (!buildPathArg) {
 
 let buildPath = path.resolve(process.cwd(), buildPathArg);
 
-createApp(buildPath).listen(port, () => {
-  let address = Object.values(os.networkInterfaces())
-    .flat()
-    .find(ip => ip?.family == "IPv4" && !ip.internal)?.address;
+createApp(buildPath).then(app =>
+  app.listen(port, () => {
+    let address = Object.values(os.networkInterfaces())
+      .flat()
+      .find(ip => ip?.family == "IPv4" && !ip.internal)?.address;
 
-  if (!address) {
-    address = "localhost";
-  }
+    if (!address) {
+      address = "localhost";
+    }
 
-  console.log(`Remix App Server started at http://${address}:${port}`);
-});
+    console.log(`Remix App Server started at http://${address}:${port}`);
+  })
+);

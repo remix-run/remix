@@ -758,7 +758,18 @@ function remixServe() {
             { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
             { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR }
           ]
-        })
+        }),
+        // Allow dynamic imports in CJS code to allow us to utilize
+        // ESM modules.
+        {
+          name: "dynamic-import-polyfill",
+          renderDynamicImport() {
+            return {
+              left: "import(",
+              right: ")"
+            };
+          }
+        }
       ]
     },
     {
