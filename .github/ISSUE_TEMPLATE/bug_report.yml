@@ -10,9 +10,7 @@ body:
 
         ## The best bug report is a failing test!
 
-        The fastest way to get a bug fixed is to add a failing test and sending
-        a Pull Request. **It's usually easy to do with our bug report test
-        template**.
+        The fastest way to get a bug fixed is to add a failing test and send a pull request. **It's usually easy to do with our bug report test template**.
 
         1. Click the "Fork" button
         2. Open up the file [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts) on your machine
@@ -21,14 +19,6 @@ body:
         ## I'd rather just report the bug
 
         That's fine too! Go ahead and fill out this form.
-
-        Please keep in mind that to optimize our time when working on Remix, we
-        may close bug reports in the issues tab with little discussion. It's
-        easy to spend hours tracking down issues that were actually problems in
-        app code and not Remix itself, so we focus on PRs with failing tests
-        instead.
-
-        Thanks for your understanding!
 
   - type: input
     attributes:
