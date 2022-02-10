@@ -22,10 +22,15 @@ Values
   [remixPlatform]     Can be one of: node, cloudflare-pages, cloudflare-workers, or deno
 
 Examples
+  $ remix build
+  $ remix build --sourcemap
   $ remix build my-website
+  $ remix dev
+  $ remix dev --debug
   $ remix dev my-website
   $ remix setup node
   $ remix routes my-website
+  $ remix routes my-website --json
 `;
 
 const cli = meow(helpText, {
