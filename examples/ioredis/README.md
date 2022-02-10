@@ -23,4 +23,3 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 ## Related Links
 
 - [ioredis](https://github.com/luin/ioredis)
-
