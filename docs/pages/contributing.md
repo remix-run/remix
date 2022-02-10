@@ -42,11 +42,13 @@ git checkout dev
 
 ## Think You Found a Bug?
 
-Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
+Please send a PR with a failing test. It's really easy if you follow the instructions in [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts)
 
 ## Proposing New or Changed API?
 
-Please provide thoughtful comments and some sample code that show what you'd like to do with Remix in your app. It helps the conversation if you can show us how you're limited by the current API first before jumping to a conclusion about what needs to be changed and/or added.
+Before you put in the work to add your feature and send a pull request, please open a GitHub Discussion so we can get on the same page and give a thumbs up or thumbs down on it. We'd hate for you to spend a bunch of time on something we ultimately don't want to add to Remix!
+
+But hey, who are we to tell you how to spend your time? Go ahead and build the feature if you want if it helps the discussion, but please don't be upset if we don't end up merging it :)
 
 ## Issue Not Getting Attention?
 
