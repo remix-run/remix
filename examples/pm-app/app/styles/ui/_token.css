@@ -1,0 +1,46 @@
+.ui--token {
+  --token-height: 1.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1;
+  padding: calc(var(--spaces-01) * 0.5) var(--spaces-02);
+  gap: 0.25em;
+  font-size: var(--font-sizes-sm);
+  background: var(--colors-gray-02);
+  color: var(--colors-gray-12);
+  border: 1px solid var(--colors-gray-09);
+  border-radius: 1000px;
+  /* height: calc(var(--spaces-01) + var(--spaces-04)); */
+  user-select: none;
+  height: var(--token-height);
+  white-space: nowrap;
+}
+
+.ui--token__dismiss-button {
+  --token-parent-height: var(--token-height, 1.375rem);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow: none;
+  height: calc(var(--token-parent-height) - 6px);
+  width: calc(var(--token-parent-height) - 6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--colors-gray-09);
+  background: var(--colors-gray-02);
+  color: var(--colors-gray-12);
+  border-radius: 1000px;
+}
+
+.ui--token .ui--token__dismiss-button {
+  position: relative;
+  right: calc(var(--spaces-01) * -1.5);
+}
+
+.ui--token__dismiss-icon {
+  width: calc(var(--token-parent-height) - 10px);
+  height: calc(var(--token-parent-height) - 10px);
+  fill: currentColor;
+}

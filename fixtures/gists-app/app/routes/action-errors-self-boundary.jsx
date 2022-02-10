@@ -1,10 +1,10 @@
 import { Form, useLoaderData } from "remix";
 
-export function action() {
+export async function action() {
   throw new Error("I am an action error!");
 }
 
-export function loader() {
+export async function loader() {
   return "nope";
 }
 
