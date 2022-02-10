@@ -64,9 +64,9 @@ export async function build(
   await compiler.build(config, {
     mode: mode,
     sourcemap,
-    onBuildFailure: (failure: Error | esbuild.BuildFailure) => {
-      compiler.defaultBuildFailureHandler(failure);
-      throw new Error();
+    onBuildFailure: (failure: compiler.BuildError) => {
+      compiler.formatBuildFailure(failure);
+      throw Error();
     }
   });
 

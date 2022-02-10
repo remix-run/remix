@@ -39,7 +39,12 @@ function defaultWarningHandler(message: string, key: string) {
   warnOnce(false, message, key);
 }
 
-export function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
+export type BuildError = Error | esbuild.BuildFailure;
+function defaultBuildFailureHandler(failure: BuildError) {
+  formatBuildFailure(failure);
+}
+
+export function formatBuildFailure(failure: BuildError) {
   if ("warnings" in failure || "errors" in failure) {
     if (failure.warnings) {
       let messages = esbuild.formatMessagesSync(failure.warnings, {
@@ -78,17 +83,13 @@ export async function build(
 ): Promise<void> {
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
 
-  const [browserBuild, serverBuild] = await buildEverything(config, assetsManifestPromiseRef, {
+  await buildEverything(config, assetsManifestPromiseRef, {
     mode,
     target,
     sourcemap,
     onWarning,
     onBuildFailure
   });
-
-  if (browserBuild === undefined && serverBuild === undefined) {
-    throw new Error("build error");
-  }
 }
 
 interface WatchOptions extends BuildOptions {
