@@ -1,0 +1,60 @@
+@import "../../../_defs.css";
+
+.new-todo-list {
+  max-width: 40rem;
+}
+
+.new-todo-list__header-inner {
+  margin-bottom: var(--spaces-05);
+}
+
+.new-todo-list__heading {
+  margin-bottom: var(--spaces-04);
+}
+
+.new-todo-list__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaces-03);
+}
+
+.new-todo-list__form > * {
+  flex: 0 0 100%;
+}
+
+.new-todo-list__new-input,
+.new-todo-list__new-button {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: inherit;
+  font: inherit;
+  border-bottom: 1px solid currentColor;
+}
+
+.new-todo-list__new-input {
+  border-bottom-color: currentColor;
+}
+
+.new-todo-list__new-button {
+  font-weight: bold;
+  border-bottom-color: transparent;
+}
+
+.new-todo-list__new-input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.new-todo-list__todo-list,
+.new-todo-list__todo-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.new-todo-list__todo-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spaces-02);
+}

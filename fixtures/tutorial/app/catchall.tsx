@@ -1,7 +1,7 @@
 import type { LoaderFunction } from "remix";
 import { useLoaderData } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
+export let loader: LoaderFunction = async ({ params }) => {
   return params["*"];
 };
 

@@ -11,18 +11,39 @@ We're going to be short on words and quick on code in this quickstart. If you're
 
 This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, cut once!).
 
+## Prerequisites
+
+If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
+
+- [Node.js](https://nodejs.org) 14 or greater
+- [npm](https://www.npmjs.com) 7 or greater
+- A code editor
+
 ## Creating the project
 
 💿 Initialize a new Remix project
 
+<docs-warning>
+Make sure you are running at least Node v14 or greater
+</docs-warning>
+
 ```sh
 npx create-remix@latest
-# choose Remix App Server
+# IMPORTANT: Choose "Remix App Server" when prompted
 cd [whatever you named the project]
 npm run dev
 ```
 
-<docs-warning>It is important that you pick Remix App Server</docs-warning>
+<docs-warning>
+
+If you are following along with this tutorial, it's important to choose Remix
+App Server at this stage. If you plan to deploy your app, you may need to update
+your code before deploying depending on your deployment target.
+
+When you are ready to deploy, see the `README` in the adapter you choose for
+platform-specific instructions.
+
+</docs-warning>
 
 We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
@@ -46,7 +67,13 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 <Link to="/posts">Posts</Link>
 ```
 
-You can put it anywhere you like, you might want to just delete everything that's there.
+You can put it anywhere you like. Make sure not to delete the Remix specific components like `<Outlet />` and `<Scripts/>`.
+
+💿 Either way you will also need to import `Link`:
+
+```tsx
+import { Link } from "remix";
+```
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
@@ -92,7 +119,7 @@ So let's get to it and provide some data to our component.
 ```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
 import { useLoaderData } from "remix";
 
-export const loader = () => {
+export const loader = async () => {
   return [
     {
       slug: "my-first-post",
@@ -153,7 +180,7 @@ export type Post = {
   title: string;
 };
 
-export const loader = () => {
+export const loader = async () => {
   const posts: Post[] = [
     {
       slug: "my-first-post",
@@ -223,10 +250,11 @@ export function getPosts() {
 
 ```tsx filename=app/routes/posts/index.tsx
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 
@@ -479,11 +507,12 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,4,9,10,14,17]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,10-11,15,18]
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
-import { getPost } from "~/post";
 import invariant from "tiny-invariant";
+
+import { getPost } from "~/post";
 
 export const loader: LoaderFunction = async ({
   params
@@ -567,10 +596,11 @@ touch app/routes/admin.tsx
 
 ```tsx filename=app/routes/admin.tsx
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 
@@ -601,6 +631,7 @@ You should recognize a lot of that code from the posts route. We set up some ext
 💿 Create an admin stylesheet
 
 ```sh
+mkdir app/styles
 touch app/styles/admin.css
 ```
 
@@ -628,6 +659,7 @@ em {
 
 ```tsx filename=app/routes/admin.tsx lines=[4,6-8]
 import { Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 import adminStyles from "~/styles/admin.css";
@@ -774,8 +806,9 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,2,4-14]
+```tsx filename=app/routes/admin/new.tsx lines=[1,3,5-15]
 import { redirect, Form } from "remix";
+
 import { createPost } from "~/post";
 
 export const action = async ({ request }) => {
@@ -823,9 +856,10 @@ export async function createPost(post: NewPost) {
 //...
 ```
 
-```tsx filename=app/routes/admin/new.tsx lines=[2,5]
+```tsx filename=app/routes/admin/new.tsx lines=[2,6]
 import { Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
+
 import { createPost } from "~/post";
 
 export const action: ActionFunction = async ({
@@ -879,7 +913,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-15,20-22,26-28]
+```tsx filename=app/routes/admin/new.tsx lines=[1,7,13-16,22-23,28-31]
 import { useActionData, Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
 

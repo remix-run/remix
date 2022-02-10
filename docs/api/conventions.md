@@ -18,6 +18,7 @@ module.exports = {
   devServerPort: 8002,
   publicPath: "/build/",
   serverBuildDirectory: "build",
+  ignoredRouteFiles: [".*"],
   routes(defineRoutes) {
     return defineRoutes(route => {
       route("/somewhere/cool/*", "catchall.tsx");
@@ -44,25 +45,24 @@ A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`. Both sets of routes will be merged.
 
 ```tsx
-exports.routes = async (defineRoutes) => {
+exports.routes = async defineRoutes => {
   // If you need to do async work, do it before calling `defineRoutes`, we use
   // the call stack of `route` inside to set nesting.
 
-  return defineRoutes((route) => {
+  return defineRoutes(route => {
     // A common use for this is catchall routes.
     // - The first argument is the React Router path to match against
     // - The second is the relative filename of the route handler
-    route("/some/path/*", "catchall.tsx")
+    route("/some/path/*", "catchall.tsx");
 
     // if you want to nest routes, use the optional callback argument
     route("some/:path", "some/route/file.js", () => {
       // - path is relative to parent path
       // - filenames are still relative to the app directory
-      route("relative/path", "some/other/file")
+      route("relative/path", "some/other/file");
     });
-
-  }
-}
+  });
+};
 ```
 
 ### assetsBuildDirectory
@@ -77,9 +77,13 @@ The URL prefix of the browser build with a trailing slash. Defaults to "/build/"
 
 The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
 
+### ignoredRouteFiles
+
+This is an array of globs (via [minimatch][minimatch]) that Remix will match to files while reading your `app/routes` directory. If a file matches, it will be ignored rather that treated like a route module. This is useful for ignoring dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+
 ### devServerPort
 
-The port number to use for the dev server. Defaults to 8002.
+The port number to use for the dev websocket server. Defaults to 8002.
 
 ## File Name Conventions
 
@@ -139,35 +143,6 @@ app/
 Any JavaScript or TypeScript files in the `app/routes/` directory will become routes in your application. The filename maps to the route's URL pathname, except for `index.tsx` which maps to the root pathname.
 
 The default export in this file is the component that is rendered at that route and will render within the `<Outlet />` rendered by the root route.
-
-#### Nested Routes
-
-<!-- prettier-ignore -->
-```markdown [3-5]
-app/
-├── routes/
-│   ├── blog/
-│   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── index.tsx
-└── root.tsx
-```
-
-<details>
-
-<summary>URL Route Matches</summary>
-
-| URL                | Matched Route                    |
-| ------------------ | -------------------------------- |
-| `/`                | `app/routes/index.tsx`           |
-| `/about`           | `app/routes/about.tsx`           |
-| `/blog`            | `app/routes/blog/index.tsx`      |
-| `/blog/categories` | `app/routes/blog/categories.tsx` |
-
-</details>
-
-Folders inside the `app/routes/` directory will create nested routes and URLs in your app. Files named `index.tsx` will render when the parent layout route's path is matched exactly.
 
 #### Dynamic Route Parameters
 
@@ -262,9 +237,9 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a nested route has the same name its directory, it becomes a layout route for all of the other child routes inside that directory. Similar to your [root route](#root-layout-route), the layout route should render an `<Outlet />` which is where the child routes will appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route](#root-layout-route), the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
-#### Flat Layout Routes
+#### Pathless Layout Routes
 
 <!-- prettier-ignore -->
 ```markdown [3,7,10-11]
@@ -290,14 +265,16 @@ app/
 | ----------------- | -------------------------------------- | ---------------------------- |
 | `/`               | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
 | `/product`        | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
-| `/dashboad`       | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
+| `/dashboard`      | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
 | `/chance/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
 
 </details>
 
-You can also create layout routes **without adding segments to the URL** by prepending the directory and associated route file with `__`.
+You can also create layout routes _without adding segments to the URL_ by prepending the directory and associated parent route file with double underscores: `__`.
 
-For example, all of your marketing pages could share a layout rendered in `app/routes/__marketing.tsx` as the layout, and those routes would go in the `app/routes/__marketing/` directory. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL.
+For example, all of your marketing pages could be in `app/routes/__marketing/*` and then share a layout by creating `app/routes/__marketing.tsx`. A route `app/routes/__marketing/product.tsx` would be accessible at the `/product` URL because `__marketing` won't add segments to the URL, just UI hierarchy.
+
+<docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
 #### Dot Delimeters
 
@@ -484,15 +461,20 @@ export default function SomeRouteComponent() {
 
 ### `loader`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
+
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
-```tsx
+```js
 export const loader = async () => {
   return { ok: true };
 };
+```
 
+```ts
 // Typescript
 import type { LoaderFunction } from "remix";
+
 export const loader: LoaderFunction = async () => {
   return { ok: true };
 };
@@ -502,8 +484,9 @@ This function is only ever run on the server. On the initial server render it wi
 
 Using the database ORM Prisma as an example:
 
-```tsx [1,4-6,9]
+```tsx lines=[1,5-7,10]
 import { useLoaderData } from "remix";
+
 import { prisma } from "../db";
 
 export const loader = async () => {
@@ -530,9 +513,11 @@ Remix polyfills the [Web Fetch API][fetch] on the server so you can use `fetch` 
 
 Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
-```js
+```ts
 // if the user visits /invoices/123
-export const loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   params.invoiceId; // "123"
 };
 ```
@@ -544,7 +529,9 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request
+}) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -581,7 +568,9 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = ({ context }) => {
+export const loader: LoaderFunction = async ({
+  context
+}) => {
   const { expressUser } = context;
   // ...
 };
@@ -601,7 +590,7 @@ export const loader = async () => {
 
 When you return a plain object, Remix turns it into a [Fetch Response][response]. This means you can return them yourself, too.
 
-```js
+```ts
 export const loader: LoaderFunction = async () => {
   const users = await db.users.findMany();
   const body = JSON.stringify(users);
@@ -675,9 +664,10 @@ export function getInvoice(id, user) {
 
 ```ts filename=app/http.ts
 import { redirect } from "remix";
+
 import { getSession } from "./session";
 
-function requireUserSession(request) {
+export async function requireUserSession(request) {
   const session = await getSession(
     request.headers.get("cookie")
   );
@@ -738,8 +728,8 @@ export function CatchBoundary() {
         <div>
           <p>You don't have access to this invoice.</p>
           <p>
-            Contact {invoiceCatch.data.invoiceOwnerEmail} to
-            get access
+            Contact {caught.data.invoiceOwnerEmail} to get
+            access
           </p>
         </div>
       );
@@ -751,14 +741,16 @@ export function CatchBoundary() {
   // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {invoiceCatch.status}{" "}
-      {invoiceCatch.statusText}
+      Something went wrong: {caught.status}{" "}
+      {caught.statusText}
     </div>
   );
 }
 ```
 
 ### `action`
+
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a> and <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a></docs-success>
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
@@ -768,6 +760,7 @@ This enables you to co-locate everything about a data set in a single route modu
 
 ```tsx
 import { redirect, Form } from "remix";
+
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
 
@@ -892,6 +885,35 @@ export function headers({ loaderHeaders, parentHeaders }) {
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
+Note that you can also add headers in your `entry.server` file for things that should be global, for example:
+
+```tsx lines=[16]
+import { renderToString } from "react-dom/server";
+import { RemixServer } from "remix";
+import type { EntryContext } from "remix";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const markup = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  responseHeaders.set("Content-Type", "text/html");
+  responseHeaders.set("X-Powered-By", "Hugs");
+
+  return new Response("<!DOCTYPE html>" + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders
+  });
+}
+```
+
+Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
+
 ### `meta`
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
@@ -985,6 +1007,7 @@ Examples:
 
 ```tsx
 import type { LinksFunction } from "remix";
+
 import stylesHref from "../styles/something.css";
 
 export const links: LinksFunction = () => {
@@ -1151,7 +1174,7 @@ Here are a couple of common use-cases:
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
 ```js [10]
-export const loader = () => {
+export const loader = async () => {
   return {
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
@@ -1193,10 +1216,10 @@ And lets say the UI looks something like this:
 └──────────────────────────────┘
 ```
 
-The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
-export function loader({ request, params }) {
+export async function loader({ request, params }) {
   const url = new URL(request.url);
   return exampleDb.activity.findAll({
     where: {
@@ -1214,7 +1237,7 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   return fakedb.findProject(params.projectId);
 }
 ```
@@ -1259,6 +1282,7 @@ It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
 import type { LinksFunction } from "remix";
+
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
 
@@ -1284,3 +1308,5 @@ export default function Page() {
 [form]: ./remix#form
 [form action]: ./remix#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[minimatch]: https://www.npmjs.com/package/minimatch
+[handledatarequest]: #entryservertsx
