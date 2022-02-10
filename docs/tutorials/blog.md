@@ -657,7 +657,7 @@ em {
 
 💿 Link to the stylesheet in the admin route
 
-```tsx filename=app/routes/admin.tsx lines=[4,6-8]
+```tsx filename=app/routes/admin.tsx lines=[5,7-9]
 import { Link, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
