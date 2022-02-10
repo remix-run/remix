@@ -10,7 +10,7 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Usages
 
-- [Install](https://redis.io/topics/quickstart) or use your existing Redis server.
+- Use your existing redis server or [install new redis server](https://redis.io/topics/quickstart) or [start redis server with docker](https://hub.docker.com/_/redis).
 - Duplicate the local `.env.example` file to `.env` and change the REDIS_URL environment variable to your redis server URL.
 - Run `$ npm install`
 - Run `$ npm run dev`
