@@ -38,14 +38,14 @@ describe("<LiveReload />", () => {
     it("defaults the port to 8002", () => {
       const { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        /ws:\/\/localhost:8002\//
+        /:8002\/socket/
       );
     });
 
-    it("can set the port explicitely", () => {
+    it("can set the port explicitly", () => {
       const { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        /ws:\/\/localhost:4321\//
+        /:4321\/socket/
       );
     });
 
@@ -53,7 +53,7 @@ describe("<LiveReload />", () => {
       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
       const { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        /ws:\/\/localhost:1234\//
+        /:1234\/socket/
       );
     });
   });
