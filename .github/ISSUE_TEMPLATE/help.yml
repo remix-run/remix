@@ -13,3 +13,10 @@ body:
         - Read the docs: https://remix.run/docs
         - Explore examples: https://github.com/remix-run/remix/tree/dev/examples
         - Ask in chat: https://rmx.as/discord
+
+  - type: textarea
+    attributes:
+      label: This space intentionally left blank
+      description: Please don't use this, open a discussion, this has to be here for GitHub to recognize the issue template at all.
+    validations:
+      required: true
