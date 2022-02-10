@@ -101,7 +101,10 @@ async function run() {
       when(answers) {
         return answers.appType === appType.stack;
       },
-      choices: [{ name: "Fly.io", value: "fly-stack" }]
+      choices: [
+        { name: "Fly.io", value: "fly-stack" },
+        { name: "Architect (AWS Lambda)", value: "arc-stack" }
+      ]
     },
     {
       name: "server",

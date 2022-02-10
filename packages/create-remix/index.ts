@@ -15,7 +15,7 @@ export type Server =
   | "remix"
   | "vercel";
 
-export type Stack = "fly-stack";
+export type Stack = "fly-stack" | "arc-stack";
 
 export let appType = {
   basic: "basic",
