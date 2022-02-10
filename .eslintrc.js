@@ -6,21 +6,21 @@ module.exports = {
     "plugin:markdown/recommended"
   ],
   overrides: [
-    // {
-    //   // all ```jsx & ```tsx code blocks in .md files
-    //   files: ["**/*.md/*.jsx", "**/*.md/*.tsx"],
-    //   rules: {
-    //     "react/jsx-no-undef": "off"
-    //   }
-    // },
-    // {
-    //   // all ```ts & ```tsx code blocks in .md files
-    //   files: ["**/*.md/*.ts", "**/*.md/*.tsx"],
-    //   rules: {
-    //     "@typescript-eslint/no-unused-expressions": "off",
-    //     "@typescript-eslint/no-unused-vars": "off"
-    //   }
-    // },
+    {
+      // all ```jsx & ```tsx code blocks in .md files
+      files: ["**/*.md/*.jsx", "**/*.md/*.tsx"],
+      rules: {
+        "react/jsx-no-undef": "off"
+      }
+    },
+    {
+      // all ```ts & ```tsx code blocks in .md files
+      files: ["**/*.md/*.ts", "**/*.md/*.tsx"],
+      rules: {
+        "@typescript-eslint/no-unused-expressions": "off",
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    },
     {
       files: [
         "packages/create-remix/templates/cloudflare-workers/**/*.js",
