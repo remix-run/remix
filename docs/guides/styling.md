@@ -617,7 +617,7 @@ npm add -D sass
 
 2. Add an npm script to your `package.json`'s `script` section' that uses the installed too to generate CSS files.
 
-```js filename="package.json"
+```json filename="package.json"
 {
   // ...
   "scripts": {
