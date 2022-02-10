@@ -174,7 +174,7 @@ If you're wanting to send structured data simply to post arrays, you can use the
 Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. Access the checkbox values with `formData.getAll()` in your action.
 
 ```tsx
-export function action({ request }) {
+export async function action({ request }) {
   const formData = await request.formData();
   let categories = formData.getAll("category");
   // ["comedy", "music"]
@@ -199,7 +199,7 @@ And then in your action:
 import queryString from "query-string";
 
 // in your action:
-export function action({ request }) {
+export async function action({ request }) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
   let formQueryString = await request.text();
@@ -222,7 +222,7 @@ Some folks even dump their JSON into a hidden field. Note that this approach won
 And then parse it in the action:
 
 ```tsx
-export function action({ request }) {
+export async function action({ request }) {
   let formData = await request.formData();
   let obj = JSON.parse(formData.get("json"));
 }

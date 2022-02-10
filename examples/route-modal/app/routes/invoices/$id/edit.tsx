@@ -17,7 +17,7 @@ export const links: LinksFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({ params }) => {
   const id = params.id;
   if (!id) return null;
 
