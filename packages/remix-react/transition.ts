@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import { Action } from "history";
 import type { Location } from "history";
 

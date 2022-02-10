@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router"; // TODO: import/export from react-router-dom
