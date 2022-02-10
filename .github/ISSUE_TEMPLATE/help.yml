@@ -1,0 +1,15 @@
+name: 🙏 I Need Help!
+description: I have a question about how to use Remix.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The issues tab is not the best place to ask questions, it's for issues!
+
+        There are several ways to get help with Remix, too:
+
+        - [Search existing questions in the Remix discussions](https://github.com/remix-run/remix/discussions/categories/q-a)
+        - [Ask a question in Remix discussions](https://github.com/remix-run/remix/discussions/new?category=q-a)
+        - Read the docs: https://remix.run/docs
+        - Explore examples: https://github.com/remix-run/remix/tree/dev/examples
+        - Ask in chat: https://rmx.as/discord

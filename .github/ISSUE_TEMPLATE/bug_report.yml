@@ -1,53 +1,38 @@
 name: 🐛 Bug Report
 description: Something is wrong with Remix.
-title: "[Bug]: "
 labels:
   - bug
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for contributing!
+        Thank you for helping to improve Remix!
 
-        Do you need some help?
-        ======================
-        The issue tracker is meant for feature requests and bug reports only. This isn't the best place for
-        support or usage questions. Questions here don't have as much visibility as they do elsewhere. Before
-        you ask a question, here are some resources to get help first:
+        ## The best but report is a failing test!
 
-        - Read the docs: https://remix.run/docs
-        - Explore examples: https://github.com/remix-run/remix/tree/dev/examples
-        - Look for/ask questions on Stack Overflow: https://stackoverflow.com/questions/ask?tags=remix
-        - Ask in GitHub Discussions: https://github.com/remix-run/remix/discussions
-        - Ask in chat: https://rmx.as/discord
+        The fastest way to get a bug fixed is to add a failing test and sending
+        a Pull Request. **It's usually easy to do with our bug report test
+        template**.
 
-        ### Test Case Starter:
-        https://stackblitz.com/github/remix-run/remix/tree/dev/examples/basic?file=app/root.tsx
-  - type: checkboxes
-    id: packages
-    attributes:
-      label: Which Remix packages are impacted?
-      options:
-        - label: "`remix` (Remix core)"
-        - label: "`create-remix`"
-        - label: "`@remix-run/architect`"
-        - label: "`@remix-run/cloudflare-workers`"
-        - label: "`@remix-run/dev`"
-        - label: "`@remix-run/express`"
-        - label: "`@remix-run/netlify`"
-        - label: "`@remix-run/node`"
-        - label: "`@remix-run/react`"
-        - label: "`@remix-run/serve`"
-        - label: "`@remix-run/server-runtime`"
-        - label: "`@remix-run/vercel`"
+        1. Click the "Fork" button
+        2. Open up the file [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts) on your machine
+        3. Follow the instructions!
+
+        ## I'd rather just report the bug
+
+        That's fine too! Go ahead and fill out this form.
+
+        Please keep in mind that to optimize our time when working on Remix, we
+        may close bug reports in the issues tab with little discussion. It's
+        easy to spend hours tracking down issues that were actually problems in
+        app code and not Remix itself, so we focus on PRs with failing tests
+        instead.
+
+        Thanks for your understanding!
+
   - type: input
     attributes:
       label: What version of Remix are you using?
-    validations:
-      required: true
-  - type: input
-    attributes:
-      label: What version of Node are you using? Minimum supported version is 14.
     validations:
       required: true
   - type: textarea
