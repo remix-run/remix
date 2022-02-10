@@ -946,7 +946,7 @@ export default function NewPost() {
           <em>Markdown is required</em>
         ) : null}
         <br />
-        <textarea rows={20} name="markdown" />
+        <textarea id="markdown" rows={20} name="markdown" />
       </p>
       <p>
         <button type="submit">Create Post</button>
