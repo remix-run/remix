@@ -9,6 +9,7 @@ import {
   IDLE_FETCHER,
   IDLE_TRANSITION
 } from "../transition";
+import type { ShouldReloadFunction } from "../routeModules";
 
 describe("init", () => {
   it("initializes with initial values", async () => {
@@ -191,7 +192,7 @@ describe("shouldReload", () => {
   it("delegates to the route if it should reload or not", async () => {
     let rootLoader = jest.fn();
     let childLoader = jest.fn(() => "CHILD");
-    let shouldReload = jest.fn(({ url, prevUrl, submission }) => {
+    let shouldReload = jest.fn(({ url }) => {
       return url.searchParams.get("reload") === "1";
     });
     let tm = createTestTransitionManager("/", {
@@ -266,6 +267,82 @@ describe("shouldReload", () => {
         "url": "http://localhost/child",
       }
     `);
+  });
+
+  it("calls shouldReload even for forms in the root route to other route actions", async () => {
+    let rootLoader = jest.fn();
+    let rootAction = jest.fn(() => "ROOT ACTION");
+    let indexAction = jest.fn(() => "CHILD ACTION");
+    let shouldReload = jest.fn(({ submission }) => {
+      return submission.formData.get("_reload") === "true";
+    });
+    let tm = createTestTransitionManager("/", {
+      loaderData: {
+        "/": "ROOT"
+      },
+      routes: [
+        {
+          path: "",
+          id: "root",
+          hasLoader: true,
+          loader: rootLoader,
+          action: rootAction,
+          shouldReload,
+          element: {},
+          module: "",
+          children: [
+            {
+              path: "/",
+              id: "index",
+              action: indexAction,
+              element: {},
+              module: "",
+              hasLoader: false
+            }
+          ]
+        }
+      ]
+    });
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/"),
+      submission: createActionSubmission(
+        "/?index",
+        new URLSearchParams({ _reload: "true" }).toString()
+      ),
+      action: Action.Push
+    });
+
+    expect(rootLoader.mock.calls.length).toBe(1);
+
+    let args = shouldReload.mock.calls[0][0];
+    expect(args).toMatchInlineSnapshot(`
+      Object {
+        "params": Object {},
+        "prevUrl": "http://localhost/",
+        "submission": Object {
+          "action": "/?index",
+          "encType": "application/x-www-form-urlencoded",
+          "formData": FormData {},
+          "key": "2",
+          "method": "POST",
+        },
+        "url": "http://localhost/",
+      }
+    `);
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/"),
+      submission: createActionSubmission(
+        "/",
+        new URLSearchParams({ _reload: "true" }).toString()
+      ),
+      action: Action.Push
+    });
+
+    expect(rootLoader.mock.calls.length).toBe(2);
   });
 });
 
