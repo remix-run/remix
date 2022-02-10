@@ -39,7 +39,7 @@ function defaultWarningHandler(message: string, key: string) {
   warnOnce(false, message, key);
 }
 
-function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
+export function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
   if ("warnings" in failure || "errors" in failure) {
     if (failure.warnings) {
       let messages = esbuild.formatMessagesSync(failure.warnings, {

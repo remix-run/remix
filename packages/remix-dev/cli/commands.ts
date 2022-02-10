@@ -61,11 +61,14 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  try {
-    await compiler.build(config, { mode: mode, sourcemap });
-  } catch (error: unknown) {
-    process.exit(1);
-  }
+  await compiler.build(config, {
+    mode: mode,
+    sourcemap,
+    onBuildFailure: (failure: Error | esbuild.BuildFailure) => {
+      compiler.defaultBuildFailureHandler(failure);
+      throw new Error();
+    }
+  });
 
   log(`Built in ${prettyMs(Date.now() - start)}`);
 }
