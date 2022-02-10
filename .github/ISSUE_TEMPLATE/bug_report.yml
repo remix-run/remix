@@ -8,7 +8,7 @@ body:
       value: |
         Thank you for helping to improve Remix!
 
-        ## The best but report is a failing test!
+        ## The best bug report is a failing test!
 
         The fastest way to get a bug fixed is to add a failing test and sending
         a Pull Request. **It's usually easy to do with our bug report test
