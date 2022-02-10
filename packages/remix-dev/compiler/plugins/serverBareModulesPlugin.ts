@@ -82,12 +82,12 @@ export function serverBareModulesPlugin(
             return undefined;
         }
 
-        for (let transpileMatcher of remixConfig.serverDependenciesToBundle) {
-          // bundle it if the path matches the transpile matcher
+        for (let pattern of remixConfig.serverDependenciesToBundle) {
+          // bundle it if the path matches the pattern
           if (
-            typeof transpileMatcher === "string"
-              ? path === transpileMatcher
-              : transpileMatcher.test(path)
+            typeof pattern === "string"
+              ? path === pattern
+              : pattern.test(path)
           ) {
             return undefined;
           }

@@ -48,7 +48,6 @@ describe("compiler", () => {
         `,
         "remix.config.js": js`
           module.exports = {
-            ignoredRouteFiles: [".*"],
             serverDependenciesToBundle: ["esm-only-pkg"],
           };
         `,

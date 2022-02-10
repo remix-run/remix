@@ -130,9 +130,9 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A list of module names or regular expressions that determined if a module
-   * is transpiled and included in the server bundle. This can be useful when
-   * consuming ESM only packages in a CJS build.
+   * A list of patterns that determined if a module is transpiled and included
+   * in the server bundle. This can be useful when consuming ESM only packages
+   * in a CJS build.
    */
   serverDependenciesToBundle?: Array<string | RegExp>;
 }
@@ -233,9 +233,9 @@ export interface RemixConfig {
   serverEntryPoint?: string;
 
   /**
-   * A list of module names or regular expressions that determined if a module
-   * is transpiled and included in the server bundle. This can be useful when
-   * consuming ESM only packages in a CJS build.
+   * A list of patterns that determined if a module is transpiled and included
+   * in the server bundle. This can be useful when consuming ESM only packages
+   * in a CJS build.
    */
   serverDependenciesToBundle: Array<string | RegExp>;
 }
