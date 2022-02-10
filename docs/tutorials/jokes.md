@@ -1381,7 +1381,7 @@ https://pris.ly/d/getting-started
 
 Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
-```tsx filename=prisma/schema.prisma lines=[13-19]
+```prisma filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -2157,7 +2157,7 @@ We're going to handroll our own authentication from scratch. Don't worry, I prom
 
 Let's start by showing you our updated `prisma/schema.prisma` file. 💿 Go ahead and update your `prisma/schema.prisma` file to look like this:
 
-```tsx filename=prisma/schema.prisma lines=[13-20,24-25]
+```prisma filename=prisma/schema.prisma lines=[13-20,24-25]
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
