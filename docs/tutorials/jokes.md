@@ -4227,7 +4227,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,18-22,39-50]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,20-24,41-52]
 import type { LoaderFunction } from "remix";
 import {
   Link,
