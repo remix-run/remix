@@ -17,12 +17,8 @@ npm i -g @architect/architect aws-sdk
 ## Development
 
 ```sh
-echo "NODE_ENV=development" >> .env
-echo SESSION_SECRET=$(openssl rand -hex 32) >> .env
 npm run dev
 ```
-
-> If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
 
 This starts your app in development mode, rebuilding assets on file changes.
 

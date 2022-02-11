@@ -122,6 +122,7 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
     }
   }
 
+  res.statusMessage = response.statusText;
   res.writeHead(response.status, response.headers.raw());
 
   if (Buffer.isBuffer(response.body)) {

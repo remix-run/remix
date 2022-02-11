@@ -52,6 +52,15 @@ async function createApp({
   ...rest
 }: CreateAppArgs) {
   let server = rest.stack ? rest.stack : rest.server;
+
+  let versions = process.versions;
+  if (versions?.node && parseInt(versions.node) < 14) {
+    console.log(
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+    );
+    process.exit(1);
+  }
+
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -131,6 +140,19 @@ async function createApp({
 
   if (install) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
+  }
+
+  let serverScript = path.resolve(serverTemplate, "scripts/init.js");
+  let projectScriptsDir = path.resolve(projectDir, "scripts");
+  let projectScript = path.resolve(projectDir, "scripts/init.js");
+  if (fse.existsSync(serverScript)) {
+    let init = require(serverScript);
+    await init(projectDir);
+    fse.removeSync(projectScript);
+    let fileCount = fse.readdirSync(projectScriptsDir).length;
+    if (fileCount === 0) {
+      fse.rmdirSync(projectScriptsDir);
+    }
   }
 
   if (!quiet) {

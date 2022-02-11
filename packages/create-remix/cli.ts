@@ -29,7 +29,7 @@ run().then(
 );
 
 async function run() {
-  let { input, flags, showHelp, showVersion } = meow(help, {
+  let { input, flags, showHelp, showVersion, pkg } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
       version: { type: "boolean", default: false, alias: "v" }
@@ -39,7 +39,7 @@ async function run() {
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
-  let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
+  let anim = chalkAnimation.rainbow(`\nR E M I X - v${pkg.version}\n`);
   await new Promise(res => setTimeout(res, 1500));
   anim.stop();
 
