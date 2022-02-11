@@ -1,0 +1,101 @@
+:root {
+  --reach-combobox: 1;
+}
+
+.ui--form-field-wrapper {
+  --form-field-height: calc((var(--spaces-01) * 2) + var(--spaces-06));
+}
+
+.ui--form-field {
+  appearance: none;
+  display: flex;
+  width: 100%;
+  font-size: var(--font-sizes-md);
+  border-radius: 4px;
+  padding-right: var(--spaces-03);
+  padding-left: var(--spaces-03);
+  height: var(
+    --form-field-height,
+    calc((var(--spaces-01) * 2) + var(--spaces-06))
+  );
+  background-color: var(--colors-gray-02);
+  border: 1px solid var(--colors-gray-09);
+  color: var(--colors-black);
+}
+
+.ui--form-field::placeholder {
+  color: var(--colors-gray-11);
+}
+
+.ui--form-field:hover {
+  background-color: var(--colors-gray-03);
+}
+
+.ui--form-field:focus,
+.ui--form-field:focus-visible {
+  outline: 2px solid var(--colors-blue-08);
+  outline-offset: 0;
+}
+
+.ui--form-field:where([aria-invalid="true"]) {
+  border-color: var(--colors-red-09);
+
+  &::placeholder {
+    color: var(--colors-red-05);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline-color: var(--colors-red-09);
+  }
+}
+
+.ui--form-field:disabled,
+.ui--form-field[aria-disabled] {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.ui--form-field--select {
+  padding-right: var(--spaces-06);
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 32 24' fill='var(--base07)' width='32' height='24' xmlns='http://www.w3.org/2000/svg'%3e%3cpolygon points='0,0 32,0 16,24'/%3e%3c/svg%3e");
+  background-origin: content-box;
+  background-position: right -1rem center;
+  background-repeat: no-repeat;
+  background-size: 9px 6px;
+}
+
+.ui--form-field--textarea {
+  --pp: var(--spaces-02);
+  min-height: calc(var(--form-field-height) * 3 - var(--pp) * 2);
+  padding-top: var(--pp);
+  padding-bottom: var(--pp);
+  resize: none;
+}
+
+.ui--form-field--textarea.resize-y {
+  resize: vertical;
+}
+
+.ui--form-field--textarea.resize-x {
+  resize: horizontal;
+}
+
+.ui--form-field--textarea.resize-xy {
+  resize: both;
+}
+
+.ui--form-label {
+  color: var(--colors-gray-12);
+  font-size: var(--font-sizes-sm);
+}
+
+.ui--form-label + .ui--form-field {
+  margin-top: var(--spaces-01);
+}
+
+.ui--form-field-error {
+  margin-top: var(--spaces-01);
+  color: var(--colors-red-10);
+  font-size: var(--font-sizes-sm);
+}
