@@ -1462,7 +1462,7 @@ export let action: ActionFunction = async ({ request }) => {
 
 export default function AvatarUploadRoute() {
   return (
-    <Form method="post">
+    <Form method="post" encType="multipart/form-data">
       <label htmlFor="avatar-input">Avatar</label>
       <input id="avatar-input" type="file" name="avatar" />
       <button>Upload</button>
