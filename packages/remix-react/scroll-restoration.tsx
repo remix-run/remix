@@ -35,9 +35,9 @@ export function ScrollRestoration() {
     }, [])
   );
 
-  const restoreScroll = ((STORAGE_KEY: string) => {
+  let restoreScroll = ((STORAGE_KEY: string) => {
     if (!window.history.state || !window.history.state.key) {
-      const key = Math.random().toString(32).slice(2);
+      let key = Math.random().toString(32).slice(2);
       window.history.replaceState({ key }, "");
     }
     try {
