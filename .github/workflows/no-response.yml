@@ -9,7 +9,9 @@ on:
 
 jobs:
   noResponse:
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
+
     steps:
       - uses: lee-dohm/no-response@v0.5.0
         with:
