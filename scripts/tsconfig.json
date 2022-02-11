@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["."],
+  "exclude": ["./deployment-test"],
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  }
+}
