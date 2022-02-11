@@ -13,6 +13,7 @@ describe("Forms", () => {
   const CHEESESTEAK = "CHEESESTEAK";
   const LAKSA = "LAKSA";
   const SQUID_INK_HOTDOG = "SQUID_INK_HOTDOG";
+  const PINEAPPLE = "PINEAPPLE";
 
   beforeAll(async () => {
     fixture = await createFixture({
@@ -81,6 +82,18 @@ describe("Forms", () => {
               </>
             )
           }
+        `,
+        "app/routes/nested/form.jsx": js`
+          import { Form } from "remix";
+
+          export default function() {
+            return (
+              <Form action="../get-submission">
+                <input type="text" name="${LUNCH}" defaultValue="${PINEAPPLE}" />
+                <button type="submit">Go</button>
+              </Form>
+            )
+          }
         `
       }
     });
@@ -135,5 +148,11 @@ describe("Forms", () => {
     await app.goto("/get-submission");
     await app.clickElement(`#${ORPHAN_BUTTON}`);
     expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
+  });
+
+  it("resolves to the correct action URL", async () => {
+    await app.goto("/nested/form");
+    await app.clickSubmitButton("/get-submission");
+    expect(await app.getHtml("pre")).toMatch(PINEAPPLE);
   });
 });
