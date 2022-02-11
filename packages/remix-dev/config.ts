@@ -263,6 +263,7 @@ export async function readConfig(
   switch (appConfig.serverBuildTarget) {
     case "node-esm":
       serverModuleFormat = "esm";
+      serverPlatform = "node";
       break;
     case "cloudflare-pages":
     case "cloudflare-workers":
