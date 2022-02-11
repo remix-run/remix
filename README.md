@@ -19,7 +19,7 @@ The documentation is automatically generated on each release from the files in
 
 ## Contributing
 
-If you're interested in contributing code and/or documentation, please [read this first](CONTRIBUTING.md).
+If you're interested in contributing code and/or documentation, please see [our guide to contributing](docs/contributing.md).
 
 ## Code of Conduct
 
