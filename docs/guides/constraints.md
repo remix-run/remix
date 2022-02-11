@@ -20,10 +20,11 @@ Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
-export function loader() {
+export async function loader() {
   return prisma.post.findMany();
 }
 
@@ -49,6 +50,7 @@ The compiler will now analyze the code in `routes/posts.tsx` and only keep code 
 
 ```tsx
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 
 export function meta() {
@@ -73,14 +75,15 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
-```tsx bad lines=5
+```tsx bad lines=[6]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
 console.log(prisma);
 
-export function loader() {
+export async function loader() {
   return prisma.post.findMany();
 }
 
@@ -96,8 +99,9 @@ export default function Posts() {
 
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
-```tsx bad lines=3,5
+```tsx bad lines=[4,6]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
 
@@ -117,12 +121,13 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
-```tsx [6]
+```tsx lines=[7]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
-export function loader() {
+export async function loader() {
   console.log(prisma);
   return prisma.post.findMany();
 }
@@ -193,7 +198,7 @@ And then use it like this:
 ```js bad filename=app/root.js
 import { removeTrailingSlash } from "~/http";
 
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
   return { some: "data" };
 };
@@ -203,7 +208,7 @@ It reads much nicer as well when you've got a lot of these:
 
 ```ts
 // this
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, session => {
       return requireUser(session, user => {
@@ -212,9 +217,11 @@ export const loader = ({ request }) => {
     });
   });
 };
+```
 
+```ts
 // vs. this
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);
@@ -322,7 +329,7 @@ function useLocalStorage(key) {
 
   useEffect(() => {
     setState(localStorage.getItem(key));
-  }, []);
+  }, [key]);
 
   const setWithLocalStorage = nextState => {
     setState(nextState);
