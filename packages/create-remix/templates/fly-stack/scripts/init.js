@@ -32,7 +32,7 @@ async function main(PROJECT_DIR) {
     fs.readFile(EXAMPLE_ENV_PATH, "utf-8")
   ]);
 
-  const newEnv = env + `\nSESSION_SECRET=${getRandomString(16)}`;
+  const newEnv = env + `\nSESSION_SECRET="${getRandomString(16)}"`;
 
   const prodToml = toml.parse(prodContent);
   const stagingToml = toml.parse(stagingContent);
