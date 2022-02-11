@@ -1308,11 +1308,20 @@ describe("fetcher redirects", () => {
   test("action fetch", async () => {
     let t = setup({ url: "/foo" });
     let A = t.fetch.post("/foo");
-    let fetcher = t.getFetcher(A.key);
     let AR = await A.action.redirect("/bar");
-    expect(t.getFetcher(A.key)).toBe(fetcher);
-    expect(t.getState().transition.type).toBe("fetchActionRedirect");
-    expect(t.getState().transition.location).toBe(AR.location);
+    expect(t.getFetcher(A.key)).toMatchInlineSnapshot(`
+      Object {
+        "data": TransitionRedirect {
+          "location": "/bar",
+        },
+        "state": "idle",
+        "submission": undefined,
+        "type": "done",
+      }
+    `);
+    let state = t.getState();
+    expect(state.transition.type).toBe("fetchActionRedirect");
+    expect(state.transition.location).toBe(AR.location);
   });
 });
 

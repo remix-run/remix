@@ -3,7 +3,7 @@ import type { LoaderFunction } from "remix";
 import { Form, json, useLoaderData, useTransition } from "remix";
 import { Link } from "remix";
 
-import { defaultStyles, sessionStorage } from "./theme-css";
+import { defaultStyles, sessionStorage } from "~/themes.server";
 
 export let handle = {
   breadcrumb: () => <Link to="/resources">Resources</Link>
