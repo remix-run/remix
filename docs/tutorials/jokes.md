@@ -2989,10 +2989,10 @@ export const action: ActionFunction = async ({
       const user = await login({ username, password });
 
       if (!user) {
-        return {
+        return badRequest({
           fields,
           formError: `Username/Password combination is incorrect`
-        };
+        });
       }
       return createUserSession(user.id, redirectTo);
     }
@@ -4577,7 +4577,7 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,12,31-58,68-77,82-104]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,7,12,31-58,68-77,82-104]
 import type { Joke } from "@prisma/client";
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
@@ -5887,7 +5887,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[12,89-109]
+```tsx filename=app/routes/jokes/new.tsx lines=[9,12,89-109]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
