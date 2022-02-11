@@ -19,7 +19,7 @@ As soon as you know you don't have what the user is looking for you should _thro
 
 ```tsx filename=routes/page/$slug.js
 export function loader({ params }) {
-  let page = await db.page.findOne({
+  const page = await db.page.findOne({
     where: { slug: params.slug }
   });
 
@@ -45,7 +45,7 @@ You probably already have one at the root of your app. This will handle all thro
 
 ```tsx
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
   return (
     <html>
       <head>
@@ -69,11 +69,10 @@ export function CatchBoundary() {
 Just like [errors], nested routes can export their own catch boundary to handle the 404 UI without taking down all of the parent layouts around it, and add some nice UX touches right in context. Bots are happy, SEO is happy, CDNs are happy, users are happy, and your code stays in context, so it seems like everybody involved is happy with this.
 
 ```tsx filename=app/routes/pages/$pageId.tsx
-import { Form, useLoaderData } from "remix";
-import { useParams } from "react-router-dom";
+import { Form, useLoaderData, useParams } from "remix";
 
 export function loader({ params }) {
-  let page = await db.page.findOne({
+  const page = await db.page.findOne({
     where: { slug: params.slug }
   });
 
@@ -87,7 +86,7 @@ export function loader({ params }) {
 }
 
 export function CatchBoundary() {
-  let params = useParams();
+  const params = useParams();
   return (
     <div>
       <h2>We couldn't find that page!</h2>

@@ -2,7 +2,7 @@ const fsp = require("fs").promises;
 const path = require("path");
 
 /**
- * @type {import("@remix-run/dev/config").AppConfig}
+ * @type {import("@remix-run/dev").AppConfig}
  */
 module.exports = {
   appDirectory: "./app",
@@ -10,6 +10,8 @@ module.exports = {
   publicPath: "/build/",
   serverBuildDirectory: "./build",
   devServerPort: 8002,
+  ignoredRouteFiles: [".*", "blargh.ts"],
+  server: "./server.js",
 
   mdx: async filename => {
     const [rehypeHighlight, remarkToc] = await Promise.all([
@@ -37,7 +39,7 @@ module.exports = {
         route(`/page/${slug}`, `pages/${page}`);
       }
 
-      route("programatic", "pages/test.jsx", () => {
+      route("programmatic", "pages/test.jsx", () => {
         // route("/test", "routes/blog/index.tsx", { index: true });
         route(":messageId", "pages/child.jsx");
       });

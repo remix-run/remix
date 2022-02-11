@@ -12,13 +12,12 @@ Here's how we like to do it:
 Open up each route module you want to include JavaScript for and add a "handle". This is way for you to provide any kind of meta information about a route to the parent route (as you'll see in a moment).
 
 ```js
-export let handle = { hydrate: true };
+export const handle = { hydrate: true };
 ```
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx [7,11,14-16,29]
-import React from "react";
+```tsx [6,10,13-15,28]
 import {
   Meta,
   Links,
@@ -28,10 +27,10 @@ import {
 } from "remix";
 
 export default function App() {
-  let matches = useMatches();
+  const matches = useMatches();
 
   // If at least one route wants to hydrate, this will return true
-  let includeScripts = matches.some(
+  const includeScripts = matches.some(
     match => match.handle?.hydrate
   );
 
@@ -46,7 +45,7 @@ export default function App() {
       <body>
         <Outlet />
         {/* include the scripts, or not! */}
-        {includeScripts && <Scripts />}
+        {includeScripts ? <Scripts /> : null}
       </body>
     </html>
   );

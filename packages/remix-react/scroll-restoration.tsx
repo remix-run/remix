@@ -7,13 +7,19 @@ let STORAGE_KEY = "positions";
 
 let positions: { [key: string]: number } = {};
 
-if (typeof window !== "undefined") {
+if (typeof document !== "undefined") {
   let sessionPositions = sessionStorage.getItem(STORAGE_KEY);
   if (sessionPositions) {
     positions = JSON.parse(sessionPositions);
   }
 }
 
+/**
+ * This component will emulate the browser's scroll restoration on location
+ * changes.
+ *
+ * @see https://remix.run/api/remix#scrollrestoration
+ */
 export function ScrollRestoration() {
   useScrollRestoration();
 
@@ -38,7 +44,7 @@ export function ScrollRestoration() {
             window.history.replaceState({ key: Math.random().toString(32).slice(2) }, null);
           }
           try {
-            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}')
+            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}')
             let storedY = positions[window.history.state.key];
             if (typeof storedY === 'number') {
               window.scrollTo(0, storedY)
@@ -79,7 +85,7 @@ function useScrollRestoration() {
     }, [])
   );
 
-  if (typeof window !== "undefined") {
+  if (typeof document !== "undefined") {
     // eslint-disable-next-line
     React.useLayoutEffect(() => {
       // don't do anything on hydration, the component already did this with an
@@ -99,7 +105,7 @@ function useScrollRestoration() {
 
       // try to scroll to the hash
       if (location.hash) {
-        let el = document.querySelector(location.hash);
+        let el = document.getElementById(location.hash.slice(1));
         if (el) {
           el.scrollIntoView();
           return;

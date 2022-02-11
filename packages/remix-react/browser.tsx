@@ -1,7 +1,9 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
 import type { ReactElement } from "react";
-import React from "react";
+import * as React from "react";
 
 import { RemixEntry } from "./components";
 import type { EntryContext } from "./entry";
@@ -43,8 +45,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   // In the browser, we don't need this because a) in the case of loader
   // errors we already know the order and b) in the case of render errors
   // React knows the order and handles error boundaries normally.
-  entryContext.componentDidCatchEmulator.trackBoundaries = false;
-  entryContext.componentDidCatchEmulator.trackCatchBoundaries = false;
+  entryContext.appState.trackBoundaries = false;
+  entryContext.appState.trackCatchBoundaries = false;
 
   return (
     <RemixEntry

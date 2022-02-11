@@ -2,6 +2,8 @@ import express from "express";
 import supertest from "supertest";
 import { createRequest } from "node-mocks-http";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import { Response as NodeResponse } from "@remix-run/node";
+import { Readable } from "stream";
 
 import {
   createRemixHeaders,
@@ -11,7 +13,7 @@ import {
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the express adapter
-jest.mock("@remix-run/server-runtime/server");
+jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -66,9 +68,24 @@ describe("express createRequestHandler", () => {
       expect(res.status).toBe(200);
     });
 
+    // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
+    it("handles body as stream", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        const stream = Readable.from("hello world");
+        return new NodeResponse(stream, { status: 200 }) as unknown as Response;
+      });
+
+      let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toBe("hello world");
+    });
+
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       let request = supertest(createApp());
@@ -92,7 +109,7 @@ describe("express createRequestHandler", () => {
           "Set-Cookie",
           "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
-        return new Response("", { headers });
+        return new Response(null, { headers });
       });
 
       let request = supertest(createApp());
@@ -211,7 +228,8 @@ describe("express createRemixRequest", () => {
     });
 
     expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -250,7 +268,7 @@ describe("express createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);

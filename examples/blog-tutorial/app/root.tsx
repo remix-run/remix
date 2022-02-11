@@ -7,8 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  Link,
-  NavLink
+  Link
 } from "remix";
 import type { LinksFunction } from "remix";
 
@@ -24,7 +23,7 @@ import darkStylesUrl from "~/styles/dark.css";
  *
  * https://remix.run/api/conventions#links
  */
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
@@ -70,7 +69,7 @@ function Document({
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );
@@ -115,7 +114,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   let message;
   switch (caught.status) {

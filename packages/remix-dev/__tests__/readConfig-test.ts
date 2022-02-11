@@ -17,7 +17,7 @@ describe("readConfig", () => {
         rootDirectory: expect.any(String),
         appDirectory: expect.any(String),
         cacheDirectory: expect.any(String),
-        serverBuildDirectory: expect.any(String),
+        serverBuildPath: expect.any(String),
         assetsBuildDirectory: expect.any(String)
       },
       `
@@ -55,7 +55,7 @@ describe("readConfig", () => {
             "id": "pages/test",
             "index": undefined,
             "parentId": "root",
-            "path": "programatic",
+            "path": "programmatic",
           },
           "pages/three": Object {
             "caseSensitive": undefined,
@@ -85,6 +85,22 @@ describe("readConfig", () => {
             "index": undefined,
             "parentId": "routes/__layout",
             "path": "with-layout",
+          },
+          "routes/__layout2": Object {
+            "caseSensitive": undefined,
+            "file": "routes/__layout2.tsx",
+            "id": "routes/__layout2",
+            "index": undefined,
+            "parentId": "root",
+            "path": undefined,
+          },
+          "routes/__layout2/with-layout2": Object {
+            "caseSensitive": undefined,
+            "file": "routes/__layout2/with-layout2.tsx",
+            "id": "routes/__layout2/with-layout2",
+            "index": undefined,
+            "parentId": "routes/__layout2",
+            "path": "with-layout2",
           },
           "routes/action-catches": Object {
             "caseSensitive": undefined,
@@ -181,46 +197,6 @@ describe("readConfig", () => {
             "index": undefined,
             "parentId": "routes/blog",
             "path": "third",
-          },
-          "routes/catchall-nested": Object {
-            "caseSensitive": undefined,
-            "file": "routes/catchall-nested.jsx",
-            "id": "routes/catchall-nested",
-            "index": undefined,
-            "parentId": "root",
-            "path": "catchall-nested",
-          },
-          "routes/catchall-nested-no-layout/$": Object {
-            "caseSensitive": undefined,
-            "file": "routes/catchall-nested-no-layout/$.jsx",
-            "id": "routes/catchall-nested-no-layout/$",
-            "index": undefined,
-            "parentId": "root",
-            "path": "catchall-nested-no-layout/*",
-          },
-          "routes/catchall-nested/$": Object {
-            "caseSensitive": undefined,
-            "file": "routes/catchall-nested/$.jsx",
-            "id": "routes/catchall-nested/$",
-            "index": undefined,
-            "parentId": "routes/catchall-nested",
-            "path": "*",
-          },
-          "routes/catchall-nested/index": Object {
-            "caseSensitive": undefined,
-            "file": "routes/catchall-nested/index.jsx",
-            "id": "routes/catchall-nested/index",
-            "index": true,
-            "parentId": "routes/catchall-nested",
-            "path": undefined,
-          },
-          "routes/catchall.flat.$": Object {
-            "caseSensitive": undefined,
-            "file": "routes/catchall.flat.$.jsx",
-            "id": "routes/catchall.flat.$",
-            "index": undefined,
-            "parentId": "root",
-            "path": "catchall/flat/*",
           },
           "routes/empty": Object {
             "caseSensitive": undefined,
@@ -431,8 +407,13 @@ describe("readConfig", () => {
             "path": "two",
           },
         },
-        "serverBuildDirectory": Any<String>,
+        "serverBuildPath": Any<String>,
+        "serverBuildTarget": undefined,
+        "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",
+        "serverEntryPoint": "./server.js",
         "serverMode": "production",
+        "serverModuleFormat": "cjs",
+        "serverPlatform": "node",
       }
     `
     );

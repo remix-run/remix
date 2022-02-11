@@ -3,6 +3,7 @@ import { useLoaderData, Link } from "remix";
 
 import redTextHref from "~/styles/redText.css";
 import blueTextHref from "~/styles/blueText.css";
+import guitar from "~/components/guitar.jpg";
 
 interface User {
   name: string;
@@ -30,7 +31,9 @@ export let links: LinksFunction = () => {
   // preload another page
   let pageLink = { page: `/gists/mjackson` };
 
-  return [styleLink, nonMatching, fails, pageLink];
+  let preloadGuitar = { rel: "preload", as: "image", href: guitar };
+
+  return [styleLink, nonMatching, fails, pageLink, preloadGuitar];
 };
 
 export default function LinksPage() {
@@ -45,23 +48,12 @@ export default function LinksPage() {
           </Link>
         </li>
       ))}
-      {/*
+
       <hr />
       <p>
-        <img alt="another guitar..." src={guitar.src} data-test-id="blocked" />
-        <br />
-        Preloaded and blocked guitar, no layout shift.
+        <img alt="a guitar" src={guitar} data-test-id="blocked" /> Prefetched
+        because it's a preload.
       </p>
-      <p>
-        <img
-          alt="another guitar..."
-          src={notPreloadedGuitar.src}
-          data-test-id="not-blocked"
-        />
-        <br />
-        Not preloaded, not blocked, layout shift!
-      </p>
-      */}
     </div>
   );
 }

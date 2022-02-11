@@ -1,11 +1,11 @@
 import * as path from "path";
-import { execSync } from "child_process";
 import chalkAnimation from "chalk-animation";
-import fse from "fs-extra";
 import inquirer from "inquirer";
 import meow from "meow";
 
-import cliPkgJson from "./package.json";
+import type { Lang, Server, Stack } from ".";
+import { appType } from ".";
+import { createApp } from ".";
 
 const help = `
   Usage:
@@ -29,7 +29,7 @@ run().then(
 );
 
 async function run() {
-  let { input, flags, showHelp, showVersion } = meow(help, {
+  let { input, flags, showHelp, showVersion, pkg } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
       version: { type: "boolean", default: false, alias: "v" }
@@ -39,7 +39,7 @@ async function run() {
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
-  let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
+  let anim = chalkAnimation.rainbow(`\nR E M I X - v${pkg.version}\n`);
   await new Promise(res => setTimeout(res, 1500));
   anim.stop();
 
@@ -63,17 +63,58 @@ async function run() {
         ).dir
   );
 
-  let answers = await inquirer.prompt<{
-    server: Server;
-    lang: "ts" | "js";
-    install: boolean;
-  }>([
+  let answers = await inquirer.prompt<
+    | {
+        appType: "basic";
+        stack?: never;
+        server: Server;
+        lang: Lang;
+        install: boolean;
+      }
+    | {
+        appType: "stack";
+        stack: Stack;
+        server?: never;
+        install: boolean;
+      }
+  >([
+    {
+      name: "appType",
+      type: "list",
+      message: "What type of app do you want to create?",
+      choices: [
+        {
+          name: "A pre-configured stack ready for production",
+          value: "stack"
+        },
+        {
+          name: "Just the basics",
+          value: "basic"
+        }
+      ]
+    },
+    {
+      name: "stack",
+      type: "list",
+      message: "Where do you want to deploy your stack?",
+      loop: false,
+      when(answers) {
+        return answers.appType === appType.stack;
+      },
+      choices: [
+        { name: "Fly.io", value: "fly-stack" },
+        { name: "Architect (AWS Lambda)", value: "arc-stack" }
+      ]
+    },
     {
       name: "server",
       type: "list",
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
+      when(answers) {
+        return answers.appType === appType.basic;
+      },
       choices: [
         { name: "Remix App Server", value: "remix" },
         { name: "Express Server", value: "express" },
@@ -81,13 +122,18 @@ async function run() {
         { name: "Fly.io", value: "fly" },
         { name: "Netlify", value: "netlify" },
         { name: "Vercel", value: "vercel" },
-        { name: "Cloudflare Workers", value: "cloudflare-workers" }
+        { name: "Cloudflare Pages", value: "cloudflare-pages" },
+        { name: "Cloudflare Workers", value: "cloudflare-workers" },
+        { name: "Deno", value: "deno" }
       ]
     },
     {
       name: "lang",
       type: "list",
       message: "TypeScript or JavaScript?",
+      when(answers) {
+        return answers.appType === appType.basic;
+      },
       choices: [
         { name: "TypeScript", value: "ts" },
         { name: "JavaScript", value: "js" }
@@ -101,96 +147,19 @@ async function run() {
     }
   ]);
 
-  // Create the app directory
-  let relativeProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relativeProjectDir === "";
-  if (!projectDirIsCurrentDir) {
-    if (fse.existsSync(projectDir)) {
-      console.log(
-        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
-      );
-      process.exit(1);
-    } else {
-      await fse.mkdir(projectDir);
-    }
-  }
-
-  // copy the shared template
-  let sharedTemplate = path.resolve(
-    __dirname,
-    "templates",
-    `_shared_${answers.lang}`
-  );
-  await fse.copy(sharedTemplate, projectDir);
-
-  // copy the server template
-  let serverTemplate = path.resolve(__dirname, "templates", answers.server);
-  if (fse.existsSync(serverTemplate)) {
-    await fse.copy(serverTemplate, projectDir, { overwrite: true });
-  }
-
-  let serverLangTemplate = path.resolve(
-    __dirname,
-    "templates",
-    `${answers.server}_${answers.lang}`
-  );
-  if (fse.existsSync(serverLangTemplate)) {
-    await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
-  }
-
-  // rename dotfiles
-  await fse.move(
-    path.join(projectDir, "gitignore"),
-    path.join(projectDir, ".gitignore")
-  );
-
-  // merge package.jsons
-  let appPkg = require(path.join(sharedTemplate, "package.json"));
-  let serverPkg = require(path.join(serverTemplate, "package.json"));
-  ["dependencies", "devDependencies", "scripts"].forEach(key => {
-    Object.assign(appPkg[key], serverPkg[key]);
-  });
-
-  appPkg.main = serverPkg.main;
-
-  // add current versions of remix deps
-  ["dependencies", "devDependencies"].forEach(pkgKey => {
-    for (let key in appPkg[pkgKey]) {
-      if (appPkg[pkgKey][key] === "*") {
-        appPkg[pkgKey][key] = `^${cliPkgJson.version}`;
-      }
-    }
-  });
-
-  // write package.json
-  await fse.writeFile(
-    path.join(projectDir, "package.json"),
-    JSON.stringify(appPkg, null, 2)
-  );
-
-  if (answers.install) {
-    execSync("npm install", { stdio: "inherit", cwd: projectDir });
-  }
-
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
+  if (answers.stack) {
+    await createApp({
+      projectDir,
+      lang: "ts",
+      stack: answers.stack,
+      install: answers.install
+    });
   } else {
-    console.log(
-      `💿 That's it! \`cd\` into "${path.relative(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
-    );
+    await createApp({
+      projectDir,
+      lang: answers.lang,
+      server: answers.server,
+      install: answers.install
+    });
   }
 }
-
-type Server =
-  | "arc"
-  | "cloudflare-workers"
-  | "express"
-  | "fly"
-  | "netlify"
-  | "remix"
-  | "vercel";

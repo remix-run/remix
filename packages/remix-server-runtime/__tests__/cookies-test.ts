@@ -79,7 +79,7 @@ describe("cookies", () => {
     `);
   });
 
-  it("failes to parses signed object values with invalid signature", async () => {
+  it("fails to parse signed object values with invalid signature", async () => {
     let cookie = createCookie("my-cookie", {
       secrets: ["secret1"]
     });
@@ -117,5 +117,19 @@ describe("cookies", () => {
     // New Set-Cookie should be different, it uses a differet secret.
     let setCookie2 = await cookie.serialize(value);
     expect(setCookie).not.toEqual(setCookie2);
+  });
+
+  it("makes the default path of cookies to be /", async () => {
+    let cookie = createCookie("my-cookie");
+
+    let setCookie = await cookie.serialize("hello world");
+    expect(setCookie).toContain("Path=/");
+
+    let cookie2 = createCookie("my-cookie2");
+
+    let setCookie2 = await cookie2.serialize("hello world", {
+      path: "/about"
+    });
+    expect(setCookie2).toContain("Path=/about");
   });
 });

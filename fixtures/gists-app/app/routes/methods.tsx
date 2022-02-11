@@ -18,22 +18,17 @@ export let loader: LoaderFunction = async ({ request }) => {
 };
 
 export let action: ActionFunction = async ({ request }) => {
-  let contentType = request.headers.get("Content-Type");
-  if (contentType !== "application/x-www-form-urlencoded") {
-    throw new Error(`${contentType} is not yet supported`);
-  }
-
   let session = await getSession(request.headers.get("Cookie"));
-  let bodyParams = new URLSearchParams(await request.text());
+  let bodyParams = await request.formData();
   let body = Array.from(bodyParams.entries()).reduce<
     Record<string, string | string[]>
   >((p, [k, v]) => {
     if (typeof p[k] === "undefined") {
-      p[k] = v;
+      p[k] = v as string;
     } else if (Array.isArray(p[k])) {
-      (p[k] as string[]).push(v);
+      (p[k] as string[]).push(v as string);
     } else {
-      p[k] = [p[k] as string, v];
+      p[k] = [p[k] as string, v as string];
     }
     return p;
   }, {});
@@ -64,7 +59,12 @@ export default function Methods() {
 
   return (
     <div data-test-id="/methods">
-      <Form action="/methods" method={method} encType={enctype}>
+      <Form
+        action="/methods"
+        method={method}
+        encType={enctype}
+        id="methods-form"
+      >
         <p>
           <label>
             Method:{" "}
@@ -134,12 +134,24 @@ export default function Methods() {
         <p>
           <button type="submit" id="submit-with-data" name="data" value="c">
             {method} (with data)
+            <svg id="submit-button-with-svg-element" width="10" height="10">
+              <rect width="10" height="10" style={{ fill: "blue" }} />
+            </svg>
           </button>
           <button type="submit" id="submit">
             {method}
           </button>
         </p>
       </Form>
+      <button
+        type="submit"
+        id="submit-with-data-outside-form"
+        name="data"
+        value="d"
+        form="methods-form"
+      >
+        {method} (with data)
+      </button>
       <div
         id="results"
         style={{

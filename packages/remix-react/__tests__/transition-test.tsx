@@ -2,11 +2,12 @@ import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
 import type { Submission, TransitionManagerInit } from "../transition";
-import { IDLE_FETCHER, IDLE_TRANSITION } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
-  TransitionRedirect
+  TransitionRedirect,
+  IDLE_FETCHER,
+  IDLE_TRANSITION
 } from "../transition";
 
 describe("init", () => {
@@ -1083,6 +1084,30 @@ describe("fetcher states", () => {
     expect(fetcher.data).toBe("A DATA");
   });
 
+  test("loader re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.get("/foo", key);
+    await A.loader.resolve("A DATA");
+    let fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("A DATA");
+
+    let B = t.fetch.get("/foo", key);
+    fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("loading");
+    expect(fetcher.type).toBe("normalLoad");
+    expect(fetcher.data).toBe("A DATA");
+
+    await B.loader.resolve("B DATA");
+    fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("B DATA");
+  });
+
   test("loader submission fetch", async () => {
     let t = setup({ url: "/foo" });
 
@@ -1095,6 +1120,19 @@ describe("fetcher states", () => {
     fetcher = t.getFetcher(A.key);
     expect(fetcher.state).toBe("idle");
     expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("A DATA");
+  });
+
+  test("loader submission re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.submitGet("/foo", key);
+    await A.loader.resolve("A DATA");
+    t.fetch.submitGet("/foo", key);
+    let fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
     expect(fetcher.data).toBe("A DATA");
   });
 
@@ -1123,6 +1161,19 @@ describe("fetcher states", () => {
         "root": "ROOT",
       }
     `);
+  });
+
+  test("action re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.post("/foo", key);
+    await A.action.resolve("A ACTION");
+    await A.loader.resolve("A DATA");
+    t.fetch.post("/foo", key);
+    let fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.data).toBe("A ACTION");
   });
 });
 
@@ -1257,11 +1308,20 @@ describe("fetcher redirects", () => {
   test("action fetch", async () => {
     let t = setup({ url: "/foo" });
     let A = t.fetch.post("/foo");
-    let fetcher = t.getFetcher(A.key);
     let AR = await A.action.redirect("/bar");
-    expect(t.getFetcher(A.key)).toBe(fetcher);
-    expect(t.getState().transition.type).toBe("fetchActionRedirect");
-    expect(t.getState().transition.location).toBe(AR.location);
+    expect(t.getFetcher(A.key)).toMatchInlineSnapshot(`
+      Object {
+        "data": TransitionRedirect {
+          "location": "/bar",
+        },
+        "state": "idle",
+        "submission": undefined,
+        "type": "done",
+      }
+    `);
+    let state = t.getState();
+    expect(state.transition.type).toBe("fetchActionRedirect");
+    expect(state.transition.location).toBe(AR.location);
   });
 });
 
@@ -1324,7 +1384,7 @@ describe("fetcher resubmissions/re-gets", () => {
 
       let B = t.fetch.post("/foo", key);
       expect(A.loader.abortMock.calls.length).toBe(1);
-      expect(t.getFetcher(key).data).toBeUndefined();
+      expect(t.getFetcher(key).data).toBe("A ACTION");
 
       await A.loader.resolve("A LOADER");
       expect(t.getState().loaderData.foo).toBeUndefined();
@@ -1333,7 +1393,7 @@ describe("fetcher resubmissions/re-gets", () => {
       expect(B.action.abortMock.calls.length).toBe(1);
 
       await B.action.resolve("B ACTION");
-      expect(t.getFetcher(key).data).toBeUndefined();
+      expect(t.getFetcher(key).data).toBe("A ACTION");
 
       await C.action.resolve("C ACTION");
       expect(t.getFetcher(key).data).toBe("C ACTION");
