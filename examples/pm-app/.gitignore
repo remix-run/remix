@@ -1,0 +1,12 @@
+node_modules
+/.env
+/.cache
+/build
+/public/build
+/server/build
+/app/db/db.json
+
+/prisma/*.db-journal
+/prisma/*.db
+/app/dist
+docker-compose.yml
