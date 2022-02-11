@@ -52,16 +52,15 @@ async function createApp({
   ...rest
 }: CreateAppArgs) {
   let server = rest.stack ? rest.stack : rest.server;
-  
-  // Check the host's node version
-  const versions = process.versions;
-  if (versions && versions.node && parseInt(versions.node) < 14) {
+
+  let versions = process.versions;
+  if (versions?.node && parseInt(versions.node) < 14) {
     console.log(
       `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
     );
     process.exit(1);
   }
-  
+
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
