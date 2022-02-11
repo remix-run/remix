@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(uuid())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  email         String     @unique
+  passwordHash  String
+  nameFirst     String
+  nameLast      String?
+  title         String?
+  timeZone      String?
+  avatar        String?
+  projects      MembersOnProjects[]
+  projectsOwned Project[]
+  todos         Todo[]
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  description String?
+  todoLists   TodoList[]
+  members     MembersOnProjects[]
+}
+
+model MembersOnProjects {
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String
+
+  @@id([userId, projectId])
+}
+
+model TodoList {
+  id          String   @id @default(uuid())
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  description String?
+  todos       Todo[]
+}
+
+model Todo {
+  id          String    @id @default(uuid())
+  todoListId  String
+  todoList    TodoList  @relation(fields: [todoListId], references: [id], onDelete: Cascade)
+  ownerId     String?
+  owner       User?     @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  name        String
+  description String?
+  completed   Boolean   @default(false)
+  order       Int?
+}

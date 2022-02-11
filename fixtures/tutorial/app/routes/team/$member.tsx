@@ -9,7 +9,7 @@ interface User {
   name: string;
 }
 
-export let loader: LoaderFunction = ({ params }) => {
+export let loader: LoaderFunction = async ({ params }) => {
   return fetch(`https://api.github.com/users/${params.member}`);
 };
 
