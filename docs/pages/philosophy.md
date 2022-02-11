@@ -25,7 +25,7 @@ There are a lot of ways Remix helps you send less stuff over the network and we 
 
 Consider [the Github Gist API](https://api.github.com/gists). This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser you make the user download all of it. It might look like this:
 
-```js
+```jsx
 export default function Gists() {
   const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"

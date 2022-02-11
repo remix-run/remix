@@ -794,8 +794,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Normal `<form encType>`.
    *
-   * Note: Remix only supports `application/x-www-form-urlencoded` right now
-   * but will soon support `multipart/form-data` as well.
+   * Note: Remix defaults to `application/x-www-form-urlencoded` and also
+   * supports `multipart/form-data`.
    */
   encType?: FormEncType;
 
@@ -1182,10 +1182,13 @@ export function useMatches() {
   return matches.map(match => {
     let { pathname, params } = match;
     return {
+      id: match.route.id,
       pathname,
       params,
       data: routeData[match.route.id],
-      handle: routeModules[match.route.id].handle
+      // if the module fails to load or an error/response is thrown, the module
+      // won't be defined.
+      handle: routeModules[match.route.id]?.handle
     };
   });
 }
