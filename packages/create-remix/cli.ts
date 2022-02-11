@@ -101,7 +101,7 @@ async function run() {
     }
   ]);
 
-  createApp({
+  await createApp({
     projectDir,
     lang: answers.lang,
     server: answers.server,

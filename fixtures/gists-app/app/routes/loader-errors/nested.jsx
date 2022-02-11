@@ -1,4 +1,4 @@
-export function loader() {
+export async function loader() {
   throw new Error("I am a loader error!");
 }
 

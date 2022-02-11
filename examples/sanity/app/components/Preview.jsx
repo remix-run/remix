@@ -8,7 +8,7 @@ export default function Preview({ data, setData, query, queryParams }) {
     initialData: data
   });
 
-  useEffect(() => setData(previewData), [previewData]);
+  useEffect(() => setData(previewData), [setData, previewData]);
 
   return <div>Preview Mode</div>;
 }

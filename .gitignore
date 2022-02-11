@@ -13,9 +13,7 @@ yarn-error.log
 /fixtures/deno-app
 
 .eslintcache
-<<<<<<< HEAD
 
 /deployment-test
-=======
+
 /.idea/
->>>>>>> main
