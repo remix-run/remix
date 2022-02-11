@@ -55,7 +55,7 @@ describe("readConfig", () => {
             "id": "pages/test",
             "index": undefined,
             "parentId": "root",
-            "path": "programatic",
+            "path": "programmatic",
           },
           "pages/three": Object {
             "caseSensitive": undefined,
@@ -85,6 +85,22 @@ describe("readConfig", () => {
             "index": undefined,
             "parentId": "routes/__layout",
             "path": "with-layout",
+          },
+          "routes/__layout2": Object {
+            "caseSensitive": undefined,
+            "file": "routes/__layout2.tsx",
+            "id": "routes/__layout2",
+            "index": undefined,
+            "parentId": "root",
+            "path": undefined,
+          },
+          "routes/__layout2/with-layout2": Object {
+            "caseSensitive": undefined,
+            "file": "routes/__layout2/with-layout2.tsx",
+            "id": "routes/__layout2/with-layout2",
+            "index": undefined,
+            "parentId": "routes/__layout2",
+            "path": "with-layout2",
           },
           "routes/action-catches": Object {
             "caseSensitive": undefined,
@@ -433,6 +449,8 @@ describe("readConfig", () => {
         },
         "serverBuildDirectory": Any<String>,
         "serverMode": "production",
+        "serverModuleFormat": "cjs",
+        "serverPlatform": "node",
       }
     `
     );

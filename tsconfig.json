@@ -4,6 +4,7 @@
     { "path": "packages/create-remix" },
     { "path": "packages/remix" },
     { "path": "packages/remix-architect" },
+    { "path": "packages/remix-cloudflare-pages" },
     { "path": "packages/remix-cloudflare-workers" },
     { "path": "packages/remix-dev" },
     { "path": "packages/remix-express" },

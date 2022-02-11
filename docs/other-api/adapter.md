@@ -34,13 +34,13 @@ createRequestHandler({ build, getLoadContext });
 
 Here's a full example with express:
 
-```ts [2, 9-20]
+```ts [2-4, 11-22]
 const express = require("express");
 const {
   createRequestHandler
 } = require("@remix-run/express");
 
-let app = express();
+const app = express();
 
 // needs to handle all verbs (GET, POST, etc.)
 app.all(
@@ -98,7 +98,7 @@ function purgeRequireCache() {
   // netlify typically does this for you, but we've found it to be hit or
   // miss and some times requires you to refresh the page after it auto reloads
   // or even have to restart your server
-  for (let key in require.cache) {
+  for (const key in require.cache) {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
     }

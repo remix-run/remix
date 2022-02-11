@@ -1,6 +1,6 @@
 ---
 title: "@remix-run/serve"
-orrder: 3
+order: 3
 ---
 
 # Remix App Server
@@ -24,14 +24,14 @@ In development, `remix-serve` will ensure the latest code is run on each request
   ```ts [1-3]
   // this will be reset whenever any files change because the module cache was
   // cleared and this will be required brand new
-  let cache = new Map();
+  const cache = new Map();
 
   export async function loader({ params }) {
     if (cache.has(params.foo)) {
       return json(cache.get(params.foo));
     }
 
-    let record = await fakeDb.stuff.find(params.foo);
+    const record = await fakeDb.stuff.find(params.foo);
     cache.set(params.foo, res);
     return json(record);
   }
@@ -41,7 +41,7 @@ In development, `remix-serve` will ensure the latest code is run on each request
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
-  ```ts [3-7]
+  ```ts [3-6]
   import { json } from "remix";
 
   // this starts running the moment the module is imported
@@ -49,11 +49,11 @@ In development, `remix-serve` will ensure the latest code is run on each request
     console.log(Date.now());
   }, 1000);
 
-  export function loader() {
+  export async function loader() {
     // ...
   }
   ```
 
-  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express](../adapter/#createrequesthandler) server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
+  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express](adapter#createrequesthandler) server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
 
 In production this doesn't happen. The server boots up and that's the end of it.

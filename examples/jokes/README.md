@@ -16,7 +16,7 @@ This example demonstrates some of the basic features of Remix, including:
 - Resource Routes
 - Deployment
 
-This is the finished version of [the tutorial](https://remix.run/docs/tutorials/jokes)
+This is the finished version of [the tutorial](https://remix.run/tutorials/jokes)
 
 - [Remix Docs](https://remix.run/docs)
 
@@ -49,4 +49,4 @@ npm start
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)

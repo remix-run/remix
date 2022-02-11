@@ -22,7 +22,7 @@ function postFromModule(mod: any): Post {
   };
 }
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   let data: PostsData = {
     posts: [
       postFromModule(helloPost),
@@ -60,7 +60,7 @@ export default function BlogPosts() {
           {posts.map(post => (
             <li key={post.slug}>
               <Link to={post.slug} className="text-blue-700 underline">
-                {post.title} {locationPending && "..."}
+                {post.title} {locationPending ? "..." : null}
               </Link>
             </li>
           ))}

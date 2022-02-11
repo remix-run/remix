@@ -1,13 +1,12 @@
-import { Outlet } from "react-router-dom";
 import type { LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
+import { Link, Outlet, useLoaderData } from "remix";
 
 interface Member {
   id: string;
   login: string;
 }
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   return fetch("https://api.github.com/orgs/reacttraining/members");
 };
 
