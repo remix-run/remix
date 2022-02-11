@@ -62,7 +62,7 @@ async function createApp({
       );
       process.exit(1);
     } else {
-      await fse.mkdir(projectDir);
+      await fse.mkdirp(projectDir);
     }
   }
 
