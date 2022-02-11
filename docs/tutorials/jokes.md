@@ -3290,7 +3290,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[76-90,92-101]
+```ts filename=app/utils/session.server.ts lines=[76-91,93-102]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3374,7 +3374,8 @@ export async function getUser(request: Request) {
 
   try {
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, username: true }
     });
     return user;
   } catch {
@@ -3429,7 +3430,7 @@ export const links: LinksFunction = () => {
 };
 
 type LoaderData = {
-  user: User | null;
+  user: Awaited<ReturnType<typeof getUser>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
@@ -3656,7 +3657,8 @@ export async function getUser(request: Request) {
 
   try {
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, username: true }
     });
     return user;
   } catch {
