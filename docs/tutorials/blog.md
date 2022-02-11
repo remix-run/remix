@@ -54,16 +54,16 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 
 💿 Add a link to posts in `app/routes/index.tsx`
 
-```tsx
-<Link to="/posts">Posts</Link>
-```
-
-You can put it anywhere you like. Make sure not to delete the Remix specific components like `<Outlet />` and `<Scripts/>`.
-
-💿 Either way you will also need to import `Link`:
+First import `Link` from "remix":
 
 ```tsx
 import { Link } from "remix";
+```
+
+Next, put the link anywhere you like. Make sure not to delete the Remix specific components like `<Outlet />` and `<Scripts/>`.
+
+```tsx
+<Link to="/posts">Posts</Link>
 ```
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
