@@ -264,12 +264,11 @@ export async function getStylesheetPrefetchLinks(
     .flat(1)
     .filter(isHtmlLinkDescriptor)
     .filter(link => link.rel === "stylesheet" || link.rel === "preload")
-    .map(({ rel, ...attrs }) => {
-      if (rel === "preload") {
-        return { rel: "prefetch", ...attrs };
-      }
-      return { rel: "prefetch", as: "style", ...attrs };
-    });
+    .map(({ rel, ...attrs }) =>
+      rel === "preload"
+        ? { rel: "prefetch", ...attrs }
+        : { rel: "prefetch", as: "style", ...attrs }
+    );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
