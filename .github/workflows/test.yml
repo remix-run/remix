@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: 'yarn'
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn --frozen-lockfile
