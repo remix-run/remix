@@ -38,7 +38,6 @@ export function createUpstashSessionStorage({ cookie }: any) {
         }
       );
       return id;
-
     },
     async readData(id) {
       console.log(id);
