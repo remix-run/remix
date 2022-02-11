@@ -2514,7 +2514,7 @@ import type {
 [useactiondata]: #useactiondata
 [useloaderdata]: #useloaderdata
 [usesubmit]: #usesubmit
-[constraints]: ../other-api/constraints
+[constraints]: ../guides/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
