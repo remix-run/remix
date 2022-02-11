@@ -790,6 +790,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
+    if (typeof AbortController === "undefined") {
+      throw new Error(
+        "handleLoaderFetch was called during the server render, but it shouldn't be. " +
+          "You are likely calling useFetcher.load() in the body of your component. " +
+          "Try moving it to a useEffect or a callback."
+      );
+    }
     let currentFetcher = state.fetchers.get(key);
 
     let fetcher: FetcherStates["Loading"] = {
