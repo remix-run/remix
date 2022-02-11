@@ -78,7 +78,7 @@ export function createCookie(
   name: string,
   cookieOptions: CookieOptions = {}
 ): Cookie {
-  const { secrets, ...options } = {
+  let { secrets, ...options } = {
     secrets: [],
     path: "/",
     ...cookieOptions

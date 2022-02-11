@@ -118,6 +118,7 @@ describe("cookies", () => {
     let setCookie2 = await cookie.serialize(value);
     expect(setCookie).not.toEqual(setCookie2);
   });
+
   it("makes the default path of cookies to be /", async () => {
     let cookie = createCookie("my-cookie");
 
