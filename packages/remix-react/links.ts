@@ -2,7 +2,6 @@
 // and leverage `react-router` here instead
 import type { Location } from "history";
 import { parsePath } from "history";
-import type { LiteralUnion } from "type-fest";
 
 import type { AssetsManifest } from "./entry";
 import type { ClientRoute } from "./routes";
@@ -10,6 +9,12 @@ import type { RouteMatch } from "./routeMatching";
 // import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, RouteModule } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
+
+type Primitive = null | undefined | string | number | boolean | symbol | bigint;
+
+type LiteralUnion<LiteralType, BaseType extends Primitive> =
+  | LiteralType
+  | (BaseType & Record<never, never>);
 
 /**
  * Represents a `<link>` element.

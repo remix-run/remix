@@ -15,8 +15,7 @@
   "module": "esm/index.js",
   "dependencies": {
     "history": "^5.2.0",
-    "react-router-dom": "^6.1.1",
-    "type-fest": "^2.8.0"
+    "react-router-dom": "^6.1.1"
   },
   "peerDependencies": {
     "react": ">=16.8",
