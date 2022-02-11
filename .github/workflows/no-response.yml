@@ -1,0 +1,37 @@
+name: No Response
+
+on:
+  issue_comment:
+    types: [created]
+  schedule:
+    # Schedule for five minutes after the hour, every hour
+    - cron: "5 * * * *"
+
+jobs:
+  noResponse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lee-dohm/no-response@v0.5.0
+        with:
+          token: ${{ github.token }}
+
+inputs:
+  closeComment:
+    description: Comment to post when closing an Issue for lack of response. Set to `false` to disable.
+    default: >
+      This issue has been automatically closed because we haven't received a
+      response from the original author 🙈. This automation helps keep the issue
+      tracker clean from issues that are unactionable. Please reach out if you
+      have more information for us! 🙂
+  daysUntilClose:
+    description: Number of days of inactivity before an Issue is closed for lack of response
+    default: 10
+  responseRequiredColor:
+    description: Color for the `responseRequiredLabel`
+    default: ffffff
+  responseRequiredLabel:
+    description: Label indicating that a response from the original author is required
+    default: needs-response
+  token:
+    description: Token to access the GitHub API
+    required: true

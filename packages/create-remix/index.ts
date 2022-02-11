@@ -8,22 +8,51 @@ export type Server =
   | "arc"
   | "cloudflare-workers"
   | "cloudflare-pages"
+  | "deno"
   | "express"
   | "fly"
   | "netlify"
   | "remix"
   | "vercel";
 
+export type Stack = "fly-stack" | "arc-stack";
+
+export let appType = {
+  basic: "basic",
+  stack: "stack"
+} as const;
+
+export type AppType = typeof appType[keyof typeof appType];
+
 export type Lang = "ts" | "js";
 
-interface CreateAppArgs {
-  projectDir: string;
-  lang: Lang;
-  server: Server;
-  install: boolean;
-}
+export type CreateAppArgs =
+  | {
+      projectDir: string;
+      lang: Lang;
+      server: Server;
+      stack?: never;
+      install: boolean;
+      quiet?: boolean;
+    }
+  | {
+      projectDir: string;
+      lang: Lang;
+      server?: never;
+      stack: Stack;
+      install: boolean;
+      quiet?: boolean;
+    };
 
-async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
+async function createApp({
+  projectDir,
+  lang,
+  install,
+  quiet,
+  ...rest
+}: CreateAppArgs) {
+  let server = rest.stack ? rest.stack : rest.server;
+  
   // Check the host's node version
   const versions = process.versions;
   if (versions && versions.node && parseInt(versions.node) < 14) {
@@ -32,7 +61,7 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
     );
     process.exit(1);
   }
-
+  
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -43,7 +72,7 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
       );
       process.exit(1);
     } else {
-      await fse.mkdir(projectDir);
+      await fse.mkdirp(projectDir);
     }
   }
 
@@ -67,13 +96,23 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
   }
 
   // rename dotfiles
-  await fse.move(
-    path.join(projectDir, "gitignore"),
-    path.join(projectDir, ".gitignore")
+  let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
+  await Promise.all(
+    dotfiles.map(async dotfile => {
+      if (fse.existsSync(path.join(projectDir, dotfile))) {
+        return fse.rename(
+          path.join(projectDir, dotfile),
+          path.join(projectDir, `.${dotfile}`)
+        );
+      }
+    })
   );
 
   // merge package.jsons
   let appPkg = require(path.join(sharedTemplate, "package.json"));
+  appPkg.scripts = appPkg.scripts || {};
+  appPkg.dependencies = appPkg.dependencies || {};
+  appPkg.devDependencies = appPkg.devDependencies || {};
   let serverPkg = require(path.join(serverTemplate, "package.json"));
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
@@ -104,17 +143,32 @@ async function createApp({ projectDir, lang, server, install }: CreateAppArgs) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
-  } else {
-    console.log(
-      `💿 That's it! \`cd\` into "${path.relative(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
-    );
+  let serverScript = path.resolve(serverTemplate, "scripts/init.js");
+  let projectScriptsDir = path.resolve(projectDir, "scripts");
+  let projectScript = path.resolve(projectDir, "scripts/init.js");
+  if (fse.existsSync(serverScript)) {
+    let init = require(serverScript);
+    await init(projectDir);
+    fse.removeSync(projectScript);
+    let fileCount = fse.readdirSync(projectScriptsDir).length;
+    if (fileCount === 0) {
+      fse.rmdirSync(projectScriptsDir);
+    }
+  }
+
+  if (!quiet) {
+    if (projectDirIsCurrentDir) {
+      console.log(
+        `💿 That's it! Check the README for development and deploy instructions!`
+      );
+    } else {
+      console.log(
+        `💿 That's it! \`cd\` into "${path.relative(
+          process.cwd(),
+          projectDir
+        )}" and check the README for development and deploy instructions!`
+      );
+    }
   }
 }
 

@@ -16,4 +16,4 @@ Check [app/routes/users/$userId.tsx](app/routes/users/$userId.tsx) to see the Ca
 
 ## Related Links
 
-- [CatchBoundary in the Remix Docs](https://remix.run/docs/en/v1/api/conventions#catchboundary)
+- [CatchBoundary in the Remix Docs](https://remix.run/api/conventions#catchboundary)

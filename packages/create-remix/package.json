@@ -16,6 +16,7 @@
     "create-remix": "cli.js"
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "chalk-animation": "^1.6.0",
     "fs-extra": "^10.0.0",
     "inquirer": "^8.0.0",
