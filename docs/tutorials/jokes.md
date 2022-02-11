@@ -2814,7 +2814,7 @@ export async function login({
   );
   if (!isCorrectPassword) return null;
 
-  return user;
+  return { id: user.id, username };
 }
 ```
 
@@ -2906,7 +2906,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,20-33,35-48,50-61]
+```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -2933,7 +2933,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3032,7 +3032,7 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[50-52,54-59,61-74]
+```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3059,7 +3059,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3290,7 +3290,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[76-90,92-101]
+```ts filename=app/utils/session.server.ts lines=[75-90,92-101]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3317,7 +3317,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3374,7 +3374,8 @@ export async function getUser(request: Request) {
 
   try {
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, username: true }
     });
     return user;
   } catch {
@@ -3429,7 +3430,7 @@ export const links: LinksFunction = () => {
 };
 
 type LoaderData = {
-  user: User | null;
+  user: Awaited<ReturnType<typeof getUser>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
@@ -3562,7 +3563,7 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[14-22]
+```tsx filename=app/utils/session.server.ts lines=[14-23]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3581,9 +3582,10 @@ export async function register({
   password
 }: LoginForm) {
   const passwordHash = await bcrypt.hash(password, 10);
-  return db.user.create({
+  const user = await db.user.create({
     data: { username, passwordHash }
   });
+  return { id: user.id, username };
 }
 
 export async function login({
@@ -3599,7 +3601,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3656,7 +3658,8 @@ export async function getUser(request: Request) {
 
   try {
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, username: true }
     });
     return user;
   } catch {
