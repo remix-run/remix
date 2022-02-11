@@ -133,6 +133,19 @@ async function createApp({
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 
+  let serverScript = path.resolve(serverTemplate, "scripts/init.js");
+  let projectScriptsDir = path.resolve(projectDir, "scripts");
+  let projectScript = path.resolve(projectDir, "scripts/init.js");
+  if (fse.existsSync(serverScript)) {
+    let init = require(serverScript);
+    await init(projectDir);
+    fse.removeSync(projectScript);
+    let fileCount = fse.readdirSync(projectScriptsDir).length;
+    if (fileCount === 0) {
+      fse.rmdirSync(projectScriptsDir);
+    }
+  }
+
   if (!quiet) {
     if (projectDirIsCurrentDir) {
       console.log(
