@@ -104,8 +104,8 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
 ```tsx filename=app/routes/gists.jsx lines=[2]
-export function loader() {
-  let res = fetch("https://api.gitub.com/gists");
+export async function loader() {
+  let res = await fetch("https://api.github.com/gists");
   return res.json();
 }
 
@@ -155,6 +155,40 @@ export default function ProductCategory() {
   return (
     <div>
       <p>{products.length} Products</p>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+If you are using TypeScript, you can use type inference to use Primsa Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
+
+```tsx filename=tsx filename=app/routes/products/$productId.tsx
+import { useLoaderData, json } from "remix";
+import { db } from "~/db.server";
+
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
+
+async function getLoaderData() {
+  const products = await db.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      imgSrc: true
+    }
+  });
+  return { products };
+}
+
+export let loader = async () => {
+  return json<LoaderData>(await getLoaderData());
+};
+
+export default function Product() {
+  let product = useLoaderData<LoaderData>();
+  return (
+    <div>
+      <p>Product {product.id}</p>
       {/* ... */}
     </div>
   );
@@ -357,7 +391,10 @@ export default function ProductFilters() {
   let brands = searchParams.getAll("brand");
 
   return (
-    <Form method="get" onChange={e => submit(e.target)}>
+    <Form
+      method="get"
+      onChange={e => submit(e.currentTarget)}
+    >
       {/* ... */}
     </Form>
   );
@@ -607,7 +644,7 @@ As you learn Remix, you'll find you shift from thinking in client state to think
 
 ## Gotchas
 
-Loaders are only called on the server, via `fetch` from the browser, so your data is serialized with `JSON.stringify` and sent over the network before it makes it to you component. This means your data needs to be serializable. For example:
+Loaders are only called on the server, via `fetch` from the browser, so your data is serialized with `JSON.stringify` and sent over the network before it makes it to your component. This means your data needs to be serializable. For example:
 
 <docs-error>This won't work!</docs-error>
 

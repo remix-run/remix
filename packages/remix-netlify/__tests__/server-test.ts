@@ -1,11 +1,20 @@
+import fsp from "fs/promises";
+import path from "path";
+import { Readable } from "stream";
 import lambdaTester from "lambda-tester";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import {
+  // This has been added as a global in node 15+
+  AbortController,
+  Response as NodeResponse
+} from "@remix-run/node";
 import type { HandlerEvent } from "@netlify/functions";
 
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
+  sendRemixResponse
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
@@ -44,7 +53,9 @@ describe("netlify createRequestHandler", () => {
 
     it("handles requests", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async req => {
-        return new Response(`URL: ${new URL(req.url).pathname}`);
+        return new Response(`URL: ${new URL(req.url).pathname}`, {
+          headers: { "content-type": "text/plain" }
+        });
       });
 
       // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
@@ -270,5 +281,47 @@ describe("netlify createRemixRequest", () => {
         },
       }
     `);
+  });
+});
+
+describe("sendRemixResponse", () => {
+  it("handles resource routes with regular data", async () => {
+    let json = JSON.stringify({ foo: "bar" });
+    let response = new NodeResponse(json, {
+      headers: {
+        "content-type": "application/json",
+        "content-length": json.length.toString()
+      }
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(json);
+  });
+  it("handles resource routes with binary data", async () => {
+    let image = await fsp.readFile(
+      path.join(__dirname, "554828.jpeg"),
+      "utf-8"
+    );
+
+    const stream = new Readable();
+    stream._read = () => {}; // redundant? see update below
+    stream.push(image);
+    stream.push(null);
+
+    let response = new NodeResponse(stream, {
+      headers: {
+        "content-type": "image/jpeg",
+        "content-length": image.length.toString()
+      }
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(image);
   });
 });
