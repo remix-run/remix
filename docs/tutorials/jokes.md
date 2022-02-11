@@ -2988,10 +2988,12 @@ export const action: ActionFunction = async ({
     case "login": {
       const user = await login({ username, password });
 
-      return badRequest({
-        fields,
-        formError: `Username/Password combination is incorrect`
-      });
+      if (!user) {
+        return badRequest({
+          fields,
+          formError: `Username/Password combination is incorrect`
+        });
+      }
       return createUserSession(user.id, redirectTo);
     }
 
