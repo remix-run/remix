@@ -5441,16 +5441,16 @@ import type { LoaderFunction } from "remix";
 import { db } from "~/utils/db.server";
 
 function escapeCdata(s: string) {
-  return s.replaceAll("]]>", "]]]]><![CDATA[>");
+  return s.replace(/\]\]>/g, "]]]]><![CDATA[>");
 }
 
 function escapeHtml(s: string) {
   return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(/\&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export const loader: LoaderFunction = async ({
