@@ -10,6 +10,7 @@
     "jest.js"
   ],
   "dependencies": {
+    "@babel/core": "^7.17.2",
     "@babel/eslint-parser": "^7.16.3",
     "@babel/preset-react": "^7.16.0",
     "@rushstack/eslint-patch": "^1.1.0",
