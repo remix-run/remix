@@ -35,17 +35,11 @@ npm run dev
 ```
 
 <docs-warning>
+If you are following along with this tutorial, it's important to choose Remix App Server at this stage. If you plan to deploy your app, you may need to update your code before deploying depending on your deployment target. We're going to be reading/writing to the file system and not all setups are compatible with that (for example, Cloudflare Workers and AWS lambda don't have a writable filesystem).
 
-If you are following along with this tutorial, it's important to choose Remix
-App Server at this stage. If you plan to deploy your app, you may need to update
-your code before deploying depending on your deployment target.
-
-When you are ready to deploy, see the `README` in the adapter you choose for
-platform-specific instructions.
-
+When you are ready to deploy, see the `README` in the adapter you choose for platform-specific instructions.
 </docs-warning>
 
-We're going to be doing some work with the file system and not all setups are compatible with the code in this tutorial.
 
 Open up [http://localhost:3000](http://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
 
