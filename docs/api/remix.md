@@ -1426,7 +1426,7 @@ return new Response(null, {
 });
 ```
 
-## `parseMultipartFormData` (node)
+## `unstable_parseMultipartFormData` (node)
 
 Allows you to handle multipart forms (file uploads) for your app.
 
@@ -1436,14 +1436,14 @@ It's to be used in place of `request.formData()`.
 
 ```diff
 - let formData = await request.formData();
-+ let formData = await parseMultipartFormData(request, uploadHandler);
++ let formData = await unstable_parseMultipartFormData(request, uploadHandler);
 ```
 
 For example:
 
 ```tsx lines=[2-5,7,23]
 export let action: ActionFunction = async ({ request }) => {
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1493,7 +1493,7 @@ let uploadHandler = unstable_createFileUploadHandler({
 });
 
 export let action: ActionFunction = async ({ request }) => {
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
@@ -1577,7 +1577,7 @@ export let action: ActionFunction = async ({ request }) => {
     return uploadedImage.secure_url;
   };
 
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
