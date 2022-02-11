@@ -1234,18 +1234,19 @@ export function useMatches() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
 
   return React.useMemo(
-    () => matches.map(match => {
-      let { pathname, params } = match;
-      return {
-        id: match.route.id,
-        pathname,
-        params,
-        data: routeData[match.route.id],
-        // if the module fails to load or an error/response is thrown, the module
-        // won't be defined.
-        handle: routeModules[match.route.id]?.handle
-      };
-    }),
+    () =>
+      matches.map(match => {
+        let { pathname, params } = match;
+        return {
+          id: match.route.id,
+          pathname,
+          params,
+          data: routeData[match.route.id],
+          // if the module fails to load or an error/response is thrown, the module
+          // won't be defined.
+          handle: routeModules[match.route.id]?.handle
+        };
+      }),
     [matches, routeData, routeModules]
   );
 }
