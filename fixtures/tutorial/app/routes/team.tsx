@@ -6,7 +6,7 @@ interface Member {
   login: string;
 }
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   return fetch("https://api.github.com/orgs/reacttraining/members");
 };
 

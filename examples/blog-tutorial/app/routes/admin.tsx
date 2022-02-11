@@ -8,7 +8,7 @@ export const links = () => {
   return [{ rel: "stylesheet", href: adminStyles }];
 };
 
-export const loader = () => {
+export const loader = async () => {
   return getPosts();
 };
 
