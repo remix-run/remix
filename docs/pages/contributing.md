@@ -29,16 +29,16 @@ The following steps will get you setup to contribute changes to this repo:
 1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page](https://github.com/remix-run/remix))
 2. Clone your fork locally
 
-```bash
-# in a terminal, cd to parent directory where you want your clone to be, then
-git clone https://github.com/<your_github_username>/remix.git
-cd remix
+   ```bash
+   # in a terminal, cd to parent directory where you want your clone to be, then
+   git clone https://github.com/<your_github_username>/remix.git
+   cd remix
 
-# if you are making *any* code changes, make sure to checkout the dev branch
-git checkout dev
-```
+   # if you are making *any* code changes, make sure to checkout the dev branch
+   git checkout dev
+   ```
 
-1. Install dependencies and build. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies and build. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
 ## Think You Found a Bug?
 
