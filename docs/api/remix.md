@@ -1473,7 +1473,7 @@ export default function AvatarUploadRoute() {
 
 ### `uploadHandler`
 
-The `uploadHandler` is the key to whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
+The `uploadHandler` is the key to the whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it to disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
 
 Remix has two utilities to create `uploadHandler`s for you:
 
