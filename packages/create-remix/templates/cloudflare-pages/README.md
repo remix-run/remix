@@ -21,15 +21,12 @@ If you don't already have an account, then [create a Cloudflare account here](ht
 
 Configure the "Build command" should be set to `npm run build`, and the "Build output directory" should be set to `public`.
 
-## To Prevent the Unsupported ESM URL Scheme Error
+## Explicitly set Node version in Pages CI
 
-If your build script uses `postcss` to build the CSS files before running `remix build` like `"cross-env NODE_ENV=production npm run build:css && remix build"`, you will find an error at build time, because Cloudflare Pages uses Node version 12 as default.
+- Pages CI Node default version is 12.18.0.
 
-So, we need to tell Cloudflare pages to use Node version 14 at build time.
+- Pages CI consumes `.node-version` and `.nvmrc`.
 
-Under the Cloudflare Pages Project Settings, set the Production Environment "NODE_VERSION" to 14.
+- To prevent some errors at build time that might be caused by the unsupported Node version, it is recommended to explicitly set the Node version you want Pages to use when it run `npm run build` in `.node-version` or `.nvmrc`.
 
-Variable Name | Value |
---- | ---
-NODE_VERSION  | 14 |
 
