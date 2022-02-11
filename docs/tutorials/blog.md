@@ -61,7 +61,7 @@ This might happen if you've added `ignore-scripts = true` to your `npm` configur
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-💿 Add a link to posts in `app/root.tsx`
+💿 Add a link to posts in `app/routes/index.tsx`
 
 ```tsx
 <Link to="/posts">Posts</Link>
