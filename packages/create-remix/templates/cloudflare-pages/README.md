@@ -21,12 +21,6 @@ If you don't already have an account, then [create a Cloudflare account here](ht
 
 Configure the "Build command" should be set to `npm run build`, and the "Build output directory" should be set to `public`.
 
-## Explicitly set Node version in Pages CI
+## Node version
 
-- Pages CI Node default version is 12.18.0.
-
-- Pages CI consumes `.node-version` and `.nvmrc`.
-
-- To prevent some errors at build time that might be caused by the unsupported Node version, it is recommended to explicitly set the Node version you want Pages to use when it run `npm run build` in `.node-version` or `.nvmrc`.
-
-
+The Cloudflare Pages CI default Node version is 12 but Remix needs 14 to build. This template includes a `.node-version` file with 14 in it. You may want to change it to a later version in the future, but make sure to not do less than 14.
