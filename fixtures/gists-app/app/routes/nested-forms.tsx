@@ -1,7 +1,7 @@
 import type { ActionFunction } from "remix";
 import { Form, json, Outlet, useActionData } from "remix";
 
-export let action: ActionFunction = ({ request }) => {
+export let action: ActionFunction = async ({ request }) => {
   return json("layout action data");
 };
 

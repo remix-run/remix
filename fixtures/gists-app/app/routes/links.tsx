@@ -10,7 +10,7 @@ interface User {
   id: string;
 }
 
-export let loader: LoaderFunction = (): User[] => {
+export let loader: LoaderFunction = async (): User[] => {
   return [
     { name: "Michael Jackson", id: "mjackson" },
     { name: "Ryan Florence", id: "ryanflorence" }

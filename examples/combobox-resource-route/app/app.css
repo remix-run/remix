@@ -1,0 +1,34 @@
+body {
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+}
+
+.combobox-wrapper {
+  position: relative;
+  width: 20rem;
+}
+
+.spinner {
+  height: 1rem;
+  width: 1rem;
+  animation: spin 1s infinite linear;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+[data-reach-combobox-input] {
+  font-size: inherit;
+  padding: 0.25rem 2rem 0.25rem 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
