@@ -137,7 +137,6 @@ async function createApp({
   let projectScriptsDir = path.resolve(projectDir, "scripts");
   let projectScript = path.resolve(projectDir, "scripts/init.js");
   if (fse.existsSync(serverScript)) {
-    console.log("init file found");
     let init = require(serverScript);
     await init(projectDir);
     fse.removeSync(projectScript);
