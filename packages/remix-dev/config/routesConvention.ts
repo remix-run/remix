@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import minimatch from "minimatch";
 
 import type { RouteManifest, DefineRouteFunction } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
@@ -21,20 +22,24 @@ export function isRouteModuleFile(filename: string): boolean {
  * For example, a file named `app/routes/gists/$username.tsx` creates a route
  * with a path of `gists/:username`.
  */
-export function defineConventionalRoutes(appDir: string): RouteManifest {
+export function defineConventionalRoutes(
+  appDir: string,
+  ignoredFilePatterns?: string[]
+): RouteManifest {
   let files: { [routeId: string]: string } = {};
 
   // First, find all route modules in app/routes
   visitFiles(path.join(appDir, "routes"), file => {
-    let routeId = createRouteId(path.join("routes", file));
-
-    if (isRouteModuleFile(file)) {
-      files[routeId] = path.join("routes", file);
+    if (
+      ignoredFilePatterns &&
+      ignoredFilePatterns.some(pattern => minimatch(file, pattern))
+    ) {
       return;
     }
 
-    // https://github.com/remix-run/remix/issues/391
-    if (path.basename(file).startsWith(".")) {
+    if (isRouteModuleFile(file)) {
+      let routeId = createRouteId(path.join("routes", file));
+      files[routeId] = path.join("routes", file);
       return;
     }
 
@@ -65,7 +70,7 @@ export function defineConventionalRoutes(appDir: string): RouteManifest {
       let fullPath = createRoutePath(routeId.slice("routes".length + 1));
       let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
 
-      if (typeof uniqueRouteId !== "undefined") {
+      if (uniqueRouteId) {
         if (uniqueRoutes.has(uniqueRouteId)) {
           throw new Error(
             `Path ${JSON.stringify(fullPath)} defined by route ${JSON.stringify(

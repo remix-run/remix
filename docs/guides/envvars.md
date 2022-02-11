@@ -8,6 +8,8 @@ Remix does not do anything directly with environment variables, but there are so
 
 Environment Variables are values that live on the server that your application can use. You may be familiar with the ubiquitous `NODE_ENV`. Your deployment server probably automatically sets that to "production".
 
+<docs-warning>When you run `remix build` we will compile `process.env.NODE_ENV` into whatever the current environment value is.</docs-warning>
+
 Here are some example environment variables you might find in the wild:
 
 - `DATABASE_URL`: The URL for a Postgres Database
@@ -70,7 +72,7 @@ Some folks ask if Remix can let them put environment variables into browser bund
 2. You can't change the values without a rebuild and redeploy.
 3. It's easy to accidentally leak secrets into publicly accessible files!
 
-Instead we recommend keeping all of your environment variables on the server (all the server secrets as well as the stuff your JavaScript in the browser needs) and exposing them to your browser code through `window.ENV`. Since you always have a server, you don't need this information in your bundle, your server can provide the clientside environment variables in the loaders.
+Instead we recommend keeping all of your environment variables on the server (all the server secrets as well as the stuff your JavaScript in the browser needs) and exposing them to your browser code through `window.ENV`. Since you always have a server, you don't need this information in your bundle, your server can provide the client-side environment variables in the loaders.
 
 1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
 
@@ -143,7 +145,9 @@ Instead we recommend keeping all of your environment variables on the server (al
    export async function redirectToStripeCheckout(
      sessionId
    ) {
-     const stripe = await loadStripe(window.ENV.stripe);
+     const stripe = await loadStripe(
+       window.ENV.STRIPE_PUBLIC_KEY
+     );
      return stripe.redirectToCheckout({ sessionId });
    }
    ```

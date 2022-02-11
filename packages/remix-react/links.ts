@@ -1,4 +1,5 @@
-// import type { Location } from "history";
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Location } from "history";
 import { parsePath } from "history";
 
@@ -171,7 +172,7 @@ export function getLinksForMatches(
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
-      return (module.links && module.links()) || [];
+      return module.links?.() || [];
     })
     .flat(1);
 
@@ -346,7 +347,7 @@ export function getDataLinkHrefs(
       .map(match => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
-        searchParams.append("_data", match.route.id);
+        searchParams.set("_data", match.route.id);
         return `${pathname}?${searchParams}`;
       })
   );

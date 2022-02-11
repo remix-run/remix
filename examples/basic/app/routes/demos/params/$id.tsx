@@ -9,7 +9,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 
   if (params.id === "this-record-does-not-exist") {
     // If the record doesn't exist we can't render the route normally, so
-    // instead we throw a 404 reponse to stop running code here and show the
+    // instead we throw a 404 response to stop running code here and show the
     // user the catch boundary.
     throw new Response("Not Found", { status: 404 });
   }

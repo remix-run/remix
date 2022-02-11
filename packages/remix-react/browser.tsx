@@ -1,7 +1,9 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
 import type { ReactElement } from "react";
-import React from "react";
+import * as React from "react";
 
 import { RemixEntry } from "./components";
 import type { EntryContext } from "./entry";

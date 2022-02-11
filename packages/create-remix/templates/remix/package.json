@@ -1,10 +1,12 @@
 {
   "scripts": {
     "postinstall": "remix setup node",
-    "dev": "remix dev",
-    "start": "remix-serve build"
+    "build": "cross-env NODE_ENV=production remix build",
+    "dev": "cross-env NODE_ENV=development remix dev",
+    "start": "cross-env NODE_ENV=production remix-serve build"
   },
   "dependencies": {
-    "@remix-run/serve": "*"
+    "@remix-run/serve": "*",
+    "cross-env": "^7.0.3"
   }
 }

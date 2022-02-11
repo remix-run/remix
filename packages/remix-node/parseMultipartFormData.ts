@@ -1,10 +1,15 @@
-import type { Readable } from "stream";
+import { Readable } from "stream";
 import Busboy from "busboy";
 
 import type { Request as NodeRequest } from "./fetch";
 import type { UploadHandler } from "./formData";
 import { FormData as NodeFormData } from "./formData";
 
+/**
+ * Allows you to handle multipart forms (file uploads) for your app.
+ *
+ * @see https://remix.run/api/remix#parsemultipartformdata-node
+ */
 export function parseMultipartFormData(
   request: Request,
   uploadHandler: UploadHandler
@@ -14,12 +19,19 @@ export function parseMultipartFormData(
 
 export async function internalParseFormData(
   contentType: string,
-  stream: Readable,
+  body: string | Buffer | Readable,
   abortController?: AbortController,
   uploadHandler?: UploadHandler
 ) {
   let formData = new NodeFormData();
   let fileWorkQueue: Promise<void>[] = [];
+
+  let stream: Readable;
+  if (typeof body === "string" || Buffer.isBuffer(body)) {
+    stream = Readable.from(body.toString());
+  } else {
+    stream = body;
+  }
 
   await new Promise<void>(async (resolve, reject) => {
     let busboy = new Busboy({

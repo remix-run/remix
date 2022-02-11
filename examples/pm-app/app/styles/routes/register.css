@@ -1,0 +1,61 @@
+@import "../_defs.css";
+
+.register__container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--spaces-10);
+  gap: var(--spaces-04);
+}
+
+.register__box {
+  --gutter: var(--spaces-04);
+  position: relative;
+  width: 24rem;
+  max-width: calc(100% - var(--gutter) * 2);
+}
+
+.register__form-error {
+  position: absolute;
+  top: calc(var(--spaces-08) * -1);
+  right: 0;
+  left: 0;
+  text-align: center;
+}
+
+.register__form-error-text {
+  display: inline-flex;
+  text-align: center;
+  color: var(--colors-red-10);
+  font-family: var(--fonts-sans);
+  font-weight: bold;
+  line-height: 1.25;
+  padding: 0.5em;
+  padding-top: calc(0.5em / 1.25);
+  background: hsl(var(--hsl-red-04) / 0.5);
+  border: 2px solid var(--colors-red-07);
+  border-radius: 4px;
+}
+
+.register__heading {
+  text-align: center;
+  margin-bottom: var(--spaces-04);
+}
+
+.register__email-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: var(--spaces-04);
+}
+
+.register__email-submit-button {
+  margin-top: var(--spaces-04);
+  width: 100%;
+}
+
+.register__outer-text,
+.register__outer-text a {
+  color: var(--colors-gray-12);
+}

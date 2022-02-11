@@ -1,3 +1,4 @@
+import { PassThrough } from "stream";
 import type * as express from "express";
 import type {
   AppLoadContext,
@@ -108,10 +109,10 @@ export function createRemixRequest(
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req; //req.pipe(new PassThrough({ highWaterMark: 16384 }));
+    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
   }
 
-  return new NodeRequest(url.toString(), init);
+  return new NodeRequest(url.href, init);
 }
 
 function sendRemixResponse(
@@ -119,6 +120,7 @@ function sendRemixResponse(
   response: NodeResponse,
   abortController: AbortController
 ): void {
+  res.statusMessage = response.statusText;
   res.status(response.status);
 
   for (let [key, values] of Object.entries(response.headers.raw())) {
