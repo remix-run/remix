@@ -206,14 +206,6 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "empty",
           },
-          "routes/esm-libs": Object {
-            "caseSensitive": undefined,
-            "file": "routes/esm-libs.jsx",
-            "id": "routes/esm-libs",
-            "index": undefined,
-            "parentId": "root",
-            "path": "esm-libs",
-          },
           "routes/fetchers": Object {
             "caseSensitive": undefined,
             "file": "routes/fetchers.tsx",
@@ -418,11 +410,7 @@ describe("readConfig", () => {
         "serverBuildPath": Any<String>,
         "serverBuildTarget": undefined,
         "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",
-        "serverDependenciesToBundle": Array [
-          "cssfn.js",
-          /@cssfn\\\\//,
-          /@nodestrap\\\\//,
-        ],
+        "serverDependenciesToBundle": Array [],
         "serverEntryPoint": "./server.js",
         "serverMode": "production",
         "serverModuleFormat": "cjs",
