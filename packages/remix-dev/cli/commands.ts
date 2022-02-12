@@ -61,7 +61,12 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  await compiler.build(config, { mode: mode, sourcemap });
+
+  await compiler.build(config, {
+    mode: mode,
+    sourcemap,
+    externals: config.externals
+  });
 
   log(`Built in ${prettyMs(Date.now() - start)}`);
 }
