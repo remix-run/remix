@@ -2882,10 +2882,7 @@ To check our work, I added a `console.log` to `app/routes/login.tsx` after the `
 {
   user: {
     id: '1dc45f54-4061-4d9e-8a6d-28d6df6a8d7f',
-    createdAt: 2021-11-21T00:28:52.560Z,
-    updatedAt: 2021-11-21T00:28:52.560Z,
-    username: 'kody',
-    passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u'
+    username: 'kody'
   }
 }
 ```
