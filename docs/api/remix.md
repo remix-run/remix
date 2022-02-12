@@ -765,7 +765,7 @@ fetcher.data; // the data from the loader
 
 **Newsletter Signup Form**
 
-Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job:
+Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create a Resource Route:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
 export async function action({ request }) {
@@ -777,6 +777,12 @@ export async function action({ request }) {
     return json({ error: error.message });
   }
 }
+```
+
+Then, somewhere else in your app (your root layout in this example), you render the following component:
+
+```tsx filename=routes/root.tsx
+// ...
 
 function NewsletterSignup() {
   const newsletter = useFetcher();
@@ -828,7 +834,7 @@ export function action({ request }) {
 }
 
 export default function NewsletterSignupRoute() {
-  const data = useActionData();
+  const newsletter = useActionData();
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
@@ -1233,6 +1239,8 @@ Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we c
 Another common use case is [enabling JavaScript for some routes and not others][disabling-javascript].
 
 Once again, `useMatches` with `handle` is a great way for routes to participate in rendering abstractions at the top of element tree, above where the route is actually rendered.
+
+For an example of how to share loader data via `useMatches`, check out [the sharing loader data example in the remix repo][example-sharing-loader-data].
 
 ### `useBeforeUnload`
 
@@ -1824,6 +1832,7 @@ Remix comes with several pre-built session storage options for common scenarios,
 - `createMemorySessionStorage`
 - `createFileSessionStorage` (node)
 - `createCloudflareKVSessionStorage` (cloudflare-workers)
+- `createArcTableSessionStorage` (architect, Amazon DynamoDB)
 - custom storage with `createSessionStorage`
 
 ### Using Sessions
@@ -2141,7 +2150,7 @@ For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-wo
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
 ```js
-// app/sessions.js
+// app/sessions.server.js
 import {
   createCookie,
   createCloudflareKVSessionStorage
@@ -2157,6 +2166,47 @@ const { getSession, commitSession, destroySession } =
   createCloudflareKVSessionStorage({
     // The KV Namespace where you want to store sessions
     kv: YOUR_NAMESPACE,
+    cookie: sessionCookie
+  });
+
+export { getSession, commitSession, destroySession };
+```
+
+### `createArcTableSessionStorage` (architect, Amazon DynamoDB)
+
+For [Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/) backed sessions, use `createArcTableSessionStorage()`.
+
+The advantage of DynamoDB backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
+
+```
+# app.arc
+sessions
+  _idx *String
+  _ttl TTL
+```
+
+```js
+// app/sessions.server.js
+import {
+  createCookie,
+  createArcTableSessionStorage
+} from "remix";
+
+// In this example the Cookie is created separately.
+const sessionCookie = createCookie("__session", {
+  secrets: ["r3m1xr0ck5"],
+  maxAge: 3600,
+  sameSite: true
+});
+
+const { getSession, commitSession, destroySession } =
+  createArcTableSessionStorage({
+    // The name of the table (should match app.arc)
+    table: "sessions",
+    // The name of the key used to store the session ID (should match app.arc)
+    idx: "_idx",
+    // The name of the key used to store the expiration time (should match app.arc)
+    ttl: "_ttl",
     cookie: sessionCookie
   });
 
@@ -2453,3 +2503,4 @@ import type {
 [constraints]: ../other-api/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
+[example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data

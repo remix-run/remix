@@ -1,12 +1,11 @@
 {
-  "main": "dist/worker.js",
   "scripts": {
     "postinstall": "remix setup cloudflare-pages",
     "build": "cross-env NODE_ENV=production remix build",
-    "dev:remix": "remix watch",
-    "dev:wrangler": "wrangler pages dev ./public --watch ./build",
-    "dev": "cross-env NODE_ENV=development run-p dev:*",
-    "start": "npm run dev:wrangler"
+    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
+    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "start": "cross-env NODE_ENV=production npm run dev:wrangler"
   },
   "dependencies": {
     "@remix-run/cloudflare-pages": "*"
@@ -14,8 +13,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^3.2.0",
     "cross-env": "^7.0.3",
-    "esbuild": "0.13.14",
     "npm-run-all": "^4.1.5",
-    "wrangler": "alpha"
+    "wrangler": "beta"
   }
 }

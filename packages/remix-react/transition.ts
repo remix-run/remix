@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import { Action } from "history";
 import type { Location } from "history";
 
@@ -566,6 +568,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
         type: "fetchAction"
       };
       init.onRedirect(result.value.location, locationState);
+      let doneFetcher: FetcherStates["Done"] = {
+        state: "idle",
+        type: "done",
+        data: result.value,
+        submission: undefined
+      };
+      state.fetchers.set(key, doneFetcher);
+      update({ fetchers: new Map(state.fetchers) });
       return;
     }
 
@@ -780,6 +790,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
+    if (typeof AbortController === "undefined") {
+      throw new Error(
+        "handleLoaderFetch was called during the server render, but it shouldn't be. " +
+          "You are likely calling useFetcher.load() in the body of your component. " +
+          "Try moving it to a useEffect or a callback."
+      );
+    }
     let currentFetcher = state.fetchers.get(key);
 
     let fetcher: FetcherStates["Loading"] = {
