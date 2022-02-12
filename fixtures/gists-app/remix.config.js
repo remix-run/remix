@@ -12,11 +12,6 @@ module.exports = {
   devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
   server: "./server.js",
-  serverDependenciesToBundle: [
-    "cssfn.js",
-    /@cssfn\//,
-    /@nodestrap\//
-  ],
 
   mdx: async filename => {
     const [rehypeHighlight, remarkToc] = await Promise.all([
