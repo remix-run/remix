@@ -60,7 +60,7 @@ First import `Link` from "remix":
 import { Link } from "remix";
 ```
 
-Next, put the link anywhere you like. Make sure not to delete the Remix specific components like `<Outlet />` and `<Scripts/>`.
+Next, put the link anywhere you like.
 
 ```tsx
 <Link to="/posts">Posts</Link>
