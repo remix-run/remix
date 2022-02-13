@@ -12,13 +12,13 @@ In general, you don't need the concept of "API Routes" at all. But we knew you'd
 
 Consider this route:
 
-```tsx filename=routes/teams.js
+```tsx filename=routes/teams.tsx
 export async function loader() {
   return getTeams();
 }
 
 export default function Teams() {
-  return <TeamsView teams={useLoaderData()}>
+  return <TeamsView teams={useLoaderData()} />;
 }
 ```
 

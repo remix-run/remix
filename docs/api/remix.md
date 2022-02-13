@@ -58,10 +58,12 @@ export default function GlobalNav() {
 In our effort to remove all loading states from your UI, `Link` can automatically prefetch all the resources the next page needs: JavaScript modules, stylesheets, and data. This prop controls if and when that happens.
 
 ```tsx
-<Link /> // defaults to "none"
-<Link prefetch="none" />
-<Link prefetch="intent" />
-<Link prefetch="render" />
+<>
+  <Link /> // defaults to "none"
+  <Link prefetch="none" />
+  <Link prefetch="intent" />
+  <Link prefetch="render" />
+</>
 ```
 
 - **"none"** - Default behavior. This will prevent any prefetching from happening. This is recommended when linking to pages that require a user session that the browser won't be able to prefetch anyway.
@@ -70,7 +72,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 <docs-error>You may need to use the <code>:last-of-type</code> selector instead of <code>:last-child</code> when styling child elements inside of your links</docs-error>
 
-Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>` tags, which provides a lot subtle benefits (like respecting HTTP cache headers, doing the work in browser idle time, using a different thread than your app, etc.) but the implementation might mess with your CSS since the link tags are rendered inside of your anchor tag. This means `a *:last-child {}` style selectors won't work. You'll need to change them to `a *:last-of-type {}` and you should be good. We will eventually get rid of this limitation.
+Remix uses the browser's cache for prefetching with HTML `<link rel="prefetch"/>` tags, which provides a lot of subtle benefits (like respecting HTTP cache headers, doing the work in browser idle time, using a different thread than your app, etc.) but the implementation might mess with your CSS since the link tags are rendered inside of your anchor tag. This means `a *:last-child {}` style selectors won't work. You'll need to change them to `a *:last-of-type {}` and you should be good. We will eventually get rid of this limitation.
 
 ### `<PrefetchPageLinks />`
 
@@ -99,7 +101,7 @@ function NavList() {
   let activeStyle = {
     textDecoration: "underline"
   };
-  let activeClassName = "underline"
+  let activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -124,20 +126,30 @@ function NavList() {
           </NavLink>
         </li>
         <li>
-          <NavLink
-            to="tasks"
-          >
+          <NavLink to="tasks">
             {({ isActive }) => (
-              <span className={isActive ? activeClassName : undefined}>
+              <span
+                className={
+                  isActive ? activeClassName : undefined
+                }
+              >
                 Tasks
               </span>
-            ))}
+            )}
           </NavLink>
         </li>
       </ul>
     </nav>
   );
 }
+```
+
+If the `end` prop is used, it will ensure this component isn't matched as "active" when its descendant paths are matched. For example, to render a link that is only active at the website root and not any other URLs, you can use:
+
+```tsx
+<NavLink to="/" end>
+  Home
+</NavLink>
 ```
 
 ### `<Form>`
@@ -170,7 +182,7 @@ Most of the time you can omit this prop. Forms without an action prop (`<Form me
 
 If you need to post to a different route, then add an action prop:
 
-```js
+```jsx
 <Form action="/projects/new" method="post" />
 ```
 
@@ -187,7 +199,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
-```js
+```jsx
 <Form method="post" />
 ```
 
@@ -325,7 +337,7 @@ export async function action({ request }) {
   }
 
   // otherwise create the user and redirect
-  await createUser(body);
+  await createUser(form);
   return redirect("/dashboard");
 }
 
@@ -424,12 +436,16 @@ See also:
 Resolves the value of a `<form action>` attribute using React Router's relative paths. This can be useful when computing the correct action for a `<button formAction>`, for example, when a `<button>` changes the action of its `<form>`.
 
 ```tsx
-<button
-  formAction={useFormAction("destroy")}
-  formMethod="DELETE"
->
-  Delete
-</button>
+function SomeComponent() {
+  return (
+    <button
+      formAction={useFormAction("destroy")}
+      formMethod="DELETE"
+    >
+      Delete
+    </button>
+  );
+}
 ```
 
 (Yes, HTML buttons can change the action of their form!)
@@ -476,7 +492,7 @@ function UserPreferences() {
 
 This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case, we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
 
-```tsx [1,10,15]
+```tsx lines=[1,10,15]
 import { useSubmit, useTransition } from "remix";
 import { useEffect } from "react";
 
@@ -493,8 +509,9 @@ function useSessionTimeout() {
     const timer = setTimeout(() => {
       submit(null, { method: "post", action: "/logout" });
     }, 5 * 60_000);
+
     return () => clearTimeout(timer);
-  }, [transition]);
+  }, [submit, transition]);
 }
 ```
 
@@ -606,7 +623,7 @@ function SubmitButton() {
       ? loadTexts[transition.type] || "Loading..."
       : "Go";
 
-  return <button type="submit"></button>;
+  return <button type="submit">{text}</button>;
 }
 ```
 
@@ -622,7 +639,7 @@ This tells you what the next location is going to be. It's most useful when matc
 
 For example, this `Link` knows when its page is loading and about to become active:
 
-```tsx [6-8]
+```tsx lines=[7-9]
 import { Link, useResolvedPath } from "remix";
 
 function PendingLink({ to, children }) {
@@ -647,18 +664,28 @@ Note that this link will not appear "pending" if a form is being submitted to th
 
 ### `useFetcher`
 
-<docs-error>This hook is for advanced cases that most features of your app don't need. It does not work with server rendering, usually requires JavaScript in the browser, and requires you to deal with pending states.</docs-error>
-
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=vTzNpiOk668&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Concurrent Mutations w/ useFetcher</a> and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
 
-It is common for Remix newcomers to see this hook and think it is the primary way to interact with the server for data loading and updates, but it is not! Remix was specifically designed to avoid this type of interaction with the server and has better ways of handling typical data loading and updating workflows, you probably want one of these:
+In HTML/HTTP, data mutations and loads are modeled with navigation: `<a href>` and `<form action>`. Both cause a navigation in the browser. The Remix equivalents are `<Link>` and `<Form>`.
+
+But sometimes you want to call a loader outside of navigation, or call an action (and get the routes to reload) but you don't want the URL to change. Many interactions with the server aren't navigation events. This hook lets you plug your UI into your actions and loaders without navigating.
+
+This is useful when you need to:
+
+- fetch data not associated with UI routes (popovers, dynamic forms, etc.)
+- submit data to actions without navigating (shared components like a newsletter sign ups)
+- handle multiple concurrent submissions in a list (typical "todo app" list where you can click multiple buttons and all be pending at the same time)
+- infinite scroll containers
+- and more!
+
+It is common for Remix newcomers to see this hook and think it is the primary way to interact with the server for data loading and updates--because it looks like what you might have done outside of Remix. If your use case can be modeled as "navigation", it's recommended you use one of the core data APIs before reaching for `useFetcher`:
 
 - [`useLoaderData`][useloaderdata]
 - [`Form`][form]
 - [`useActionData`][useactiondata]
 - [`useTransition`][usetransition]
 
-This hook will call loaders and actions without navigating. It's similar to `useFetch()` wrappers found in many React apps but with extra behavior specific to Remix (like capturing data updates automatically across the whole page).
+If you're building a highly interactive, "app like" user interface, you will `useFetcher` often.
 
 ```tsx
 import { useFetcher } from "remix";
@@ -668,8 +695,11 @@ function SomeComponent() {
 
   // trigger the fetch with these
   <fetcher.Form {...formOptions} />;
-  fetcher.submit(data, options);
-  fetcher.load(href);
+
+  useEffect(() => {
+    fetcher.submit(data, options);
+    fetcher.load(href);
+  }, [fetcher]);
 
   // build UI with these
   fetcher.state;
@@ -678,12 +708,6 @@ function SomeComponent() {
   fetcher.data;
 }
 ```
-
-In HTML/HTTP, data mutations and loads are modeled with navigation: `<a href>` and `<form action>` both cause a navigation in the browser. The remix equivalents are `<Link>` and `<Form>`.
-
-In Remix, when the user submits a `<Form>` the action is called and then the loaders for the routes on the page are called again to get fresh data.
-
-But sometimes you want to call an action to update data (and get the routes to reload) but you don't want the URL to change. Many interactions with the server aren't navigation events. This hook lets you plug your UI into your actions and loaders without navigating.
 
 Notes about how it works:
 
@@ -740,7 +764,7 @@ The returned response data from your loader or action is stored here. Once the d
 Just like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
 
 ```tsx
-function SomeComp() {
+function SomeComponent() {
   const fetcher = useFetcher();
   return (
     <fetcher.Form method="post" action="/some/route">
@@ -755,8 +779,14 @@ function SomeComp() {
 Just like `useSubmit` except it doesn't cause a navigation.
 
 ```tsx
-const fetcher = useFetcher();
-fetcher.submit({ some: "values" }, { method: "post" });
+function SomeComponent() {
+  const fetcher = useFetcher();
+
+  const onClick = () =>
+    fetcher.submit({ some: "values" }, { method: "post" });
+
+  // ...
+}
 ```
 
 #### `fetcher.load()`
@@ -764,13 +794,17 @@ fetcher.submit({ some: "values" }, { method: "post" });
 Loads data from a route loader.
 
 ```tsx
-const fetcher = useFetcher();
-React.useEffect(() => {
-  if (fetcher.type === "init") {
-    fetcher.load("/some/route");
-  }
-}, [fetcher]);
-fetcher.data; // the data from the loader
+function SomeComponent() {
+  const fetcher = useFetcher();
+
+  useEffect(() => {
+    if (fetcher.type === "init") {
+      fetcher.load("/some/route");
+    }
+  }, [fetcher]);
+
+  fetcher.data; // the data from the loader
+}
 ```
 
 #### Examples
@@ -901,8 +935,9 @@ export function NewsletterForm({
 And now you could reuse the same form, but it gets data from a different hook for the no-js experience:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-import { NewsletterForm } from "~/NewsletterSignup";
 import { Form } from "remix";
+
+import { NewsletterForm } from "~/NewsletterSignup";
 
 export default function NewsletterSignupRoute() {
   const data = useActionData();
@@ -929,8 +964,8 @@ function useMarkAsRead({ articleId, userId }) {
     marker.submit(
       { userId },
       {
-        method: "POST",
-        action: "/article/${articleID}/mark-as-read"
+        method: "post",
+        action: `/article/${articleID}/mark-as-read`
       }
     );
   });
@@ -954,7 +989,7 @@ function UserAvatar({ partialUser }) {
     if (showDetails && userDetails.type === "init") {
       userDetails.load(`/users/${user.id}/details`);
     }
-  }, [showDetails]);
+  }, [showDetails, userDetails]);
 
   return (
     <div
@@ -1157,7 +1192,11 @@ function ProjectTaskCount({ project }) {
 Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
 
 ```js
-const matches = useMatches();
+function SomeComponent() {
+  const matches = useMatches();
+
+  // ...
+}
 ```
 
 `matches` has the following shape:
@@ -1266,7 +1305,7 @@ In this situation, you may need to save important application state on the page 
 
 Remix or not, this is a good practice. The user can change the url, accidentally close the browser window, etc.
 
-```tsx [1,7-11]
+```tsx lines=[1,7-11]
 import { useBeforeUnload } from "remix";
 
 function SomeForm() {
@@ -1275,7 +1314,7 @@ function SomeForm() {
   // save it off before the automatic page reload
   useBeforeUnload(
     React.useCallback(() => {
-      localStorage.stuff = state
+      localStorage.stuff = state;
     }, [state])
   );
 
@@ -1284,11 +1323,9 @@ function SomeForm() {
     if (state === null && localStorage.stuff != null) {
       setState(localStorage.stuff);
     }
-  }, []);
+  }, [state]);
 
-  return (
-    // ...
-  );
+  return <>{/*... */}</>;
 }
 ```
 
@@ -1298,7 +1335,7 @@ function SomeForm() {
 
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
-```ts [2,6]
+```ts lines=[2,6]
 import type { LoaderFunction } from "remix";
 import { json } from "remix";
 
@@ -1317,7 +1354,7 @@ export const loader: LoaderFunction = async () => {
 
 You can also pass a status code and headers:
 
-```ts [4-9]
+```ts lines=[4-9]
 export const loader: LoaderFunction = async () => {
   return json(
     { not: "coffee" },
@@ -1335,7 +1372,7 @@ export const loader: LoaderFunction = async () => {
 
 This is shortcut for sending 30x responses.
 
-```ts [2,8]
+```ts lines=[2,8]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
@@ -1389,7 +1426,7 @@ return new Response(null, {
 });
 ```
 
-## `parseMultipartFormData` (node)
+## `unstable_parseMultipartFormData` (node)
 
 Allows you to handle multipart forms (file uploads) for your app.
 
@@ -1399,14 +1436,14 @@ It's to be used in place of `request.formData()`.
 
 ```diff
 - let formData = await request.formData();
-+ let formData = await parseMultipartFormData(request, uploadHandler);
++ let formData = await unstable_parseMultipartFormData(request, uploadHandler);
 ```
 
 For example:
 
-```tsx [2-5,7,23]
+```tsx lines=[2-5,7,23]
 export let action: ActionFunction = async ({ request }) => {
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1425,7 +1462,7 @@ export let action: ActionFunction = async ({ request }) => {
 
 export default function AvatarUploadRoute() {
   return (
-    <Form method="post">
+    <Form method="post" encType="multipart/form-data">
       <label htmlFor="avatar-input">Avatar</label>
       <input id="avatar-input" type="file" name="avatar" />
       <button>Upload</button>
@@ -1436,7 +1473,7 @@ export default function AvatarUploadRoute() {
 
 ### `uploadHandler`
 
-The `uploadHandler` is the key to whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
+The `uploadHandler` is the key to the whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it to disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
 
 Remix has two utilities to create `uploadHandler`s for you:
 
@@ -1456,7 +1493,7 @@ let uploadHandler = unstable_createFileUploadHandler({
 });
 
 export let action: ActionFunction = async ({ request }) => {
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
@@ -1540,7 +1577,7 @@ export let action: ActionFunction = async ({ request }) => {
     return uploadedImage.secure_url;
   };
 
-  let formData = await parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
@@ -1622,8 +1659,9 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```js filename=app/routes/index.js lines=[2,6,14,18]
+```tsx filename=app/routes/index.tsx lines=[3,7-8,14-15,19]
 import { useLoaderData, json, redirect } from "remix";
+
 import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
@@ -1639,7 +1677,7 @@ export async function action({ request }) {
     (await userPrefs.parse(cookieHeader)) || {};
   const bodyParams = await request.formData();
 
-  if (bodyParams.get("banner") === "hidden") {
+  if (bodyParams.get("bannerVisibility") === "hidden") {
     cookie.showBanner = false;
   }
 
@@ -1813,7 +1851,7 @@ new Response("...", {
 Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 
 ```js
-const cookie = createCookie("user-prefs");
+let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
 cookie = createCookie("user-prefs", {
@@ -1824,10 +1862,10 @@ console.log(cookie.isSigned); // true
 
 #### `cookie.expires`
 
-The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
+The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-const cookie = createCookie("user-prefs", {
+let cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01")
 });
 
@@ -1885,8 +1923,9 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=2,5-7,9,14,18,24-26,37,42,47,52
-import { json, redirect } from "remix";
+```tsx filename=app/routes/login.js lines=[3,6-8,10,15,19,25-27,38,43,48,53]
+import { json, redirect, useLoaderData } from "remix";
+
 import { getSession, commitSession } from "../sessions";
 
 export async function loader({ request }) {
@@ -2104,7 +2143,7 @@ This storage keeps all the cookie information in your server's memory.
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage
+  createMemorySessionStorage
 } from "remix";
 
 // In this example the Cookie is created separately.
@@ -2114,10 +2153,7 @@ const sessionCookie = createCookie("__session", {
 });
 
 const { getSession, commitSession, destroySession } =
-  createFileSessionStorage({
-    // The root directory where you want to store the files.
-    // Make sure it's writable!
-    dir: "/app/sessions",
+  createMemorySessionStorage({
     cookie: sessionCookie
   });
 
@@ -2308,11 +2344,15 @@ session.unset("name");
 <docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
 ```js
-return json(data, {
-  headers: {
-    "Set-Cookie": await commitSession(session)
-  }
-});
+export async function loader({ request }) {
+  // ...
+
+  return json(data, {
+    headers: {
+      "Set-Cookie": await commitSession(session)
+    }
+  });
+}
 ```
 
 ### `<Outlet context />`
@@ -2323,8 +2363,7 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
-```tsx filename=app/routes/companies.tsx lines=[6,27-30,35-41,50-54,65]
-import type { LoaderData } from "remix";
+```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
 import {
   json,
   useLoaderData,
@@ -2337,7 +2376,9 @@ import {
   AccordionButton,
   AccordionPanel
 } from "@reach/accordion";
-import { getCompanies, Companies } from "~/utils/companies";
+
+import type { Companies } from "~/utils/companies";
+import { getCompanies } from "~/utils/companies";
 
 type LoaderData = {
   companies: Array<Companies>;
@@ -2407,13 +2448,14 @@ This hook returns the context from the `<Outlet />` that rendered you.
 
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
-```tsx filename=app/routes/companies/$companyId.tsx lines=[5,7,24,26-29]
+```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
 import type { LoaderFunction } from "remix";
 import {
   json,
   useLoaderData,
   useOutletContext
 } from "remix";
+
 import type { ContextType } from "../companies";
 
 type LoaderData = {
@@ -2472,7 +2514,7 @@ import type {
 [useactiondata]: #useactiondata
 [useloaderdata]: #useloaderdata
 [usesubmit]: #usesubmit
-[constraints]: ../other-api/constraints
+[constraints]: ../guides/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data

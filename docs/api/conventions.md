@@ -265,7 +265,7 @@ app/
 | ----------------- | -------------------------------------- | ---------------------------- |
 | `/`               | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
 | `/product`        | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
-| `/dashboad`       | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
+| `/dashboard`      | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
 | `/chance/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
 
 </details>
@@ -465,13 +465,16 @@ export default function SomeRouteComponent() {
 
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
-```tsx
+```js
 export const loader = async () => {
   return { ok: true };
 };
+```
 
+```ts
 // Typescript
 import type { LoaderFunction } from "remix";
+
 export const loader: LoaderFunction = async () => {
   return { ok: true };
 };
@@ -481,8 +484,9 @@ This function is only ever run on the server. On the initial server render it wi
 
 Using the database ORM Prisma as an example:
 
-```tsx [1,4-6,9]
+```tsx lines=[1,5-7,10]
 import { useLoaderData } from "remix";
+
 import { prisma } from "../db";
 
 export const loader = async () => {
@@ -509,7 +513,7 @@ Remix polyfills the [Web Fetch API][fetch] on the server so you can use `fetch` 
 
 Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
-```js
+```ts
 // if the user visits /invoices/123
 export const loader: LoaderFunction = async ({
   params
@@ -586,7 +590,7 @@ export const loader = async () => {
 
 When you return a plain object, Remix turns it into a [Fetch Response][response]. This means you can return them yourself, too.
 
-```js
+```ts
 export const loader: LoaderFunction = async () => {
   const users = await db.users.findMany();
   const body = JSON.stringify(users);
@@ -660,9 +664,10 @@ export function getInvoice(id, user) {
 
 ```ts filename=app/http.ts
 import { redirect } from "remix";
+
 import { getSession } from "./session";
 
-function requireUserSession(request) {
+export async function requireUserSession(request) {
   const session = await getSession(
     request.headers.get("cookie")
   );
@@ -702,7 +707,7 @@ export const loader = async ({ request, params }) => {
     const data: InvoiceCatchData = {
       invoiceOwnerEmail: invoice.owner.email
     };
-    throw new json(data, { status: 401 });
+    throw json(data, { status: 401 });
   }
 
   return invoice;
@@ -723,8 +728,8 @@ export function CatchBoundary() {
         <div>
           <p>You don't have access to this invoice.</p>
           <p>
-            Contact {invoiceCatch.data.invoiceOwnerEmail} to
-            get access
+            Contact {caught.data.invoiceOwnerEmail} to get
+            access
           </p>
         </div>
       );
@@ -736,8 +741,8 @@ export function CatchBoundary() {
   // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {invoiceCatch.status}{" "}
-      {invoiceCatch.statusText}
+      Something went wrong: {caught.status}{" "}
+      {caught.statusText}
     </div>
   );
 }
@@ -755,6 +760,7 @@ This enables you to co-locate everything about a data set in a single route modu
 
 ```tsx
 import { redirect, Form } from "remix";
+
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
 
@@ -1001,6 +1007,7 @@ Examples:
 
 ```tsx
 import type { LinksFunction } from "remix";
+
 import stylesHref from "../styles/something.css";
 
 export const links: LinksFunction = () => {
@@ -1209,7 +1216,7 @@ And lets say the UI looks something like this:
 └──────────────────────────────┘
 ```
 
-The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
 export async function loader({ request, params }) {
@@ -1275,6 +1282,7 @@ It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
 import type { LinksFunction } from "remix";
+
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
 

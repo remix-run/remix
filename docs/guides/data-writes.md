@@ -110,7 +110,7 @@ The data is made available to the server's request handler so you can create the
 export async function action({ request }) {
   const body = await request.formData();
   const project = await createProject(body);
-  redirect(`/projects/${project.id}`);
+  return redirect(`/projects/${project.id}`);
 }
 ```
 
@@ -429,7 +429,7 @@ function ValidationMessage({ error, isSubmitting }) {
 
 Now we can wrap our old error messages in this new fancy component, and even turn the borders of our fields red that have errors:
 
-```tsx [21-24, 31-34, 44-47, 53-56]
+```tsx [21-24, 31-34, 44-48, 53-56]
 export default function NewProject() {
   const transition = useTransition();
   const actionData = useActionData();

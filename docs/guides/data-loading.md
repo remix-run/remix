@@ -140,6 +140,7 @@ And then your routes can import it and make queries against it:
 ```tsx filename=app/routes/products/$categoryId.tsx
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
+
 import { db } from "~/db.server";
 
 export let loader: LoaderFunction = async ({ params }) => {
@@ -188,7 +189,7 @@ export default function Product() {
 
 ## Not Found
 
-While loading data its common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
 export let loader: LoaderFunction = async ({
@@ -337,7 +338,7 @@ export default function ProductFilters() {
         id="adidas"
         name="brand"
         value="adidas"
-        defaultChecked={brands.includes("nike")}
+        defaultChecked={brands.includes("adidas")}
       />
 
       <button type="submit">Update</button>
@@ -495,7 +496,7 @@ export default function ProductFilters() {
   // (form submission or link click)
   React.useEffect(() => {
     setNikeChecked(brands.includes("nike"));
-  }, [searchParams]);
+  }, [brands, searchParams]);
 
   return (
     <Form method="get">
@@ -539,7 +540,7 @@ function SearchCheckbox({ name, value }) {
 
   React.useEffect(() => {
     setChecked(all.includes(value));
-  }, [searchParams]);
+  }, [all, searchParams, value]);
 
   return (
     <input
@@ -666,4 +667,4 @@ export default function RouteComp() {
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#userloaderdata
+[useloaderdata]: ../api/remix#useloaderdata
