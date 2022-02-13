@@ -76,6 +76,7 @@ async function run() {
         appType: "stack";
         stack: Stack;
         server?: never;
+        tailwind?: never;
         install: boolean;
       }
   >([
@@ -144,6 +145,9 @@ async function run() {
       name: "tailwind",
       type: "confirm",
       message: "Do you want to use Tailwind CSS?",
+      when(answers) {
+        return answers.appType === appType.basic;
+      },
       default: false
     },
     {

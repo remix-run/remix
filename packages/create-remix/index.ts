@@ -41,7 +41,7 @@ export type CreateAppArgs =
       lang: Lang;
       server?: never;
       stack: Stack;
-      tailwind: boolean;
+      tailwind?: never;
       install: boolean;
       quiet?: boolean;
     };
@@ -97,16 +97,15 @@ async function createApp({
     await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
   }
 
+  // Tailwind CSS
+  let tailwindTemplate = path.resolve(__dirname, "templates", "tailwind");
   if (tailwind) {
     // tailwind: copy the tailwind template
-    let tailwindTemplate = path.resolve(__dirname, "templates", "tailwind");
     if (fse.existsSync(tailwindTemplate)) {
       await fse.copy(tailwindTemplate, projectDir, { overwrite: true });
     }
-    
     // tailwind: append /app/styles to gitignore
     fse.appendFileSync(path.join(projectDir, "gitignore"), `\n/app/styles`);
-   
     // tailwind: add tailwind css to root.tsx
     let rootTsxPath = path.join(projectDir, "app", "root.tsx");
     if (fse.existsSync(rootTsxPath)) {
