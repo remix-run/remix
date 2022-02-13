@@ -21,9 +21,6 @@ the relevent files are:
 - get the cloudname, api key and api secret from dashboard
 - copy the .env.sample to .env and populate the credentials
 
-## caveat
-
-- upload large file is not seems stable now, try upload image with size < 30kb
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
