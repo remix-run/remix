@@ -395,13 +395,11 @@ Perhaps the most popular way to style a Remix application in the community is to
 
 First install a couple dev dependencies:
 
-```sh
+```
 yarn add -D concurrently tailwindcss
 // OR
 npm i -D oncurrently tailwindcss
-
 ```
-
 
 Initialize a tailwind config so we can tell it which files to generate classes from.
 
