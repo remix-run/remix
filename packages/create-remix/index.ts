@@ -150,7 +150,7 @@ async function createApp({
   let tailwindPkg = require(path.join(tailwindTemplate, "package.json"));
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
-    Object.assign(appPkg[key], tailwindPkg[key]);
+    if (tailwind) Object.assign(appPkg[key], tailwindPkg[key]);
   });
 
   appPkg.main = serverPkg.main;
