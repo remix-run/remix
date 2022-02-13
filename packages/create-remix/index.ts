@@ -41,6 +41,7 @@ export type CreateAppArgs =
       lang: Lang;
       server?: never;
       stack: Stack;
+      tailwind: boolean;
       install: boolean;
       quiet?: boolean;
     };
@@ -48,6 +49,7 @@ export type CreateAppArgs =
 async function createApp({
   projectDir,
   lang,
+  tailwind,
   install,
   quiet,
   ...rest
@@ -95,36 +97,36 @@ async function createApp({
     await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
   }
 
-  // tailwind: copy the tailwind template
-  let tailwindTemplate = path.resolve(__dirname, "templates", "tailwind");
-  if (fse.existsSync(tailwindTemplate)) {
-    await fse.copy(tailwindTemplate, projectDir, { overwrite: true });
-  }
-  // tailwind: append /app/styles to gitignore
-  try {
+  if (tailwind) {
+    // tailwind: copy the tailwind template
+    let tailwindTemplate = path.resolve(__dirname, "templates", "tailwind");
+    if (fse.existsSync(tailwindTemplate)) {
+      await fse.copy(tailwindTemplate, projectDir, { overwrite: true });
+    }
+    
+    // tailwind: append /app/styles to gitignore
     fse.appendFileSync(path.join(projectDir, "gitignore"), `\n/app/styles`);
-  } catch (error) {
-    throw error;
-  }
-  // tailwind: add tailwind css to root.tsx
-  let rootTsxPath = path.join(projectDir, "app", "root.tsx");
-  if (fse.existsSync(rootTsxPath)) {
-    let rootTsxData = fse.readFileSync(rootTsxPath).toString().split("\n");
-    let hasLinksFunction =
-      rootTsxData.includes("LinksFunction") || rootTsxData.includes("rel:");
-    rootTsxData.splice(
-      0,
-      0,
-      `import tailwind from "~/styles/tailwind.css";${
-        !hasLinksFunction
-          ? lang === "ts"
-            ? '\nimport type { LinksFunction } from "remix";\n\nexport const links: LinksFunction = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
-            : '\n\nexport const links = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
-          : ""
-      }`
-    );
-    let withTailwindImportText = rootTsxData.join("\n");
-    fse.writeFileSync(rootTsxPath, withTailwindImportText);
+   
+    // tailwind: add tailwind css to root.tsx
+    let rootTsxPath = path.join(projectDir, "app", "root.tsx");
+    if (fse.existsSync(rootTsxPath)) {
+      let rootTsxData = fse.readFileSync(rootTsxPath).toString().split("\n");
+      let hasLinksFunction =
+        rootTsxData.includes("LinksFunction") || rootTsxData.includes("rel:");
+      rootTsxData.splice(
+        0,
+        0,
+        `import tailwind from "~/styles/tailwind.css";${
+          !hasLinksFunction
+            ? lang === "ts"
+              ? '\nimport type { LinksFunction } from "remix";\n\nexport const links: LinksFunction = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
+              : '\n\nexport const links = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
+            : ""
+        }`
+      );
+      let withTailwindImportText = rootTsxData.join("\n");
+      fse.writeFileSync(rootTsxPath, withTailwindImportText);
+    }
   }
 
   // rename dotfiles
