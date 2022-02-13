@@ -107,9 +107,13 @@ async function createApp({
     // tailwind: append /app/styles to gitignore
     fse.appendFileSync(path.join(projectDir, "gitignore"), `\n/app/styles`);
     // tailwind: add tailwind css to root.tsx
-    let rootTsxPath = path.join(projectDir, "app", "root.tsx");
-    if (fse.existsSync(rootTsxPath)) {
-      let rootTsxData = fse.readFileSync(rootTsxPath).toString().split("\n");
+    let rootPath = path.join(
+      projectDir,
+      "app",
+      `root.${lang === "ts" ? "tsx" : "jsx"}`
+    );
+    if (fse.existsSync(rootPath)) {
+      let rootTsxData = fse.readFileSync(rootPath).toString().split("\n");
       let hasLinksFunction =
         rootTsxData.includes("LinksFunction") || rootTsxData.includes("rel:");
       rootTsxData.splice(
@@ -118,13 +122,13 @@ async function createApp({
         `import tailwind from "~/styles/tailwind.css";${
           !hasLinksFunction
             ? lang === "ts"
-              ? '\nimport type { LinksFunction } from "remix";\n\nexport const links: LinksFunction = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
-              : '\n\nexport const links = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
+              ? '\nimport type { LinksFunction } from "remix";\n\nexport const links: LinksFunction = () => {\n  return [{ rel: "stylesheet", href: tailwind }];\n}\n'
+              : '\n\nexport function links() {\n  return [{ rel: "stylesheet", href: tailwind }];\n}\n'
             : ""
         }`
       );
       let withTailwindImportText = rootTsxData.join("\n");
-      fse.writeFileSync(rootTsxPath, withTailwindImportText);
+      fse.writeFileSync(rootPath, withTailwindImportText);
     }
   }
 
