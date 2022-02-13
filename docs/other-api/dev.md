@@ -53,4 +53,4 @@ Same as `watch` but also boots the [Remix app server](serve.md) in development m
 $ remix dev
 ```
 
-*Note: The default port is `3000`, but can be changed by setting the `PORT` environment variable.*
+*Note: The default port is `3000`, but can be changed by setting the `PORT` environment variable. If you are changing this to run multiple instances of Remix, you must also set unique [Dev websocket ports](https://remix.run/docs/en/v1/api/conventions#devserverport) via `remix.config.js` or setting `REMIX_DEV_SERVER_WS_PORT`.*
