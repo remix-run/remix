@@ -98,7 +98,7 @@ function useScrollRestoration() {
       let y = positions[location.key];
 
       // been here before, scroll to it
-      if (y) {
+      if (y != undefined) {
         window.scrollTo(0, y);
         return;
       }
