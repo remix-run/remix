@@ -33,4 +33,8 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Related Links
 
-Link to documentation or other related examples.
+### Remix Documentation
+
+- [Handle Multiple Part Forms(File Uplodas)](https://remix.run/docs/en/v1/api/remix#unstable_parsemultipartformdata-node)
+- [Upload Handler](https://remix.run/docs/en/v1/api/remix#uploadhandler)
+- [Custom Uploader](https://remix.run/docs/en/v1/api/remix#custom-uploadhandler)

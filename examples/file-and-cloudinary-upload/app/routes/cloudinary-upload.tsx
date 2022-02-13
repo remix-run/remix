@@ -1,12 +1,12 @@
 import {
   Form,
-  unstable_createFileUploadHandler,
   unstable_parseMultipartFormData,
   useActionData,
   json
 } from "remix";
-import type { ActionFunction } from "remix";
-import { cloudinary } from "~/utils/utils.server";
+import type { ActionFunction, UploadHandler } from "remix";
+
+import { uploadImage } from "~/utils/utils.server";
 
 type ActionData = {
   errorMsg?: string;
@@ -14,24 +14,27 @@ type ActionData = {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  const uploadHandler = unstable_createFileUploadHandler({
-    maxFileSize: 30000
-  });
+  let uploadHandler: UploadHandler = async ({ name, stream }) => {
+    if (name !== "img") {
+      stream.resume();
+      return;
+    }
+    const uploadedImage = await uploadImage(stream);
+    return uploadedImage.secure_url;
+  };
+
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
-  const image = formData.get("img");
-  if (!image) {
+  const imgSrc = formData.get("img");
+  if (!imgSrc) {
     return json({
       error: "something wrong"
     });
   }
-  const uploadedImage = await cloudinary.v2.uploader.upload(image.filepath, {
-    folder: "/my-site/avatars"
-  });
   return json({
-    imgSrc: uploadedImage.secure_url
+    imgSrc
   });
 };
 
