@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "prebuild": "cross-env NODE_ENV=production tailwindcss -m -i ./styles/app.css -o app/styles/app.css",
+    "dev:css": "tailwindcss -w -i ./styles/tailwind.css -o app/styles/tailwind.css"
+  },
+  "devDependencies": {
+    "tailwindcss": "latest",
+    "postcss": "latest",
+    "autoprefixer": "latest"
+  }
+}

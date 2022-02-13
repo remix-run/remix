@@ -79,6 +79,11 @@ describe("create-remix cli", () => {
           break;
 
         case 5:
+          expect(prompt).toEqual("Do you want to use Tailwind CSS? (y/N)");
+          cli.stdin.write("y");
+          break;
+
+        case 6:
           expect(prompt).toEqual(
             "? Do you want me to run `npm install`? (Y/n)"
           );

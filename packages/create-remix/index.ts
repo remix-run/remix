@@ -32,6 +32,7 @@ export type CreateAppArgs =
       lang: Lang;
       server: Server;
       stack?: never;
+      tailwind: boolean;
       install: boolean;
       quiet?: boolean;
     }
@@ -94,6 +95,38 @@ async function createApp({
     await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
   }
 
+  // tailwind: copy the tailwind template
+  let tailwindTemplate = path.resolve(__dirname, "templates", "tailwind");
+  if (fse.existsSync(tailwindTemplate)) {
+    await fse.copy(tailwindTemplate, projectDir, { overwrite: true });
+  }
+  // tailwind: append /app/styles to gitignore
+  try {
+    fse.appendFileSync(path.join(projectDir, "gitignore"), `\n/app/styles`);
+  } catch (error) {
+    throw error;
+  }
+  // tailwind: add tailwind css to root.tsx
+  let rootTsxPath = path.join(projectDir, "app", "root.tsx");
+  if (fse.existsSync(rootTsxPath)) {
+    let rootTsxData = fse.readFileSync(rootTsxPath).toString().split("\n");
+    let hasLinksFunction =
+      rootTsxData.includes("LinksFunction") || rootTsxData.includes("rel:");
+    rootTsxData.splice(
+      0,
+      0,
+      `import tailwind from "~/styles/tailwind.css";${
+        !hasLinksFunction
+          ? lang === "ts"
+            ? '\nimport type { LinksFunction } from "remix";\n\nexport const links: LinksFunction = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
+            : '\n\nexport const links = () => {\n  return [{ rel: "stylesheet", href: tailwind }]\n}\n'
+          : ""
+      }`
+    );
+    let withTailwindImportText = rootTsxData.join("\n");
+    fse.writeFileSync(rootTsxPath, withTailwindImportText);
+  }
+
   // rename dotfiles
   let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
   await Promise.all(
@@ -113,8 +146,10 @@ async function createApp({
   appPkg.dependencies = appPkg.dependencies || {};
   appPkg.devDependencies = appPkg.devDependencies || {};
   let serverPkg = require(path.join(serverTemplate, "package.json"));
+  let tailwindPkg = require(path.join(tailwindTemplate, "package.json"));
   ["dependencies", "devDependencies", "scripts"].forEach(key => {
     Object.assign(appPkg[key], serverPkg[key]);
+    Object.assign(appPkg[key], tailwindPkg[key]);
   });
 
   appPkg.main = serverPkg.main;

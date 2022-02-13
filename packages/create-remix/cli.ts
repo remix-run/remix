@@ -69,6 +69,7 @@ async function run() {
         stack?: never;
         server: Server;
         lang: Lang;
+        tailwind: boolean;
         install: boolean;
       }
     | {
@@ -140,6 +141,12 @@ async function run() {
       ]
     },
     {
+      name: "tailwind",
+      type: "confirm",
+      message: "Do you want to use Tailwind CSS?",
+      default: false
+    },
+    {
       name: "install",
       type: "confirm",
       message: "Do you want me to run `npm install`?",
@@ -159,6 +166,7 @@ async function run() {
       projectDir,
       lang: answers.lang,
       server: answers.server,
+      tailwind: answers.tailwind,
       install: answers.install
     });
   }
