@@ -53,4 +53,4 @@ Same as `watch` but also boots the [Remix app server](serve.md) in development m
 $ remix dev
 ```
 
-*Note: The default port is `3000` but you can set it with `cross-env PORT=4000 remix dev`.*
+*Note: The default port is `3000`, but can be changed by setting the `PORT` environment variable.*
