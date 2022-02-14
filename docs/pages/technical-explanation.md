@@ -121,9 +121,9 @@ export default function Projects() {
         <input name="title" />
         <button type="submit">Create New Project</button>
       </Form>
-      {actionData?.errors && (
+      {actionData?.errors ? (
         <ErrorMessages errors={actionData.errors} />
-      )}
+      ) : null}
 
       {/* outlets render the nested child routes 
           that match the URL deeper than this route,
@@ -192,11 +192,11 @@ export default function Projects() {
         </button>
       </Form>
 
-      {actionData?.errors && (
+      {actionData?.errors ? (
         <FadeIn>
           <ErrorMessages errors={actionData.errors} />
         </FadeIn>
-      )}
+      ) : null}
 
       <Outlet />
     </div>

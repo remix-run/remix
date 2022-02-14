@@ -1693,7 +1693,7 @@ export default function Home() {
 
   return (
     <div>
-      {showBanner && (
+      {showBanner ? (
         <div>
           <Link to="/sale">Don't miss our sale!</Link>
           <Form method="post">
@@ -1705,7 +1705,7 @@ export default function Home() {
             <button type="submit">Hide</button>
           </Form>
         </div>
-      )}
+      ) : null}
       <h1>Welcome!</h1>
     </div>
   );
@@ -1986,7 +1986,7 @@ export default function Login() {
 
   return (
     <div>
-      {error && <div className="error">{error}</div>}
+      {error ? <div className="error">{error}</div> : null}
       <form method="POST">
         <div>
           <p>Please sign in</p>
@@ -2284,7 +2284,7 @@ Now we can read the message in a loader.
 
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
-```js
+```jsx
 import { Meta, Links, Scripts, Outlet, json } from "remix";
 
 import { getSession, commitSession } from "./sessions";
@@ -2316,7 +2316,9 @@ export default function App() {
         <Links />
       </head>
       <body>
-        {message && <div className="flash">{message}</div>}
+        {message ? (
+          <div className="flash">{message}</div>
+        ) : null}
         <Outlet />
         <Scripts />
       </body>

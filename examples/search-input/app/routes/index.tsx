@@ -105,25 +105,25 @@ export default function Index() {
         </div>
       ) : (
         <>
-          {data.status === "emptySearch" && (
+          {data.status === "emptySearch" ? (
             <p className="info">
               Start searching...{" "}
               <span role="img" aria-label="point up emoji">
                 ☝️
               </span>
             </p>
-          )}
+          ) : null}
 
-          {data.status === "noResults" && (
+          {data.status === "noResults" ? (
             <p className="info">
               Ooops, no results{" "}
               <span role="img" aria-label="crying emoji">
                 😢
               </span>
             </p>
-          )}
+          ) : null}
 
-          {data.status === "resultsFound" && (
+          {data.status === "resultsFound" ? (
             <div className="results">
               {data.items.map(item => (
                 <a
@@ -137,7 +137,7 @@ export default function Index() {
                 </a>
               ))}
             </div>
-          )}
+          ) : null}
         </>
       )}
     </div>

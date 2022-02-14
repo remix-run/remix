@@ -20,7 +20,7 @@ export default function Screen() {
 
   return (
     <Form method="post" action="/auth/github">
-      {error && <div>{error.message}</div>}
+      {error ? <div>{error.message}</div> : null}
       <button>Sign In with GitHub</button>
     </Form>
   );

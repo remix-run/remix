@@ -41,7 +41,7 @@ export default function Add() {
 
   return (
     <Dialog isOpen={true} aria-label="Add invoice" onDismiss={onDismiss}>
-      {transition.state === "submitting" && <div>Saving...</div>}
+      {transition.state === "submitting" ? <div>Saving...</div> : null}
       <h3>Add invoice</h3>
       <Form
         method="post"
