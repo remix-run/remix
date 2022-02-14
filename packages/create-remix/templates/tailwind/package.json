@@ -6,6 +6,8 @@
   "devDependencies": {
     "tailwindcss": "latest",
     "postcss": "latest",
-    "autoprefixer": "latest"
+    "autoprefixer": "latest",
+    "prettier": "latest",
+    "prettier-plugin-tailwindcss": "latest"
   }
 }
