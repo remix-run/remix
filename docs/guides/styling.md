@@ -398,7 +398,7 @@ First install a couple dev dependencies:
 ```
 yarn add -D concurrently tailwindcss
 // OR
-npm i -D oncurrently tailwindcss
+npm i -D concurrently tailwindcss
 ```
 
 Initialize a tailwind config so we can tell it which files to generate classes from.
