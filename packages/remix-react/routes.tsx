@@ -25,6 +25,7 @@ interface Route {
   id: string;
   path?: string;
   index?: boolean;
+  resourceOnly?: boolean;
 }
 
 // NOTE: make sure to change the EntryRoute in server-runtime if you change this
@@ -36,6 +37,7 @@ export interface EntryRoute extends Route {
   imports?: string[];
   module: string;
   parentId?: string;
+  resourceOnly?: boolean;
 }
 
 export type RouteDataFunction = {
@@ -94,7 +96,8 @@ export function createClientRoute(
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary,
     CatchBoundary: entryRoute.hasCatchBoundary,
-    hasLoader: entryRoute.hasLoader
+    hasLoader: entryRoute.hasLoader,
+    resourceOnly: entryRoute.resourceOnly,
   };
 }
 

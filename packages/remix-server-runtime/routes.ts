@@ -23,6 +23,7 @@ export interface EntryRoute extends Route {
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
+  resourceOnly?: boolean;
 }
 
 export interface ServerRoute extends Route {

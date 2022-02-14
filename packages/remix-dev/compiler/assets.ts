@@ -29,6 +29,7 @@ export interface AssetsManifest {
       hasLoader: boolean;
       hasCatchBoundary: boolean;
       hasErrorBoundary: boolean;
+      resourceOnly?: boolean;
     };
   };
 }
