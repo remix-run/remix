@@ -7,7 +7,7 @@ declare global {
   var __redis: RedisType | undefined;
 }
 
-let redisOptions: Redis.RedisOptions = {
+const redisOptions: Redis.RedisOptions = {
   maxRetriesPerRequest: null,
   enableReadyCheck: false
 }
