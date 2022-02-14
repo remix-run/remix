@@ -1,12 +1,13 @@
-import { ActionFunction, useTransition } from "remix";
-import { Form, json, useActionData } from "remix";
+import type { ActionFunction } from "remix";
+import { Form, json, useActionData, useTransition } from "remix";
+
 import { queue } from "~/queues/notifier.server";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const email = formData.get("email");
 
-  if (!email || typeof email !== "string" || !email.includes('@')) {
+  if (!email || typeof email !== "string" || !email.includes("@")) {
     return json("Invalid email!", { status: 400 });
   }
 
@@ -15,14 +16,14 @@ export let action: ActionFunction = async ({ request }) => {
   // the job to redis for our worker to later pick up.
   await queue.add("notification email", {
     emailAddress: email
-  })
+  });
 
   return json(`Email queued for ${email}!`);
 };
 
-export default function () {
-  let actionMessage = useActionData<string>();
-  let transition = useTransition();
+export default function Index() {
+  const actionMessage = useActionData<string>();
+  const transition = useTransition();
 
   return (
     <main>
@@ -33,7 +34,9 @@ export default function () {
           <input name="email" />
         </label>
         <div>
-          <button type="submit">{transition.state === 'idle' ? 'Send' : 'Sending'}</button>
+          <button type="submit">
+            {transition.state === "idle" ? "Send" : "Sending"}
+          </button>
         </div>
       </Form>
       {actionMessage ? (

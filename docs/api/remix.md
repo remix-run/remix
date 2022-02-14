@@ -2284,7 +2284,7 @@ Now we can read the message in a loader.
 
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
-```js
+```jsx
 import { Meta, Links, Scripts, Outlet, json } from "remix";
 
 import { getSession, commitSession } from "./sessions";
