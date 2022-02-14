@@ -1,6 +1,6 @@
 // TODO: We eventually might not want to import anything directly from `history`
 // and leverage `react-router` here instead
-import { Action } from "history";
+import { Action, createPath } from "history";
 import type { Location } from "history";
 
 import type { RouteData } from "./routeData";
@@ -454,6 +454,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
         let matches = matchClientRoutes(routes, location);
 
+        if (process.env.NODE_ENV === "development") {
+          // we include resource only routes in the manifest in dev mode
+          // so we can notify the developer about using <Link /> to a
+          // resource-only route.
+
+          // However, we still need to treat resource-only routes as if they
+          // didn't match to get proper behavior.
+          if (matches?.[matches.length - 1].route.resourceOnly) {
+            matches = null;
+          }
+        }
+
         if (!matches) {
           matches = [
             {
@@ -903,19 +915,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     // complicated without the pending state, maybe we can figure something else
     // out later, but this works great.)
     await Promise.resolve();
-
-    let catchBoundaryId = findNearestCatchBoundary(matches[0], matches);
-    update({
-      location,
-      matches,
-      catch: {
-        data: null,
-        status: 404,
-        statusText: "Not Found"
-      },
-      catchBoundaryId,
-      transition: IDLE_TRANSITION
-    });
+    window.location.reload();
   }
 
   async function handleActionSubmissionNavigation(
