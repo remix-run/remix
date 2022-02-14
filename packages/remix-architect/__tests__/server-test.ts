@@ -349,6 +349,6 @@ describe("sendRemixResponse", () => {
 
     let result = await sendRemixResponse(response, abortController);
 
-    expect(result.body).toMatch(Buffer.from(image).toString("base64"));
+    expect(result.body).toMatch(image.toString("base64"));
   });
 });
