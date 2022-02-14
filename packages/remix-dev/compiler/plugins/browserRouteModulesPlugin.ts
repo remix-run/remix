@@ -17,6 +17,18 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
   unstable_shouldReload: true
 };
 
+export async function getBrowserSafeExportsForRoute(
+  config: RemixConfig,
+  routeId: string
+): Promise<string[]> {
+  const theExports = await getRouteModuleExportsCached(config, routeId);
+  return theExports.filter(ex => !!browserSafeRouteExports[ex]);
+}
+
+export async function isResourceOnlyRoute(config: RemixConfig, routeId: string): Promise<boolean> {
+  return (await getBrowserSafeExportsForRoute(config, routeId)).length === 0;
+}
+
 /**
  * This plugin loads route modules for the browser build, using module shims
  * that re-export only the route module exports that are safe for the browser.
@@ -54,9 +66,7 @@ export function browserRouteModulesPlugin(
           try {
             invariant(route, `Cannot get route by path: ${args.path}`);
 
-            theExports = (
-              await getRouteModuleExportsCached(config, route.id)
-            ).filter(ex => !!browserSafeRouteExports[ex]);
+            theExports = await getBrowserSafeExportsForRoute(config, route.id);
           } catch (error: any) {
             return {
               errors: [
@@ -67,9 +77,27 @@ export function browserRouteModulesPlugin(
               ]
             };
           }
-          let spec =
-            theExports.length > 0 ? `{ ${theExports.join(", ")} }` : "*";
-          let contents = `export ${spec} from ${JSON.stringify(file)};`;
+
+          // This should never hit, as we are filtering these out in createBrowserBuild
+          // in compiler.ts. But it doesn't hurt to be defensive.
+
+          // If it *does* for some reason, wrap it in an if instead of just calling invariant()
+          // so we don't pay the Object.keys cost unless there's a problem.
+          if (theExports.length === 0) {
+            invariant(
+              false,
+              `Route at path ${file} does not have any browser-safe exports.\n` +
+                `Browser-safe exports are: ${Object.keys(
+                  browserSafeRouteExports
+                )
+                  // Let's not surface unstable_* stuff in error messages
+                  .filter(n => !n.startsWith("unstable_"))
+                  .join(", ")}`
+            );
+          }
+
+          let exports = theExports.join(", ");
+          let contents = `export { ${exports} } from ${JSON.stringify(file)}`;
 
           return {
             contents,

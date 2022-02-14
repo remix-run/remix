@@ -6,6 +6,9 @@ import invariant from "../invariant";
 import { getRouteModuleExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
+import { isResourceOnlyRoute } from "./plugins/browserRouteModulesPlugin";
+import { BuildMode } from "../build";
+import type { BuildOptions } from "../build";
 
 type Route = RemixConfig["routes"][string];
 
@@ -36,6 +39,7 @@ export interface AssetsManifest {
 
 export async function createAssetsManifest(
   config: RemixConfig,
+  options: Required<BuildOptions>,
   metafile: esbuild.Metafile
 ): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
@@ -99,6 +103,31 @@ export async function createAssetsManifest(
         hasCatchBoundary: sourceExports.includes("CatchBoundary"),
         hasErrorBoundary: sourceExports.includes("ErrorBoundary")
       };
+    }
+  }
+
+  if (options.mode !== BuildMode.Production) {
+    // Resource only routes will be omitted from the build, so we need
+    // to add them to the manifest manually
+    for (let id of Object.keys(config.routes)) {
+      if (await isResourceOnlyRoute(config, id)) {
+        const { parentId, path, index, caseSensitive } = config.routes[id];
+        let sourceExports = await getRouteModuleExportsCached(config, id);
+        routes[id] = {
+          id,
+          parentId,
+          path,
+          index,
+          caseSensitive,
+          module: "",
+          imports: [],
+          hasAction: sourceExports.includes("action"),
+          hasLoader: sourceExports.includes("loader"),
+          hasCatchBoundary: false,
+          hasErrorBoundary: false,
+          resourceOnly: true
+        };
+      }
     }
   }
 

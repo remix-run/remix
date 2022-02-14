@@ -14,7 +14,10 @@ import type { AssetsManifest } from "./compiler/assets";
 import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders } from "./compiler/loaders";
-import { browserRouteModulesPlugin } from "./compiler/plugins/browserRouteModulesPlugin";
+import {
+  browserRouteModulesPlugin,
+  isResourceOnlyRoute
+} from "./compiler/plugins/browserRouteModulesPlugin";
 import { emptyModulesPlugin } from "./compiler/plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./compiler/plugins/mdx";
 import type { AssetsManifestPromiseRef } from "./compiler/plugins/serverAssetsManifestPlugin";
@@ -191,7 +194,7 @@ export async function watch(
     // should probably blow as it's not really recoverable.
     let browserBuildPromise = browserBuild.rebuild();
     let assetsManifestPromise = browserBuildPromise.then(build =>
-      generateAssetsManifest(config, build.metafile!)
+      generateAssetsManifest(config, options, build.metafile!)
     );
 
     // Assign the assetsManifestPromise to a ref so the server build can await
@@ -286,7 +289,7 @@ async function buildEverything(
   try {
     let browserBuildPromise = createBrowserBuild(config, options);
     let assetsManifestPromise = browserBuildPromise.then(build =>
-      generateAssetsManifest(config, build.metafile!)
+      generateAssetsManifest(config, options, build.metafile!)
     );
 
     // Assign the assetsManifestPromise to a ref so the server build can await
@@ -337,8 +340,14 @@ async function createBrowserBuild(
     // All route entry points are virtual modules that will be loaded by the
     // browserEntryPointsPlugin. This allows us to tree-shake server-only code
     // that we don't want to run in the browser (i.e. action & loader).
-    entryPoints[id] =
-      path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
+
+    // If any route entry point has *zero* browser safe exports (ie: only action/loader etc)
+    // then omit it entirely from the browser build
+    if (!(await isResourceOnlyRoute(config, id))) {
+      // We can include it as an entry point
+      entryPoints[id] =
+        path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
+    }
   }
 
   return esbuild.build({
@@ -457,16 +466,21 @@ async function createServerBuild(
 
 async function generateAssetsManifest(
   config: RemixConfig,
+  options: Required<BuildOptions>,
   metafile: esbuild.Metafile
 ): Promise<AssetsManifest> {
-  let assetsManifest = await createAssetsManifest(config, metafile);
+  let assetsManifest = await createAssetsManifest(config, options, metafile);
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
 
   assetsManifest.url = config.publicPath + filename;
 
   await writeFileSafe(
     path.join(config.assetsBuildDirectory, filename),
-    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
+    `window.__remixManifest=${JSON.stringify(
+      assetsManifest,
+      undefined,
+      options.mode !== BuildMode.Production ? 2 : undefined
+    )};`
   );
 
   return assetsManifest;
