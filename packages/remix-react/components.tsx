@@ -1,6 +1,7 @@
 // TODO: We eventually might not want to import anything directly from `history`
 // and leverage `react-router` here instead
 import type { Action, Location } from "history";
+import { createPath } from "history";
 import type {
   FocusEventHandler,
   FormHTMLAttributes,
@@ -434,6 +435,33 @@ function usePrefetchBehavior(
   ];
 }
 
+function useResourceRouteWarning(to: LinkProps["to"], reloadDocument?: boolean) {
+  let { clientRoutes } = useRemixEntryContext();
+  let resolvedPath = useResolvedPath(to);
+
+  if (process.env.NODE_ENV === "development" && !reloadDocument) {
+    let matches = matchClientRoutes(clientRoutes, resolvedPath as Location);
+    if (!matches) {
+      console.warn(
+        `Route for "${createPath(resolvedPath)}" not found. ` +
+          "Ensure a route exists for that path in app/routes, or verify your " +
+          "configuration if using custom routes."
+      );
+    } else if (matches[matches.length - 1].route.resourceOnly) {
+      console.warn(
+        'You used a <Link /> or <NavLink />  to link to a "Resource Route" ' +
+          `from your UI with the path ${createPath(resolvedPath)}. ` +
+          "Please add the `reloadDocument` prop for the browser " +
+          "to be able to view or download this resource. \n\n" +
+          "If it's not a resource route, please add a default " +
+          "export to your route so that it gets included in the " +
+          "UI. If it's just there to redirect, use:\n" +
+          "`export default function() { return null }`."
+      );
+    }
+  }
+}
+
 /**
  * A special kind of `<Link>` that knows whether or not it is "active".
  *
@@ -446,6 +474,7 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
       prefetch,
       props
     );
+    useResourceRouteWarning(to, props.reloadDocument);
     return (
       <>
         <RouterNavLink
@@ -473,6 +502,7 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
       prefetch,
       props
     );
+    useResourceRouteWarning(to, props.reloadDocument);
     return (
       <>
         <RouterLink
