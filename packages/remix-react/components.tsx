@@ -1360,8 +1360,11 @@ export const LiveReload =
       }) {
         return (
           <script
+            suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `
+              __html:
+                typeof document === "undefined"
+                  ? `
 let protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 let host = location.hostname;
 let socketPath = protocol + '//' + host + ':${port}/socket';
@@ -1382,6 +1385,7 @@ ws.onerror = error => {
   console.error(error);
 };
               `.trim()
+                  : " "
             }}
           />
         );
