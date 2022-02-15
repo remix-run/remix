@@ -1,6 +1,9 @@
 const { execSync } = require("child_process");
 const chalk = require("chalk");
+const path = require("path");
 const semver = require("semver");
+const { default: simpleGit } = require("simple-git");
+const git = simpleGit(path.resolve(__dirname, ".."));
 
 const {
   ensureCleanWorkingDirectory,
@@ -231,16 +234,26 @@ async function gitMerge(from, to, opts = {}) {
     await gitPull(from);
   }
   execSync(`git checkout ${to}`);
-  let resp = execSync(`git merge ${from}`).toString();
-  if (hasMergeConflicts(resp)) {
+
+  let savedError;
+  /** @type {import('simple-git').MergeResult} */
+  let summary;
+  try {
+    summary = await git.merge([from]);
+  } catch (err) {
+    savedError = err;
+    summary = err.git;
+  }
+
+  if (summary.conflicts.length > 0) {
     let answer = await prompt(
       `Merge conflicts detected. Resolve all conflicts and commit the changes before resuming the process.
           ${chalk.bold("Press Y to continue or N to cancel the release.")}`
     );
     if (answer === false) return 0;
-  } else if (mergeFailed(resp)) {
+  } else if (savedError) {
     console.error(chalk.red("Merge failed.\n"));
-    throw Error(resp);
+    throw savedError;
   }
 
   execSync(`git checkout ${initialBranch}`);
