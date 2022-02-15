@@ -1,7 +1,6 @@
 import { Form, json, redirect, useLoaderData, useLocation } from "remix";
-import invariant from "tiny-invariant";
 import type { Note } from "@prisma/client";
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
 
 import { prisma } from "~/db.server";
 import { createNote, deleteNote } from "~/models/note.server";
@@ -11,13 +10,13 @@ interface LoaderData {
   notes: Array<Note>;
 }
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await requireUserId(request);
   const notes = await prisma.note.findMany({ where: { userId: userId } });
   return json<LoaderData>({ notes });
 };
 
-const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
 
   const formData = await request.formData();
@@ -58,7 +57,11 @@ const action: ActionFunction = async ({ request }) => {
   }
 };
 
-function Index() {
+export const meta: MetaFunction = () => {
+  return { title: "New Remix App" };
+};
+
+export default function Index() {
   const location = useLocation();
   const data = useLoaderData<LoaderData>();
 
@@ -104,6 +107,3 @@ function Index() {
     </div>
   );
 }
-
-export default Index;
-export { action, loader };

@@ -6,13 +6,13 @@ import { getUserId, createUserSession } from "~/session.server";
 import { createUser } from "~/models/user.server";
 import invariant from "tiny-invariant";
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
   if (userId) return redirect("/");
   return {};
 };
 
-const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const email = formData.get("email");
   const password = formData.get("password");
@@ -29,11 +29,13 @@ const action: ActionFunction = async ({ request }) => {
   return createUserSession(request, user.id, "/");
 };
 
-const meta: MetaFunction = () => ({
-  title: "Join"
-});
+export const meta: MetaFunction = () => {
+  return {
+    title: "Join"
+  };
+};
 
-function JoinPage() {
+export default function JoinPage() {
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("redirectTo") ?? undefined;
 
@@ -71,6 +73,3 @@ function JoinPage() {
     </div>
   );
 }
-
-export default JoinPage;
-export { action, loader, meta };
