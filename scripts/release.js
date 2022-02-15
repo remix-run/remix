@@ -120,6 +120,12 @@ async function run(args) {
  */
 async function initStart(givenVersion, git) {
   ensureDevBranch(git.initialBranch);
+
+  if (releaseTypes.includes(givenVersion)) {
+    givenVersion = `pre${givenVersion}`;
+  }
+
+  /** @type {string | null} */
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(
@@ -127,6 +133,7 @@ async function initStart(givenVersion, git) {
       givenVersion
     );
   }
+
   return nextVersion;
 }
 
