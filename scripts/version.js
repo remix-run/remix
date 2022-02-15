@@ -20,58 +20,15 @@ let runtimes = ["cloudflare-workers", "cloudflare-pages", "deno", "node"];
 let core = ["dev", "server-runtime", "react", "eslint-config"];
 let allPackages = [...adapters, ...runtimes, ...core, "serve"];
 
-/**
- * @param {string} currentVersion
- * @param {string} givenVersion
- * @param {string} [prereleaseId]
- * @returns
- */
-function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
-  if (givenVersion == null) {
-    console.error("Missing next version. Usage: node version.js [nextVersion]");
+run(process.argv.slice(2)).then(
+  () => {
+    process.exit(0);
+  },
+  error => {
+    console.error(error);
     process.exit(1);
   }
-
-  let nextVersion;
-  if (givenVersion === "experimental") {
-    let hash = execSync(`git rev-parse --short HEAD`).toString().trim();
-    nextVersion = `0.0.0-experimental-${hash}`;
-  } else {
-    // @ts-ignore
-    nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
-  }
-
-  if (nextVersion == null) {
-    console.error(`Invalid version specifier: ${givenVersion}`);
-    process.exit(1);
-  }
-
-  return nextVersion;
-}
-
-/**
- * @param {string} packageName
- * @param {(json: import('type-fest').PackageJson) => any} transform
- */
-async function updatePackageConfig(packageName, transform) {
-  let file = packageJson(packageName, "packages");
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
-}
-
-/**
- * @param {string} example
- * @param {(json: import('type-fest').PackageJson) => any} transform
- */
-async function updateExamplesPackageConfig(example, transform) {
-  let file = packageJson(example, "examples");
-  if (!(await fileExists(file))) return;
-
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
-}
+);
 
 /**
  * @param {string[]} args
@@ -159,15 +116,58 @@ async function run(args) {
   console.log(chalk.green(`  Committed and tagged version ${nextVersion}`));
 }
 
-run(process.argv.slice(2)).then(
-  () => {
-    process.exit(0);
-  },
-  error => {
-    console.error(error);
+/**
+ * @param {string} currentVersion
+ * @param {string} givenVersion
+ * @param {string} [prereleaseId]
+ * @returns
+ */
+function getNextVersion(currentVersion, givenVersion, prereleaseId = "pre") {
+  if (givenVersion == null) {
+    console.error("Missing next version. Usage: node version.js [nextVersion]");
     process.exit(1);
   }
-);
+
+  let nextVersion;
+  if (givenVersion === "experimental") {
+    let hash = execSync(`git rev-parse --short HEAD`).toString().trim();
+    nextVersion = `0.0.0-experimental-${hash}`;
+  } else {
+    // @ts-ignore
+    nextVersion = semver.inc(currentVersion, givenVersion, prereleaseId);
+  }
+
+  if (nextVersion == null) {
+    console.error(`Invalid version specifier: ${givenVersion}`);
+    process.exit(1);
+  }
+
+  return nextVersion;
+}
+
+/**
+ * @param {string} packageName
+ * @param {(json: import('type-fest').PackageJson) => any} transform
+ */
+async function updatePackageConfig(packageName, transform) {
+  let file = packageJson(packageName, "packages");
+  let json = await jsonfile.readFile(file);
+  transform(json);
+  await jsonfile.writeFile(file, json, { spaces: 2 });
+}
+
+/**
+ * @param {string} example
+ * @param {(json: import('type-fest').PackageJson) => any} transform
+ */
+async function updateExamplesPackageConfig(example, transform) {
+  let file = packageJson(example, "examples");
+  if (!(await fileExists(file))) return;
+
+  let json = await jsonfile.readFile(file);
+  transform(json);
+  await jsonfile.writeFile(file, json, { spaces: 2 });
+}
 
 /**
  * @param {string} filePath
