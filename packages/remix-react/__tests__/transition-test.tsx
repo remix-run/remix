@@ -118,6 +118,20 @@ describe("normal navigation", () => {
     expect(t.getState().loaderData.foo).toBe("2");
   });
 
+  it("does not reload all routes when search does not change", async () => {
+    let t = setup();
+    let A = t.navigate.get("/foo?q=1");
+    await A.loader.resolve("1");
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+    expect(t.getState().loaderData.foo).toBe("1");
+
+    let B = t.navigate.get("/foo/bar?q=1");
+    await B.loader.resolve("2");
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+    
+    expect(t.getState().loaderData.foobar).toBe("2");
+  });
+
   it("reloads only routes with changed params", async () => {
     let t = setup();
 
@@ -1886,6 +1900,15 @@ let setup = ({ url } = { url: "/" }) => {
         {
           path: "/foo",
           id: "foo",
+          hasLoader: true,
+          loader: createLoader(),
+          action: createAction(),
+          element: {},
+          module: ""
+        },
+        {
+          path: "/foo/bar",
+          id: "foobar",
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
