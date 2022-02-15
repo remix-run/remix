@@ -5,14 +5,14 @@
 ## Architect Setup
 
 1. Globally install Architect and the AWS SDK
-2. Install the [AWS CLI][aws_cli]
+2. Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 ```sh
 npm i -g @architect/architect aws-sdk
 ```
 
-2. [Sign up][signup] and login to your AWS account
-   - To login with the CLI, you'll need to generate `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, you can do so from your [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", and then download and open the credentials file.
+2. [Sign up](https://portal.aws.amazon.com/billing/signup#/start) and login to your AWS account
+   - To login with the CLI, you'll need to generate `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, you can do so from your [security credentials](https://console.aws.amazon.com/iam/home?region=us-west-2#/security_credentials) and click on the "Access keys" tab, and then click "Create New Access Key", and then download and open the credentials file.
    - Next, run `aws configure` and paste in your credentials.
 
 ## Development
@@ -41,7 +41,7 @@ Prior to your first deployment, you'll need to do a few things:
 
 - Create a new [GitHub repo](https://repo.new)
 
-- Make sure you have your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` saved to your GitHub repo's secrets. You can re-use the ones you used for the AWS CLI or you can go to your AWS [security credentials][aws_access_key_id] and click on the "Access keys" tab, and then click "Create New Access Key", then you can copy those and add them to your repo's secrets.
+- Make sure you have your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` saved to your GitHub repo's secrets. You can re-use the ones you used for the AWS CLI or you can go to your AWS [security credentials](https://console.aws.amazon.com/iam/home?region=us-west-2#/security_credentials) and click on the "Access keys" tab, and then click "Create New Access Key", then you can copy those and add them to your repo's secrets.
 
 Along with your AWS credentials, you'll also need to give your CloudFormation a `SESSION_SECRET` variable of its own for both staging and production environments.
 
@@ -50,16 +50,11 @@ arc env staging SESSION_SECRET $(openssl rand -hex 32)
 arc env production SESSION_SECRET $(openssl rand -hex 32)
 ```
 
-> If you don't have openssl installed, you can also use [1password][generate_password] to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
+> If you don't have openssl installed, you can also use [1password](https://1password.com/password-generator) to generate a random secret, just replace `$(openssl rand -hex 32)` with the generated secret.
 
 ## Where do I find my CloudFormation?
 
 You can find the CloudFormation template that Architect generated for you in the sam.yaml file.
 
-To find it on AWS, you can search for [CloudFormation][cloudformation] (make sure you're looking at the correct region!) and find the name of your stack (the name is a PascalCased version of what you have in `app.arc`, so by default it's RemixAwsStackStaging) that matches what's in `app.arc`, you can find all of your app's resources under the "Resources" tab.
+To find it on AWS, you can search for [CloudFormation](https://console.aws.amazon.com/cloudformation/home) (make sure you're looking at the correct region!) and find the name of your stack (the name is a PascalCased version of what you have in `app.arc`, so by default it's RemixAwsStackStaging) that matches what's in `app.arc`, you can find all of your app's resources under the "Resources" tab.
 
-[aws_cli]: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-[signup]: https://portal.aws.amazon.com/billing/signup#/start
-[cloudformation]: https://console.aws.amazon.com/cloudformation/home
-[aws_access_key_id]: https://console.aws.amazon.com/iam/home?region=us-west-2#/security_credentials
-[generate_password]: https://1password.com/password-generator
