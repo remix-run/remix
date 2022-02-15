@@ -370,7 +370,7 @@ function ensureReleaseBranch(branch) {
  */
 function ensureLatestReleaseBranch(branch, git) {
   let versionFromBranch = ensureReleaseBranch(branch);
-  let taggedVersions = [...git.tags]
+  let taggedVersions = git.tags
     .filter(tag => /^v\d/.test(tag))
     .sort(semver.compare);
 

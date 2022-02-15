@@ -107,6 +107,14 @@ async function updateExamplesRemixVersion(nextVersion) {
             config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
           }
         }
+
+        console.log(
+          chalk.green(
+            `  Updated Remix to version ${chalk.bold(
+              nextVersion
+            )} in ${chalk.bold(example)} example`
+          )
+        );
       });
     }
   }
