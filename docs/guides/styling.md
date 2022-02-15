@@ -397,7 +397,7 @@ First install a couple dev dependencies:
 
 ```
 yarn add -D concurrently tailwindcss
-// OR
+# OR
 npm i -D concurrently tailwindcss
 ```
 
