@@ -128,7 +128,7 @@ describe("normal navigation", () => {
     let B = t.navigate.get("/foo/bar?q=1");
     await B.loader.resolve("2");
     expect(t.rootLoaderMock.calls.length).toBe(1);
-    
+
     expect(t.getState().loaderData.foobar).toBe("2");
   });
 
