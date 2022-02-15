@@ -1,11 +1,15 @@
 const { execSync } = require("child_process");
 const chalk = require("chalk");
+const path = require("path");
 const semver = require("semver");
+const { default: simpleGit } = require("simple-git");
+const git = simpleGit(path.resolve(__dirname, ".."));
 
 const {
   ensureCleanWorkingDirectory,
   getPackageVersion,
-  prompt
+  prompt,
+  incrementRemixVersion
 } = require("./utils");
 
 const releaseTypes = ["patch", "minor", "major"];
@@ -168,7 +172,7 @@ async function execStart(nextVersion) {
   }
 
   await gitMerge("main", releaseBranch, { pullFirst: true });
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
@@ -188,7 +192,7 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge("main", git.initialBranch, { pullFirst: true });
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
@@ -208,15 +212,8 @@ Run ${chalk.bold(`git push origin ${git.initialBranch} --follow-tags`)}`)
 async function execFinish(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge(git.initialBranch, "main");
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   await gitMerge(git.initialBranch, "dev");
-}
-
-/**
- * @param {string} version
- */
-function incrementVersion(version) {
-  return execSync(`yarn run version ${version}`);
 }
 
 /**
@@ -231,16 +228,26 @@ async function gitMerge(from, to, opts = {}) {
     await gitPull(from);
   }
   execSync(`git checkout ${to}`);
-  let resp = execSync(`git merge ${from}`).toString();
-  if (hasMergeConflicts(resp)) {
+
+  let savedError;
+  /** @type {import('simple-git').MergeResult} */
+  let summary;
+  try {
+    summary = await git.merge([from]);
+  } catch (err) {
+    savedError = err;
+    summary = err.git;
+  }
+
+  if (summary.conflicts.length > 0) {
     let answer = await prompt(
       `Merge conflicts detected. Resolve all conflicts and commit the changes before resuming the process.
           ${chalk.bold("Press Y to continue or N to cancel the release.")}`
     );
     if (answer === false) return 0;
-  } else if (mergeFailed(resp)) {
+  } else if (savedError) {
     console.error(chalk.red("Merge failed.\n"));
-    throw Error(resp);
+    throw savedError;
   }
 
   execSync(`git checkout ${initialBranch}`);

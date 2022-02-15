@@ -45,8 +45,8 @@ git checkout dev
 yarn release start patch|minor|major
 
 # Once you create the pre-release, you can run tests and even publish a pre-release
-# directly to ensure everything works as expected. If there are any issues, you can
-# iterate with a new pre-release with the following command:
+# directly to ensure everything works as expected. If there are any issues, fix the bugs and commit directly to the pre-release branch. Once you're done working, you
+# can iterate with a new pre-release with the following command:
 yarn release bump
 
 # Once all tests have passed and the release is ready to be made stable, the following
@@ -69,19 +69,31 @@ yarn build
 npm publish build/node_modules/create-remix
 ```
 
-### Experimental releases
+### Experimental releases and hot-fixes
 
-Experimental releases do not need to be branched off of `dev` or `main` but can
-be branched from anywhere as they are not intended for general use. The release
-process here is a bit simpler:
+Experimental releases and hot-fixes do not need to be branched off of `dev`.
+Experimental releases can be branched from anywhere as they are not intended for
+general use. Hot-fixes are typically applied directly to main. In either case,
+the release process here is a bit simpler:
 
 ```bash
+# for experimental releases:
 git checkout -b release/experimental
 yarn run version experimental
 yarn run publish
 
-# clean up
+## clean up
 git checkout <previous-branch>
 git branch -d release/experimental
 git push origin --delete release/experimental
+
+# for hot-fix:
+git checkout main
+## fix changes and commit
+git add .
+git commit -m "fix: squashed a super gnarly bug"
+
+## version + publish
+yarn run version patch
+yarn run publish
 ```
