@@ -28,33 +28,32 @@ async function getSession(input: string | Request | null): Promise<Session> {
   return sessionStorage.getSession(cookieHeader);
 }
 
-async function getUserId(request: Request) {
+async function getUser(request: Request): Promise<{ pk: string } | null> {
   const session = await getSession(request);
-  const userId = session.get(USER_SESSION_KEY);
-  if (!userId || typeof userId !== "string") return null;
-  return userId;
+  const user = session.get(USER_SESSION_KEY);
+  if (!user) return null;
+  return user;
 }
 
-async function requireUserId(
+async function requireUser(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
-) {
-  const session = await getSession(request);
-  const userId = session.get("userId");
-  if (!userId || typeof userId !== "string") {
+): Promise<{ pk: string } | null> {
+  const user = await getUser(request);
+  if (!user) {
     const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
   }
-  return userId;
+  return user;
 }
 
 async function createUserSession(
   request: Request,
-  userId: string,
+  user: string,
   redirectTo: string
 ) {
   const session = await getSession(request);
-  session.set(USER_SESSION_KEY, userId);
+  session.set(USER_SESSION_KEY, user);
   return redirect(redirectTo, {
     headers: {
       "Set-Cookie": await sessionStorage.commitSession(session)
@@ -74,8 +73,8 @@ async function logout(request: Request) {
 export {
   sessionStorage,
   getSession,
-  getUserId,
-  requireUserId,
+  getUser,
+  requireUser,
   createUserSession,
   logout
 };

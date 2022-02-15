@@ -8,14 +8,14 @@ import {
   useLocation
 } from "remix";
 
-import { getSession } from "~/session.server";
+import { getSession, requireUser } from "~/session.server";
 
 import Alert from "@reach/alert";
 import { createNote, deleteNote, getNotes } from "~/models/note";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const session = await getSession(request);
-  const user = session.get("user");
+  const user = await requireUser(request);
+
   if (!user) return redirect("/login");
 
   const notes = await getNotes(user.pk);

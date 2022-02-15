@@ -3,11 +3,11 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import { createUserSession, getUserId } from "~/session.server";
+import { createUserSession, getUser } from "~/session.server";
 import { createUser, getUserByEmail } from "~/models/user";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const userId = await getUserId(request);
+  const userId = await getUser(request);
   if (userId) return redirect("/");
   return {};
 };
