@@ -94,6 +94,7 @@
     "rollup": "^2.36.1",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.4",
+    "simple-git": "^3.2.4",
     "start-server-and-test": "^1.14.0",
     "strip-ansi": "^6.0.1",
     "type-fest": "^2.11.1",
