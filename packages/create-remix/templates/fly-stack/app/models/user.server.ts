@@ -1,43 +1,47 @@
 import bcrypt from "@node-rs/bcrypt";
+import type { User } from "@prisma/client";
 import { prisma } from "~/db.server";
 
-async function createUser(email: string, password: string) {
+async function createUser(email: string, password: string): Promise<User> {
   const hashedPassword = await bcrypt.hash(password);
   const user = await prisma.user.create({
-    select: {
-      userData: true
-    },
     data: {
       email,
-      password: hashedPassword,
-      userData: {
+      password: {
         create: {
-          email
+          password: hashedPassword
         }
       }
     }
   });
 
-  return user.userData;
+  return user;
 }
 
-async function verifyLogin(email: string, password: string) {
+async function verifyLogin(
+  email: string,
+  password: string
+): Promise<User | undefined> {
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { userData: true }
+    include: {
+      password: true
+    }
   });
 
-  if (!user) {
+  if (!user || !user.password) {
     return undefined;
   }
 
-  const isValid = await bcrypt.verify(password, user.password);
+  const isValid = await bcrypt.verify(password, user.password.password);
 
   if (!isValid) {
     return undefined;
   }
 
-  return user.userData;
+  const { password: _password, ...userWithoutPassword } = user;
+
+  return userWithoutPassword;
 }
 
 export { createUser, verifyLogin };

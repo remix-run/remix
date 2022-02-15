@@ -8,32 +8,27 @@ generator client {
 }
 
 model User {
-  id       String @id @default(cuid())
-  email    String @unique
-  password String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userData UserData?
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  Password?
+  notes     Note[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
-model UserData {
-  id    String @id @default(cuid())
-  email String @unique
-  notes Note[]
+model Password {
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+  password String
+}
 
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user   User   @relation(fields: [userId], references: [id])
-  userId String @unique
-}
-
-model Note {
-  id     String   @id @default(cuid())
-  title  String
-  body   String
-  user   UserData @relation(fields: [userId], references: [id])
   userId String
 }

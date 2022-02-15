@@ -1,6 +1,13 @@
-import { Form, json, redirect, useLoaderData, useLocation } from "remix";
+import {
+  Form,
+  json,
+  redirect,
+  useLoaderData,
+  useLocation
+} from "remix";
 import type { Note } from "@prisma/client";
-import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
+import type { ActionFunction, LoaderFunction ,
+  MetaFunction} from "remix";
 
 import { prisma } from "~/db.server";
 import { createNote, deleteNote } from "~/models/note.server";
