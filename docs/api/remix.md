@@ -1562,7 +1562,7 @@ import cloudinary from "cloudinary";
 export let action: ActionFunction = async ({ request }) => {
   const userId = getUserId(request);
 
-  function uploadFromStream(
+  function uploadStreamToCloudinary(
     stream: Readable,
     options?: UploadApiOptions
   ): Promise<UploadApiResponse | UploadApiErrorResponse> {
