@@ -60,6 +60,7 @@ export async function loader() {
   const json = await res.json();
   return json.map(gist => {
     return {
+      description: gist.description,
       url: gist.html_url,
       files: Object.keys(gist.files),
       owner: gist.owner.login
