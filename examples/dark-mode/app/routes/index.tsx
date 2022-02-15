@@ -1,4 +1,4 @@
-import { Theme, useTheme } from "~/utils/theme-provider";
+import { Theme, Themed, useTheme } from "~/utils/theme-provider";
 
 import styles from "~/styles/styles.css";
 
@@ -15,5 +15,13 @@ export default function IndexRoute() {
     );
   };
 
-  return <button onClick={toggleTheme}>Toggle</button>;
+  return (
+    <>
+      <button onClick={toggleTheme}>Toggle</button>
+      <Themed
+        dark={<h1 className="dark-component">I'm only seen in dark mode</h1>}
+        light={<h1 className="light-component">I'm only seen in light mode</h1>}
+      />
+    </>
+  );
 }

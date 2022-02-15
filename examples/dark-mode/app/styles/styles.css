@@ -7,3 +7,11 @@ html {
 html.dark {
   --background-colour: black;
 }
+
+.dark-component {
+  color: white;
+}
+
+.light-component {
+  color: black;
+}

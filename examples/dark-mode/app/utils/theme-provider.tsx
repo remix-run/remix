@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useRef,
+  useState
+} from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useFetcher } from "remix";
 
@@ -46,6 +53,11 @@ function ThemeProvider({
   });
 
   const persistTheme = useFetcher();
+  // TODO: remove this when persistTheme is memoized properly
+  const persistThemeRef = useRef(persistTheme);
+  useEffect(() => {
+    persistThemeRef.current = persistTheme;
+  }, [persistTheme]);
 
   const mountRun = useRef(false);
 
@@ -58,7 +70,7 @@ function ThemeProvider({
       return;
     }
 
-    persistTheme.submit(
+    persistThemeRef.current.submit(
       { theme },
       { action: "action/set-theme", method: "post" }
     );
@@ -114,6 +126,28 @@ const clientThemeCode = `
 })();
 `;
 
+function handleDarkAndLightModeEls() {
+  const theme = getPreferredTheme();
+  const darkEls = document.querySelectorAll("dark-mode");
+  const lightEls = document.querySelectorAll("light-mode");
+  for (const darkEl of darkEls) {
+    if (theme === "dark") {
+      for (const child of darkEl.childNodes) {
+        darkEl.parentElement?.append(child);
+      }
+    }
+    darkEl.remove();
+  }
+  for (const lightEl of lightEls) {
+    if (theme === "light") {
+      for (const child of lightEl.childNodes) {
+        lightEl.parentElement?.append(child);
+      }
+    }
+    lightEl.remove();
+  }
+}
+
 function NonFlashOfWrongThemeEls({ ssrTheme }: { ssrTheme: boolean }) {
   const [theme] = useTheme();
 
@@ -152,8 +186,49 @@ function useTheme() {
   return context;
 }
 
+/**
+ * This allows you to render something that depends on the theme without
+ * worrying about whether it'll SSR properly when we don't actually know
+ * the user's preferred theme.
+ */
+function Themed({
+  dark,
+  light,
+  initialOnly = false
+}: {
+  dark: ReactNode | string;
+  light: ReactNode | string;
+  initialOnly?: boolean;
+}) {
+  const [theme] = useTheme();
+  const [initialTheme] = useState(theme);
+  const themeToReference = initialOnly ? initialTheme : theme;
+  const serverRenderWithUnknownTheme = !theme && typeof window !== "object";
+
+  if (serverRenderWithUnknownTheme) {
+    // stick them both in and our little script will update the DOM to match
+    // what we'll render in the client during hydration.
+    return (
+      <>
+        {createElement("dark-mode", null, dark)}
+        {createElement("light-mode", null, light)}
+      </>
+    );
+  }
+
+  return <>{themeToReference === "light" ? light : dark}</>;
+}
+
 function isTheme(value: unknown): value is Theme {
   return typeof value === "string" && themes.includes(value as Theme);
 }
 
-export { isTheme, NonFlashOfWrongThemeEls, Theme, ThemeProvider, useTheme };
+export {
+  handleDarkAndLightModeEls,
+  isTheme,
+  NonFlashOfWrongThemeEls,
+  Theme,
+  Themed,
+  ThemeProvider,
+  useTheme
+};
