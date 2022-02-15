@@ -11,20 +11,20 @@
     "start:dev": "cross-env NODE_ENV=development node server/index.js"
   },
   "dependencies": {
-    "@remix-run/express": "1.1.3",
-    "@remix-run/react": "1.1.3",
+    "@remix-run/express": "1.2.0-pre.0",
+    "@remix-run/react": "1.2.0-pre.0",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
     "express": "^4.17.2",
     "morgan": "^1.10.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "1.1.3",
+    "remix": "1.2.0-pre.0",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.4.1"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.1.3",
+    "@remix-run/dev": "1.2.0-pre.0",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "typescript": "^4.5.4"
