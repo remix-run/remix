@@ -385,26 +385,33 @@ function ensureLatestReleaseBranch(branch, git) {
  * @param {string} branch
  * @returns {string | undefined}
  */
-const getVersionFromReleaseBranch = branch => branch.split("/")[1]?.slice(1);
+function getVersionFromReleaseBranch(branch) {
+  return branch.split("/")[1]?.slice(1);
+}
 
 /**
  * @param {string} version
  */
-const getVersionTag = version => (version.startsWith("v") ? "" : "v") + version;
+function getVersionTag(version) {
+  return (version.startsWith("v") ? "" : "v") + version;
+}
 
 /**
  * @param {string} version
  */
-const getReleaseBranch = version =>
-  `release/${getVersionTag(
+function getReleaseBranch(version) {
+  return `release/${getVersionTag(
     version.includes("-") ? version.slice(0, version.indexOf("-")) : version
   )}`;
+}
 
 /**
  * @param {string[]} tags
  * @param {string} version
  */
-const versionExists = (tags, version) => tags.includes(getVersionTag(version));
+function versionExists(tags, version) {
+  return tags.includes(getVersionTag(version));
+}
 
 /**
  * @typedef {{ tags: string[]; initialBranch: string }} GitAttributes
