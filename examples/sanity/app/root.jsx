@@ -14,7 +14,7 @@ export function links() {
   return [{ rel: "stylesheet", href: stylesUrl }];
 }
 
-export function loader() {
+export async function loader() {
   return { date: new Date() };
 }
 

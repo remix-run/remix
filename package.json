@@ -13,7 +13,7 @@
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
-    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx . --fix",
+    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md . --fix",
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint"
   },
   "workspaces": [
@@ -74,6 +74,7 @@
     "eslint-plugin-import": "^2.25.3",
     "eslint-plugin-jest": "^25.3.0",
     "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-markdown": "^2.2.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-react": "^7.27.1",
     "eslint-plugin-react-hooks": "^4.3.0",

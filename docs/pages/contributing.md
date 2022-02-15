@@ -15,7 +15,7 @@ When it comes to open source, there are many different kinds of contributions th
 
 If you'd like to contribute something—whether it's a bug fix to scratch your own itch or a typo in the docs—we'd be happy to have your contribution. We need you to "sign" a contributor license agreement (CLA) first that assigns us ownership so we are able to include it in this software.
 
-When you start a pull request, the remix-cla-bot will prompt you to review the [CLA](https://github.com/remix-run/remix/blob/main/docs/contributing.md) and sign it by adding your name to `contributors.yml`.
+When you start a pull request, the remix-cla-bot will prompt you to review the [CLA](https://github.com/remix-run/remix/blob/main/CLA.md) and sign it by adding your name to `contributors.yml`.
 
 ## Setup
 
@@ -29,24 +29,26 @@ The following steps will get you setup to contribute changes to this repo:
 1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page](https://github.com/remix-run/remix))
 2. Clone your fork locally
 
-```bash
-# in a terminal, cd to parent directory where you want your clone to be, then
-git clone https://github.com/<your_github_username>/remix.git
-cd remix
+   ```bash
+   # in a terminal, cd to parent directory where you want your clone to be, then
+   git clone https://github.com/<your_github_username>/remix.git
+   cd remix
 
-# if you are making *any* code changes, make sure to checkout the dev branch
-git checkout dev
-```
+   # if you are making *any* code changes, make sure to checkout the dev branch
+   git checkout dev
+   ```
 
-1. Install dependencies and build. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies and build. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
 ## Think You Found a Bug?
 
-Please conform to the issue template and provide a clear path to reproduction with a code example. Best is a pull request with a failing test. Next best is a link to [Remix Stackblitz](https://remix.new/) or repository that illustrates the bug.
+Please send a PR with a failing test. It's really easy if you follow the instructions in [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts)
 
 ## Proposing New or Changed API?
 
-Please provide thoughtful comments and some sample code that show what you'd like to do with Remix in your app. It helps the conversation if you can show us how you're limited by the current API first before jumping to a conclusion about what needs to be changed and/or added.
+Before you put in the work to add your feature and send a pull request, please open a GitHub Discussion so we can get on the same page and give a thumbs up or thumbs down on it. We'd hate for you to spend a bunch of time on something we ultimately don't want to add to Remix!
+
+But hey, who are we to tell you how to spend your time? Go ahead and build the feature if you want if it helps the discussion, but please don't be upset if we don't end up merging it :)
 
 ## Issue Not Getting Attention?
 
@@ -54,7 +56,7 @@ If you need a bug fixed and nobody is fixing it, your best bet is to provide a f
 
 ## Making a Pull Request?
 
-> **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch. If you are submitting a PR that touches any code, this should be the `dev` branch. Pull releases that only change documentation can be merged into `main`.
+> **Important:** When creating the PR in GitHub, make sure that you set the base to the correct branch. If you are submitting a PR that touches any code, this should be the `dev` branch. Pull requests that only change documentation can be merged into `main`.
 >
 > You can set the base in GitHub when authoring the PR with the dropdown below the "Compare changes" heading:
 >
@@ -84,14 +86,14 @@ Running `yarn build` from the root directory will run the build.
 
 ### Testing
 
-Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --projects packages/<package-name>`:
+Before running the tests, you need to run a build. After you build, running `yarn test` from the root directory will run **every** package's tests. If you want to run tests for a specific package, use `yarn test --selectProjects <display-name>`:
 
 ```bash
 # Test all packages
 yarn test
 
 # Test only @remix-run/express
-yarn test --projects packages/remix-express
+yarn test --selectProjects express
 ```
 
 ## Repository Branching

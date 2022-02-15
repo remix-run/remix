@@ -149,7 +149,6 @@ export default function App() {
                   min="12"
                   max="120"
                   step="1"
-                  pattern="\d+"
                 />
               </label>
             </div>
@@ -160,19 +159,25 @@ export default function App() {
               </label>
             </div>
             <div className="form-control">
-              <label>Text with minLength(10) and maxLength(140)</label>
+              <label htmlFor="text-with-minlength-maxlength">
+                Text with minLength(10) and maxLength(140)
+              </label>
               <textarea
                 name="text-with-minlength-maxlength"
+                id="text-with-minlength-maxlength"
                 minLength={10}
                 maxLength={140}
                 rows={3}
               ></textarea>
             </div>
             <div className="form-control">
-              <label>Date with min(today) and max(tomorrow)</label>
+              <label htmlFor="date-with-min-max">
+                Date with min(today) and max(tomorrow)
+              </label>
               <input
                 type="date"
                 name="date-with-min-max"
+                id="date-with-min-max"
                 min={data.todayString}
                 max={data.tomorrowString}
               />

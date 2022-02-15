@@ -362,7 +362,7 @@ export function RemixRoute({ id }: { id: string }) {
 /**
  * Defines the prefetching behavior of the link:
  *
- * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
@@ -822,8 +822,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Normal `<form encType>`.
    *
-   * Note: Remix only supports `application/x-www-form-urlencoded` right now
-   * but will soon support `multipart/form-data` as well.
+   * Note: Remix defaults to `application/x-www-form-urlencoded` and also
+   * supports `multipart/form-data`.
    */
   encType?: FormEncType;
 

@@ -25,7 +25,7 @@ Each [route module][route-module] can export a component and a [`loader`][loader
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   return [{ name: "Pants" }, { name: "Jacket" }];
 };
 
@@ -53,7 +53,7 @@ When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
+export let loader: LoaderFunction = async ({ params }) => {
   console.log(params.userId);
   console.log(params.projectId);
 };
@@ -71,7 +71,7 @@ These params are most useful for looking up data:
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[6,7]
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
+export let loader: LoaderFunction = async ({ params }) => {
   return fakeDb.project.findMany({
     where: {
       userId: params.userId,
@@ -89,7 +89,7 @@ Because these params come from the URL and not your source code, you can't know 
 import invariant from "tiny-invariant";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
+export let loader: LoaderFunction = async ({ params }) => {
   invariant(params.userId, "Expected params.userId");
   invariant(params.projectId, "Expected params.projectId");
 
@@ -140,6 +140,7 @@ And then your routes can import it and make queries against it:
 ```tsx filename=app/routes/products/$categoryId.tsx
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
+
 import { db } from "~/db.server";
 
 export let loader: LoaderFunction = async ({ params }) => {
@@ -197,7 +198,7 @@ export default function Product() {
 
 ## Cloudflare KV
 
-If you picked Cloudflare Workers as you environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
+If you picked Cloudflare Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
 
 ```tsx filename=app/routes/products/$productId.tsx
 import { useLoaderData } from "remix";
@@ -222,7 +223,7 @@ export default function Product() {
 
 ## Not Found
 
-While loading data its common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
 export let loader: LoaderFunction = async ({
@@ -252,7 +253,7 @@ URL Search Params are the portion of the URL after a `?`. Other names for this a
 ```tsx filename=routes/products.tsx lines=[1,4,5]
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ request }) => {
+export let loader: LoaderFunction = async ({ request }) => {
   let url = new URL(request.url);
   let term = url.searchParams.get("term");
   return fakeProductSearch(term);
@@ -328,7 +329,7 @@ Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 Note that `brand` is repeated in the URL search string since both checkboxes were named `"brand"`. In your loader you can get access to all of those values with [`searchParams.getAll`][search-params-getall]
 
 ```tsx lines=[3]
-export function loader({ request }) {
+export async function loader({ request }) {
   let url = new URL(request.url);
   let brands = url.searchParams.getAll("brand");
   return getProducts({ brands });
@@ -371,7 +372,7 @@ export default function ProductFilters() {
         id="adidas"
         name="brand"
         value="adidas"
-        defaultChecked={brands.includes("nike")}
+        defaultChecked={brands.includes("adidas")}
       />
 
       <button type="submit">Update</button>
@@ -529,7 +530,7 @@ export default function ProductFilters() {
   // (form submission or link click)
   React.useEffect(() => {
     setNikeChecked(brands.includes("nike"));
-  }, [searchParams]);
+  }, [brands, searchParams]);
 
   return (
     <Form method="get">
@@ -573,7 +574,7 @@ function SearchCheckbox({ name, value }) {
 
   React.useEffect(() => {
     setChecked(all.includes(value));
-  }, [searchParams]);
+  }, [all, searchParams, value]);
 
   return (
     <input
@@ -649,7 +650,7 @@ Loaders are only called on the server, via `fetch` from the browser, so your dat
 <docs-error>This won't work!</docs-error>
 
 ```tsx bad nocopy lines=[3-6]
-export function loader() {
+export async function loader() {
   return {
     date: new Date(),
     someMethod() {
@@ -700,4 +701,4 @@ export default function RouteComp() {
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#userloaderdata
+[useloaderdata]: ../api/remix#useloaderdata

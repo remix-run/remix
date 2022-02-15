@@ -29,7 +29,7 @@ With these build artifacts, an application can be deployed to any hosting servic
 
 While Remix runs on the server, it is not actually a server. It's just a handler that is given to an actual JavaScript server.
 
-It's built on the [Web Fetch API][fetch] instead of Node.js. This enables Remix to run in any Node.js server like [Vercel][vercel], [Netlify][netlify], [Architect][arc], etc. as well as non-Node.js environments like like [Cloudflare Workers][cf] and [Deno Deploy][deno].
+It's built on the [Web Fetch API][fetch] instead of Node.js. This enables Remix to run in any Node.js server like [Vercel][vercel], [Netlify][netlify], [Architect][arc], etc. as well as non-Node.js environments like [Cloudflare Workers][cf] and [Deno Deploy][deno].
 
 This is what Remix looks like when running in an express app:
 
@@ -84,7 +84,7 @@ More often than not, a Remix route module can contain both the UI and the intera
 
 Route modules have three primary exports: `loader`, `action`, and `default` (component).
 
-```js
+```jsx
 // Loaders only run on the server and provide data
 // to your component on GET requests
 export async function loader() {
@@ -121,9 +121,9 @@ export default function Projects() {
         <input name="title" />
         <button type="submit">Create New Project</button>
       </Form>
-      {actionData?.errors && (
+      {actionData?.errors ? (
         <ErrorMessages errors={actionData.errors} />
-      )}
+      ) : null}
 
       {/* outlets render the nested child routes 
           that match the URL deeper than this route,
@@ -165,7 +165,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server side form validation fails
 3. Animate in the error messages
 
-```js nocopy lines=[4-6,8-12,21,22,28-30]
+```jsx nocopy lines=[4-6,8-12,21,22,28-30]
 export default function Projects() {
   const projects = useLoaderData();
   const actionData = useActionData();
@@ -192,11 +192,11 @@ export default function Projects() {
         </button>
       </Form>
 
-      {actionData?.errors && (
+      {actionData?.errors ? (
         <FadeIn>
           <ErrorMessages errors={actionData.errors} />
         </FadeIn>
-      )}
+      ) : null}
 
       <Outlet />
     </div>
