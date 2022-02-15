@@ -8,7 +8,7 @@ import type {
   TouchEventHandler
 } from "react";
 import * as React from "react";
-import type { Navigator } from "react-router";
+import type { Navigator, Params } from "react-router";
 import {
   Router,
   Link as RouterLink,
@@ -1230,7 +1230,7 @@ export function useBeforeUnload(callback: () => any): void {
  *
  * @see https://remix.run/api/remix#usematches
  */
-export function useMatches() {
+export function useMatches<T = any>(): Match<T>[] {
   let { matches, routeData, routeModules } = useRemixEntryContext();
 
   return React.useMemo(
@@ -1249,6 +1249,14 @@ export function useMatches() {
       }),
     [matches, routeData, routeModules]
   );
+}
+
+export interface Match<T = any> {
+  id: string;
+  pathname: string;
+  params: Params<string>;
+  data: RouteData;
+  handle: T;
 }
 
 /**
