@@ -48,8 +48,6 @@ const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  console.log({ user });
-
   return createUserSession(request, user.pk, "/");
 };
 
