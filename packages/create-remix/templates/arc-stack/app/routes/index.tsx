@@ -8,25 +8,19 @@ import {
   useLocation
 } from "remix";
 
-import { getSession, requireUser } from "~/session.server";
+import { requireUser } from "~/session.server";
 
 import Alert from "@reach/alert";
 import { createNote, deleteNote, getNotes } from "~/models/note";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const user = await requireUser(request);
-
-  if (!user) return redirect("/login");
-
-  const notes = await getNotes(user.pk);
-
+  const userId = await requireUser(request);
+  const notes = await getNotes(userId);
   return json({ notes });
 };
 
 const action: ActionFunction = async ({ request }) => {
-  const session = await getSession(request);
-  const user = session.get("user");
-  if (!user) return redirect("/login");
+  const userId = await requireUser(request);
 
   const formData = await request.formData();
 
@@ -61,7 +55,7 @@ const action: ActionFunction = async ({ request }) => {
         throw new Response("body must be a string", { status: 400 });
       }
 
-      await createNote({ title, body, email: user.pk });
+      await createNote({ title, body, email: userId });
       return redirect("/");
     }
 

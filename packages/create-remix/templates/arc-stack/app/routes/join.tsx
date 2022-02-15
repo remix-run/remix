@@ -3,11 +3,11 @@ import { Form, json, Link, useActionData } from "remix";
 import { redirect } from "remix";
 import Alert from "@reach/alert";
 
-import { createUserSession, getUser } from "~/session.server";
+import { createUserSession, getUserId } from "~/session.server";
 import { createUser, getUserByEmail } from "~/models/user";
 
 const loader: LoaderFunction = async ({ request }) => {
-  const userId = await getUser(request);
+  const userId = await getUserId(request);
   if (userId) return redirect("/");
   return {};
 };
@@ -50,7 +50,7 @@ const action: ActionFunction = async ({ request }) => {
 
   const user = await createUser(email, password);
 
-  return createUserSession(request, user, "/");
+  return createUserSession(request, user.pk, "/");
 };
 
 const meta: MetaFunction = () => ({

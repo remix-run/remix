@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
-const sessionStorage = createArcTableSessionStorage({
+export const sessionStorage = createArcTableSessionStorage({
   table: "arc-sessions",
   ttl: "_ttl",
   idx: "_idx",
@@ -19,27 +19,29 @@ const sessionStorage = createArcTableSessionStorage({
   }
 });
 
-const USER_SESSION_KEY = "user";
+const USER_SESSION_KEY = "userId";
 
-async function getSession(input: string | Request | null): Promise<Session> {
+export async function getSession(
+  input: string | Request | null
+): Promise<Session> {
   const cookieHeader =
     input instanceof Request ? input.headers.get("Cookie") : input;
 
   return sessionStorage.getSession(cookieHeader);
 }
 
-async function getUser(request: Request): Promise<{ pk: string } | null> {
+export async function getUserId(request: Request) {
   const session = await getSession(request);
   const user = session.get(USER_SESSION_KEY);
   if (!user) return null;
   return user;
 }
 
-async function requireUser(
+export async function requireUser(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
-): Promise<{ pk: string } | null> {
-  const user = await getUser(request);
+) {
+  const user = await getUserId(request);
   if (!user) {
     const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
@@ -47,13 +49,13 @@ async function requireUser(
   return user;
 }
 
-async function createUserSession(
+export async function createUserSession(
   request: Request,
-  user: string,
+  userId: string,
   redirectTo: string
 ) {
   const session = await getSession(request);
-  session.set(USER_SESSION_KEY, user);
+  session.set(USER_SESSION_KEY, userId);
   return redirect(redirectTo, {
     headers: {
       "Set-Cookie": await sessionStorage.commitSession(session)
@@ -61,7 +63,7 @@ async function createUserSession(
   });
 }
 
-async function logout(request: Request) {
+export async function logout(request: Request) {
   const session = await getSession(request);
   return redirect("/login", {
     headers: {
@@ -69,12 +71,3 @@ async function logout(request: Request) {
     }
   });
 }
-
-export {
-  sessionStorage,
-  getSession,
-  getUser,
-  requireUser,
-  createUserSession,
-  logout
-};

@@ -10,16 +10,10 @@ async function getUserByEmail(email: string) {
   const db = await arc.tables();
   const result = await db.people.query({
     KeyConditionExpression: "pk = :pk",
-    ExpressionAttributeValues: { ":pk": `email#${email}` },
+    ExpressionAttributeValues: { ":pk": `email#${email}` }
   });
 
-  const user = result.Items[0];
-
-  if (!user) {
-    return undefined;
-  }
-
-  return cleanUser(user);
+  return result.Items[0];
 }
 
 async function createUser(email: string, password: string) {
@@ -27,7 +21,7 @@ async function createUser(email: string, password: string) {
   const db = await arc.tables();
   const user = await db.people.put({
     pk: `email#${email}`,
-    password: hashedPassword,
+    password: hashedPassword
   });
 
   return cleanUser(user);
@@ -35,9 +29,7 @@ async function createUser(email: string, password: string) {
 
 async function verifyLogin(email: string, password: string) {
   const user = await getUserByEmail(email);
-  if (!user) {
-    return undefined;
-  }
+  if (!user) return undefined;
 
   const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) {
