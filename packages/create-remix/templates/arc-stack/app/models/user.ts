@@ -14,19 +14,21 @@ async function getUserByEmail(email: string) {
 async function createUser(email: string, password: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
   const db = await arc.tables();
-  return db.people.put({
+  const { password: userPassword, ...user } = await db.people.put({
     pk: `email#${email}`,
     password: hashedPassword
   });
+
+  return user;
 }
 
 async function verifyLogin(email: string, password: string) {
-  const user = await getUserByEmail(email);
+  const { password: userPassword, ...user } = await getUserByEmail(email);
   if (!user) {
     return undefined;
   }
 
-  const isValid = await bcrypt.compare(password, user.password);
+  const isValid = await bcrypt.compare(password, userPassword);
   if (!isValid) {
     return undefined;
   }
