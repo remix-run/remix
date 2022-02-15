@@ -8,7 +8,8 @@ const git = simpleGit(path.resolve(__dirname, ".."));
 const {
   ensureCleanWorkingDirectory,
   getPackageVersion,
-  prompt
+  prompt,
+  incrementRemixVersion
 } = require("./utils");
 
 const releaseTypes = ["patch", "minor", "major"];
@@ -171,7 +172,7 @@ async function execStart(nextVersion) {
   }
 
   await gitMerge("main", releaseBranch, { pullFirst: true });
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
@@ -191,7 +192,7 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge("main", git.initialBranch, { pullFirst: true });
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
@@ -211,15 +212,8 @@ Run ${chalk.bold(`git push origin ${git.initialBranch} --follow-tags`)}`)
 async function execFinish(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge(git.initialBranch, "main");
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   await gitMerge(git.initialBranch, "dev");
-}
-
-/**
- * @param {string} version
- */
-function incrementVersion(version) {
-  return execSync(`yarn run version ${version}`);
 }
 
 /**
