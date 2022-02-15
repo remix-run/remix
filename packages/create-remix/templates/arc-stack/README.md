@@ -5,6 +5,7 @@
 ## Architect Setup
 
 1. Globally install Architect and the AWS SDK
+2. Install the [AWS CLI][aws_cli]
 
 ```sh
 npm i -g @architect/architect aws-sdk
@@ -57,6 +58,7 @@ You can find the CloudFormation template that Architect generated for you in the
 
 To find it on AWS, you can search for [CloudFormation][cloudformation] (make sure you're looking at the correct region!) and find the name of your stack (the name is a PascalCased version of what you have in `app.arc`, so by default it's RemixAwsStackStaging) that matches what's in `app.arc`, you can find all of your app's resources under the "Resources" tab.
 
+[aws_cli]: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 [signup]: https://portal.aws.amazon.com/billing/signup#/start
 [cloudformation]: https://console.aws.amazon.com/cloudformation/home
 [aws_access_key_id]: https://console.aws.amazon.com/iam/home?region=us-west-2#/security_credentials
