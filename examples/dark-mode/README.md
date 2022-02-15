@@ -18,6 +18,8 @@ When the page is initially rendered, the server first checks whether a cookie fr
 
 While not essential, the cookie uses a secret to sign the value (see [app/utils/theme.server.ts](app/utils/theme.server.ts)). This value comes from the environment variable `SESSION_SECRET` (make sure to set it before running the app or an error will be thrown).
 
+The Themed component is used to conditionally render two components depending on current theme. If a theme preference hasn't been set, the server renders both components and the client uses `handleDarkAndLightModeEls` in [bootstrap.client.tsx](app/bootstrap.client.tsx) to remove the component that is not associated with the user's theme preferences.
+
 ## Related Links
 
 - [Creating cookie sessions in the Remix docs](https://remix.run/docs/en/v1/api/remix#createcookiesessionstorage)
