@@ -13,14 +13,14 @@
     "@mantine/core": "^3.5.0",
     "@mantine/hooks": "^3.5.0",
     "@mantine/ssr": "^3.5.0",
-    "@remix-run/react": "1.2.0-pre.0",
-    "@remix-run/serve": "1.2.0-pre.0",
+    "@remix-run/react": "1.2.0-pre.1",
+    "@remix-run/serve": "1.2.0-pre.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "1.2.0-pre.0"
+    "remix": "1.2.0-pre.1"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.2.0-pre.0",
+    "@remix-run/dev": "1.2.0-pre.1",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "typescript": "^4.5.4"
