@@ -6,7 +6,7 @@ import Alert from "@reach/alert";
 import { createUserSession, getUserId } from "~/session.server";
 import { createUser, getUserByEmail } from "~/models/user";
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
   if (userId) return redirect("/");
   return {};
@@ -19,20 +19,20 @@ interface ActionData {
   };
 }
 
-const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
 
   const email = formData.get("email");
   const password = formData.get("password");
 
-  if (typeof email !== "string") {
+  if (typeof email !== "string" || email.length === 0) {
     return json<ActionData>(
       { errors: { email: "Email is required" } },
       { status: 400 }
     );
   }
 
-  if (typeof password !== "string") {
+  if (typeof password !== "string" || password.length === 0) {
     return json<ActionData>(
       { errors: { password: "Password is required" } },
       { status: 400 }
@@ -53,38 +53,61 @@ const action: ActionFunction = async ({ request }) => {
   return createUserSession(request, user.pk, "/");
 };
 
-const meta: MetaFunction = () => ({
+export const meta: MetaFunction = () => ({
   title: "Join"
 });
 
-function JoinPage() {
-  const validation = useActionData<ActionData>();
+export default function JoinPage() {
+  const actionData = useActionData<ActionData>();
 
   return (
     <>
-      <Form method="post">
+      <h1>Join</h1>
+      <Form
+        method="post"
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         <label>
-          <span>Email</span>
-          <input type="email" name="email" autoComplete="email" />
-          {validation?.errors?.email && (
-            <Alert style={{ color: "red" }}>{validation.errors.email}</Alert>
+          <span>Email: </span>
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            aria-invalid={actionData?.errors?.email ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.email ? "email-error" : undefined
+            }
+          />
+          {actionData?.errors?.email && (
+            <Alert style={{ color: "red", paddingTop: 4 }} id="email-error">
+              {actionData.errors.email}
+            </Alert>
           )}
         </label>
         <label>
-          <span>Password</span>
-          <input type="password" name="password" autoComplete="new-password" />
-          {validation?.errors?.password && (
-            <Alert style={{ color: "red" }}>{validation.errors.password}</Alert>
+          <span>Password: </span>
+          <input
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            aria-invalid={actionData?.errors?.password ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.password ? "password-error" : undefined
+            }
+          />
+          {actionData?.errors?.password && (
+            <Alert style={{ color: "red", paddingTop: 4 }} id="password-error">
+              {actionData.errors.password}
+            </Alert>
           )}
         </label>
-        <button type="submit">Join</button>
+        <div>
+          <button type="submit">Join</button>
+        </div>
       </Form>
-      <div>
+      <div style={{ paddingTop: 8 }}>
         Already have an account? <Link to="/login">Log in</Link>
       </div>
     </>
   );
 }
-
-export default JoinPage;
-export { action, loader, meta };

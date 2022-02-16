@@ -1,4 +1,4 @@
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
 import {
   Form,
   json,
@@ -13,13 +13,19 @@ import { requireUser } from "~/session.server";
 import Alert from "@reach/alert";
 import { createNote, deleteNote, getNotes } from "~/models/note";
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await requireUser(request);
+
+  console.log({ userId });
+
+  if (!userId) return redirect("/login");
+
   const notes = await getNotes(userId);
+
   return json({ notes });
 };
 
-const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUser(request);
 
   const formData = await request.formData();
@@ -47,12 +53,15 @@ const action: ActionFunction = async ({ request }) => {
       const title = formData.get("title");
       const body = formData.get("body");
 
-      if (typeof title !== "string") {
-        throw new Response("title must be a string", { status: 400 });
+      if (typeof title !== "string" || title.length === 0) {
+        return json(
+          { errors: { title: "Title is required" } },
+          { status: 400 }
+        );
       }
 
-      if (typeof body !== "string") {
-        throw new Response("body must be a string", { status: 400 });
+      if (typeof body !== "string" || body.length === 0) {
+        return json({ errors: { body: "Body is required" } }, { status: 400 });
       }
 
       await createNote({ title, body, email: userId });
@@ -65,48 +74,82 @@ const action: ActionFunction = async ({ request }) => {
   }
 };
 
-function Index() {
+export const meta: MetaFunction = () => {
+  return { title: "New Remix App" };
+};
+
+export default function IndexPage() {
   const location = useLocation();
   const data = useLoaderData();
-  const validation = useActionData();
+  const actionData = useActionData();
 
   return (
     <div>
-      <header>
+      <header style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <h1>Notes</h1>
         <Form action="/logout" method="post">
           <button type="submit">Logout</button>
         </Form>
       </header>
-      <Form method="post" key={location.key}>
+      <Form
+        method="post"
+        key={location.key}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8
+        }}
+      >
         <label>
-          <span>Title</span>
-          <input name="title" />
-          {validation?.errors.title && (
-            <Alert style={{ color: "red" }}>{validation.errors.title}</Alert>
+          <span style={{ display: "block" }}>Title: </span>
+          <input
+            name="title"
+            style={{ marginTop: 4 }}
+            aria-invalid={actionData?.errors?.title ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.title ? "title-error" : undefined
+            }
+          />
+          {actionData?.errors.title && (
+            <Alert style={{ color: "red" }} id="title=error">
+              {actionData.errors.title}
+            </Alert>
           )}
         </label>
         <label>
-          <span>Body</span>
-          <textarea name="body" rows={8} />
-          {validation?.errors.body && (
-            <Alert style={{ color: "red" }}>{validation.errors.body}</Alert>
+          <span style={{ display: "block" }}>Body: </span>
+          <textarea
+            name="body"
+            rows={8}
+            style={{ marginTop: 4 }}
+            aria-invalid={actionData?.errors?.body ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.body ? "body-error" : undefined
+            }
+          />
+          {actionData?.errors.body && (
+            <Alert style={{ color: "red" }} id="body-error">
+              {actionData.errors.body}
+            </Alert>
           )}
         </label>
-        <button name="_action" value="create-note" type="submit">
-          Save
-        </button>
+        <div>
+          <button name="_action" value="create-note" type="submit">
+            Save
+          </button>
+        </div>
       </Form>
 
       <h2>Notes</h2>
       {data.notes.length === 0 ? (
         <p>No notes yet</p>
       ) : (
-        <ul>
+        <ul style={{ paddingLeft: 0 }}>
           {data.notes.map((note: any) => (
-            <li key={`${note.pk}-${note.sk}`}>
-              <h3>{note.title}</h3>
-              <p>{note.body}</p>
+            <li
+              key={`${note.pk}-${note.sk}`}
+              style={{ display: "flex", gap: 16, alignItems: "center" }}
+            >
               <Form method="post">
                 <input type="hidden" name="pk" value={note.pk} />
                 <input type="hidden" name="sk" value={note.sk} />
@@ -114,6 +157,10 @@ function Index() {
                   Delete
                 </button>
               </Form>
+              <div>
+                <h3>{note.title}</h3>
+                <p>{note.body}</p>
+              </div>
             </li>
           ))}
         </ul>
@@ -121,6 +168,3 @@ function Index() {
     </div>
   );
 }
-
-export default Index;
-export { action, loader };
