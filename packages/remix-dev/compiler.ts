@@ -434,7 +434,7 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
-      conditions: isCloudflareWorkersOrPages ? ['worker'] : [],
+      conditions: isCloudflareWorkersOrPages ? ['worker'] : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
