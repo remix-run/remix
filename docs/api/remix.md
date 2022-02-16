@@ -789,6 +789,27 @@ function SomeComponent() {
 }
 ```
 
+You can now submit raw JSON. This is helpful when interfacing with existing JSON APIs. Set `options.json:true`. You can use `request.json()` in the action to return the parsed JSON value.
+
+```tsx
+// action
+export async function action({ request }) {
+  const data = await request.json();
+}
+
+function SomeComponent() {
+  const fetcher = useFetcher();
+
+  const onClick = () =>
+    fetcher.submit(
+      { some: "values" },
+      { method: "post", json: true }
+    );
+
+  // ...
+}
+```
+
 #### `fetcher.load()`
 
 Loads data from a route loader.

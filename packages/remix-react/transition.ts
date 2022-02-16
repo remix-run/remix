@@ -100,7 +100,7 @@ export interface TransitionManagerInit {
 export interface Submission {
   action: string;
   method: string;
-  formData: FormData;
+  formData: FormData | string;
   encType: string;
   key: string;
 }

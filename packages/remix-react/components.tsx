@@ -1011,7 +1011,23 @@ export interface SubmitOptions {
    * to `false`.
    */
   replace?: boolean;
+
+  /**
+   * Set `true` to specify that target is a JSON object or JSON string.
+   * Defaults to `false`.
+   */
+  json?: boolean;
 }
+
+/**
+ * Type a valid JSON value.
+ */
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | { [x: string]: JSONValue }
+  | Array<JSONValue>;
 
 /**
  * Submits a HTML `<form>` to the server without reloading the page.
@@ -1033,6 +1049,7 @@ export interface SubmitFunction {
       | FormData
       | URLSearchParams
       | { [name: string]: string }
+      | JSONValue
       | null,
 
     /**
@@ -1063,9 +1080,17 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let method: string;
       let action: string;
       let encType: string;
-      let formData: FormData;
+      let formData: FormData | string;
 
-      if (isFormElement(target)) {
+      if (options.json) {
+        if (target === null) {
+          throw new Error("`target` must be specified when submitting JSON");
+        }
+        formData = typeof target === "string" ? target : JSON.stringify(target);
+        method = options.method ?? "post";
+        action = options.action ?? "";
+        encType = "application/json";
+      } else if (isFormElement(target)) {
         let submissionTrigger: HTMLButtonElement | HTMLInputElement = (
           options as any
         ).submissionTrigger;
@@ -1125,8 +1150,12 @@ export function useSubmitImpl(key?: string): SubmitFunction {
               formData.append(name, value);
             }
           } else if (target != null) {
+            // target is { [name: string]: string }
             for (let name of Object.keys(target)) {
-              formData.append(name, target[name]);
+              formData.append(
+                name,
+                (target as { [name: string]: string })[name]
+              );
             }
           }
         }
@@ -1142,7 +1171,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let { protocol, host } = window.location;
       let url = new URL(action, `${protocol}//${host}`);
 
-      if (method.toLowerCase() === "get") {
+      if (formData instanceof FormData && method.toLowerCase() === "get") {
         for (let [name, value] of formData) {
           if (typeof value === "string") {
             url.searchParams.append(name, value);

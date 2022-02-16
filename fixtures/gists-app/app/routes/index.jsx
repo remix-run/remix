@@ -66,6 +66,9 @@ export default function Index() {
             <Link to="/fetchers">Fetchers</Link>
           </li>
           <li>
+            <Link to="/fetchers-json">Fetchers JSON support</Link>
+          </li>
+          <li>
             <Link to="/loader-errors?throw">
               Loader error with no ErrorBoundary
             </Link>

@@ -242,4 +242,27 @@ describe("action", () => {
       "
     `);
   });
+
+  it.only("handles fetcher.submit with JSON payload", async () => {
+    const data = {
+      title: "Remix",
+      isActive: true,
+      count: 123,
+      list: ["a", "b", "c"],
+      nested: { message: "hello world" }
+    };
+
+    await page.goto(`${testServer}/fetchers-json`);
+    await Utils.reactIsHydrated(page);
+    let [response] = await Promise.all([
+      page.waitForResponse(
+        `${testServer}/fetchers-json?_data=routes%2Ffetchers-json`
+      ),
+      page.click("button")
+    ]);
+
+    expect(response!.status()).toBe(200);
+    const json = await response!.text();
+    expect(json).toBe(JSON.stringify(data));
+  });
 });
