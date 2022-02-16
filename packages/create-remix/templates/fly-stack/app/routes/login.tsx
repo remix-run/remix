@@ -1,80 +1,153 @@
-import { Form, Link, redirect, useSearchParams } from "remix";
+import * as React from "react";
 import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
+import {
+  Form,
+  json,
+  Link,
+  useActionData,
+  redirect,
+  useSearchParams
+} from "remix";
+import Alert from "@reach/alert";
 
 import { createUserSession, getUserId } from "~/session.server";
-
 import { verifyLogin } from "~/models/user.server";
-import invariant from "tiny-invariant";
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
   if (userId) return redirect("/");
   return {};
 };
 
-const action: ActionFunction = async ({ request }) => {
+interface ActionData {
+  errors?: {
+    email?: string;
+    password?: string;
+  };
+}
+
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const email = formData.get("email");
   const password = formData.get("password");
+  const returnTo = formData.get("returnTo");
 
-  invariant(typeof email === "string", "email must be a string");
-  invariant(typeof password === "string", "password must be a string");
+  if (typeof email !== "string" || email.length === 0) {
+    return json<ActionData>(
+      { errors: { email: "Email is required" } },
+      { status: 400 }
+    );
+  }
+
+  if (typeof password !== "string" || password.length === 0) {
+    return json<ActionData>(
+      { errors: { password: "Password is required" } },
+      { status: 400 }
+    );
+  }
 
   const user = await verifyLogin(email, password);
 
   if (!user) {
-    return redirect("/login");
+    return json<ActionData>(
+      { errors: { email: "Invalid email or password" } },
+      { status: 400 }
+    );
   }
 
-  return createUserSession(request, user.id, "/");
+  return createUserSession(
+    request,
+    user.id,
+    typeof returnTo === "string" ? returnTo : "/"
+  );
 };
 
-const meta: MetaFunction = () => ({
-  title: "Login"
-});
+export const meta: MetaFunction = () => {
+  return {
+    title: "Login"
+  };
+};
 
-function LoginPage() {
+export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("redirectTo") ?? undefined;
+  const actionData = useActionData<ActionData>();
+  const emailRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (actionData?.errors?.email) {
+      emailRef.current?.focus();
+    } else if (actionData?.errors?.password) {
+      passwordRef.current?.focus();
+    }
+  }, [actionData]);
 
   return (
-    <div>
-      <div>
-        <h2>Sign in to your account</h2>
-      </div>
-
-      <Form method="post">
+    <>
+      <h1>Sign in to your account</h1>
+      <Form
+        method="post"
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         <input type="hidden" name="redirectTo" value={returnTo} />
-        <label>
-          <span>Email address</span>
-          <input name="email" type="email" autoComplete="email" />
-        </label>
+        <div>
+          <label>
+            <span>Email address</span>
+            <input
+              ref={emailRef}
+              name="email"
+              type="email"
+              autoComplete="email"
+              aria-invalid={actionData?.errors?.email ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.email ? "email-error" : undefined
+              }
+            />
+          </label>
+          {actionData?.errors?.email && (
+            <Alert style={{ color: "red", paddingTop: 4 }} id="email-error">
+              {actionData.errors.email}
+            </Alert>
+          )}
+        </div>
 
-        <label>
-          <span>Password</span>
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-          />
-        </label>
-
-        <button type="submit">Sign in</button>
+        <div>
+          <label>
+            <span>Password</span>
+            <input
+              ref={passwordRef}
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              aria-invalid={actionData?.errors?.password ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.password ? "password-error" : undefined
+              }
+            />
+          </label>
+          {actionData?.errors?.password && (
+            <Alert style={{ color: "red", paddingTop: 4 }} id="password-error">
+              {actionData.errors.password}
+            </Alert>
+          )}
+        </div>
+        <div>
+          <button type="submit">Sign in</button>
+        </div>
       </Form>
 
-      <p>
+      <div style={{ paddingTop: 8 }}>
+        Don't have an account?{" "}
         <Link
           to={{
             pathname: "/join",
             search: returnTo ? `?returnTo=${returnTo}` : undefined
           }}
         >
-          Don't have an account?
+          Sign up
         </Link>
-      </p>
-    </div>
+      </div>
+    </>
   );
 }
-
-export default LoginPage;
-export { action, loader, meta };

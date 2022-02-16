@@ -1,6 +1,7 @@
 import * as path from "path";
 import { execSync } from "child_process";
 import fse from "fs-extra";
+import sortPackageJSON from "sort-package-json";
 
 import cliPkgJson from "./package.json";
 
@@ -131,6 +132,8 @@ async function createApp({
       }
     }
   });
+
+  appPkg = sortPackageJSON(appPkg);
 
   // write package.json
   await fse.writeFile(
