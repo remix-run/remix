@@ -21,7 +21,8 @@
     "fs-extra": "^10.0.0",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",
-    "semver": "^7.3.5"
+    "semver": "^7.3.5",
+    "sort-package-json": "^1.54.0"
   },
   "devDependencies": {
     "@types/chalk-animation": "^1.6.0",
