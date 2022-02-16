@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/eslint-config",
   "description": "ESLint configuration for Remix projects",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "repository": "https://github.com/remix-run/packages",
   "main": "index.js",
   "license": "MIT",
