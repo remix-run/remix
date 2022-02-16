@@ -617,7 +617,7 @@ export default function Admin() {
 }
 ```
 
-You should recognize a lot of that code from the posts route. We set up some extra HTML structure cause we're going to style this real quick.
+You should recognize a lot of that code from the posts route. We set up some extra HTML structure because we're going to style this real quick.
 
 💿 Create an admin stylesheet
 
