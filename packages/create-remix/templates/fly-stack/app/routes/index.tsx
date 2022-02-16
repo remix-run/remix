@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Form,
   json,
@@ -86,6 +87,16 @@ export default function Index() {
   const location = useLocation();
   const data = useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (actionData?.errors?.title) {
+      titleRef.current?.focus();
+    } else if (actionData?.errors?.body) {
+      bodyRef.current?.focus();
+    }
+  }, [actionData]);
 
   return (
     <div>
@@ -109,6 +120,7 @@ export default function Index() {
           <label>
             <span style={{ display: "block" }}>Title: </span>
             <input
+              ref={titleRef}
               name="title"
               style={{ marginTop: 4 }}
               aria-invalid={actionData?.errors?.title ? true : undefined}
@@ -127,6 +139,7 @@ export default function Index() {
           <label>
             <span style={{ display: "block" }}>Body: </span>
             <textarea
+              ref={bodyRef}
               name="body"
               rows={8}
               style={{ marginTop: 4 }}

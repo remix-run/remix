@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
 import {
   Form,
@@ -72,6 +73,16 @@ export default function JoinPage() {
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("redirectTo") ?? undefined;
   const actionData = useActionData<ActionData>();
+  const emailRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (actionData?.errors?.email) {
+      emailRef.current?.focus();
+    } else if (actionData?.errors?.password) {
+      passwordRef.current?.focus();
+    }
+  }, [actionData]);
 
   return (
     <>
@@ -85,6 +96,7 @@ export default function JoinPage() {
           <label>
             <span>Email address</span>
             <input
+              ref={emailRef}
               name="email"
               type="email"
               autoComplete="email"
@@ -105,6 +117,7 @@ export default function JoinPage() {
           <label>
             <span>Password</span>
             <input
+              ref={passwordRef}
               name="password"
               type="password"
               autoComplete="new-password"
