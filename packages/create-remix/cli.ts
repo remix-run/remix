@@ -82,6 +82,9 @@ async function run() {
       name: "appType",
       type: "list",
       message: "What type of app do you want to create?",
+      when() {
+        return path.basename(projectDir).endsWith("-stack");
+      },
       choices: [
         {
           name: "A pre-configured stack ready for production",
@@ -113,7 +116,7 @@ async function run() {
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
       when(answers) {
-        return answers.appType === appType.basic;
+        return answers.appType !== appType.stack;
       },
       choices: [
         { name: "Remix App Server", value: "remix" },
@@ -132,7 +135,7 @@ async function run() {
       type: "list",
       message: "TypeScript or JavaScript?",
       when(answers) {
-        return answers.appType === appType.basic;
+        return answers.appType !== appType.stack;
       },
       choices: [
         { name: "TypeScript", value: "ts" },
