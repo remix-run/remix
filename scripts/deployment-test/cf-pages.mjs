@@ -6,6 +6,7 @@ import fetch from "node-fetch";
 
 import { addCypress, runCypress, sha, getSpawnOpts } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
+import { checkUp } from "./_shared.mjs";
 
 let APP_NAME = `remix-cf-pages-${sha}`;
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
@@ -150,11 +151,15 @@ try {
     "we'll sleep for 5 minutes to give it time to build"
   );
 
-  // sleep for 5 minutes to be safe...
-  await new Promise(resolve => setTimeout(resolve, 60_000 * 5));
+  // builds typically take between 2 and 3 minutes
+  await new Promise(resolve => setTimeout(resolve, 60_000 * 3));
+
+  let appUrl = new URL(`https://${APP_NAME}.pages.dev`);
+
+  await checkUp(appUrl.origin);
 
   // run cypress against the cloudflare pages server
-  runCypress(PROJECT_DIR, false, `https://${APP_NAME}.pages.dev`);
+  runCypress(PROJECT_DIR, false, appUrl.toString());
 
   process.exit(0);
 } catch (error) {

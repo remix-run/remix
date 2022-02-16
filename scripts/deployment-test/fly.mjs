@@ -5,6 +5,7 @@ import toml from "@iarna/toml";
 
 import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
+import { checkUp } from "./_shared.mjs";
 
 let APP_NAME = `remix-fly-${sha}`;
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
@@ -69,8 +70,8 @@ try {
   flyToml.services[0].internal_port = "8080";
 
   await fse.writeFile(flyTomlPath, toml.stringify(flyToml));
-  let flyUrl = `https://${flyToml.app}.fly.dev`;
-  console.log(`Fly app url: ${flyUrl}`);
+  let flyUrl = new URL(`https://${flyToml.app}.fly.dev`);
+  console.log(`Fly app url: ${flyUrl.toString()}`);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -92,10 +93,10 @@ try {
   // ... or a minute...
   // ... or a few minutes...
   console.log(`Fly app deployed, waiting for dns...`);
-  await new Promise(resolve => setTimeout(() => resolve(), 60_000 * 5));
+  await checkUp(flyUrl.origin);
 
   // run cypress against the deployed server
-  runCypress(PROJECT_DIR, false, flyUrl);
+  runCypress(PROJECT_DIR, false, flyUrl.toString());
 
   process.exit(0);
 } catch (error) {

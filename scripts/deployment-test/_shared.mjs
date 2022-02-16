@@ -1,3 +1,4 @@
+import dns from "dns/promises";
 import path from "path";
 import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
@@ -68,11 +69,32 @@ function runCypress(dir, dev, url) {
   }
 }
 
+export async function checkUp(url) {
+  let retriesLeft = 10;
+  function check() {
+    try {
+      await dns.lookup(url);
+      clearInterval(checker);
+    } catch (error) {
+      retriesLeft -= 1;
+      if (retriesLeft === 0) {
+        throw new Error(`Could not connect to ${url}`);
+      }
+
+      console.log(`${url} is down, trying again, ${retriesLeft} retries left`);
+      return false;
+    }
+  }
+
+  let checker = setInterval(check, 60_000);
+}
+
 export {
   sha,
   updatePackageConfig,
   getSpawnOpts,
   runCypress,
   addCypress,
-  getRootPackageJson
+  getRootPackageJson,
+  checkUp
 };
