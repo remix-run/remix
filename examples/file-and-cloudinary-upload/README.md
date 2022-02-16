@@ -21,7 +21,6 @@ the relevent files are:
 - get the cloudname, api key and api secret from dashboard
 - copy the .env.sample to .env and populate the credentials
 
-
 Open this example on [CodeSandbox](https://codesandbox.com):
 
 [![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/file-and-cloudinary-upload)

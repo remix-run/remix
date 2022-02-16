@@ -14,7 +14,7 @@ type ActionData = {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  let uploadHandler: UploadHandler = async ({ name, stream }) => {
+  const uploadHandler: UploadHandler = async ({ name, stream }) => {
     if (name !== "img") {
       stream.resume();
       return;
