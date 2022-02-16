@@ -12,4 +12,11 @@ to first discuss any significant new features.
 
 https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md
 
+Please fill in or delete each item below:
+
 -->
+
+Closes: #
+
+- [ ] Docs
+- [ ] Tests
