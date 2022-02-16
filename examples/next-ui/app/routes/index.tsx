@@ -1,4 +1,5 @@
 import { Text, Container, css } from "@nextui-org/react";
+import { Link } from "remix";
 export default function Index() {
   return (
     <Container
@@ -10,21 +11,21 @@ export default function Index() {
         fontFamily: "system-ui, sans-serif",
         padding: "$2 $4",
         lineHeight: "1.4",
-        '@xs': {
-          bg: '$blue800',
-          color: '$blue100',
+        "@xs": {
+          bg: "$blue800",
+          color: "$blue100"
         },
-        '@sm': {
-          bg: '$yellow800',
-          color: '$yellow100',
+        "@sm": {
+          bg: "$yellow800",
+          color: "$yellow100"
         },
-        '@md': {
-          bg: '$purple800',
-          color: '$purple100',
+        "@md": {
+          bg: "$purple800",
+          color: "$purple100"
         },
-        '@lg': {
-          bg: '$pink800'
-        },
+        "@lg": {
+          bg: "$pink800"
+        }
       }}
     >
       <Text
@@ -33,11 +34,11 @@ export default function Index() {
         css={{
           textAlign: "center",
           "@dark": {
-            color: "$red400",
+            color: "$red400"
           },
           "@light": {
-            color: "$green600",
-          },
+            color: "$green600"
+          }
         }}
       >
         Remix X NextUI
@@ -47,22 +48,23 @@ export default function Index() {
         weight="bold"
         css={{
           textAlign: "center",
-          '@xs': {
-            color: '$blue100',
+          "@xs": {
+            color: "$blue100"
           },
-          '@sm': {
-            color: '$yellow100',
+          "@sm": {
+            color: "$yellow100"
           },
-          '@md': {
-            color: '$purple100',
+          "@md": {
+            color: "$purple100"
           },
-          '@lg': {
-            bg: '$pink800'
-          },
+          "@lg": {
+            bg: "$pink800"
+          }
         }}
       >
         Resize the screen
       </Text>
+      <Link to="/error">Test Error Boundary</Link>
     </Container>
   );
 }
