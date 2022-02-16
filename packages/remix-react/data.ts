@@ -77,7 +77,7 @@ function getActionInit(
 
   if (encType === "application/x-www-form-urlencoded") {
     body = new URLSearchParams();
-    for (let [key, value] of formData) {
+    for (let [key, value] of formData as FormData) {
       invariant(
         typeof value === "string",
         `File inputs are not supported with encType "application/x-www-form-urlencoded", please use "multipart/form-data" instead.`

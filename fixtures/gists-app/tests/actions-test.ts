@@ -243,7 +243,7 @@ describe("action", () => {
     `);
   });
 
-  it.only("handles fetcher.submit with JSON payload", async () => {
+  it("handles fetcher.submit with JSON payload", async () => {
     const data = {
       title: "Remix",
       isActive: true,
