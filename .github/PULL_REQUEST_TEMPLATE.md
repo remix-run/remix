@@ -2,6 +2,8 @@
 
 👋 Hey, thanks for your interest in contributing to Remix!
 
+If this is a simple docs change, go ahead and delete all this.
+
 **Please ask first before starting work on any significant new features.**
 
 It's never a fun experience to have your pull request declined after investing a
