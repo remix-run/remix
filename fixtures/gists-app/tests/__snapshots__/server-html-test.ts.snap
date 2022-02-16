@@ -1,0 +1,69 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`the server HTML for the root URL is correct 1`] = `
+"<div data-test-id=\\"content\\" id=\\"content\\">
+  <div data-test-id=\\"/\\">
+    <header><h1>Cool Gists App</h1></header>
+    <nav>
+      <ul>
+        <li><a href=\\"/links\\">Link preloads and stuff</a></li>
+        <li><a href=\\"/gists\\">View Some gists</a></li>
+        <li><a href=\\"/gists/mjackson\\">View Michael's gists</a></li>
+        <li><a href=\\"/gists/mjijackson\\">Loader Redirect</a></li>
+        <li><a href=\\"/fart\\">Broken link</a></li>
+        <li><a href=\\"/methods\\">Forms</a></li>
+        <li><a href=\\"/actions\\">Actions</a></li>
+        <li><a href=\\"/fetchers\\">Fetchers</a></li>
+        <li>
+          <a href=\\"/loader-errors?throw\\">Loader error with no ErrorBoundary</a>
+        </li>
+        <li>
+          <a href=\\"/loader-errors?catch\\"
+            >Loader throws Response with no CatchBoundary</a
+          >
+        </li>
+        <li>
+          <a href=\\"/loader-errors/nested\\"
+            >Loader error in nested route with ErrorBoundary</a
+          >
+        </li>
+        <li>
+          <a href=\\"/loader-errors/nested-catch\\"
+            >Loader error in nested route with CatchBoundary</a
+          >
+        </li>
+        <li>
+          <a href=\\"/render-errors?throw\\">Render error with no ErrorBoundary</a>
+        </li>
+        <li>
+          <a href=\\"/render-errors/nested\\"
+            >Render error in nested route with ErrorBoundary</a
+          >
+        </li>
+        <li><a href=\\"/multiple-set-cookies\\">Multiple Set Cookie Headers</a></li>
+        <li><a href=\\"/prefs\\">Preferences</a></li>
+        <li><a href=\\"/catchall/flat\\">Catchall flat</a></li>
+        <li><a href=\\"/catchall/flat/sub\\">Catchall flat subroute</a></li>
+        <li>
+          <a href=\\"/catchall-nested\\"
+            >Catchall with layout index takes precedence</a
+          >
+        </li>
+        <li><a href=\\"/catchall-nested/sub\\">Catchall with layout splat</a></li>
+        <li>
+          <a href=\\"/catchall-nested-no-layout\\">Catchall without layout</a>
+        </li>
+        <li>
+          <a href=\\"/catchall-nested-no-layout/sub\\"
+            >Catchall without layout splat</a
+          >
+        </li>
+        <li><a href=\\"/with-layout\\">Route with _layout</a></li>
+        <li><a href=\\"/resources\\">Resource routes</a></li>
+      </ul>
+    </nav>
+    <div><p>Shared</p></div>
+  </div>
+</div>
+"
+`;

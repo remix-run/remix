@@ -1,0 +1,6 @@
+{
+  "hardReloadOnChange": true,
+  "container": {
+    "port": 3000
+  }
+}

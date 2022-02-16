@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`loader results when a loader returns not found sends a not found page 1`] = `
+"<div data-test-id=\\"content\\" id=\\"content\\">
+  <div data-test-id=\\"/gists\\">
+    <header>
+      <h1>Gists</h1>
+      <ul>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists/ryanflorence\\"
+            >Ryan Florence<!-- -->
+          </a>
+        </li>
+        <li>
+          <a class=\\"text-blue-700 underline\\" href=\\"/gists/mjackson\\"
+            >Michael Jackson<!-- -->
+          </a>
+        </li>
+      </ul>
+    </header>
+    <div data-test-id=\\"/gists/$username\\">
+      <h2>
+        No gists for
+        <!-- -->_why
+      </h2>
+    </div>
+    <div><p>Shared</p></div>
+  </div>
+</div>
+"
+`;

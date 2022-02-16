@@ -1,0 +1,45 @@
+name: release
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: echo "::set-output name=version::$(cat .nvmrc)"
+        id: nvmrc
+
+      - name: Setup node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "${{ steps.nvmrc.outputs.version }}"
+
+      - run: echo "::set-output name=dir::$(yarn cache dir)"
+        id: yarn-cache
+
+      - name: Restore dependency cache
+        uses: actions/cache@v2
+        with:
+          path: "${{ steps.yarn-cache.outputs.dir }}"
+          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-cache-
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Setup npm auth
+        run: |
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish
+        run: npm run publish

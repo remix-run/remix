@@ -1,0 +1,47 @@
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  position: absolute;
+  right: 0;
+  animation: spin 1s infinite linear;
+}
+
+button {
+  position: relative;
+  padding-bottom: 0.4rem;
+  width: 10rem;
+  font-size: 80%;
+  background: #f0f0f0 !important;
+  color: black;
+}
+
+button:active {
+  background: #eee;
+}
+
+button[data-status="error"] {
+  color: red;
+}
+
+button[data-status="complete"] {
+  color: green;
+}
+
+button[data-status="incomplete"] {
+  color: blue;
+}
+
+button:hover {
+  background: #ddd;
+}
+
+progress {
+  position: absolute;
+  top: 1.4rem;
+  left: 0;
+  width: 100%;
+}

@@ -1,0 +1,47 @@
+{
+  "private": true,
+  "name": "gists-app",
+  "version": "1.0.0",
+  "scripts": {
+    "install_remix": "node scripts/install_remix.js && node node_modules/@remix-run/dev/cli.js setup",
+    "prebuild": "yarn run install_remix",
+    "build": "node node_modules/@remix-run/dev/cli.js build",
+    "predev": "yarn run install_remix",
+    "dev": "pm2-dev pm2.config.js",
+    "prestart": "yarn run install_remix",
+    "start": "node server.js",
+    "preroutes": "yarn run install_remix",
+    "routes": "node node_modules/@remix-run/dev/cli.js routes"
+  },
+  "dependencies": {
+    "@exampledev/new.css": "^1.1.3",
+    "@mdx-js/react": "^1.6.22",
+    "abort-controller": "^3.0.0",
+    "autoprefixer": "^10.2.4",
+    "compression": "^1.7.4",
+    "cssnano": "^4.1.10",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0",
+    "postcss-nested": "^5.0.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router-dom": "^6.2.1"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "autoprefixer": "^10.2.4",
+    "cssnano": "^4.1.10",
+    "fs-extra": "^10.0.0",
+    "pm2": "^4.5.1",
+    "postcss": "^8.2.6",
+    "postcss-cli": "^8.3.1",
+    "rehype-highlight": "^5.0.0",
+    "remark-toc": "^8.0.0",
+    "tailwindcss": "^2.0.3"
+  },
+  "browserslist": [
+    "last 4 version"
+  ],
+  "sideEffects": false
+}

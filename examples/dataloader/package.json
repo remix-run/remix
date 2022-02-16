@@ -1,0 +1,36 @@
+{
+  "private": true,
+  "name": "remix-app-template",
+  "description": "",
+  "license": "",
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix watch",
+    "postinstall": "remix setup node",
+    "start": "cross-env NODE_ENV=production node -r esbuild-register server/index.ts",
+    "start:dev": "cross-env NODE_ENV=development node -r esbuild-register server/index.ts"
+  },
+  "dependencies": {
+    "@remix-run/express": "^1.1.1",
+    "@remix-run/react": "^1.1.1",
+    "compression": "^1.7.4",
+    "cross-env": "^7.0.3",
+    "dataloader": "^2.0.0",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "^1.1.1"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^1.1.1",
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "esbuild-register": "^3.3.2",
+    "typescript": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": false
+}

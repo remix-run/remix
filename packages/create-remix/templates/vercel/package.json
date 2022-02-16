@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "postinstall": "remix setup node",
+    "build": "remix build",
+    "dev": "remix dev"
+  },
+  "dependencies": {
+    "@remix-run/serve": "*",
+    "@remix-run/vercel": "*"
+  }
+}

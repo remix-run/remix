@@ -1,0 +1,18 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/create-remix" },
+    { "path": "packages/remix" },
+    { "path": "packages/remix-architect" },
+    { "path": "packages/remix-cloudflare-pages" },
+    { "path": "packages/remix-cloudflare-workers" },
+    { "path": "packages/remix-dev" },
+    { "path": "packages/remix-express" },
+    { "path": "packages/remix-netlify" },
+    { "path": "packages/remix-node" },
+    { "path": "packages/remix-react" },
+    { "path": "packages/remix-serve" },
+    { "path": "packages/remix-server-runtime" },
+    { "path": "packages/remix-vercel" }
+  ]
+}

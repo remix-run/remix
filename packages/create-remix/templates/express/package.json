@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "postinstall": "remix setup node",
+    "dev": "remix watch",
+    "start": "cross-env NODE_ENV=production node server/index.js",
+    "start:dev": "cross-env NODE_ENV=development node server/index.js"
+  },
+  "dependencies": {
+    "@remix-run/express": "*",
+    "compression": "^1.7.4",
+    "cross-env": "^7.0.3",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0"
+  }
+}

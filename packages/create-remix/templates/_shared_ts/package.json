@@ -1,0 +1,26 @@
+{
+  "private": true,
+  "name": "remix-app-template",
+  "description": "",
+  "license": "",
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix watch"
+  },
+  "dependencies": {
+    "@remix-run/react": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "*"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "*",
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "typescript": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": false
+}

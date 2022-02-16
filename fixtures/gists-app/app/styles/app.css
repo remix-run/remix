@@ -1,0 +1,38 @@
+/* purgecss start ignore */
+/* @tailwind base; */
+/* @tailwind components; */
+/* purgecss end ignore */
+
+/* @tailwind utilities; */
+/* @tailwind screens; */
+
+@font-face {
+  font-family: system;
+  font-style: normal;
+  font-weight: 300;
+  src: local(".SFNSText"), local(".HelveticaNeueDeskInterface-Light"),
+    local(".LucidaGrandeUI"), local("Ubuntu Light"), local("Segoe UI Light"),
+    local("Roboto-Light"), local("DroidSans"), local("Tahoma");
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.breadcrumbs {
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumbs li:after {
+  content: " >";
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+}
+
+.breadcrumbs li:last-child:after {
+  content: "";
+  display: none;
+}

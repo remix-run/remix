@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "postinstall": "remix setup node",
+    "build": "remix build",
+    "dev": "remix dev",
+    "deploy": "fly deploy --remote-only",
+    "start": "remix-serve build"
+  },
+  "dependencies": {
+    "@remix-run/serve": "*"
+  }
+}
