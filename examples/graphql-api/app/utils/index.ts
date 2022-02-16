@@ -7,13 +7,10 @@ import { GRAPHQL_API } from "~/config";
  * Check out the link above for more information.
  */
  export const fetchFromGraphQL = async (
-    operation: 'mutation' | 'query',
-    payload: any,
-    variables?: any
+    query: string,
+    variables?: Record<string, any>
   ) => {
-    const body = {
-      [operation]: payload
-    };
+    const body: any = { query };
 
     if (variables) body.variables = variables;
 
@@ -22,6 +19,6 @@ import { GRAPHQL_API } from "~/config";
       headers: {
         'Content-Type': 'application/json'
       },
-      method: 'post',
+      method: 'POST',
     });
   };

@@ -36,7 +36,7 @@ export const loader: LoaderFunction = async (args) => {
       }
     `;
 
-  const res = await fetchFromGraphQL('query', getCharacterQuery, { id: params.id });
+  const res = await fetchFromGraphQL(getCharacterQuery, { id: params.id });
   return res.json()
 }
 

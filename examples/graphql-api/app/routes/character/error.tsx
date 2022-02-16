@@ -36,7 +36,7 @@ export const loader: LoaderFunction = async (_args) => {
   // ⚠️ Force an error using an invalid ID
   const invalidId = 8675309;
 
-  const res = await fetchFromGraphQL('query', getCharacterQuery, { id: invalidId });
+  const res = await fetchFromGraphQL(getCharacterQuery, { id: invalidId });
   return res.json()
 }
 
