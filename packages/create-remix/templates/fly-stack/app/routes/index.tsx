@@ -53,16 +53,16 @@ export const action: ActionFunction = async ({ request }) => {
       const title = formData.get("title");
       const body = formData.get("body");
 
-      if (typeof title !== "string") {
-        return json(
-          { errors: { title: "title must be a string" } },
+      if (typeof title !== "string" || title.length === 0) {
+        return json<ActionData>(
+          { errors: { title: "Title is required" } },
           { status: 400 }
         );
       }
 
-      if (typeof body !== "string") {
-        return json(
-          { errors: { body: "body must be a string" } },
+      if (typeof body !== "string" || body.length === 0) {
+        return json<ActionData>(
+          { errors: { body: "Body is required" } },
           { status: 400 }
         );
       }
@@ -105,39 +105,43 @@ export default function Index() {
           gap: 8
         }}
       >
-        <label>
-          <span style={{ display: "block" }}>Title: </span>
-          <input
-            name="title"
-            style={{ marginTop: 4 }}
-            aria-invalid={actionData?.errors?.title ? true : undefined}
-            aria-errormessage={
-              actionData?.errors.title ? "title-error" : undefined
-            }
-          />
-          {actionData?.errors.title && (
+        <div>
+          <label>
+            <span style={{ display: "block" }}>Title: </span>
+            <input
+              name="title"
+              style={{ marginTop: 4 }}
+              aria-invalid={actionData?.errors?.title ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.title ? "title-error" : undefined
+              }
+            />
+          </label>
+          {actionData?.errors?.title && (
             <Alert style={{ color: "red" }} id="title=error">
               {actionData.errors.title}
             </Alert>
           )}
-        </label>
-        <label>
-          <span style={{ display: "block" }}>Body: </span>
-          <textarea
-            name="body"
-            rows={8}
-            style={{ marginTop: 4 }}
-            aria-invalid={actionData?.errors?.body ? true : undefined}
-            aria-errormessage={
-              actionData?.errors.body ? "body-error" : undefined
-            }
-          />
-          {actionData?.errors.title && (
-            <Alert style={{ color: "red" }} id="title=error">
-              {actionData.errors.title}
+        </div>
+        <div>
+          <label>
+            <span style={{ display: "block" }}>Body: </span>
+            <textarea
+              name="body"
+              rows={8}
+              style={{ marginTop: 4 }}
+              aria-invalid={actionData?.errors?.body ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.body ? "body-error" : undefined
+              }
+            />
+          </label>
+          {actionData?.errors?.body && (
+            <Alert style={{ color: "red" }} id="body=error">
+              {actionData.errors.body}
             </Alert>
           )}
-        </label>
+        </div>
         <div>
           <button name="_action" value="create-note" type="submit">
             Save

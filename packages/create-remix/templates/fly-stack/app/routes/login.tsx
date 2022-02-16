@@ -80,41 +80,45 @@ export default function LoginPage() {
         style={{ display: "flex", flexDirection: "column", gap: 8 }}
       >
         <input type="hidden" name="redirectTo" value={returnTo} />
-        <label>
-          <span>Email address</span>
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            aria-invalid={actionData?.errors?.email ? true : undefined}
-            aria-errormessage={
-              actionData?.errors.email ? "email-error" : undefined
-            }
-          />
+        <div>
+          <label>
+            <span>Email address</span>
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              aria-invalid={actionData?.errors?.email ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.email ? "email-error" : undefined
+              }
+            />
+          </label>
           {actionData?.errors?.email && (
             <Alert style={{ color: "red", paddingTop: 4 }} id="email-error">
               {actionData.errors.email}
             </Alert>
           )}
-        </label>
+        </div>
 
-        <label>
-          <span>Password</span>
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            aria-invalid={actionData?.errors?.password ? true : undefined}
-            aria-errormessage={
-              actionData?.errors.password ? "password-error" : undefined
-            }
-          />
+        <div>
+          <label>
+            <span>Password</span>
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              aria-invalid={actionData?.errors?.password ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.password ? "password-error" : undefined
+              }
+            />
+          </label>
           {actionData?.errors?.password && (
             <Alert style={{ color: "red", paddingTop: 4 }} id="password-error">
               {actionData.errors.password}
             </Alert>
           )}
-        </label>
+        </div>
         <div>
           <button type="submit">Sign in</button>
         </div>
