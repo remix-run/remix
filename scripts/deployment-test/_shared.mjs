@@ -89,12 +89,17 @@ export async function checkUp(url) {
   let checker = setInterval(check, 60_000);
 }
 
+function getAppName(target) {
+  let unique = crypto.randomBytes(2).toString("hex");
+  return `remix-${target}-${sha}-${unique}`;
+}
+
 export {
-  sha,
   updatePackageConfig,
   getSpawnOpts,
   runCypress,
   addCypress,
   getRootPackageJson,
-  checkUp
+  checkUp,
+  getAppName
 };

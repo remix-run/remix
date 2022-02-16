@@ -4,11 +4,16 @@ import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 
-import { addCypress, runCypress, sha, getSpawnOpts } from "./_shared.mjs";
+import {
+  addCypress,
+  checkUp,
+  getAppName,
+  getSpawnOpts,
+  runCypress
+} from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
-import { checkUp } from "./_shared.mjs";
 
-let APP_NAME = `remix-cf-pages-${sha}`;
+let APP_NAME = getAppName("cf-pages");
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8788";
 

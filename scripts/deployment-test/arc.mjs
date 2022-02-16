@@ -6,15 +6,15 @@ import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
 
 import {
-  sha,
-  updatePackageConfig,
+  addCypress,
+  getAppName,
   getSpawnOpts,
   runCypress,
-  addCypress
+  updatePackageConfig
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-arc-${sha}`;
+let APP_NAME = getAppName("arc");
 let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
