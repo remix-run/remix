@@ -138,14 +138,14 @@ export default function LoginPage() {
       </Form>
 
       <div style={{ paddingTop: 8 }}>
-        Already have an account?{" "}
+        Don't have an account?{" "}
         <Link
           to={{
             pathname: "/join",
             search: returnTo ? `?returnTo=${returnTo}` : undefined
           }}
         >
-          Don't have an account?
+          Sign up
         </Link>
       </div>
     </>
