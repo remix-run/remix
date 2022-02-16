@@ -1,0 +1,80 @@
+body {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: radial-gradient(
+    circle at 0% 0%,
+    #acb86b 0,
+    #a1bb70 3.33%,
+    #96bd76 6.67%,
+    #8abf7d 10%,
+    #7dc186 13.33%,
+    #70c38f 16.67%,
+    #62c498 20%,
+    #54c5a3 23.33%,
+    #43c5ad 26.67%,
+    #31c6b7 30%,
+    #18c6c2 33.33%,
+    #00c5cc 36.67%,
+    #00c5d5 40%,
+    #00c4de 43.33%,
+    #00c3e6 46.67%,
+    #0cc1ed 50%,
+    #2ebff3 53.33%,
+    #46bdf7 56.67%,
+    #5bbafa 60%,
+    #6eb7fc 63.33%,
+    #80b4fc 66.67%,
+    #92b1fb 70%,
+    #a2adf9 73.33%,
+    #b1a9f4 76.67%,
+    #bfa5ef 80%,
+    #cba2e9 83.33%,
+    #d69ee1 86.67%,
+    #e09bd9 90%,
+    #e898cf 93.33%,
+    #ef96c6 96.67%,
+    #f495bc 100%
+  );
+}
+
+h1 {
+  color: rgb(254, 204, 27);
+  font-family: Arial black, sans-serif;
+}
+textarea {
+  resize: none;
+  padding: 2%;
+  width: 80%;
+  border-radius: 0.25rem;
+}
+
+textarea:focus {
+  outline: 0;
+}
+
+button {
+  padding: 0.5rem 2rem;
+  margin-bottom: 1em;
+  margin-top: 1em;
+  background: rgba(57, 146, 255, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: none;
+  color: white;
+  border-radius: 0.25rem;
+  font-weight: 900;
+  font-family: sans-serif;
+  width: 80%;
+}
+
+button:focus {
+  outline: 0;
+}
+
+button:active {
+  position: relative;
+  top: 2px;
+}

@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "license": "MIT",
@@ -16,11 +16,13 @@
     "create-remix": "cli.js"
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "chalk-animation": "^1.6.0",
     "fs-extra": "^10.0.0",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",
-    "semver": "^7.3.5"
+    "semver": "^7.3.5",
+    "sort-package-json": "^1.54.0"
   },
   "devDependencies": {
     "@types/chalk-animation": "^1.6.0",

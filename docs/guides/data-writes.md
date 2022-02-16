@@ -81,7 +81,7 @@ If you have more fields, the browser will add them:
 </form>
 ```
 
-Depending on which checkboxes the uses clicks, the browser will navigate to URLs like:
+Depending on which checkboxes the user clicks, the browser will navigate to URLs like:
 
 ```
 /search?brand=nike&color=black
@@ -110,7 +110,7 @@ The data is made available to the server's request handler so you can create the
 export async function action({ request }) {
   const body = await request.formData();
   const project = await createProject(body);
-  redirect(`/projects/${project.id}`);
+  return redirect(`/projects/${project.id}`);
 }
 ```
 
@@ -175,7 +175,7 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx [5-9]
+```tsx [5-11]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
@@ -206,12 +206,12 @@ We know, we know, you want to animate in nice validation errors and stuff. We'll
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-const [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(formData);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx [3,5-8]
+```tsx [5,7-10]
 export const action: ActionFunction = async ({
   request
 }) => {
@@ -219,7 +219,7 @@ export const action: ActionFunction = async ({
   const [errors, project] = await createProject(formData);
 
   if (errors) {
-    const values = Object.fromEntries(newProject);
+    const values = Object.fromEntries(formData);
     return { errors, values };
   }
 
@@ -229,7 +229,7 @@ export const action: ActionFunction = async ({
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx [1,8,18,23-27,35,40-44]
+```tsx [1,10,20,25-29,37,42-46]
 import { redirect, useActionData } from "remix";
 
 export const action: ActionFunction = async ({
@@ -429,7 +429,7 @@ function ValidationMessage({ error, isSubmitting }) {
 
 Now we can wrap our old error messages in this new fancy component, and even turn the borders of our fields red that have errors:
 
-```tsx [21-24, 31-34, 48-51, 57-60]
+```tsx [21-24, 31-34, 44-48, 53-56]
 export default function NewProject() {
   const transition = useTransition();
   const actionData = useActionData();
@@ -506,11 +506,11 @@ Boom! Fancy UI without having to change anything about how we communicate with t
 
 - First we built the project form without JavaScript in mind. A simple form, posting to a server-side action. Welcome to 1998.
 
-- Once that worked, we used JavaScript to submit the form by changing `<form>` to `<Form>`, but we didnt' have to do anything else!
+- Once that worked, we used JavaScript to submit the form by changing `<form>` to `<Form>`, but we didn't have to do anything else!
 
 - Now that there was a stateful page with React, we added loading indicators and animation for the validation errors by simply asking Remix for the state of the transition.
 
-From your components perspective, all that happend was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple state updates. This makes it really easy to dress up any user flow.
+From your components perspective, all that happened was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple state updates. This makes it really easy to dress up any user flow.
 
 ## See also
 

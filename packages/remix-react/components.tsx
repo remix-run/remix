@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Action, Location } from "history";
 import type {
   FocusEventHandler,
@@ -64,7 +66,7 @@ interface RemixEntryContextType {
   transitionManager: ReturnType<typeof createTransitionManager>;
 }
 
-const RemixEntryContext = React.createContext<
+export const RemixEntryContext = React.createContext<
   RemixEntryContextType | undefined
 >(undefined);
 
@@ -360,7 +362,7 @@ export function RemixRoute({ id }: { id: string }) {
 /**
  * Defines the prefetching behavior of the link:
  *
- * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
@@ -432,6 +434,11 @@ function usePrefetchBehavior(
   ];
 }
 
+/**
+ * A special kind of `<Link>` that knows whether or not it is "active".
+ *
+ * @see https://remix.run/api/remix#navlink
+ */
 export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
@@ -444,8 +451,8 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
         <RouterNavLink
           ref={forwardedRef}
           to={to}
-          {...prefetchHandlers}
           {...props}
+          {...prefetchHandlers}
         />
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
@@ -453,6 +460,12 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   }
 );
 
+/**
+ * This component renders an anchor tag and is the primary way the user will
+ * navigate around your website.
+ *
+ * @see https://remix.run/api/remix#link
+ */
 export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
@@ -465,8 +478,8 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
         <RouterLink
           ref={forwardedRef}
           to={to}
-          {...prefetchHandlers}
           {...props}
+          {...prefetchHandlers}
         />
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
@@ -490,6 +503,8 @@ export function composeEventHandlers<
 
 /**
  * Renders the `<link>` tags for the current routes.
+ *
+ * @see https://remix.run/api/remix#meta-links-scripts
  */
 export function Links() {
   let { matches, routeModules, manifest } = useRemixEntryContext();
@@ -512,6 +527,15 @@ export function Links() {
   );
 }
 
+/**
+ * This component renders all of the `<link rel="prefetch">` and
+ * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
+ * a given page.
+ *
+ * @param props
+ * @param props.page
+ * @see https://remix.run/api/remix#prefetchpagelinks-
+ */
 export function PrefetchPageLinks({
   page,
   ...dataLinkProps
@@ -605,6 +629,8 @@ function PrefetchPageLinksImpl({
 
 /**
  * Renders the `<title>` and `<meta>` tags for the current routes.
+ *
+ * @see https://remix.run/api/remix#meta-links-scripts
  */
 export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
@@ -682,6 +708,8 @@ type ScriptProps = Omit<
  * @param props Additional properties to add to each script tag that is rendered.
  * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
  * property if provided.
+ *
+ * @see https://remix.run/api/remix#meta-links-scripts
  */
 export function Scripts(props: ScriptProps) {
   let {
@@ -794,8 +822,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Normal `<form encType>`.
    *
-   * Note: Remix only supports `application/x-www-form-urlencoded` right now
-   * but will soon support `multipart/form-data` as well.
+   * Note: Remix defaults to `application/x-www-form-urlencoded` and also
+   * supports `multipart/form-data`.
    */
   encType?: FormEncType;
 
@@ -823,6 +851,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
  * interaction with the server is with `fetch` instead of new document
  * requests, allowing components to add nicer UX to the page as the form is
  * submitted and returns with data.
+ *
+ * @see https://remix.run/api/remix#form
  */
 export let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
   return <FormImpl {...props} ref={ref} />;
@@ -875,19 +905,23 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       if (!form) return;
 
       function handleClick(event: MouseEvent) {
-        if (!(event.target instanceof HTMLElement)) return;
+        if (!(event.target instanceof Element)) return;
         let submitButton = event.target.closest<
           HTMLButtonElement | HTMLInputElement
         >("button,input[type=submit]");
 
-        if (submitButton && submitButton.type === "submit") {
+        if (
+          submitButton &&
+          submitButton.form === form &&
+          submitButton.type === "submit"
+        ) {
           clickedButtonRef.current = submitButton;
         }
       }
 
-      form.addEventListener("click", handleClick);
+      window.addEventListener("click", handleClick);
       return () => {
-        form && form.removeEventListener("click", handleClick);
+        window.removeEventListener("click", handleClick);
       };
     }, []);
 
@@ -930,6 +964,8 @@ function isActionRequestMethod(method: string): boolean {
 
 /**
  * Resolves a `<form action>` path relative to the current route.
+ *
+ * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
   action = ".",
@@ -1010,6 +1046,8 @@ export interface SubmitFunction {
 /**
  * Returns a function that may be used to programmatically submit a form (or
  * some arbitrary data) to the server.
+ *
+ * @see https://remix.run/api/remix#usesubmit
  */
 export function useSubmit(): SubmitFunction {
   return useSubmitImpl();
@@ -1094,6 +1132,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
       }
 
+      if (typeof window === "undefined") {
+        throw new Error(
+          "You are calling submit during the server render. " +
+            "Try calling submit within a `useEffect` or callback instead."
+        );
+      }
+
       let { protocol, host } = window.location;
       let url = new URL(action, `${protocol}//${host}`);
 
@@ -1167,6 +1212,8 @@ function isInputElement(object: any): object is HTMLInputElement {
  *
  * Note: The `callback` argument should be a function created with
  * `React.useCallback()`.
+ *
+ * @see https://remix.run/api/remix#usebeforeunload
  */
 export function useBeforeUnload(callback: () => any): void {
   React.useEffect(() => {
@@ -1177,26 +1224,47 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
+/**
+ * Returns the current route matches on the page. This is useful for creating
+ * layout abstractions with your current routes.
+ *
+ * @see https://remix.run/api/remix#usematches
+ */
 export function useMatches() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
-  return matches.map(match => {
-    let { pathname, params } = match;
-    return {
-      pathname,
-      params,
-      data: routeData[match.route.id],
-      handle: routeModules[match.route.id].handle
-    };
-  });
+
+  return React.useMemo(
+    () =>
+      matches.map(match => {
+        let { pathname, params } = match;
+        return {
+          id: match.route.id,
+          pathname,
+          params,
+          data: routeData[match.route.id],
+          // if the module fails to load or an error/response is thrown, the module
+          // won't be defined.
+          handle: routeModules[match.route.id]?.handle
+        };
+      }),
+    [matches, routeData, routeModules]
+  );
 }
 
 /**
- * Returns the data from the current route's `loader`.
+ * Returns the JSON parsed data from the current route's `loader`.
+ *
+ * @see https://remix.run/api/remix#useloaderdata
  */
 export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
+/**
+ * Returns the JSON parsed data from the current route's `action`.
+ *
+ * @see https://remix.run/api/remix#useactiondata
+ */
 export function useActionData<T = AppData>(): T | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
@@ -1204,6 +1272,12 @@ export function useActionData<T = AppData>(): T | undefined {
   return actionData ? actionData[routeId] : undefined;
 }
 
+/**
+ * Returns everything you need to know about a page transition to build pending
+ * navigation indicators and optimistic UI on data mutations.
+ *
+ * @see https://remix.run/api/remix#usetransition
+ */
 export function useTransition(): Transition {
   let { transitionManager } = useRemixEntryContext();
   return transitionManager.getState().transition;
@@ -1227,6 +1301,8 @@ type FetcherWithComponents<TData> = Fetcher<TData> & {
 /**
  * Interacts with route loaders and actions without causing a navigation. Great
  * for any interaction that stays on the same page.
+ *
+ * @see https://remix.run/api/remix#usefetcher
  */
 export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   let { transitionManager } = useRemixEntryContext();
@@ -1263,6 +1339,8 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
 /**
  * Provides all fetchers currently on the page. Useful for layouts and parent
  * routes that need to provide pending/optimistic UI regarding the fetch.
+ *
+ * @see https://remix.run/api/remix#usefetchers
  */
 export function useFetchers(): Fetcher[] {
   let { transitionManager } = useRemixEntryContext();
@@ -1270,13 +1348,22 @@ export function useFetchers(): Fetcher[] {
   return [...fetchers.values()];
 }
 
-export function LiveReload({ port = 8002 }: { port?: number }) {
-  if (process.env.NODE_ENV !== "development") return null;
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          let ws = new WebSocket("ws://localhost:${port}/socket");
+// Dead Code Elimination magic for production builds.
+// This way devs don't have to worry about doing the NODE_ENV check themselves.
+export const LiveReload =
+  process.env.NODE_ENV !== "development"
+    ? () => null
+    : function LiveReload({
+        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002)
+      }: {
+        port?: number;
+      }) {
+        let setupLiveReload = ((port: number) => {
+          let protocol = location.protocol === "https:" ? "wss:" : "ws:";
+          let host = location.hostname;
+          let socketPath = `${protocol}//${host}:${port}/socket`;
+
+          let ws = new WebSocket(socketPath);
           ws.onmessage = message => {
             let event = JSON.parse(message.data);
             if (event.type === "LOG") {
@@ -1291,11 +1378,17 @@ export function LiveReload({ port = 8002 }: { port?: number }) {
             console.log("Remix dev asset server web socket error:");
             console.error(error);
           };
-      `
-      }}
-    />
-  );
-}
+        }).toString();
+
+        return (
+          <script
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{
+              __html: `(${setupLiveReload})(${JSON.stringify(port)})`
+            }}
+          />
+        );
+      };
 
 function useComposedRefs<RefValueType = any>(
   ...refs: Array<React.Ref<RefValueType> | null | undefined>
