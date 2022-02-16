@@ -11,27 +11,27 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async (_args) => {
   const getCharacterQuery = `
-      fragment CharacterFields on Character {
-        gender
-        id
-        image
+    fragment CharacterFields on Character {
+      gender
+      id
+      image
+      name
+      origin {
+        dimension
         name
-        origin {
-          dimension
-          name
-          type
-        }
-        species
-        status
         type
       }
+      species
+      status
+      type
+    }
 
-      query getCharacter($id: ID!) {
-        character(id: $id) {
-          ...CharacterFields
-        }
+    query getCharacter($id: ID!) {
+      character(id: $id) {
+        ...CharacterFields
       }
-    `;
+    }
+  `;
 
   // ⚠️ Force an error using an invalid ID
   const invalidId = 8675309;
