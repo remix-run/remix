@@ -107,7 +107,7 @@ export default function Login() {
         <h1>Login</h1>
         <Form
           method="post"
-          aria-describedby={
+          aria-errormessage={
             actionData?.formError ? "form-error-message" : undefined
           }
         >
@@ -148,7 +148,7 @@ export default function Login() {
               name="username"
               defaultValue={actionData?.fields?.username}
               aria-invalid={Boolean(actionData?.fieldErrors?.username)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username ? "username-error" : undefined
               }
             />
@@ -170,7 +170,7 @@ export default function Login() {
               defaultValue={actionData?.fields?.password}
               type="password"
               aria-invalid={Boolean(actionData?.fieldErrors?.password)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password ? "password-error" : undefined
               }
             />

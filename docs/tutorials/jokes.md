@@ -1281,7 +1281,7 @@ export default function JokesRoute() {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx
+```tsx filename=app/routes/index.tsx lines=[1,4,6-13]
 import type { LinksFunction } from "remix";
 import { Link } from "remix";
 
@@ -1750,7 +1750,7 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,5,7,9-16,19]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,5,7,9-18,21]
 import type { LoaderFunction } from "remix";
 import { Link, useLoaderData } from "remix";
 import type { Joke } from "@prisma/client";
@@ -1996,7 +1996,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -2062,7 +2062,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -2089,7 +2089,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -2632,7 +2632,7 @@ export default function Login() {
         <h1>Login</h1>
         <form
           method="post"
-          aria-describedby={
+          aria-errormessage={
             actionData?.formError
               ? "form-error-message"
               : undefined
@@ -2684,7 +2684,7 @@ export default function Login() {
               aria-invalid={Boolean(
                 actionData?.fieldErrors?.username
               )}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username
                   ? "username-error"
                   : undefined
@@ -2696,7 +2696,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -2712,7 +2712,7 @@ export default function Login() {
                   actionData?.fieldErrors?.password
                 ) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password
                   ? "password-error"
                   : undefined
@@ -2724,7 +2724,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -2734,7 +2734,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -2781,7 +2781,7 @@ Here's what we need in that file to get started:
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts
+```ts filename=app/utils/session.server.ts
 import bcrypt from "bcryptjs";
 
 import { db } from "./db.server";
@@ -2818,14 +2818,8 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[10,21-28] nocopy
-import type { ActionFunction, LinksFunction } from "remix";
-import {
-  useActionData,
-  json,
-  Link,
-  useSearchParams
-} from "remix";
+```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
+// ...
 
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
@@ -2898,7 +2892,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
+```ts filename=app/utils/session.server.ts lines=[3,30-33,35-48,50-61]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3024,7 +3018,7 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
+```ts filename=app/utils/session.server.ts lines=[50-52,54-59,61-74]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3074,7 +3068,7 @@ const storage = createCookieSessionStorage({
   }
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3144,7 +3138,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -3213,7 +3207,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -3240,7 +3234,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -3282,7 +3276,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[75-90,92-101]
+```ts filename=app/utils/session.server.ts lines=[76-91,93-100]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3332,7 +3326,7 @@ const storage = createCookieSessionStorage({
   }
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3376,9 +3370,7 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(
-    request.headers.get("Cookie")
-  );
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await storage.destroySession(session)
@@ -3408,7 +3400,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[6,19,31,35,57-68]
+```tsx filename=app/routes/jokes.tsx lines=[6,14,30,52-63]
 import type { User } from "@prisma/client";
 import type { LinksFunction, LoaderFunction } from "remix";
 import { Link, Outlet, useLoaderData } from "remix";
@@ -3616,7 +3608,7 @@ const storage = createCookieSessionStorage({
   }
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3660,9 +3652,7 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(
-    request.headers.get("Cookie")
-  );
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await storage.destroySession(session)
@@ -3814,7 +3804,7 @@ export default function Login() {
         <h1>Login</h1>
         <form
           method="post"
-          aria-describedby={
+          aria-errormessage={
             actionData?.formError
               ? "form-error-message"
               : undefined
@@ -3866,7 +3856,7 @@ export default function Login() {
               aria-invalid={Boolean(
                 actionData?.fieldErrors?.username
               )}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username
                   ? "username-error"
                   : undefined
@@ -3878,7 +3868,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -3894,7 +3884,7 @@ export default function Login() {
                   actionData?.fieldErrors?.password
                 ) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password
                   ? "password-error"
                   : undefined
@@ -3906,7 +3896,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -3916,7 +3906,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -4355,7 +4345,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[6-7,16-22,156-167]
+```tsx filename=app/routes/jokes/new.tsx lines=[6,16-24,156-167]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
@@ -4388,7 +4378,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -4457,7 +4447,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -4484,7 +4474,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -4568,7 +4558,7 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,7,12,31-58,68-77,82-104]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,7,12,31-61,71-80,89-95,103-109]
 import type { Joke } from "@prisma/client";
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
@@ -4604,28 +4594,31 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -4654,6 +4647,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -4691,7 +4691,7 @@ Now that people will get a proper error message if they try to delete a joke tha
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,17,20,23,34,76-87]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,17,23,34,79-90]
 import type { Joke } from "@prisma/client";
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
@@ -4735,28 +4735,31 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -4787,6 +4790,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5127,7 +5137,7 @@ export default function Login() {
         <h1>Login</h1>
         <form
           method="post"
-          aria-describedby={
+          aria-errormessage={
             actionData?.formError
               ? "form-error-message"
               : undefined
@@ -5179,7 +5189,7 @@ export default function Login() {
               aria-invalid={Boolean(
                 actionData?.fieldErrors?.username
               )}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username
                   ? "username-error"
                   : undefined
@@ -5191,7 +5201,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -5207,7 +5217,7 @@ export default function Login() {
                   actionData?.fieldErrors?.password
                 ) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password
                   ? "password-error"
                   : undefined
@@ -5219,7 +5229,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -5229,7 +5239,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -5324,28 +5334,31 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -5376,6 +5389,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5735,14 +5755,13 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[20,94-96]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[19,97]
 import type {
   LoaderFunction,
   ActionFunction,
   MetaFunction
 } from "remix";
 import {
-  Link,
   useLoaderData,
   useCatch,
   redirect,
@@ -5802,28 +5821,31 @@ export const action: ActionFunction = async ({
   params
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId }
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -5838,6 +5860,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5910,7 +5939,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -6000,7 +6029,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -6027,7 +6056,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
