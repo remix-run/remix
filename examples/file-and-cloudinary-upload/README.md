@@ -32,6 +32,6 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ### Remix Documentation
 
-- [Handle Multiple Part Forms(File Uplodas)](https://remix.run/docs/en/v1/api/remix#unstable_parsemultipartformdata-node)
+- [Handle Multiple Part Forms (File Uploads)](https://remix.run/docs/en/v1/api/remix#unstable_parsemultipartformdata-node)
 - [Upload Handler](https://remix.run/docs/en/v1/api/remix#uploadhandler)
 - [Custom Uploader](https://remix.run/docs/en/v1/api/remix#custom-uploadhandler)
