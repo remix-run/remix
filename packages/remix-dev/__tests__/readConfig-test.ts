@@ -214,6 +214,14 @@ describe("readConfig", () => {
             "parentId": "root",
             "path": "fetchers",
           },
+          "routes/fetchers-json": Object {
+            "caseSensitive": undefined,
+            "file": "routes/fetchers-json.tsx",
+            "id": "routes/fetchers-json",
+            "index": undefined,
+            "parentId": "root",
+            "path": "fetchers-json",
+          },
           "routes/gists": Object {
             "caseSensitive": undefined,
             "file": "routes/gists.jsx",
