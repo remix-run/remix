@@ -1,7 +1,14 @@
-import { Form, json, redirect, useLoaderData, useLocation } from "remix";
-import invariant from "tiny-invariant";
+import {
+  Form,
+  json,
+  redirect,
+  useLoaderData,
+  useLocation,
+  useActionData
+} from "remix";
 import type { Note } from "@prisma/client";
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
+import Alert from "@reach/alert";
 
 import { prisma } from "~/db.server";
 import { createNote, deleteNote } from "~/models/note.server";
@@ -11,13 +18,20 @@ interface LoaderData {
   notes: Array<Note>;
 }
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await requireUserId(request);
   const notes = await prisma.note.findMany({ where: { userId: userId } });
   return json<LoaderData>({ notes });
 };
 
-const action: ActionFunction = async ({ request }) => {
+interface ActionData {
+  errors?: {
+    title?: string;
+    body?: string;
+  };
+}
+
+export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
 
   const formData = await request.formData();
@@ -40,11 +54,17 @@ const action: ActionFunction = async ({ request }) => {
       const body = formData.get("body");
 
       if (typeof title !== "string") {
-        throw new Response("title must be a string", { status: 400 });
+        return json(
+          { errors: { title: "title must be a string" } },
+          { status: 400 }
+        );
       }
 
       if (typeof body !== "string") {
-        throw new Response("body must be a string", { status: 400 });
+        return json(
+          { errors: { body: "body must be a string" } },
+          { status: 400 }
+        );
       }
 
       await createNote(title, body, userId);
@@ -58,45 +78,93 @@ const action: ActionFunction = async ({ request }) => {
   }
 };
 
-function Index() {
+export const meta: MetaFunction = () => {
+  return { title: "New Remix App" };
+};
+
+export default function Index() {
   const location = useLocation();
   const data = useLoaderData<LoaderData>();
+  const actionData = useActionData<ActionData>();
 
   return (
     <div>
-      <h1>Notes</h1>
-      <Form action="/logout" method="post">
-        <button type="submit">Log out</button>
-      </Form>
-      <Form method="post" key={location.key}>
+      <header style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <h1>Notes</h1>
+        <Form action="/logout" method="post">
+          <button type="submit">Logout</button>
+        </Form>
+      </header>
+
+      <Form
+        method="post"
+        key={location.key}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8
+        }}
+      >
         <label>
-          <span>Title</span>
-          <input name="title" />
+          <span style={{ display: "block" }}>Title: </span>
+          <input
+            name="title"
+            style={{ marginTop: 4 }}
+            aria-invalid={actionData?.errors?.title ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.title ? "title-error" : undefined
+            }
+          />
+          {actionData?.errors.title && (
+            <Alert style={{ color: "red" }} id="title=error">
+              {actionData.errors.title}
+            </Alert>
+          )}
         </label>
         <label>
-          <span>Body</span>
-          <textarea name="body" rows={8} />
+          <span style={{ display: "block" }}>Body: </span>
+          <textarea
+            name="body"
+            rows={8}
+            style={{ marginTop: 4 }}
+            aria-invalid={actionData?.errors?.body ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.body ? "body-error" : undefined
+            }
+          />
+          {actionData?.errors.title && (
+            <Alert style={{ color: "red" }} id="title=error">
+              {actionData.errors.title}
+            </Alert>
+          )}
         </label>
-        <button name="_action" value="create-note" type="submit">
-          Save
-        </button>
+        <div>
+          <button name="_action" value="create-note" type="submit">
+            Save
+          </button>
+        </div>
       </Form>
 
       <h2>Notes</h2>
       {data.notes.length === 0 ? (
         <p>No notes yet</p>
       ) : (
-        <ul>
+        <ul style={{ paddingLeft: 0 }}>
           {data.notes.map(note => (
-            <li key={note.id}>
-              <h3>{note.title}</h3>
-              <p>{note.body}</p>
+            <li
+              key={note.id}
+              style={{ display: "flex", gap: 16, alignItems: "center" }}
+            >
               <Form method="post">
                 <input type="hidden" name="noteId" value={note.id} />
                 <button type="submit" name="_action" value="delete-note">
                   Delete
                 </button>
               </Form>
+              <div>
+                <h3>{note.title}</h3>
+                <p>{note.body}</p>
+              </div>
             </li>
           ))}
         </ul>
@@ -104,6 +172,3 @@ function Index() {
     </div>
   );
 }
-
-export default Index;
-export { action, loader };

@@ -6,7 +6,7 @@ import Alert from "@reach/alert";
 import { createUserSession, getUserId } from "~/session.server";
 import { verifyLogin } from "~/models/user";
 
-const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
   if (userId) return redirect("/");
   return {};
@@ -19,7 +19,7 @@ interface ActionData {
   };
 }
 
-const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
 
   const email = formData.get("email");
@@ -48,45 +48,65 @@ const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  return createUserSession(request, user, "/");
+  return createUserSession(request, user.pk, "/");
 };
 
-const meta: MetaFunction = () => ({
+export const meta: MetaFunction = () => ({
   title: "Login"
 });
 
-function LoginPage() {
+export default function LoginPage() {
   const actionData = useActionData<ActionData>();
 
   return (
     <>
-      <Form method="post">
+      <h1>Login</h1>
+      <Form
+        method="post"
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         <label>
-          <span>Email</span>
-          <input type="email" name="email" autoComplete="email" />
+          <span>Email: </span>
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            aria-invalid={actionData?.errors?.email ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.email ? "email-error" : undefined
+            }
+          />
+
           {actionData?.errors?.email && (
-            <Alert style={{ color: "red" }}>{actionData.errors.email}</Alert>
+            <Alert style={{ color: "red", paddingTop: 4 }} id="email-error">
+              {actionData.errors.email}
+            </Alert>
           )}
         </label>
         <label>
-          <span>Password</span>
+          <span>Password: </span>
           <input
             type="password"
             name="password"
             autoComplete="current-password"
+            aria-invalid={actionData?.errors?.password ? true : undefined}
+            aria-errormessage={
+              actionData?.errors.password ? "password-error" : undefined
+            }
           />
           {actionData?.errors?.password && (
-            <Alert style={{ color: "red" }}>{actionData.errors.password}</Alert>
+            <Alert style={{ color: "red", paddingTop: 4 }} id="password-error">
+              {actionData.errors.password}
+            </Alert>
           )}
         </label>
-        <button type="submit">Log in</button>
+        <div>
+          <button type="submit">Log in</button>
+        </div>
       </Form>
-      <div>
+      <div style={{ paddingTop: 8 }}>
         Don't have an account? <Link to="/join">Join</Link>
       </div>
     </>
   );
 }
-
-export default LoginPage;
-export { action, loader, meta };
