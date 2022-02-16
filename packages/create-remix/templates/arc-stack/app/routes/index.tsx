@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
 import {
   Form,
@@ -24,6 +25,13 @@ export const loader: LoaderFunction = async ({ request }) => {
 
   return json({ notes });
 };
+
+interface ActionData {
+  errors: {
+    title?: string;
+    body?: string;
+  };
+}
 
 export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUser(request);
@@ -54,14 +62,17 @@ export const action: ActionFunction = async ({ request }) => {
       const body = formData.get("body");
 
       if (typeof title !== "string" || title.length === 0) {
-        return json(
+        return json<ActionData>(
           { errors: { title: "Title is required" } },
           { status: 400 }
         );
       }
 
       if (typeof body !== "string" || body.length === 0) {
-        return json({ errors: { body: "Body is required" } }, { status: 400 });
+        return json<ActionData>(
+          { errors: { body: "Body is required" } },
+          { status: 400 }
+        );
       }
 
       await createNote({ title, body, email: userId });
@@ -81,7 +92,17 @@ export const meta: MetaFunction = () => {
 export default function IndexPage() {
   const location = useLocation();
   const data = useLoaderData();
-  const actionData = useActionData();
+  const actionData = useActionData<ActionData>();
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (actionData?.errors?.title) {
+      titleRef.current?.focus();
+    } else if (actionData?.errors?.body) {
+      bodyRef.current?.focus();
+    }
+  }, [actionData]);
 
   return (
     <div>
@@ -100,39 +121,47 @@ export default function IndexPage() {
           gap: 8
         }}
       >
-        <label>
-          <span style={{ display: "block" }}>Title: </span>
-          <input
-            name="title"
-            style={{ marginTop: 4 }}
-            aria-invalid={actionData?.errors?.title ? true : undefined}
-            aria-errormessage={
-              actionData?.errors.title ? "title-error" : undefined
-            }
-          />
-          {actionData?.errors.title && (
+        <div>
+          <label>
+            <span style={{ display: "block" }}>Title: </span>
+            <input
+              ref={titleRef}
+              name="title"
+              style={{ marginTop: 4 }}
+              aria-invalid={actionData?.errors?.title ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.title ? "title-error" : undefined
+              }
+            />
+          </label>
+          {actionData?.errors?.title && (
             <Alert style={{ color: "red" }} id="title=error">
               {actionData.errors.title}
             </Alert>
           )}
-        </label>
-        <label>
-          <span style={{ display: "block" }}>Body: </span>
-          <textarea
-            name="body"
-            rows={8}
-            style={{ marginTop: 4 }}
-            aria-invalid={actionData?.errors?.body ? true : undefined}
-            aria-errormessage={
-              actionData?.errors.body ? "body-error" : undefined
-            }
-          />
-          {actionData?.errors.body && (
-            <Alert style={{ color: "red" }} id="body-error">
+        </div>
+
+        <div>
+          <label>
+            <span style={{ display: "block" }}>Body: </span>
+            <textarea
+              ref={bodyRef}
+              name="body"
+              rows={8}
+              style={{ marginTop: 4 }}
+              aria-invalid={actionData?.errors?.body ? true : undefined}
+              aria-errormessage={
+                actionData?.errors?.body ? "body-error" : undefined
+              }
+            />
+          </label>
+          {actionData?.errors?.body && (
+            <Alert style={{ color: "red" }} id="body=error">
               {actionData.errors.body}
             </Alert>
           )}
-        </label>
+        </div>
+
         <div>
           <button name="_action" value="create-note" type="submit">
             Save

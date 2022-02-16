@@ -135,6 +135,7 @@ export default function Index() {
             </Alert>
           )}
         </div>
+
         <div>
           <label>
             <span style={{ display: "block" }}>Body: </span>
@@ -155,6 +156,7 @@ export default function Index() {
             </Alert>
           )}
         </div>
+
         <div>
           <button name="_action" value="create-note" type="submit">
             Save
