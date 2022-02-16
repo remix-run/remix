@@ -4,8 +4,8 @@
   "description": "",
   "license": "",
   "scripts": {
-    "build": "remix build",
-    "dev": "remix dev",
+    "build": "node -r dotenv/config node_modules/.bin/remix build",
+    "dev": "node -r dotenv/config node_modules/.bin/remix dev",
     "generate:types": "graphql-codegen",
     "postinstall": "remix setup node",
     "prebuild": "npm run generate:types",
@@ -16,6 +16,7 @@
     "@remix-run/react": "1.1.3",
     "@remix-run/serve": "1.1.3",
     "apollo-server-errors": "^3.3.1",
+    "dotenv": "^16.0.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "1.1.3"

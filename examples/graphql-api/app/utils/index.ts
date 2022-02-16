@@ -1,5 +1,3 @@
-import { GRAPHQL_API } from "~/config";
-
 /**
  * @name fetchFromGraphQL
  * @external https://css-tricks.com/raw-graphql-querying
@@ -10,11 +8,15 @@ import { GRAPHQL_API } from "~/config";
     query: string,
     variables?: Record<string, any>
   ) => {
+    if (!process.env.GRAPHQL_API) {
+      throw new Error("GRAPHQL_API is required");
+    }
+
     const body: any = { query };
 
     if (variables) body.variables = variables;
 
-    return fetch(GRAPHQL_API, {
+    return fetch(process.env.GRAPHQL_API, {
       body: JSON.stringify(body),
       headers: {
         'Content-Type': 'application/json'
