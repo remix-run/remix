@@ -166,6 +166,7 @@ If you are using TypeScript, you can use type inference to use Primsa Client gen
 
 ```tsx filename=tsx filename=app/routes/products/$productId.tsx
 import { useLoaderData, json } from "remix";
+
 import { db } from "~/db.server";
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
