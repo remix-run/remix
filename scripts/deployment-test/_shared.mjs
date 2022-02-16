@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import dns from "dns/promises";
 import path from "path";
 import { execSync, spawnSync } from "child_process";
@@ -69,9 +70,9 @@ function runCypress(dir, dev, url) {
   }
 }
 
-export async function checkUp(url) {
+async function checkUp(url) {
   let retriesLeft = 10;
-  function check() {
+  async function check() {
     try {
       await dns.lookup(url);
       clearInterval(checker);
