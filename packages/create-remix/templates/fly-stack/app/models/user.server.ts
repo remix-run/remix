@@ -9,7 +9,7 @@ async function createUser(email: string, password: string): Promise<User> {
       email,
       password: {
         create: {
-          password: hashedPassword
+          hash: hashedPassword
         }
       }
     }
@@ -33,7 +33,7 @@ async function verifyLogin(
     return undefined;
   }
 
-  const isValid = await bcrypt.verify(password, user.password.password);
+  const isValid = await bcrypt.verify(password, user.password.hash);
 
   if (!isValid) {
     return undefined;

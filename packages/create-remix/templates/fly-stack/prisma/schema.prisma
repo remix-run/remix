@@ -19,9 +19,10 @@ model User {
 }
 
 model Password {
-  user     User   @relation(fields: [userId], references: [id])
-  userId   String @unique
-  password String
+  hash String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
 }
 
 model Note {

@@ -10,8 +10,8 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "Password" (
-    "userId" TEXT NOT NULL,
-    "password" TEXT NOT NULL
+    "hash" TEXT NOT NULL,
+    "userId" TEXT NOT NULL
 );
 
 -- CreateTable
