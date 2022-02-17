@@ -16,20 +16,22 @@ module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   devServerPort: 8002,
-  publicPath: "/build/",
-  serverBuildDirectory: "build",
   ignoredRouteFiles: [".*"],
+  publicPath: "/build/",
   routes(defineRoutes) {
     return defineRoutes(route => {
       route("/somewhere/cool/*", "catchall.tsx");
     });
-  }
+  },
+  serverBuildPath: "build/index.js",
+  serverBuildTarget: "node-cjs"
 };
 ```
 
 ### appDirectory
 
-The path to the `app` directory, relative to remix.config.js. Defaults to "app".
+The path to the `app` directory, relative to remix.config.js. Defaults to
+`"app"`.
 
 ```js
 // default
@@ -38,6 +40,37 @@ exports.appDirectory = "./app";
 // custom
 exports.appDirectory = "./elsewhere";
 ```
+
+### assetsBuildDirectory
+
+The path to the browser build, relative to remix.config.js. Defaults to
+"public/build". Should be deployed to static hosting.
+
+### cacheDirectory
+
+The path to a directory Remix can use for caching things in development,
+relative to `remix.config.js`. Defaults to `".cache"`.
+
+### devServerBroadcastDelay
+
+The delay, in milliseconds, before the dev server broadcasts a reload event.
+There is no delay by default.
+
+### devServerPort
+
+The port number to use for the dev websocket server. Defaults to 8002.
+
+### ignoredRouteFiles
+
+This is an array of globs (via [minimatch][minimatch]) that Remix will match to
+files while reading your `app/routes` directory. If a file matches, it will be
+ignored rather that treated like a route module. This is useful for ignoring
+dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+
+### publicPath
+
+The URL prefix of the browser build with a trailing slash. Defaults to
+`"/build/"`. This is the path the browser will use to find assets.
 
 ### routes
 
@@ -65,25 +98,48 @@ exports.routes = async defineRoutes => {
 };
 ```
 
-### assetsBuildDirectory
+### server
 
-The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
-
-### publicPath
-
-The URL prefix of the browser build with a trailing slash. Defaults to "/build/". This is the path the browser will use to find assets.
+A server entrypoint, relative to the root directory that becomes your server's
+main module. If specified, Remix will compile this file along with your
+application into a single file to be deployed to your server. This file can use
+either a `.js` or `.ts` file extension.
 
 ### serverBuildDirectory
 
-The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
+<docs-warning>This option is deprecated and will likely be removed in a future
+stable release. Use [`serverBuildPath`](#serverbuildpath) instead.</docs-warning>
 
-### ignoredRouteFiles
+The path to the server build, relative to `remix.config.js`. Defaults to
+"build". This needs to be deployed to your server.
 
-This is an array of globs (via [minimatch][minimatch]) that Remix will match to files while reading your `app/routes` directory. If a file matches, it will be ignored rather that treated like a route module. This is useful for ignoring dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+### serverBuildPath
 
-### devServerPort
+The path to the server build file, relative to `remix.config.js`. This file
+should end in a `.js` extension and should be deployed to your server.
 
-The port number to use for the dev websocket server. Defaults to 8002.
+If omitted, the default build path will be based on your
+[`serverBuildTarget`](#serverbuildtarget).
+
+### serverBuildTarget
+
+The target of the server build. Defaults to `"node-cjs"`.
+
+The `serverBuildTarget` can be one of the following:
+
+- [`"arc"`](https://arc.codes)
+- [`"cloudflare-pages"`](https://pages.cloudflare.com/)
+- [`"cloudflare-workers"`](https://workers.cloudflare.com/)
+- [`"deno"`](https://deno.land/)
+- [`"netlify"`](https://www.netlify.com/)
+- [`"node-cjs"`](https://nodejs.org/en/)
+- [`"vercel"`](https://vercel.com/)
+
+### serverDependenciesToBundle
+
+A list of patterns that determined if a module is transpiled and included in the
+server bundle. This can be useful when consuming ESM only packages in a CJS
+build.
 
 ## File Name Conventions
 
