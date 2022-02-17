@@ -30,7 +30,7 @@ export default function SomeRoute() {
 }
 ```
 
-To fix it, move the import into a different module named `*.server.js` and import from there. In our example here, we create a new file at `utils/fs-extra.serverjs`:
+To fix it, move the import into a different module named `*.server.js` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
 
 ```js filename=app/utils/fs-extra.server.js
 export * from "fs-extra";
