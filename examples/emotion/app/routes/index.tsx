@@ -1,37 +1,25 @@
 import styled from "@emotion/styled";
+import { Link } from "remix";
 
 const Container = styled("div")`
   font-family: "system-ui, sans-serif";
   line-height: 1.4;
+  background-color: #ddd;
 `;
 
 export default function Index() {
   return (
     <Container>
-      <h1>Welcome to Remix</h1>
+      <h1>Welcome to Remix with Emotion Example</h1>
       <ul>
         <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
+          <Link to="/jokes">Jokes</Link>
         </li>
         <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
+          <Link to="/jokes/not-found">Jokes: Not Found</Link>
         </li>
         <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
+          <Link to="/jokes/test-id">Jokes: Test Id</Link>
         </li>
       </ul>
     </Container>
