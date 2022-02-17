@@ -71,28 +71,32 @@ function runCypress(dir, dev, url) {
 }
 
 async function checkUp(url) {
-  let retriesLeft = 10;
+  return new Promise(async (resolve, reject) => {
+    let retriesLeft = 10;
 
-  async function check() {
-    try {
-      console.log(`Checking ${url}`);
-      await dns.lookup(url);
-      clearInterval(checker);
-      console.log(`${url} is up`);
-    } catch (error) {
-      retriesLeft -= 1;
-      if (retriesLeft === 0) {
+    async function check() {
+      try {
+        console.log(`Checking ${url}`);
+        await dns.lookup(url);
         clearInterval(checker);
-        throw new Error(`Could not connect to ${url}`);
+        console.log(`${url} is up`);
+        resolve();
+      } catch (error) {
+        retriesLeft -= 1;
+        if (retriesLeft === 0) {
+          clearInterval(checker);
+          reject(`Could not connect to ${url}`);
+        }
+
+        console.log(
+          `${url} is down, trying again in 10 seconds, ${retriesLeft} retries left`
+        );
       }
-
-      console.log(`${url} is down, trying again, ${retriesLeft} retries left`);
-      return false;
     }
-  }
 
-  await check();
-  let checker = setInterval(() => check(), 60_000);
+    await check();
+    let checker = setInterval(() => check(), 10_000);
+  });
 }
 
 function getAppName(target) {

@@ -161,7 +161,7 @@ try {
 
   let appUrl = new URL(`https://${APP_NAME}.pages.dev`);
 
-  await checkUp(appUrl.origin);
+  await checkUp(appUrl.hostname);
 
   // run cypress against the cloudflare pages server
   runCypress(PROJECT_DIR, false, appUrl.toString());

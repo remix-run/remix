@@ -93,7 +93,7 @@ try {
   // ... or a minute...
   // ... or a few minutes...
   console.log(`Fly app deployed, waiting for dns...`);
-  await checkUp(flyUrl.origin);
+  await checkUp(flyUrl.hostname);
 
   // run cypress against the deployed server
   runCypress(PROJECT_DIR, false, flyUrl.toString());
