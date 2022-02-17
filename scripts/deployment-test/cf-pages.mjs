@@ -1,5 +1,5 @@
 import path from "path";
-import { spawnSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
@@ -92,6 +92,11 @@ async function createRepoIfNeeded() {
   return repo.data;
 }
 
+let currentGitUser = {
+  email: execSync("git config --get user.email").toString().trim(),
+  name: execSync("git config --get user.name").toString().trim()
+};
+
 try {
   // create a new remix app
   await createNewApp();
@@ -170,4 +175,17 @@ try {
 } catch (error) {
   console.error(error);
   process.exit(1);
+} finally {
+  if (currentGitUser.email && currentGitUser.name) {
+    spawnSync(
+      "git",
+      ["config", "--global", "user.email", currentGitUser.email],
+      spawnOpts
+    );
+    spawnSync(
+      "git",
+      ["config", "--global", "user.name", currentGitUser.name],
+      spawnOpts
+    );
+  }
 }
