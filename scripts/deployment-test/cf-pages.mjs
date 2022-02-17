@@ -171,11 +171,6 @@ try {
   // run cypress against the cloudflare pages server
   runCypress(PROJECT_DIR, false, appUrl);
 
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
-} finally {
   if (currentGitUser.email && currentGitUser.name) {
     spawnSync(
       "git",
@@ -188,4 +183,22 @@ try {
       spawnOpts
     );
   }
+
+  process.exit(0);
+} catch (error) {
+  if (currentGitUser.email && currentGitUser.name) {
+    spawnSync(
+      "git",
+      ["config", "--global", "user.email", currentGitUser.email],
+      spawnOpts
+    );
+    spawnSync(
+      "git",
+      ["config", "--global", "user.name", currentGitUser.name],
+      spawnOpts
+    );
+  }
+
+  console.error(error);
+  process.exit(1);
 }
