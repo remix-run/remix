@@ -39,7 +39,7 @@ export * from "fs-extra";
 And then change our import in the route to the new "wrapper" module:
 
 ```js lines=[1] filename=app/routes/index.jsx
-import fs from "../utils/fs-extra";
+import fs from "../utils/fs-extra.server";
 
 export function loader() {
   return fs.pathExists("../some/path");
