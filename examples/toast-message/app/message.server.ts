@@ -1,9 +1,11 @@
 import { createCookieSessionStorage } from "remix";
 import type { Session } from "remix";
 
+export type ToastMessage = { message: string; type: "success" | "error" };
+
 const ONE_YEAR = 1000 * 60 * 60 * 24 * 365;
 
-const { commitSession, getSession } = createCookieSessionStorage({
+export const { commitSession, getSession } = createCookieSessionStorage({
   cookie: {
     name: "__message",
     path: "/",
@@ -15,14 +17,10 @@ const { commitSession, getSession } = createCookieSessionStorage({
   }
 });
 
-const setSuccessMessage = (session: Session, message: string) => {
-  session.flash("message", message);
-  session.flash("type", "success");
-};
+export function setSuccessMessage(session: Session, message: string) {
+  session.flash("toastMessage", { message, type: "success" } as ToastMessage);
+}
 
-const setErrorMessage = async (session: Session, message: string) => {
-  session.flash("message", message);
-  session.flash("type", "error");
-};
-
-export { setErrorMessage, setSuccessMessage, commitSession, getSession };
+export function setErrorMessage(session: Session, message: string) {
+  session.flash("toastMessage", { message, type: "error" } as ToastMessage);
+}

@@ -12,9 +12,12 @@ import {
 import type { LoaderFunction, MetaFunction } from "remix";
 
 import { Toaster, toast } from "react-hot-toast";
+import type { ToastMessage } from "./message.server";
 import { commitSession, getSession } from "./message.server";
 
-type LoaderData = { message: string | null; type: string | null };
+type LoaderData = {
+  toastMessage: ToastMessage | null;
+};
 
 export const meta: MetaFunction = () => {
   return {
@@ -25,32 +28,31 @@ export const meta: MetaFunction = () => {
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request.headers.get("cookie"));
 
-  const message = session.get("message");
-  const type = session.get("type");
+  const toastMessage = session.get("toastMessage") as ToastMessage;
 
-  if (!message) {
-    return json<LoaderData>({ message: null, type: null });
+  if (!toastMessage) {
+    return json<LoaderData>({ toastMessage: null });
   }
 
-  if (!type) {
+  if (!toastMessage.type) {
     throw new Error("Message should have a type");
   }
 
   return json<LoaderData>(
-    { message, type },
+    { toastMessage },
     { headers: { "Set-Cookie": await commitSession(session) } }
   );
 };
 
 export default function App() {
-  const data = useLoaderData<LoaderData>();
+  const { toastMessage } = useLoaderData<LoaderData>();
 
   React.useEffect(() => {
-    const { message, type } = data;
-
-    if (!message && !type) {
+    if (!toastMessage) {
       return;
     }
+    const { message, type } = toastMessage;
+
     switch (type) {
       case "success":
         toast.success(message);
@@ -61,7 +63,7 @@ export default function App() {
       default:
         throw new Error(`${type} is not handled`);
     }
-  }, [data]);
+  }, [toastMessage]);
 
   return (
     <html lang="en">
@@ -76,7 +78,7 @@ export default function App() {
         <Toaster />
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );
