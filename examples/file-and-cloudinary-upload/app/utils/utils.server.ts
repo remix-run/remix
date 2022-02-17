@@ -1,8 +1,6 @@
-import dotenv from "dotenv";
 import cloudinary from "cloudinary";
 import type { Stream } from "stream";
 
-dotenv.config();
 cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,

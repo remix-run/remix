@@ -5,7 +5,7 @@
   "license": "",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev",
+    "dev": "node -r dotenv/config node_modules/.bin/remix dev",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   },
