@@ -16,10 +16,7 @@ export default function Index() {
           <Link to="/jokes">Jokes</Link>
         </li>
         <li>
-          <Link to="/jokes/not-found">Jokes: Not Found</Link>
-        </li>
-        <li>
-          <Link to="/jokes/test-id">Jokes: Test Id</Link>
+          <Link to="/jokes-error">Jokes: Error</Link>
         </li>
       </ul>
     </Container>

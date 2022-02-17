@@ -7,6 +7,10 @@ import {
   ScrollRestoration,
   useCatch
 } from "remix";
+import { useContext, useEffect } from "react";
+import { withEmotionCache } from "@emotion/react";
+import ServerStyleContext from "./styles/server.context";
+import ClientStyleContext from "./styles/client.context";
 import type { MetaFunction } from "remix";
 
 import styled from "@emotion/styled";
@@ -17,46 +21,71 @@ const Container = styled("div")`
 `;
 
 export const meta: MetaFunction = () => {
-  return { title: "New Remix App" };
+  return { title: "Remix with Emotion" };
 };
 
-function Document({
-  children,
-  title = "App title"
-}: {
+interface DocumentProps {
   children: React.ReactNode;
   title?: string;
-}) {
+}
+
+const Document = withEmotionCache(
+  ({ children, title }: DocumentProps, emotionCache) => {
+    const serverStyleData = useContext(ServerStyleContext);
+    const clientStyleData = useContext(ClientStyleContext);
+
+    // Only executed on client
+    useEffect(() => {
+      // re-link sheet container
+      emotionCache.sheet.container = document.head;
+
+      // re-inject tags
+      const tags = emotionCache.sheet.tags;
+      emotionCache.sheet.flush();
+      tags.forEach(tag => {
+        (emotionCache.sheet as any)._insertTag(tag);
+      });
+
+      // reset cache to reapply global styles
+      clientStyleData.reset();
+    }, []);
+
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width,initial-scale=1" />
+          {title ? <title>{title}</title> : null}
+          <Meta />
+          <Links />
+          {serverStyleData?.map(({ key, ids, css }) => (
+            <style
+              key={key}
+              data-emotion={`${key} ${ids.join(" ")}`}
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{ __html: css }}
+            />
+          ))}
+        </head>
+        <body>
+          {children}
+          <ScrollRestoration />
+          <Scripts />
+          {process.env.NODE_ENV === "development" && <LiveReload />}
+        </body>
+      </html>
+    );
+  }
+);
+
+export default function App() {
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <Meta />
-        <title>{title}</title>
-        <Links />
-      </head>
-      <body>
-        {children}
-        <ScrollRestoration />
-        <Scripts />
-        <LiveReload />
-      </body>
-    </html>
+    <Document>
+      <Outlet />
+    </Document>
   );
 }
 
-export default function App() {
-  throw new Error("🙀 Error");
-
-  // return (
-  //   <Document>
-  //     <Outlet />
-  //   </Document>
-  // );
-}
-
-// How NextUIProvider should be used on CatchBoundary
 export function CatchBoundary() {
   const caught = useCatch();
 
@@ -71,7 +100,6 @@ export function CatchBoundary() {
   );
 }
 
-// How NextUIProvider should be used on ErrorBoundary
 export function ErrorBoundary({ error }: { error: Error }) {
   return (
     <Document title="Error!">

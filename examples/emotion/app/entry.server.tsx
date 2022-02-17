@@ -1,15 +1,11 @@
-import ReactDOMServer from "react-dom/server";
-import { CacheProvider } from "@emotion/react";
 import { renderToString } from "react-dom/server";
 import { RemixServer } from "remix";
-import createEmotionServer from "@emotion/server/create-instance";
-import createCache from "@emotion/cache";
 import type { EntryContext } from "remix";
 
-const key = "remix-emotion";
-const cache = createCache({ key });
-const { extractCriticalToChunks, constructStyleTagsFromChunks } =
-  createEmotionServer(cache);
+import createEmotionServer from "@emotion/server/create-instance";
+import { CacheProvider } from "@emotion/react";
+import createEmotionCache from "./styles/createEmotionCache";
+import ServerStyleContext from "./styles/server.context";
 
 export default function handleRequest(
   request: Request,
@@ -17,24 +13,30 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
+  const cache = createEmotionCache();
+  const { extractCriticalToChunks } = createEmotionServer(cache);
+
   const html = renderToString(
-    <CacheProvider value={cache}>
-      <RemixServer context={remixContext} url={request.url} />
-    </CacheProvider>
+    <ServerStyleContext.Provider value={null}>
+      <CacheProvider value={cache}>
+        <RemixServer context={remixContext} url={request.url} />
+      </CacheProvider>
+    </ServerStyleContext.Provider>
   );
 
   const chunks = extractCriticalToChunks(html);
-  const styles = constructStyleTagsFromChunks(chunks);
 
-  let markup = ReactDOMServer.renderToString(
-    <RemixServer context={remixContext} url={request.url} />
+  const markup = renderToString(
+    <ServerStyleContext.Provider value={chunks.styles}>
+      <CacheProvider value={cache}>
+        <RemixServer context={remixContext} url={request.url} />
+      </CacheProvider>
+    </ServerStyleContext.Provider>
   );
-
-  markup = markup.replace("__STYLES__", styles);
 
   responseHeaders.set("Content-Type", "text/html");
 
-  return new Response("<!DOCTYPE html>" + markup, {
+  return new Response(`<!DOCTYPE html>${markup}`, {
     status: responseStatusCode,
     headers: responseHeaders
   });

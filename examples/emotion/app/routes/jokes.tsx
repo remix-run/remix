@@ -1,4 +1,4 @@
-import { Outlet, Link } from "remix";
+import { Link } from "remix";
 import styled from "@emotion/styled";
 
 const Container = styled("div")`
@@ -9,7 +9,7 @@ export default function Jokes() {
   return (
     <Container>
       <h1>Jokes</h1>
-      <Outlet />
+      <p>This route works fine.</p>
       <Link to="/">Back to home</Link>
     </Container>
   );
