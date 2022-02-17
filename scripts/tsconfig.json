@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["."],
+  "exclude": ["./deployment-test"],
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "moduleResolution": "Node",
+    "target": "ES2018"
+  }
+}

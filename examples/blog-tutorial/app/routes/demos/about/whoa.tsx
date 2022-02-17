@@ -1,6 +1,6 @@
 import { Link } from "remix";
 
-export default function AboutIndex() {
+export default function Whoa() {
   return (
     <div>
       <p>

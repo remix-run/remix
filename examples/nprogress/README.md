@@ -17,4 +17,4 @@ To visualize it, the `/` route has a link to `/slow-page` whose loader takes one
 ## Related Links
 
 - [NProgress](https://ricostacruz.com/nprogress/)
-- [useTransition](https://remix.run/docs/en/v1/api/remix#usetransition)
+- [useTransition](https://remix.run/api/remix#usetransition)

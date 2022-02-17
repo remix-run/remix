@@ -1,4 +1,5 @@
-// import type { Location } from "history";
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Location } from "history";
 import { parsePath } from "history";
 
@@ -8,6 +9,12 @@ import type { RouteMatch } from "./routeMatching";
 // import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, RouteModule } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
+
+type Primitive = null | undefined | string | number | boolean | symbol | bigint;
+
+type LiteralUnion<LiteralType, BaseType extends Primitive> =
+  | LiteralType
+  | (BaseType & Record<never, never>);
 
 /**
  * Represents a `<link>` element.
@@ -28,7 +35,7 @@ export interface HtmlLinkDescriptor {
   /**
    * Relationship between the document containing the hyperlink and the destination resource
    */
-  rel:
+  rel: LiteralUnion<
     | "alternate"
     | "dns-prefetch"
     | "icon"
@@ -41,8 +48,9 @@ export interface HtmlLinkDescriptor {
     | "preload"
     | "prerender"
     | "search"
-    | "stylesheet"
-    | string;
+    | "stylesheet",
+    string
+  >;
 
   /**
    * Applicable media: "screen", "print", "(max-width: 764px)"
@@ -96,7 +104,7 @@ export interface HtmlLinkDescriptor {
   /**
    * Potential destination for a preload request (for rel="preload" and rel="modulepreload")
    */
-  as?:
+  as?: LiteralUnion<
     | "audio"
     | "audioworklet"
     | "document"
@@ -117,8 +125,9 @@ export interface HtmlLinkDescriptor {
     | "track"
     | "video"
     | "worker"
-    | "xslt"
-    | string;
+    | "xslt",
+    string
+  >;
 
   /**
    * Color to use when customizing a site's icon (for rel="mask-icon")
@@ -263,12 +272,11 @@ export async function getStylesheetPrefetchLinks(
     .flat(1)
     .filter(isHtmlLinkDescriptor)
     .filter(link => link.rel === "stylesheet" || link.rel === "preload")
-    .map(({ rel, ...attrs }) => {
-      if (rel === "preload") {
-        return { rel: "prefetch", ...attrs };
-      }
-      return { rel: "prefetch", as: "style", ...attrs };
-    });
+    .map(({ rel, ...attrs }) =>
+      rel === "preload"
+        ? { rel: "prefetch", ...attrs }
+        : { rel: "prefetch", as: "style", ...attrs }
+    );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -346,7 +354,7 @@ export function getDataLinkHrefs(
       .map(match => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
-        searchParams.append("_data", match.route.id);
+        searchParams.set("_data", match.route.id);
         return `${pathname}?${searchParams}`;
       })
   );

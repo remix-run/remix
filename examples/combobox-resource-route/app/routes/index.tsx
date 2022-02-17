@@ -14,7 +14,7 @@ import comboboxStyles from "@reach/combobox/styles.css";
 
 export function links() {
   // Add them to the page when this route is active:
-  // https://remix.run/docs/en/v1/api/conventions#links
+  // https://remix.run/api/conventions#links
   return [{ rel: "stylesheet", href: comboboxStyles }];
 }
 

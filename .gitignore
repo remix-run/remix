@@ -1,16 +1,19 @@
 .DS_Store
 .vscode
-.DS_Store
 
 /build/
 node_modules/
 yarn-error.log
 
-/MICHAEL_TODOS.md
+/jacob
 /fixtures/cloudflare
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
 
 .eslintcache
+.tmp
+
+/deployment-test
+
 /.idea/
