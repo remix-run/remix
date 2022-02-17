@@ -2,8 +2,7 @@ import {
   // This has been added as a global in node 15+
   AbortController,
   Headers as NodeHeaders,
-  Request as NodeRequest,
-  formatServerError
+  Request as NodeRequest
 } from "@remix-run/node";
 import type {
   APIGatewayProxyEventHeaders,
@@ -47,7 +46,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
-  let platform: ServerPlatform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, _context) => {
