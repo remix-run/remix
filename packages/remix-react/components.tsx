@@ -1080,13 +1080,14 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let method: string;
       let action: string;
       let encType: string;
-      let formData: FormData | string;
+      let formData: FormData | undefined;
+      let json: string | undefined;
 
       if (options.json) {
         if (target === null) {
           throw new Error("`target` must be specified when submitting JSON");
         }
-        formData = typeof target === "string" ? target : JSON.stringify(target);
+        json = typeof target === "string" ? target : JSON.stringify(target);
         method = options.method ?? "post";
         action = options.action ?? "";
         encType = "application/json";
@@ -1182,7 +1183,8 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       }
 
       let submission: Submission = {
-        formData,
+        formData: !options.json ? formData : undefined,
+        json: options.json ? json : undefined,
         action: url.pathname + url.search,
         method: method.toUpperCase(),
         encType,

@@ -70,10 +70,10 @@ function getActionInit(
   submission: Submission,
   signal: AbortSignal
 ): RequestInit {
-  let { encType, method, formData } = submission;
+  let { encType, method, formData, json } = submission;
 
   let headers = undefined;
-  let body = formData;
+  let body = formData ?? json;
 
   if (encType === "application/x-www-form-urlencoded") {
     body = new URLSearchParams();
@@ -84,6 +84,8 @@ function getActionInit(
       );
       body.append(key, value);
     }
+  }
+  if (encType) {
     headers = { "Content-Type": encType };
   }
 
