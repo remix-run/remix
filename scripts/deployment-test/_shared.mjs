@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import dns from "dns/promises";
+import https from "https";
 import path from "path";
 import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
@@ -71,25 +72,50 @@ function runCypress(dir, dev, url) {
 }
 
 async function checkUp(url) {
+  let hostname = new URL(url).hostname;
   return new Promise(async (resolve, reject) => {
-    let retriesLeft = 10;
+    let statusCodeRetriesLeft = 10;
+    let dnsRetriesLeft = 10;
 
     async function check() {
       try {
         console.log(`Checking ${url}`);
-        await dns.lookup(url);
+        await dns.lookup(hostname);
+
+        https.get(url, response => {
+          if (response.statusCode === 200) {
+            clearInterval(checker);
+            console.log(`${url} returned a 200 status code`);
+            resolve();
+          } else {
+            statusCodeRetriesLeft -= 1;
+            if (statusCodeRetriesLeft === 0) {
+              clearInterval(checker);
+              reject(`${url} failed to return a 200 status code`);
+            }
+
+            console.log(
+              `${url} returned a ${response.statusCode} status code`,
+              `trying again in 10 seconds, `,
+              statusCodeRetriesLeft + statusCodeRetriesLeft === 1
+                ? "retry"
+                : "retries" + " left"
+            );
+          }
+        });
+
         clearInterval(checker);
-        console.log(`${url} is up`);
+        console.log(`${url} returned a 200 status code`);
         resolve();
       } catch (error) {
-        retriesLeft -= 1;
-        if (retriesLeft === 0) {
+        dnsRetriesLeft -= 1;
+        if (dnsRetriesLeft === 0) {
           clearInterval(checker);
-          reject(`Could not connect to ${url}`);
+          reject(`${url} failed to return a 200 status code`);
         }
 
         console.log(
-          `${url} is down, trying again in 10 seconds, ${retriesLeft} retries left`
+          `Couldn't resolve ${url}, trying again in 10 seconds, ${dnsRetriesLeft} retries left`
         );
       }
     }

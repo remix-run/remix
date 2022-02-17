@@ -164,12 +164,12 @@ try {
   // builds typically take between 2 and 3 minutes
   await new Promise(resolve => setTimeout(resolve, 60_000 * 3));
 
-  let appUrl = new URL(`https://${APP_NAME}.pages.dev`);
+  let appUrl = `https://${APP_NAME}.pages.dev`;
 
-  await checkUp(appUrl.hostname);
+  await checkUp(appUrl);
 
   // run cypress against the cloudflare pages server
-  runCypress(PROJECT_DIR, false, appUrl.toString());
+  runCypress(PROJECT_DIR, false, appUrl);
 
   process.exit(0);
 } catch (error) {
