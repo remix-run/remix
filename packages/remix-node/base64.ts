@@ -1,7 +1,7 @@
 export function atob(a: string): string {
-  return Buffer.from(a, "base64").toString("binary");
+  return Buffer.from(a, "base64").toString();
 }
 
 export function btoa(b: string): string {
-  return Buffer.from(b, "binary").toString("base64");
+  return Buffer.from(b).toString("base64");
 }
