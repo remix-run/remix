@@ -24,7 +24,6 @@ export default function Contact() {
       | null
     >
   ) => {
-    e.preventDefault();
 
     const target = e.target as typeof e.target & {
       message: { value: string };
