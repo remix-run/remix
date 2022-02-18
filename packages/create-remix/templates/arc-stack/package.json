@@ -1,0 +1,41 @@
+{
+  "private": true,
+  "name": "remix-app-template",
+  "description": "",
+  "license": "",
+  "scripts": {
+    "postinstall": "remix setup node",
+    "build": "remix build",
+    "dev:remix": "remix watch",
+    "dev:arc": "arc sandbox",
+    "dev": "cross-env ARC_LOCAL=1 ARC_TABLES_PORT=5555 run-p dev:*"
+  },
+  "dependencies": {
+    "@architect/functions": "^4.1.2",
+    "@reach/alert": "^0.16.0",
+    "@remix-run/architect": "^1.1.3",
+    "@remix-run/react": "^1.1.3",
+    "bcryptjs": "2.4.3",
+    "cuid": "^2.1.8",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "^1.1.3",
+    "tiny-invariant": "^1.2.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^1.1.3",
+    "@types/architect__functions": "^3.13.6",
+    "@types/bcryptjs": "2.4.2",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "cross-env": "^7.0.3",
+    "mock-aws-s3": "^4.0.2",
+    "nock": "^13.2.2",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": false
+}

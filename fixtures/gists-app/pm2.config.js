@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: "Express",
-      script: "server.js",
-      watch: ["build/assets.json"],
+      script: "./build/index.js",
+      watch: ["build/index.js"],
       watch_options: {
         followSymlinks: false
       },

@@ -15,7 +15,7 @@ export default function Screen() {
       </ClientOnly>
 
       <button
-        type="buttonn"
+        type="button"
         disabled={!hydrated}
         onClick={() => alert("I has JS loaded!")}
       >

@@ -69,7 +69,7 @@ function Document({
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
+        <LiveReload />
       </body>
     </html>
   );

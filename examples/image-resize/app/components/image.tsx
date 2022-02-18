@@ -8,9 +8,15 @@ export interface ImageProps {
 }
 export function Image({ src, width, height, fit, ...other }: ImageProps) {
   const query = new URLSearchParams();
-  width && query.set("w", width.toString());
-  height && query.set("h", height.toString());
-  fit && query.set("fit", fit);
+  if (width) {
+    query.set("w", width.toString());
+  }
+  if (height) {
+    query.set("h", height.toString());
+  }
+  if (fit) {
+    query.set("fit", fit);
+  }
   return (
     <img
       src={`/assets/resize/${src}?${query.toString()}`}

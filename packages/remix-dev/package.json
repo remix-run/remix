@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/dev",
   "description": "Dev tools and CLI for Remix",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,11 +15,14 @@
     "remix": "cli.js"
   },
   "dependencies": {
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
+    "@remix-run/server-runtime": "1.2.1",
     "cacache": "^15.0.5",
     "chokidar": "^3.5.1",
     "esbuild": "0.13.14",
     "exit-hook": "2.2.1",
     "fs-extra": "^10.0.0",
+    "get-port": "^5.1.1",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "minimatch": "^3.0.4",

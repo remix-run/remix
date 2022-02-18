@@ -22,7 +22,7 @@ function postFromModule(mod: any): Post {
   };
 }
 
-export let loader: LoaderFunction = () => {
+export let loader: LoaderFunction = async () => {
   let data: PostsData = {
     posts: [
       postFromModule(helloPost),

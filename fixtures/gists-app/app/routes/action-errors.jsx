@@ -1,6 +1,6 @@
 import { Form } from "remix";
 
-export function action() {
+export async function action() {
   throw new Error("I am an action error!");
 }
 

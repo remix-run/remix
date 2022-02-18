@@ -37,7 +37,6 @@ export async function fetchData(
   submission?: Submission
 ): Promise<Response | Error> {
   url.searchParams.set("_data", routeId);
-  url.searchParams.sort(); // Improves caching
 
   let init: RequestInit = submission
     ? getActionInit(submission, signal)

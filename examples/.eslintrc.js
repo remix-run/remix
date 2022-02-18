@@ -1,6 +1,6 @@
 module.exports = {
   rules: {
-    "prefer-const": "warn",
+    "prefer-const": "error",
 
     // because in our examples we shouldn't care
     "import/order": "off"

@@ -7,7 +7,7 @@ export function links() {
   return [{ rel: "stylesheet", href: stylesHref }];
 }
 
-export function loader() {
+export async function loader() {
   let data = {
     users: [
       { id: "ryanflorence", name: "Ryan Florence" },

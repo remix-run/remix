@@ -1,6 +1,6 @@
 # Image Resize
 
-It uses the excellent [https://sharp.pixelplumbing.com/](sharp) npm package
+It uses the excellent [`sharp`](https://sharp.pixelplumbing.com) npm package
 
 ### Note
 
@@ -20,8 +20,7 @@ From your terminal:
 npm run dev
 ```
 
-Visit
-http://localhost:3000/ to view the resized images
+Visit http://localhost:3000 to view the resized images
 
 ## Image Component
 

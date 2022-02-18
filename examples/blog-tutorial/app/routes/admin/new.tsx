@@ -50,7 +50,7 @@ export default function NewPost() {
         <label htmlFor="markdown">Markdown:</label>{" "}
         {errors?.markdown ? <em>Markdown is required</em> : null}
         <br />
-        <textarea rows={20} name="markdown" />
+        <textarea rows={20} name="markdown" id="markdown" />
       </p>
       <p>
         <button type="submit">

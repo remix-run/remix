@@ -1,11 +1,19 @@
+import fsp from "fs/promises";
+import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import {
+  // This has been added as a global in node 15+
+  AbortController,
+  Response as NodeResponse
+} from "@remix-run/node";
 
 import {
   createRequestHandler,
   createRemixHeaders,
-  createRemixRequest
+  createRemixRequest,
+  sendRemixResponse
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
@@ -213,15 +221,14 @@ describe("architect createRemixHeaders", () => {
     it("handles cookies", () => {
       expect(
         createRemixHeaders({ "x-something-else": "true" }, [
-          "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-          "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
+          "__session=some_value",
+          "__other=some_other_value"
         ])
       ).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
             "Cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+              "__session=some_value; __other=some_other_value",
             ],
             "x-something-else": Array [
               "true",
@@ -301,5 +308,47 @@ describe("architect createRemixRequest", () => {
         },
       }
     `);
+  });
+});
+
+describe("sendRemixResponse", () => {
+  it("handles regular responses", async () => {
+    let response = new NodeResponse("anything");
+    let abortController = new AbortController();
+    let result = await sendRemixResponse(response, abortController);
+    expect(result.body).toBe("anything");
+  });
+
+  it("handles resource routes with regular data", async () => {
+    let json = JSON.stringify({ foo: "bar" });
+    let response = new NodeResponse(json, {
+      headers: {
+        "Content-Type": "application/json",
+        "content-length": json.length.toString()
+      }
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(json);
+  });
+
+  it("handles resource routes with binary data", async () => {
+    let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
+
+    let response = new NodeResponse(image, {
+      headers: {
+        "content-type": "image/jpeg",
+        "content-length": image.length.toString()
+      }
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(image.toString("base64"));
   });
 });
