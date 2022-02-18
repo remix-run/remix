@@ -12,6 +12,9 @@ A lot of Remix APIs aren't imported from the `"remix"` package, but are instead 
 This file has a few build and development configuration options, but does not actually run on your server.
 
 ```tsx filename=remix.config.js
+/**
+ * @type {import('@remix-run/dev').AppConfig}
+ */
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
@@ -137,9 +140,29 @@ The `serverBuildTarget` can be one of the following:
 
 ### serverDependenciesToBundle
 
-A list of patterns that determined if a module is transpiled and included in the
-server bundle. This can be useful when consuming ESM only packages in a CJS
-build.
+A list of regex patterns that determined if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
+
+For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
+
+```ts filename=remix.config.js lines=[11-16]
+/**
+ * @type {import('@remix-run/dev').AppConfig}
+ */
+module.exports = {
+  appDirectory: "app",
+  assetsBuildDirectory: "public/build",
+  publicPath: "/build/",
+  serverBuildDirectory: "build",
+  devServerPort: 8002,
+  ignoredRouteFiles: [".*"],
+  serverDependenciesToBundle: [
+    /^rehype.*/,
+    /^remark.*/,
+    /^unified.*/,
+    "@sindresorhus/slugify"
+  ]
+};
+```
 
 ## File Name Conventions
 
