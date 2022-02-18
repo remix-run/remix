@@ -2,12 +2,11 @@ import type { LoaderFunction, LinksFunction } from "remix";
 import { Form } from "remix";
 import { Outlet, useLoaderData, Link } from "remix";
 import { db } from "~/utils/db.server";
-import type { User } from "@prisma/client";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";
 
 type LoaderData = {
-  user: User | null;
+  user: Awaited<ReturnType<typeof getUser>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 

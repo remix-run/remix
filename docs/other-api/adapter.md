@@ -34,7 +34,7 @@ createRequestHandler({ build, getLoadContext });
 
 Here's a full example with express:
 
-```ts [2, 9-20]
+```ts [2-4, 11-22]
 const express = require("express");
 const {
   createRequestHandler
@@ -139,7 +139,7 @@ import * as build from "../build";
 const handleRequest = createRequestHandler({ build });
 
 const handleEvent = async (event: FetchEvent) => {
-  const response = await handleAsset(event, build);
+  let response = await handleAsset(event, build);
 
   if (!response) {
     response = await handleRequest(event);

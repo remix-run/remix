@@ -1,6 +1,7 @@
 import * as path from "path";
 import { execSync } from "child_process";
 import fse from "fs-extra";
+import sortPackageJSON from "sort-package-json";
 
 import cliPkgJson from "./package.json";
 
@@ -52,6 +53,15 @@ async function createApp({
   ...rest
 }: CreateAppArgs) {
   let server = rest.stack ? rest.stack : rest.server;
+
+  let versions = process.versions;
+  if (versions?.node && parseInt(versions.node) < 14) {
+    console.log(
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+    );
+    process.exit(1);
+  }
+
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";
@@ -122,6 +132,8 @@ async function createApp({
       }
     }
   });
+
+  appPkg = sortPackageJSON(appPkg);
 
   // write package.json
   await fse.writeFile(

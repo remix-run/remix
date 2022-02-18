@@ -1,6 +1,8 @@
-export { AbortController } from "abort-controller";
+import sourceMapSupport from "source-map-support";
 
-export { formatServerError } from "./errors";
+sourceMapSupport.install();
+
+export { AbortController } from "abort-controller";
 
 export type {
   HeadersInit,
@@ -11,6 +13,7 @@ export type {
 export { Headers, Request, Response, fetch } from "./fetch";
 
 export { FormData } from "./formData";
+export type { UploadHandler, UploadHandlerArgs } from "./formData";
 
 export { installGlobals } from "./globals";
 

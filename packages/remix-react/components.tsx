@@ -362,7 +362,7 @@ export function RemixRoute({ id }: { id: string }) {
 /**
  * Defines the prefetching behavior of the link:
  *
- * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
@@ -822,8 +822,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Normal `<form encType>`.
    *
-   * Note: Remix only supports `application/x-www-form-urlencoded` right now
-   * but will soon support `multipart/form-data` as well.
+   * Note: Remix defaults to `application/x-www-form-urlencoded` and also
+   * supports `multipart/form-data`.
    */
   encType?: FormEncType;
 
@@ -1232,18 +1232,23 @@ export function useBeforeUnload(callback: () => any): void {
  */
 export function useMatches() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
-  return matches.map(match => {
-    let { pathname, params } = match;
-    return {
-      id: match.route.id,
-      pathname,
-      params,
-      data: routeData[match.route.id],
-      // if the module fails to load or an error/response is thrown, the module
-      // won't be defined.
-      handle: routeModules[match.route.id]?.handle
-    };
-  });
+
+  return React.useMemo(
+    () =>
+      matches.map(match => {
+        let { pathname, params } = match;
+        return {
+          id: match.route.id,
+          pathname,
+          params,
+          data: routeData[match.route.id],
+          // if the module fails to load or an error/response is thrown, the module
+          // won't be defined.
+          handle: routeModules[match.route.id]?.handle
+        };
+      }),
+    [matches, routeData, routeModules]
+  );
 }
 
 /**
@@ -1353,30 +1358,33 @@ export const LiveReload =
       }: {
         port?: number;
       }) {
+        let setupLiveReload = ((port: number) => {
+          let protocol = location.protocol === "https:" ? "wss:" : "ws:";
+          let host = location.hostname;
+          let socketPath = `${protocol}//${host}:${port}/socket`;
+
+          let ws = new WebSocket(socketPath);
+          ws.onmessage = message => {
+            let event = JSON.parse(message.data);
+            if (event.type === "LOG") {
+              console.log(event.message);
+            }
+            if (event.type === "RELOAD") {
+              console.log("💿 Reloading window ...");
+              window.location.reload();
+            }
+          };
+          ws.onerror = error => {
+            console.log("Remix dev asset server web socket error:");
+            console.error(error);
+          };
+        }).toString();
+
         return (
           <script
+            suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `
-let protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-let host = location.hostname;
-let socketPath = protocol + '//' + host + ':${port}/socket';
-
-let ws = new WebSocket(socketPath);
-ws.onmessage = message => {
-  let event = JSON.parse(message.data);
-  if (event.type === "LOG") {
-    console.log(event.message);
-  }
-  if (event.type === "RELOAD") {
-    console.log("💿 Reloading window ...");
-    window.location.reload();
-  }
-};
-ws.onerror = error => {
-  console.log("Remix dev asset server web socket error:");
-  console.error(error);
-};
-              `.trim()
+              __html: `(${setupLiveReload})(${JSON.stringify(port)})`
             }}
           />
         );

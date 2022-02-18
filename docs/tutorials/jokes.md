@@ -61,7 +61,7 @@ You can follow along with this tutorial on [CodeSandbox](https://codesandbox.com
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor ([VSCode](https://code.visualstudio.com/) is a nice one)
 
-If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io) (note, currently hosting sqlite on fly will cost a few bucks a month).
+If you'd like to follow along with the deploy step at the end, you'll also want an account on [Fly.io](https://fly.io).
 
 We'll also be executing commands in your system command line/terminal interface. So you'll want to be familiar with that.
 
@@ -167,7 +167,7 @@ Building Remix app in production mode...
 Built in 132ms
 ```
 
-Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
+Now you should also have a `.cache/` directory (something used internally by Remix), a `build/` directory, and a `public/build` directory. The `build/` directory is our server-side code. The `public/build/` holds all our client-side code. These three directories are listed in your `.gitignore` file so you don't commit the generated files to source control.
 
 💿 Let's run the built app now:
 
@@ -188,7 +188,7 @@ Open up that URL and you should be presented with a minimal page pointing to som
 - `app/routes`
 - `app/styles`
 
-We're going to trim this down the the bare bones and introduce things incrementally.
+We're going to trim this down the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
@@ -401,7 +401,7 @@ Great, so now going to [`/jokes/new`](http://localhost:3000/jokes/new) should di
 
 ### Parameterized Routes
 
-Soon we'll add a database that stores our jokes by an ID, so lets add one more route that's a little more unique, a parameterized route:
+Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
 `/jokes/:jokeId`
 
@@ -437,7 +437,7 @@ Great! We've got our primary routes all set up!
 
 ## Styling
 
-From the beginning of styling on the web, to get CSS on the page, we've used `<link rel="stylesheet" href="/path-to-file.css" />`. This is how you style your Remix applications as well, but Remix makes it much easier than just throwing `link` tags all over the place. Remix brings the power of it's Nested Routing support to CSS and allows you to associate `link`s to routes. When the route is active, the `link` is on the page and the CSS applies. When the route is not active (the user navigates away), the `link` tag is removed and the CSS no longer applies.
+From the beginning of styling on the web, to get CSS on the page, we've used `<link rel="stylesheet" href="/path-to-file.css" />`. This is how you style your Remix applications as well, but Remix makes it much easier than just throwing `link` tags all over the place. Remix brings the power of its Nested Routing support to CSS and allows you to associate `link`s to routes. When the route is active, the `link` is on the page and the CSS applies. When the route is not active (the user navigates away), the `link` tag is removed and the CSS no longer applies.
 
 You do this by exporting a [`links`](../api/conventions#links) function in your route module. Let's get the homepage styled. You can put your CSS files anywhere you like within the `app` directory. We'll put ours in `app/styles/`.
 
@@ -463,9 +463,10 @@ body {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1-6]
+```tsx filename=app/routes/index.tsx lines=[1, 3, 5-7]
 import type { LinksFunction } from "remix";
-import stylesUrl from "../styles/index.css";
+
+import stylesUrl from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -478,7 +479,7 @@ export default function IndexRoute() {
 
 </details>
 
-Now if you go to [`/`](http://localhost:3000/) you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
+Now if you go to [`/`](http://localhost:3000) you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
 
 So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`](../api/remix#link) component.
 
@@ -1221,18 +1222,14 @@ export default function App() {
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[1,3,5-12]
+```tsx filename=app/routes/jokes.tsx lines=[1,4,6-8]
 import type { LinksFunction } from "remix";
 import { Outlet, Link } from "remix";
-import stylesUrl from "../styles/jokes.css";
+
+import stylesUrl from "~/styles/jokes.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl
-    }
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 export default function JokesRoute() {
@@ -1287,7 +1284,8 @@ export default function JokesRoute() {
 ```tsx filename=app/routes/index.tsx
 import type { LinksFunction } from "remix";
 import { Link } from "remix";
-import stylesUrl from "../styles/index.css";
+
+import stylesUrl from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
   return [
@@ -1375,7 +1373,7 @@ https://pris.ly/d/getting-started
 
 Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
-```ts filename=prisma/schema.prisma lines=[13-19]
+```prisma filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -1581,6 +1579,7 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 // this is just an example. No need to copy/paste this 😄
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
@@ -1617,19 +1616,15 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[1-3,15-17,19-24,27,51-55]
-import { LinksFunction, LoaderFunction } from "remix";
+```tsx filename=app/routes/jokes.tsx lines=[1-2,4,11-13,15-20,23,47-51]
+import type { LinksFunction, LoaderFunction } from "remix";
 import { Link, Outlet, useLoaderData } from "remix";
+
 import { db } from "~/utils/db.server";
-import stylesUrl from "../styles/jokes.css";
+import stylesUrl from "~/styles/jokes.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl
-    }
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 type LoaderData = {
@@ -1755,10 +1750,11 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3-4,6,8-15,18]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,5,7,9-16,19]
 import type { LoaderFunction } from "remix";
 import { Link, useLoaderData } from "remix";
 import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 
 type LoaderData = { joke: Joke };
@@ -1814,10 +1810,11 @@ const [randomJoke] = await db.joke.findMany({
 
 <summary>app/routes/jokes/index.tsx</summary>
 
-```tsx filename=app/routes/jokes/index.tsx lines=[3-4,6,8-17,20]
+```tsx filename=app/routes/jokes/index.tsx lines=[3,5,7,9-18,21]
 import type { LoaderFunction } from "remix";
 import { useLoaderData, Link } from "remix";
 import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 
 type LoaderData = { randomJoke: Joke };
@@ -1901,9 +1898,10 @@ const joke = await db.joke.create({
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[1-3,5-24]
+```tsx filename=app/routes/jokes/new.tsx lines=[1-2,4,6-25]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
+
 import { db } from "~/utils/db.server";
 
 export const action: ActionFunction = async ({
@@ -1979,15 +1977,16 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2,5-9,11-15,17-27,29-30,42-44,47-50,52-54,61,72,74-82,85-93,99,101-109,112-120]
+```tsx filename=app/routes/jokes/new.tsx lines=[2,6-10,12-16,18-28,30-31,43-45,48-51,53-55,62,73,75-83,86-94,100,102-110,113-121]
 import type { ActionFunction } from "remix";
 import { useActionData, redirect, json } from "remix";
+
 import { db } from "~/utils/db.server";
 
 function validateJokeContent(content: string) {
@@ -2130,7 +2129,7 @@ First I want you to notice that I've added an `ActionData` type so we could get 
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
 
-The `badRequest` helper function is important to gives us typechecking to ensure our return value is of type `ActionData`, while still returning the accurate HTTP status, [`400 Bad Request`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400), to the client. If we just return the `ActionData` value, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
+The `badRequest` helper function is important because it gives us typechecking that ensures our return value is of type `ActionData`, while still returning the accurate HTTP status, [`400 Bad Request`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400), to the client. If we just return the `ActionData` value, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
@@ -2150,7 +2149,7 @@ We're going to handroll our own authentication from scratch. Don't worry, I prom
 
 Let's start by showing you our updated `prisma/schema.prisma` file. 💿 Go ahead and update your `prisma/schema.prisma` file to look like this:
 
-```ts filename=prisma/schema.prisma lines=[13-20,24-25]
+```prisma filename=prisma/schema.prisma lines=[13-20,24-25]
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -2221,10 +2220,10 @@ With this change, we're going to start experiencing some TypeScript errors in ou
 
 ```ts filename=prisma/seed.ts lines=[5-12,15-16]
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
 async function seed() {
-  const kody = await prisma.user.create({
+  const kody = await db.user.create({
     data: {
       username: "kody",
       // this is a hashed version of "twixrox"
@@ -2235,7 +2234,7 @@ async function seed() {
   await Promise.all(
     getJokes().map(joke => {
       const data = { jokesterId: kody.id, ...joke };
-      return prisma.joke.create({ data });
+      return db.joke.create({ data });
     })
   );
 }
@@ -2422,6 +2421,7 @@ fieldset > :not(:last-child) {
 ```tsx filename=app/routes/login.tsx
 import type { LinksFunction } from "remix";
 import { Link, useSearchParams } from "remix";
+
 import stylesUrl from "../styles/login.css";
 
 export const links: LinksFunction = () => {
@@ -2524,8 +2524,9 @@ import {
   Link,
   useSearchParams
 } from "remix";
+
 import { db } from "~/utils/db.server";
-import stylesUrl from "../styles/login.css";
+import stylesUrl from "~/styles/login.css";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -2770,7 +2771,7 @@ Here's what we need in that file to get started:
 - Export a function called `login` that accepts the `username` and `password`
 - Queries prisma for a user with the `username`
 - If there is no user, return `null`
-- Use `bcrypt.compare` to compare the give `password` to the user's `passwordHash`
+- Use `bcrypt.compare` to compare the given `password` to the user's `passwordHash`
 - If the passwords don't match, return `null`
 - If the passwords match, return the user
 
@@ -2782,6 +2783,7 @@ Here's what we need in that file to get started:
 
 ```tsx filename=app/utils/session.server.ts
 import bcrypt from "bcryptjs";
+
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -2804,7 +2806,7 @@ export async function login({
   );
   if (!isCorrectPassword) return null;
 
-  return user;
+  return { id: user.id, username };
 }
 ```
 
@@ -2816,12 +2818,18 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
+```tsx filename=app/routes/login.tsx lines=[10,21-28] nocopy
 import type { ActionFunction, LinksFunction } from "remix";
-import { useActionData, json, Link } from "remix";
+import {
+  useActionData,
+  json,
+  Link,
+  useSearchParams
+} from "remix";
+
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
-import stylesUrl from "../styles/login.css";
+import stylesUrl from "~/styles/login.css";
 
 // ...
 
@@ -2896,6 +2904,7 @@ import {
   createCookieSessionStorage,
   redirect
 } from "remix";
+
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -2916,7 +2925,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -2961,16 +2970,29 @@ export async function createUserSession(
 
 ```tsx filename=app/routes/login.tsx nocopy
 // ...
-case "login": {
-  const user = await login({ username, password });
-  if (!user) {
-    return {
-      fields,
-      formError: `Username/Password combination is incorrect`
-    };
+
+export const action: ActionFunction = async ({
+  request
+}) => {
+  // ...
+
+  switch (loginType) {
+    case "login": {
+      const user = await login({ username, password });
+
+      if (!user) {
+        return badRequest({
+          fields,
+          formError: `Username/Password combination is incorrect`
+        });
+      }
+      return createUserSession(user.id, redirectTo);
+    }
+
+    // ...
   }
-  return createUserSession(user.id, redirectTo);
-}
+};
+
 // ...
 ```
 
@@ -2992,7 +3014,7 @@ And now every request the browser makes to our server will include that cookie (
 
 ![Request headers showing the Cookie](/jokes-tutorial/img/cookie-header-on-request.png)
 
-So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `prisma.joke.create` call.
+So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `db.joke.create` call.
 
 <docs-info>Remember to check [the docs](../api/remix#sessions) to learn how to get the session from the request</docs-info>
 
@@ -3008,6 +3030,7 @@ import {
   createCookieSessionStorage,
   redirect
 } from "remix";
+
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -3028,7 +3051,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3101,15 +3124,16 @@ We'll cover this more in the error handling sections later.
 
 You may also notice that our solution makes use of the `login` route's `redirectTo` feature we had earlier.
 
-💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `prisma.joke.create` call.
+💿 Now update `app/routes/jokes/new.tsx` to use that function to get the userId and pass it to the `db.joke.create` call.
 
 <details>
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```ts filename=app/routes/jokes/new.tsx lines=[4,36,59]
+```tsx filename=app/routes/jokes/new.tsx lines=[5,37,60]
 import type { ActionFunction } from "remix";
 import { useActionData, redirect, json } from "remix";
+
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
 
@@ -3258,12 +3282,13 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[75-89,91-100]
+```ts filename=app/utils/session.server.ts lines=[75-90,92-101]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
 } from "remix";
+
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -3284,7 +3309,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3341,7 +3366,8 @@ export async function getUser(request: Request) {
 
   try {
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, username: true }
     });
     return user;
   } catch {
@@ -3382,30 +3408,21 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[10,23,35,39,61-72]
-import { User } from "@prisma/client";
-import {
-  Link,
-  LinksFunction,
-  LoaderFunction,
-  Outlet,
-  useLoaderData
-} from "remix";
+```tsx filename=app/routes/jokes.tsx lines=[6,19,31,35,57-68]
+import type { User } from "@prisma/client";
+import type { LinksFunction, LoaderFunction } from "remix";
+import { Link, Outlet, useLoaderData } from "remix";
+
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
-import stylesUrl from "../styles/jokes.css";
+import stylesUrl from "~/styles/jokes.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl
-    }
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 type LoaderData = {
-  user: User | null;
+  user: Awaited<ReturnType<typeof getUser>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
@@ -3492,6 +3509,7 @@ export default function JokesRoute() {
 ```tsx filename=app/routes/logout.tsx
 import type { ActionFunction, LoaderFunction } from "remix";
 import { redirect } from "remix";
+
 import { logout } from "~/utils/session.server";
 
 export const action: ActionFunction = async ({
@@ -3537,12 +3555,13 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[13-21]
+```tsx filename=app/utils/session.server.ts lines=[14-23]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect
 } from "remix";
+
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -3555,9 +3574,10 @@ export async function register({
   password
 }: LoginForm) {
   const passwordHash = await bcrypt.hash(password, 10);
-  return db.user.create({
+  const user = await db.user.create({
     data: { username, passwordHash }
   });
+  return { id: user.id, username };
 }
 
 export async function login({
@@ -3573,7 +3593,7 @@ export async function login({
     user.passwordHash
   );
   if (!isCorrectPassword) return null;
-  return user;
+  return { id: user.id, username };
 }
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -3630,7 +3650,8 @@ export async function getUser(request: Request) {
 
   try {
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, username: true }
     });
     return user;
   } catch {
@@ -3669,7 +3690,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[12,96-102]
+```tsx filename=app/routes/login.tsx lines=[13,97-103]
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
@@ -3677,13 +3698,14 @@ import {
   useSearchParams,
   Link
 } from "remix";
+
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
   login,
   register
 } from "~/utils/session.server";
-import stylesUrl from "../styles/login.css";
+import stylesUrl from "~/styles/login.css";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -4196,7 +4218,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,17-21,38-49]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,20-24,41-52]
 import type { LoaderFunction } from "remix";
 import {
   Link,
@@ -4205,6 +4227,7 @@ import {
   useParams
 } from "remix";
 import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 
 type LoaderData = { joke: Joke };
@@ -4263,10 +4286,11 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/index.tsx</summary>
 
-```tsx filename=app/routes/jokes/index.tsx lines=[2,15-19,38-51]
+```tsx filename=app/routes/jokes/index.tsx lines=[2,16-20,39-52]
 import type { LoaderFunction } from "remix";
 import { useLoaderData, Link, useCatch } from "remix";
 import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 
 type LoaderData = { randomJoke: Joke };
@@ -4331,7 +4355,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[6-7,15-21,155-166]
+```tsx filename=app/routes/jokes/new.tsx lines=[6-7,16-22,156-167]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
@@ -4340,6 +4364,7 @@ import {
   useCatch,
   Link
 } from "remix";
+
 import { db } from "~/utils/db.server";
 import {
   requireUserId,
@@ -4543,9 +4568,9 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,8,11,30-57,67-76,81-103]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,7,12,31-58,68-77,82-104]
 import type { Joke } from "@prisma/client";
-import { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
 import {
   Link,
   useLoaderData,
@@ -4553,6 +4578,7 @@ import {
   redirect,
   useParams
 } from "remix";
+
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
 
@@ -4665,8 +4691,9 @@ Now that people will get a proper error message if they try to delete a joke tha
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[12,16,19,22,33,75-86]
-import { ActionFunction, LoaderFunction } from "remix";
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,17,20,23,34,76-87]
+import type { Joke } from "@prisma/client";
+import type { ActionFunction, LoaderFunction } from "remix";
 import {
   Link,
   useLoaderData,
@@ -4674,7 +4701,7 @@ import {
   redirect,
   useParams
 } from "remix";
-import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 import {
   getUserId,
@@ -4810,7 +4837,7 @@ But before you get started, remember that we're in charge of rendering everythin
 
 <summary>app/root.tsx</summary>
 
-```ts filename=app/root.tsx lines=[1,7,33-45,58]
+```tsx filename=app/root.tsx lines=[1,7,33-45,58]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
@@ -4922,27 +4949,21 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/index.tsx</summary>
 
-```ts filename=app/routes/index.tsx lines=[1,14-20]
+```tsx filename=app/routes/index.tsx lines=[1,10-14]
 import type { LinksFunction, MetaFunction } from "remix";
 import { Link } from "remix";
-import stylesUrl from "../styles/index.css";
+
+import stylesUrl from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl
-    }
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
-export const meta: MetaFunction = () => {
-  return {
-    title: "Remix: So great, it's funny!",
-    description:
-      "Remix jokes app. Learn Remix and laugh at the same time!"
-  };
-};
+export const meta: MetaFunction = () => ({
+  title: "Remix: So great, it's funny!",
+  description:
+    "Remix jokes app. Learn Remix and laugh at the same time!"
+});
 
 export default function Index() {
   return (
@@ -4970,7 +4991,7 @@ export default function Index() {
 
 <summary>app/routes/login.tsx</summary>
 
-```ts filename=app/routes/login.tsx lines=[4,24-30]
+```tsx filename=app/routes/login.tsx lines=[4,25-31]
 import type {
   ActionFunction,
   LinksFunction,
@@ -4982,13 +5003,14 @@ import {
   useSearchParams,
   Link
 } from "remix";
+
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
   login,
   register
 } from "~/utils/session.server";
-import stylesUrl from "../styles/login.css";
+import stylesUrl from "~/styles/login.css";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -5237,7 +5259,7 @@ export default function Login() {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```ts filename=app/routes/jokes/$jokeId.tsx lines=[4,20-35]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,21-36]
 import type {
   ActionFunction,
   LoaderFunction,
@@ -5251,6 +5273,7 @@ import {
   useParams
 } from "remix";
 import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 import {
   getUserId,
@@ -5393,7 +5416,7 @@ This is what [Resource Routes](../guides/resource-routes) are for. I think it'd 
 
 <docs-info>Believe it or not, you've actually already made one of these. Check out your logout route! No UI necessary because it's just there to handle mutations and redirect lost souls.</docs-info>
 
-For this one, you'll probably want to at least peak at the example unless you want to go read up on the RSS spec 😅.
+For this one, you'll probably want to at least peek at the example unless you want to go read up on the RSS spec 😅.
 
 💿 Make a `/jokes.rss` route.
 
@@ -5403,19 +5426,20 @@ For this one, you'll probably want to at least peak at the example unless you wa
 
 ```tsx filename=app/routes/jokes[.]rss.tsx
 import type { LoaderFunction } from "remix";
+
 import { db } from "~/utils/db.server";
 
 function escapeCdata(s: string) {
-  return s.replaceAll("]]>", "]]]]><![CDATA[>");
+  return s.replace(/\]\]>/g, "]]]]><![CDATA[>");
 }
 
 function escapeHtml(s: string) {
   return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(/\&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export const loader: LoaderFunction = async ({
@@ -5711,7 +5735,7 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[19,93-95]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[20,94-96]
 import type {
   LoaderFunction,
   ActionFunction,
@@ -5725,6 +5749,7 @@ import {
   useParams
 } from "remix";
 import type { Joke } from "@prisma/client";
+
 import { db } from "~/utils/db.server";
 import {
   getUserId,
@@ -5849,7 +5874,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[11,88-108]
+```tsx filename=app/routes/jokes/new.tsx lines=[9,12,89-109]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
@@ -5860,6 +5885,7 @@ import {
   Form,
   useTransition
 } from "remix";
+
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import {
@@ -6066,9 +6092,9 @@ Here's a demonstration of what that experience looks like:
 
 I feel pretty great about the user experience we've created here. So let's get this thing deployed! With Remix you have a lot of options for deployment. When you ran `npx create-remix@latest` at the start of this tutorial, there were several options given to you. Because the tutorial we've built relies on Node.js (`prisma`), we're going to deploy to one of our favorite hosting providers: [Fly.io](https://fly.io).
 
-<docs-error>Note, deploying to fly with a sqlite database is going to cost a little bit of money: A couple bucks per month you have it running.</docs-error>
-
 💿 Before proceeding, you're going to need to [install fly](https://fly.io/docs/hands-on/installing/) and [sign up for an account](https://fly.io/docs/hands-on/sign-up/).
+
+<docs-info>Fly.io asks you a credit card number at account creation (see why in [their blog article](https://fly.io/blog/free-postgres/#a-note-about-credit-cards)) but there are free tiers that cover the needs of this app hosted as a simple side project.</docs-info>
 
 💿 Once you've done that, run this command from within your project directory:
 
@@ -6086,7 +6112,7 @@ Detected a Remix app
 Automatically selected personal organization: Kent C. Dodds
 ? Select region: dfw (Dallas, Texas (US))
 Created app remix-jokes in organization personal
-Created a 10GB volume vol_18l524yj27947zmp in the dfw region
+Created a 1GB volume vol_18l524yj27947zmp in the dfw region
 Wrote config file fly.toml
 
 This launch configuration uses SQLite on a single, dedicated volume. It will not scale beyond a single VM. Look into 'fly postgres' for a more robust production database.
@@ -6099,7 +6125,7 @@ You'll want to choose a different app name because I already took `remix-jokes` 
 
 It also allowed you to select a region, I recommend choosing one that's close to you. If you decide to deploy a real app on Fly in the future, you may decide to scale up your fly to multiple regions.
 
-Fly also detected that this project is using sqlite with prisma and created a persistence volume for us (this is the part that costs money).
+Fly also detected that this project is using sqlite with prisma and created a persistence volume for us.
 
 We don't want to deploy right now because we have an environment variable we need to set! So choose "No".
 

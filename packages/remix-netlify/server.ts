@@ -1,7 +1,6 @@
 import {
   // This has been added as a global in node 15+
   AbortController,
-  formatServerError,
   Headers as NodeHeaders,
   Request as NodeRequest
 } from "@remix-run/node";
@@ -46,7 +45,7 @@ export function createRequestHandler({
   getLoadContext?: AppLoadContext;
   mode?: string;
 }): Handler {
-  let platform: ServerPlatform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, context) => {
@@ -145,14 +144,18 @@ export async function sendRemixResponse(
     response.headers.set("Connection", "close");
   }
 
-  let isBinary = isBinaryType(response.headers.get("content-type"));
-  let isString = typeof response.body === "string";
-  let isBuffer = response.body && response.body instanceof Buffer;
-  let isBase64Encoded = isBuffer || (isBinary && isString);
-  let body =
-    isBuffer && isBinary
-      ? Buffer.from(response.body as any).toString("base64")
-      : await response.text();
+  let contentType = response.headers.get("content-type");
+  let isBinary = isBinaryType(contentType);
+  let body;
+  let isBase64Encoded = false;
+
+  if (isBinary) {
+    const blob = await response.arrayBuffer();
+    body = Buffer.from(blob).toString("base64");
+    isBase64Encoded = true;
+  } else {
+    body = await response.text();
+  }
 
   return {
     statusCode: response.status,

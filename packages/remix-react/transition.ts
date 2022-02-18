@@ -1395,7 +1395,7 @@ function filterMatchesToLoad(
     // clicked the same link, resubmitted a GET form
     createHref(url) === createHref(state.location) ||
     // search affects all loaders
-    url.searchParams.toString() !== state.location.search
+    url.searchParams.toString() !== state.location.search.substring(1)
   ) {
     return matches.filter(filterByRouteProps);
   }

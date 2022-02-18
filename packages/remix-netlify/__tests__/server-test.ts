@@ -1,6 +1,5 @@
 import fsp from "fs/promises";
 import path from "path";
-import { Readable } from "stream";
 import lambdaTester from "lambda-tester";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
@@ -53,9 +52,7 @@ describe("netlify createRequestHandler", () => {
 
     it("handles requests", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async req => {
-        return new Response(`URL: ${new URL(req.url).pathname}`, {
-          headers: { "content-type": "text/plain" }
-        });
+        return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
       // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
@@ -285,11 +282,18 @@ describe("netlify createRemixRequest", () => {
 });
 
 describe("sendRemixResponse", () => {
+  it("handles regular responses", async () => {
+    let response = new NodeResponse("anything");
+    let abortController = new AbortController();
+    let result = await sendRemixResponse(response, abortController);
+    expect(result.body).toBe("anything");
+  });
+
   it("handles resource routes with regular data", async () => {
     let json = JSON.stringify({ foo: "bar" });
     let response = new NodeResponse(json, {
       headers: {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "content-length": json.length.toString()
       }
     });
@@ -300,18 +304,11 @@ describe("sendRemixResponse", () => {
 
     expect(result.body).toMatch(json);
   });
+
   it("handles resource routes with binary data", async () => {
-    let image = await fsp.readFile(
-      path.join(__dirname, "554828.jpeg"),
-      "utf-8"
-    );
+    let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
 
-    const stream = new Readable();
-    stream._read = () => {}; // redundant? see update below
-    stream.push(image);
-    stream.push(null);
-
-    let response = new NodeResponse(stream, {
+    let response = new NodeResponse(image, {
       headers: {
         "content-type": "image/jpeg",
         "content-length": image.length.toString()
@@ -322,6 +319,6 @@ describe("sendRemixResponse", () => {
 
     let result = await sendRemixResponse(response, abortController);
 
-    expect(result.body).toMatch(image);
+    expect(result.body).toMatch(image.toString("base64"));
   });
 });

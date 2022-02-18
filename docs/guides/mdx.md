@@ -103,7 +103,7 @@ function postFromModule(mod) {
   };
 }
 
-export function loader() {
+export async function loader() {
   // Return metadata about each of the posts for display on the index page.
   // Referencing the posts here instead of in the Index component down below
   // lets us avoid bundling the actual posts themselves in the bundle for the

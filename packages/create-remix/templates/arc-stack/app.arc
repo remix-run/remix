@@ -12,6 +12,9 @@ remix-aws-stack
 people
   pk *String  # email
 
+password
+  pk *String # user's email
+
 notes
   pk *String  # user's email
   sk **String # noteId

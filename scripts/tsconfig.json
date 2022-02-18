@@ -5,6 +5,8 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true
+    "noEmit": true,
+    "moduleResolution": "Node",
+    "target": "ES2018"
   }
 }

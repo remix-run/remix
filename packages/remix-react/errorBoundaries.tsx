@@ -100,7 +100,7 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
           dangerouslySetInnerHTML={{
             __html: `
               console.log(
-                "💿 Hey developer👋. You can provide a way better UX when your app throws errors than this. Check out https://remix.run/guides/errors for more information."
+                "💿 Hey developer👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
               );
             `
           }}
@@ -170,7 +170,7 @@ export function RemixRootDefaultCatchBoundary() {
           dangerouslySetInnerHTML={{
             __html: `
               console.log(
-                "💿 Hey developer👋. You can provide a way better UX when your app throws 404s (and other responses) than this. Check out https://remix.run/guides/not-found for more information."
+                "💿 Hey developer👋. You can provide a way better UX than this when your app throws 404s (and other responses). Check out https://remix.run/guides/not-found for more information."
               );
             `
           }}
