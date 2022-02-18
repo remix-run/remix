@@ -1132,7 +1132,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
       }
 
-      if (typeof window === "undefined") {
+      if (typeof document === "undefined") {
         throw new Error(
           "You are calling submit during the server render. " +
             "Try calling submit within a `useEffect` or callback instead."

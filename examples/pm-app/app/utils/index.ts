@@ -14,15 +14,14 @@ export function getUserFromDisplayName<
 }
 
 export const canUseDOM: boolean = !!(
-  typeof window !== "undefined" &&
-  typeof window.document !== "undefined" &&
-  typeof window.document.createElement !== "undefined"
+  typeof document !== "undefined" &&
+  typeof document.createElement !== "undefined"
 );
 
 export function getClientSafeEnvVariable<
   K extends keyof RemoveIndex<Exclude<Window["ENV"], undefined>>
 >(key: K): Exclude<Window["ENV"], undefined>[K] {
-  if (typeof window !== "undefined") {
+  if (typeof document !== "undefined") {
     try {
       const ENV = window.ENV;
       if (!ENV) {
