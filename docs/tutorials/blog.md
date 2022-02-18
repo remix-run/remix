@@ -360,7 +360,7 @@ Since we're reading in a file, the type system has no idea what's in there, so w
 💿 Ensure our posts have the proper meta data and get type safety
 
 ```sh
-npm add tiny-invariant
+npm install tiny-invariant
 ```
 
 ```tsx filename=app/post.ts lines=[4,11-13,17-21,33-36]
@@ -531,9 +531,9 @@ There are a lot of markdown parsers, we'll use "marked" for this tutorial becaus
 💿 Parse the markdown into HTML
 
 ```sh
-npm add marked
+npm install marked
 # if using typescript
-npm add @types/marked
+npm install @types/marked
 ```
 
 ```tsx filename=app/post.ts lines=[5,11,18,19]
