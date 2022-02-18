@@ -92,4 +92,28 @@ You may ask why we don't just bundle everything for the server. We could, but th
 
 With major deployment platforms now supporting ESM server side, we're confident the future is brighter than the past here. We're still working on a solid dev experience for ESM server builds, our current approach relies on some things that you can't do in ESM. We'll get there.
 
+## `typeof window` checks
+
+Because the same JavaScript code can run in the browser as well as the server, sometimes you need to have a part of your code that only runs in one context or the other:
+
+```ts bad
+if (typeof window === "undefined") {
+  // running in a server environment
+} else {
+  // running in a browser environment
+}
+```
+
+This works fine in a Node.js environment, however, Deno actually supports `window`! So if you really want to check whether you're running in the browser, it's better to check for `document` instead:
+
+```ts good
+if (typeof document === "undefined") {
+  // running in a server environment
+} else {
+  // running in a browser environment
+}
+```
+
+This will work for all JS environments (Node.js, Deno, Workers, etc.).
+
 [esbuild]: https://esbuild.github.io/
