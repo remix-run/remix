@@ -1,4 +1,10 @@
-# Welcome to Remix!
+# Remix Jokes!
+
+So great, it's funny!
+
+Production deploy here: https://remix-jokes.lol
+
+Tutorial here: https://rmx.as/jokes
 
 This example demonstrates some of the basic features of Remix, including:
 
