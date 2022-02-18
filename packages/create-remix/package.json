@@ -19,13 +19,17 @@
     "@iarna/toml": "^2.2.5",
     "chalk-animation": "^1.6.0",
     "fs-extra": "^10.0.0",
+    "got": "^11.8.3",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",
+    "node-fetch": "^2.6.7",
     "semver": "^7.3.5",
-    "sort-package-json": "^1.54.0"
+    "sort-package-json": "^1.54.0",
+    "tar": "^6.1.11"
   },
   "devDependencies": {
     "@types/chalk-animation": "^1.6.0",
-    "@types/inquirer": "^7.3.1"
+    "@types/inquirer": "^7.3.1",
+    "@types/tar": "^6.1.1"
   }
 }
