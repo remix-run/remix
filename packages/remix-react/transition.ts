@@ -904,7 +904,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
-    if (typeof AbortController === "undefined") {
+    if (typeof window === "undefined") {
       throw new Error(
         "handleLoaderFetch was called during the server render, but it shouldn't be. " +
           "You are likely calling useFetcher.load() in the body of your component. " +
