@@ -1,6 +1,6 @@
-# fly.toml file generated for remix-example-jokes on 2021-11-19T20:07:25-07:00
+# fly.toml file generated for remix-jokes on 2021-11-21T03:55:55-07:00
 
-app = "remix-example-jokes"
+app = "remix-jokes"
 
 kill_signal = "SIGINT"
 kill_timeout = 5
@@ -9,6 +9,7 @@ processes = []
 [env]
   DATABASE_URL = "file:/data/sqlite.db"
   PORT = "8080"
+  NODE_ENV = "production"
 
 [experimental]
   cmd = "start_with_migrations.sh"
