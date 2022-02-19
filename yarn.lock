@@ -8513,6 +8513,13 @@ mute-stream@0.0.8:
   resolved "https://registry.npmjs.org/mute-stream/-/mute-stream-0.0.8.tgz"
   integrity sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==
 
+nano-staged@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/nano-staged/-/nano-staged-0.6.0.tgz#f62dd9ac709b2b24af0dbe35b245affb5a03d456"
+  integrity sha512-TqbdujUpBMwaBu582a5/BHlxTrs3Mu1DMk8KF2q38M0CTGiY34WRpwaQXTy5jRc5BXGjBCy4XByS69TSaS8WPw==
+  dependencies:
+    picocolors "^1.0.0"
+
 nanocolors@^0.1.0, nanocolors@^0.1.5:
   version "0.1.12"
   resolved "https://registry.npmjs.org/nanocolors/-/nanocolors-0.1.12.tgz"

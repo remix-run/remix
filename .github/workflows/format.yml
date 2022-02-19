@@ -29,7 +29,11 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Format
-        run: npm run format --if-present
+        run: |
+          if [ ${{ github.event_name == 'push' }} ]; then
+            git fetch origin ${{ github.event.before }}
+            npx nano-staged --diff ${{ github.event.before }} -c ./.format.js
+          fi
 
       - name: Commit
         run: |
