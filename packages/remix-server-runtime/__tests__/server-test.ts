@@ -1652,5 +1652,34 @@ describe("shared server runtime", () => {
       expect(calls.length).toBe(2);
       expect(spy.console.mock.calls.length).toBe(1);
     });
+
+    test("provides load context to server entrypoint", async () => {
+      let build = mockServerBuild({
+        root: {
+          default: {},
+        },
+        "routes/index": {
+          parentId: "root",
+          default: () => null,
+          index: true
+        }
+      });
+
+      build.entry.module.default = jest.fn(
+        async (request, responseStatusCode, responseHeaders, entryContext, loadContext) =>
+          new Response(loadContext, {
+            status: responseStatusCode,
+            headers: responseHeaders
+          })
+      );
+
+      let handler = createRequestHandler(build, {}, ServerMode.Development);
+      let request = new Request(`${baseUrl}/`, { method: "get" });
+      let loadContext = "load context";
+
+      let result = await handler(request, loadContext);
+      expect(result.status).toBe(200);
+      expect(await result.text()).toBe(loadContext);
+    });
   });
 });

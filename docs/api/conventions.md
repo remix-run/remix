@@ -488,6 +488,7 @@ import { renderToString } from "react-dom/server";
 import type {
   EntryContext,
   HandleDataRequestFunction,
+  AppLoadContext,
 } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { RemixServer } from "@remix-run/react";
 
@@ -495,7 +496,11 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  // This is the context you passed in to your server adapter's getLoadContext() function.
+  // It is the same value that is also passed to your loaders and actions.
+  // See also the description of the loader `context` parameter later in this document.
+  loadContext: AppLoadContext,
 ) {
   const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />

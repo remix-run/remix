@@ -465,7 +465,8 @@ async function handleDocumentRequest({
       request,
       responseStatusCode,
       responseHeaders,
-      entryContext
+      entryContext,
+      loadContext
     );
   } catch (error: any) {
     responseStatusCode = 500;
@@ -485,7 +486,8 @@ async function handleDocumentRequest({
         request,
         responseStatusCode,
         responseHeaders,
-        entryContext
+        entryContext,
+        loadContext
       );
     } catch (error: any) {
       if (serverMode !== ServerMode.Test) {
