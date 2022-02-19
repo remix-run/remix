@@ -1,4 +1,4 @@
-name: Format
+name: Format with Nano Staged
 
 on:
   push:
