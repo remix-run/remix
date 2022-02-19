@@ -8,11 +8,14 @@ describe("Forms", () => {
   const KEYBOARD_INPUT = "KEYBOARD_INPUT";
   const CHECKBOX_BUTTON = "CHECKBOX_BUTTON";
   const ORPHAN_BUTTON = "ORPHAN_BUTTON";
+  const FORM_WITH_ACTION_INPUT = "FORM_WITH_ACTION_INPUT";
   const FORM_WITH_ORPHAN = "FORM_WITH_ORPHAN";
   const LUNCH = "LUNCH";
   const CHEESESTEAK = "CHEESESTEAK";
   const LAKSA = "LAKSA";
   const SQUID_INK_HOTDOG = "SQUID_INK_HOTDOG";
+  const ACTION = "action";
+  const EAT = "EAT";
 
   const STATIC_ROUTE_ABSOLUTE_ACTION = "static-route-abs";
   const STATIC_ROUTE_CURRENT_ACTION = "static-route-cur";
@@ -52,6 +55,13 @@ describe("Forms", () => {
               <>
                 <Form>
                   <input type="text" name="${LUNCH}" defaultValue="${CHEESESTEAK}" />
+                  <input type="text" name="${ACTION}" defaultValue="${EAT}" />
+                  <button type="submit">
+                  </button>
+                </Form>
+
+                <Form id="${FORM_WITH_ACTION_INPUT}">
+                  <input type="text" name="${ACTION}" defaultValue="${EAT}" />
                   <button type="submit">
                   </button>
                 </Form>
@@ -266,6 +276,12 @@ describe("Forms", () => {
     await app.goto("/get-submission");
     await app.clickSubmitButton("/get-submission");
     expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+  });
+
+  it("posts to a loader with an <input name='action' />", async () => {
+    await app.goto("/get-submission");
+    await app.clickElement(`#${FORM_WITH_ACTION_INPUT} button`);
+    expect(await app.getHtml("pre")).toMatch(EAT);
   });
 
   it("posts to a loader with button data with click", async () => {
