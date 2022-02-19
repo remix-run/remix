@@ -10,7 +10,7 @@
     "build": "run-s build:*",
     "dev:remix": "remix dev",
     "dev:css": "sass styles/:app/styles/ --watch ",
-    "dev": "run-p dev:*",
+    "dev": "run-p 'dev:*'",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   },

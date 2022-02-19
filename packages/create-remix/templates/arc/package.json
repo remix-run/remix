@@ -4,7 +4,7 @@
     "build": "cross-env NODE_ENV=production remix build",
     "dev:remix": "cross-env NODE_ENV=development remix watch",
     "dev:arc": "cross-env NODE_ENV=development arc sandbox",
-    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev": "cross-env NODE_ENV=development remix build && run-p 'dev:*'",
     "start": "cross-env NODE_ENV=production arc sandbox"
   },
   "dependencies": {
