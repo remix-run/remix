@@ -1578,6 +1578,7 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
 import type { LoaderFunction } from "remix";
+import { useLoaderData } from "remix";
 import type { User } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -1595,7 +1596,7 @@ export default function Users() {
   return (
     <ul>
       {data.users.map(user => (
-        <li>{user.name}</li>
+        <li key={user.id}>{user.name}</li>
       ))}
     </ul>
   );
