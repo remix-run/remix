@@ -20,7 +20,11 @@ if (typeof document !== "undefined") {
  *
  * @see https://remix.run/api/remix#scrollrestoration
  */
-export function ScrollRestoration() {
+export function ScrollRestoration({
+  nonce = undefined
+}: {
+  nonce?: string;
+}) {
   useScrollRestoration();
 
   // wait for the browser to restore it on its own
@@ -54,6 +58,7 @@ export function ScrollRestoration() {
 
   return (
     <script
+      nonce={nonce}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
         __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`,
