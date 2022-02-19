@@ -919,9 +919,9 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
         }
       }
 
-      window.addEventListener("click", handleClick);
+      window.addEventListener("click", handleClick, { capture: true });
       return () => {
-        window.removeEventListener("click", handleClick);
+        window.removeEventListener("click", handleClick, { capture: true });
       };
     }, []);
 
