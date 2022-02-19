@@ -2868,7 +2868,7 @@ To check our work, I added a `console.log` to `app/routes/login.tsx` after the `
 {
   user: {
     id: '1dc45f54-4061-4d9e-8a6d-28d6df6a8d7f',
-    username: 'kody',
+    username: 'kody'
   }
 }
 ```
