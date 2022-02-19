@@ -8,7 +8,6 @@ on:
 
 jobs:
   format:
-    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
 
     steps:
@@ -34,17 +33,3 @@ jobs:
             git fetch origin ${{ github.event.before }}
             npx nano-staged --diff ${{ github.event.before }} -c ./.format.js
           fi
-
-      - name: Commit test
-        run: |
-          git config --local user.email "hello@remix.run"
-          git config --local user.name "Remix Run Bot"
-
-          git add .
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "💿 no formatting changed"
-            exit 0
-          fi
-          git commit -m "chore: format"
-          git push
-          echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
