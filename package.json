@@ -104,5 +104,8 @@
   },
   "engines": {
     "node": ">=14"
+  },
+  "devDependencies": {
+    "nano-staged": "^0.6.0"
   }
 }
