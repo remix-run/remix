@@ -80,13 +80,13 @@ function itPrefetchesPageLinks<
       jest.useFakeTimers();
     });
 
-    function withContext(stuff: JSX.Element) {
+    function withContext(stuff: JSX.Element, hasLoader: boolean) {
       const context = {
         routeModules: { idk: { default: () => null } },
         manifest: {
           routes: {
             idk: {
-              hasLoader: true,
+              hasLoader,
               hasAction: false,
               hasCatchBoundary: false,
               hasErrorBoundary: false,
@@ -100,7 +100,7 @@ function itPrefetchesPageLinks<
         },
         matches: [],
         clientRoutes: [
-          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" },
+          { id: "idk", path: "idk", hasLoader, element: "", module: "" },
         ],
         routeData: {},
         appState: {} as any,
@@ -114,47 +114,74 @@ function itPrefetchesPageLinks<
     }
 
     setIntentEvents.forEach((event) => {
-      it(`prefetches page links on ${event}`, () => {
-        const { container, unmount } = render(
-          withContext(
-            <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
-          )
-        );
+      [true, false].forEach((hasLoader) => {
+        const modulePreloadSelector = "link[rel=modulepreload][href*=idk]";
+        const prefetchSelector = "link[rel=prefetch][href*=idk]";
 
-        fireEvent[event](container.firstChild);
-        act(() => {
-          jest.runAllTimers();
+        it(`prefetches page links on ${event} ${
+          hasLoader ? "with" : "without"
+        } loader`, () => {
+          const { container, unmount } = render(
+            withContext(
+              <Component {...({ to: "idk", prefetch: "intent" } as Props)} />,
+              hasLoader
+            )
+          );
+
+          expect(container.querySelector(modulePreloadSelector)).toBeFalsy();
+          expect(container.querySelector(prefetchSelector)).toBeFalsy();
+
+          fireEvent[event](container.firstChild);
+          act(() => {
+            jest.runAllTimers();
+          });
+
+          expect(container.querySelector(modulePreloadSelector)).toBeTruthy();
+          if (hasLoader) {
+            expect(container.querySelector(prefetchSelector)).toBeTruthy();
+          } else {
+            expect(container.querySelector(prefetchSelector)).toBeFalsy();
+          }
+          unmount();
         });
 
-        expect(container.querySelector("link[rel=prefetch]")).toBeTruthy();
-        unmount();
-      });
+        it(`prefetches page links and calls explicit handler on ${event} ${
+          hasLoader ? "with" : "without"
+        } loader`, () => {
+          let ranHandler = false;
+          const eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
+          const { container, unmount } = render(
+            withContext(
+              <Component
+                {...({
+                  to: "idk",
+                  prefetch: "intent",
+                  [eventHandler]: () => {
+                    ranHandler = true;
+                  },
+                } as any)}
+              />,
+              hasLoader
+            )
+          );
 
-      it(`prefetches page links and calls explicit handler on ${event}`, () => {
-        let ranHandler = false;
-        const eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
-        const { container, unmount } = render(
-          withContext(
-            <Component
-              {...({
-                to: "idk",
-                prefetch: "intent",
-                [eventHandler]: () => {
-                  ranHandler = true;
-                },
-              } as any)}
-            />
-          )
-        );
+          expect(container.querySelector(modulePreloadSelector)).toBeFalsy();
+          expect(container.querySelector(prefetchSelector)).toBeFalsy();
 
-        fireEvent[event](container.firstChild);
-        act(() => {
-          jest.runAllTimers();
+          fireEvent[event](container.firstChild);
+          act(() => {
+            jest.runAllTimers();
+          });
+
+          expect(container.querySelector(modulePreloadSelector)).toBeTruthy();
+          if (hasLoader) {
+            expect(container.querySelector(prefetchSelector)).toBeTruthy();
+          } else {
+            expect(container.querySelector(prefetchSelector)).toBeFalsy();
+          }
+          expect(ranHandler).toBe(true);
+          unmount();
         });
-
-        expect(container.querySelector("link[rel=prefetch]")).toBeTruthy();
-        expect(ranHandler).toBe(true);
-        unmount();
       });
     });
   });

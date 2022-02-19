@@ -333,10 +333,7 @@ export function getNewMatchesForLinks(
           return true;
         })
       : nextMatches.filter((match, index) => {
-          return (
-            match.route.hasLoader &&
-            (isNew(match, index) || matchPathChanged(match, index))
-          );
+          return isNew(match, index) || matchPathChanged(match, index);
         });
 
   return newMatches;
