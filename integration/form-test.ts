@@ -15,10 +15,12 @@ describe("Forms", () => {
   const SQUID_INK_HOTDOG = "SQUID_INK_HOTDOG";
   const PINEAPPLE = "PINEAPPLE";
 
+  const GET_SUBMISSION = "get-submission";
+
   beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        "app/routes/get-submission.jsx": js`
+        [`app/routes/${GET_SUBMISSION}.jsx`]: js`
           import { useLoaderData, Form } from "remix";
 
           export function loader({ request }) {
@@ -46,7 +48,7 @@ describe("Forms", () => {
                   >
                     <svg height="100" width="100">
                       <circle id="svg-button-enhanced" cx="50" cy="50" r="40" stroke="black" strokeWidth="3" fill="red" />
-                    </svg> 
+                    </svg>
                   </button>
                 </Form>
 
@@ -88,7 +90,7 @@ describe("Forms", () => {
 
           export default function() {
             return (
-              <Form action="../get-submission">
+              <Form action="../${GET_SUBMISSION}">
                 <input type="text" name="${LUNCH}" defaultValue="${PINEAPPLE}" />
                 <button type="submit">Go</button>
               </Form>
@@ -107,8 +109,8 @@ describe("Forms", () => {
 
   it("posts to a loader without JavaScript", async () => {
     let enableJavaScript = await app.disableJavaScript();
-    await app.goto("/get-submission");
-    await app.clickSubmitButton("/get-submission", { wait: false });
+    await app.goto(`/${GET_SUBMISSION}`);
+    await app.clickSubmitButton(`/${GET_SUBMISSION}`, { wait: false });
     await app.page.waitForNavigation();
     expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
     await enableJavaScript();
@@ -116,19 +118,19 @@ describe("Forms", () => {
 
   it("posts to a loader", async () => {
     // this indirectly tests that clicking SVG children in buttons works
-    await app.goto("/get-submission");
-    await app.clickSubmitButton("/get-submission");
+    await app.goto(`/${GET_SUBMISSION}`);
+    await app.clickSubmitButton(`/${GET_SUBMISSION}`);
     expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
   });
 
   it("posts to a loader with button data with click", async () => {
-    await app.goto("/get-submission");
+    await app.goto(`/${GET_SUBMISSION}`);
     await app.clickElement("#buttonWithValue");
     expect(await app.getHtml("pre")).toMatch(LAKSA);
   });
 
   it("posts to a loader with button data with keyboard", async () => {
-    await app.goto("/get-submission");
+    await app.goto(`/${GET_SUBMISSION}`);
     await app.waitForNetworkAfter(async () => {
       await app.page.focus(`#${KEYBOARD_INPUT}`);
       await app.page.keyboard.press("Enter");
@@ -137,7 +139,7 @@ describe("Forms", () => {
   });
 
   it("posts with the correct checkbox data", async () => {
-    await app.goto("/get-submission");
+    await app.goto(`/${GET_SUBMISSION}`);
     await app.clickElement(`#${CHECKBOX_BUTTON}`);
     expect(await app.getHtml("pre")).toMatchInlineSnapshot(
       `"<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>"`
@@ -145,14 +147,14 @@ describe("Forms", () => {
   });
 
   it("posts button data from outside the form", async () => {
-    await app.goto("/get-submission");
+    await app.goto(`/${GET_SUBMISSION}`);
     await app.clickElement(`#${ORPHAN_BUTTON}`);
     expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
   });
 
   it("resolves to the correct action URL", async () => {
     await app.goto("/nested/form");
-    await app.clickSubmitButton("/get-submission");
+    await app.clickSubmitButton(`/${GET_SUBMISSION}`);
     expect(await app.getHtml("pre")).toMatch(PINEAPPLE);
   });
 });
