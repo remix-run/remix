@@ -35,7 +35,7 @@ jobs:
             npx nano-staged --diff ${{ github.event.before }} -c ./.format.js
           fi
 
-      - name: Commit
+      - name: Commit test
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
