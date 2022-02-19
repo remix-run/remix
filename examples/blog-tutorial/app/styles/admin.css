@@ -6,7 +6,7 @@
   padding-right: 2rem;
 }
 
-.admin > main {
+.admin > section {
   flex: 1;
   border-left: solid 1px #ccc;
   padding-left: 2rem;

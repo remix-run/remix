@@ -60,7 +60,7 @@ export default function Index() {
 
   return (
     <div className="remix__page">
-      <main>
+      <section>
         <h2>Welcome to Remix!</h2>
         <p>We're stoked that you're here. 🥳</p>
         <p>
@@ -74,7 +74,7 @@ export default function Index() {
           <code>app/routes/demos</code> and <code>app/styles/demos</code>{" "}
           folders when you're ready to turn this into your next project.
         </p>
-      </main>
+      </section>
       <aside>
         <h2>Demos In This App</h2>
         <ul>

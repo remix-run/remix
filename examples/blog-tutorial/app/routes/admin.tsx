@@ -26,9 +26,9 @@ export default function Admin() {
           ))}
         </ul>
       </nav>
-      <main>
+      <section>
         <Outlet />
-      </main>
+      </section>
     </div>
   );
 }

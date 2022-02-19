@@ -611,7 +611,7 @@ export default function Admin() {
           ))}
         </ul>
       </nav>
-      <main>...</main>
+      <section>...</section>
     </div>
   );
 }
@@ -635,7 +635,7 @@ touch app/styles/admin.css
   padding-right: 2rem;
 }
 
-.admin > main {
+.admin > section {
   flex: 1;
   border-left: solid 1px #ccc;
   padding-left: 2rem;
@@ -714,9 +714,9 @@ export default function Admin() {
           ))}
         </ul>
       </nav>
-      <main>
+      <section>
         <Outlet />
-      </main>
+      </section>
     </div>
   );
 }

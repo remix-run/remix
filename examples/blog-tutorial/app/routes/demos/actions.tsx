@@ -58,7 +58,7 @@ export default function ActionsDemo() {
 
   return (
     <div className="remix__page">
-      <main>
+      <section>
         <h2>Actions!</h2>
         <p>
           This form submission will send a post request that we handle in our
@@ -83,7 +83,7 @@ export default function ActionsDemo() {
             </p>
           ) : null}
         </Form>
-      </main>
+      </section>
 
       <aside>
         <h3>Additional Resources</h3>
