@@ -13,14 +13,11 @@ describe("Forms", () => {
   const CHEESESTEAK = "CHEESESTEAK";
   const LAKSA = "LAKSA";
   const SQUID_INK_HOTDOG = "SQUID_INK_HOTDOG";
-  const PINEAPPLE = "PINEAPPLE";
-
-  const GET_SUBMISSION = "get-submission";
 
   beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        [`app/routes/${GET_SUBMISSION}.jsx`]: js`
+        "app/routes/get-submission.jsx": js`
           import { useLoaderData, Form } from "remix";
 
           export function loader({ request }) {
@@ -84,18 +81,6 @@ describe("Forms", () => {
               </>
             )
           }
-        `,
-        "app/routes/nested/form.jsx": js`
-          import { Form } from "remix";
-
-          export default function() {
-            return (
-              <Form action="../${GET_SUBMISSION}">
-                <input type="text" name="${LUNCH}" defaultValue="${PINEAPPLE}" />
-                <button type="submit">Go</button>
-              </Form>
-            )
-          }
         `
       }
     });
@@ -109,8 +94,8 @@ describe("Forms", () => {
 
   it("posts to a loader without JavaScript", async () => {
     let enableJavaScript = await app.disableJavaScript();
-    await app.goto(`/${GET_SUBMISSION}`);
-    await app.clickSubmitButton(`/${GET_SUBMISSION}`, { wait: false });
+    await app.goto("/get-submission");
+    await app.clickSubmitButton("/get-submission", { wait: false });
     await app.page.waitForNavigation();
     expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
     await enableJavaScript();
@@ -118,19 +103,19 @@ describe("Forms", () => {
 
   it("posts to a loader", async () => {
     // this indirectly tests that clicking SVG children in buttons works
-    await app.goto(`/${GET_SUBMISSION}`);
-    await app.clickSubmitButton(`/${GET_SUBMISSION}`);
+    await app.goto("/get-submission");
+    await app.clickSubmitButton("/get-submission");
     expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
   });
 
   it("posts to a loader with button data with click", async () => {
-    await app.goto(`/${GET_SUBMISSION}`);
+    await app.goto("/get-submission");
     await app.clickElement("#buttonWithValue");
     expect(await app.getHtml("pre")).toMatch(LAKSA);
   });
 
   it("posts to a loader with button data with keyboard", async () => {
-    await app.goto(`/${GET_SUBMISSION}`);
+    await app.goto("/get-submission");
     await app.waitForNetworkAfter(async () => {
       await app.page.focus(`#${KEYBOARD_INPUT}`);
       await app.page.keyboard.press("Enter");
@@ -139,7 +124,7 @@ describe("Forms", () => {
   });
 
   it("posts with the correct checkbox data", async () => {
-    await app.goto(`/${GET_SUBMISSION}`);
+    await app.goto("/get-submission");
     await app.clickElement(`#${CHECKBOX_BUTTON}`);
     expect(await app.getHtml("pre")).toMatchInlineSnapshot(
       `"<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>"`
@@ -147,14 +132,8 @@ describe("Forms", () => {
   });
 
   it("posts button data from outside the form", async () => {
-    await app.goto(`/${GET_SUBMISSION}`);
+    await app.goto("/get-submission");
     await app.clickElement(`#${ORPHAN_BUTTON}`);
     expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
-  });
-
-  it("resolves to the correct action URL", async () => {
-    await app.goto("/nested/form");
-    await app.clickSubmitButton(`/${GET_SUBMISSION}`);
-    expect(await app.getHtml("pre")).toMatch(PINEAPPLE);
   });
 });
