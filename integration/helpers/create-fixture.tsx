@@ -308,6 +308,15 @@ export async function createAppFixture(fixture: Fixture) {
       getHtml: (selector?: string) => getHtml(page, selector),
 
       /**
+       * Get the attribute from an HTML element given a selector.
+       *
+       * @param selector CSS Selector for the element's HTML you want
+       * @param attribute Name of the attribute you want
+       */
+      getAttribute: async (selector: string, attribute: string) =>
+        getAttribute(await getHtml(page, selector), selector, attribute),
+
+      /**
        * Keeps the fixture running for as many seconds as you want so you can go
        * poke around in the browser to see what's up.
        *
@@ -397,6 +406,18 @@ async function renamePkgJsonApp(dir: string) {
 export async function getHtml(page: Page, selector?: string) {
   let html = await page.content();
   return selector ? selectHtml(html, selector) : prettyHtml(html);
+}
+
+export function getAttribute(
+  html: string,
+  selector: string,
+  attributeName: string
+) {
+  let el = cheerio(selector, html);
+  if (!el.length) {
+    throw new Error("Invalid HTML");
+  }
+  return el.attr(attributeName);
 }
 
 export function selectHtml(source: string, selector: string) {

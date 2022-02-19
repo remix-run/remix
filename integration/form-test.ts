@@ -14,6 +14,27 @@ describe("Forms", () => {
   const LAKSA = "LAKSA";
   const SQUID_INK_HOTDOG = "SQUID_INK_HOTDOG";
 
+  const STATIC_ROUTE_ABSOLUTE_ACTION = "static-route-abs";
+  const STATIC_ROUTE_CURRENT_ACTION = "static-route-cur";
+  const STATIC_ROUTE_PARENT_ACTION = "static-route-parent";
+  const STATIC_ROUTE_TOO_MANY_DOTS_ACTION = "static-route-too-many-dots";
+  const INDEX_ROUTE_ABSOLUTE_ACTION = "index-route-abs";
+  const INDEX_ROUTE_CURRENT_ACTION = "index-route-cur";
+  const INDEX_ROUTE_PARENT_ACTION = "index-route-parent";
+  const INDEX_ROUTE_TOO_MANY_DOTS_ACTION = "index-route-too-many-dots";
+  const DYNAMIC_ROUTE_ABSOLUTE_ACTION = "dynamic-route-abs";
+  const DYNAMIC_ROUTE_CURRENT_ACTION = "dynamic-route-cur";
+  const DYNAMIC_ROUTE_PARENT_ACTION = "dynamic-route-parent";
+  const DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION = "dynamic-route-too-many-dots";
+  const LAYOUT_ROUTE_ABSOLUTE_ACTION = "layout-route-abs";
+  const LAYOUT_ROUTE_CURRENT_ACTION = "layout-route-cur";
+  const LAYOUT_ROUTE_PARENT_ACTION = "layout-route-parent";
+  const LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION = "layout-route-too-many-dots";
+  const SPLAT_ROUTE_ABSOLUTE_ACTION = "splat-route-abs";
+  const SPLAT_ROUTE_CURRENT_ACTION = "splat-route-cur";
+  const SPLAT_ROUTE_PARENT_ACTION = "splat-route-parent";
+  const SPLAT_ROUTE_TOO_MANY_DOTS_ACTION = "splat-route-too-many-dots";
+
   beforeAll(async () => {
     fixture = await createFixture({
       files: {
@@ -81,6 +102,145 @@ describe("Forms", () => {
               </>
             )
           }
+        `,
+
+        "app/routes/about.jsx": js`
+          export async function action({ request }) {
+            return json({ submitted: true });
+          }
+          export default function () {
+            return <h1>About</h1>;
+          }
+        `,
+
+        "app/routes/inbox.jsx": js`
+          import { Form } from "remix";
+          export default function() {
+            return (
+              <>
+                <Form id="${STATIC_ROUTE_ABSOLUTE_ACTION}" action="/about">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${STATIC_ROUTE_CURRENT_ACTION}" action=".">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${STATIC_ROUTE_PARENT_ACTION}" action="..">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../about">
+                  <button>Submit</button>
+                </Form>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/blog.jsx": js`
+          import { Form, Outlet } from "remix";
+          export default function() {
+            return (
+              <>
+                <h1>Blog</h1>
+                <Form id="${LAYOUT_ROUTE_ABSOLUTE_ACTION}" action="/about">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${LAYOUT_ROUTE_CURRENT_ACTION}" action=".">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${LAYOUT_ROUTE_PARENT_ACTION}" action="..">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../../about">
+                  <button>Submit</button>
+                </Form>
+                <Outlet />
+              </>
+            )
+          }
+        `,
+
+        "app/routes/blog/index.jsx": js`
+          import { Form } from "remix";
+          export default function() {
+            return (
+              <>
+                <Form id="${INDEX_ROUTE_ABSOLUTE_ACTION}" action="/about">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${INDEX_ROUTE_CURRENT_ACTION}" action=".">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${INDEX_ROUTE_PARENT_ACTION}" action="..">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../../about">
+                  <button>Submit</button>
+                </Form>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/blog/$postId.jsx": js`
+          import { Form } from "remix";
+          export default function() {
+            return (
+              <>
+                <Form id="${DYNAMIC_ROUTE_ABSOLUTE_ACTION}" action="/about">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${DYNAMIC_ROUTE_CURRENT_ACTION}" action=".">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${DYNAMIC_ROUTE_PARENT_ACTION}" action="..">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../../about">
+                  <button>Submit</button>
+                </Form>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/projects.jsx": js`
+          import { Form, Outlet } from "remix";
+          export default function() {
+            return (
+              <>
+                <h1>Projects</h1>
+                <Outlet />
+              </>
+            )
+          }
+        `,
+
+        "app/routes/projects/index.jsx": js`
+          export default function() {
+            return <h2>All projects</h2>
+          }
+        `,
+
+        "app/routes/projects/$.jsx": js`
+          import { Form } from "remix";
+          export default function() {
+            return (
+              <>
+                <Form id="${SPLAT_ROUTE_ABSOLUTE_ACTION}" action="/about">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${SPLAT_ROUTE_CURRENT_ACTION}" action=".">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${SPLAT_ROUTE_PARENT_ACTION}" action="..">
+                  <button>Submit</button>
+                </Form>
+                <Form id="${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../../about">
+                  <button>Submit</button>
+                </Form>
+              </>
+            )
+          }
         `
       }
     });
@@ -135,5 +295,191 @@ describe("Forms", () => {
     await app.goto("/get-submission");
     await app.clickElement(`#${ORPHAN_BUTTON}`);
     expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
+  });
+
+  describe("<Form> action", () => {
+    describe("in a static route", () => {
+      test("absolute action resolves relative to the root route", async () => {
+        await app.goto("/inbox");
+        expect(
+          await app.getAttribute(`#${STATIC_ROUTE_ABSOLUTE_ACTION}`, "action")
+        ).toMatch("/about");
+      });
+
+      test("'.' action resolves relative to the current route", async () => {
+        expect(
+          await app.getAttribute(`#${STATIC_ROUTE_CURRENT_ACTION}`, "action")
+        ).toMatch("/inbox");
+      });
+
+      test("'..' action resolves relative to the parent route", async () => {
+        await app.goto("/inbox");
+        expect(
+          await app.getAttribute(`#${STATIC_ROUTE_PARENT_ACTION}`, "action")
+        ).toMatch("/");
+      });
+
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
+        await app.goto("/inbox");
+        expect(
+          await app.getAttribute(
+            `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`,
+            "action"
+          )
+        ).toMatch("/");
+      });
+    });
+
+    describe("in a dynamic route", () => {
+      test("absolute action resolves relative to the root route", async () => {
+        await app.goto("/blog/abc");
+        expect(
+          await app.getAttribute(`#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`, "action")
+        ).toMatch("/about");
+      });
+
+      test("'.' action resolves relative to the current route", async () => {
+        await app.goto("/blog/abc");
+        expect(
+          await app.getAttribute(`#${DYNAMIC_ROUTE_CURRENT_ACTION}`, "action")
+        ).toMatch("/blog/abc");
+      });
+
+      test("'..' action resolves relative to the parent route", async () => {
+        await app.goto("/blog/abc");
+        expect(
+          await app.getAttribute(`#${DYNAMIC_ROUTE_PARENT_ACTION}`, "action")
+        ).toMatch("/blog");
+      });
+
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
+        await app.goto("/blog/abc");
+        expect(
+          await app.getAttribute(
+            `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`,
+            "action"
+          )
+        ).toMatch("/");
+      });
+    });
+
+    describe("in an index route", () => {
+      test("absolute action resolves relative to the root route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(`#${INDEX_ROUTE_ABSOLUTE_ACTION}`, "action")
+        ).toMatch("/about");
+      });
+
+      test("'.' action resolves relative to the current route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(`#${INDEX_ROUTE_CURRENT_ACTION}`, "action")
+        ).toMatch("/blog");
+      });
+
+      test("'..' action resolves relative to the parent route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(`#${INDEX_ROUTE_PARENT_ACTION}`, "action")
+        ).toMatch("/");
+      });
+
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(
+            `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`,
+            "action"
+          )
+        ).toMatch("/");
+      });
+    });
+
+    describe("in a layout route", () => {
+      test("absolute action resolves relative to the root route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(`#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`, "action")
+        ).toMatch("/about");
+      });
+
+      test("'.' action resolves relative to the current route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(`#${LAYOUT_ROUTE_CURRENT_ACTION}`, "action")
+        ).toMatch("/blog");
+      });
+
+      test("'..' action resolves relative to the parent route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(`#${LAYOUT_ROUTE_PARENT_ACTION}`, "action")
+        ).toMatch("/");
+      });
+
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
+        await app.goto("/blog");
+        expect(
+          await app.getAttribute(
+            `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`,
+            "action"
+          )
+        ).toMatch("/");
+      });
+    });
+
+    describe("in a splat route", () => {
+      test("absolute action resolves relative to the root route", async () => {
+        await app.goto("/projects/blarg");
+        expect(
+          await app.getAttribute(`#${SPLAT_ROUTE_ABSOLUTE_ACTION}`, "action")
+        ).toMatch("/about");
+      });
+
+      test("'.' action resolves relative to the current route", async () => {
+        await app.goto("/projects/blarg");
+        expect(
+          await app.getAttribute(`#${SPLAT_ROUTE_CURRENT_ACTION}`, "action")
+        ).toMatch("/projects");
+      });
+
+      test("'..' action resolves relative to the parent route", async () => {
+        await app.goto("/projects/blarg");
+        expect(
+          await app.getAttribute(`#${SPLAT_ROUTE_PARENT_ACTION}`, "action")
+        ).toMatch("/projects");
+      });
+
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
+        await app.goto("/projects/blarg");
+        expect(
+          await app.getAttribute(
+            `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`,
+            "action"
+          )
+        ).toMatch("/");
+      });
+    });
+
+    // describe("in a layout route", () => {
+    //   test("absolute action resolves relative to the root route", async () => {});
+
+    //   test("'.' action resolves relative to the current route", async () => {});
+
+    //   test("'..' action resolves relative to the parent route", async () => {});
+
+    //   test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {});
+    // });
+
+    // describe("in a splat route", () => {
+    //   test("absolute action resolves relative to the root route", async () => {});
+
+    //   test("'.' action resolves relative to the current route", async () => {});
+
+    //   test("'..' action resolves relative to the parent route", async () => {});
+
+    //   test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {});
+    // });
   });
 });
