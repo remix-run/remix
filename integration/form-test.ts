@@ -477,25 +477,5 @@ describe("Forms", () => {
         ).toMatch("/");
       });
     });
-
-    // describe("in a layout route", () => {
-    //   test("absolute action resolves relative to the root route", async () => {});
-
-    //   test("'.' action resolves relative to the current route", async () => {});
-
-    //   test("'..' action resolves relative to the parent route", async () => {});
-
-    //   test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {});
-    // });
-
-    // describe("in a splat route", () => {
-    //   test("absolute action resolves relative to the root route", async () => {});
-
-    //   test("'.' action resolves relative to the current route", async () => {});
-
-    //   test("'..' action resolves relative to the parent route", async () => {});
-
-    //   test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {});
-    // });
   });
 });
