@@ -7,7 +7,8 @@ import {
   addCypress,
   getAppName,
   getSpawnOpts,
-  runCypress
+  runCypress,
+  validatePackageVersions
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -20,7 +21,8 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "netlify",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
+    quiet: true
   });
 }
 
@@ -36,6 +38,9 @@ function createNetlifySite() {
 
 try {
   await createNewApp();
+
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
   await Promise.all([
     fse.copy(

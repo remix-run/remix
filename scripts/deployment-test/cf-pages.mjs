@@ -9,7 +9,8 @@ import {
   checkUp,
   getAppName,
   getSpawnOpts,
-  runCypress
+  runCypress,
+  validatePackageVersions
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -22,7 +23,8 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "cloudflare-pages",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
+    quiet: true
   });
 }
 
@@ -97,9 +99,14 @@ let currentGitUser = {
   name: execSync("git config --get user.name").toString().trim()
 };
 
+let spawnOpts = getSpawnOpts(PROJECT_DIR);
+
 try {
   // create a new remix app
   await createNewApp();
+
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
   // create a new github repo
   let repo = await createRepoIfNeeded(APP_NAME);
@@ -118,8 +125,6 @@ try {
 
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
-
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
