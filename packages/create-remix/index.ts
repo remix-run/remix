@@ -22,7 +22,16 @@ export type Server =
   | "remix"
   | "vercel";
 
-export type Stack = "fly-stack" | "arc-stack";
+export let stacks: { [key: string]: RepoInfo } = {
+  "fly-stack": {
+    branch: "main",
+    filePath: "",
+    name: "fly-stack",
+    owner: "remix-run"
+  }
+} as const;
+
+export type Stack = typeof stacks[keyof typeof stacks];
 
 export type Lang = "ts" | "js";
 
@@ -41,13 +50,12 @@ interface CreateAppOptions {
   install: boolean;
   quiet?: boolean;
   repo: InputRepoInfo;
-  stack: Stack;
   server: Server;
 }
 
 export type CreateAppArgs = RequireExactlyOne<
   CreateAppOptions,
-  "server" | "stack" | "repo"
+  "server" | "repo"
 >;
 
 async function createApp({
@@ -56,8 +64,7 @@ async function createApp({
   install,
   quiet,
   repo,
-  server,
-  stack
+  server
 }: CreateAppArgs) {
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
@@ -94,6 +101,7 @@ async function createApp({
       process.exit(1);
     }
 
+    console.log("Fetching template from GitHub...");
     await downloadAndExtractRepo(projectDir, repoInfo);
 
     appPkg = require(path.join(projectDir, "package.json"));
@@ -111,7 +119,8 @@ async function createApp({
       }
     }
   } else {
-    let serverTemplatePath = stack ? stack : server;
+    // let serverTemplatePath = stack ? stack : server;
+    let serverTemplatePath = server;
     if (!serverTemplatePath) {
       console.log(`️🚨 Oops, you must specify a server template`);
       process.exit(1);

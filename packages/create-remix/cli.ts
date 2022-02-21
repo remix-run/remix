@@ -4,8 +4,8 @@ import inquirer from "inquirer";
 import meow from "meow";
 import gitUrlParse from "git-url-parse";
 
-import { getProjectDir, getRepoInfo } from ".";
-import type { RepoInfo, Lang, Server, Stack, RequireExactlyOne } from ".";
+import { getProjectDir, getRepoInfo, stacks } from ".";
+import type { Lang, Server, Stack, RequireExactlyOne } from ".";
 import { createApp } from ".";
 
 const help = `
@@ -53,12 +53,22 @@ async function run() {
     let repoInfo;
     try {
       let parsed = gitUrlParse(flags.template);
+      // we'll validate in getRepoInfo
       repoInfo = await getRepoInfo(parsed as any);
-
-      console.log({ repoInfo });
     } catch (error) {
-      console.log(`️🚨 Oops, ${flags.template} is not a valid git url.`);
-      process.exit(1);
+      try {
+        // if we were given a template but it's not a valid git url, (or shorthand)
+        // we'll assume it's an example
+        repoInfo = await getRepoInfo({
+          filePath: `examples/${flags.template}`,
+          name: "remix",
+          owner: "remix-run",
+          branch: "main"
+        });
+      } catch (error) {
+        console.log(`️🚨 Oops, ${flags.template} is not a valid GitHub repo.`);
+        process.exit(1);
+      }
     }
 
     if (!repoInfo) {
@@ -66,135 +76,140 @@ async function run() {
       process.exit(1);
     }
 
+    // allow passing a directory name or use the template's `{name}-{branch}`
     let projectDir = path.resolve(
       process.cwd(),
-      input.length > 0
-        ? input[0]
-        : getProjectDir(repoInfo as unknown as RepoInfo)
+      input.length > 0 ? input[0] : getProjectDir(repoInfo)
     );
 
     await createApp({
       projectDir,
       lang: "ts",
       install: false,
-      repo: repoInfo as any
+      repo: repoInfo
+    });
+
+    return;
+  }
+
+  // Figure out the app directory
+  let projectDir = path.resolve(
+    process.cwd(),
+    input.length > 0
+      ? input[0]
+      : (
+          await inquirer.prompt<{ dir: string }>([
+            {
+              type: "input",
+              name: "dir",
+              message: "Where would you like to create your app?",
+              default: "./my-remix-app"
+            }
+          ])
+        ).dir
+  );
+
+  let answers = await inquirer.prompt<
+    RequireExactlyOne<
+      {
+        appType?: "stack" | "basic";
+        server: Server;
+        stack: Stack;
+        lang: Lang;
+        install: boolean;
+      },
+      "server" | "stack"
+    >
+  >([
+    {
+      name: "appType",
+      type: "list",
+      message: "What type of app do you want to create?",
+      when() {
+        return path.basename(projectDir).endsWith("-stack");
+      },
+      choices: [
+        {
+          name: "A pre-configured stack ready for production",
+          value: "stack"
+        },
+        {
+          name: "Just the basics",
+          value: "basic"
+        }
+      ]
+    },
+    {
+      name: "stack",
+      type: "list",
+      message: "Where do you want to deploy your stack?",
+      loop: false,
+      when(answers) {
+        return answers.appType === "stack";
+      },
+      choices: Object.keys(stacks).map(key => ({
+        name: stacks[key].name,
+        value: stacks[key]
+      }))
+    },
+    {
+      name: "server",
+      type: "list",
+      message:
+        "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
+      loop: false,
+      when(answers) {
+        return answers.appType !== "stack";
+      },
+      choices: [
+        { name: "Remix App Server", value: "remix" },
+        { name: "Express Server", value: "express" },
+        { name: "Architect (AWS Lambda)", value: "arc" },
+        { name: "Fly.io", value: "fly" },
+        { name: "Netlify", value: "netlify" },
+        { name: "Vercel", value: "vercel" },
+        { name: "Cloudflare Pages", value: "cloudflare-pages" },
+        { name: "Cloudflare Workers", value: "cloudflare-workers" },
+        { name: "Deno (experimental)", value: "deno" }
+      ]
+    },
+    {
+      name: "lang",
+      type: "list",
+      message: "TypeScript or JavaScript?",
+      when(answers) {
+        return answers.appType !== "stack";
+      },
+      choices: [
+        { name: "TypeScript", value: "ts" },
+        { name: "JavaScript", value: "js" }
+      ]
+    },
+    {
+      name: "install",
+      type: "confirm",
+      message: "Do you want me to run `npm install`?",
+      default: true
+    }
+  ]);
+
+  console.log({ answers });
+
+  if (answers.stack) {
+    await createApp({
+      projectDir,
+      repo: answers.stack,
+      lang: answers.lang,
+      install: answers.install
     });
   } else {
-    // Figure out the app directory
-    let projectDir = path.resolve(
-      process.cwd(),
-      input.length > 0
-        ? input[0]
-        : (
-            await inquirer.prompt<{ dir: string }>([
-              {
-                type: "input",
-                name: "dir",
-                message: "Where would you like to create your app?",
-                default: "./my-remix-app"
-              }
-            ])
-          ).dir
-    );
-
-    let answers = await inquirer.prompt<
-      RequireExactlyOne<
-        {
-          stack: Stack;
-          server: Server;
-          lang: Lang;
-          install: boolean;
-        },
-        "server" | "stack"
-      >
-    >([
-      {
-        name: "appType",
-        type: "list",
-        message: "What type of app do you want to create?",
-        when() {
-          return path.basename(projectDir).endsWith("-stack");
-        },
-        choices: [
-          {
-            name: "A pre-configured stack ready for production",
-            value: "stack"
-          },
-          {
-            name: "Just the basics",
-            value: "basic"
-          }
-        ]
-      },
-      {
-        name: "stack",
-        type: "list",
-        message: "Where do you want to deploy your stack?",
-        loop: false,
-        when(answers) {
-          return !!answers.stack;
-        },
-        choices: [
-          { name: "Fly.io", value: "fly-stack" },
-          { name: "Architect (AWS Lambda)", value: "arc-stack" }
-        ]
-      },
-      {
-        name: "server",
-        type: "list",
-        message:
-          "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
-        loop: false,
-        when(answers) {
-          return !answers.stack;
-        },
-        choices: [
-          { name: "Remix App Server", value: "remix" },
-          { name: "Express Server", value: "express" },
-          { name: "Architect (AWS Lambda)", value: "arc" },
-          { name: "Fly.io", value: "fly" },
-          { name: "Netlify", value: "netlify" },
-          { name: "Vercel", value: "vercel" },
-          { name: "Cloudflare Pages", value: "cloudflare-pages" },
-          { name: "Cloudflare Workers", value: "cloudflare-workers" },
-          { name: "Deno (experimental)", value: "deno" }
-        ]
-      },
-      {
-        name: "lang",
-        type: "list",
-        message: "TypeScript or JavaScript?",
-        when(answers) {
-          return !answers.stack;
-        },
-        choices: [
-          { name: "TypeScript", value: "ts" },
-          { name: "JavaScript", value: "js" }
-        ]
-      },
-      {
-        name: "install",
-        type: "confirm",
-        message: "Do you want me to run `npm install`?",
-        default: true
-      }
-    ]);
-
-    if (answers.stack) {
-      await createApp({
-        projectDir,
-        // stacks are only available with TypeScript
-        lang: "ts",
-        stack: answers.stack,
-        install: answers.install
-      });
-    } else {
-      await createApp({
-        projectDir,
-        lang: answers.lang,
-        server: answers.server,
-        install: answers.install
-      });
-    }
+    await createApp({
+      projectDir,
+      lang: answers.lang,
+      server: answers.server,
+      install: answers.install
+    });
   }
+
+  return;
 }
