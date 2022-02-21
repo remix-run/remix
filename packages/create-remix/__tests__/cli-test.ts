@@ -128,6 +128,7 @@ describe("create-remix cli", () => {
           Flags:
             --help, -h          Show this help message
             --version, -v       Show the version of this script
+            --template, -t      The template to use for the app
 
         "
       `);
@@ -149,6 +150,7 @@ describe("create-remix cli", () => {
           Flags:
             --help, -h          Show this help message
             --version, -v       Show the version of this script
+            --template, -t      The template to use for the app
 
         "
       `);
