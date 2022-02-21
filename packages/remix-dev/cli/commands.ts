@@ -1,4 +1,3 @@
-import * as fsp from "fs/promises";
 import * as path from "path";
 import os from "os";
 import * as fse from "fs-extra";
@@ -15,6 +14,7 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
+import { loadEnv } from "../env";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
 import { log } from "../log";
 
@@ -141,28 +141,6 @@ export async function watch(
     fse.emptyDirSync(config.assetsBuildDirectory);
     fse.rmSync(config.serverBuildPath);
   });
-}
-
-// Import environment variables from: .env(.development|.production|.local),
-// failing gracefully if the file does not exist
-async function loadEnv(
-  rootDirectory: string,
-  suffix?: BuildMode | "local"
-): Promise<void> {
-  const envFile = `.env${suffix ? `.${suffix}` : ""}`;
-  const envPath = path.join(rootDirectory, envFile);
-  try {
-    await fsp.readFile(envPath);
-  } catch (e) {
-    // Fail gracefully if file doesn't exist
-    return;
-  }
-
-  console.log(`Loading environment variables from: ${envFile}`);
-  const result = require("dotenv").config({ path: envPath });
-  if (result.error) {
-    throw result.error;
-  }
 }
 
 export async function dev(remixRoot: string, modeArg?: string) {
