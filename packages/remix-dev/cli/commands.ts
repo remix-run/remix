@@ -197,7 +197,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
 }
 
 function purgeAppRequireCache(buildPath: string) {
-  if (purgeAppRequireCache.cache[buildPath + "/assets.json"]?.exports.version !== JSON.parse(require('fs').readFileSync(BUILD_DIR + '/assets.json')).version) {
+  if (require.cache[buildPath + "/assets.json"]?.exports.version !== JSON.parse(require('fs').readFileSync(BUILD_DIR + '/assets.json')).version) {
     for (let key in require.cache) {
       if (key.startsWith(buildPath)) {
         delete require.cache[key];
