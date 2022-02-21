@@ -102,6 +102,7 @@ async function createApp({
     }
 
     console.log("Fetching template from GitHub...");
+    // TODO: handle HTTP errors
     await downloadAndExtractRepo(projectDir, repoInfo);
 
     appPkg = require(path.join(projectDir, "package.json"));
@@ -241,7 +242,6 @@ function downloadAndExtractRepo(
   root: string,
   repoInfo: RepoInfo
 ): Promise<void> {
-  console.log({ repoInfo });
   let directory = getProjectDir(repoInfo);
 
   return pipeline(
