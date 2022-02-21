@@ -40,6 +40,7 @@ describe("create-remix cli", () => {
 
       promptCount++;
 
+      /* eslint-disable jest/no-conditional-expect */
       switch (promptCount) {
         case 1:
           expect(prompt).toEqual(
@@ -89,6 +90,7 @@ describe("create-remix cli", () => {
           cli.kill("SIGINT");
           break;
       }
+      /* eslint-enable jest/no-conditional-expect */
 
       previousPrompt = prompt;
     });
