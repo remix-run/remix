@@ -222,7 +222,7 @@ async function createApp({
       );
     } else {
       console.log(
-        `💿 That's it! \`cd\` into "${path.relative(
+        `💿 That's it! \`cd\` into "${path.resolve(
           process.cwd(),
           projectDir
         )}" and check the README for development and deploy instructions!`
