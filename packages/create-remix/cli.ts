@@ -5,8 +5,8 @@ import meow from "meow";
 import gitUrlParse from "git-url-parse";
 
 import { getProjectDir, getRepoInfo } from ".";
-import type { RepoInfo, Lang, Server, Stack } from ".";
-import { createApp, appType } from ".";
+import type { RepoInfo, Lang, Server, Stack, RequireExactlyOne } from ".";
+import { createApp } from ".";
 
 const help = `
   Usage:
@@ -98,19 +98,15 @@ async function run() {
     );
 
     let answers = await inquirer.prompt<
-      | {
-          appType: "basic";
-          stack?: never;
+      RequireExactlyOne<
+        {
+          stack: Stack;
           server: Server;
           lang: Lang;
           install: boolean;
-        }
-      | {
-          appType: "stack";
-          stack: Stack;
-          server?: never;
-          install: boolean;
-        }
+        },
+        "server" | "stack"
+      >
     >([
       {
         name: "appType",
@@ -136,7 +132,7 @@ async function run() {
         message: "Where do you want to deploy your stack?",
         loop: false,
         when(answers) {
-          return answers.appType === appType.stack;
+          return !!answers.stack;
         },
         choices: [
           { name: "Fly.io", value: "fly-stack" },
@@ -150,7 +146,7 @@ async function run() {
           "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
         loop: false,
         when(answers) {
-          return answers.appType !== appType.stack;
+          return !answers.stack;
         },
         choices: [
           { name: "Remix App Server", value: "remix" },
@@ -169,7 +165,7 @@ async function run() {
         type: "list",
         message: "TypeScript or JavaScript?",
         when(answers) {
-          return answers.appType !== appType.stack;
+          return !answers.stack;
         },
         choices: [
           { name: "TypeScript", value: "ts" },
@@ -187,6 +183,7 @@ async function run() {
     if (answers.stack) {
       await createApp({
         projectDir,
+        // stacks are only available with TypeScript
         lang: "ts",
         stack: answers.stack,
         install: answers.install

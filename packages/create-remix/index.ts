@@ -24,43 +24,31 @@ export type Server =
 
 export type Stack = "fly-stack" | "arc-stack";
 
-export let appType = {
-  basic: "basic",
-  stack: "stack"
-} as const;
-
-export type AppType = typeof appType[keyof typeof appType];
-
 export type Lang = "ts" | "js";
 
-export type CreateAppArgs =
-  | {
-      projectDir: string;
-      lang: Lang;
-      server: Server;
-      stack?: never;
-      install: boolean;
-      quiet?: boolean;
-      repo?: InputRepoInfo;
-    }
-  | {
-      projectDir: string;
-      lang: Lang;
-      server?: never;
-      stack: Stack;
-      install: boolean;
-      quiet?: boolean;
-      repo?: InputRepoInfo;
-    }
-  | {
-      projectDir: string;
-      lang: "ts";
-      server?: never;
-      stack?: never;
-      install: boolean;
-      quiet?: boolean;
-      repo: InputRepoInfo;
-    };
+export type RequireExactlyOne<
+  ObjectType,
+  KeysType extends keyof ObjectType = keyof ObjectType
+> = {
+  [Key in KeysType]: Required<Pick<ObjectType, Key>> &
+    Partial<Record<Exclude<KeysType, Key>, never>>;
+}[KeysType] &
+  Omit<ObjectType, KeysType>;
+
+interface CreateAppOptions {
+  projectDir: string;
+  lang: Lang;
+  install: boolean;
+  quiet?: boolean;
+  repo: InputRepoInfo;
+  stack: Stack;
+  server: Server;
+}
+
+export type CreateAppArgs = RequireExactlyOne<
+  CreateAppOptions,
+  "server" | "stack" | "repo"
+>;
 
 async function createApp({
   projectDir,
