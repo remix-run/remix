@@ -4,9 +4,12 @@ import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
 import got from "got";
 import tar from "tar";
-import { pipeline } from "stream/promises";
+import { Stream } from "stream";
+import { promisify } from "util";
 
 import cliPkgJson from "./package.json";
+
+const pipeline = promisify(Stream.pipeline);
 
 export type Server =
   | "arc"
