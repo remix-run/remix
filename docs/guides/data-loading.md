@@ -384,7 +384,7 @@ export default function ProductFilters() {
 
 You might want to auto submit the form on any field change, for that there is [`useSubmit`][use-submit]:
 
-```tsx lines=[1,4,9]
+```tsx lines=[1,4,11]
 import { useSubmit, useSearchParams } from "remix";
 
 export default function ProductFilters() {

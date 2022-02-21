@@ -1551,9 +1551,37 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 
 ```tsx
 import type { UploadHandler } from "remix";
+import type {
+  UploadApiErrorResponse,
+  UploadApiOptions,
+  UploadApiResponse,
+  UploadStream
+} from "cloudinary";
+import cloudinary from "cloudinary";
 
 export let action: ActionFunction = async ({ request }) => {
   const userId = getUserId(request);
+
+  function uploadStreamToCloudinary(
+    stream: Readable,
+    options?: UploadApiOptions
+  ): Promise<UploadApiResponse | UploadApiErrorResponse> {
+    return new Promise((resolve, reject) => {
+      const uploader = cloudinary.v2.uploader.upload_stream(
+        options,
+        (error, result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(error);
+          }
+        }
+      );
+
+      stream.pipe(uploader);
+    });
+  }
+
   let uploadHandler: UploadHandler = async ({
     name,
     stream
@@ -1568,11 +1596,13 @@ export let action: ActionFunction = async ({ request }) => {
       return;
     }
 
-    const uploadedImage =
-      await cloudinary.v2.uploader.upload(stream, {
+    const uploadedImage = await uploadStreamToCloudinary(
+      stream,
+      {
         public_id: userId,
         folder: "/my-site/avatars"
-      });
+      }
+    );
 
     return uploadedImage.secure_url;
   };
