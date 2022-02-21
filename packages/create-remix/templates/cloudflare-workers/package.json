@@ -5,7 +5,7 @@
     "build": "cross-env NODE_ENV=production remix build",
     "dev:remix": "cross-env NODE_ENV=development remix watch",
     "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
-    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev": "cross-env NODE_ENV=development remix build && run-p 'dev:*'",
     "start": "cross-env NODE_ENV=production miniflare ./build/index.js",
     "deploy": "npm run build && wrangler publish"
   },
