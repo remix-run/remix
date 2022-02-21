@@ -2,10 +2,11 @@ import * as path from "path";
 import chalkAnimation from "chalk-animation";
 import inquirer from "inquirer";
 import meow from "meow";
+import gitUrlParse from "git-url-parse";
 
-import type { Lang, Server, Stack } from ".";
-import { appType } from ".";
-import { createApp } from ".";
+import { getProjectDir, getRepoInfo } from ".";
+import type { RepoInfo, Lang, Server, Stack } from ".";
+import { createApp, appType } from ".";
 
 const help = `
   Usage:
@@ -49,25 +50,34 @@ async function run() {
   console.log();
 
   if (flags.template) {
-    let repoUrl;
     let repoInfo;
     try {
-      // we were given a full url
-      repoUrl = new URL(flags.template);
-      repoInfo = repoUrl.pathname.split("/");
+      let parsed = gitUrlParse(flags.template);
+      repoInfo = await getRepoInfo(parsed as any);
+
+      console.log({ repoInfo });
     } catch (error) {
-      // we were given a repo name
-      repoUrl = new URL(flags.template, "https://github.com");
-      repoInfo = flags.template.split("/");
+      console.log(`️🚨 Oops, ${flags.template} is not a valid git url.`);
+      process.exit(1);
     }
 
-    let [, repo] = repoInfo;
+    if (!repoInfo) {
+      console.log(`️🚨 Oops, no repo info`);
+      process.exit(1);
+    }
+
+    let projectDir = path.resolve(
+      process.cwd(),
+      input.length > 0
+        ? input[0]
+        : getProjectDir(repoInfo as unknown as RepoInfo)
+    );
 
     await createApp({
-      projectDir: path.join(process.cwd(), `${repo}-main`),
+      projectDir,
       lang: "ts",
       install: false,
-      repoUrl: repoUrl.toString()
+      repo: repoInfo as any
     });
   } else {
     // Figure out the app directory

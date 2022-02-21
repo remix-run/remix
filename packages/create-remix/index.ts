@@ -41,7 +41,7 @@ export type CreateAppArgs =
       stack?: never;
       install: boolean;
       quiet?: boolean;
-      repoUrl?: never;
+      repo?: InputRepoInfo;
     }
   | {
       projectDir: string;
@@ -50,7 +50,7 @@ export type CreateAppArgs =
       stack: Stack;
       install: boolean;
       quiet?: boolean;
-      repoUrl?: never;
+      repo?: InputRepoInfo;
     }
   | {
       projectDir: string;
@@ -59,7 +59,7 @@ export type CreateAppArgs =
       stack?: never;
       install: boolean;
       quiet?: boolean;
-      repoUrl: string;
+      repo: InputRepoInfo;
     };
 
 async function createApp({
@@ -67,20 +67,10 @@ async function createApp({
   lang,
   install,
   quiet,
-  repoUrl,
+  repo,
   server,
   stack
 }: CreateAppArgs) {
-  console.log({
-    projectDir,
-    lang,
-    install,
-    repoUrl,
-    server,
-    stack,
-    quiet
-  });
-
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
     console.log(
@@ -106,16 +96,18 @@ async function createApp({
   let appPkg: any;
   let setupScript: any;
 
-  if (typeof repoUrl === "string") {
-    // download the repo
-    // appPkg = require(path.join(sharedTemplate, "package.json"));
+  if (repo) {
+    let repoInfo = await getRepoInfo(repo);
 
-    await downloadAndExtractRepo(projectDir, {
-      username: "mcansh",
-      branch: "main",
-      filePath: "",
-      name: "snkrs"
-    });
+    if (!repoInfo) {
+      console.log(
+        `️🚨 Oops, https://github.com/${repo.name}/${repo.name} is not a valid github repo`
+      );
+      process.exit(1);
+    }
+
+    await downloadAndExtractRepo(projectDir, repoInfo);
+
     appPkg = require(path.join(projectDir, "package.json"));
 
     setupScript = path.resolve(projectDir, "scripts/init.js");
@@ -143,7 +135,9 @@ async function createApp({
       "templates",
       `_shared_${lang}`
     );
-    await fse.copy(sharedTemplate, projectDir);
+    await fse.copy(sharedTemplate, projectDir, {
+      filter: (src, dest) => true
+    });
 
     // copy the server template
     let serverTemplate = path.resolve(
@@ -152,7 +146,10 @@ async function createApp({
       serverTemplatePath
     );
     if (fse.existsSync(serverTemplate)) {
-      await fse.copy(serverTemplate, projectDir, { overwrite: true });
+      await fse.copy(serverTemplate, projectDir, {
+        overwrite: true,
+        filter: (src, dest) => true
+      });
     }
 
     let serverLangTemplate = path.resolve(
@@ -161,21 +158,11 @@ async function createApp({
       `${server}_${lang}`
     );
     if (fse.existsSync(serverLangTemplate)) {
-      await fse.copy(serverLangTemplate, projectDir, { overwrite: true });
+      await fse.copy(serverLangTemplate, projectDir, {
+        overwrite: true,
+        filter: (src, dest) => true
+      });
     }
-
-    // rename dotfiles
-    let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
-    await Promise.all(
-      dotfiles.map(async dotfile => {
-        if (fse.existsSync(path.join(projectDir, dotfile))) {
-          return fse.rename(
-            path.join(projectDir, dotfile),
-            path.join(projectDir, `.${dotfile}`)
-          );
-        }
-      })
-    );
 
     // merge package.jsons
     appPkg = require(path.join(sharedTemplate, "package.json"));
@@ -244,26 +231,55 @@ async function createApp({
   }
 }
 
-type RepoInfo = {
-  username: string;
+export interface InputRepoInfo {
+  owner: string;
   name: string;
-  branch: string;
+  branch?: string;
   filePath: string;
-};
+}
+
+export type RepoInfo = Omit<InputRepoInfo, "branch"> & { branch: string };
 
 function downloadAndExtractRepo(
   root: string,
-  { username, name, branch, filePath }: RepoInfo
+  repoInfo: RepoInfo
 ): Promise<void> {
+  console.log({ repoInfo });
+  let directory = getProjectDir(repoInfo);
+
   return pipeline(
     got.stream(
-      `https://github.com/${username}/${name}/archive/refs/heads/${branch}.tar.gz`
+      `https://github.com/${repoInfo.owner}/${repoInfo.name}/archive/refs/heads/${repoInfo.branch}.tar.gz`
     ),
     tar.extract(
-      { cwd: root, strip: filePath ? filePath.split("/").length + 1 : 1 },
-      [`${name}-${branch}${filePath ? `/${filePath}` : ""}`]
+      {
+        cwd: root,
+        strip: repoInfo.filePath ? repoInfo.filePath.split("/").length + 1 : 1
+      },
+      [`${directory}${repoInfo.filePath ? `/${repoInfo.filePath}` : ""}`]
     )
   );
+}
+
+export function getProjectDir(repoInfo: RepoInfo) {
+  return `${repoInfo.name}-${repoInfo.branch}`;
+}
+
+export async function getRepoInfo(
+  repoInfo: InputRepoInfo
+): Promise<RepoInfo | undefined> {
+  if (!repoInfo.branch) {
+    let res: any = await got(
+      `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.name}`
+    ).json();
+
+    repoInfo.branch = res["default_branch"] as string;
+  }
+
+  return {
+    ...repoInfo,
+    branch: repoInfo.branch
+  };
 }
 
 export { createApp };
