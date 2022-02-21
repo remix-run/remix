@@ -6,7 +6,7 @@ import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
 
-let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7) + "-new";
+let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
 
 function getAppName(target) {
   let unique = crypto.randomBytes(2).toString("hex");
