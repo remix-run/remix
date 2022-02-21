@@ -1,3 +1,4 @@
+import * as fsp from "fs/promises";
 import * as path from "path";
 import os from "os";
 import * as fse from "fs-extra";
@@ -142,8 +143,29 @@ export async function watch(
   });
 }
 
+// Import environment variables from: .env(.development|.production|.local),
+// failing gracefully if the file does not exist
+async function loadEnv(
+  rootDirectory: string,
+  suffix?: BuildMode | "local"
+): Promise<void> {
+  const envFile = `.env${suffix ? `.${suffix}` : ""}`;
+  const envPath = path.join(rootDirectory, envFile);
+  try {
+    await fsp.readFile(envPath);
+  } catch (e) {
+    // Fail gracefully if file doesn't exist
+    return;
+  }
+
+  console.log(`Loading environment variables from: ${envFile}`);
+  const result = require("dotenv").config({ path: envPath });
+  if (result.error) {
+    throw result.error;
+  }
+}
+
 export async function dev(remixRoot: string, modeArg?: string) {
-  // TODO: Warn about the need to install @remix-run/serve if it isn't there?
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -158,6 +180,12 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+
+  // Load .env files if present.  Precedence: .env.local -> .env.{mode} -> .env
+  await loadEnv(config.rootDirectory, "local");
+  await loadEnv(config.rootDirectory, mode);
+  await loadEnv(config.rootDirectory);
+
   let port = await getPort({
     port: process.env.PORT ? Number(process.env.PORT) : 3000
   });
