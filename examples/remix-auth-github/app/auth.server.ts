@@ -24,8 +24,8 @@ export const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: ["s3cret"], // This should be an env variable
-    secure: process.env.NODE_ENV === "production"
-  }
+    secure: process.env.NODE_ENV === "production",
+  },
 });
 
 export const auth = new Authenticator<{
@@ -39,7 +39,7 @@ auth.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      callbackURL: new URL("/auth/github/callback", BASE_URL).toString()
+      callbackURL: new URL("/auth/github/callback", BASE_URL).toString(),
     },
     async ({ profile, accessToken, extraParams }) => {
       return { profile, accessToken, extraParams };

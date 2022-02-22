@@ -27,7 +27,7 @@ async function getRootPackageJson() {
 async function addCypress(directory, url) {
   let rootPkgJson = await getRootPackageJson();
 
-  await updatePackageConfig(directory, config => {
+  await updatePackageConfig(directory, (config) => {
     config.devDependencies["start-server-and-test"] =
       rootPkgJson.dependencies["start-server-and-test"];
     config.devDependencies["cypress"] = rootPkgJson.dependencies["cypress"];
@@ -44,7 +44,7 @@ async function addCypress(directory, url) {
 function getSpawnOpts(dir) {
   return {
     cwd: dir,
-    stdio: "inherit"
+    stdio: "inherit",
   };
 }
 
@@ -52,7 +52,7 @@ function runCypress(dir, dev, url) {
   let spawnOpts = getSpawnOpts(dir);
   let cypressSpawnOpts = {
     ...spawnOpts,
-    env: { ...process.env, CYPRESS_BASE_URL: url }
+    env: { ...process.env, CYPRESS_BASE_URL: url },
   };
   if (dev) {
     let cypressDevCommand = spawnSync(
@@ -86,7 +86,7 @@ async function checkUp(url) {
         console.log(`Checking ${url}`);
         await dns.lookup(hostname);
 
-        https.get(url, response => {
+        https.get(url, (response) => {
           if (response.statusCode === 200) {
             clearInterval(checker);
             console.log(`${url} returned a 200 status code`);
@@ -169,12 +169,12 @@ async function validatePackageVersions(directory) {
   let devDependencies = packageJson.devDependencies || {};
   let dependencies = packageJson.dependencies || {};
   let allDeps = { ...devDependencies, ...dependencies };
-  let remixDeps = Object.keys(allDeps).filter(key =>
+  let remixDeps = Object.keys(allDeps).filter((key) =>
     key.startsWith("@remix-run")
   );
 
   await Promise.all(
-    remixDeps.map(key => {
+    remixDeps.map((key) => {
       let version = allDeps[key];
       return verifyPackageIsAvailable(key, version);
     })
@@ -189,5 +189,5 @@ export {
   getSpawnOpts,
   runCypress,
   updatePackageConfig,
-  validatePackageVersions
+  validatePackageVersions,
 };

@@ -26,7 +26,7 @@ export const action: ActionFunction = async ({ request }) => {
   const rightAnswers = [
     "4fa6024f12494d3a99d8bda9b7a55f7d140f328a",
     "ce3659ad235ca6d1e12dec21465aff3f9a62bb8c",
-    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4"
+    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4",
   ];
 
   const encrypted = hash(answer);

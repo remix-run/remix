@@ -4,7 +4,7 @@ import { installGlobals } from "@remix-run/node";
 installGlobals();
 
 global.Deno = {
-  readFile: jest.fn()
+  readFile: jest.fn(),
 };
 
 global.window = {};

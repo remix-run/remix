@@ -6,7 +6,7 @@ export async function getNotes(email: string) {
 
   const result = await db.notes.query({
     KeyConditionExpression: "pk = :pk",
-    ExpressionAttributeValues: { ":pk": email }
+    ExpressionAttributeValues: { ":pk": email },
   });
 
   return result.Items;
@@ -15,7 +15,7 @@ export async function getNotes(email: string) {
 export async function createNote({
   title,
   body,
-  email
+  email,
 }: {
   title: string;
   body: string;
@@ -29,13 +29,13 @@ export async function createNote({
     pk: email,
     sk: `note#${cuid()}`,
     title: title,
-    body: body
+    body: body,
   });
 }
 
 export async function deleteNote({
   noteId,
-  email
+  email,
 }: {
   noteId: string;
   email: string;

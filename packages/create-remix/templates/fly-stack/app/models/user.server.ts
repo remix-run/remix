@@ -9,10 +9,10 @@ async function createUser(email: string, password: string): Promise<User> {
       email,
       password: {
         create: {
-          hash: hashedPassword
-        }
-      }
-    }
+          hash: hashedPassword,
+        },
+      },
+    },
   });
 
   return user;
@@ -25,8 +25,8 @@ async function verifyLogin(
   const user = await prisma.user.findUnique({
     where: { email },
     include: {
-      password: true
-    }
+      password: true,
+    },
   });
 
   if (!user || !user.password) {

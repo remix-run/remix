@@ -10,7 +10,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const email = await auth.isAuthenticated(request, {
-    failureRedirect: "/login"
+    failureRedirect: "/login",
   });
 
   return json<LoaderData>({ email });

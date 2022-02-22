@@ -7,5 +7,5 @@ module.exports = {
   publicPath: "/_static/build/",
   serverBuildDirectory: "server/build",
   devServerPort: 8002,
-  ignoredRouteFiles: [".*"]
+  ignoredRouteFiles: [".*"],
 };

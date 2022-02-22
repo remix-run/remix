@@ -14,7 +14,7 @@ let remixPackages = {
   core: ["dev", "server-runtime", "react", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
-  }
+  },
 };
 
 /**
@@ -42,7 +42,7 @@ async function getPackageVersion(packageName) {
 function ensureCleanWorkingDirectory() {
   let status = execSync(`git status --porcelain`).toString().trim();
   let lines = status.split("\n");
-  if (!lines.every(line => line === "" || line.startsWith("?"))) {
+  if (!lines.every((line) => line === "" || line.startsWith("?"))) {
     console.error(
       "Working directory is not clean. Please commit or stash your changes."
     );
@@ -94,7 +94,7 @@ async function updateExamplesRemixVersion(nextVersion) {
       let stat = await fsp.stat(path.join(examplesDir, example));
       if (!stat.isDirectory()) continue;
 
-      await updateExamplesPackageConfig(example, config => {
+      await updateExamplesPackageConfig(example, (config) => {
         if (config.dependencies?.["remix"]) {
           config.dependencies["remix"] = nextVersion;
         }
@@ -126,7 +126,7 @@ async function updateExamplesRemixVersion(nextVersion) {
  * @param {string} [successMessage]
  */
 async function updateRemixVersion(packageName, nextVersion, successMessage) {
-  await updatePackageConfig(packageName, config => {
+  await updatePackageConfig(packageName, (config) => {
     config.version = nextVersion;
     for (let pkg of remixPackages.all) {
       if (config.dependencies?.[`@remix-run/${pkg}`]) {

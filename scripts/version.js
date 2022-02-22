@@ -5,14 +5,14 @@ const {
   ensureCleanWorkingDirectory,
   getPackageVersion,
   prompt,
-  incrementRemixVersion
+  incrementRemixVersion,
 } = require("./utils");
 
 run(process.argv.slice(2)).then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(error);
     process.exit(1);
   }

@@ -15,7 +15,7 @@ function defaultCacheControl(url: URL, assetsPublicPath: string = "/build/") {
 export function createRequestHandler<Context = unknown>({
   build,
   mode,
-  getLoadContext
+  getLoadContext,
 }: {
   build: ServerBuild;
   mode?: string;
@@ -42,7 +42,7 @@ export async function serveStaticFiles(
   {
     cacheControl,
     publicDir = "./public",
-    assetsPublicPath = "/build/"
+    assetsPublicPath = "/build/",
   }: {
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
@@ -76,8 +76,8 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
   getLoadContext,
   staticFiles = {
     publicDir: "./public",
-    assetsPublicPath: "/build/"
-  }
+    assetsPublicPath: "/build/",
+  },
 }: {
   build: ServerBuild;
   mode?: string;

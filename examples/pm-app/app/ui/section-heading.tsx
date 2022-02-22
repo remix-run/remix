@@ -40,7 +40,7 @@ const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
         ref={ref}
         {...props}
         className={cx(props.className, {
-          [`h${levelProp}`]: levelProp
+          [`h${levelProp}`]: levelProp,
         })}
       />
     );

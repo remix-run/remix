@@ -48,13 +48,13 @@ export async function getPost(slug: string) {
 export async function getPosts() {
   const dir = await fs.readdir(postsPath);
   return Promise.all(
-    dir.map(async filename => {
+    dir.map(async (filename) => {
       const file = await fs.readFile(path.join(postsPath, filename));
       const { attributes } = parseFrontMatter(file.toString());
       invariant(isValidPostAttributes(attributes));
       return {
         slug: filename.replace(/\.md$/, ""),
-        title: attributes.title
+        title: attributes.title,
       };
     })
   );

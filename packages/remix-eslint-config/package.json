@@ -8,6 +8,7 @@
   "files": [
     "README.md",
     "rules",
+    "settings",
     "index.js",
     "jest.js"
   ],

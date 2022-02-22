@@ -56,7 +56,7 @@ export function ScrollRestoration() {
     <script
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`
+        __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`,
       }}
     />
   );

@@ -13,7 +13,7 @@ export type {
   ShouldReloadFunction,
   ThrownResponse,
   LinkProps,
-  NavLinkProps
+  NavLinkProps,
 } from "@remix-run/react";
 
 export {
@@ -37,7 +37,7 @@ export {
   useActionData,
   useBeforeUnload,
   useMatches,
-  RemixServer
+  RemixServer,
 } from "@remix-run/react";
 
 // react-router-dom exports
@@ -51,5 +51,5 @@ export {
   useParams,
   useResolvedPath,
   useSearchParams,
-  useOutletContext
+  useOutletContext,
 } from "@remix-run/react";

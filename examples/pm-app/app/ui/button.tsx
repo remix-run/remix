@@ -86,7 +86,7 @@ function getButtonClassNames({
   disabled = false,
   isActive = false, // for active NavLink styles,
   rounded,
-  size = "base"
+  size = "base",
 }: {
   className?: string | ((props: { isActive: boolean }) => string);
   variant?: ButtonVariant;
@@ -103,7 +103,7 @@ function getButtonClassNames({
     {
       // all disabled buttons
       "ui--button--disabled": disabled,
-      "ui--button--rounded": rounded
+      "ui--button--rounded": rounded,
     }
   )
     .replace(/\s+/g, " ")
@@ -134,6 +134,6 @@ export type {
   ButtonProps,
   ButtonLinkProps,
   ButtonNavLinkProps,
-  ButtonDivProps
+  ButtonDivProps,
 };
 export { Button, ButtonLink, ButtonNavLink, ButtonDiv };

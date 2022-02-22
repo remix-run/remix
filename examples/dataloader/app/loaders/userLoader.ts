@@ -6,8 +6,8 @@ export const createUsersByIdLoader = () =>
     db.user.findMany({
       where: {
         id: {
-          in: keys
-        }
-      }
+          in: keys,
+        },
+      },
     })
   );

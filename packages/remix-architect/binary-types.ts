@@ -57,12 +57,12 @@ let binaryTypes = [
   "application/x-rar-compressed",
   "application/x-tar",
   "application/x-zip",
-  "application/zip"
+  "application/zip",
 ];
 
 function isBinaryType(contentType: string | null | undefined) {
   if (!contentType) return false;
-  return binaryTypes.some(t => contentType.includes(t));
+  return binaryTypes.some((t) => contentType.includes(t));
 }
 
 export { isBinaryType };

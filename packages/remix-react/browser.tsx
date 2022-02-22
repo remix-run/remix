@@ -33,7 +33,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     (_: Update, update: Update) => update,
     {
       action: history.action,
-      location: history.location
+      location: history.location,
     }
   );
 

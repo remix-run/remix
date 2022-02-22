@@ -14,7 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuList,
-  DropdownMenuOptionsButton
+  DropdownMenuOptionsButton,
 } from "~/ui/dropdown-menu";
 import { requireUser } from "~/session.server";
 import { getUserProjects } from "~/db.server";
@@ -25,14 +25,14 @@ export const links: LinksFunction = () => {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const projects = await getUserProjects(secureUser.id);
 
   const data: LoaderData = {
     user: secureUser,
-    projects
+    projects,
   };
 
   return data;
@@ -113,7 +113,7 @@ export default function DashboardIndex() {
                           );
                           if (confirmed) {
                             deleteFetcher.submit(deleteFormRef.current, {
-                              replace: true
+                              replace: true,
                             });
                           }
                         }}

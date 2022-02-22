@@ -29,7 +29,7 @@ async function main(PROJECT_DIR) {
     fs.readFile(FLY_TOML_PROD_PATH, "utf-8"),
     fs.readFile(FLY_TOML_STAGING_PATH, "utf-8"),
     fs.readFile(README_PATH, "utf-8"),
-    fs.readFile(EXAMPLE_ENV_PATH, "utf-8")
+    fs.readFile(EXAMPLE_ENV_PATH, "utf-8"),
   ]);
 
   const newEnv = env + `\nSESSION_SECRET="${getRandomString(16)}"`;
@@ -48,7 +48,7 @@ async function main(PROJECT_DIR) {
     fs.writeFile(FLY_TOML_PROD_PATH, toml.stringify(prodToml)),
     fs.writeFile(FLY_TOML_STAGING_PATH, toml.stringify(stagingToml)),
     fs.writeFile(README_PATH, newReadme),
-    fs.writeFile(ENV_PATH, newEnv)
+    fs.writeFile(ENV_PATH, newEnv),
   ]);
 }
 

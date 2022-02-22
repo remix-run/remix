@@ -5,7 +5,7 @@ async function getUserByEmail(email: string) {
   const db = await arc.tables();
   const result = await db.people.query({
     KeyConditionExpression: "pk = :pk",
-    ExpressionAttributeValues: { ":pk": `email#${email}` }
+    ExpressionAttributeValues: { ":pk": `email#${email}` },
   });
 
   return result.Items[0];
@@ -15,7 +15,7 @@ async function getUserPasswordByEmail(email: string) {
   const db = await arc.tables();
   const result = await db.password.query({
     KeyConditionExpression: "pk = :pk",
-    ExpressionAttributeValues: { ":pk": `email#${email}` }
+    ExpressionAttributeValues: { ":pk": `email#${email}` },
   });
 
   return result.Items[0];
@@ -26,11 +26,11 @@ async function createUser(email: string, password: string) {
   const db = await arc.tables();
   await db.password.put({
     pk: `email#${email}`,
-    password: hashedPassword
+    password: hashedPassword,
   });
 
   await db.people.put({
-    pk: `email#${email}`
+    pk: `email#${email}`,
   });
 
   const user = await getUserByEmail(email);

@@ -15,13 +15,13 @@ const jestConfig = {
     {
       files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],
       env: {
-        "jest/globals": true
+        "jest/globals": true,
       },
       rules: {
-        ...jestRules
-      }
-    }
-  ]
+        ...jestRules,
+      },
+    },
+  ],
 };
 
 module.exports = jestConfig;

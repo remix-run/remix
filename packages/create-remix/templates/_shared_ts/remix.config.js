@@ -6,5 +6,5 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "server/build",
-  ignoredRouteFiles: [".*"]
+  ignoredRouteFiles: [".*"],
 };
