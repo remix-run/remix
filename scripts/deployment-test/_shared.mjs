@@ -21,19 +21,19 @@ async function updatePackageConfig(directory, transform) {
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
-async function getRootPackageJson() {
+async function getSharedPackageJson() {
   return jsonfile.readFile(path.join(process.cwd(), "package.json"));
 }
 
 async function addCypress(directory, url) {
-  let rootPkgJson = await getRootPackageJson();
+  let shared = await getSharedPackageJson();
 
   await updatePackageConfig(directory, (config) => {
     config.devDependencies["start-server-and-test"] =
-      rootPkgJson.dependencies["start-server-and-test"];
-    config.devDependencies["cypress"] = rootPkgJson.dependencies["cypress"];
+      shared.dependencies["start-server-and-test"];
+    config.devDependencies["cypress"] = shared.dependencies["cypress"];
     config.devDependencies["@testing-library/cypress"] =
-      rootPkgJson.dependencies["@testing-library/cypress"];
+      shared.dependencies["@testing-library/cypress"];
 
     config.scripts["cy:run"] = "cypress run";
     config.scripts["cy:open"] = "cypress open";
