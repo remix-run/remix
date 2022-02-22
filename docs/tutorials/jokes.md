@@ -1583,7 +1583,7 @@ import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
-export let loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
   };
@@ -3670,7 +3670,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[13,97-103]
+```tsx filename=app/routes/login.tsx lines=[13,98-104]
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
@@ -3743,8 +3743,9 @@ export const action: ActionFunction = async ({
     username: validateUsername(username),
     password: validatePassword(password),
   };
-  if (Object.values(fieldErrors).some(Boolean))
+  if (Object.values(fieldErrors).some(Boolean)) {
     return badRequest({ fieldErrors, fields });
+  }
 
   switch (loginType) {
     case "login": {

@@ -55,7 +55,7 @@ export default function Index() {
       {data?.imgSrc && (
         <>
           <h2>uploaded image</h2>
-          <img src={data.imgSrc} alt={data.imgDesc || "Upload result"} />
+          <img alt={data.imgDesc || "Upload result"} src={data.imgSrc} />
         </>
       )}
     </>

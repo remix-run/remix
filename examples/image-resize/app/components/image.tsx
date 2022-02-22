@@ -19,6 +19,7 @@ export function Image({ src, width, height, fit, ...other }: ImageProps) {
   }
   return (
     <img
+      alt=""
       src={`/assets/resize/${src}?${query.toString()}`}
       {...{ width, height, ...other }}
     />

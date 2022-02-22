@@ -50,15 +50,15 @@ Express (or Node.js) is the actual server, Remix is just a handler on that serve
 ```ts
 export function createRequestHandler({ build }) {
   // creates a Fetch API request handler from the server build
-  let handleRequest = createRemixRequestHandler(build);
+  const handleRequest = createRemixRequestHandler(build);
 
   // returns an express.js specific handler for the express server
   return async (req, res) => {
     // adapts the express.req to a Fetch API request
-    let request = createRemixRequest(req);
+    const request = createRemixRequest(req);
 
     // calls the app handler and receives a Fetch API response
-    let response = await handleRequest(request);
+    const response = await handleRequest(request);
 
     // adapts the Fetch API response to the express.res
     sendRemixResponse(res, response);
@@ -123,6 +123,7 @@ export default function Projects() {
         <input name="title" />
         <button type="submit">Create New Project</button>
       </Form>
+
       {actionData?.errors ? (
         <ErrorMessages errors={actionData.errors} />
       ) : null}
@@ -167,7 +168,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server side form validation fails
 3. Animate in the error messages
 
-```jsx nocopy lines=[4-6,8-12,21,22,28-30]
+```jsx nocopy lines=[4-6,8-12,23,25,30-34]
 export default function Projects() {
   const projects = useLoaderData();
   const actionData = useActionData();
@@ -191,6 +192,7 @@ export default function Projects() {
 
       <Form method="post">
         <input ref={inputRef} name="title" />
+
         <button type="submit" disabled={busy}>
           {busy ? "Creating..." : "Create New Project"}
         </button>

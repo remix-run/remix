@@ -38,10 +38,10 @@ function Document({ children, title }) {
 }
 
 export default function App() {
-  const data = useLoaderData();
+  const { date } = useLoaderData();
 
   return (
-    <Document>
+    <Document title={date.toISOString()}>
       <Outlet />
     </Document>
   );

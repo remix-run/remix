@@ -59,7 +59,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 ```tsx
 <>
-  <Link /> // defaults to "none"
+  <Link /> {/* defaults to "none" */}
   <Link prefetch="none" />
   <Link prefetch="intent" />
   <Link prefetch="render" />
@@ -98,10 +98,10 @@ import { NavLink } from "remix";
 function NavList() {
   // This styling will be applied to a <NavLink> when the
   // route that it links to is currently selected.
-  let activeStyle = {
+  const activeStyle = {
     textDecoration: "underline",
   };
-  let activeClassName = "underline";
+  const activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -1415,10 +1415,10 @@ Of course, you can do redirects without this helper if you'd rather build it up 
 
 ```ts
 // this is a shortcut...
-return redirect("/else/where", 303);
+redirect("/else/where", 303);
 
 // ...for this
-return new Response(null, {
+new Response(null, {
   status: 303,
   headers: {
     Location: "/else/where",
@@ -1442,8 +1442,8 @@ It's to be used in place of `request.formData()`.
 For example:
 
 ```tsx lines=[2-5,7,23]
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1451,7 +1451,7 @@ export let action: ActionFunction = async ({ request }) => {
   // the returned value for the file field is whatever our uploadHandler returns.
   // Let's imagine we're uploading the avatar to s3,
   // so our uploadHandler returns the URL.
-  let avatarUrl = formData.get("avatar");
+  const avatarUrl = formData.get("avatar");
 
   // update the currently logged in user's avatar in our database
   await updateUserAvatar(request, avatarUrl);
@@ -1487,18 +1487,18 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createFileUploadHandler({
+const uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "NodeFile" which has a similar API to "File"
   // ... etc
@@ -1524,17 +1524,17 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createMemoryUploadHandler({
+const uploadHandler = unstable_createMemoryUploadHandler({
   maxFileSize: 500_000,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "File" (https://mdn.io/File) polyfilled for node
   // ... etc
@@ -1559,7 +1559,7 @@ import type {
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request }) => {
   const userId = getUserId(request);
 
   function uploadStreamToCloudinary(
@@ -1582,7 +1582,7 @@ export let action: ActionFunction = async ({ request }) => {
     });
   }
 
-  let uploadHandler: UploadHandler = async ({
+  const uploadHandler: UploadHandler = async ({
     name,
     stream,
   }) => {
@@ -1607,12 +1607,12 @@ export let action: ActionFunction = async ({ request }) => {
     return uploadedImage.secure_url;
   };
 
-  let formData = await unstable_parseMultipartFormData(
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let imageUrl = formData.get("avatar");
+  const imageUrl = formData.get("avatar");
 
   // because our uploadHandler returns a string, that's what the imageUrl will be.
   // ... etc
@@ -1640,17 +1640,17 @@ import type { UploadHandler } from "remix";
 import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export let fileUploadHandler =
+export const fileUploadHandler =
   unstable_createFileUploadHandler({
     directory: "public/calendar-events",
   });
 
-export let cloudinaryUploadHandler =
+export const cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
     folder: "/my-site/avatars",
   });
 
-export let multHandler: UploadHandler = (args) => {
+export const multHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
     return fileUploadHandler(args);
   } else if (args.name === "eventBanner") {
@@ -1895,7 +1895,7 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01"),
 });
 
@@ -2083,8 +2083,8 @@ Returns `true` if an object is a Remix session.
 ```js
 import { isSession } from "remix";
 
-let sessionData = { foo: "bar" };
-let session = createSession(sessionData, "remix-session");
+const sessionData = { foo: "bar" };
+const session = createSession(sessionData, "remix-session");
 console.log(isSession(session));
 // true
 ```

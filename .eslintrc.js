@@ -7,9 +7,21 @@ module.exports = {
   ],
   overrides: [
     {
+      // all code blocks in .md files
+      files: ["**/*.md/*.js", "**/*.md/*.jsx", "**/*.md/*.ts", "**/*.md/*.tsx"],
+      rules: {
+        "no-unreachable": "off",
+        "prefer-const": "error",
+      },
+    },
+    {
       // all ```jsx & ```tsx code blocks in .md files
       files: ["**/*.md/*.jsx", "**/*.md/*.tsx"],
       rules: {
+        "jsx-a11y/alt-text": "off",
+        "jsx-a11y/anchor-has-content": "off",
+
+        "react/display-name": "off",
         "react/jsx-no-undef": "off",
       },
     },
@@ -22,18 +34,24 @@ module.exports = {
       },
     },
     {
-      files: [
-        "packages/create-remix/templates/cloudflare-workers/**/*.js",
-        "packages/remix-cloudflare-workers/**/*.ts",
-      ],
+      files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
       rules: {
-        "no-restricted-globals": "off",
+        "jest/no-disabled-tests": "off",
       },
     },
     {
       files: ["fixtures/gists-app/jest/**/*.js"],
       env: {
         "jest/globals": true,
+      },
+    },
+    {
+      files: [
+        "packages/create-remix/templates/cloudflare-workers/**/*.js",
+        "packages/remix-cloudflare-workers/**/*.ts",
+      ],
+      rules: {
+        "no-restricted-globals": "off",
       },
     },
   ],
