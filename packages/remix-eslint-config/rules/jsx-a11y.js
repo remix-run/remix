@@ -15,9 +15,7 @@ module.exports = {
   "jsx-a11y/img-redundant-alt": WARN,
   "jsx-a11y/lang": WARN,
   "jsx-a11y/no-access-key": WARN,
-  "jsx-a11y/no-distracting-elements": WARN,
   "jsx-a11y/no-redundant-roles": WARN,
   "jsx-a11y/role-has-required-aria-props": WARN,
-  "jsx-a11y/role-supports-aria-props": WARN,
-  "jsx-a11y/scope": WARN
+  "jsx-a11y/role-supports-aria-props": WARN
 };
