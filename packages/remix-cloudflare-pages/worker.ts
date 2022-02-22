@@ -48,9 +48,10 @@ export function createPagesFunctionHandler<Env = any>({
         context.request.url,
         context.request.clone()
       );
-      response = response?.ok
-        ? new Response(response.body, response)
-        : undefined;
+      response =
+        response && response.status >= 200 && response.status < 400
+          ? new Response(response.body, response)
+          : undefined;
     } catch {}
 
     if (!response) {

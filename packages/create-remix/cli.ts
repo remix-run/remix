@@ -29,7 +29,7 @@ run().then(
 );
 
 async function run() {
-  let { input, flags, showHelp, showVersion } = meow(help, {
+  let { input, flags, showHelp, showVersion, pkg } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
       version: { type: "boolean", default: false, alias: "v" }
@@ -39,7 +39,7 @@ async function run() {
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
-  let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
+  let anim = chalkAnimation.rainbow(`\nR E M I X - v${pkg.version}\n`);
   await new Promise(res => setTimeout(res, 1500));
   anim.stop();
 
@@ -82,6 +82,9 @@ async function run() {
       name: "appType",
       type: "list",
       message: "What type of app do you want to create?",
+      when() {
+        return path.basename(projectDir).endsWith("-stack");
+      },
       choices: [
         {
           name: "A pre-configured stack ready for production",
@@ -113,7 +116,7 @@ async function run() {
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
       when(answers) {
-        return answers.appType === appType.basic;
+        return answers.appType !== appType.stack;
       },
       choices: [
         { name: "Remix App Server", value: "remix" },
@@ -124,7 +127,7 @@ async function run() {
         { name: "Vercel", value: "vercel" },
         { name: "Cloudflare Pages", value: "cloudflare-pages" },
         { name: "Cloudflare Workers", value: "cloudflare-workers" },
-        { name: "Deno", value: "deno" }
+        { name: "Deno (experimental)", value: "deno" }
       ]
     },
     {
@@ -132,7 +135,7 @@ async function run() {
       type: "list",
       message: "TypeScript or JavaScript?",
       when(answers) {
-        return answers.appType === appType.basic;
+        return answers.appType !== appType.stack;
       },
       choices: [
         { name: "TypeScript", value: "ts" },

@@ -4,7 +4,7 @@ title: Styling
 
 # Styling
 
-The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export]([route-module-links]) at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
+The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export][route-module-links] at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
 ```js
 export function links() {
@@ -136,7 +136,7 @@ Websites large and small usually have a set of shared components used throughout
 
 #### Shared stylesheet
 
-The first is approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
+The first approach is very simple. Put them all in a `shared.css` file included in `app/root.tsx`. That makes it easy for the components themselves to share CSS code (and your editor to provide intellisense for things like [custom properties][custom-properties]), and each component already needs a unique module name in JavaScript anyway, so you can scope the styles to a unique class name or data attribute:
 
 ```css filename=app/styles/shared.css
 /* scope with class names */
@@ -226,9 +226,9 @@ export const PrimaryButton = React.forwardRef(
 );
 ```
 
-Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know it's dependencies (just like JavaScript imports).
+Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know its dependencies (just like JavaScript imports).
 
-Because these buttons are not routes, and therefore not associate with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
+Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
 Consider that `routes/index.js` uses the primary button component:
 
@@ -249,21 +249,20 @@ export function links() {
 
 Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-button.css`, and the route's `index.css`.
 
-An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so its not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
+An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
 ```tsx filename=app/routes/$category.js lines=[1-4,19-26]
 import { TileGrid } from "~/components/tile-grid";
 import { ProductTile } from "~/components/product-tile";
-import { ProductDetails} from "~/components/product-details";
+import { ProductDetails } from "~/components/product-details";
 import { AddFavoriteButton } from "~/components/add-favorite-button";
-
 import styles from "~/styles/$category.css";
 
 export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 
-export function loader({ params }) {
+export async function loader({ params }) {
   return getProductsForCategory(params.category);
 }
 
@@ -274,7 +273,7 @@ export default function Category() {
       {products.map(product => (
         <ProductTile key={product.id}>
           <ProductDetails product={product} />
-          <AddFavoriteButton id={product.id}>
+          <AddFavoriteButton id={product.id} />
         </ProductTile>
       ))}
     </TileGrid>
@@ -284,7 +283,7 @@ export default function Category() {
 
 The component imports are already there, we just need to surface the assets:
 
-```tsx filename=app/routes/$category.js lines=[3,7,11,15,22-25]
+```js filename=app/routes/$category.js lines=[3,7,11,15,22-25]
 import {
   TileGrid,
   links as tileGridLinks
@@ -301,7 +300,6 @@ import {
   AddFavoriteButton,
   links as addFavoriteLinks
 } from "~/components/add-favorite-button";
-
 import styles from "~/styles/$category.css";
 
 export function links() {
@@ -325,7 +323,7 @@ While that's a bit of boilerplate it enables a lot:
 - When your components aren't used by a route, their CSS is unloaded from the page
 - Remix will prefetch the CSS for the next page with [`<Link prefetch>`][link]
 - When one component's styles change, browser and CDN caches for the other components won't break because they are all have their own URLs.
-- When a component's JavaScript changes but it's styles don't, the cache is not broken for the styles
+- When a component's JavaScript changes but its styles don't, the cache is not broken for the styles
 
 #### Asset Preloads
 
@@ -363,7 +361,7 @@ Not only will this make the asset high priority in the network tab, but Remix wi
 
 ### Link Media Queries
 
-Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you you can do the following:
+Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you can do the following:
 
 ```tsx lines=[10,15,20]
 export function links() {
@@ -433,7 +431,7 @@ Update the package scripts to generate the tailwind file during dev and for the 
 
 Finally, import the generated CSS file into your app:
 
-```tsx filename=root.tsx
+```tsx filename=app/root.tsx
 // ...
 import styles from "./tailwind.css";
 
@@ -458,7 +456,7 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 
 Then alter how tailwind is generating css:
 
-```json filename="package.json lines=[4-7]
+```json filename=package.json lines=[4-7]
 {
   // ...
   "scripts": {
@@ -579,6 +577,7 @@ Here's how to set it up:
 
    ```tsx filename=root.tsx
    import type { LinksFunction } from "remix";
+
    import styles from "./styles/app.css";
 
    export const links: LinksFunction = () => {
@@ -599,6 +598,63 @@ npm add -D concurrently
   }
 }
 ```
+
+## CSS Preprocessors
+
+You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
+
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export]([route-module-links]) function, just like any other CSS file in Remix.
+
+To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
+
+An example using SASS.
+
+1. First you'll need to install the tool your preprocess uses to generate CSS files.
+
+```sh
+npm add -D sass
+```
+
+2. Add an npm script to your `package.json`'s `script` section' that uses the installed too to generate CSS files.
+
+```json filename="package.json"
+{
+  // ...
+  "scripts": {
+    // ...
+    "sass": "sass --watch app/:app/"
+  }
+  // ...
+}
+```
+
+The above example assumes SASS files will be stored somewhere in the `app` folder.
+
+The `--watch` flag included above will keep `sass` running as an active process, listening for changes to or for any new SASS files. When changes are made to the source file, `sass` will regenerate the CSS file automatically. Generated CSS files will be stored in the same location as their source files.
+
+3. Run the npm script.
+
+```sh
+npm run sass
+```
+
+This will start the `sass` process. Any new SASS files, or changes to existing SASS files, will be detected by the running process.
+
+You might want to use something like `concurrently` to avoid needing two terminal tabs to generate your CSS files and also run `remix dev`.
+
+```sh
+npm add -D concurrently
+```
+
+```json filename=package.json
+{
+  "scripts": {
+    "dev": "concurrently \"npm run sass\" \"remix dev\""
+  }
+}
+```
+
+Running `npm run dev` will run the specified commands in parallel in a single terminal window.
 
 ## CSS-in-JS libraries
 
@@ -637,7 +693,9 @@ Here's some sample code to show how you might use Styled Components with Remix (
            <Outlet />
            <ScrollRestoration />
            <Scripts />
-           <LiveReload />
+           {process.env.NODE_ENV === "development" ? (
+             <LiveReload />
+           ) : null}
          </body>
        </html>
      );

@@ -13,7 +13,7 @@ export function meta() {
   };
 }
 
-export function loader() {
+export async function loader() {
   if (process.env.NODE_ENV !== "test") {
     console.log(serverMessage);
   }

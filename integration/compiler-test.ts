@@ -9,14 +9,23 @@ describe("compiler", () => {
     fixture = await createFixture({
       files: {
         "app/fake.server.js": js`
-          export default { hello: "world" };
+          export const hello = "server";
+        `,
+        "app/fake.client.js": js`
+          export const hello = "client";
+        `,
+        "app/fake.js": js`
+          import { hello as clientHello } from "./fake.client.js";
+          import { hello as serverHello } from "./fake.server.js";
+          export default clientHello || serverHello;
         `,
 
         "app/routes/index.jsx": js`
-          import fake from "~/fake.server.js";
+          import fake from "~/fake.js";
 
           export default function Index() {
-            return <div id="index">{Object.keys(fake).length}</div>
+            let hasRightModule = fake === (typeof document === "undefined" ? "server" : "client");
+            return <div id="index">{String(hasRightModule)}</div>
           }
         `,
         "app/routes/built-ins.jsx": js`
@@ -36,8 +45,29 @@ describe("compiler", () => {
           import * as path from "path";
 
           export default function BuiltIns() {
-            return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>
+            return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;
           }
+        `,
+        "app/routes/esm-only-pkg.jsx": js`
+          import esmOnlyPkg from "esm-only-pkg";
+
+          export default function EsmOnlyPkg() {
+            return <div id="esm-only-pkg">{esmOnlyPkg}</div>;
+          }
+        `,
+        "remix.config.js": js`
+          module.exports = {
+            serverDependenciesToBundle: ["esm-only-pkg"],
+          };
+        `,
+        "node_modules/esm-only-pkg/package.json": `{
+          "name": "esm-only-pkg",
+          "version": "1.0.0",
+          "type": "module",
+          "main": "./esm-only-pkg.js"
+        }`,
+        "node_modules/esm-only-pkg/esm-only-pkg.js": js`
+          export default "esm-only-pkg";
         `
       }
     });
@@ -55,7 +85,17 @@ describe("compiler", () => {
 
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#index")).toMatchInlineSnapshot(
-      `"<div id=\\"index\\">0</div>"`
+      `"<div id=\\"index\\">true</div>"`
+    );
+  });
+  it("removes server code with `*.client` files", async () => {
+    await app.disableJavaScript();
+    let res = await app.goto("/", true);
+    expect(res.status()).toBe(200); // server rendered fine
+
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#index")).toMatchInlineSnapshot(
+      `"<div id=\\"index\\">true</div>"`
     );
   });
 
@@ -89,5 +129,14 @@ describe("compiler", () => {
     );
     // does not include `import bla from "path"` in the output bundle
     expect(routeModule).not.toMatch(/from\s*"path/);
+  });
+
+  it("allows consumption of ESM modules in CJS builds with `serverDependenciesToBundle`", async () => {
+    let res = await app.goto("/esm-only-pkg", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#esm-only-pkg")).toMatchInlineSnapshot(
+      `"<div id=\\"esm-only-pkg\\">esm-only-pkg</div>"`
+    );
   });
 });

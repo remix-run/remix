@@ -10,10 +10,12 @@ import prettier from "prettier";
 import getPort from "get-port";
 
 import { createRequestHandler } from "../../packages/remix-server-runtime";
-import { formatServerError } from "../../packages/remix-node";
 import { createApp } from "../../packages/create-remix";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
-import type { ServerBuild } from "../../packages/remix-server-runtime";
+import type {
+  ServerBuild,
+  ServerPlatform
+} from "../../packages/remix-server-runtime";
 import type { CreateAppArgs } from "../../packages/create-remix";
 import { TMP_DIR } from "./global-setup";
 
@@ -32,7 +34,7 @@ export let js = String.raw;
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handler = createRequestHandler(app, platform);
 
   let requestDocument = async (href: string, init?: RequestInit) => {
@@ -306,6 +308,15 @@ export async function createAppFixture(fixture: Fixture) {
       getHtml: (selector?: string) => getHtml(page, selector),
 
       /**
+       * Get a cheerio instance of an element from the page.
+       *
+       * @param selector CSS Selector for the element's HTML you want
+       */
+      getElement: async (selector: string) => {
+        return getElement(await getHtml(page), selector);
+      },
+
+      /**
        * Keeps the fixture running for as many seconds as you want so you can go
        * poke around in the browser to see what's up.
        *
@@ -397,13 +408,25 @@ export async function getHtml(page: Page, selector?: string) {
   return selector ? selectHtml(html, selector) : prettyHtml(html);
 }
 
-export function selectHtml(source: string, selector: string) {
-  let el = cheerio(selector, source);
+export function getAttribute(
+  source: string,
+  selector: string,
+  attributeName: string
+) {
+  let el = getElement(source, selector);
+  return el.attr(attributeName);
+}
 
+export function getElement(source: string, selector: string) {
+  let el = cheerio(selector, source);
   if (!el.length) {
     throw new Error(`No element matches selector "${selector}"`);
   }
+  return el;
+}
 
+export function selectHtml(source: string, selector: string) {
+  let el = getElement(source, selector);
   return prettyHtml(cheerio.html(el)).trim();
 }
 

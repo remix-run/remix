@@ -108,7 +108,7 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               aria-invalid={Boolean(actionData?.fieldErrors?.name)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name ? "name-error" : undefined
               }
             />
@@ -126,7 +126,7 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.content}
               name="content"
               aria-invalid={Boolean(actionData?.fieldErrors?.content)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content ? "content-error" : undefined
               }
             />

@@ -11,17 +11,36 @@ async function getUserByEmail(email: string) {
   return result.Items[0];
 }
 
+async function getUserPasswordByEmail(email: string) {
+  const db = await arc.tables();
+  const result = await db.password.query({
+    KeyConditionExpression: "pk = :pk",
+    ExpressionAttributeValues: { ":pk": `email#${email}` }
+  });
+
+  return result.Items[0];
+}
+
 async function createUser(email: string, password: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
   const db = await arc.tables();
-  return db.people.put({
+  await db.password.put({
     pk: `email#${email}`,
     password: hashedPassword
   });
+
+  await db.people.put({
+    pk: `email#${email}`
+  });
+
+  const user = await getUserByEmail(email);
+
+  return user;
 }
 
 async function verifyLogin(email: string, password: string) {
-  const user = await getUserByEmail(email);
+  const user = await getUserPasswordByEmail(email);
+
   if (!user) {
     return undefined;
   }
@@ -31,7 +50,7 @@ async function verifyLogin(email: string, password: string) {
     return undefined;
   }
 
-  return user;
+  return getUserByEmail(email);
 }
 
 export { getUserByEmail, createUser, verifyLogin };

@@ -404,7 +404,7 @@ async function createServerBuild(
 
   let plugins: esbuild.Plugin[] = [
     mdxPlugin(config),
-    emptyModulesPlugin(config, /\.client\.[tj]sx?$/),
+    emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
@@ -412,7 +412,7 @@ async function createServerBuild(
   ];
 
   if (config.serverPlatform !== "node") {
-    plugins.push(NodeModulesPolyfillPlugin());
+    plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
   return esbuild

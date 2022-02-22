@@ -75,6 +75,7 @@ export function CatchBoundary() {
           {caught.status} {caught.statusText}
         </p>
       );
+      break;
   }
 
   return (

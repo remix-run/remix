@@ -12,23 +12,29 @@ A lot of Remix APIs aren't imported from the `"remix"` package, but are instead 
 This file has a few build and development configuration options, but does not actually run on your server.
 
 ```tsx filename=remix.config.js
+/**
+ * @type {import('@remix-run/dev').AppConfig}
+ */
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
   devServerPort: 8002,
+  ignoredRouteFiles: [".*"],
   publicPath: "/build/",
-  serverBuildDirectory: "build",
   routes(defineRoutes) {
     return defineRoutes(route => {
       route("/somewhere/cool/*", "catchall.tsx");
     });
-  }
+  },
+  serverBuildPath: "build/index.js",
+  serverBuildTarget: "node-cjs"
 };
 ```
 
 ### appDirectory
 
-The path to the `app` directory, relative to remix.config.js. Defaults to "app".
+The path to the `app` directory, relative to remix.config.js. Defaults to
+`"app"`.
 
 ```js
 // default
@@ -37,6 +43,37 @@ exports.appDirectory = "./app";
 // custom
 exports.appDirectory = "./elsewhere";
 ```
+
+### assetsBuildDirectory
+
+The path to the browser build, relative to remix.config.js. Defaults to
+"public/build". Should be deployed to static hosting.
+
+### cacheDirectory
+
+The path to a directory Remix can use for caching things in development,
+relative to `remix.config.js`. Defaults to `".cache"`.
+
+### devServerBroadcastDelay
+
+The delay, in milliseconds, before the dev server broadcasts a reload event.
+There is no delay by default.
+
+### devServerPort
+
+The port number to use for the dev websocket server. Defaults to 8002.
+
+### ignoredRouteFiles
+
+This is an array of globs (via [minimatch][minimatch]) that Remix will match to
+files while reading your `app/routes` directory. If a file matches, it will be
+ignored rather that treated like a route module. This is useful for ignoring
+dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+
+### publicPath
+
+The URL prefix of the browser build with a trailing slash. Defaults to
+`"/build/"`. This is the path the browser will use to find assets.
 
 ### routes
 
@@ -64,21 +101,68 @@ exports.routes = async defineRoutes => {
 };
 ```
 
-### assetsBuildDirectory
+### server
 
-The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
-
-### publicPath
-
-The URL prefix of the browser build with a trailing slash. Defaults to "/build/". This is the path the browser will use to find assets.
+A server entrypoint, relative to the root directory that becomes your server's
+main module. If specified, Remix will compile this file along with your
+application into a single file to be deployed to your server. This file can use
+either a `.js` or `.ts` file extension.
 
 ### serverBuildDirectory
 
-The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
+<docs-warning>This option is deprecated and will likely be removed in a future
+stable release. Use [`serverBuildPath`](#serverbuildpath) instead.</docs-warning>
 
-### devServerPort
+The path to the server build, relative to `remix.config.js`. Defaults to
+"build". This needs to be deployed to your server.
 
-The port number to use for the dev websocket server. Defaults to 8002.
+### serverBuildPath
+
+The path to the server build file, relative to `remix.config.js`. This file
+should end in a `.js` extension and should be deployed to your server.
+
+If omitted, the default build path will be based on your
+[`serverBuildTarget`](#serverbuildtarget).
+
+### serverBuildTarget
+
+The target of the server build. Defaults to `"node-cjs"`.
+
+The `serverBuildTarget` can be one of the following:
+
+- [`"arc"`](https://arc.codes)
+- [`"cloudflare-pages"`](https://pages.cloudflare.com/)
+- [`"cloudflare-workers"`](https://workers.cloudflare.com/)
+- [`"deno"`](https://deno.land/)
+- [`"netlify"`](https://www.netlify.com/)
+- [`"node-cjs"`](https://nodejs.org/en/)
+- [`"vercel"`](https://vercel.com/)
+
+### serverDependenciesToBundle
+
+A list of regex patterns that determined if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
+
+For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
+
+```ts filename=remix.config.js lines=[11-16]
+/**
+ * @type {import('@remix-run/dev').AppConfig}
+ */
+module.exports = {
+  appDirectory: "app",
+  assetsBuildDirectory: "public/build",
+  publicPath: "/build/",
+  serverBuildDirectory: "build",
+  devServerPort: 8002,
+  ignoredRouteFiles: [".*"],
+  serverDependenciesToBundle: [
+    /^rehype.*/,
+    /^remark.*/,
+    /^unified.*/,
+    "@sindresorhus/slugify"
+  ]
+};
+```
 
 ## File Name Conventions
 
@@ -260,7 +344,7 @@ app/
 | ----------------- | -------------------------------------- | ---------------------------- |
 | `/`               | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
 | `/product`        | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
-| `/dashboad`       | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
+| `/dashboard`      | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
 | `/chance/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
 
 </details>
@@ -456,15 +540,20 @@ export default function SomeRouteComponent() {
 
 ### `loader`
 
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
+
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
-```tsx
+```js
 export const loader = async () => {
   return { ok: true };
 };
+```
 
+```ts
 // Typescript
 import type { LoaderFunction } from "remix";
+
 export const loader: LoaderFunction = async () => {
   return { ok: true };
 };
@@ -474,8 +563,9 @@ This function is only ever run on the server. On the initial server render it wi
 
 Using the database ORM Prisma as an example:
 
-```tsx [1,4-6,9]
+```tsx lines=[1,5-7,10]
 import { useLoaderData } from "remix";
+
 import { prisma } from "../db";
 
 export const loader = async () => {
@@ -502,9 +592,11 @@ Remix polyfills the [Web Fetch API][fetch] on the server so you can use `fetch` 
 
 Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
-```js
+```ts
 // if the user visits /invoices/123
-export const loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params
+}) => {
   params.invoiceId; // "123"
 };
 ```
@@ -516,7 +608,9 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request
+}) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -553,7 +647,9 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = ({ context }) => {
+export const loader: LoaderFunction = async ({
+  context
+}) => {
   const { expressUser } = context;
   // ...
 };
@@ -573,7 +669,7 @@ export const loader = async () => {
 
 When you return a plain object, Remix turns it into a [Fetch Response][response]. This means you can return them yourself, too.
 
-```js
+```ts
 export const loader: LoaderFunction = async () => {
   const users = await db.users.findMany();
   const body = JSON.stringify(users);
@@ -647,9 +743,10 @@ export function getInvoice(id, user) {
 
 ```ts filename=app/http.ts
 import { redirect } from "remix";
+
 import { getSession } from "./session";
 
-function requireUserSession(request) {
+export async function requireUserSession(request) {
   const session = await getSession(
     request.headers.get("cookie")
   );
@@ -689,7 +786,7 @@ export const loader = async ({ request, params }) => {
     const data: InvoiceCatchData = {
       invoiceOwnerEmail: invoice.owner.email
     };
-    throw new json(data, { status: 401 });
+    throw json(data, { status: 401 });
   }
 
   return invoice;
@@ -710,8 +807,8 @@ export function CatchBoundary() {
         <div>
           <p>You don't have access to this invoice.</p>
           <p>
-            Contact {invoiceCatch.data.invoiceOwnerEmail} to
-            get access
+            Contact {caught.data.invoiceOwnerEmail} to get
+            access
           </p>
         </div>
       );
@@ -723,14 +820,16 @@ export function CatchBoundary() {
   // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {invoiceCatch.status}{" "}
-      {invoiceCatch.statusText}
+      Something went wrong: {caught.status}{" "}
+      {caught.statusText}
     </div>
   );
 }
 ```
 
 ### `action`
+
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a> and <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a></docs-success>
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
@@ -740,6 +839,7 @@ This enables you to co-locate everything about a data set in a single route modu
 
 ```tsx
 import { redirect, Form } from "remix";
+
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
 
@@ -864,6 +964,35 @@ export function headers({ loaderHeaders, parentHeaders }) {
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
+Note that you can also add headers in your `entry.server` file for things that should be global, for example:
+
+```tsx lines=[16]
+import { renderToString } from "react-dom/server";
+import { RemixServer } from "remix";
+import type { EntryContext } from "remix";
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const markup = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  responseHeaders.set("Content-Type", "text/html");
+  responseHeaders.set("X-Powered-By", "Hugs");
+
+  return new Response("<!DOCTYPE html>" + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders
+  });
+}
+```
+
+Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
+
 ### `meta`
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
@@ -957,6 +1086,7 @@ Examples:
 
 ```tsx
 import type { LinksFunction } from "remix";
+
 import stylesHref from "../styles/something.css";
 
 export const links: LinksFunction = () => {
@@ -1123,7 +1253,7 @@ Here are a couple of common use-cases:
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
 ```js [10]
-export const loader = () => {
+export const loader = async () => {
   return {
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
@@ -1165,10 +1295,10 @@ And lets say the UI looks something like this:
 └──────────────────────────────┘
 ```
 
-The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
 ```js [2,7]
-export function loader({ request, params }) {
+export async function loader({ request, params }) {
   const url = new URL(request.url);
   return exampleDb.activity.findAll({
     where: {
@@ -1186,7 +1316,7 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   return fakedb.findProject(params.projectId);
 }
 ```
@@ -1231,6 +1361,7 @@ It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
 import type { LinksFunction } from "remix";
+
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
 
@@ -1256,3 +1387,5 @@ export default function Page() {
 [form]: ./remix#form
 [form action]: ./remix#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[minimatch]: https://www.npmjs.com/package/minimatch
+[handledatarequest]: #entryservertsx

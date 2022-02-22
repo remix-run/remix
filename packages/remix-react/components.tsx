@@ -362,7 +362,7 @@ export function RemixRoute({ id }: { id: string }) {
 /**
  * Defines the prefetching behavior of the link:
  *
- * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
@@ -822,8 +822,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Normal `<form encType>`.
    *
-   * Note: Remix only supports `application/x-www-form-urlencoded` right now
-   * but will soon support `multipart/form-data` as well.
+   * Note: Remix defaults to `application/x-www-form-urlencoded` and also
+   * supports `multipart/form-data`.
    */
   encType?: FormEncType;
 
@@ -1056,6 +1056,8 @@ export function useSubmit(): SubmitFunction {
 export function useSubmitImpl(key?: string): SubmitFunction {
   let navigate = useNavigate();
   let defaultAction = useFormAction();
+  let defaultMethod = "get";
+  let defaultEncType = "application/x-www-form-urlencoded";
   let { transitionManager } = useRemixEntryContext();
 
   return React.useCallback(
@@ -1070,9 +1072,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           options as any
         ).submissionTrigger;
 
-        method = options.method || target.method;
-        action = options.action || target.action;
-        encType = options.encType || target.enctype;
+        method =
+          options.method || target.getAttribute("method") || defaultMethod;
+        action =
+          options.action || target.getAttribute("action") || defaultAction;
+        encType =
+          options.encType || target.getAttribute("enctype") || defaultEncType;
+
         formData = new FormData(target);
 
         if (submissionTrigger && submissionTrigger.name) {
@@ -1092,11 +1098,20 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         // <button>/<input type="submit"> may override attributes of <form>
 
         method =
-          options.method || target.getAttribute("formmethod") || form.method;
+          options.method ||
+          target.getAttribute("formmethod") ||
+          form.getAttribute("method") ||
+          defaultMethod;
         action =
-          options.action || target.getAttribute("formaction") || form.action;
+          options.action ||
+          target.getAttribute("formaction") ||
+          form.getAttribute("action") ||
+          defaultAction;
         encType =
-          options.encType || target.getAttribute("formenctype") || form.enctype;
+          options.encType ||
+          target.getAttribute("formenctype") ||
+          form.getAttribute("enctype") ||
+          defaultEncType;
         formData = new FormData(form);
 
         // Include name + value from a <button>
@@ -1130,6 +1145,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
             }
           }
         }
+      }
+
+      if (typeof document === "undefined") {
+        throw new Error(
+          "You are calling submit during the server render. " +
+            "Try calling submit within a `useEffect` or callback instead."
+        );
       }
 
       let { protocol, host } = window.location;
@@ -1225,18 +1247,23 @@ export function useBeforeUnload(callback: () => any): void {
  */
 export function useMatches() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
-  return matches.map(match => {
-    let { pathname, params } = match;
-    return {
-      id: match.route.id,
-      pathname,
-      params,
-      data: routeData[match.route.id],
-      // if the module fails to load or an error/response is thrown, the module
-      // won't be defined.
-      handle: routeModules[match.route.id]?.handle
-    };
-  });
+
+  return React.useMemo(
+    () =>
+      matches.map(match => {
+        let { pathname, params } = match;
+        return {
+          id: match.route.id,
+          pathname,
+          params,
+          data: routeData[match.route.id],
+          // if the module fails to load or an error/response is thrown, the module
+          // won't be defined.
+          handle: routeModules[match.route.id]?.handle
+        };
+      }),
+    [matches, routeData, routeModules]
+  );
 }
 
 /**
@@ -1346,26 +1373,33 @@ export const LiveReload =
       }: {
         port?: number;
       }) {
+        let setupLiveReload = ((port: number) => {
+          let protocol = location.protocol === "https:" ? "wss:" : "ws:";
+          let host = location.hostname;
+          let socketPath = `${protocol}//${host}:${port}/socket`;
+
+          let ws = new WebSocket(socketPath);
+          ws.onmessage = message => {
+            let event = JSON.parse(message.data);
+            if (event.type === "LOG") {
+              console.log(event.message);
+            }
+            if (event.type === "RELOAD") {
+              console.log("💿 Reloading window ...");
+              window.location.reload();
+            }
+          };
+          ws.onerror = error => {
+            console.log("Remix dev asset server web socket error:");
+            console.error(error);
+          };
+        }).toString();
+
         return (
           <script
+            suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `
-let ws = new WebSocket("ws://localhost:${port}/socket");
-ws.onmessage = message => {
-  let event = JSON.parse(message.data);
-  if (event.type === "LOG") {
-    console.log(event.message);
-  }
-  if (event.type === "RELOAD") {
-    console.log("💿 Reloading window ...");
-    window.location.reload();
-  }
-};
-ws.onerror = error => {
-  console.log("Remix dev asset server web socket error:");
-  console.error(error);
-};
-              `.trim()
+              __html: `(${setupLiveReload})(${JSON.stringify(port)})`
             }}
           />
         );

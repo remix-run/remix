@@ -33,7 +33,7 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
-        // These are our virutal modules, always bundle the because there is no
+        // These are our virutal modules, always bundle them because there is no
         // "real" file on disk to externalize.
         if (
           path === serverBuildVirtualModule.id ||
@@ -71,15 +71,15 @@ export function serverBareModulesPlugin(
           case "cloudflare-pages":
           case "cloudflare-workers":
             return undefined;
-          // Map node externals to deno std libs and bundle everything else.
-          case "deno":
-            if (isNodeBuiltIn(packageName)) {
-              return {
-                path: `https://deno.land/std/node/${packageName}/mod.ts`,
-                external: true
-              };
-            }
+        }
+
+        for (let pattern of remixConfig.serverDependenciesToBundle) {
+          // bundle it if the path matches the pattern
+          if (
+            typeof pattern === "string" ? path === pattern : pattern.test(path)
+          ) {
             return undefined;
+          }
         }
 
         // Externalize everything else if we've gotten here.

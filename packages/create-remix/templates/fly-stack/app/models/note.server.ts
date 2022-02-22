@@ -5,7 +5,11 @@ function createNote(title: string, body: string, userId: string) {
     data: {
       title,
       body,
-      userId
+      user: {
+        connect: {
+          id: userId
+        }
+      }
     }
   });
 }
