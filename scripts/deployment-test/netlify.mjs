@@ -10,10 +10,10 @@ import {
   runCypress,
   validatePackageVersions
 } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
+import { createApp } from "create-remix";
 
 let APP_NAME = getAppName("netlify");
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let PROJECT_DIR = path.join(process.cwd(), APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
 async function createNewApp() {
@@ -70,7 +70,7 @@ try {
   // deploy to netlify
   let netlifyDeployCommand = spawnSync(
     "npx",
-    ["--yes", "netlify-cli", "deploy", "--site", site.id, "--prod"],
+    ["netlify-cli", "deploy", "--site", site.id, "--prod"],
     spawnOpts
   );
   if (netlifyDeployCommand.status !== 0) {

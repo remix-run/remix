@@ -1,0 +1,20 @@
+{
+  "name": "deployment-test",
+  "description": "deps needed for testing remix deployments",
+  "private": true,
+  "scripts": {},
+  "dependencies": {
+    "@architect/parser": "^5.0.2",
+    "@architect/utils": "^3.0.4",
+    "@cloudflare/wrangler": "latest",
+    "@iarna/toml": "^2.2.5",
+    "@octokit/rest": "^18.12.0",
+    "aws-sdk": "^2.1055.0",
+    "create-remix": "latest",
+    "fs-extra": "^10.0.0",
+    "netlify-cli": "latest",
+    "netlify": "^10.1.1",
+    "node-fetch": "^2.6.1",
+    "vercel": "latest"
+  }
+}

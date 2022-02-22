@@ -13,11 +13,11 @@ import {
   updatePackageConfig,
   validatePackageVersions
 } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
+import { createApp } from "create-remix";
 
 let APP_NAME = getAppName("arc");
 let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let PROJECT_DIR = path.join(process.cwd(), APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 let CYPRESS_DEV_URL = "http://localhost:3333";
 

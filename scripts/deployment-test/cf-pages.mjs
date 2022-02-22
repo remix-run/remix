@@ -12,10 +12,10 @@ import {
   runCypress,
   validatePackageVersions
 } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
+import { createApp } from "create-remix";
 
 let APP_NAME = getAppName("cf-pages");
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let PROJECT_DIR = path.join(process.cwd(), APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8788";
 
 async function createNewApp() {
