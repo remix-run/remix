@@ -37,11 +37,11 @@ export const decodeFormData = async <DecodedForm extends Form>(
     codec.decode(form),
     fold(
       // left: the error case
-      errors => {
+      (errors) => {
         throw new Response(JSON.stringify(errors), { status: 422 });
       },
       // right: successful computation of `codec.decode(form)`
-      decodedFormData => decodedFormData
+      (decodedFormData) => decodedFormData
     )
   );
 };

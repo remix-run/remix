@@ -5,7 +5,7 @@ import type {
   FocusEventHandler,
   FormHTMLAttributes,
   MouseEventHandler,
-  TouchEventHandler
+  TouchEventHandler,
 } from "react";
 import * as React from "react";
 import type { Navigator } from "react-router";
@@ -17,7 +17,7 @@ import {
   useRoutes,
   useNavigate,
   useHref,
-  useResolvedPath
+  useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 
@@ -28,7 +28,7 @@ import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary,
   RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary
+  RemixCatchBoundary,
 } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
@@ -37,7 +37,7 @@ import {
   getModuleLinkHrefs,
   getNewMatchesForLinks,
   getStylesheetPrefetchLinks,
-  isPageLinkDescriptor
+  isPageLinkDescriptor,
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
@@ -81,7 +81,7 @@ export function RemixEntry({
   action,
   location: historyLocation,
   navigator: _navigator,
-  static: staticProp = false
+  static: staticProp = false,
 }: {
   context: EntryContext;
   action: Action;
@@ -95,7 +95,7 @@ export function RemixEntry({
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
-    appState: entryComponentDidCatchEmulator
+    appState: entryComponentDidCatchEmulator,
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -116,7 +116,7 @@ export function RemixEntry({
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
-      onChange: state => {
+      onChange: (state) => {
         setClientState({
           catch: state.catch,
           error: state.error,
@@ -124,9 +124,9 @@ export function RemixEntry({
           loaderBoundaryRouteId: state.errorBoundaryId,
           renderBoundaryRouteId: null,
           trackBoundaries: false,
-          trackCatchBoundaries: false
+          trackCatchBoundaries: false,
         });
-      }
+      },
     });
   });
 
@@ -152,7 +152,7 @@ export function RemixEntry({
       type: "navigation",
       location: historyLocation,
       submission: consumeNextNavigationSubmission(),
-      action
+      action,
     });
   }, [transitionManager, historyLocation, action]);
 
@@ -182,7 +182,7 @@ export function RemixEntry({
         clientRoutes,
         routeData: loaderData,
         actionData,
-        transitionManager
+        transitionManager,
       }}
     >
       <RemixErrorBoundary
@@ -280,7 +280,7 @@ export function RemixRoute({ id }: { id: string }) {
           get data() {
             console.error("You cannot `useLoaderData` in a catch boundary.");
             return undefined;
-          }
+          },
         }
       : { id, data };
 
@@ -332,7 +332,7 @@ export function RemixRoute({ id }: { id: string }) {
           get data() {
             console.error("You cannot `useLoaderData` in an error boundary.");
             return undefined;
-          }
+          },
         }
       : { id, data };
 
@@ -429,8 +429,8 @@ function usePrefetchBehavior(
       onBlur: composeEventHandlers(onBlur, cancelIntent),
       onMouseEnter: composeEventHandlers(onMouseEnter, setIntent),
       onMouseLeave: composeEventHandlers(onMouseLeave, cancelIntent),
-      onTouchStart: composeEventHandlers(onTouchStart, setIntent)
-    }
+      onTouchStart: composeEventHandlers(onTouchStart, setIntent),
+    },
   ];
 }
 
@@ -496,7 +496,7 @@ export function composeEventHandlers<
   theirHandler: ((event: EventType) => any) | undefined,
   ourHandler: (event: EventType) => any
 ): (event: EventType) => any {
-  return event => {
+  return (event) => {
     theirHandler && theirHandler(event);
     if (!event.defaultPrevented) {
       ourHandler(event);
@@ -519,7 +519,7 @@ export function Links() {
 
   return (
     <>
-      {links.map(link =>
+      {links.map((link) =>
         isPageLinkDescriptor(link) ? (
           <PrefetchPageLinks key={link.page} {...link} />
         ) : (
@@ -567,7 +567,7 @@ function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, routeModules).then(links => {
+    getStylesheetPrefetchLinks(matches, routeModules).then((links) => {
       if (!interrupted) setStyleLinks(links);
     });
 
@@ -615,13 +615,13 @@ function PrefetchPageLinksImpl({
 
   return (
     <>
-      {dataHrefs.map(href => (
+      {dataHrefs.map((href) => (
         <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
       ))}
-      {moduleHrefs.map(href => (
+      {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
-      {styleLinks.map(link => (
+      {styleLinks.map((link) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
         <link key={link.href} {...link} />
@@ -669,7 +669,7 @@ export function Meta() {
         return name === "title" ? (
           <title key="title">{value}</title>
         ) : Array.isArray(value) ? (
-          value.map(content =>
+          value.map((content) =>
             isOpenGraphTag ? (
               <meta key={name + content} property={name} content={content} />
             ) : (
@@ -720,7 +720,7 @@ export function Scripts(props: ScriptProps) {
     matches,
     pendingLocation,
     clientRoutes,
-    serverHandoffString
+    serverHandoffString,
   } = useRemixEntryContext();
 
   React.useEffect(() => {
@@ -780,7 +780,7 @@ window.__remixRouteModules = {${matches
 
   let routePreloads = matches
     .concat(nextMatches)
-    .map(match => {
+    .map((match) => {
       let route = manifest.routes[match.route.id];
       return (route.imports || []).concat([route.module]);
     })
@@ -790,7 +790,7 @@ window.__remixRouteModules = {${matches
 
   return (
     <>
-      {dedupe(preloads).map(path => (
+      {dedupe(preloads).map((path) => (
         <link
           key={path}
           rel="modulepreload"
@@ -939,14 +939,14 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
         onSubmit={
           reloadDocument
             ? undefined
-            : event => {
+            : (event) => {
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
                 submit(clickedButtonRef.current || event.currentTarget, {
                   method,
-                  replace
+                  replace,
                 });
                 clickedButtonRef.current = null;
               }
@@ -1180,7 +1180,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         action: url.pathname + url.search,
         method: method.toUpperCase(),
         encType,
-        key: Math.random().toString(36).substr(2, 8)
+        key: Math.random().toString(36).substr(2, 8),
       };
 
       if (key) {
@@ -1188,7 +1188,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           type: "fetcher",
           href: submission.action,
           submission,
-          key
+          key,
         });
       } else {
         setNextNavigationSubmission(submission);
@@ -1258,7 +1258,7 @@ export function useMatches() {
 
   return React.useMemo(
     () =>
-      matches.map(match => {
+      matches.map((match) => {
         let { pathname, params } = match;
         return {
           id: match.route.id,
@@ -1267,7 +1267,7 @@ export function useMatches() {
           data: routeData[match.route.id],
           // if the module fails to load or an error/response is thrown, the module
           // won't be defined.
-          handle: routeModules[match.route.id]?.handle
+          handle: routeModules[match.route.id]?.handle,
         };
       }),
     [matches, routeData, routeModules]
@@ -1348,7 +1348,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
       Form,
       submit,
       load,
-      ...fetcher
+      ...fetcher,
     }),
     [fetcher, Form, submit, load]
   );
@@ -1381,7 +1381,7 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002)
+        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
       }: {
         port?: number;
       }) {
@@ -1391,7 +1391,7 @@ export const LiveReload =
           let socketPath = `${protocol}//${host}:${port}/socket`;
 
           let ws = new WebSocket(socketPath);
-          ws.onmessage = message => {
+          ws.onmessage = (message) => {
             let event = JSON.parse(message.data);
             if (event.type === "LOG") {
               console.log(event.message);
@@ -1401,7 +1401,7 @@ export const LiveReload =
               window.location.reload();
             }
           };
-          ws.onerror = error => {
+          ws.onerror = (error) => {
             console.log("Remix dev asset server web socket error:");
             console.error(error);
           };
@@ -1411,7 +1411,7 @@ export const LiveReload =
           <script
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${JSON.stringify(port)})`
+              __html: `(${setupLiveReload})(${JSON.stringify(port)})`,
             }}
           />
         );
@@ -1420,7 +1420,7 @@ export const LiveReload =
 function useComposedRefs<RefValueType = any>(
   ...refs: Array<React.Ref<RefValueType> | null | undefined>
 ): React.RefCallback<RefValueType> {
-  return React.useCallback(node => {
+  return React.useCallback((node) => {
     for (let ref of refs) {
       if (ref == null) continue;
       if (typeof ref === "function") {

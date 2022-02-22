@@ -5,7 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  json
+  json,
 } from "remix";
 import type { LoaderFunction } from "remix";
 import type { User } from "~/data.server";

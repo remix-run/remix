@@ -6,6 +6,6 @@ export let sessionStorage = createCookieSessionStorage({
     path: "/",
     httpOnly: true,
     sameSite: true,
-    secure: process.env.NODE_ENV !== "development"
-  }
+    secure: process.env.NODE_ENV !== "development",
+  },
 });

@@ -2,7 +2,7 @@ import {
   Form,
   unstable_parseMultipartFormData,
   useActionData,
-  json
+  json,
 } from "remix";
 import type { ActionFunction, UploadHandler } from "remix";
 
@@ -30,11 +30,11 @@ export const action: ActionFunction = async ({ request }) => {
   const imgSrc = formData.get("img");
   if (!imgSrc) {
     return json({
-      error: "something wrong"
+      error: "something wrong",
     });
   }
   return json({
-    imgSrc
+    imgSrc,
   });
 };
 

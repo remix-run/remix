@@ -21,7 +21,7 @@ describe("can set multiple set cookies headers", () => {
     it("are correct", async () => {
       let responses = collectResponses(
         page,
-        url => url.pathname === "/multiple-set-cookies"
+        (url) => url.pathname === "/multiple-set-cookies"
       );
 
       await page.goto(`${testServer}/multiple-set-cookies`);

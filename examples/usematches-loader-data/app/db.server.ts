@@ -6,7 +6,7 @@ import type { User } from "./useUser";
 function getCurrentUser(): Promise<User | undefined> {
   return Promise.resolve({
     name: "John Doe",
-    email: "john.doe@email.com"
+    email: "john.doe@email.com",
   });
 }
 

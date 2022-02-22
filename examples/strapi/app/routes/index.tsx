@@ -30,12 +30,12 @@ export const loader: LoaderFunction = async () => {
   const response = await fetch("http://localhost:1337/api/posts");
   const postResponse = (await response.json()) as PostResponse;
 
-  return postResponse.data.map(post => ({
+  return postResponse.data.map((post) => ({
     ...post,
     attributes: {
       ...post.attributes,
-      article: marked(post.attributes.article)
-    }
+      article: marked(post.attributes.article),
+    },
   }));
 };
 
@@ -44,13 +44,13 @@ const Posts: React.FC = () => {
 
   return (
     <>
-      {posts.map(post => {
+      {posts.map((post) => {
         const { title, article, createdAt } = post.attributes;
         const date = new Date(createdAt).toLocaleString("en-US", {
           weekday: "long",
           year: "numeric",
           month: "long",
-          day: "numeric"
+          day: "numeric",
         });
 
         return (

@@ -5,7 +5,7 @@ import stylesUrl from "../styles/index.css";
 export const meta: MetaFunction = () => {
   return {
     title: "Remix: Search a TV show",
-    description: "Search a TV show"
+    description: "Search a TV show",
   };
 };
 
@@ -38,7 +38,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     const data: LoaderData = {
       status: "emptySearch",
       searchTerm: searchTerm || "",
-      items: []
+      items: [],
     };
     return json(data);
   }
@@ -52,7 +52,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     const data: LoaderData = {
       status: "noResults",
       searchTerm,
-      items: []
+      items: [],
     };
     return json(data);
   }
@@ -61,23 +61,23 @@ export const loader: LoaderFunction = async ({ request }) => {
     status: "resultsFound",
     searchTerm,
     items: showResults
-      .map(item =>
+      .map((item) =>
         item.show.image
           ? {
               id: item.id,
               name: item.show.name,
               image: item.show.image.medium,
-              url: item.show.url
+              url: item.show.url,
             }
           : null
       )
-      .filter(typedBoolean)
+      .filter(typedBoolean),
   };
 
   return json(data, {
     headers: {
-      "Cache-Control": "max-age=60, stale-while-revalidate=60"
-    }
+      "Cache-Control": "max-age=60, stale-while-revalidate=60",
+    },
   });
 };
 
@@ -125,7 +125,7 @@ export default function Index() {
 
           {data.status === "resultsFound" ? (
             <div className="results">
-              {data.items.map(item => (
+              {data.items.map((item) => (
                 <a
                   href={item.url}
                   target="_blank"

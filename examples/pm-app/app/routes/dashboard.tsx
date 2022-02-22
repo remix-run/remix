@@ -10,10 +10,10 @@ import { requireUser } from "~/session.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
   return {
-    user: secureUser
+    user: secureUser,
   };
 };
 
@@ -26,19 +26,19 @@ export const meta: MetaFunction = ({ params, data, location, parentsData }) => {
   userName = "Chance";
   return {
     title: `Welcome${userName?.padStart(userName.length + 1) || ""}! | PM Camp`,
-    description: "Welcome to PM Camp"
+    description: "Welcome to PM Camp",
   };
 };
 
 const navItems = [
   //   { label: "Notifications", to: "notifications" },
   //   { label: "Search", to: "search" },
-  { label: "Sign Out", to: "/sign-out" }
+  { label: "Sign Out", to: "/sign-out" },
 ];
 
 function Layout({
   currentYear,
-  children
+  children,
 }: React.PropsWithChildren<{ currentYear?: string | number }>) {
   return (
     <div className="dashboard-layout__container">

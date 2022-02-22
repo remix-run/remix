@@ -99,7 +99,7 @@ function NavList() {
   // This styling will be applied to a <NavLink> when the
   // route that it links to is currently selected.
   let activeStyle = {
-    textDecoration: "underline"
+    textDecoration: "underline",
   };
   let activeClassName = "underline";
   return (
@@ -613,7 +613,7 @@ function SubmitButton() {
 
   const loadTexts = {
     actionRedirect: "Data saved, redirecting...",
-    actionReload: "Data saved, reloading fresh data..."
+    actionReload: "Data saved, reloading fresh data...",
   };
 
   const text =
@@ -926,7 +926,7 @@ export function NewsletterForm({
   Form,
   data,
   state,
-  type
+  type,
 }) {
   // refactor a bit in here, just read from props instead of useFetcher
 }
@@ -965,7 +965,7 @@ function useMarkAsRead({ articleId, userId }) {
       { userId },
       {
         method: "post",
-        action: `/article/${articleID}/mark-as-read`
+        action: `/article/${articleID}/mark-as-read`,
       }
     );
   });
@@ -1028,7 +1028,7 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="city-query"
-            onChange={event =>
+            onChange={(event) =>
               cities.submit(event.target.form)
             }
           />
@@ -1043,7 +1043,7 @@ function CitySearchCombobox() {
               <p>Failed to load cities :(</p>
             ) : cities.data.length ? (
               <ComboboxList>
-                {cities.data.map(city => (
+                {cities.data.map((city) => (
                   <ComboboxOption
                     key={city.id}
                     value={city.name}
@@ -1106,7 +1106,7 @@ function Task({ task }) {
         <input
           type="checkbox"
           checked={checked}
-          onChange={e => toggle.submit(e.target.form)}
+          onChange={(e) => toggle.submit(e.target.form)}
         />
       </label>
     </toggle.Form>
@@ -1205,7 +1205,7 @@ function SomeComponent() {
 [
   { pathname, data, params, handle }, // root route
   { pathname, data, params, handle }, // layout route
-  { pathname, data, params, handle } // child route
+  { pathname, data, params, handle }, // child route
   // etc.
 ];
 ```
@@ -1227,7 +1227,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
    ```tsx
    // routes/parent.tsx
    export const handle = {
-     breadcrumb: () => <Link to="/parent">Some Route</Link>
+     breadcrumb: () => <Link to="/parent">Some Route</Link>,
    };
    ```
 
@@ -1238,7 +1238,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
    export const handle = {
      breadcrumb: () => (
        <Link to="/parent/child">Child Route</Link>
-     )
+     ),
    };
    ```
 
@@ -1250,7 +1250,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
      Links,
      Scripts,
      useLoaderData,
-     useMatches
+     useMatches,
    } from "remix";
 
    export default function Root() {
@@ -1268,7 +1268,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
                {matches
                  // skip routes that don't have a breadcrumb
                  .filter(
-                   match =>
+                   (match) =>
                      match.handle && match.handle.breadcrumb
                  )
                  // render breadcrumbs!
@@ -1346,8 +1346,8 @@ export const loader: LoaderFunction = async () => {
   // Instead of this:
   return new Response(JSON.stringify({ any: "thing" }), {
     headers: {
-      "Content-Type": "application/json; charset=utf-8"
-    }
+      "Content-Type": "application/json; charset=utf-8",
+    },
   });
 };
 ```
@@ -1361,8 +1361,8 @@ export const loader: LoaderFunction = async () => {
     {
       status: 418,
       headers: {
-        "Cache-Control": "no-store"
-      }
+        "Cache-Control": "no-store",
+      },
     }
   );
 };
@@ -1399,15 +1399,15 @@ You can also send a `ResponseInit` to set headers, like committing a session.
 ```ts
 redirect(path, {
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 
 redirect(path, {
   status: 302,
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 ```
 
@@ -1421,8 +1421,8 @@ return redirect("/else/where", 303);
 return new Response(null, {
   status: 303,
   headers: {
-    Location: "/else/where"
-  }
+    Location: "/else/where",
+  },
 });
 ```
 
@@ -1489,7 +1489,7 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 ```tsx
 let uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
-  file: ({ filename }) => filename
+  file: ({ filename }) => filename,
 });
 
 export let action: ActionFunction = async ({ request }) => {
@@ -1525,7 +1525,7 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 
 ```tsx
 let uploadHandler = unstable_createMemoryUploadHandler({
-  maxFileSize: 500_000
+  maxFileSize: 500_000,
 });
 
 export let action: ActionFunction = async ({ request }) => {
@@ -1555,7 +1555,7 @@ import type {
   UploadApiErrorResponse,
   UploadApiOptions,
   UploadApiResponse,
-  UploadStream
+  UploadStream,
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
@@ -1584,7 +1584,7 @@ export let action: ActionFunction = async ({ request }) => {
 
   let uploadHandler: UploadHandler = async ({
     name,
-    stream
+    stream,
   }) => {
     // we only care about the file form field called "avatar"
     // so we'll ignore anything else
@@ -1600,7 +1600,7 @@ export let action: ActionFunction = async ({ request }) => {
       stream,
       {
         public_id: userId,
-        folder: "/my-site/avatars"
+        folder: "/my-site/avatars",
       }
     );
 
@@ -1642,15 +1642,15 @@ import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
 export let fileUploadHandler =
   unstable_createFileUploadHandler({
-    directory: "public/calendar-events"
+    directory: "public/calendar-events",
   });
 
 export let cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
-    folder: "/my-site/avatars"
+    folder: "/my-site/avatars",
   });
 
-export let multHandler: UploadHandler = args => {
+export let multHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
     return fileUploadHandler(args);
   } else if (args.name === "eventBanner") {
@@ -1681,7 +1681,7 @@ First, create a cookie:
 import { createCookie } from "remix";
 
 export const userPrefs = createCookie("user-prefs", {
-  maxAge: 604_800 // one week
+  maxAge: 604_800, // one week
 });
 ```
 
@@ -1713,8 +1713,8 @@ export async function action({ request }) {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await userPrefs.serialize(cookie)
-    }
+      "Set-Cookie": await userPrefs.serialize(cookie),
+    },
   });
 }
 
@@ -1755,7 +1755,7 @@ const cookie = createCookie("user-prefs", {
   httpOnly: true,
   secure: true,
   expires: new Date(Date.now() + 60_000),
-  maxAge: 60
+  maxAge: 60,
 });
 
 // You can either use the defaults:
@@ -1775,7 +1775,7 @@ To sign a cookie, provide one or more `secrets` when you first create the cookie
 
 ```js
 const cookie = createCookie("user-prefs", {
-  secrets: ["s3cret1"]
+  secrets: ["s3cret1"],
 });
 ```
 
@@ -1786,7 +1786,7 @@ Secrets may be rotated by adding new secrets to the front of the `secrets` array
 ```js
 // app/cookies.js
 const cookie = createCookie("user-prefs", {
-  secrets: ["n3wsecr3t", "olds3cret"]
+  secrets: ["n3wsecr3t", "olds3cret"],
 });
 
 // in your route module...
@@ -1798,8 +1798,8 @@ export async function loader({ request }) {
   new Response("...", {
     headers: {
       // Set-Cookie is signed with "n3wsecr3t"
-      "Set-Cookie": await cookie.serialize(value)
-    }
+      "Set-Cookie": await cookie.serialize(value),
+    },
   });
 }
 ```
@@ -1820,7 +1820,7 @@ const cookie = createCookie("cookie-name", {
   path: "/",
   sameSite: "lax",
   secrets: ["s3cret1"],
-  secure: true
+  secure: true,
 });
 ```
 
@@ -1870,9 +1870,9 @@ Serializes a value and combines it with this cookie's options to create a `Set-C
 new Response("...", {
   headers: {
     "Set-Cookie": await cookie.serialize({
-      showBanner: true
-    })
-  }
+      showBanner: true,
+    }),
+  },
 });
 ```
 
@@ -1885,7 +1885,7 @@ let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
 cookie = createCookie("user-prefs", {
-  secrets: ["soopersekrit"]
+  secrets: ["soopersekrit"],
 });
 console.log(cookie.isSigned); // true
 ```
@@ -1896,7 +1896,7 @@ The `Date` on which this cookie expires. Note that if a cookie has both `maxAge`
 
 ```js
 let cookie = createCookie("user-prefs", {
-  expires: new Date("2021-01-01")
+  expires: new Date("2021-01-01"),
 });
 
 console.log(cookie.expires); // "2020-01-01T00:00:00.000Z"
@@ -1939,8 +1939,8 @@ const { getSession, commitSession, destroySession } =
       path: "/",
       sameSite: "lax",
       secrets: ["s3cret1"],
-      secure: true
-    }
+      secure: true,
+    },
   });
 
 export { getSession, commitSession, destroySession };
@@ -1973,8 +1973,8 @@ export async function loader({ request }) {
 
   return json(data, {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 
@@ -1997,8 +1997,8 @@ export async function action({ request }) {
     // Redirect back to the login page with errors.
     return redirect("/login", {
       headers: {
-        "Set-Cookie": await commitSession(session)
-      }
+        "Set-Cookie": await commitSession(session),
+      },
     });
   }
 
@@ -2007,8 +2007,8 @@ export async function action({ request }) {
   // Login succeeded, send them to the home page.
   return redirect("/", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 
@@ -2041,13 +2041,15 @@ And then a logout form might look something like this:
 import { getSession, destroySession } from "../sessions";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const session = await getSession(
     request.headers.get("Cookie")
   );
   return redirect("/login", {
-    headers: { "Set-Cookie": await destroySession(session) }
+    headers: {
+      "Set-Cookie": await destroySession(session),
+    },
   });
 };
 
@@ -2099,7 +2101,7 @@ import { createSessionStorage } from "remix";
 function createDatabaseSessionStorage({
   cookie,
   host,
-  port
+  port,
 }) {
   // Configure your database client...
   const db = createDatabaseClient(host, port);
@@ -2121,7 +2123,7 @@ function createDatabaseSessionStorage({
     },
     async deleteData(id) {
       await db.delete(id);
-    }
+    },
   });
 }
 ```
@@ -2135,8 +2137,8 @@ const { getSession, commitSession, destroySession } =
     port: 1234,
     cookie: {
       name: "__session",
-      sameSite: "lax"
-    }
+      sameSite: "lax",
+    },
   });
 ```
 
@@ -2159,8 +2161,8 @@ const { getSession, commitSession, destroySession } =
     cookie: {
       name: "__session",
       secrets: ["r3m1xr0ck5"],
-      sameSite: "lax"
-    }
+      sameSite: "lax",
+    },
   });
 ```
 
@@ -2174,18 +2176,18 @@ This storage keeps all the cookie information in your server's memory.
 // app/sessions.js
 import {
   createCookie,
-  createMemorySessionStorage
+  createMemorySessionStorage,
 } from "remix";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
   createMemorySessionStorage({
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2203,13 +2205,13 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage
+  createFileSessionStorage,
 } from "remix";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
@@ -2217,7 +2219,7 @@ const { getSession, commitSession, destroySession } =
     // The root directory where you want to store the files.
     // Make sure it's writable!
     dir: "/app/sessions",
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2233,20 +2235,20 @@ The advantage of KV backed sessions is that only the session ID is stored in the
 // app/sessions.server.js
 import {
   createCookie,
-  createCloudflareKVSessionStorage
+  createCloudflareKVSessionStorage,
 } from "remix";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
   createCloudflareKVSessionStorage({
     // The KV Namespace where you want to store sessions
     kv: YOUR_NAMESPACE,
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2269,14 +2271,14 @@ sessions
 // app/sessions.server.js
 import {
   createCookie,
-  createArcTableSessionStorage
+  createArcTableSessionStorage,
 } from "remix";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
   maxAge: 3600,
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
@@ -2287,7 +2289,7 @@ const { getSession, commitSession, destroySession } =
     idx: "_idx",
     // The name of the key used to store the expiration time (should match app.arc)
     ttl: "_ttl",
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2346,8 +2348,8 @@ export async function action({ request, params }) {
 
   return redirect("/dashboard", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 ```
@@ -2372,8 +2374,8 @@ export async function loader({ request }) {
     {
       headers: {
         // only necessary with cookieSessionStorage
-        "Set-Cookie": await commitSession(session)
-      }
+        "Set-Cookie": await commitSession(session),
+      },
     }
   );
 }
@@ -2423,8 +2425,8 @@ export async function loader({ request }) {
 
   return json(data, {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 ```
@@ -2442,13 +2444,13 @@ import {
   json,
   useLoaderData,
   useParams,
-  Outlet
+  Outlet,
 } from "remix";
 import {
   Accordion,
   AccordionItem,
   AccordionButton,
-  AccordionPanel
+  AccordionPanel,
 } from "@reach/accordion";
 
 import type { Companies } from "~/utils/companies";
@@ -2460,7 +2462,7 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    companies: await getCompanies()
+    companies: await getCompanies(),
   };
   return json(data);
 };
@@ -2476,7 +2478,7 @@ export default function CompaniesRoute() {
   const [invoiceSort, setInvoiceSort] =
     React.useState<Sort>("ASC");
   function changeInvoiceSort() {
-    setInvoiceSort(sort =>
+    setInvoiceSort((sort) =>
       sort === "ASC" ? "DESC" : "ASC"
     );
   }
@@ -2485,7 +2487,7 @@ export default function CompaniesRoute() {
 
   const params = useParams();
   const selectedCompanyIndex = data.companies.findIndex(
-    company => company.id === params.companyId
+    (company) => company.id === params.companyId
   );
 
   return (
@@ -2496,7 +2498,7 @@ export default function CompaniesRoute() {
           : "Sort Ascending"}
       </button>
       <Accordion index={selectedCompanyIndex}>
-        {data.companies.map(company => (
+        {data.companies.map((company) => (
           <AccordionItem key={company.id}>
             <AccordionButton as={Link} to={company.id}>
               {company.name}
@@ -2527,7 +2529,7 @@ import type { LoaderFunction } from "remix";
 import {
   json,
   useLoaderData,
-  useOutletContext
+  useOutletContext,
 } from "remix";
 
 import type { ContextType } from "../companies";
@@ -2537,10 +2539,10 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   const data: LoaderData = {
-    company: await getCompany(params.companyId)
+    company: await getCompany(params.companyId),
   };
   return json(data);
 };
@@ -2558,7 +2560,7 @@ export default function CompanyRoute() {
     <div>
       <h2>{data.company.name}</h2>
       <ul>
-        {sortedInvoices.map(invoice => (
+        {sortedInvoices.map((invoice) => (
           <li key={invoice.id}>{invoice.name}</li>
         ))}
       </ul>
@@ -2575,7 +2577,7 @@ import type {
   LoaderFunction,
   MetaFunction,
   LinksFunction,
-  ShouldReloadFunction
+  ShouldReloadFunction,
 } from "remix";
 ```
 

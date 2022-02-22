@@ -7,7 +7,7 @@ type LoaderData = { workshops: Array<Workshop> };
 
 export const loader: LoaderFunction = async () => {
   return json<LoaderData>({
-    workshops: await getWorkshops()
+    workshops: await getWorkshops(),
   });
 };
 
@@ -18,7 +18,7 @@ export default function Workshops() {
     <div>
       <h1>There are {data.workshops.length} workshops</h1>
       <ul>
-        {data.workshops.map(workshop => (
+        {data.workshops.map((workshop) => (
           <li key={workshop.id}>
             <Link to={workshop.id}>{workshop.title}</Link>
           </li>

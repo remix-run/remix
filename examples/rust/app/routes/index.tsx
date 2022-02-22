@@ -18,12 +18,12 @@ export const action: ActionFunction = async ({ request }) => {
       const result = add(Number(left_operand), Number(right_operand));
       console.log("result", result);
       return {
-        result
+        result,
       };
     default:
       // Implement other operators
       return {
-        result: "🤷🏾"
+        result: "🤷🏾",
       };
   }
 };

@@ -17,5 +17,5 @@ module.exports = {
   "jsx-a11y/no-access-key": WARN,
   "jsx-a11y/no-redundant-roles": WARN,
   "jsx-a11y/role-has-required-aria-props": WARN,
-  "jsx-a11y/role-supports-aria-props": WARN
+  "jsx-a11y/role-supports-aria-props": WARN,
 };

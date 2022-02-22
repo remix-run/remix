@@ -5,7 +5,7 @@ import React, { useContext } from "react";
 
 import type {
   CatchBoundaryComponent,
-  ErrorBoundaryComponent
+  ErrorBoundaryComponent,
 } from "./routeModules";
 import type { ThrownResponse } from "./errors";
 
@@ -90,7 +90,7 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
               padding: "2rem",
               background: "hsla(10, 50%, 50%, 0.1)",
               color: "red",
-              overflow: "auto"
+              overflow: "auto",
             }}
           >
             {error.stack}
@@ -102,7 +102,7 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
               console.log(
                 "💿 Hey developer👋. You can provide a way better UX than this when your app throws errors. Check out https://remix.run/guides/errors for more information."
               );
-            `
+            `,
           }}
         />
       </body>
@@ -134,7 +134,7 @@ type RemixCatchBoundaryProps = React.PropsWithChildren<{
 export function RemixCatchBoundary({
   catch: catchVal,
   component: Component,
-  children
+  children,
 }: RemixCatchBoundaryProps) {
   if (catchVal) {
     return (
@@ -172,7 +172,7 @@ export function RemixRootDefaultCatchBoundary() {
               console.log(
                 "💿 Hey developer👋. You can provide a way better UX than this when your app throws 404s (and other responses). Check out https://remix.run/guides/not-found for more information."
               );
-            `
+            `,
           }}
         />
       </body>

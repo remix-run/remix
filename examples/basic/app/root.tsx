@@ -8,7 +8,7 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  useLocation
+  useLocation,
 } from "remix";
 import type { LinksFunction } from "remix";
 
@@ -30,9 +30,9 @@ export const links: LinksFunction = () => {
     {
       rel: "stylesheet",
       href: darkStylesUrl,
-      media: "(prefers-color-scheme: dark)"
+      media: "(prefers-color-scheme: dark)",
     },
-    { rel: "stylesheet", href: deleteMeRemixStyles }
+    { rel: "stylesheet", href: deleteMeRemixStyles },
   ];
 };
 
@@ -53,7 +53,7 @@ export default function App() {
 
 function Document({
   children,
-  title
+  title,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -239,7 +239,7 @@ const RouteChangeAnnouncement = React.memo(() => {
         position: "absolute",
         width: "1px",
         whiteSpace: "nowrap",
-        wordWrap: "normal"
+        wordWrap: "normal",
       }}
     >
       {innerHtml}

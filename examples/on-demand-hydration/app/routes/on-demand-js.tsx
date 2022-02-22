@@ -12,7 +12,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 export const handle = {
   hydrate(data: LoaderData) {
     return data.withJS;
-  }
+  },
 };
 
 export default function Screen() {

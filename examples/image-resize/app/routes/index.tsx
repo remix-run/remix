@@ -3,13 +3,13 @@ import { Image } from "~/components/image";
 const containerStyles = {
   padding: "2rem",
   "margin-left": "auto",
-  "margin-right": "auto"
+  "margin-right": "auto",
 };
 const imageGridStyles = {
   display: "flex",
   gap: "1rem",
   "align-items": "center",
-  "overflow-x": "scroll"
+  "overflow-x": "scroll",
 };
 
 export default function Index() {
