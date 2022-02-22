@@ -31,7 +31,7 @@ export async function requireUserSession(request) {
   // put in the session when the user authenticated
   if (!session.has("userId")) {
     // if there is no user session, redirect to login
-    throw new redirect("/login");
+    throw redirect("/login");
   }
 
   return session;

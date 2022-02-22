@@ -1,4 +1,6 @@
 const jestRules = require("./rules/jest");
+const jestDomRules = require("./rules/jest-dom");
+const testingLibraryRules = require("./rules/testing-library");
 
 /**
  * @see https://github.com/eslint/eslint/issues/3458
@@ -6,22 +8,19 @@ const jestRules = require("./rules/jest");
  */
 require("@rushstack/eslint-patch/modern-module-resolution");
 
-/**
- * @deprecated Use `@remix-run/eslint-config/jest-testing-library` instead.
- */
-const jestConfig = {
-  plugins: ["jest"],
+module.exports = {
+  plugins: ["jest", "jest-dom", "testing-library"],
   overrides: [
     {
       files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],
       env: {
-        "jest/globals": true,
+        "jest/globals": true
       },
       rules: {
-        ...jestRules
+        ...jestRules,
+        ...jestDomRules,
+        ...testingLibraryRules
       }
     }
   ]
 };
-
-module.exports = jestConfig;
