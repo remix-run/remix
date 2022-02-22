@@ -439,7 +439,7 @@ function usePrefetchBehavior(
  *
  * @see https://remix.run/api/remix#navlink
  */
-export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
+let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -459,14 +459,15 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     );
   }
 );
-
+NavLink.displayName = "NavLink";
+export { NavLink };
 /**
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
  *
  * @see https://remix.run/api/remix#link
  */
-export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
+let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -486,6 +487,8 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     );
   }
 );
+Link.displayName = "Link";
+export { Link };
 
 export function composeEventHandlers<
   EventType extends React.SyntheticEvent | Event
@@ -854,15 +857,17 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
  *
  * @see https://remix.run/api/remix#form
  */
-export let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
+let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
   return <FormImpl {...props} ref={ref} />;
 });
+Form.displayName = "Form";
+export { Form };
 
 interface FormImplProps extends FormProps {
   fetchKey?: string;
 }
 
-export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
+let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   (
     {
       reloadDocument = false,
@@ -951,6 +956,8 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     );
   }
 );
+FormImpl.displayName = "FormImpl";
+export { FormImpl };
 
 function isActionRequestMethod(method: string): boolean {
   method = method.toLowerCase();
@@ -1053,11 +1060,12 @@ export function useSubmit(): SubmitFunction {
   return useSubmitImpl();
 }
 
+let defaultMethod = "get";
+let defaultEncType = "application/x-www-form-urlencoded";
+
 export function useSubmitImpl(key?: string): SubmitFunction {
   let navigate = useNavigate();
   let defaultAction = useFormAction();
-  let defaultMethod = "get";
-  let defaultEncType = "application/x-www-form-urlencoded";
   let { transitionManager } = useRemixEntryContext();
 
   return React.useCallback(
@@ -1299,10 +1307,14 @@ export function useTransition(): Transition {
 }
 
 function createFetcherForm(fetchKey: string) {
-  return React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
-    // TODO: make ANOTHER form w/o a fetchKey prop
-    return <FormImpl {...props} ref={ref} fetchKey={fetchKey} />;
-  });
+  let FetcherForm = React.forwardRef<HTMLFormElement, FormProps>(
+    (props, ref) => {
+      // TODO: make ANOTHER form w/o a fetchKey prop
+      return <FormImpl {...props} ref={ref} fetchKey={fetchKey} />;
+    }
+  );
+  FetcherForm.displayName = "fetcher.Form";
+  return FetcherForm;
 }
 
 let fetcherId = 0;
