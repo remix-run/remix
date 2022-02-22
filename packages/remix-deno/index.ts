@@ -3,7 +3,7 @@ import { installGlobals } from "./globals";
 export {
   createRequestHandler,
   createRequestHandlerWithStaticFiles,
-  serveStaticFiles
+  serveStaticFiles,
 } from "./server";
 
 export { createFileSessionStorage } from "./sessions/fileStorage";

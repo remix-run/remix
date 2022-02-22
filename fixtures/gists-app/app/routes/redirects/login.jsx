@@ -8,8 +8,8 @@ export let action = async ({ request }) => {
 
   throw redirect("/redirects/login", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 };
 
@@ -17,8 +17,8 @@ export let loader = async ({ request }) => {
   let session = await sessionStorage.getSession(request.headers.get("Cookie"));
   return json(!!session.get("done"), {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 };
 

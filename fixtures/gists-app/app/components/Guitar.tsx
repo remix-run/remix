@@ -11,7 +11,7 @@ export default function Guitar() {
         src={guitar.src}
         style={{
           backgroundImage: `url(${guitar.placeholder})`,
-          backgroundSize: "cover"
+          backgroundSize: "cover",
         }}
         width={guitar.width / 2}
         height={guitar.height / 2}
@@ -24,7 +24,7 @@ export default function Guitar() {
         srcSet={guitar2.srcset}
         style={{
           backgroundImage: `url(${guitar2.placeholder})`,
-          backgroundSize: "cover"
+          backgroundSize: "cover",
         }}
       />
     </div>

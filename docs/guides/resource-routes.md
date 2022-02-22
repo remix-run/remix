@@ -48,8 +48,8 @@ export async function loader({ params }) {
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```
@@ -90,7 +90,7 @@ import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   // handle "GET" request
 
@@ -104,7 +104,7 @@ To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 import type { ActionFunction } from "remix";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   switch (request.method) {
     case "POST": {
@@ -133,7 +133,7 @@ import { json } from "remix";
 import crypto from "crypto";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   if (request.method !== "POST") {
     return json({ message: "Method not allowed" }, 405);

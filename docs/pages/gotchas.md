@@ -73,7 +73,7 @@ In our case here we're using the `dot-prop` package, so we would do it like this
 
 ```js filename=remix.config.js
 module.exports = {
-  serverDependenciesToBundle: ["dot-prop"]
+  serverDependenciesToBundle: ["dot-prop"],
   // ...
 };
 ```

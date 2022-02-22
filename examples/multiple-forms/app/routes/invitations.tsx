@@ -5,14 +5,14 @@ import { sendInvitation } from "~/data.server";
 import {
   getInvitations,
   resendInvitation,
-  deleteInvitiation
+  deleteInvitiation,
 } from "~/data.server";
 
 type LoaderData = { invitations: Array<Invitation> };
 
 export const loader: LoaderFunction = async () => {
   return json<LoaderData>({
-    invitations: await getInvitations()
+    invitations: await getInvitations(),
   });
 };
 
@@ -35,7 +35,7 @@ export const action: ActionFunction = async ({ request }) => {
     throw new Error("make sure you implement validation");
   }
   const invitiations = await getInvitations();
-  const invitation = invitiations.find(i => i.id === invitationId);
+  const invitation = invitiations.find((i) => i.id === invitationId);
   if (!invitation) {
     // you'll want to handle this in a real app...
     throw new Error("make sure you implement validation");
@@ -58,7 +58,7 @@ export default function Index() {
     <div>
       <h1>Invitations:</h1>
       <ul>
-        {data.invitations.map(invitation => (
+        {data.invitations.map((invitation) => (
           <li key={invitation.id}>
             <Form method="post">
               <input type="hidden" name="invitationId" value={invitation.id} />

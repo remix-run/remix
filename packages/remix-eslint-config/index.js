@@ -15,32 +15,32 @@ module.exports = {
     ecmaVersion: 2019,
     requireConfigFile: false,
     babelOptions: {
-      presets: ["@babel/preset-react"]
-    }
+      presets: ["@babel/preset-react"],
+    },
   },
   env: {
     browser: true,
     commonjs: true,
     es6: true,
-    node: true
+    node: true,
   },
   plugins: ["import", "react", "react-hooks", "jsx-a11y"],
   settings: {
     react: {
-      version: "detect"
+      version: "detect",
     },
     "import/ignore": ["node_modules", "\\.(css|md|svg|json)$"],
     "import/parsers": {
-      [require.resolve("@typescript-eslint/parser")]: [".ts", ".tsx", ".d.ts"]
+      [require.resolve("@typescript-eslint/parser")]: [".ts", ".tsx", ".d.ts"],
     },
     "import/resolver": {
       [require.resolve("eslint-import-resolver-node")]: {
-        extensions: [".js", ".jsx", ".ts", ".tsx"]
+        extensions: [".js", ".jsx", ".ts", ".tsx"],
       },
       [require.resolve("eslint-import-resolver-typescript")]: {
-        alwaysTryTypes: true
-      }
-    }
+        alwaysTryTypes: true,
+      },
+    },
   },
 
   // NOTE: Omit rules related to code style/formatting. Eslint should report
@@ -89,10 +89,10 @@ module.exports = {
           ["&", "|", "^", "~", "<<", ">>", ">>>"],
           ["==", "!=", "===", "!==", ">", ">=", "<", "<="],
           ["&&", "||"],
-          ["in", "instanceof"]
+          ["in", "instanceof"],
         ],
-        allowSamePrecedence: false
-      }
+        allowSamePrecedence: false,
+      },
     ],
     "no-unsafe-negation": WARN,
     "no-new-func": WARN,
@@ -114,20 +114,20 @@ module.exports = {
       {
         allowShortCircuit: true,
         allowTernary: true,
-        allowTaggedTemplates: true
-      }
+        allowTaggedTemplates: true,
+      },
     ],
     "no-unused-labels": WARN,
     "no-unused-vars": [
       WARN,
       {
         args: "none",
-        ignoreRestSiblings: true
-      }
+        ignoreRestSiblings: true,
+      },
     ],
     "no-use-before-define": [
       WARN,
-      { classes: false, functions: false, variables: false }
+      { classes: false, functions: false, variables: false },
     ],
     "no-useless-computed-key": WARN,
     "no-useless-concat": WARN,
@@ -138,8 +138,8 @@ module.exports = {
       {
         ignoreDestructuring: false,
         ignoreImport: false,
-        ignoreExport: false
-      }
+        ignoreExport: false,
+      },
     ],
     "require-yield": WARN,
     "use-isnan": WARN,
@@ -190,7 +190,7 @@ module.exports = {
     "jsx-a11y/no-redundant-roles": WARN,
     "jsx-a11y/role-has-required-aria-props": WARN,
     "jsx-a11y/role-supports-aria-props": WARN,
-    "jsx-a11y/scope": WARN
+    "jsx-a11y/scope": WARN,
   },
   overrides: [
     {
@@ -201,9 +201,9 @@ module.exports = {
         sourceType: "module",
         ecmaVersion: 2019,
         ecmaFeatures: {
-          jsx: true
+          jsx: true,
         },
-        warnOnUnsupportedTypeScriptVersion: true
+        warnOnUnsupportedTypeScriptVersion: true,
       },
       plugins: ["@typescript-eslint"],
       rules: {
@@ -231,8 +231,8 @@ module.exports = {
             functions: false,
             classes: false,
             variables: false,
-            typedefs: false
-          }
+            typedefs: false,
+          },
         ],
         "no-unused-expressions": OFF,
         "@typescript-eslint/no-unused-expressions": [
@@ -240,20 +240,20 @@ module.exports = {
           {
             allowShortCircuit: true,
             allowTernary: true,
-            allowTaggedTemplates: true
-          }
+            allowTaggedTemplates: true,
+          },
         ],
         "no-unused-vars": OFF,
         "@typescript-eslint/no-unused-vars": [
           WARN,
           {
             args: "none",
-            ignoreRestSiblings: true
-          }
+            ignoreRestSiblings: true,
+          },
         ],
         "no-useless-constructor": OFF,
-        "@typescript-eslint/no-useless-constructor": WARN
-      }
-    }
-  ]
+        "@typescript-eslint/no-useless-constructor": WARN,
+      },
+    },
+  ],
 };

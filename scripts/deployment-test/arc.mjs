@@ -10,7 +10,7 @@ import {
   updatePackageConfig,
   getSpawnOpts,
   runCypress,
-  addCypress
+  addCypress,
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -25,7 +25,7 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "arc",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
   });
 }
 
@@ -34,13 +34,13 @@ let client = new aws.ApiGatewayV2({
   apiVersion: "latest",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
-  return deployments.Items.find(item => item.Name === AWS_STACK_NAME);
+  return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
 }
 
 try {
@@ -59,9 +59,9 @@ try {
 
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
 
-    updatePackageConfig(PROJECT_DIR, config => {
+    updatePackageConfig(PROJECT_DIR, (config) => {
       config.devDependencies["@architect/architect"] = "latest";
-    })
+    }),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);

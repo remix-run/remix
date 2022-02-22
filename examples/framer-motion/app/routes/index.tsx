@@ -6,7 +6,7 @@ export default function Index() {
         display: "flex",
         width: "100%",
         height: "100vh",
-        justifyContent: "center"
+        justifyContent: "center",
       }}
     >
       <motion.div animate={{ rotate: 360 }} transition={{ duration: 2 }}>

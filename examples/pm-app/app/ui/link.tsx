@@ -53,7 +53,7 @@ const ArrowLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
         className={cx(className, "group items-center", {
           "inline-flex": !(
             className && /\b(flex|block|inline-block|inline)\b/g.test(className)
-          )
+          ),
         })}
         {...props}
         ref={ref}

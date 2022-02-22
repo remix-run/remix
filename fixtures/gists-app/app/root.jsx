@@ -8,7 +8,7 @@ import {
   ScrollRestoration,
   useCatch,
   useLoaderData,
-  useMatches
+  useMatches,
 } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
 
@@ -19,22 +19,22 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href: normalizeHref
+      href: normalizeHref,
     },
     { rel: "stylesheet", href: stylesHref },
     { rel: "stylesheet", href: "/resources/theme-css" },
-    { rel: "shortcut icon", href: favicon }
+    { rel: "shortcut icon", href: favicon },
   ];
 }
 
 export async function loader({ request }) {
   return {
-    enableScripts: new URL(request.url).searchParams.get("disableJs") == null
+    enableScripts: new URL(request.url).searchParams.get("disableJs") == null,
   };
 }
 
 export let handle = {
-  breadcrumb: () => <Link to="/">Home</Link>
+  breadcrumb: () => <Link to="/">Home</Link>,
 };
 
 export let unstable_shouldReload = () => false;
@@ -59,7 +59,7 @@ export default function Root() {
         <header>
           <ol className="breadcrumbs">
             {matches
-              .filter(match => match.handle?.breadcrumb)
+              .filter((match) => match.handle?.breadcrumb)
               .map((match, index) => (
                 <li key={index}>{match.handle.breadcrumb(match)}</li>
               ))}

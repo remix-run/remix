@@ -36,7 +36,7 @@ export default function UserEmails() {
     <section>
       <h2>Emails</h2>
       <ul>
-        {users.map(user => (
+        {users.map((user) => (
           <li key={user.email}>{user.email}</li>
         ))}
       </ul>

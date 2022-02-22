@@ -15,7 +15,7 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "cloudflare-workers",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
   });
 }
 
@@ -35,7 +35,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);

@@ -20,12 +20,12 @@ As soon as you know you don't have what the user is looking for you should _thro
 ```tsx filename=routes/page/$slug.js
 export async function loader({ params }) {
   const page = await db.page.findOne({
-    where: { slug: params.slug }
+    where: { slug: params.slug },
   });
 
   if (!page) {
     throw new Response("Not Found", {
-      status: 404
+      status: 404,
     });
   }
 
@@ -73,12 +73,12 @@ import { Form, useLoaderData, useParams } from "remix";
 
 export async function loader({ params }) {
   const page = await db.page.findOne({
-    where: { slug: params.slug }
+    where: { slug: params.slug },
   });
 
   if (!page) {
     throw new Response("Not Found", {
-      status: 404
+      status: 404,
     });
   }
 
