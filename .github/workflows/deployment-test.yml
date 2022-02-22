@@ -18,7 +18,7 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -49,7 +49,7 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -81,7 +81,7 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -111,7 +111,7 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -143,7 +143,7 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -172,7 +172,7 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
