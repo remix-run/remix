@@ -1,4 +1,9 @@
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  getElement,
+  js
+} from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
 describe("Forms", () => {
@@ -317,164 +322,150 @@ describe("Forms", () => {
     describe("in a static route", () => {
       test("absolute action resolves relative to the root route", async () => {
         await app.goto("/inbox");
-        expect(
-          await app.getAttribute(`#${STATIC_ROUTE_ABSOLUTE_ACTION}`, "action")
-        ).toMatch("/about");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${STATIC_ROUTE_ABSOLUTE_ACTION}`);
+        expect(el.attr("action")).toMatch("/about");
       });
 
       test("'.' action resolves relative to the current route", async () => {
-        expect(
-          await app.getAttribute(`#${STATIC_ROUTE_CURRENT_ACTION}`, "action")
-        ).toMatch("/inbox");
+        await app.goto("/inbox");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/inbox");
       });
 
       test("'..' action resolves relative to the parent route", async () => {
         await app.goto("/inbox");
-        expect(
-          await app.getAttribute(`#${STATIC_ROUTE_PARENT_ACTION}`, "action")
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${STATIC_ROUTE_PARENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
 
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
         await app.goto("/inbox");
-        expect(
-          await app.getAttribute(
-            `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`,
-            "action"
-          )
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
     });
 
     describe("in a dynamic route", () => {
       test("absolute action resolves relative to the root route", async () => {
         await app.goto("/blog/abc");
-        expect(
-          await app.getAttribute(`#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`, "action")
-        ).toMatch("/about");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`);
+        expect(el.attr("action")).toMatch("/about");
       });
 
       test("'.' action resolves relative to the current route", async () => {
         await app.goto("/blog/abc");
-        expect(
-          await app.getAttribute(`#${DYNAMIC_ROUTE_CURRENT_ACTION}`, "action")
-        ).toMatch("/blog/abc");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog/abc");
       });
 
       test("'..' action resolves relative to the parent route", async () => {
         await app.goto("/blog/abc");
-        expect(
-          await app.getAttribute(`#${DYNAMIC_ROUTE_PARENT_ACTION}`, "action")
-        ).toMatch("/blog");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${DYNAMIC_ROUTE_PARENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog");
       });
 
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
         await app.goto("/blog/abc");
-        expect(
-          await app.getAttribute(
-            `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`,
-            "action"
-          )
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
     });
 
     describe("in an index route", () => {
       test("absolute action resolves relative to the root route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(`#${INDEX_ROUTE_ABSOLUTE_ACTION}`, "action")
-        ).toMatch("/about");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_ABSOLUTE_ACTION}`);
+        expect(el.attr("action")).toMatch("/about");
       });
 
       test("'.' action resolves relative to the current route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(`#${INDEX_ROUTE_CURRENT_ACTION}`, "action")
-        ).toMatch("/blog");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog");
       });
 
       test("'..' action resolves relative to the parent route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(`#${INDEX_ROUTE_PARENT_ACTION}`, "action")
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_PARENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
 
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(
-            `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`,
-            "action"
-          )
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
     });
 
     describe("in a layout route", () => {
       test("absolute action resolves relative to the root route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(`#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`, "action")
-        ).toMatch("/about");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`);
+        expect(el.attr("action")).toMatch("/about");
       });
 
       test("'.' action resolves relative to the current route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(`#${LAYOUT_ROUTE_CURRENT_ACTION}`, "action")
-        ).toMatch("/blog");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog");
       });
 
       test("'..' action resolves relative to the parent route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(`#${LAYOUT_ROUTE_PARENT_ACTION}`, "action")
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${LAYOUT_ROUTE_PARENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
 
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
         await app.goto("/blog");
-        expect(
-          await app.getAttribute(
-            `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`,
-            "action"
-          )
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
     });
 
     describe("in a splat route", () => {
       test("absolute action resolves relative to the root route", async () => {
         await app.goto("/projects/blarg");
-        expect(
-          await app.getAttribute(`#${SPLAT_ROUTE_ABSOLUTE_ACTION}`, "action")
-        ).toMatch("/about");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${SPLAT_ROUTE_ABSOLUTE_ACTION}`);
+        expect(el.attr("action")).toMatch("/about");
       });
 
       test("'.' action resolves relative to the current route", async () => {
         await app.goto("/projects/blarg");
-        expect(
-          await app.getAttribute(`#${SPLAT_ROUTE_CURRENT_ACTION}`, "action")
-        ).toMatch("/projects");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/projects");
       });
 
       test("'..' action resolves relative to the parent route", async () => {
         await app.goto("/projects/blarg");
-        expect(
-          await app.getAttribute(`#${SPLAT_ROUTE_PARENT_ACTION}`, "action")
-        ).toMatch("/projects");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${SPLAT_ROUTE_PARENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/projects");
       });
 
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
         await app.goto("/projects/blarg");
-        expect(
-          await app.getAttribute(
-            `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`,
-            "action"
-          )
-        ).toMatch("/");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
+        expect(el.attr("action")).toMatch("/");
       });
     });
   });
