@@ -8,7 +8,7 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  validatePackageVersions
+  validatePackageVersions,
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -22,7 +22,7 @@ async function createNewApp() {
     lang: "ts",
     server: "cloudflare-workers",
     projectDir: PROJECT_DIR,
-    quiet: true
+    quiet: true,
   });
 }
 
@@ -45,7 +45,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);

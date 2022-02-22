@@ -8,7 +8,7 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  validatePackageVersions
+  validatePackageVersions,
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -22,7 +22,7 @@ async function createNewApp() {
     lang: "ts",
     server: "vercel",
     projectDir: PROJECT_DIR,
-    quiet: true
+    quiet: true,
   });
 }
 
@@ -32,8 +32,8 @@ function vercelClient(input, init) {
     ...init,
     headers: {
       ...init?.headers,
-      Authorization: `Bearer ${process.env.VERCEL_TOKEN}`
-    }
+      Authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
+    },
   };
 
   return fetch(url, opts);
@@ -45,8 +45,8 @@ async function createVercelProject() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       framework: "remix",
-      name: APP_NAME
-    })
+      name: APP_NAME,
+    }),
   });
 
   if (promise.status !== 200) {
@@ -86,7 +86,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -108,11 +108,11 @@ try {
       "deploy",
       "--prod",
       "--token",
-      process.env.VERCEL_TOKEN
+      process.env.VERCEL_TOKEN,
     ],
     {
       ...spawnOpts,
-      env: { ...process.env, VERCEL_PROJECT_ID: project.id }
+      env: { ...process.env, VERCEL_PROJECT_ID: project.id },
     }
   );
   if (vercelDeployCommand.status !== 0) {

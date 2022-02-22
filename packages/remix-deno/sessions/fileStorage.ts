@@ -2,7 +2,7 @@
 import * as path from "https://deno.land/std/path/mod.ts";
 import type {
   SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 
@@ -27,7 +27,7 @@ interface FileSessionStorageOptions {
  */
 export function createFileSessionStorage({
   cookie,
-  dir
+  dir,
 }: FileSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
@@ -99,7 +99,7 @@ export function createFileSessionStorage({
       } catch (error: any) {
         if (error.code !== "ENOENT") throw error;
       }
-    }
+    },
   });
 }
 

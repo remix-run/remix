@@ -2,23 +2,23 @@ import {
   // This has been added as a global in node 15+
   AbortController,
   Headers as NodeHeaders,
-  Request as NodeRequest
+  Request as NodeRequest,
 } from "@remix-run/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
   Handler,
   HandlerEvent,
   HandlerContext,
-  HandlerResponse
+  HandlerResponse,
 } from "@netlify/functions";
 import type {
   Response as NodeResponse,
-  RequestInit as NodeRequestInit
+  RequestInit as NodeRequestInit,
 } from "@remix-run/node";
 
 import { isBinaryType } from "./binary-types";
@@ -39,7 +39,7 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: AppLoadContext;
@@ -83,7 +83,7 @@ export function createRemixRequest(
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
     abortController,
-    signal: abortController?.signal
+    signal: abortController?.signal,
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -161,6 +161,6 @@ export async function sendRemixResponse(
     statusCode: response.status,
     multiValueHeaders: response.headers.raw(),
     body,
-    isBase64Encoded
+    isBase64Encoded,
   };
 }

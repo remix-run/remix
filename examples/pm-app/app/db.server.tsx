@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import type {
   MembersOnProjects,
-  Project as PrismaProject
+  Project as PrismaProject,
 } from "@prisma/client";
 import type {
   Project,
@@ -10,7 +10,7 @@ import type {
   TodoDataOrdered,
   TodoList,
   User,
-  UserSecure
+  UserSecure,
 } from "~/models";
 import bcrypt from "bcrypt";
 
@@ -55,11 +55,11 @@ export async function getUser(
       );
     }
     return await prisma.user.findUnique({
-      where: { [id as "id"]: value }
+      where: { [id as "id"]: value },
     });
   }
   return await prisma.user.findUnique({
-    where: { id }
+    where: { id },
   });
 }
 
@@ -87,7 +87,7 @@ export async function getUserSecure(
 
 export async function getUsers(): Promise<Array<UserSecure>> {
   const users = await prisma.user.findMany();
-  return users.map(user => {
+  return users.map((user) => {
     const { passwordHash, ...secureUser } = user;
     return secureUser;
   });
@@ -96,8 +96,8 @@ export async function getUsers(): Promise<Array<UserSecure>> {
 export async function deleteUser(userId: User["id"]) {
   await prisma.user.delete({
     where: {
-      id: userId
-    }
+      id: userId,
+    },
   });
 }
 
@@ -109,7 +109,7 @@ export async function createUser({
   title,
   avatar,
   password,
-  projects
+  projects,
 }: {
   email: string;
   password: string;
@@ -130,19 +130,19 @@ export async function createUser({
       timeZone: timeZone || null,
       title: title || null,
       avatar: avatar?.url || null,
-      passwordHash
-    }
+      passwordHash,
+    },
   };
 
   if (projects && projects.length > 0) {
     createArgs.data.projects = {
-      create: projects.map(id => {
+      create: projects.map((id) => {
         return {
           project: {
-            connect: { id }
-          }
+            connect: { id },
+          },
         };
-      })
+      }),
     };
   }
 
@@ -154,8 +154,8 @@ export async function createUser({
       timeZone: timeZone || null,
       title: title || null,
       avatar: avatar?.url || null,
-      passwordHash
-    }
+      passwordHash,
+    },
   });
 }
 
@@ -180,7 +180,7 @@ export async function createProject({
   description,
   ownerId,
   todoLists,
-  members
+  members,
 }: {
   name: string;
   ownerId: User["id"];
@@ -197,11 +197,11 @@ export async function createProject({
         description: description || null,
         ownerId,
         members: {
-          create: members.map(id => {
+          create: members.map((id) => {
             return {
-              user: { connect: { id } }
+              user: { connect: { id } },
             };
-          })
+          }),
         },
         todoLists: {
           create: (todoLists || []).map(({ todos, ...list }) => {
@@ -212,30 +212,30 @@ export async function createProject({
                   todos?.map((todo, index) => {
                     return {
                       ...todo,
-                      order: index
+                      order: index,
                     };
-                  }) || []
-              }
+                  }) || [],
+              },
             };
-          })
-        }
+          }),
+        },
       },
       include: {
         members: {
           include: {
-            user: true
-          }
+            user: true,
+          },
         },
         todoLists: {
           include: {
             todos: {
               orderBy: {
-                createdAt: "asc"
-              }
-            }
-          }
-        }
-      }
+                createdAt: "asc",
+              },
+            },
+          },
+        },
+      },
     })
   );
 }
@@ -246,28 +246,28 @@ export async function getProject(id: string): Promise<Project | null> {
     include: {
       members: {
         include: {
-          user: true
-        }
+          user: true,
+        },
       },
       todoLists: {
         include: {
           todos: {
             orderBy: {
-              createdAt: "asc"
-            }
-          }
-        }
-      }
-    }
+              createdAt: "asc",
+            },
+          },
+        },
+      },
+    },
   });
   return project
     ? {
         ...project,
-        members: project.members.map(member => {
+        members: project.members.map((member) => {
           return {
-            ...member.user
+            ...member.user,
           };
-        })
+        }),
       }
     : null;
 }
@@ -278,19 +278,19 @@ export async function getProjects(): Promise<Project[]> {
       include: {
         members: {
           include: {
-            user: true
-          }
+            user: true,
+          },
         },
         todoLists: {
           include: {
             todos: {
               orderBy: {
-                createdAt: "asc"
-              }
-            }
-          }
-        }
-      }
+                createdAt: "asc",
+              },
+            },
+          },
+        },
+      },
     })) || [];
 
   return projects.map(modelProject);
@@ -302,26 +302,26 @@ export async function getUserProjects(userId: User["id"]): Promise<Project[]> {
       where: {
         members: {
           some: {
-            userId
-          }
-        }
+            userId,
+          },
+        },
       },
       include: {
         members: {
           include: {
-            user: true
-          }
+            user: true,
+          },
         },
         todoLists: {
           include: {
             todos: {
               orderBy: {
-                createdAt: "asc"
-              }
-            }
-          }
-        }
-      }
+                createdAt: "asc",
+              },
+            },
+          },
+        },
+      },
     })) || [];
 
   return projects.map(modelProject);
@@ -344,38 +344,38 @@ export async function updateProject(
         description: data.description || undefined,
         ownerId: data.ownerId || undefined,
         members: {
-          create: (members?.add || []).map(userId => {
+          create: (members?.add || []).map((userId) => {
             return {
-              userId
+              userId,
             };
           }),
 
-          delete: (members?.remove || []).map(userId => {
+          delete: (members?.remove || []).map((userId) => {
             return {
               userId_projectId: {
                 projectId: id,
-                userId
-              }
+                userId,
+              },
             };
-          })
-        }
+          }),
+        },
       },
       include: {
         members: {
           include: {
-            user: true
-          }
+            user: true,
+          },
         },
         todoLists: {
           include: {
             todos: {
               orderBy: {
-                createdAt: "asc"
-              }
-            }
-          }
-        }
-      }
+                createdAt: "asc",
+              },
+            },
+          },
+        },
+      },
     });
     return modelProject(project);
   } catch (error) {
@@ -391,19 +391,19 @@ export async function deleteProject(id: string) {
       include: {
         members: {
           include: {
-            user: true
-          }
+            user: true,
+          },
         },
         todoLists: {
           include: {
             todos: {
               orderBy: {
-                createdAt: "asc"
-              }
-            }
-          }
-        }
-      }
+                createdAt: "asc",
+              },
+            },
+          },
+        },
+      },
     });
     return project && modelProject(project);
   } catch (error) {
@@ -416,7 +416,7 @@ export async function createTodoList({
   name,
   description,
   todos,
-  projectId
+  projectId,
 }: TodoListData): Promise<TodoList> {
   return await prisma.todoList.create({
     data: {
@@ -427,18 +427,18 @@ export async function createTodoList({
         create: (todos || []).map((todo, index) => {
           return {
             ...todo,
-            order: index
+            order: index,
           };
-        })
-      }
+        }),
+      },
     },
     include: {
       todos: {
         orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
+          createdAt: "asc",
+        },
+      },
+    },
   });
 }
 
@@ -448,10 +448,10 @@ export async function getTodoList(id: string): Promise<TodoList | null> {
     include: {
       todos: {
         orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
+          createdAt: "asc",
+        },
+      },
+    },
   });
 }
 
@@ -465,10 +465,10 @@ export async function updateTodoList(
     include: {
       todos: {
         orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
+          createdAt: "asc",
+        },
+      },
+    },
   });
 }
 
@@ -478,10 +478,10 @@ export async function deleteTodoList(id: string): Promise<TodoList> {
     include: {
       todos: {
         orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
+          createdAt: "asc",
+        },
+      },
+    },
   });
 }
 
@@ -490,7 +490,7 @@ export async function createTodo({
   order,
   description,
   ownerId,
-  todoListId
+  todoListId,
 }: TodoDataOrdered): Promise<Todo> {
   return await prisma.todo.create({
     data: {
@@ -498,22 +498,22 @@ export async function createTodo({
       todoListId,
       order,
       description: description || null,
-      ownerId: ownerId || null
-    }
+      ownerId: ownerId || null,
+    },
   });
 }
 
 export async function getTodo(id: Todo["id"]): Promise<Todo | null> {
   return await prisma.todo.findUnique({
-    where: { id }
+    where: { id },
   });
 }
 
 export async function getAllTodos(): Promise<Todo[]> {
   return await prisma.todo.findMany({
     orderBy: {
-      createdAt: "asc"
-    }
+      createdAt: "asc",
+    },
   });
 }
 
@@ -522,11 +522,11 @@ export async function getTodosFromList(
 ): Promise<Todo[]> {
   return await prisma.todo.findMany({
     where: {
-      todoListId: listId
+      todoListId: listId,
     },
     orderBy: {
-      createdAt: "asc"
-    }
+      createdAt: "asc",
+    },
   });
 }
 
@@ -535,10 +535,10 @@ export async function getAllTodoLists(): Promise<TodoList[]> {
     include: {
       todos: {
         orderBy: {
-          createdAt: "asc"
-        }
-      }
-    }
+          createdAt: "asc",
+        },
+      },
+    },
   });
 }
 
@@ -548,13 +548,13 @@ export async function updateTodo(
 ): Promise<Todo | null> {
   return await prisma.todo.update({
     where: { id },
-    data
+    data,
   });
 }
 
 export async function deleteTodo(id: Todo["id"]) {
   return await prisma.todo.delete({
-    where: { id }
+    where: { id },
   });
 }
 
@@ -566,7 +566,7 @@ function getProjectMembers(
     })[];
   }
 ): UserSecure[] {
-  const members = project.members.map(member => {
+  const members = project.members.map((member) => {
     const { passwordHash, ...secureUser } = member.user;
     return secureUser;
   });
@@ -583,6 +583,6 @@ function modelProject(
 ): Project {
   return {
     ...project,
-    members: getProjectMembers(project)
+    members: getProjectMembers(project),
   };
 }

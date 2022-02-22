@@ -10,7 +10,7 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  validatePackageVersions
+  validatePackageVersions,
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -24,7 +24,7 @@ async function createNewApp() {
     lang: "ts",
     server: "cloudflare-pages",
     projectDir: PROJECT_DIR,
-    quiet: true
+    quiet: true,
   });
 }
 
@@ -36,7 +36,7 @@ async function createCloudflareProject() {
       headers: {
         "X-Auth-Email": process.env.CF_EMAIL,
         "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name: APP_NAME,
@@ -47,15 +47,15 @@ async function createCloudflareProject() {
             repo_name: APP_NAME,
             production_branch: "main",
             pr_comments_enabled: true,
-            deployments_enabled: true
-          }
+            deployments_enabled: true,
+          },
         },
         build_config: {
           build_command: "npm run build",
           destination_dir: "public",
-          root_dir: ""
-        }
-      })
+          root_dir: "",
+        },
+      }),
     }
   );
 
@@ -74,8 +74,8 @@ async function createCloudflareDeployment() {
       method: "POST",
       headers: {
         "X-Auth-Email": process.env.CF_EMAIL,
-        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY
-      }
+        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
+      },
     }
   );
 
@@ -96,7 +96,7 @@ async function createRepoIfNeeded() {
 
 let currentGitUser = {
   email: execSync("git config --get user.email").toString().trim(),
-  name: execSync("git config --get user.name").toString().trim()
+  name: execSync("git config --get user.name").toString().trim(),
 };
 
 let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -123,7 +123,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   // install deps
@@ -153,7 +153,7 @@ try {
       "remote",
       "add",
       "origin",
-      `https://${process.env.GITHUB_TOKEN}@github.com/${repo.full_name}.git`
+      `https://${process.env.GITHUB_TOKEN}@github.com/${repo.full_name}.git`,
     ],
     spawnOpts
   );
@@ -167,7 +167,7 @@ try {
   );
 
   // builds typically take between 2 and 3 minutes
-  await new Promise(resolve => setTimeout(resolve, 60_000 * 3));
+  await new Promise((resolve) => setTimeout(resolve, 60_000 * 3));
 
   let appUrl = `https://${APP_NAME}.pages.dev`;
 

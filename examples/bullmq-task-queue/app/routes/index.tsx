@@ -15,7 +15,7 @@ export const action: ActionFunction = async ({ request }) => {
   // This function is asyncronous because it is writing
   // the job to redis for our worker to later pick up.
   await queue.add("notification email", {
-    emailAddress: email
+    emailAddress: email,
   });
 
   return json(`Email queued for ${email}!`);

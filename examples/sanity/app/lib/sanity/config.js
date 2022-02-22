@@ -3,5 +3,5 @@ export const config = {
   // Find these in your ./studio/sanity.json file
   dataset: "production",
   projectId: "YOUR_PROJECT_ID",
-  useCdn: false
+  useCdn: false,
 };

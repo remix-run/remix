@@ -13,13 +13,13 @@ module.exports = {
       ignore_watch: ["."],
       env: {
         ...result.parsed,
-        NODE_ENV: "development"
-      }
+        NODE_ENV: "development",
+      },
     },
     {
       name: "CSS",
       script: "npx postcss styles --base styles --dir app/styles -w",
-      watch: ["styles/"]
+      watch: ["styles/"],
     },
     {
       name: "Express",
@@ -27,8 +27,8 @@ module.exports = {
       ignore_watch: ["."],
       env: {
         ...result.parsed,
-        NODE_ENV: "development"
-      }
-    }
-  ]
+        NODE_ENV: "development",
+      },
+    },
+  ],
 };

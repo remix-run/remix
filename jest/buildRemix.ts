@@ -6,7 +6,7 @@ function buildRemix(dir) {
     childProcess
       .spawn("yarn", ["build"], {
         stdio: "inherit",
-        cwd: dir
+        cwd: dir,
       })
       .on("error", reject)
       .on("close", accept);

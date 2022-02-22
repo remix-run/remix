@@ -10,7 +10,7 @@ export function getUserDisplayName(user: {
 export function getUserFromDisplayName<
   U extends { nameFirst: string; nameLast?: string | null }
 >(users: Array<U>, displayName: string) {
-  return users.find(u => getUserDisplayName(u) === displayName);
+  return users.find((u) => getUserDisplayName(u) === displayName);
 }
 
 export const canUseDOM: boolean = !!(
@@ -68,7 +68,7 @@ export function composeEventHandlers<
   theirHandler: ((event: EventType) => any) | undefined,
   ourHandler: (event: EventType) => any
 ): (event: EventType) => any {
-  return event => {
+  return (event) => {
     theirHandler && theirHandler(event);
     if (!event.defaultPrevented) {
       return ourHandler(event);

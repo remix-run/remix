@@ -7,16 +7,16 @@ function createNote(title: string, body: string, userId: string) {
       body,
       user: {
         connect: {
-          id: userId
-        }
-      }
-    }
+          id: userId,
+        },
+      },
+    },
   });
 }
 
 function deleteNote(id: string) {
   return prisma.note.delete({
-    where: { id }
+    where: { id },
   });
 }
 
