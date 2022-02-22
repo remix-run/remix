@@ -44,12 +44,12 @@ try {
 
   await Promise.all([
     fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress"),
+      path.join(process.cwd(), "cypress"),
       path.join(PROJECT_DIR, "cypress")
     ),
 
     fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
+      path.join(process.cwd(), "cypress.json"),
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
