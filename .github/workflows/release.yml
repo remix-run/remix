@@ -71,6 +71,7 @@ jobs:
 
       - name: Deploy to Arc
         run: node ./arc.mjs
+        working-directory: S{{ env.working-directory }}
         env:
           CI: true
           AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
@@ -103,6 +104,7 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         run: node ./cf-pages.mjs
+        working-directory: S{{ env.working-directory }}
         env:
           CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
           CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
@@ -136,6 +138,7 @@ jobs:
 
       - name: Deploy to Cloudflare Workers
         run: node ./cf-workers.mjs
+        working-directory: S{{ env.working-directory }}
         env:
           CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
@@ -170,6 +173,7 @@ jobs:
 
       - name: Deploy to Fly
         run: node ./fly.mjs
+        working-directory: S{{ env.working-directory }}
         env:
           FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
 
@@ -200,6 +204,7 @@ jobs:
 
       - name: Deploy to Netlify
         run: node ./netlify.mjs
+        working-directory: S{{ env.working-directory }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
@@ -230,6 +235,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: node ./vercel.mjs
+        working-directory: S{{ env.working-directory }}
         env:
           VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
