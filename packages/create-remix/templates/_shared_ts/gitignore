@@ -4,3 +4,4 @@ node_modules
 /server/build
 /public/build
 .env
+.env.*

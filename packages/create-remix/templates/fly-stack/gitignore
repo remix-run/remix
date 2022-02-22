@@ -4,3 +4,4 @@
 /public/build
 /postgres-data
 .env
+.env.*
