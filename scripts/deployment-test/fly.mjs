@@ -3,10 +3,17 @@ import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
 
-import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import {
+  addCypress,
+  checkUp,
+  getAppName,
+  getSpawnOpts,
+  runCypress,
+  validatePackageVersions
+} from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-fly-${sha}`;
+let APP_NAME = getAppName("fly");
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
@@ -15,13 +22,17 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "fly",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
+    quiet: true
   });
 }
 
 try {
   // create a new remix app
   await createNewApp();
+
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
   // add cypress to the project
   await Promise.all([
@@ -88,11 +99,9 @@ try {
     throw new Error("Deployment failed");
   }
 
-  // fly deployments can take a sec to start
-  // ... or a minute...
-  // ... or a few minutes...
+  // fly deployments can take a little bit to start receiving traffic
   console.log(`Fly app deployed, waiting for dns...`);
-  await new Promise(resolve => setTimeout(() => resolve(), 60_000 * 5));
+  await checkUp(flyUrl);
 
   // run cypress against the deployed server
   runCypress(PROJECT_DIR, false, flyUrl);

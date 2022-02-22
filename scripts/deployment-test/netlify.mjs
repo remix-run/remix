@@ -3,10 +3,16 @@ import { spawnSync } from "child_process";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";
 
-import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import {
+  addCypress,
+  getAppName,
+  getSpawnOpts,
+  runCypress,
+  validatePackageVersions
+} from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-netlify-${sha}`;
+let APP_NAME = getAppName("netlify");
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
@@ -15,7 +21,8 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "netlify",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
+    quiet: true
   });
 }
 
@@ -31,6 +38,9 @@ function createNetlifySite() {
 
 try {
   await createNewApp();
+
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
   await Promise.all([
     fse.copy(

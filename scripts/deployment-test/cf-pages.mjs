@@ -1,13 +1,20 @@
 import path from "path";
-import { spawnSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 
-import { addCypress, runCypress, sha, getSpawnOpts } from "./_shared.mjs";
+import {
+  addCypress,
+  checkUp,
+  getAppName,
+  getSpawnOpts,
+  runCypress,
+  validatePackageVersions
+} from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-cf-pages-${sha}`;
+let APP_NAME = getAppName("cf-pages");
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8788";
 
@@ -16,7 +23,8 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "cloudflare-pages",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
+    quiet: true
   });
 }
 
@@ -86,9 +94,19 @@ async function createRepoIfNeeded() {
   return repo.data;
 }
 
+let currentGitUser = {
+  email: execSync("git config --get user.email").toString().trim(),
+  name: execSync("git config --get user.name").toString().trim()
+};
+
+let spawnOpts = getSpawnOpts(PROJECT_DIR);
+
 try {
   // create a new remix app
   await createNewApp();
+
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
   // create a new github repo
   let repo = await createRepoIfNeeded(APP_NAME);
@@ -107,8 +125,6 @@ try {
 
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
   ]);
-
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -150,14 +166,44 @@ try {
     "we'll sleep for 5 minutes to give it time to build"
   );
 
-  // sleep for 5 minutes to be safe...
-  await new Promise(resolve => setTimeout(resolve, 60_000 * 5));
+  // builds typically take between 2 and 3 minutes
+  await new Promise(resolve => setTimeout(resolve, 60_000 * 3));
+
+  let appUrl = `https://${APP_NAME}.pages.dev`;
+
+  await checkUp(appUrl);
 
   // run cypress against the cloudflare pages server
-  runCypress(PROJECT_DIR, false, `https://${APP_NAME}.pages.dev`);
+  runCypress(PROJECT_DIR, false, appUrl);
+
+  if (currentGitUser.email && currentGitUser.name) {
+    spawnSync(
+      "git",
+      ["config", "--global", "user.email", currentGitUser.email],
+      spawnOpts
+    );
+    spawnSync(
+      "git",
+      ["config", "--global", "user.name", currentGitUser.name],
+      spawnOpts
+    );
+  }
 
   process.exit(0);
 } catch (error) {
+  if (currentGitUser.email && currentGitUser.name) {
+    spawnSync(
+      "git",
+      ["config", "--global", "user.email", currentGitUser.email],
+      spawnOpts
+    );
+    spawnSync(
+      "git",
+      ["config", "--global", "user.name", currentGitUser.name],
+      spawnOpts
+    );
+  }
+
   console.error(error);
   process.exit(1);
 }
