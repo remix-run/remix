@@ -25,6 +25,7 @@ const Section = React.forwardRef<HTMLElement, SectionProps>(
     );
   }
 );
+Section.displayName = "Section";
 
 const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
   ({ as: asProp, level: levelProp, ...props }, ref) => {
@@ -46,6 +47,7 @@ const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
     );
   }
 );
+Heading.displayName = "Heading";
 
 interface HeadingProps extends React.ComponentPropsWithRef<"h1"> {
   level?: HeadingLevel;

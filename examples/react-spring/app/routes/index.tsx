@@ -1,6 +1,6 @@
 import { useSpring, animated, config } from "react-spring";
 
-export default function () {
+export default function IndexRoute() {
   const [{ x }, interpolate] = useSpring(() => ({
     from: { x: 0 },
     config: config.wobbly,

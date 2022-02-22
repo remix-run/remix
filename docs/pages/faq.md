@@ -81,10 +81,11 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
+```jsx filename=app/routes/projects/$id.jsx lines=[3,5,37,43]
 export async function action({ request }) {
-  let formData = await request.formData();
-  let action = formData.get("_action");
+  const formData = await request.formData();
+  const action = formData.get("_action");
+  
   switch (action) {
     case "update": {
       // do your update
@@ -101,10 +102,12 @@ export async function action({ request }) {
 }
 
 export default function Projects() {
-  let project = useLoaderData();
+  const project = useLoaderData();
+  
   return (
     <>
       <h2>Update Project</h2>
+        
       <Form method="post">
         <label>
           Project name:{" "}
@@ -114,6 +117,7 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
+          
         <button type="submit" name="_action" value="create">
           Update
         </button>
@@ -176,7 +180,7 @@ Each checkbox has the name: "category". Since `FormData` can have multiple value
 ```tsx
 export async function action({ request }) {
   const formData = await request.formData();
-  let categories = formData.getAll("category");
+  const categories = formData.getAll("category");
   // ["comedy", "music"]
 }
 ```
@@ -187,10 +191,10 @@ If you still want to submit nested structures as well, you can use non-standard 
 
 ```tsx
 <>
-  // arrays with []
+  {/* arrays with [] */}
   <input name="category[]" value="comedy" />
   <input name="category[]" value="comedy" />
-  // nested structures parentKey[childKey]
+  {/* nested structures parentKey[childKey] */}
   <input name="user[name]" value="Ryan" />
 </>
 ```
@@ -204,10 +208,10 @@ import queryString from "query-string";
 export async function action({ request }) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
-  let formQueryString = await request.text();
+  const formQueryString = await request.text();
 
   // parse it into an object
-  let obj = queryString.parse(formQueryString);
+  const obj = queryString.parse(formQueryString);
 }
 ```
 
@@ -225,8 +229,8 @@ And then parse it in the action:
 
 ```tsx
 export async function action({ request }) {
-  let formData = await request.formData();
-  let obj = JSON.parse(formData.get("json"));
+  const formData = await request.formData();
+  const obj = JSON.parse(formData.get("json"));
 }
 ```
 

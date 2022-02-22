@@ -38,6 +38,7 @@ function Document({ children, title }) {
 }
 
 export default function App() {
+  // eslint-disable-next-line no-unused-vars
   const data = useLoaderData();
 
   return (

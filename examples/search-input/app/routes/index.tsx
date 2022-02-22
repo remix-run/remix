@@ -95,12 +95,14 @@ export default function Index() {
           name="search"
           type="search"
         />
+
         <button type="submit">Search</button>
       </Form>
+
       {transition.state === "submitting" ? (
         <div className="results">
-          {[...Array(8).keys()].map(() => (
-            <div className="placeholder" />
+          {[...Array(8).keys()].map((i) => (
+            <div key={i} className="placeholder" />
           ))}
         </div>
       ) : (

@@ -30,19 +30,22 @@ export default function Gists() {
   const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"
   );
+
   if (!gists) {
     return <Skeleton />;
   }
+
   return (
     <ul>
       {gists.map((gist) => (
-        <li>
+        <li key={gist.id}>
           <a href={gist.html_url}>
             {gist.description}, {gist.owner.login}
           </a>
+
           <ul>
             {Object.keys(gist.files).map((key) => (
-              <li>{key}</li>
+              <li key={key}>{key}</li>
             ))}
           </ul>
         </li>
@@ -54,32 +57,33 @@ export default function Gists() {
 
 With Remix, you can filter down the data _on the server_ before sending it to the user:
 
-```js [1-11]
+```jsx lines=[1-11]
 export async function loader() {
   const res = await fetch("https://api.github.com/gists");
   const json = await res.json();
-  return json.map((gist) => {
-    return {
-      description: gist.description,
-      url: gist.html_url,
-      files: Object.keys(gist.files),
-      owner: gist.owner.login,
-    };
-  });
+
+  return json.map((gist) => ({
+    description: gist.description,
+    files: Object.keys(gist.files),
+    owner: gist.owner.login,
+    url: gist.html_url,
+  }));
 }
 
 export default function Gists() {
   const gists = useLoaderData();
+
   return (
     <ul>
       {gists.map((gist) => (
-        <li>
+        <li key={gist.id}>
           <a href={gist.url}>
             {gist.description}, {gist.owner}
           </a>
+
           <ul>
             {gist.files.map((key) => (
-              <li>{key}</li>
+              <li key={key}>{key}</li>
             ))}
           </ul>
         </li>

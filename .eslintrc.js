@@ -7,13 +7,21 @@ module.exports = {
   ],
   overrides: [
     {
-      // all ```jsx & ```tsx code blocks in .md files
+      // all code blocks in .md files
       files: ["**/*.md/*.js", "**/*.md/*.jsx", "**/*.md/*.ts", "**/*.md/*.tsx"],
       rules: {
         "no-unreachable": "off",
+        "prefer-const": "error",
+      },
+    },
+    {
+      // all ```jsx & ```tsx code blocks in .md files
+      files: ["**/*.md/*.jsx", "**/*.md/*.tsx"],
+      rules: {
         "jsx-a11y/alt-text": "off",
         "jsx-a11y/anchor-has-content": "off",
-        "react/jsx-no-comment-textnodes": "off",
+
+        "react/display-name": "off",
         "react/jsx-no-undef": "off",
       },
     },
@@ -26,12 +34,9 @@ module.exports = {
       },
     },
     {
-      files: [
-        "packages/create-remix/templates/cloudflare-workers/**/*.js",
-        "packages/remix-cloudflare-workers/**/*.ts",
-      ],
+      files: ["**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
       rules: {
-        "no-restricted-globals": "off",
+        "jest/no-disabled-tests": "off",
       },
     },
     {
@@ -41,15 +46,12 @@ module.exports = {
       },
     },
     {
-      files: ["examples/**/*.js", "examples/**/*.jsx"],
+      files: [
+        "packages/create-remix/templates/cloudflare-workers/**/*.js",
+        "packages/remix-cloudflare-workers/**/*.ts",
+      ],
       rules: {
-        "no-unused-vars": "off",
-      },
-    },
-    {
-      files: ["examples/**/*.ts", "examples/**/*.tsx"],
-      rules: {
-        "@typescript-eslint/no-unused-vars": "off",
+        "no-restricted-globals": "off",
       },
     },
   ],
@@ -65,6 +67,5 @@ module.exports = {
         ],
       },
     ],
-    "jest/no-disabled-tests": "off",
   },
 };

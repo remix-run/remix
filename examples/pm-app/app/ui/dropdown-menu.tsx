@@ -158,7 +158,7 @@ const DropdownMenuItemLink = React.forwardRef<
     />
   );
 });
-DropdownMenuItem.displayName = "DropdownMenuItem";
+DropdownMenuItemLink.displayName = "DropdownMenuItemLink";
 
 export {
   DropdownMenu,

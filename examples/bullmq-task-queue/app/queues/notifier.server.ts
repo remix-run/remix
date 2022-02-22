@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { Queue, Worker, QueueScheduler } from "bullmq";
 
 import { redis } from "~/utils/redis.server";

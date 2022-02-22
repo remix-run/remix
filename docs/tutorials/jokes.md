@@ -1583,7 +1583,7 @@ import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
-export let loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
   };
@@ -1592,10 +1592,11 @@ export let loader: LoaderFunction = async () => {
 
 export default function Users() {
   const data = useLoaderData<LoaderData>();
+
   return (
     <ul>
       {data.users.map((user) => (
-        <li>{user.name}</li>
+        <li key={user.id}>{user.name}</li>
       ))}
     </ul>
   );
@@ -2626,18 +2627,13 @@ export const action: ActionFunction = async ({
 export default function Login() {
   const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
+
   return (
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -2645,10 +2641,12 @@ export default function Login() {
               searchParams.get("redirectTo") ?? undefined
             }
           />
+
           <fieldset>
             <legend className="sr-only">
               Login or Register?
             </legend>
+
             <label>
               <input
                 type="radio"
@@ -2661,6 +2659,7 @@ export default function Login() {
               />{" "}
               Login
             </label>
+
             <label>
               <input
                 type="radio"
@@ -2674,8 +2673,10 @@ export default function Login() {
               Register
             </label>
           </fieldset>
+
           <div>
             <label htmlFor="username-input">Username</label>
+
             <input
               type="text"
               id="username-input"
@@ -2690,6 +2691,7 @@ export default function Login() {
                   : undefined
               }
             />
+
             {actionData?.fieldErrors?.username ? (
               <p
                 className="form-validation-error"
@@ -2700,6 +2702,7 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <div>
             <label htmlFor="password-input">Password</label>
             <input
@@ -2718,6 +2721,7 @@ export default function Login() {
                   : undefined
               }
             />
+
             {actionData?.fieldErrors?.password ? (
               <p
                 className="form-validation-error"
@@ -2728,6 +2732,7 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <div id="form-error-message">
             {actionData?.formError ? (
               <p
@@ -2738,16 +2743,19 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <button type="submit" className="button">
             Submit
           </button>
         </form>
       </div>
+
       <div className="links">
         <ul>
           <li>
             <Link to="/">Home</Link>
           </li>
+
           <li>
             <Link to="/jokes">Jokes</Link>
           </li>
@@ -3680,7 +3688,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[13,97-103]
+```tsx filename=app/routes/login.tsx lines=[13,98-104]
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
@@ -3753,8 +3761,9 @@ export const action: ActionFunction = async ({
     username: validateUsername(username),
     password: validatePassword(password),
   };
-  if (Object.values(fieldErrors).some(Boolean))
+  if (Object.values(fieldErrors).some(Boolean)) {
     return badRequest({ fieldErrors, fields });
+  }
 
   switch (loginType) {
     case "login": {
@@ -3798,18 +3807,13 @@ export const action: ActionFunction = async ({
 export default function Login() {
   const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
+
   return (
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -3817,10 +3821,12 @@ export default function Login() {
               searchParams.get("redirectTo") ?? undefined
             }
           />
+
           <fieldset>
             <legend className="sr-only">
               Login or Register?
             </legend>
+
             <label>
               <input
                 type="radio"
@@ -3833,6 +3839,7 @@ export default function Login() {
               />{" "}
               Login
             </label>
+
             <label>
               <input
                 type="radio"
@@ -3846,8 +3853,10 @@ export default function Login() {
               Register
             </label>
           </fieldset>
+
           <div>
             <label htmlFor="username-input">Username</label>
+
             <input
               type="text"
               id="username-input"
@@ -3862,6 +3871,7 @@ export default function Login() {
                   : undefined
               }
             />
+
             {actionData?.fieldErrors?.username ? (
               <p
                 className="form-validation-error"
@@ -3872,8 +3882,10 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <div>
             <label htmlFor="password-input">Password</label>
+
             <input
               id="password-input"
               name="password"
@@ -3890,6 +3902,7 @@ export default function Login() {
                   : undefined
               }
             />
+
             {actionData?.fieldErrors?.password ? (
               <p
                 className="form-validation-error"
@@ -3900,6 +3913,7 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <div id="form-error-message">
             {actionData?.formError ? (
               <p
@@ -3910,16 +3924,19 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <button type="submit" className="button">
             Submit
           </button>
         </form>
       </div>
+
       <div className="links">
         <ul>
           <li>
             <Link to="/">Home</Link>
           </li>
+
           <li>
             <Link to="/jokes">Jokes</Link>
           </li>
@@ -5131,18 +5148,13 @@ export const action: ActionFunction = async ({
 export default function Login() {
   const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();
+
   return (
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -5150,10 +5162,12 @@ export default function Login() {
               searchParams.get("redirectTo") ?? undefined
             }
           />
+
           <fieldset>
             <legend className="sr-only">
               Login or Register?
             </legend>
+
             <label>
               <input
                 type="radio"
@@ -5166,6 +5180,7 @@ export default function Login() {
               />{" "}
               Login
             </label>
+
             <label>
               <input
                 type="radio"
@@ -5179,8 +5194,10 @@ export default function Login() {
               Register
             </label>
           </fieldset>
+
           <div>
             <label htmlFor="username-input">Username</label>
+
             <input
               type="text"
               id="username-input"
@@ -5195,6 +5212,7 @@ export default function Login() {
                   : undefined
               }
             />
+
             {actionData?.fieldErrors?.username ? (
               <p
                 className="form-validation-error"
@@ -5205,8 +5223,10 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <div>
             <label htmlFor="password-input">Password</label>
+
             <input
               id="password-input"
               name="password"
@@ -5223,6 +5243,7 @@ export default function Login() {
                   : undefined
               }
             />
+
             {actionData?.fieldErrors?.password ? (
               <p
                 className="form-validation-error"
@@ -5233,6 +5254,7 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <div id="form-error-message">
             {actionData?.formError ? (
               <p
@@ -5243,16 +5265,19 @@ export default function Login() {
               </p>
             ) : null}
           </div>
+
           <button type="submit" className="button">
             Submit
           </button>
         </form>
       </div>
+
       <div className="links">
         <ul>
           <li>
             <Link to="/">Home</Link>
           </li>
+
           <li>
             <Link to="/jokes">Jokes</Link>
           </li>
