@@ -5,6 +5,8 @@ const importRules = require("./rules/import");
 const reactRules = require("./rules/react");
 const jsxA11yRules = require("./rules/jsx-a11y");
 const typescriptRules = require("./rules/typescript");
+const importSettings = require("./settings/import");
+const reactSettings = require("./settings/react");
 
 /**
  * @see https://github.com/eslint/eslint/issues/3458
@@ -30,21 +32,8 @@ module.exports = {
   },
   plugins: ["import", "react", "react-hooks", "jsx-a11y"],
   settings: {
-    react: {
-      version: "detect"
-    },
-    "import/ignore": ["node_modules", "\\.(css|md|svg|json)$"],
-    "import/parsers": {
-      [require.resolve("@typescript-eslint/parser")]: [".ts", ".tsx", ".d.ts"]
-    },
-    "import/resolver": {
-      [require.resolve("eslint-import-resolver-node")]: {
-        extensions: [".js", ".jsx", ".ts", ".tsx"]
-      },
-      [require.resolve("eslint-import-resolver-typescript")]: {
-        alwaysTryTypes: true
-      }
-    }
+    ...reactSettings,
+    ...importSettings
   },
 
   // NOTE: Omit rules related to code style/formatting. Eslint should report
