@@ -10,7 +10,7 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  validatePackageVersions
+  validatePackageVersions,
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -24,7 +24,7 @@ async function createNewApp() {
     lang: "ts",
     server: "cloudflare-pages",
     projectDir: PROJECT_DIR,
-    quiet: true
+    quiet: true,
   });
 }
 
@@ -96,7 +96,7 @@ async function createRepoIfNeeded() {
 
 let currentGitUser = {
   email: execSync("git config --get user.email").toString().trim(),
-  name: execSync("git config --get user.name").toString().trim()
+  name: execSync("git config --get user.name").toString().trim(),
 };
 
 let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -167,7 +167,7 @@ try {
   );
 
   // builds typically take between 2 and 3 minutes
-  await new Promise(resolve => setTimeout(resolve, 60_000 * 3));
+  await new Promise((resolve) => setTimeout(resolve, 60_000 * 3));
 
   let appUrl = `https://${APP_NAME}.pages.dev`;
 

@@ -1,7 +1,7 @@
 export enum BuildMode {
   Development = "development",
   Production = "production",
-  Test = "test"
+  Test = "test",
 }
 
 export function isBuildMode(mode: any): mode is BuildMode {

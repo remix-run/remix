@@ -18,10 +18,10 @@ const jestConfig = {
         "jest/globals": true,
       },
       rules: {
-        ...jestRules
-      }
-    }
-  ]
+        ...jestRules,
+      },
+    },
+  ],
 };
 
 module.exports = jestConfig;

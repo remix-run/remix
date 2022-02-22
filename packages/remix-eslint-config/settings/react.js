@@ -5,12 +5,12 @@ module.exports = {
     linkComponents: [
       {
         name: "Link",
-        linkAttribute: "to"
+        linkAttribute: "to",
       },
       {
         name: "NavLink",
-        linkAttribute: "to"
-      }
-    ]
-  }
+        linkAttribute: "to",
+      },
+    ],
+  },
 };

@@ -33,7 +33,7 @@ module.exports = {
   plugins: ["import", "react", "react-hooks", "jsx-a11y"],
   settings: {
     ...reactSettings,
-    ...importSettings
+    ...importSettings,
   },
 
   // NOTE: Omit rules related to code style/formatting. Eslint should report
@@ -48,7 +48,7 @@ module.exports = {
     ...coreRules,
     ...importRules,
     ...reactRules,
-    ...jsxA11yRules
+    ...jsxA11yRules,
   },
   overrides: [
     {
@@ -65,8 +65,8 @@ module.exports = {
       },
       plugins: ["@typescript-eslint"],
       rules: {
-        ...typescriptRules
-      }
-    }
-  ]
+        ...typescriptRules,
+      },
+    },
+  ],
 };

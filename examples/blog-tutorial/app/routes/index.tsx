@@ -19,7 +19,7 @@ export const loader: LoaderFunction = async () => {
       },
       {
         name: "React Router Docs",
-        url: "https://reactrouter.com/docs",
+        url: "reactrouter.com/docs",
       },
       {
         name: "Remix Discord",

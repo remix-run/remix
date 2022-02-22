@@ -15,5 +15,5 @@ module.exports = {
   "jest/no-mocks-import": WARN,
   "jest/valid-describe-callback": ERROR,
   "jest/valid-expect": ERROR,
-  "jest/valid-expect-in-promise": ERROR
+  "jest/valid-expect-in-promise": ERROR,
 };

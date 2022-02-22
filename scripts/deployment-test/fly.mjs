@@ -9,7 +9,7 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  validatePackageVersions
+  validatePackageVersions,
 } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
@@ -23,7 +23,7 @@ async function createNewApp() {
     lang: "ts",
     server: "fly",
     projectDir: PROJECT_DIR,
-    quiet: true
+    quiet: true,
   });
 }
 

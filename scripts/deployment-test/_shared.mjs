@@ -86,7 +86,7 @@ async function checkUp(url) {
         console.log(`Checking ${url}`);
         await dns.lookup(hostname);
 
-        https.get(url, response => {
+        https.get(url, (response) => {
           if (response.statusCode === 200) {
             clearInterval(checker);
             console.log(`${url} returned a 200 status code`);
@@ -169,12 +169,12 @@ async function validatePackageVersions(directory) {
   let devDependencies = packageJson.devDependencies || {};
   let dependencies = packageJson.dependencies || {};
   let allDeps = { ...devDependencies, ...dependencies };
-  let remixDeps = Object.keys(allDeps).filter(key =>
+  let remixDeps = Object.keys(allDeps).filter((key) =>
     key.startsWith("@remix-run")
   );
 
   await Promise.all(
-    remixDeps.map(key => {
+    remixDeps.map((key) => {
       let version = allDeps[key];
       return verifyPackageIsAvailable(key, version);
     })
@@ -189,5 +189,5 @@ export {
   getSpawnOpts,
   runCypress,
   updatePackageConfig,
-  validatePackageVersions
+  validatePackageVersions,
 };

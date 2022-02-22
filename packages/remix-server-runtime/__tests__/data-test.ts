@@ -170,7 +170,7 @@ describe("loaders", () => {
       possibleError = await callRouteLoader({
         request,
         match,
-        loadContext: {}
+        loadContext: {},
       });
     } catch (error) {
       possibleError = error;
@@ -207,7 +207,7 @@ describe("actions", () => {
       possibleError = await callRouteAction({
         request,
         match,
-        loadContext: {}
+        loadContext: {},
       });
     } catch (error) {
       possibleError = error;

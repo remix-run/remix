@@ -36,7 +36,6 @@ export const action: ActionFunction = async ({ request }) => {
   }
   return json({
     imgSrc,
-    imgDesc,
   });
 };
 

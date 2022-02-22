@@ -38,7 +38,7 @@ export default function Products() {
     <div>
       <h1>Products</h1>
       {products.map((product) => (
-        <div key={product.id}>{product.name}</div>
+        <div>{product.name}</div>
       ))}
     </div>
   );
@@ -117,7 +117,7 @@ export default function GistsRoute() {
   return (
     <ul>
       {gists.map((gist) => (
-        <li key={gist.id}>
+        <li>
           <a href={gist.html_url}>{gist.id}</a>
         </li>
       ))}

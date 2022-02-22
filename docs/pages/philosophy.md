@@ -36,13 +36,13 @@ export default function Gists() {
   return (
     <ul>
       {gists.map((gist) => (
-        <li key={gist.id}>
+        <li>
           <a href={gist.html_url}>
             {gist.description}, {gist.owner.login}
           </a>
           <ul>
             {Object.keys(gist.files).map((key) => (
-              <li key={key}>{key}</li>
+              <li>{key}</li>
             ))}
           </ul>
         </li>
@@ -73,13 +73,13 @@ export default function Gists() {
   return (
     <ul>
       {gists.map((gist) => (
-        <li key={gist.id}>
+        <li>
           <a href={gist.url}>
             {gist.description}, {gist.owner}
           </a>
           <ul>
             {gist.files.map((key) => (
-              <li key={key}>{key}</li>
+              <li>{key}</li>
             ))}
           </ul>
         </li>

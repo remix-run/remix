@@ -1595,7 +1595,7 @@ export default function Users() {
   return (
     <ul>
       {data.users.map((user) => (
-        <li key={user.id}>{user.name}</li>
+        <li>{user.name}</li>
       ))}
     </ul>
   );
