@@ -186,7 +186,6 @@ export {
   addCypress,
   checkUp,
   getAppName,
-  getRootPackageJson,
   getSpawnOpts,
   runCypress,
   updatePackageConfig,
