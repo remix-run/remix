@@ -13,7 +13,6 @@ module.exports = {
   "react/jsx-uses-vars": WARN,
   "react/jsx-uses-react": WARN,
   "react/no-danger-with-children": WARN,
-  "react/no-deprecated": WARN,
   "react/no-direct-mutation-state": WARN,
   "react/no-find-dom-node": WARN,
   "react/no-is-mounted": WARN,

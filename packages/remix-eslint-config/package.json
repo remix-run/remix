@@ -30,6 +30,9 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "eslint-plugin-testing-library": "^5.0.5"
   },
+  "devDependencies": {
+    "@types/eslint": "^8.4.1"
+  },
   "peerDependencies": {
     "@remix-run/react": ">=1.0.0",
     "eslint": ">=8.1.0",
