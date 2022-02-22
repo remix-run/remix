@@ -5,6 +5,7 @@ import path from "path";
 import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
+import { coerce } from "semver";
 
 let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
 
@@ -176,7 +177,7 @@ async function validatePackageVersions(directory) {
   await Promise.all(
     remixDeps.map((key) => {
       let version = allDeps[key];
-      return verifyPackageIsAvailable(key, version);
+      return verifyPackageIsAvailable(key, coerce(version));
     })
   );
 }

@@ -15,6 +15,7 @@
     "netlify-cli": "latest",
     "netlify": "^10.1.1",
     "node-fetch": "^2.6.1",
+    "semver": "^7.3.5",
     "vercel": "latest"
   }
 }
