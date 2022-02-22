@@ -1310,15 +1310,3 @@ export default function Page() {
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
 [minimatch]: https://www.npmjs.com/package/minimatch
 [handledatarequest]: #entryservertsx
-
-## Environment Variables
-
-Hopefully, your application has at least 3 deployment locations (local, test, and prod). In order to decouple your application from it's eventual deployment location, environment-specific application configuration values are best stored in Environment Variables. How you configure these will vary based on your deployment target in higher environments, so Remix does not do anything special during production runs in your deployment target or via `remix serve`.
-
-However, it can be a pain to have to configure environment variable support for your local development environment as well. While you can do something like `node -r dotenv/config node_modules/.bin/remix dev`, we made it a bit easier and did that automatically for you inside of `remix dev`. If they exist in the root of your remix app repository, the following environment variable files will be loaded in order and processed by [`dotenv`](https://www.npmjs.com/package/dotenv):
-
-- `.env.local`
-- `.env.development` or `.env.production` (depending on `NODE_ENV`)
-- `.env`
-
-The behavior matches the default behavior of `dotenv` and variables will not overwrite exiting values from the environment or previously loaded `.env` files.
