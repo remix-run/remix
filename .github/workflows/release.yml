@@ -1,4 +1,5 @@
 name: release
+
 on:
   release:
     types: [published]
@@ -47,9 +48,9 @@ jobs:
   arc_deploy:
     name: Architect Deploy
     needs: [build]
-    env:
-      working_directory: ./scripts/deployment-test
     if: github.repository == 'remix-run/remix'
+    env:
+      working-directory: ./scripts/deployment-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -65,9 +66,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: S{{ env.working-directory }}
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: S{{ env.working-directory }}
 
       - name: Deploy to Arc
         run: node ./arc.mjs
@@ -80,9 +83,9 @@ jobs:
   cf_pages_deploy:
     name: "CF Pages Deploy"
     needs: [build]
-    env:
-      working_directory: ./scripts/deployment-test
     if: github.repository == 'remix-run/remix'
+    env:
+      working-directory: ./scripts/deployment-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -98,9 +101,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: S{{ env.working-directory }}
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: S{{ env.working-directory }}
 
       - name: Deploy to Cloudflare Pages
         run: node ./cf-pages.mjs
@@ -114,9 +119,9 @@ jobs:
   cf_workers_deploy:
     name: "CF Workers Deploy"
     needs: [build]
-    env:
-      working_directory: ./scripts/deployment-test
     if: github.repository == 'remix-run/remix'
+    env:
+      working-directory: ./scripts/deployment-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -132,9 +137,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: S{{ env.working-directory }}
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: S{{ env.working-directory }}
 
       - name: Deploy to Cloudflare Workers
         run: node ./cf-workers.mjs
@@ -146,9 +153,9 @@ jobs:
   fly_deploy:
     name: "Fly Deploy"
     needs: [build]
-    env:
-      working_directory: ./scripts/deployment-test
     if: github.repository == 'remix-run/remix'
+    env:
+      working-directory: ./scripts/deployment-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -164,9 +171,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: S{{ env.working-directory }}
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: S{{ env.working-directory }}
 
       - name: Install the Fly CLI
         run: curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
@@ -180,9 +189,9 @@ jobs:
   netlify_deploy:
     name: "Netlify Deploy"
     needs: [build]
-    env:
-      working_directory: ./scripts/deployment-test
     if: github.repository == 'remix-run/remix'
+    env:
+      working-directory: ./scripts/deployment-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -198,9 +207,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: S{{ env.working-directory }}
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: S{{ env.working-directory }}
 
       - name: Deploy to Netlify
         run: node ./netlify.mjs
@@ -211,9 +222,9 @@ jobs:
   vercel_deploy:
     name: "Vercel Deploy"
     needs: [build]
-    env:
-      working_directory: ./scripts/deployment-test
     if: github.repository == 'remix-run/remix'
+    env:
+      working-directory: ./scripts/deployment-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -229,9 +240,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: S{{ env.working-directory }}
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: S{{ env.working-directory }}
 
       - name: Deploy to Vercel
         run: node ./vercel.mjs
