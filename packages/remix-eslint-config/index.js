@@ -14,12 +14,15 @@ const reactSettings = require("./settings/react");
  */
 require("@rushstack/eslint-patch/modern-module-resolution");
 
-module.exports = {
+/**
+ * @type {import("eslint").Linter.Config}
+ */
+const config = {
   parser: "@babel/eslint-parser",
   parserOptions: {
     sourceType: "module",
-    ecmaVersion: 2019,
     requireConfigFile: false,
+    ecmaVersion: "latest",
     babelOptions: {
       presets: ["@babel/preset-react"],
     },
@@ -70,3 +73,5 @@ module.exports = {
     },
   ],
 };
+
+module.exports = config;

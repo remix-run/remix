@@ -4,13 +4,13 @@ const ERROR = 2;
 
 module.exports = {
   "array-callback-return": WARN,
-  "constructor-super": ERROR,
   "getter-return": WARN,
-  "new-cap": [WARN, { capIsNew: false, newIsCap: true }],
+  "new-parens": WARN,
   "no-array-constructor": WARN,
   "no-caller": ERROR,
   "no-cond-assign": [WARN, "except-parens"],
   "no-const-assign": ERROR,
+  "no-control-regex": WARN,
   "no-dupe-args": WARN,
   "no-dupe-class-members": WARN,
   "no-dupe-keys": WARN,
