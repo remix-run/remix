@@ -94,10 +94,16 @@ async function createRepoIfNeeded() {
   return repo.data;
 }
 
-let currentGitUser = {
-  email: execSync("git config --get user.email").toString().trim(),
-  name: execSync("git config --get user.name").toString().trim(),
-};
+let currentGitUser = {};
+
+try {
+  currentGitUser = {
+    email: execSync("git config --get user.email").toString().trim(),
+    name: execSync("git config --get user.name").toString().trim(),
+  };
+} catch {
+  // git user not set
+}
 
 let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
