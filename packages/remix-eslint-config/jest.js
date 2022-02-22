@@ -14,7 +14,7 @@ module.exports = {
     {
       files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],
       env: {
-        "jest/globals": true
+        "jest/globals": true,
       },
       rules: {
         // https://github.com/jest-community/eslint-plugin-jest
@@ -26,8 +26,8 @@ module.exports = {
         "jest/no-mocks-import": WARN,
         "jest/valid-describe-callback": ERROR,
         "jest/valid-expect": ERROR,
-        "jest/valid-expect-in-promise": ERROR
-      }
-    }
-  ]
+        "jest/valid-expect-in-promise": ERROR,
+      },
+    },
+  ],
 };

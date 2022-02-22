@@ -9,8 +9,8 @@ async function seed() {
   const user = await prisma.user.create({
     data: {
       email: "you@example.com",
-      password: hashedPassword
-    }
+      password: hashedPassword,
+    },
   });
 
   await prisma.note.createMany({
@@ -18,14 +18,14 @@ async function seed() {
       {
         title: "My first note",
         body: "Hello, world!",
-        userId: user.id
+        userId: user.id,
       },
       {
         title: "My second note",
         body: "Hello, world!",
-        userId: user.id
-      }
-    ]
+        userId: user.id,
+      },
+    ],
   });
 
   console.log(`Database has been seeded. 🌱`);

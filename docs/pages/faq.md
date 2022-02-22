@@ -16,7 +16,7 @@ We recommend you create a function that validates the user session that can be a
 ```tsx filename=app/session.js lines=[9-22]
 import {
   createCookieSessionStorage,
-  redirect
+  redirect,
 } from "remix";
 
 // somewhere you've got a session storage
@@ -47,7 +47,7 @@ export async function loader({ request }) {
 
   // otherwise the code continues to execute
   const projects = await fakeDb.projects.scan({
-    userId: session.get("userId")
+    userId: session.get("userId"),
   });
   return projects;
 }

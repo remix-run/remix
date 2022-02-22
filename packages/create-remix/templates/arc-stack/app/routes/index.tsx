@@ -6,7 +6,7 @@ import {
   redirect,
   useActionData,
   useLoaderData,
-  useLocation
+  useLocation,
 } from "remix";
 
 import { requireUser } from "~/session.server";
@@ -118,7 +118,7 @@ export default function IndexPage() {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 8
+          gap: 8,
         }}
       >
         <div>

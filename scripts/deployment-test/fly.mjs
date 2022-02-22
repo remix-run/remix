@@ -15,7 +15,7 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "fly",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
   });
 }
 
@@ -35,7 +35,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -51,7 +51,7 @@ try {
       "--org",
       "personal",
       "--region",
-      "ord"
+      "ord",
     ],
     spawnOpts
   );
@@ -92,7 +92,7 @@ try {
   // ... or a minute...
   // ... or a few minutes...
   console.log(`Fly app deployed, waiting for dns...`);
-  await new Promise(resolve => setTimeout(() => resolve(), 60_000 * 5));
+  await new Promise((resolve) => setTimeout(() => resolve(), 60_000 * 5));
 
   // run cypress against the deployed server
   runCypress(PROJECT_DIR, false, flyUrl);

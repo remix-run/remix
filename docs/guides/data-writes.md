@@ -120,7 +120,7 @@ If you're newer to web development, you may not have ever used a form this way. 
 
 ```js
 <form
-  onSubmit={event => {
+  onSubmit={(event) => {
     event.preventDefault();
     // good luck!
   }}
@@ -181,7 +181,7 @@ import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
   const project = await createProject(formData);
@@ -213,7 +213,7 @@ If there are validation errors, we want to go back to the form and display them.
 
 ```tsx [5,7-10]
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
@@ -233,7 +233,7 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 import { redirect, useActionData } from "remix";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
 };
@@ -321,7 +321,7 @@ import {
   redirect,
   useActionData,
   Form,
-  useTransition
+  useTransition,
 } from "remix";
 
 // ...
@@ -418,7 +418,7 @@ function ValidationMessage({ error, isSubmitting }) {
         opacity: show ? 1 : 0,
         height: show ? "1em" : 0,
         color: "red",
-        transition: "all 300ms ease-in-out"
+        transition: "all 300ms ease-in-out",
       }}
     >
       {error}
@@ -453,7 +453,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.name
                   ? "red"
-                  : ""
+                  : "",
               }}
             />
           </label>
@@ -476,7 +476,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.description
                   ? "red"
-                  : ""
+                  : "",
               }}
             />
           </label>

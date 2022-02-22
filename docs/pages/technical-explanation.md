@@ -113,7 +113,7 @@ export default function Projects() {
 
   return (
     <div>
-      {projects.map(project => (
+      {projects.map((project) => (
         <Link key={project.slug} to={project.slug}>
           {project.title}
         </Link>
@@ -183,7 +183,7 @@ export default function Projects() {
 
   return (
     <div>
-      {projects.map(project => (
+      {projects.map((project) => (
         <Link key={project.slug} to={project.slug}>
           {project.title}
         </Link>

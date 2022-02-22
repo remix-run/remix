@@ -19,7 +19,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     hasSearch
       ? cn.search(sitePath, term, page, "public_site")
       : cn.latestNotes(sitePath, page, "public_site"),
-    cn.site(sitePath)
+    cn.site(sitePath),
   ]);
 
   return json<LoaderData>({ notes, site });
@@ -45,7 +45,7 @@ export default function Screen() {
       </Form>
 
       <ul>
-        {notes.map(note => {
+        {notes.map((note) => {
           return (
             <li key={note.id}>
               <a href={note.path}>{note.title}</a>
@@ -54,7 +54,7 @@ export default function Screen() {
                 {new Date(note.created_at).toLocaleDateString("en", {
                   year: "numeric",
                   month: "long",
-                  day: "2-digit"
+                  day: "2-digit",
                 })}
               </time>
             </li>

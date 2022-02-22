@@ -6,7 +6,7 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 import type { Socket } from "socket.io-client";
 import io from "socket.io-client";
@@ -29,7 +29,7 @@ export default function App() {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("confirmation", data => {
+    socket.on("confirmation", (data) => {
       console.log(data);
     });
   }, [socket]);

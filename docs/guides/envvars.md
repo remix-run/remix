@@ -81,8 +81,8 @@ Instead we recommend keeping all of your environment variables on the server (al
      return {
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-         FAUNA_DB_URL: process.env.FAUNA_DB_URL
-       }
+         FAUNA_DB_URL: process.env.FAUNA_DB_URL,
+       },
      };
    }
 
@@ -108,8 +108,8 @@ Instead we recommend keeping all of your environment variables on the server (al
    export async function loader() {
      return {
        ENV: {
-         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY
-       }
+         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+       },
      };
    }
 
@@ -127,7 +127,7 @@ Instead we recommend keeping all of your environment variables on the server (al
              dangerouslySetInnerHTML={{
                __html: `window.ENV = ${JSON.stringify(
                  data.ENV
-               )}`
+               )}`,
              }}
            />
            <Scripts />

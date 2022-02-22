@@ -7,5 +7,5 @@ module.exports = [
   "strapi::query",
   "strapi::body",
   "strapi::favicon",
-  "strapi::public"
+  "strapi::public",
 ];

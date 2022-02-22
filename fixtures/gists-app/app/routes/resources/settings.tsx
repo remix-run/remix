@@ -6,7 +6,7 @@ import { Link } from "remix";
 import { defaultStyles, sessionStorage } from "~/themes.server";
 
 export let handle = {
-  breadcrumb: () => <Link to="/resources">Resources</Link>
+  breadcrumb: () => <Link to="/resources">Resources</Link>,
 };
 
 export let loader: LoaderFunction = async ({ request }) => {
@@ -17,7 +17,7 @@ export let loader: LoaderFunction = async ({ request }) => {
   let settings = Object.entries(defaultStyles).reduce<Record<string, string>>(
     (p, [key, defaultValue]) => ({
       ...p,
-      [key]: custom[key] || defaultValue
+      [key]: custom[key] || defaultValue,
     }),
     {}
   );

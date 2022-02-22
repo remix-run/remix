@@ -18,7 +18,7 @@ type PostsData = { posts: Post[] };
 function postFromModule(mod: any): Post {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
-    ...mod.attributes.meta
+    ...mod.attributes.meta,
   };
 }
 
@@ -27,14 +27,14 @@ export let loader: LoaderFunction = async () => {
     posts: [
       postFromModule(helloPost),
       postFromModule(secondPost),
-      postFromModule(thirdPost)
-    ]
+      postFromModule(thirdPost),
+    ],
   };
 
   return json(data, {
     headers: {
-      "Cache-Control": "public, max-age=60"
-    }
+      "Cache-Control": "public, max-age=60",
+    },
   });
 };
 
@@ -44,7 +44,7 @@ export let links: LinksFunction = () => {
 
 export let headers: HeadersFunction = ({ loaderHeaders }) => {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")!
+    "Cache-Control": loaderHeaders.get("Cache-Control")!,
   };
 };
 
@@ -57,7 +57,7 @@ export default function BlogPosts() {
       <main>
         <h1>Blog Posts</h1>
         <ul>
-          {posts.map(post => (
+          {posts.map((post) => (
             <li key={post.slug}>
               <Link to={post.slug} className="text-blue-700 underline">
                 {post.title} {locationPending ? "..." : null}

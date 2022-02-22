@@ -9,7 +9,7 @@ import {
   MenuPopover as ReachMenuPopover,
   MenuItem as ReachMenuItem,
   MenuLink as ReachMenuLink,
-  MenuItems as ReachMenuItems
+  MenuItems as ReachMenuItems,
 } from "@reach/menu-button";
 import type {
   MenuProps as ReachMenuProps,
@@ -17,7 +17,7 @@ import type {
   MenuPopoverProps as ReachMenuPopoverProps,
   MenuItemProps as ReachMenuItemProps,
   MenuLinkProps as ReachMenuLinkProps,
-  MenuItemsProps as ReachMenuItemsProps
+  MenuItemsProps as ReachMenuItemsProps,
 } from "@reach/menu-button";
 import { IconDots } from "~/ui/icons";
 
@@ -79,7 +79,7 @@ const DropdownMenuOptionsButton = React.forwardRef<
         "ui--dropdown-menu__options-button",
         {
           "ui--dropdown-menu__options-button--size-8": size === 8,
-          "ui--dropdown-menu__options-button--size-10": size === 10
+          "ui--dropdown-menu__options-button--size-10": size === 10,
         }
       )}
       aria-label="Options"
@@ -168,7 +168,7 @@ export {
   DropdownMenuPopover,
   DropdownMenuList,
   DropdownMenuItem,
-  DropdownMenuItemLink
+  DropdownMenuItemLink,
 };
 
 export interface DropdownMenuProps

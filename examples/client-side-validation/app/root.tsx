@@ -7,7 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
   useActionData,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 
 import stylesUrl from "./index.css";
@@ -16,8 +16,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: stylesUrl
-    }
+      href: stylesUrl,
+    },
   ];
 };
 

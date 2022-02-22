@@ -11,18 +11,18 @@ export const loader: LoaderFunction = async ({ request }) => {
     session.set("myStoredData", "Some data");
     return json(
       {
-        message: "Created new session"
+        message: "Created new session",
       },
       {
         headers: {
-          "Set-Cookie": await commitSession(session)
-        }
+          "Set-Cookie": await commitSession(session),
+        },
       }
     );
   }
   // If session was found, present the session info.
   return json({
-    message: `Showing Session info: ${myStoredData}`
+    message: `Showing Session info: ${myStoredData}`,
   });
 };
 
