@@ -440,7 +440,12 @@ function createServerBuild(
           config.serverBuildTarget
         ),
       mainFields:
-        config.serverModuleFormat === "esm"
+        !!config.serverBuildTarget &&
+        ["cloudflare-workers", "cloudflare-pages"].includes(
+          config.serverBuildTarget
+        )
+          ? ["browser", "module", "main"]
+          : config.serverModuleFormat === "esm"
           ? ["module", "main"]
           : ["main", "module"],
       target: options.target,
