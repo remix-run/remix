@@ -197,6 +197,7 @@ export const Button = React.forwardRef(
     return <button {...props} ref={ref} data-button />;
   }
 );
+Button.displayName = "Button";
 ```
 
 And then a `<PrimaryButton>` that extends it:
@@ -224,6 +225,7 @@ export const PrimaryButton = React.forwardRef(
     );
   }
 );
+PrimaryButton.displayName = "PrimaryButton";
 ```
 
 Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know its dependencies (just like JavaScript imports).
@@ -355,6 +357,7 @@ export const CopyToClipboard = React.forwardRef(
     );
   }
 );
+CopyToClipboard.displayName = "CopyToClipboard";
 ```
 
 Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.

@@ -105,12 +105,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <Form
-          method="post"
-          aria-errormessage={
-            actionData?.formError ? "form-error-message" : undefined
-          }
-        >
+        <Form method="post">
           <input
             type="hidden"
             name="redirectTo"

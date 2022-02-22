@@ -1595,7 +1595,7 @@ export default function Users() {
   return (
     <ul>
       {data.users.map(user => (
-        <li>{user.name}</li>
+        <li key={user.id}>{user.name}</li>
       ))}
     </ul>
   );
@@ -2630,14 +2630,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -3802,14 +3795,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -5135,14 +5121,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -5455,7 +5434,7 @@ function escapeCdata(s: string) {
 
 function escapeHtml(s: string) {
   return s
-    .replace(/\&/g, "&amp;")
+    .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")

@@ -28,13 +28,15 @@ export const action: ActionFunction = async ({ request }) => {
     uploadHandler
   );
   const imgSrc = formData.get("img");
+  const imgDesc = formData.get("desc");
   if (!imgSrc) {
     return json({
       error: "something wrong"
     });
   }
   return json({
-    imgSrc
+    imgSrc,
+    imgDesc
   });
 };
 
@@ -43,14 +45,17 @@ export default function Index() {
   return (
     <>
       <Form method="post" encType="multipart/form-data">
-        <input type="file" name="img" accept="image/*" />
+        <label htmlFor="img-field">Image to upload</label>
+        <input id="img-field" type="file" name="img" accept="image/*" />
+        <label htmlFor="img-desc">Image description</label>
+        <input id="img-desc" type="text" name="desc" />
         <button type="submit">upload to cloudinary</button>
       </Form>
       {data?.errorMsg && <h2>{data.errorMsg}</h2>}
       {data?.imgSrc && (
         <>
           <h2>uploaded image</h2>
-          <img src={data.imgSrc} />
+          <img src={data.imgSrc} alt={data.imgDesc || "Upload result"} />
         </>
       )}
     </>

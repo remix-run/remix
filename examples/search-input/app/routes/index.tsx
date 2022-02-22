@@ -99,8 +99,8 @@ export default function Index() {
       </Form>
       {transition.state === "submitting" ? (
         <div className="results">
-          {[...Array(8).keys()].map(() => (
-            <div className="placeholder" />
+          {[...Array(8).keys()].map((_, i) => (
+            <div className="placeholder" key={i} />
           ))}
         </div>
       ) : (

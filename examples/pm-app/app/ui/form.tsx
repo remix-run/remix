@@ -18,6 +18,7 @@ const FieldProvider = React.forwardRef<
     </div>
   );
 });
+FieldProvider.displayName = "FieldProvider";
 
 type ResolvedFieldProps =
   | FieldProps

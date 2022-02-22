@@ -67,6 +67,7 @@ const ArrowLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
     );
   }
 );
+ArrowLink.displayName = "ArrowLink";
 
 export { CustomNavLink as NavLink, CustomLink as Link, ArrowLink };
 export type { NavLinkProps, LinkProps };
