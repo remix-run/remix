@@ -61,6 +61,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm install
@@ -92,6 +93,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm install
@@ -124,6 +126,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm install
@@ -154,6 +157,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm install
@@ -186,6 +190,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm install
@@ -215,6 +220,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm install
