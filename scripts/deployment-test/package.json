@@ -17,6 +17,7 @@
     "netlify-cli": "latest",
     "netlify": "^10.1.1",
     "node-fetch": "^2.6.1",
+    "retry": "^0.13.1",
     "semver": "^7.3.5",
     "start-server-and-test": "^1.14.0",
     "vercel": "latest"

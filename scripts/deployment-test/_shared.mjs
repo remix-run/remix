@@ -5,6 +5,7 @@ import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
 import semver from "semver";
+import retry from "retry";
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -79,46 +80,23 @@ export function runCypress(dir, dev, url) {
   }
 }
 
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+export async function checkUrl(url) {
+  let operation = retry.operation({ retries: 10 });
 
-function retry(fn, delay, retries, error) {
-  if (retries === 0) {
-    return Promise.reject(error);
-  }
-  return fn().catch(async (error) => {
-    await wait(delay);
-    return retry(fn, retries - 1, error);
+  return new Promise((resolve, reject) => {
+    operation.attempt(async () => {
+      try {
+        let response = await fetch(url);
+        if (response.status >= 200 && response.status < 400) {
+          resolve("App server is up");
+        } else {
+          throw new Error(`App server is not up: ${response.status}`);
+        }
+      } catch (error) {
+        reject(operation.retry(error));
+      }
+    });
   });
-}
-
-export async function checkUp(url) {
-  async function checkAppServer() {
-    let response = await fetch(url);
-    if (response.status >= 200 && response.status < 400) {
-      console.log("App server is up");
-      return;
-    }
-    throw new Error(`App server is not up: ${response.status}`);
-  }
-
-  await retry(checkAppServer, 10_000, 10);
-}
-
-async function verifyPackageIsAvailable(packageName, version) {
-  async function getPackage() {
-    let response = await fetch(
-      `https://registry.npmjs.org/${packageName}/${version}`
-    );
-    if (response.status >= 200 && response.status < 400) {
-      console.log(`Package ${packageName}@${version} is available`);
-      return;
-    }
-    throw new Error(
-      `Package ${packageName}@${version} is not available: ${response.status}`
-    );
-  }
-
-  await retry(getPackage, 5_000, 4);
 }
 
 export async function validatePackageVersions(directory) {
@@ -133,7 +111,7 @@ export async function validatePackageVersions(directory) {
   await Promise.all(
     remixDeps.map((key) => {
       let version = allDeps[key];
-      return verifyPackageIsAvailable(key, semver.coerce(version));
+      return checkUrl(`https://registry.npmjs.org/${key}/${version}`);
     })
   );
 }

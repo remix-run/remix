@@ -7,7 +7,7 @@ import { createApp } from "create-remix";
 
 import {
   addCypress,
-  checkUp,
+  checkUrl,
   CYPRESS_CONFIG,
   CYPRESS_SOURCE_DIR,
   getAppDirectory,
@@ -174,7 +174,7 @@ try {
 
   let appUrl = `https://${APP_NAME}.pages.dev`;
 
-  await checkUp(appUrl);
+  await checkUrl(appUrl);
 
   // run cypress against the cloudflare pages server
   runCypress(PROJECT_DIR, false, appUrl);

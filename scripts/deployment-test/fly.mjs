@@ -6,7 +6,7 @@ import { createApp } from "create-remix";
 
 import {
   addCypress,
-  checkUp,
+  checkUrl,
   CYPRESS_CONFIG,
   CYPRESS_SOURCE_DIR,
   getAppDirectory,
@@ -96,7 +96,7 @@ try {
 
   // fly deployments can take a little bit to start receiving traffic
   console.log(`Fly app deployed, waiting for dns...`);
-  await checkUp(flyUrl);
+  await checkUrl(flyUrl);
 
   // run cypress against the deployed server
   runCypress(PROJECT_DIR, false, flyUrl);
