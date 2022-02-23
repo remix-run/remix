@@ -20,4 +20,4 @@ Older browsers ignore it because they don't understand the `type`, so no JavaScr
 
 [pe]: https://en.wikipedia.org/wiki/Progressive_enhancement
 [esm-browsers]: https://caniuse.com/es6-module
-[msie]:https://techcommunity.microsoft.com/t5/microsoft-365-blog/microsoft-365-apps-say-farewell-to-internet-explorer-11-and/ba-p/1591666
+[msie]: https://techcommunity.microsoft.com/t5/microsoft-365-blog/microsoft-365-apps-say-farewell-to-internet-explorer-11-and/ba-p/1591666
