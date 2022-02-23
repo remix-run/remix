@@ -1,4 +1,4 @@
-name: release
+name: release-private
 on:
   release:
     types: [published]
