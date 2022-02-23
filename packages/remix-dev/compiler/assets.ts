@@ -34,9 +34,13 @@ export interface AssetsManifest {
   rootAssets: RootAssets;
 }
 
+type RootAssetType = "cssModules";
+export type RootAssets = Partial<Record<RootAssetType, string>>;
+
 export async function createAssetsManifest(
   config: RemixConfig,
-  metafile: esbuild.Metafile
+  metafile: esbuild.Metafile,
+  rootAssets?: RootAssets
 ): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
@@ -107,7 +111,19 @@ export async function createAssetsManifest(
   optimizeRoutes(routes, entry.imports);
   let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
-  return { version, entry, routes };
+  let cssModules =
+    config.unstable_cssModules === true && rootAssets?.cssModules
+      ? resolveUrl(rootAssets.cssModules)
+      : undefined;
+
+  return {
+    version,
+    entry,
+    routes,
+    rootAssets: {
+      cssModules,
+    },
+  };
 }
 
 type ImportsCache = { [routeId: string]: string[] };
