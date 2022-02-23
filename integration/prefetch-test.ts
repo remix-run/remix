@@ -1,10 +1,4 @@
-import {
-  createAppFixture,
-  createFixture,
-  js,
-  selectHtml,
-  installMouseHelper,
-} from "./helpers/create-fixture";
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
 // Generate the test app using the given prefetch mode
