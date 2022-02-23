@@ -4,5 +4,6 @@ node_modules
 .vercel
 .output
 
-public/build
-api/_build
+/build/
+/public/build
+/api/index.js

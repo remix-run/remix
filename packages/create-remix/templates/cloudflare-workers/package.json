@@ -1,12 +1,12 @@
 {
-  "main": "dist/worker.js",
+  "main": "build/index.js",
   "scripts": {
     "postinstall": "remix setup cloudflare-workers",
-    "build:worker": "esbuild --define:process.env.NODE_ENV='\"production\"' --minify --bundle --sourcemap --outdir=dist ./worker",
-    "build": "remix build",
-    "dev": "remix watch",
-    "dev:worker": "esbuild --define:process.env.NODE_ENV='\"development\"' --bundle --sourcemap --outdir=dist ./worker",
-    "start": "miniflare --build-command \"npm run dev:worker\" --watch",
+    "build": "cross-env NODE_ENV=production remix build",
+    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
+    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "start": "cross-env NODE_ENV=production miniflare ./build/index.js",
     "deploy": "npm run build && wrangler publish"
   },
   "dependencies": {
@@ -14,7 +14,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^2.2.2",
-    "esbuild": "0.13.14",
-    "miniflare": "2.0.0-next.3"
+    "cross-env": "^7.0.3",
+    "miniflare": "^2.1.0",
+    "npm-run-all": "^4.1.5"
   }
 }

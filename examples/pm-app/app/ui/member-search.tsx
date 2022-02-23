@@ -8,7 +8,7 @@ import {
   ComboboxInput,
   ComboboxList,
   ComboboxOption,
-  ComboboxPopover
+  ComboboxPopover,
 } from "~/ui/combobox";
 import type { ComboboxProps } from "~/ui/combobox";
 import { Token, TokenDismissButton } from "~/ui/token";
@@ -32,7 +32,7 @@ export function MemberSearch({
   children,
   initialSelection,
   selection,
-  onSelectionChange
+  onSelectionChange,
 }: {
   users: UserSecure[];
   className?: string;
@@ -53,7 +53,7 @@ export function MemberSearch({
     setSelectionRef.current = onSelectionChange;
   }, [onSelectionChange]);
   const setSelectedUsers: React.Dispatch<React.SetStateAction<UserSecure[]>> =
-    React.useCallback(val => {
+    React.useCallback((val) => {
       const setSelection = setSelectionRef.current;
       if (!isControlledRef.current) {
         setValue(val);
@@ -62,13 +62,13 @@ export function MemberSearch({
     }, []);
 
   const context = React.useMemo<MemberSearchContextValue>(() => {
-    const selectableUsers = users.filter(u => {
-      return !selectedUsers.find(sel => sel.id === u.id);
+    const selectableUsers = users.filter((u) => {
+      return !selectedUsers.find((sel) => sel.id === u.id);
     });
     return {
       selectableUsers,
       selectedUsers,
-      setSelectedUsers
+      setSelectedUsers,
     };
   }, [users, selectedUsers, setSelectedUsers]);
 
@@ -102,7 +102,7 @@ export function MemberSearchCombobox({
   function handleComboboxSelect(value: string) {
     const found = getUserFromDisplayName(selectableUsers, value);
     if (found) {
-      setSelectedUsers(selectedUsers => selectedUsers.concat([found!]));
+      setSelectedUsers((selectedUsers) => selectedUsers.concat([found!]));
     }
     setComboboxValue("");
   }
@@ -123,7 +123,7 @@ export function MemberSearchCombobox({
       {comboboxResults && comboboxResults.length > 0 ? (
         <ComboboxPopover>
           <ComboboxList>
-            {comboboxResults.slice(0, 10).map(result => (
+            {comboboxResults.slice(0, 10).map((result) => (
               <ComboboxOption
                 key={result.id}
                 value={getUserDisplayName(result)}
@@ -146,15 +146,15 @@ export function MemberSearchSelections({ className }: { className?: string }) {
       onBlur={handleMemberListBlur}
       onFocus={handleMemberListFocus}
     >
-      {selectedUsers.map(selection => {
+      {selectedUsers.map((selection) => {
         return (
           <MemberToken
             key={selection.id}
             value={getUserDisplayName(selection)}
             className={"ui--member-search__selection-token"}
-            remove={val => {
-              setSelectedUsers(s =>
-                s.filter(u => getUserDisplayName(u) !== val)
+            remove={(val) => {
+              setSelectedUsers((s) =>
+                s.filter((u) => getUserDisplayName(u) !== val)
               );
             }}
           />
@@ -170,7 +170,7 @@ export function MemberSearchHiddenField({ name }: { name: string }) {
     <input
       type="hidden"
       name={name}
-      value={JSON.stringify(selectedUsers.map(u => u.id))}
+      value={JSON.stringify(selectedUsers.map((u) => u.id))}
     />
   );
 }
@@ -182,7 +182,7 @@ function useUserMatch(users: UserSecure[], term: string) {
       throttledTerm.trim() === ""
         ? null
         : matchSorter(users, throttledTerm, {
-            keys: [user => getUserDisplayName(user)]
+            keys: [(user) => getUserDisplayName(user)],
           }),
     [throttledTerm, users]
   );
@@ -238,7 +238,7 @@ function handleMemberListKeyDown(event: React.KeyboardEvent<HTMLElement>) {
       "ArrowLeft",
       "ArrowRight",
       "Home",
-      "End"
+      "End",
     ].includes(event.key)
   ) {
     return;
@@ -249,7 +249,7 @@ function handleMemberListKeyDown(event: React.KeyboardEvent<HTMLElement>) {
   const listButtons = Array.from(
     list.querySelectorAll<HTMLButtonElement>("button")
   );
-  const currentIndex = listButtons.findIndex(el => el === activeElement);
+  const currentIndex = listButtons.findIndex((el) => el === activeElement);
 
   switch (event.key) {
     case "ArrowLeft":

@@ -4,7 +4,7 @@ import {
   Scripts,
   useLoaderData,
   LiveReload,
-  useCatch
+  useCatch,
 } from "remix";
 import { Outlet } from "react-router-dom";
 
@@ -14,7 +14,7 @@ export function links() {
   return [{ rel: "stylesheet", href: stylesUrl }];
 }
 
-export function loader() {
+export async function loader() {
   return { date: new Date() };
 }
 
@@ -31,7 +31,7 @@ function Document({ children, title }) {
       <body>
         {children}
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );

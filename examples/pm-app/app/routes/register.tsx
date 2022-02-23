@@ -3,7 +3,7 @@ import type {
   ActionFunction,
   MetaFunction,
   LinksFunction,
-  LoaderFunction
+  LoaderFunction,
 } from "remix";
 import { Form, json, useActionData, useSearchParams } from "remix";
 import { Button } from "~/ui/button";
@@ -18,7 +18,7 @@ import { validateEmail, validatePassword } from "~/utils/validation";
 
 export const meta: MetaFunction = () => {
   return {
-    title: "Register | PM Camp"
+    title: "Register | PM Camp",
   };
 };
 
@@ -46,7 +46,7 @@ export const action: ActionFunction = async ({ request }) => {
     "nameFirst",
     "nameLast",
     "email",
-    "password"
+    "password",
   ] as TextFields[]) {
     const fieldValue = formData.get(fieldName);
     fields[fieldName] = fieldValue as string;
@@ -64,7 +64,7 @@ export const action: ActionFunction = async ({ request }) => {
     typeof redirectTo !== "string"
   ) {
     const data: ActionData = {
-      formError: `Something went wrong. Please try again later.`
+      formError: `Something went wrong. Please try again later.`,
     };
     return json(data);
   }
@@ -104,7 +104,7 @@ export const action: ActionFunction = async ({ request }) => {
   if (existingUser) {
     return {
       fields,
-      formError: `Sorry! That email is already taken.`
+      formError: `Sorry! That email is already taken.`,
     };
   }
 
@@ -113,14 +113,14 @@ export const action: ActionFunction = async ({ request }) => {
   if (!user) {
     return {
       fields,
-      formError: `Something went wrong with registration. Please try again later!`
+      formError: `Something went wrong with registration. Please try again later!`,
     };
   }
 
   // 5. Create a user session with the new user's ID
   return await createUserSession(user.id, {
     // 6. Redirect to the user's dashboard
-    redirect: redirectTo
+    redirect: redirectTo,
   });
 };
 
@@ -148,7 +148,7 @@ export default function Register() {
         "nameFirst",
         "nameLast",
         "email",
-        "password"
+        "password",
       ] as TextFields[]) {
         if (fieldErrors[field]) {
           const elem = document.getElementById(`register-${field}`);

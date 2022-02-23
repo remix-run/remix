@@ -3,10 +3,6 @@
   "name": "remix-app-template-js",
   "description": "",
   "license": "",
-  "scripts": {
-    "build": "remix build",
-    "dev": "remix watch"
-  },
   "dependencies": {
     "@remix-run/react": "*",
     "react": "^17.0.2",

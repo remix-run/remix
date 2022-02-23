@@ -9,11 +9,11 @@ import { message as serverMessage } from "../scripts/message.server";
 export function meta() {
   return {
     title: "Gists Fixture App",
-    description: "We're just tryin' to make sure stuff works, ya know?!"
+    description: "We're just tryin' to make sure stuff works, ya know?!",
   };
 }
 
-export function loader() {
+export async function loader() {
   if (process.env.NODE_ENV !== "test") {
     console.log(serverMessage);
   }
@@ -23,7 +23,7 @@ export function loader() {
 
 export function headers() {
   return {
-    test: "value"
+    test: "value",
   };
 }
 

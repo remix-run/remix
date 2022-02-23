@@ -3,10 +3,16 @@ import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 
-import { sha, spawnOpts, runCypress, addCypress } from "./_shared.mjs";
+import {
+  addCypress,
+  getAppName,
+  getSpawnOpts,
+  runCypress,
+  validatePackageVersions,
+} from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-vercel-${sha}`;
+let APP_NAME = getAppName("vercel");
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
@@ -15,7 +21,8 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "vercel",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
+    quiet: true,
   });
 }
 
@@ -25,8 +32,8 @@ function vercelClient(input, init) {
     ...init,
     headers: {
       ...init?.headers,
-      Authorization: `Bearer ${process.env.VERCEL_TOKEN}`
-    }
+      Authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
+    },
   };
 
   return fetch(url, opts);
@@ -38,8 +45,8 @@ async function createVercelProject() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       framework: "remix",
-      name: APP_NAME
-    })
+      name: APP_NAME,
+    }),
   });
 
   if (promise.status !== 200) {
@@ -65,23 +72,28 @@ async function getVercelDeploymentUrl(projectId) {
 try {
   await createNewApp();
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress"),
-    path.join(PROJECT_DIR, "cypress")
-  );
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-    path.join(PROJECT_DIR, "cypress.json")
-  );
+  await Promise.all([
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress"),
+      path.join(PROJECT_DIR, "cypress")
+    ),
 
-  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
+    fse.copy(
+      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
+      path.join(PROJECT_DIR, "cypress.json")
+    ),
 
-  process.chdir(PROJECT_DIR);
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+  ]);
+
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // create a new project on vercel
   let project = await createVercelProject();
@@ -96,11 +108,11 @@ try {
       "deploy",
       "--prod",
       "--token",
-      process.env.VERCEL_TOKEN
+      process.env.VERCEL_TOKEN,
     ],
     {
       ...spawnOpts,
-      env: { ...process.env, VERCEL_PROJECT_ID: project.id }
+      env: { ...process.env, VERCEL_PROJECT_ID: project.id },
     }
   );
   if (vercelDeployCommand.status !== 0) {
@@ -117,7 +129,7 @@ try {
 
   console.log(`Deployed to ${fullUrl}`);
 
-  runCypress(false, fullUrl);
+  runCypress(PROJECT_DIR, false, fullUrl);
 
   process.exit(0);
 } catch (error) {

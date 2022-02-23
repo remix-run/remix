@@ -1,11 +1,19 @@
+import fsp from "fs/promises";
+import path from "path";
 import lambdaTester from "lambda-tester";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import {
+  // This has been added as a global in node 15+
+  AbortController,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import type { HandlerEvent } from "@netlify/functions";
 
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
+  sendRemixResponse,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
@@ -28,7 +36,7 @@ function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
     multiValueQueryStringParameters: null,
     body: null,
     isBase64Encoded: false,
-    ...event
+    ...event,
   };
 }
 
@@ -43,7 +51,7 @@ describe("netlify createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
@@ -51,7 +59,7 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
           expect(res.body).toBe("URL: /foo/bar");
         });
@@ -66,7 +74,7 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
         });
     });
@@ -80,7 +88,7 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(204);
         });
     });
@@ -108,14 +116,14 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.multiValueHeaders["X-Time-Of-Year"]).toEqual([
-            "most wonderful"
+            "most wonderful",
           ]);
           expect(res.multiValueHeaders["Set-Cookie"]).toEqual([
             "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
             "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
           ]);
         });
     });
@@ -196,9 +204,9 @@ describe("netlify createRemixHeaders", () => {
         createRemixHeaders({
           Cookie: [
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
+            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
           ],
-          "x-something-else": ["true"]
+          "x-something-else": ["true"],
         })
       ).toMatchInlineSnapshot(`
         Headers {
@@ -223,8 +231,8 @@ describe("netlify createRemixRequest", () => {
       createRemixRequest(
         createMockEvent({
           multiValueHeaders: {
-            Cookie: ["__session=value", "__other=value"]
-          }
+            Cookie: ["__session=value", "__other=value"],
+          },
         })
       )
     ).toMatchInlineSnapshot(`
@@ -270,5 +278,47 @@ describe("netlify createRemixRequest", () => {
         },
       }
     `);
+  });
+});
+
+describe("sendRemixResponse", () => {
+  it("handles regular responses", async () => {
+    let response = new NodeResponse("anything");
+    let abortController = new AbortController();
+    let result = await sendRemixResponse(response, abortController);
+    expect(result.body).toBe("anything");
+  });
+
+  it("handles resource routes with regular data", async () => {
+    let json = JSON.stringify({ foo: "bar" });
+    let response = new NodeResponse(json, {
+      headers: {
+        "Content-Type": "application/json",
+        "content-length": json.length.toString(),
+      },
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(json);
+  });
+
+  it("handles resource routes with binary data", async () => {
+    let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
+
+    let response = new NodeResponse(image, {
+      headers: {
+        "content-type": "image/jpeg",
+        "content-length": image.length.toString(),
+      },
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(image.toString("base64"));
   });
 });

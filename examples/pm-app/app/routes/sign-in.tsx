@@ -3,7 +3,7 @@ import type {
   ActionFunction,
   MetaFunction,
   LinksFunction,
-  LoaderFunction
+  LoaderFunction,
 } from "remix";
 import { Form, json, useActionData, useSearchParams } from "remix";
 import { Button } from "~/ui/button";
@@ -19,7 +19,7 @@ import { useFocusOnFormError } from "~/utils/react";
 
 export const meta: MetaFunction = () => {
   return {
-    title: "Sign In | PM Camp"
+    title: "Sign In | PM Camp",
   };
 };
 
@@ -35,7 +35,7 @@ export const action: ActionFunction = async ({ request }) => {
   const redirectTo = formData.get("redirectTo");
   const fieldErrors: FieldErrors = {
     email: null,
-    password: null
+    password: null,
   };
 
   // 2. Validate the form data
@@ -109,13 +109,13 @@ export const action: ActionFunction = async ({ request }) => {
   return await createUserSession(user.id, {
     // 5. Redirect to the user's dashboard (or whatever URL is set by the
     //    `redirectTo` field)
-    redirect: redirectTo || "/dashboard"
+    redirect: redirectTo || "/dashboard",
   });
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
   await redirectUser(request, {
-    redirect: "/dashboard"
+    redirect: "/dashboard",
   });
   return {};
 };

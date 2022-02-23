@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
 import type { ReactElement } from "react";
@@ -31,7 +33,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     (_: Update, update: Update) => update,
     {
       action: history.action,
-      location: history.location
+      location: history.location,
     }
   );
 

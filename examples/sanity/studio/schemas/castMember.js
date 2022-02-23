@@ -6,30 +6,30 @@ export default {
     {
       name: "characterName",
       title: "Character Name",
-      type: "string"
+      type: "string",
     },
     {
       name: "person",
       title: "Actor",
       type: "reference",
-      to: [{ type: "person" }]
+      to: [{ type: "person" }],
     },
     {
       name: "externalId",
       title: "External ID",
-      type: "number"
+      type: "number",
     },
     {
       name: "externalCreditId",
       title: "External Credit ID",
-      type: "string"
-    }
+      type: "string",
+    },
   ],
   preview: {
     select: {
       subtitle: "characterName",
       title: "person.name",
-      media: "person.image"
-    }
-  }
+      media: "person.image",
+    },
+  },
 };

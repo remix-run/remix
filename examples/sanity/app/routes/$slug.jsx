@@ -23,7 +23,7 @@ export async function loader({ request, params }) {
     preview,
     // If `preview` mode is active, we'll need these for live updates
     query: preview ? query : null,
-    queryParams: preview ? queryParams : null
+    queryParams: preview ? queryParams : null,
   };
 }
 

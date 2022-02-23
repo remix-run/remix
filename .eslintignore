@@ -2,3 +2,4 @@
 **/tests/__snapshots/
 **/node_modules/
 !.eslintrc.js
+/packages/remix-deno/deno.d.ts

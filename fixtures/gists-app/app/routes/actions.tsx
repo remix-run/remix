@@ -3,13 +3,13 @@ import {
   json,
   unstable_parseMultipartFormData as parseMultipartFormData,
   useActionData,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 import type { HeadersFunction, ActionFunction } from "remix";
 
 import { uploadHandler } from "../uploadHandler.server";
 
-export function loader() {
+export async function loader() {
   return "ay! data from the loader!";
 }
 
@@ -26,19 +26,19 @@ export let action: ActionFunction = async ({ request }) => {
   return json(
     {
       files,
-      message: `heyooo, data from the action: ${formData.get("field1")}`
+      message: `heyooo, data from the action: ${formData.get("field1")}`,
     },
     {
       headers: {
-        "x-test": "works"
-      }
+        "x-test": "works",
+      },
     }
   );
 };
 
 export let headers: HeadersFunction = ({ actionHeaders }) => {
   return {
-    "x-test": actionHeaders.get("x-test")!
+    "x-test": actionHeaders.get("x-test")!,
   };
 };
 

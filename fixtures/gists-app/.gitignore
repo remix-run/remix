@@ -4,3 +4,6 @@
 /public/build
 /public/uploads
 /yarn.lock
+/pnpm-lock.yaml
+/pnpm-lock.yml
+/package-lock.json

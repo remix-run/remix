@@ -1,15 +1,21 @@
 {
   "scripts": {
     "postinstall": "remix setup node",
-    "dev": "remix watch",
-    "start": "cross-env NODE_ENV=production node server/index.js",
-    "start:dev": "cross-env NODE_ENV=development node server/index.js"
+    "build": "cross-env NODE_ENV=production remix build",
+    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "dev:node": "cross-env NODE_ENV=development nodemon ./build/index.js",
+    "start": "cross-env NODE_ENV=production node ./build/index.js"
   },
   "dependencies": {
     "@remix-run/express": "*",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
     "express": "^4.17.1",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "npm-run-all": "^4.1.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
   }
 }

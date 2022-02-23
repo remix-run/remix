@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 import { createPost } from "~/post";
 
 export const action: ActionFunction = async ({ request }) => {
-  await new Promise(res => setTimeout(res, 1000));
+  await new Promise((res) => setTimeout(res, 1000));
   const formData = await request.formData();
   const title = formData.get("title");
   const slug = formData.get("slug");
@@ -50,7 +50,7 @@ export default function NewPost() {
         <label htmlFor="markdown">Markdown:</label>{" "}
         {errors?.markdown ? <em>Markdown is required</em> : null}
         <br />
-        <textarea rows={20} name="markdown" />
+        <textarea rows={20} name="markdown" id="markdown" />
       </p>
       <p>
         <button type="submit">

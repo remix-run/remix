@@ -10,12 +10,12 @@ export interface createPagesFunctionHandlerParams<Env = any> {
 export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
-  mode
+  mode,
 }: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
   let platform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
-  return context => {
+  return (context) => {
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(context)
@@ -29,12 +29,12 @@ declare const process: any;
 export function createPagesFunctionHandler<Env = any>({
   build,
   getLoadContext,
-  mode
+  mode,
 }: createPagesFunctionHandlerParams<Env>) {
   const handleRequest = createRequestHandler<Env>({
     build,
     getLoadContext,
-    mode
+    mode,
   });
 
   const handleFetch = async (context: EventContext<Env, any, any>) => {
@@ -48,9 +48,10 @@ export function createPagesFunctionHandler<Env = any>({
         context.request.url,
         context.request.clone()
       );
-      response = response?.ok
-        ? new Response(response.body, response)
-        : undefined;
+      response =
+        response && response.status >= 200 && response.status < 400
+          ? new Response(response.body, response)
+          : undefined;
     } catch {}
 
     if (!response) {
@@ -67,12 +68,12 @@ export function createPagesFunctionHandler<Env = any>({
       if (process.env.NODE_ENV === "development" && e instanceof Error) {
         console.error(e);
         return new Response(e.message || e.toString(), {
-          status: 500
+          status: 500,
         });
       }
 
       return new Response("Internal Error", {
-        status: 500
+        status: 500,
       });
     }
   };

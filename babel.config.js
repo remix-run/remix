@@ -4,15 +4,15 @@ module.exports = {
       "@babel/preset-env",
       {
         targets: {
-          node: "current"
-        }
-      }
+          node: "current",
+        },
+      },
     ],
     "@babel/preset-react",
-    "@babel/preset-typescript"
+    "@babel/preset-typescript",
   ],
   plugins: [
     "@babel/plugin-proposal-export-namespace-from",
-    "@babel/plugin-proposal-optional-chaining"
-  ]
+    "@babel/plugin-proposal-optional-chaining",
+  ],
 };
