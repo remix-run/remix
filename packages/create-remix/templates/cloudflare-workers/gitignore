@@ -5,5 +5,3 @@ node_modules
 /dist
 /public/build
 /.mf
-.env
-.env.*

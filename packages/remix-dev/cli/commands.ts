@@ -159,9 +159,6 @@ export async function dev(remixRoot: string, modeArg?: string) {
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
 
-  // Load .env files if present.  Precedence: .env.local -> .env.{mode} -> .env
-  await loadEnv(config.rootDirectory, "local");
-  await loadEnv(config.rootDirectory, mode);
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
