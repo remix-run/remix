@@ -33,6 +33,9 @@ export async function getRouteModuleExportsCached(
     }
   }
 
+  // TODO: Why is this here? The only purpose of this function is to cache the
+  // result of getRouteModuleExports! This should either be there or somewhere
+  // in the caller.
   // Layout routes can't have actions
   if (routeId.match(/\/__[\s\w\d_-]+$/) && cached.exports.includes("action")) {
     throw new Error(`Actions are not supported in layout routes: ${routeId}`);
