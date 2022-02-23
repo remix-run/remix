@@ -111,19 +111,20 @@ describe("prefetch=render", () => {
 
   it("adds prefetch tags on hydration", async () => {
     await app.goto("/");
-    const expectedLinks = [
-      // Both data and asset fetch for /with-loader
-      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
-      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
-      // Only asset fetch for /without-loader
-      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
-    ];
-    for (let i = 0; i < expectedLinks.length; i++) {
-      expect(await app.page.$(expectedLinks[i])).not.toBeNull();
-    }
+    // Both data and asset fetch for /with-loader
+    await app.page.waitForSelector(
+      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
+    );
+    await app.page.waitForSelector(
+      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
+    );
+    // Only asset fetch for /without-loader
+    await app.page.waitForSelector(
+      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
+    );
 
     // Ensure no other links in the #nav element
-    expect((await app.page.$$("#nav link")).length).toBe(expectedLinks.length);
+    expect((await app.page.$$("#nav link")).length).toBe(3);
   });
 });
 
