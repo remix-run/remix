@@ -153,30 +153,20 @@ describe("prefetch=intent (hover)", () => {
 
   it("adds prefetch tags on hover", async () => {
     await app.page.hover("a[href='/with-loader']");
-    await app.page.waitForTimeout(100);
-    const expectedLinks = [
-      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
-      // Check href prefix due to hashed filenames
-      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
-    ];
-    for (let i = 0; i < expectedLinks.length; i++) {
-      expect(await app.page.$(expectedLinks[i])).not.toBeNull();
-    }
-
-    // Ensure no other links in the #nav element
-    expect((await app.page.$$("#nav link")).length).toBe(expectedLinks.length);
+    await app.page.waitForSelector(
+      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
+    );
+    // Check href prefix due to hashed filenames
+    await app.page.waitForSelector(
+      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
+    );
+    expect((await app.page.$$("#nav link")).length).toBe(2);
 
     await app.page.hover("a[href='/without-loader']");
-    await app.page.waitForTimeout(100);
-    expectedLinks.push(
+    await app.page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
     );
-    for (let i = 0; i < expectedLinks.length; i++) {
-      expect(await app.page.$(expectedLinks[i])).not.toBeNull();
-    }
-
-    // Ensure no other links in the #nav element
-    expect((await app.page.$$("#nav link")).length).toBe(expectedLinks.length);
+    expect((await app.page.$$("#nav link")).length).toBe(3);
   });
 });
 
@@ -204,33 +194,24 @@ describe("prefetch=intent (focus)", () => {
     expect((await app.page.$$("#nav link")).length).toBe(0);
   });
 
-  // TODO: Focusing doesn't seem to work right in puppeteer?
   it("adds prefetch tags on focus", async () => {
+    // This click is needed to transfer focus to the main window, allowing
+    // subsequent focus events to fire
     await app.page.click("body");
     await app.page.focus("a[href='/with-loader']");
-    await app.page.waitForTimeout(100);
-    const expectedLinks = [
-      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
-      // Check href prefix due to hashed filenames
-      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
-    ];
-    for (let i = 0; i < expectedLinks.length; i++) {
-      expect(await app.page.$(expectedLinks[i])).not.toBeNull();
-    }
-
-    // Ensure no other links in the #nav element
-    expect((await app.page.$$("#nav link")).length).toBe(expectedLinks.length);
+    await app.page.waitForSelector(
+      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
+    );
+    // Check href prefix due to hashed filenames
+    await app.page.waitForSelector(
+      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
+    );
+    expect((await app.page.$$("#nav link")).length).toBe(2);
 
     await app.page.focus("a[href='/without-loader']");
-    await app.page.waitForTimeout(100);
-    expectedLinks.push(
+    await app.page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
     );
-    for (let i = 0; i < expectedLinks.length; i++) {
-      expect(await app.page.$(expectedLinks[i])).not.toBeNull();
-    }
-
-    // Ensure no other links in the #nav element
-    expect((await app.page.$$("#nav link")).length).toBe(expectedLinks.length);
+    expect((await app.page.$$("#nav link")).length).toBe(3);
   });
 });
