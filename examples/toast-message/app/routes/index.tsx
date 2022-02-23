@@ -45,12 +45,26 @@ export default function () {
         </label>
         <button>Submit</button>
       </Form>
-      <h2>Action handled by resource route</h2>
+      <h2>Action handled by resource route (fetcher.Form)</h2>
       <fetcher.Form method="post" action="/submit-secret">
         <label>
           Enter the secret number: <input name="number" type="text" required />
         </label>
         <button>Submit</button>
+      </fetcher.Form>
+      <h2>Action handled by resource route (fetcher.submit())</h2>
+      <fetcher.Form action="/submit-secret" method="post">
+        <label>
+          Enter the secret number: <input name="number" type="text" required />
+        </label>
+        <button
+          type="button"
+          onClick={event => {
+            fetcher.submit(event.currentTarget);
+          }}
+        >
+          Submit
+        </button>
       </fetcher.Form>
     </>
   );
