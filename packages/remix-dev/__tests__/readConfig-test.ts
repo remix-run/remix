@@ -19,7 +19,6 @@ describe("readConfig", () => {
         cacheDirectory: expect.any(String),
         serverBuildPath: expect.any(String),
         assetsBuildDirectory: expect.any(String),
-        assetsBuildDirectory: expect.any(String),
         unstable_cssModules: expect.any(Boolean),
       },
       `
