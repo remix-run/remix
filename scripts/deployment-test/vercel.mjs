@@ -2,18 +2,21 @@ import path from "path";
 import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import fetch from "node-fetch";
+import { createApp } from "create-remix";
 
 import {
   addCypress,
+  CYPRESS_CONFIG,
+  CYPRESS_SOURCE_DIR,
+  getAppDirectory,
   getAppName,
   getSpawnOpts,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
-import { createApp } from "create-remix";
 
 let APP_NAME = getAppName("vercel");
-let PROJECT_DIR = path.join(process.cwd(), APP_NAME);
+let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
 async function createNewApp() {
@@ -76,16 +79,8 @@ try {
   await validatePackageVersions(PROJECT_DIR);
 
   await Promise.all([
-    fse.copy(
-      path.join(process.cwd(), "cypress"),
-      path.join(PROJECT_DIR, "cypress")
-    ),
-
-    fse.copy(
-      path.join(process.cwd(), "cypress.json"),
-      path.join(PROJECT_DIR, "cypress.json")
-    ),
-
+    fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
+    fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 

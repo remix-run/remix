@@ -13,6 +13,6 @@ yarn-error.log
 .eslintcache
 .tmp
 
-/deployment-test
+/scripts/deployment-test/apps
 
 /.idea/

@@ -1,32 +1,35 @@
 import crypto from "crypto";
-import dns from "dns/promises";
-import https from "https";
 import path from "path";
+import { fileURLToPath } from "url";
 import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
 import semver from "semver";
 
-let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
+let __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function getAppName(target) {
+export function getAppDirectory(name) {
+  return path.join(__dirname, "apps", name);
+}
+
+export let CYPRESS_SOURCE_DIR = path.join(__dirname, "cypress");
+export let CYPRESS_CONFIG = path.join(__dirname, "cypress.json");
+
+export function getAppName(target) {
+  let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
   let unique = crypto.randomBytes(2).toString("hex");
   return `remix-${target}-${sha}-${unique}`;
 }
 
-async function updatePackageConfig(directory, transform) {
+export async function updatePackageConfig(directory, transform) {
   let file = path.join(directory, "package.json");
   let json = await jsonfile.readFile(file);
   transform(json);
   await jsonfile.writeFile(file, json, { spaces: 2 });
 }
 
-async function getSharedPackageJson() {
-  return jsonfile.readFile(path.join(process.cwd(), "package.json"));
-}
-
-async function addCypress(directory, url) {
-  let shared = await getSharedPackageJson();
+export async function addCypress(directory, url) {
+  let shared = await jsonfile.readFile(path.join(__dirname, "package.json"));
 
   await updatePackageConfig(directory, (config) => {
     config.devDependencies["start-server-and-test"] =
@@ -42,14 +45,14 @@ async function addCypress(directory, url) {
   });
 }
 
-function getSpawnOpts(dir) {
+export function getSpawnOpts(dir) {
   return {
     cwd: dir,
     stdio: "inherit",
   };
 }
 
-function runCypress(dir, dev, url) {
+export function runCypress(dir, dev, url) {
   let spawnOpts = getSpawnOpts(dir);
   let cypressSpawnOpts = {
     ...spawnOpts,
@@ -76,96 +79,49 @@ function runCypress(dir, dev, url) {
   }
 }
 
-async function checkUp(url) {
-  let hostname = new URL(url).hostname;
-  return new Promise(async (resolve, reject) => {
-    let statusCodeRetriesLeft = 10;
-    let dnsRetriesLeft = 10;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-    async function check() {
-      try {
-        console.log(`Checking ${url}`);
-        await dns.lookup(hostname);
-
-        https.get(url, (response) => {
-          if (response.statusCode === 200) {
-            clearInterval(checker);
-            console.log(`${url} returned a 200 status code`);
-            resolve();
-          } else {
-            statusCodeRetriesLeft -= 1;
-            if (statusCodeRetriesLeft === 0) {
-              clearInterval(checker);
-              reject(`${url} failed to return a 200 status code`);
-            }
-
-            console.log(
-              `${url} returned a ${response.statusCode} status code trying again in 10 seconds,`,
-              statusCodeRetriesLeft === 1
-                ? `${statusCodeRetriesLeft} retry left`
-                : `${statusCodeRetriesLeft} retries left`
-            );
-          }
-        });
-
-        clearInterval(checker);
-        console.log(`${url} returned a 200 status code`);
-        resolve();
-      } catch (error) {
-        dnsRetriesLeft -= 1;
-        if (dnsRetriesLeft === 0) {
-          clearInterval(checker);
-          reject(`${url} failed to return a 200 status code`);
-        }
-
-        console.log(
-          `Couldn't resolve ${url}, trying again in 10 seconds, ${dnsRetriesLeft} retries left`
-        );
-      }
-    }
-
-    await check();
-    let checker = setInterval(() => check(), 10_000);
+function retry(fn, delay, retries, error) {
+  if (retries === 0) {
+    return Promise.reject(error);
+  }
+  return fn().catch(async (error) => {
+    await wait(delay);
+    return retry(fn, retries - 1, error);
   });
+}
+
+export async function checkUp(url) {
+  async function checkAppServer() {
+    let response = await fetch(url);
+    if (response.status >= 200 && response.status < 400) {
+      console.log("App server is up");
+      return;
+    }
+    throw new Error(`App server is not up: ${response.status}`);
+  }
+
+  await retry(checkAppServer, 10_000, 10);
 }
 
 async function verifyPackageIsAvailable(packageName, version) {
-  return new Promise(async (resolve, reject) => {
-    let retriesLeft = 4;
-
-    async function check() {
-      try {
-        console.log(`checking ${packageName}@${version} is available`);
-        let res = await fetch(
-          `https://registry.npmjs.org/${packageName}/${version}`
-        );
-        if (res.status !== 200) {
-          throw new Error(`${packageName}@${version} is not available`);
-        }
-        clearInterval(timerId);
-        console.log(`${packageName}@${version} is available`);
-        resolve();
-      } catch (error) {
-        retriesLeft -= 1;
-        if (retriesLeft > 0) {
-          console.error(
-            `${packageName}@${version} is not available, retrying in 5 seconds, ${retriesLeft} ${
-              retriesLeft === 1 ? "retry" : "retries"
-            } left`
-          );
-        } else {
-          clearInterval(timerId);
-          console.error(`giving up`);
-          reject();
-        }
-      }
+  async function getPackage() {
+    let response = await fetch(
+      `https://registry.npmjs.org/${packageName}/${version}`
+    );
+    if (response.status >= 200 && response.status < 400) {
+      console.log(`Package ${packageName}@${version} is available`);
+      return;
     }
+    throw new Error(
+      `Package ${packageName}@${version} is not available: ${response.status}`
+    );
+  }
 
-    let timerId = setInterval(() => check(), 5_000);
-  });
+  await retry(getPackage, 5_000, 4);
 }
 
-async function validatePackageVersions(directory) {
+export async function validatePackageVersions(directory) {
   let packageJson = jsonfile.readFileSync(path.join(directory, "package.json"));
   let devDependencies = packageJson.devDependencies || {};
   let dependencies = packageJson.dependencies || {};
@@ -181,13 +137,3 @@ async function validatePackageVersions(directory) {
     })
   );
 }
-
-export {
-  addCypress,
-  checkUp,
-  getAppName,
-  getSpawnOpts,
-  runCypress,
-  updatePackageConfig,
-  validatePackageVersions,
-};
