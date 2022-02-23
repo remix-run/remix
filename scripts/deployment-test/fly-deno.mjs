@@ -6,7 +6,7 @@ import toml from "@iarna/toml";
 import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
 import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-fly-${sha}`;
+let APP_NAME = `remix-fly-deno-${sha}`;
 let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8000";
 
