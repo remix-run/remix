@@ -19,6 +19,8 @@ describe("readConfig", () => {
         cacheDirectory: expect.any(String),
         serverBuildPath: expect.any(String),
         assetsBuildDirectory: expect.any(String),
+        assetsBuildDirectory: expect.any(String),
+        unstable_cssModules: expect.any(Boolean),
       },
       `
       Object {
@@ -415,6 +417,7 @@ describe("readConfig", () => {
         "serverMode": "production",
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",
+        "unstable_cssModules": Any<Boolean>,
       }
     `
     );

@@ -26,6 +26,8 @@
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "minimatch": "^3.0.4",
+    "postcss": "^8.4.6",
+    "postcss-modules": "^4.3.0",
     "pretty-ms": "^7.0.1",
     "read-package-json-fast": "^2.0.2",
     "remark-frontmatter": "^4.0.0",

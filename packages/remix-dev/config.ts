@@ -147,6 +147,14 @@ export interface AppConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle?: Array<string | RegExp>;
+
+  /**
+   * Adds experimental support for CSS module imports.
+   *
+   * **Warning:** The API and implementation of experimental features may change
+   * between minor and patch versions.
+   */
+  unstable_cssModules?: boolean;
 }
 
 /**
@@ -250,6 +258,14 @@ export interface RemixConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle: Array<string | RegExp>;
+
+  /**
+   * Adds experimental support for CSS module imports.
+   *
+   * **Warning:** The API and implementation of experimental features may change
+   * between minor and patch versions.
+   */
+  unstable_cssModules?: boolean;
 }
 
 /**
@@ -395,6 +411,8 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  let unstable_cssModules = appConfig.unstable_cssModules || false;
+
   return {
     appDirectory,
     cacheDirectory,
@@ -415,6 +433,7 @@ export async function readConfig(
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
     mdx,
+    unstable_cssModules,
   };
 }
 

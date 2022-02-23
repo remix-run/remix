@@ -11,6 +11,7 @@ import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import { warnOnce } from "./warnings";
 import type { AssetsManifest } from "./compiler/assets";
+import type { RootAssets } from "./compiler/assets";
 import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders } from "./compiler/loaders";
@@ -22,7 +23,12 @@ import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManif
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
+import {
+  cssModulesClientPlugin,
+  cssModulesServerPlugin,
+} from "./compiler/plugins/css-modules";
 import { writeFileSafe } from "./compiler/utils/fs";
+import { getHash } from "./compiler/utils/crypto";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -61,7 +67,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
   console.error(failure?.message || "An unknown build error occurred");
 }
 
-interface BuildOptions extends Partial<BuildConfig> {
+export interface BuildOptions extends Partial<BuildConfig> {
   onWarning?(message: string, key: string): void;
   onBuildFailure?(failure: Error | esbuild.BuildFailure): void;
 }
@@ -278,13 +284,30 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+interface BrowserBuildResult extends esbuild.BuildResult {
+  rootAssets: RootAssets;
+}
+
+type ServerBuildResult = esbuild.BuildResult;
+
 async function buildEverything(
   config: RemixConfig,
   assetsManifestPromiseRef: AssetsManifestPromiseRef,
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
+  let cssModulesContent = "";
+  let cssHashSource = "";
+  function handleProcessedCss(args: { css: string; hash: string }) {
+    cssModulesContent += args.css;
+    cssHashSource += args.hash;
+  }
+
   try {
-    let browserBuildPromise = createBrowserBuild(config, options);
+    let browserBuildPromise = createBrowserBuild(
+      config,
+      options,
+      handleProcessedCss
+    );
     let assetsManifestPromise = browserBuildPromise.then((build) =>
       generateAssetsManifest(config, build.metafile!)
     );
@@ -299,8 +322,43 @@ async function buildEverything(
       assetsManifestPromiseRef
     );
 
+    let supportsCssModules = config.unstable_cssModules === true;
+    let cssModuleHash = getHash(cssHashSource).slice(0, 8).toUpperCase();
+    let cssModuleFilePath = path.resolve(
+      config.assetsBuildDirectory,
+      `__modules.css`
+    );
+
     return await Promise.all([
-      assetsManifestPromise.then(() => browserBuildPromise),
+      assetsManifestPromise
+        .then(() => browserBuildPromise)
+        .then(async (build) => {
+          let cssModulePromise: Promise<any> | null = null;
+          if (supportsCssModules && cssModulesContent) {
+            cssModuleFilePath = cssModuleFilePath.replace(
+              /\.css$/,
+              `-${cssModuleHash}.css`
+            );
+            cssModulePromise = fse.writeFile(
+              cssModuleFilePath,
+              cssModulesContent
+            );
+          }
+
+          let rootAssets: RootAssets = {
+            cssModules: cssModuleFilePath,
+          };
+
+          await Promise.all([
+            cssModulePromise,
+            generateAssetsManifest(config, build.metafile!, rootAssets),
+          ]);
+
+          return {
+            ...build,
+            rootAssets,
+          };
+        }),
       serverBuildPromise,
     ]);
   } catch (err) {
@@ -311,8 +369,9 @@ async function buildEverything(
 
 async function createBrowserBuild(
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
-): Promise<esbuild.BuildResult> {
+  options: BuildOptions & { incremental?: boolean },
+  handleProcessedCss: (args: { css: string; hash: string }) => void
+): Promise<BrowserBuildResult> {
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
   // *actually* be external in the browser build (we want to bundle all deps) so
@@ -335,13 +394,13 @@ async function createBrowserBuild(
   };
   for (let id of Object.keys(config.routes)) {
     // All route entry points are virtual modules that will be loaded by the
-    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+    // browserRouteModulesPlugin. This allows us to tree-shake server-only code
     // that we don't want to run in the browser (i.e. action & loader).
     entryPoints[id] =
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  return esbuild.build({
+  let build = await esbuild.build({
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
@@ -375,13 +434,20 @@ async function createBrowserBuild(
       NodeModulesPolyfillPlugin(),
     ],
   });
+
+  return {
+    ...build,
+    rootAssets: {
+      cssModules: undefined,
+    },
+  };
 }
 
 async function createServerBuild(
   config: RemixConfig,
   options: Required<BuildOptions> & { incremental?: boolean },
   assetsManifestPromiseRef: AssetsManifestPromiseRef
-): Promise<esbuild.BuildResult> {
+): Promise<ServerBuildResult> {
   let dependencies = await getAppDependencies(config);
 
   let stdin: esbuild.StdinOptions | undefined;
@@ -398,6 +464,7 @@ async function createServerBuild(
   }
 
   let plugins: esbuild.Plugin[] = [
+    cssModulesServerPlugin(config),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
@@ -457,9 +524,10 @@ async function createServerBuild(
 
 async function generateAssetsManifest(
   config: RemixConfig,
-  metafile: esbuild.Metafile
+  metafile: esbuild.Metafile,
+  rootAssets?: RootAssets
 ): Promise<AssetsManifest> {
-  let assetsManifest = await createAssetsManifest(config, metafile);
+  let assetsManifest = await createAssetsManifest(config, metafile, rootAssets);
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
 
   assetsManifest.url = config.publicPath + filename;

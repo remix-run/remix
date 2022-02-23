@@ -27,7 +27,11 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
+  rootAssets: RootAssets;
 }
+
+type RootAssetType = "cssModules";
+type RootAssets = Partial<Record<RootAssetType, string>>;
 
 export function createEntryMatches(
   matches: RouteMatch<ServerRoute>[],

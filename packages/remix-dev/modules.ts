@@ -6,6 +6,10 @@ declare module "*.css" {
   const asset: string;
   export default asset;
 }
+declare module "*.module.css" {
+  const asset: { [key: string]: string };
+  export default asset;
+}
 declare module "*.eot" {
   const asset: string;
   export default asset;

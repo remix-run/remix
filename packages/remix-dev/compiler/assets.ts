@@ -31,6 +31,7 @@ export interface AssetsManifest {
       hasErrorBoundary: boolean;
     };
   };
+  rootAssets: RootAssets;
 }
 
 export async function createAssetsManifest(
