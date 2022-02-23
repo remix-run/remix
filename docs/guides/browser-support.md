@@ -4,25 +4,20 @@ title: Browser Support
 
 # Browser Support
 
-Thanks to first-class support for [Progressive Enhancement][pe], Remix apps can support browsers as old as Netscape 1.0! This works because Remix server renders and fully supports `<form>` for mutations. Rather than JavaScript _enabling_ the app to work, in a Remix app, JavaScript enhances the user experience of the app. App functionality is the baseline. Yep, you read that right:
+Remix only runs in browsers that support [ES Modules][esm-browsers].
 
-<docs-success>Remix supports IE11 and _older_.</docs-success>
+Usually teams are concerned about IE11 support when asking this question. Note that [Microsoft itself has stopped supporting this browser][msie] for their web applications and it's probably time for you, too.
 
-This is the case even if the libraries you're using to enhance the UX don't support older browsers.
+However, thanks to first-class support for [Progressive Enhancement][pe], Remix apps can support browsers as old as Netscape 1.0! This works because Remix is built on the foundations of the web: HTML, HTTP, and browser behavior. By following Remix conventions, your app can work at a baseline level for IE11, while still providing a highly interactive SPA experience for modern browsers. It doesn't take much effort on your part to achieve this, either.
 
-So the question is less: "which browsers does Remix support" and more "which browsers can be progressively enhanced." The answer to that is: ["browsers that support `<script type="modlue">`."][esm-browsers]
-
-It's pretty simple, here's how it works:
+Here's how it works. The Remix `<Scripts/>` component renders module script tags like this:
 
 ```html
-<script type="module">
-  <!-- Modern browser! -->
-</script>
+<script type="module" src="..." />
 ```
 
-For older browsers, they just ignore that `script` tag because they don't understand the `type`. So no JavaScript is loaded and links (GETs) and forms (POSTs) work the way they've always worked. Your actions will be called exactly the same way regardless of the browser making those requests.
-
-This is the power of progressive enhancement. Your mental model stays the same and you support every browser your users are using.
+Older browsers ignore it because they don't understand the `type`, so no JavaScript is loaded. Links, loaders, forms, and actions still work because they are built on the foundations of HTML, HTTP and browser behavior. Modern browsers will load the scripts, providing enhanced SPA behavior with faster transitions and the enhanced UX of your application code.
 
 [pe]: https://en.wikipedia.org/wiki/Progressive_enhancement
 [esm-browsers]: https://caniuse.com/es6-module
+[msie]:https://techcommunity.microsoft.com/t5/microsoft-365-blog/microsoft-365-apps-say-farewell-to-internet-explorer-11-and/ba-p/1591666
