@@ -1,4 +1,5 @@
-// import type { Location } from "history";
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Location } from "history";
 import { parsePath } from "history";
 
@@ -8,6 +9,12 @@ import type { RouteMatch } from "./routeMatching";
 // import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, RouteModule } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
+
+type Primitive = null | undefined | string | number | boolean | symbol | bigint;
+
+type LiteralUnion<LiteralType, BaseType extends Primitive> =
+  | LiteralType
+  | (BaseType & Record<never, never>);
 
 /**
  * Represents a `<link>` element.
@@ -28,7 +35,7 @@ export interface HtmlLinkDescriptor {
   /**
    * Relationship between the document containing the hyperlink and the destination resource
    */
-  rel:
+  rel: LiteralUnion<
     | "alternate"
     | "dns-prefetch"
     | "icon"
@@ -41,8 +48,9 @@ export interface HtmlLinkDescriptor {
     | "preload"
     | "prerender"
     | "search"
-    | "stylesheet"
-    | string;
+    | "stylesheet",
+    string
+  >;
 
   /**
    * Applicable media: "screen", "print", "(max-width: 764px)"
@@ -96,7 +104,7 @@ export interface HtmlLinkDescriptor {
   /**
    * Potential destination for a preload request (for rel="preload" and rel="modulepreload")
    */
-  as?:
+  as?: LiteralUnion<
     | "audio"
     | "audioworklet"
     | "document"
@@ -117,8 +125,9 @@ export interface HtmlLinkDescriptor {
     | "track"
     | "video"
     | "worker"
-    | "xslt"
-    | string;
+    | "xslt",
+    string
+  >;
 
   /**
    * Color to use when customizing a site's icon (for rel="mask-icon")
@@ -195,7 +204,7 @@ export async function prefetchStyleLinks(
 
   // don't block for non-matching media queries
   let matchingLinks = styleLinks.filter(
-    link => !link.media || window.matchMedia(link.media).matches
+    (link) => !link.media || window.matchMedia(link.media).matches
   );
 
   await Promise.all(matchingLinks.map(prefetchStyleLink));
@@ -204,7 +213,7 @@ export async function prefetchStyleLinks(
 async function prefetchStyleLink(
   descriptor: HtmlLinkDescriptor
 ): Promise<void> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     let link = document.createElement("link");
     Object.assign(link, descriptor);
 
@@ -253,7 +262,7 @@ export async function getStylesheetPrefetchLinks(
   routeModules: RouteModules
 ) {
   let links = await Promise.all(
-    matches.map(async match => {
+    matches.map(async (match) => {
       let mod = await loadRouteModule(match.route, routeModules);
       return mod.links ? mod.links() : [];
     })
@@ -262,13 +271,12 @@ export async function getStylesheetPrefetchLinks(
   return links
     .flat(1)
     .filter(isHtmlLinkDescriptor)
-    .filter(link => link.rel === "stylesheet" || link.rel === "preload")
-    .map(({ rel, ...attrs }) => {
-      if (rel === "preload") {
-        return { rel: "prefetch", ...attrs };
-      }
-      return { rel: "prefetch", as: "style", ...attrs };
-    });
+    .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
+    .map(({ rel, ...attrs }) =>
+      rel === "preload"
+        ? { rel: "prefetch", ...attrs }
+        : { rel: "prefetch", as: "style", ...attrs }
+    );
 }
 
 // This is ridiculously identical to transition.ts `filterMatchesToLoad`
@@ -319,7 +327,7 @@ export function getNewMatchesForLinks(
                 location.pathname + location.search + location.hash,
                 window.origin
               ),
-              url: new URL(page, window.origin)
+              url: new URL(page, window.origin),
             });
           }
           return true;
@@ -342,11 +350,11 @@ export function getDataLinkHrefs(
   let path = parsePathPatch(page);
   return dedupeHrefs(
     matches
-      .filter(match => manifest.routes[match.route.id].hasLoader)
-      .map(match => {
+      .filter((match) => manifest.routes[match.route.id].hasLoader)
+      .map((match) => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
-        searchParams.append("_data", match.route.id);
+        searchParams.set("_data", match.route.id);
         return `${pathname}?${searchParams}`;
       })
   );
@@ -358,7 +366,7 @@ export function getModuleLinkHrefs(
 ): string[] {
   return dedupeHrefs(
     matches
-      .map(match => {
+      .map((match) => {
         let route = manifestPatch.routes[match.route.id];
         let hrefs = [route.module];
         if (route.imports) {
@@ -379,7 +387,7 @@ function getCurrentPageModulePreloadHrefs(
 ): string[] {
   return dedupeHrefs(
     matches
-      .map(match => {
+      .map((match) => {
         let route = manifest.routes[match.route.id];
         let hrefs = [route.module];
 

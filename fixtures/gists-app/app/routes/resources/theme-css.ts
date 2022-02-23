@@ -1,26 +1,7 @@
 import type { ActionFunction, LoaderFunction } from "remix";
 import { redirect } from "remix";
-import { createCookieSessionStorage } from "remix";
 
-export let sessionStorage = createCookieSessionStorage({
-  cookie: {
-    name: "theme-css",
-    secrets: ["fjdlafjdkla"]
-  }
-});
-
-export let defaultStyles: Record<string, string> = {
-  "--nc-tx-1": "#ffffff",
-  "--nc-tx-2": "#eeeeee",
-  "--nc-bg-1": "#000000",
-  "--nc-bg-2": "#111111",
-  "--nc-bg-3": "#222222",
-  "--nc-lk-1": "#3291FF",
-  "--nc-lk-2": "#0070F3",
-  "--nc-lk-tx": "#FFFFFF",
-  "--nc-ac-1": "#7928CA",
-  "--nc-ac-tx": "#FFFFFF"
-};
+import { defaultStyles, sessionStorage } from "~/themes.server";
 
 export let action: ActionFunction = async ({ request }) => {
   let formData = new URLSearchParams(await request.text());
@@ -31,8 +12,8 @@ export let action: ActionFunction = async ({ request }) => {
   if (formData.get("event") === "reset") {
     return redirect("/resources/settings", {
       headers: {
-        "Set-Cookie": await sessionStorage.destroySession(session)
-      }
+        "Set-Cookie": await sessionStorage.destroySession(session),
+      },
     });
   }
 
@@ -46,8 +27,8 @@ export let action: ActionFunction = async ({ request }) => {
 
   return redirect("/resources/settings", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 };
 
@@ -62,15 +43,15 @@ export let loader: LoaderFunction = async ({ request }) => {
     .map(([key, value]) =>
       defaultStyles[key] && value ? `${key}: ${value};` : false
     )
-    .filter(s => s)
+    .filter((s) => s)
     .join("\n  ")}
 }
   `,
     {
       headers: {
         "Content-Type": "text/css; charset=UTF-8",
-        "x-has-custom": Object.keys(custom).length > 0 ? "yes" : "no"
-      }
+        "x-has-custom": Object.keys(custom).length > 0 ? "yes" : "no",
+      },
     }
   );
 };

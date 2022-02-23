@@ -2,7 +2,7 @@ import type {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
-  RouteComponent
+  RouteComponent,
 } from "remix";
 import { redirect, json, Form } from "remix";
 
@@ -21,7 +21,7 @@ let action: ActionFunction = async () => {
 };
 
 let meta: MetaFunction = () => ({
-  title: "Multi Set Cookie Headers"
+  title: "Multi Set Cookie Headers",
 });
 
 let MultipleSetCookiesPage: RouteComponent = () => {

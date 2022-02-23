@@ -12,13 +12,13 @@ In general, you don't need the concept of "API Routes" at all. But we knew you'd
 
 Consider this route:
 
-```tsx filename=routes/teams.js
-export function loader() {
+```tsx filename=routes/teams.tsx
+export async function loader() {
   return getTeams();
 }
 
 export default function Teams() {
-  return <TeamsView teams={useLoaderData()}>
+  return <TeamsView teams={useLoaderData()} />;
 }
 ```
 
@@ -33,7 +33,7 @@ You can `useFetcher` for cases like this. And once again, since Remix in the bro
 For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
-export function loader({ request }) {
+export async function loader({ request }) {
   const url = new URL(request.url);
   return searchCities(url.searchParams.get("q"));
 }
@@ -51,7 +51,7 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="q"
-            onChange={event =>
+            onChange={(event) =>
               cities.submit(event.target.form)
             }
           />
@@ -66,7 +66,7 @@ function CitySearchCombobox() {
               <p>Failed to load cities :(</p>
             ) : cities.data.length ? (
               <ComboboxList>
-                {cities.data.map(city => (
+                {cities.data.map((city) => (
                   <ComboboxOption
                     key={city.id}
                     value={city.name}
@@ -89,14 +89,14 @@ function CitySearchCombobox() {
 In other cases, you may need routes that are part of your application, but aren't part of your application's UI. Maybe you want a loader that renders a report as a PDF:
 
 ```tsx
-export function loader({ params }) {
+export async function loader({ params }) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```

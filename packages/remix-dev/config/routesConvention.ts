@@ -29,10 +29,10 @@ export function defineConventionalRoutes(
   let files: { [routeId: string]: string } = {};
 
   // First, find all route modules in app/routes
-  visitFiles(path.join(appDir, "routes"), file => {
+  visitFiles(path.join(appDir, "routes"), (file) => {
     if (
       ignoredFilePatterns &&
-      ignoredFilePatterns.some(pattern => minimatch(file, pattern))
+      ignoredFilePatterns.some((pattern) => minimatch(file, pattern))
     ) {
       return;
     }
@@ -58,7 +58,7 @@ export function defineConventionalRoutes(
     parentId?: string
   ): void {
     let childRouteIds = routeIds.filter(
-      id => findParentRouteId(routeIds, id) === parentId
+      (id) => findParentRouteId(routeIds, id) === parentId
     );
 
     for (let routeId of childRouteIds) {
@@ -70,7 +70,7 @@ export function defineConventionalRoutes(
       let fullPath = createRoutePath(routeId.slice("routes".length + 1));
       let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
 
-      if (typeof uniqueRouteId !== "undefined") {
+      if (uniqueRouteId) {
         if (uniqueRoutes.has(uniqueRouteId)) {
           throw new Error(
             `Path ${JSON.stringify(fullPath)} defined by route ${JSON.stringify(
@@ -86,7 +86,7 @@ export function defineConventionalRoutes(
 
       if (isIndexRoute) {
         let invalidChildRoutes = routeIds.filter(
-          id => findParentRouteId(routeIds, id) === routeId
+          (id) => findParentRouteId(routeIds, id) === routeId
         );
 
         if (invalidChildRoutes.length > 0) {
@@ -96,7 +96,7 @@ export function defineConventionalRoutes(
         }
 
         defineRoute(routePath, files[routeId], {
-          index: true
+          index: true,
         });
       } else {
         defineRoute(routePath, files[routeId], () => {
@@ -197,7 +197,7 @@ function findParentRouteId(
   routeIds: string[],
   childRouteId: string
 ): string | undefined {
-  return routeIds.find(id => childRouteId.startsWith(`${id}/`));
+  return routeIds.find((id) => childRouteId.startsWith(`${id}/`));
 }
 
 function byLongestFirst(a: string, b: string): number {

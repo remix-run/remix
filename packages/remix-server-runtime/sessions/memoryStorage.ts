@@ -1,7 +1,7 @@
 import type {
   SessionData,
   SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
 } from "../sessions";
 import { createSessionStorage } from "../sessions";
 
@@ -19,9 +19,11 @@ interface MemorySessionStorageOptions {
  *
  * Note: This storage does not scale beyond a single process, so it is not
  * suitable for most production scenarios.
+ *
+ * @see https://remix.run/api/remix#creatememorysessionstorage
  */
 export function createMemorySessionStorage({
-  cookie
+  cookie,
 }: MemorySessionStorageOptions = {}): SessionStorage {
   let uniqueId = 0;
   let map = new Map<string, { data: SessionData; expires?: Date }>();
@@ -52,6 +54,6 @@ export function createMemorySessionStorage({
     },
     async deleteData(id) {
       map.delete(id);
-    }
+    },
   });
 }

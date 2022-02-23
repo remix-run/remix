@@ -14,7 +14,7 @@ Usually, the difficulty with cache headers is configuring them. In Remix we've m
 ```tsx
 export function headers() {
   return {
-    "Cache-Control": "public, max-age=300, s-maxage=3600"
+    "Cache-Control": "public, max-age=300, s-maxage=3600",
   };
 }
 
@@ -53,12 +53,12 @@ Open up `app/routes/gists.ts` and update your headers function like so:
 
 ```tsx
 export function headers({
-  loaderHeaders
+  loaderHeaders,
 }: {
   loaderHeaders: Headers;
 }) {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
+    "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
 }
 ```

@@ -1,0 +1,6 @@
+.ui--member-search__selections {
+  margin-top: var(--spaces-01);
+  gap: var(--spaces-01);
+  display: flex;
+  flex-wrap: wrap;
+}

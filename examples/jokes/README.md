@@ -1,4 +1,10 @@
-# Welcome to Remix!
+# Remix Jokes!
+
+So great, it's funny!
+
+Production deploy here: https://remix-jokes.lol
+
+Tutorial here: https://rmx.as/jokes
 
 This example demonstrates some of the basic features of Remix, including:
 
@@ -49,4 +55,4 @@ npm start
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)
