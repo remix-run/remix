@@ -2,18 +2,21 @@ import path from "path";
 import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
+import { createApp } from "create-remix";
 
 import {
   addCypress,
+  CYPRESS_CONFIG,
+  CYPRESS_SOURCE_DIR,
+  getAppDirectory,
   getAppName,
   getSpawnOpts,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = getAppName("cf-workers");
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8787";
 
 async function createNewApp() {
@@ -35,16 +38,8 @@ try {
 
   // add cypress to the project
   await Promise.all([
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress"),
-      path.join(PROJECT_DIR, "cypress")
-    ),
-
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-      path.join(PROJECT_DIR, "cypress.json")
-    ),
-
+    fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
+    fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 

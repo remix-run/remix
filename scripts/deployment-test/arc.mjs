@@ -4,20 +4,23 @@ import aws from "aws-sdk";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
+import { createApp } from "create-remix";
 
 import {
   addCypress,
+  CYPRESS_CONFIG,
+  CYPRESS_SOURCE_DIR,
+  getAppDirectory,
   getAppName,
   getSpawnOpts,
   runCypress,
   updatePackageConfig,
   validatePackageVersions,
 } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
 
 let APP_NAME = getAppName("arc");
 let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let PROJECT_DIR = getAppDirectory(APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 let CYPRESS_DEV_URL = "http://localhost:3333";
 
@@ -52,18 +55,9 @@ try {
   await validatePackageVersions(PROJECT_DIR);
 
   await Promise.all([
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress"),
-      path.join(PROJECT_DIR, "cypress")
-    ),
-
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-      path.join(PROJECT_DIR, "cypress.json")
-    ),
-
+    fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
+    fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
-
     updatePackageConfig(PROJECT_DIR, (config) => {
       config.devDependencies["@architect/architect"] = "latest";
     }),
