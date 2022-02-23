@@ -2,10 +2,9 @@ import * as path from "path";
 import chalkAnimation from "chalk-animation";
 import inquirer from "inquirer";
 import meow from "meow";
-import gitUrlParse from "git-url-parse";
 
-import { getProjectDir, getRepoInfo, stacks } from ".";
-import type { Lang, Server, Stack, RequireExactlyOne } from ".";
+import type { Lang, Server } from ".";
+import { servers } from ".";
 import { createApp } from ".";
 
 const help = `
@@ -18,6 +17,12 @@ const help = `
     --help, -h          Show this help message
     --version, -v       Show the version of this script
     --template, -t      The template to use for the app
+
+  Examples:
+    $ npx create-remix --template express-template
+    $ npx create-remix --template :username/:repo
+    $ npx create-remix --template https://github.com/:username/:repo
+    $ npx create-remix --template https://github.com/:username/:repo/tree/:branch
 `;
 
 run().then(
@@ -49,49 +54,6 @@ async function run() {
   console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
   console.log();
 
-  if (flags.template) {
-    let repoInfo;
-    try {
-      let parsed = gitUrlParse(flags.template);
-      // we'll validate in getRepoInfo
-      repoInfo = await getRepoInfo(parsed as any);
-    } catch (error) {
-      try {
-        // if we were given a template but it's not a valid git url, (or shorthand)
-        // we'll assume it's an example
-        repoInfo = await getRepoInfo({
-          filePath: `examples/${flags.template}`,
-          name: "remix",
-          owner: "remix-run",
-          branch: "main"
-        });
-      } catch (error) {
-        console.log(`️🚨 Oops, ${flags.template} is not a valid GitHub repo.`);
-        process.exit(1);
-      }
-    }
-
-    if (!repoInfo) {
-      console.log(`️🚨 Oops, no repo info`);
-      process.exit(1);
-    }
-
-    // allow passing a directory name or use the template's `{name}-{branch}`
-    let projectDir = path.resolve(
-      process.cwd(),
-      input.length > 0 ? input[0] : getProjectDir(repoInfo)
-    );
-
-    await createApp({
-      projectDir,
-      lang: "ts",
-      install: false,
-      repo: repoInfo
-    });
-
-    return;
-  }
-
   // Figure out the app directory
   let projectDir = path.resolve(
     process.cwd(),
@@ -109,77 +71,39 @@ async function run() {
         ).dir
   );
 
-  let answers = await inquirer.prompt<
-    RequireExactlyOne<
-      {
-        appType?: "stack" | "basic";
-        server: Server;
-        stack: Stack;
-        lang: Lang;
-        install: boolean;
-      },
-      "server" | "stack"
-    >
-  >([
-    {
-      name: "appType",
-      type: "list",
-      message: "What type of app do you want to create?",
-      when() {
-        return path.basename(projectDir).endsWith("-stack");
-      },
-      choices: [
-        {
-          name: "A pre-configured stack ready for production",
-          value: "stack"
-        },
-        {
-          name: "Just the basics",
-          value: "basic"
-        }
-      ]
-    },
-    {
-      name: "stack",
-      type: "list",
-      message: "Where do you want to deploy your stack?",
-      loop: false,
-      when(answers) {
-        return answers.appType === "stack";
-      },
-      choices: Object.keys(stacks).map(key => ({
-        name: stacks[key].name,
-        value: stacks[key]
-      }))
-    },
+  if (flags.template) {
+    await createApp({
+      projectDir,
+      lang: "ts",
+      install: false,
+      repo: flags.template
+    });
+
+    return;
+  }
+
+  let answers = await inquirer.prompt<{
+    server: Server;
+    lang: Lang;
+    install: boolean;
+  }>([
     {
       name: "server",
       type: "list",
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
-      when(answers) {
-        return answers.appType !== "stack";
-      },
-      choices: [
-        { name: "Remix App Server", value: "remix" },
-        { name: "Express Server", value: "express" },
-        { name: "Architect (AWS Lambda)", value: "arc" },
-        { name: "Fly.io", value: "fly" },
-        { name: "Netlify", value: "netlify" },
-        { name: "Vercel", value: "vercel" },
-        { name: "Cloudflare Pages", value: "cloudflare-pages" },
-        { name: "Cloudflare Workers", value: "cloudflare-workers" },
-        { name: "Deno (experimental)", value: "deno" }
-      ]
+      choices: Object.entries(servers).map(([server, repoInfo]) => {
+        return {
+          name: server,
+          value: repoInfo
+        };
+      })
     },
     {
       name: "lang",
       type: "list",
       message: "TypeScript or JavaScript?",
-      when(answers) {
-        return answers.appType !== "stack";
-      },
       choices: [
         { name: "TypeScript", value: "ts" },
         { name: "JavaScript", value: "js" }
@@ -193,23 +117,12 @@ async function run() {
     }
   ]);
 
-  console.log({ answers });
-
-  if (answers.stack) {
-    await createApp({
-      projectDir,
-      repo: answers.stack,
-      lang: answers.lang,
-      install: answers.install
-    });
-  } else {
-    await createApp({
-      projectDir,
-      lang: answers.lang,
-      server: answers.server,
-      install: answers.install
-    });
-  }
+  await createApp({
+    projectDir,
+    lang: answers.lang,
+    repo: answers.server,
+    install: answers.install
+  });
 
   return;
 }
