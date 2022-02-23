@@ -7,9 +7,9 @@ export function meta() {
 export default function Boundaries() {
   return (
     <div className="remix__page">
-      <section>
+      <main>
         <Outlet />
-      </section>
+      </main>
 
       <aside>
         <h2>Click these Links</h2>
