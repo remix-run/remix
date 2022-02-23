@@ -4,13 +4,13 @@
   "description": "",
   "license": "",
   "scripts": {
-    "build": "node -r dotenv/config node_modules/.bin/remix build",
-    "dev": "node -r dotenv/config node_modules/.bin/remix dev",
+    "build": "NODE_OPTIONS=\"-r dotenv/config\" node_modules/.bin/remix build",
+    "dev": "NODE_OPTIONS=\"-r dotenv/config\" node_modules/.bin/remix dev",
     "generate:types": "graphql-codegen",
     "postinstall": "remix setup node",
     "prebuild": "npm run generate:types",
     "predev": "npm run generate:types",
-    "start": "remix-serve build"
+    "start": "NODE_OPTIONS=\"-r dotenv/config\" remix-serve build"
   },
   "dependencies": {
     "@remix-run/react": "1.1.3",
