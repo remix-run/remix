@@ -7,7 +7,6 @@ export async function loadEnv(rootDirectory: string): Promise<void> {
   try {
     await fsp.readFile(envPath);
   } catch (e) {
-    // Fail gracefully if file doesn't exist
     return;
   }
 

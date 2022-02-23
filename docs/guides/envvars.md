@@ -30,7 +30,7 @@ Environment variables on your server will be handled by your host, for example:
 
 If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
 
-In order to set up local-development environment variables, you can do this very quickly:
+If you're using the `remix dev` server, you can do this very quickly:
 
 ```sh
 touch .env

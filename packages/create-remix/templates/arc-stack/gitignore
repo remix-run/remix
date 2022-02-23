@@ -5,4 +5,5 @@ node_modules
 preferences.arc
 sam.json
 sam.yaml
+
 .env
