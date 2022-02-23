@@ -8,6 +8,7 @@ import tar from "tar-fs";
 import gitUrlParse from "git-url-parse";
 import stream from "stream";
 import { promisify } from "util";
+import URL from "url";
 
 import cliPkgJson from "./package.json";
 
@@ -74,9 +75,12 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
   let parsed: RepoInfo | undefined;
 
   // check if the "repo" is a file on disk; if so, use that
-  // otherwise, parse the git url (or partial git url)
+  // otherwise, parse the git url (or partial git url))
   if (fse.existsSync(repo)) {
     type = "file";
+  } else if (repo.startsWith("file://")) {
+    type = "file";
+    repo = URL.fileURLToPath(repo);
   } else {
     type = "url";
     parsed = await gitUrlToRepoInfo(repo);
