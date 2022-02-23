@@ -1,15 +1,15 @@
-import { ApolloError } from 'apollo-server-errors';
-import { LoaderFunction, useLoaderData } from 'remix';
-import { CharacterList } from '~/components/CharacterList';
-import { Code } from '~/components/Code';
-import { fetchFromGraphQL } from '~/utils/index';
-import { Characters } from '~/generated/types';
+import { Link, useLoaderData } from "remix";
+import type { ApolloError } from "apollo-server-errors";
+import type { LoaderFunction } from "remix";
+
+import { Code } from "~/components/Code";
+import { fetchFromGraphQL } from "~/utils/index";
+import type { Characters } from "~/generated/types";
 
 type LoaderData = {
-  data: { characters: Characters; },
+  data: { characters: Characters };
   errors?: ApolloError[];
 };
-
 
 export const loader: LoaderFunction = async () => {
   const getCharactersQuery = `
@@ -43,8 +43,8 @@ export const loader: LoaderFunction = async () => {
 
   const res = await fetchFromGraphQL(getCharactersQuery, { page: 1 });
 
-  return res.json()
-}
+  return res.json();
+};
 
 /**
  * @description This route demonstrates fetching a list of characters from
@@ -53,6 +53,8 @@ export const loader: LoaderFunction = async () => {
 export default function () {
   const loader = useLoaderData<LoaderData>();
   const { data } = loader;
+
+  const characters = data.characters.results ?? [];
 
   return (
     <main className="ui-main">
@@ -63,7 +65,19 @@ export default function () {
         above to see what the Remix loader returned.
       </p>
       <hr style={{ margin: "40px auto" }} />
-      <CharacterList data={data.characters.results ?? []} />
+      {characters.map(character => {
+        if (!character) return null;
+
+        const { image } = character;
+        const to = `/character/${character.id}`;
+
+        return (
+          <Link key={character.id} style={{ display: "flex", gap: 16 }} to={to}>
+            {image && <img alt="" height={40} src={image} width={40} />}
+            <h2>{character.name}</h2>
+          </Link>
+        );
+      })}
     </main>
   );
-};
+}

@@ -1,16 +1,17 @@
-import { ApolloError } from 'apollo-server-errors';
-import { Link, LoaderFunction, useLoaderData } from 'remix';
-import { CharacterDetail } from '~/components/CharacterDetail';
-import { Code } from '~/components/Code';
-import { fetchFromGraphQL } from '~/utils/index';
-import { Character } from '~/generated/types';
+import { Link, useLoaderData } from "remix";
+import type { ApolloError } from "apollo-server-errors";
+import type { LoaderFunction } from "remix";
+
+import { Code } from "~/components/Code";
+import { fetchFromGraphQL } from "~/utils/index";
+import type { Character } from "~/generated/types";
 
 type LoaderData = {
-  data: { character: Character; },
+  data: { character: Character };
   errors?: ApolloError[];
 };
 
-export const loader: LoaderFunction = async (args) => {
+export const loader: LoaderFunction = async args => {
   const { params } = args;
 
   const getCharacterQuery = `
@@ -37,8 +38,8 @@ export const loader: LoaderFunction = async (args) => {
     `;
 
   const res = await fetchFromGraphQL(getCharacterQuery, { id: params.id });
-  return res.json()
-}
+  return res.json();
+};
 
 /**
  * @description This route fetches the details of a single character using
@@ -47,6 +48,27 @@ export const loader: LoaderFunction = async (args) => {
 export default function () {
   const loader = useLoaderData<LoaderData>();
   const { data } = loader;
+
+  const character = data.character;
+
+  const renderCharacter = () => {
+    if (!character) return null;
+
+    return (
+      <div style={{ display: "flex", gap: 16 }}>
+        {character.image && (
+          <img alt={character.name ?? ""} src={character.image} />
+        )}
+        <div className="list">
+          <b>Gender:</b> {character.gender}
+          <br />
+          <b>Species:</b> {character.species}
+          <br />
+          <b>Status:</b> {character.status}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="ui-main">
@@ -57,15 +79,15 @@ export default function () {
         above to see what the Remix loader returned.
       </p>
       <hr style={{ margin: "40px auto" }} />
-      {data?.character && <CharacterDetail data={data.character} />}
-      <div className="links" style={{ marginTop: 40 }}>
-        <Link to="/" >
+      {renderCharacter()}
+      <div className="" style={{ display: "flex", gap: 16, marginTop: 40 }}>
+        <Link style={{ color: "blue" }} to="/">
           View all characters
         </Link>
-        <Link to="/character/error">
+        <Link style={{ color: "blue" }} to="/character/error">
           Trigger an error
         </Link>
       </div>
     </main>
   );
-};
+}

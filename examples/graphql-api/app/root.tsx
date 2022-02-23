@@ -1,18 +1,11 @@
 import {
   Links,
-  LinksFunction,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration
 } from "remix";
-
-import styles from '~/styles/index.css';
-
-export const links: LinksFunction = () => {
-  return [{ href: styles, rel: 'stylesheet' }];
-};
 
 export default function App() {
   return (

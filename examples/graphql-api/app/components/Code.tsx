@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 export interface CodeProps {
   data: any;
   summary: string;
@@ -9,16 +7,14 @@ export interface CodeProps {
  * @name Code
  * @description Simple component to render out our JSON responses.
  */
-export const Code: React.FC<CodeProps> = (props) => {
+export const Code = (props: CodeProps) => {
   const { data, summary } = props;
 
   return (
-    <details className="code">
+    <details>
       <summary>{summary}</summary>
       <code>
-        <pre>
-          {JSON.stringify(data, null, 2)}
-        </pre>
+        <pre>{JSON.stringify(data, null, 2)}</pre>
       </code>
     </details>
   );
