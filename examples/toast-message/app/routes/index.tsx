@@ -60,7 +60,7 @@ export default function () {
         <button
           type="button"
           onClick={event => {
-            fetcher.submit(event.currentTarget);
+            fetcher.submit(event.currentTarget.form);
           }}
         >
           Submit
