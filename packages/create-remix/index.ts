@@ -1,73 +1,38 @@
-import * as path from "path";
+import path from "path";
 import { execSync } from "child_process";
 import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
 import got from "got";
-import tar from "tar";
-import { Stream } from "stream";
-import { promisify } from "util";
+import gunzip from "gunzip-maybe";
+import tar from "tar-fs";
 import gitUrlParse from "git-url-parse";
+import stream from "stream";
+import { promisify } from "util";
 
 import cliPkgJson from "./package.json";
 
-// Node 15 added stream/promises, we can convert once we drop support for Node 14
-let pipeline = promisify(Stream.pipeline);
+// this is natively a promise in node 15+ stream/promises
+let pipeline = promisify(stream.pipeline);
 
-export let servers: { [key: string]: RepoInfo } = {
-  "Architect (AWS Lambda)": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/arc",
-    name: "remix",
-    owner: "remix-run"
-  },
-  "Cloudflare Pages": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/cloudflare-workers",
-    name: "remix",
-    owner: "remix-run"
-  },
-  "Cloudflare Workers": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/cloudflare-pages",
-    name: "remix",
-    owner: "remix-run"
-  },
-  "Deno (experimental)": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/deno",
-    name: "remix",
-    owner: "remix-run"
-  },
-  "Express Server": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/express",
-    name: "remix",
-    owner: "remix-run"
-  },
-  "Fly.io": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/fly",
-    name: "remix",
-    owner: "remix-run"
-  },
-  Netlify: {
-    branch: "main",
-    filePath: "packages/create-remix/templates/netlify",
-    name: "remix",
-    owner: "remix-run"
-  },
-  "Remix App Server": {
-    branch: "main",
-    filePath: "packages/create-remix/templates/remix",
-    name: "remix",
-    owner: "remix-run"
-  },
-  Vercel: {
-    branch: "main",
-    filePath: "packages/create-remix/templates/vercel",
-    name: "remix",
-    owner: "remix-run"
-  }
+export let servers: { [key: string]: string } = {
+  "Architect (AWS Lambda)":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/arc",
+  "Cloudflare Pages":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/cloudflare-workers",
+  "Cloudflare Workers":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/cloudflare-pages",
+  "Deno (experimental)":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/deno",
+  "Express Server":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/express",
+  "Fly.io":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/fly",
+  Netlify:
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/netlify",
+  "Remix App Server":
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/remix",
+  Vercel:
+    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/vercel"
 } as const;
 
 export type Server = typeof servers[keyof typeof servers];
@@ -79,15 +44,10 @@ export interface CreateAppArgs {
   lang: Lang;
   install: boolean;
   quiet?: boolean;
-  repo: string | InputRepoInfo;
+  repo: string;
 }
 
-async function createApp({
-  projectDir,
-  install,
-  quiet,
-  repo: repoInfoOrUrl
-}: CreateAppArgs) {
+async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
     console.log(
@@ -105,38 +65,43 @@ async function createApp({
         `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
       throw new Error();
-    } else {
-      await fse.mkdirp(projectDir);
     }
   }
 
   let appPkg: any;
 
-  let parsed =
-    typeof repoInfoOrUrl === "string"
-      ? gitUrlToRepoInfo(repoInfoOrUrl)
-      : repoInfoOrUrl;
-  console.log({ parsed });
+  let type: "url" | "file";
+  let parsed: RepoInfo | undefined;
 
-  let repoInfo = await getRepoInfo(parsed);
-
-  // default to remix org if no owner is specified
-  if (!parsed.owner) {
-    parsed.owner = "remix-run";
+  // check if the "repo" is a file on disk; if so, use that
+  // otherwise, parse the git url (or partial git url)
+  if (fse.existsSync(repo)) {
+    type = "file";
+  } else {
+    type = "url";
+    parsed = await gitUrlToRepoInfo(repo);
   }
 
-  if (!repoInfo) {
-    let url =
-      typeof repoInfoOrUrl === "string"
-        ? repoInfoOrUrl
-        : `https://github.com/${repoInfoOrUrl.name}/${repoInfoOrUrl.name}`;
-    console.log(`️🚨 Oops, ${url} is not a valid github repo`);
+  if (type === "file") {
+    if (repo.endsWith(".tar.gz")) {
+      console.log(`Extracting local tarball...`);
+      await extractLocalTarball(projectDir, repo);
+    }
+  } else if (typeof parsed !== "undefined") {
+    // default to remix org if no owner is specified
+    if (!parsed.owner) {
+      parsed.owner = "remix-run";
+    }
+    console.log("Fetching template from GitHub...");
+    // TODO: handle HTTP errors
+    await downloadAndExtractRepo(
+      projectDir,
+      `https://github.com/${parsed.owner}/${parsed.name}/archive/refs/heads/${parsed.branch}.tar.gz`
+    );
+  } else {
+    console.log(`️🚨 Oops, ${repo} is not a valid github repo`);
     throw new Error();
   }
-
-  console.log("Fetching template from GitHub...");
-  // TODO: handle HTTP errors
-  await downloadAndExtractRepo(projectDir, repoInfo);
 
   appPkg = require(path.join(projectDir, "package.json"));
 
@@ -161,16 +126,23 @@ async function createApp({
     JSON.stringify(appPkg, null, 2)
   );
 
-  if (install || repoInfoOrUrl) {
+  if (install || repo) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 
-  let setupScript = path.resolve(projectDir, "remix.init.js");
-  let projectScript = path.resolve(projectDir, "remix.init.js");
+  let setupScriptDir = path.join(projectDir, "remix.init");
+  let setupScript = path.resolve(projectDir, "remix.init", "index.js");
   if (fse.existsSync(setupScript)) {
-    let init = require(setupScript);
-    await init(projectDir);
-    fse.removeSync(projectScript);
+    try {
+      let init = require(setupScript);
+      await init(projectDir);
+      fse.removeSync(setupScriptDir);
+    } catch (error) {
+      console.error(
+        `⚠️  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
+      );
+      console.error(error);
+    }
   }
 
   if (!quiet) {
@@ -189,69 +161,56 @@ async function createApp({
   }
 }
 
-export interface InputRepoInfo {
+export interface RepoInfo {
   owner: string;
   name: string;
-  branch?: string;
+  branch: string;
   filePath: string;
 }
 
-export type RepoInfo = Omit<InputRepoInfo, "branch"> & { branch: string };
+async function extractLocalTarball(root: string, filePath: string) {
+  console.log({ root, filePath });
+  let readStream = fse.createReadStream(filePath).pipe(gunzip());
+  let writeStream = tar.extract(root);
+  await pipeline(readStream, writeStream);
+}
 
-function downloadAndExtractRepo(
-  root: string,
-  repoInfo: RepoInfo
-): Promise<void> {
-  let directory = getProjectDir(repoInfo);
-
+async function downloadAndExtractRepo(root: string, url: string) {
   try {
-    return pipeline(
-      got.stream(
-        // `https://codeload.github.com/${repoInfo.owner}/${repoInfo.name}/tar.gz/${repoInfo.branch}`
-        `https://github.com/${repoInfo.owner}/${repoInfo.name}/archive/refs/heads/${repoInfo.branch}.tar.gz`
-      ),
-      tar.extract(
-        {
-          cwd: root,
-          strip: repoInfo.filePath ? repoInfo.filePath.split("/").length + 1 : 1
-        },
-        [`${directory}${repoInfo.filePath ? `/${repoInfo.filePath}` : ""}`]
-      )
-    );
+    let tarballStream = got.stream(url).pipe(gunzip());
+    let writeStream = fse.createWriteStream(root);
+    await pipeline(tarballStream, writeStream);
   } catch (error) {
     console.error(error);
     throw error;
   }
 }
 
-export function getProjectDir(repoInfo: RepoInfo) {
-  return `${repoInfo.name}-${repoInfo.branch}`;
-}
+// function getProjectDir(repoInfo: RepoInfo) {
+//   return `${repoInfo.name}-${repoInfo.branch}`;
+// }
 
-function gitUrlToRepoInfo(url: string): InputRepoInfo {
+async function gitUrlToRepoInfo(url: string): Promise<RepoInfo | undefined> {
   let parsed = gitUrlParse(url);
+
+  if (!parsed.ref) {
+    let res = await got(
+      `https://api.github.com/repos/${parsed.owner}/${parsed.name}`
+    );
+
+    if (res.statusCode !== 200) {
+      throw new Error(`Error fetching repo info for ${url}: ${res.statusCode}`);
+    }
+
+    let repo = JSON.parse(res.body.toString());
+    parsed.ref = repo.default_branch;
+  }
+
   return {
     filePath: parsed.filepath,
     name: parsed.name,
     owner: parsed.owner,
     branch: parsed.ref
-  };
-}
-
-export async function getRepoInfo(
-  repoInfo: InputRepoInfo
-): Promise<RepoInfo | undefined> {
-  if (!repoInfo.branch) {
-    let res: any = await got(
-      `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.name}`
-    ).json();
-
-    repoInfo.branch = res["default_branch"] as string;
-  }
-
-  return {
-    ...repoInfo,
-    branch: repoInfo.branch
   };
 }
 

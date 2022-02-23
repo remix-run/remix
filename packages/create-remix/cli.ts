@@ -23,6 +23,11 @@ const help = `
     $ npx create-remix --template :username/:repo
     $ npx create-remix --template https://github.com/:username/:repo
     $ npx create-remix --template https://github.com/:username/:repo/tree/:branch
+    $ npx create-remix --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+    $ npx create-remix --template /my/remix-stack
+    $ npx create-remix --template /my/remix-stack.tar.gz
+    $ npx create-remix --template https://example.com/remix-stack.tar.gz
+    $ npx create-remix --template file:///Users/michael/michael-stackson.tar.gz
 `;
 
 run().then(
@@ -93,11 +98,8 @@ async function run() {
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
-      choices: Object.entries(servers).map(([server, repoInfo]) => {
-        return {
-          name: server,
-          value: repoInfo
-        };
+      choices: Object.entries(servers).map(([server, url]) => {
+        return { name: server, value: url };
       })
     },
     {

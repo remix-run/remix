@@ -21,17 +21,19 @@
     "fs-extra": "^10.0.0",
     "git-url-parse": "11.6.0",
     "got": "^11.8.3",
+    "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",
     "node-fetch": "^2.6.7",
     "semver": "^7.3.5",
     "sort-package-json": "^1.54.0",
-    "tar": "^6.1.11"
+    "tar-fs": "^2.1.1"
   },
   "devDependencies": {
     "@types/chalk-animation": "^1.6.0",
     "@types/git-url-parse": "9.0.1",
+    "@types/gunzip-maybe": "^1.4.0",
     "@types/inquirer": "^7.3.1",
-    "@types/tar": "^6.1.1"
+    "@types/tar-fs": "^2.0.1"
   }
 }
