@@ -168,27 +168,32 @@ export interface RepoInfo {
   filePath: string;
 }
 
-async function extractLocalTarball(root: string, filePath: string) {
-  console.log({ root, filePath });
+async function extractLocalTarball(
+  projectDir: string,
+  filePath: string
+): Promise<void> {
   let readStream = fse.createReadStream(filePath).pipe(gunzip());
-  let writeStream = tar.extract(root);
+  let writeStream = tar.extract(projectDir);
   await pipeline(readStream, writeStream);
 }
 
-async function downloadAndExtractRepo(root: string, url: string) {
-  try {
-    let tarballStream = got.stream(url).pipe(gunzip());
-    let writeStream = fse.createWriteStream(root);
-    await pipeline(tarballStream, writeStream);
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+async function downloadAndExtractRepo(
+  projectDir: string,
+  url: string
+): Promise<void> {
+  let desiredDir = path.basename(projectDir);
+  let cwd = path.dirname(projectDir);
+  await pipeline(
+    got.stream(url).pipe(gunzip()),
+    tar.extract(cwd, {
+      map(header) {
+        let originalDirName = header.name.split("/")[0];
+        header.name = header.name.replace(originalDirName, desiredDir);
+        return header;
+      }
+    })
+  );
 }
-
-// function getProjectDir(repoInfo: RepoInfo) {
-//   return `${repoInfo.name}-${repoInfo.branch}`;
-// }
 
 async function gitUrlToRepoInfo(url: string): Promise<RepoInfo | undefined> {
   let parsed = gitUrlParse(url);
