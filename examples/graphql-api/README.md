@@ -4,7 +4,8 @@ This example demonstrates using the Fetch API to query a GraphQL endpoint. It al
 
 ## Setup
 
-- Duplicate the local `.env.example` file to `.env`
+- Setup the `GRAPHQL_API` environment variable
+  - See the [Remix docs](/docs/guides/envvars) for some suggested patterns
 - Run `$ npm install`
 
 ## Preview
