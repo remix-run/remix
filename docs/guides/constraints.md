@@ -159,7 +159,7 @@ export function removeTrailingSlash(loader) {
     const url = new URL(request.url);
     if (url.pathname.endsWith("/")) {
       return redirect(request.url.slice(0, -1), {
-        status: 308
+        status: 308,
       });
     }
     return loader(arg);
@@ -187,7 +187,7 @@ import { redirect } from "remix";
 export function removeTrailingSlash(url) {
   if (url.pathname.endsWith("/")) {
     throw redirect(request.url.slice(0, -1), {
-      status: 308
+      status: 308,
     });
   }
 }
@@ -210,8 +210,8 @@ It reads much nicer as well when you've got a lot of these:
 // this
 export const loader = async ({ request }) => {
   return removeTrailingSlash(request.url, () => {
-    return withSession(request, session => {
-      return requireUser(session, user => {
+    return withSession(request, (session) => {
+      return requireUser(session, (user) => {
         return json(user);
       });
     });
@@ -313,7 +313,7 @@ function useLocalStorage(key) {
     localStorage.getItem(key)
   );
 
-  const setWithLocalStorage = nextState => {
+  const setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 
@@ -331,7 +331,7 @@ function useLocalStorage(key) {
     setState(localStorage.getItem(key));
   }, [key]);
 
-  const setWithLocalStorage = nextState => {
+  const setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 

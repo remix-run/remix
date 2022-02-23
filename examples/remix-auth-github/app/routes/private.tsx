@@ -11,7 +11,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { profile } = await auth.isAuthenticated(request, {
-    failureRedirect: "/"
+    failureRedirect: "/",
   });
 
   return json<LoaderData>({ profile });

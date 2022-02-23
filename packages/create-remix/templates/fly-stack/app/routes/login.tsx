@@ -6,7 +6,7 @@ import {
   Link,
   useActionData,
   redirect,
-  useSearchParams
+  useSearchParams,
 } from "remix";
 import Alert from "@reach/alert";
 
@@ -64,7 +64,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 export const meta: MetaFunction = () => {
   return {
-    title: "Login"
+    title: "Login",
   };
 };
 
@@ -142,7 +142,7 @@ export default function LoginPage() {
         <Link
           to={{
             pathname: "/join",
-            search: returnTo ? `?returnTo=${returnTo}` : undefined
+            search: returnTo ? `?returnTo=${returnTo}` : undefined,
           }}
         >
           Sign up

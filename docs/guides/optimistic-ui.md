@@ -46,7 +46,7 @@ export function ProjectView({ project }) {
       <h2>{project.title}</h2>
       <p>{project.description}</p>
       <ul>
-        {project.tasks.map(task => (
+        {project.tasks.map((task) => (
           <li key={task.id}>{task.name}</li>
         ))}
       </ul>
@@ -63,7 +63,7 @@ import { Form, redirect } from "remix";
 import { createProject } from "~/utils";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -96,7 +96,7 @@ import { Form, redirect, useTransition } from "remix";
 import { createProject } from "~/utils";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -138,7 +138,7 @@ import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -184,14 +184,14 @@ import {
   redirect,
   useTransition,
   useActionData,
-  json
+  json,
 } from "remix";
 
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -201,7 +201,7 @@ export const action: ActionFunction = async ({
   } catch (e) {
     console.error(e);
     return json("Sorry, we couldn't create the project", {
-      status: 500
+      status: 500,
     });
   }
 };

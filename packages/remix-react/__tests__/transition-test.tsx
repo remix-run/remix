@@ -7,7 +7,7 @@ import {
   createTransitionManager,
   TransitionRedirect,
   IDLE_FETCHER,
-  IDLE_TRANSITION
+  IDLE_TRANSITION,
 } from "../transition";
 
 describe("init", () => {
@@ -20,8 +20,8 @@ describe("init", () => {
           path: "/",
           ErrorBoundary: {},
           module: "",
-          hasLoader: false
-        }
+          hasLoader: false,
+        },
       ],
       location: createLocation("/"),
       loaderData: { root: "LOADER DATA" },
@@ -29,7 +29,7 @@ describe("init", () => {
       error: new Error("lol"),
       errorBoundaryId: "root",
       onChange: () => {},
-      onRedirect: () => {}
+      onRedirect: () => {},
     });
     expect(tm.getState()).toMatchInlineSnapshot(`
       Object {
@@ -210,7 +210,7 @@ describe("shouldReload", () => {
     });
     let tm = createTestTransitionManager("/", {
       loaderData: {
-        "/": "ROOT"
+        "/": "ROOT",
       },
       routes: [
         {
@@ -228,7 +228,7 @@ describe("shouldReload", () => {
               action: () => null,
               element: {},
               module: "",
-              hasLoader: false
+              hasLoader: false,
             },
             {
               path: "/child",
@@ -237,24 +237,24 @@ describe("shouldReload", () => {
               loader: childLoader,
               action: () => null,
               element: {},
-              module: ""
-            }
-          ]
-        }
-      ]
+              module: "",
+            },
+          ],
+        },
+      ],
     });
 
     await tm.send({
       type: "navigation",
       location: createLocation("/child?reload=1"),
-      action: Action.Push
+      action: Action.Push,
     });
     expect(rootLoader.mock.calls.length).toBe(1);
 
     await tm.send({
       type: "navigation",
       location: createLocation("/child?reload=0"),
-      action: Action.Push
+      action: Action.Push,
     });
     expect(rootLoader.mock.calls.length).toBe(1);
 
@@ -262,7 +262,7 @@ describe("shouldReload", () => {
       type: "navigation",
       location: createLocation("/child"),
       submission: createActionSubmission("/child"),
-      action: Action.Push
+      action: Action.Push,
     });
 
     let args = shouldReload.mock.calls[2][0];
@@ -299,7 +299,7 @@ describe("no route match", () => {
     expect(state.catch).toEqual({
       data: null,
       status: 404,
-      statusText: "Not Found"
+      statusText: "Not Found",
     });
     expect(state.matches).toMatchInlineSnapshot(`
       Array [
@@ -401,16 +401,16 @@ describe("errors on navigation", () => {
                 module: "",
                 ErrorBoundary: FakeComponent,
                 hasLoader: true,
-                loader
-              }
-            ]
-          }
-        ]
+                loader,
+              },
+            ],
+          },
+        ],
       });
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("child");
@@ -430,7 +430,7 @@ describe("errors on navigation", () => {
         element: {},
         module: "",
         hasLoader: true,
-        loader
+        loader,
       };
       let parent = {
         path: "/",
@@ -439,16 +439,16 @@ describe("errors on navigation", () => {
         module: "",
         ErrorBoundary: FakeComponent,
         children: [child],
-        hasLoader: false
+        hasLoader: false,
       };
 
       let tm = createTestTransitionManager("/", {
-        routes: [parent]
+        routes: [parent],
       });
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("parent");
@@ -483,19 +483,19 @@ describe("errors on navigation", () => {
                     module: "",
                     ErrorBoundary: FakeComponent,
                     hasLoader: true,
-                    loader
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+                    loader,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       });
 
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       expect(tm.getState().errorBoundaryId).toBeDefined();
       expect(tm.getState().error).toBeDefined();
@@ -503,7 +503,7 @@ describe("errors on navigation", () => {
       await tm.send({
         type: "navigation",
         location: createLocation("/"),
-        action: Action.Push
+        action: Action.Push,
       });
       expect(tm.getState().errorBoundaryId).toBeUndefined();
       expect(tm.getState().error).toBeUndefined();
@@ -522,7 +522,7 @@ describe("errors on navigation", () => {
 
     let tm = createTestTransitionManager("/", {
       loaderData: {
-        a: await loaderA()
+        a: await loaderA(),
       },
       routes: [
         {
@@ -548,18 +548,18 @@ describe("errors on navigation", () => {
                   element: {},
                   module: "",
                   hasLoader: true,
-                  loader: loaderC
-                }
-              ]
-            }
-          ]
-        }
-      ]
+                  loader: loaderC,
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
     await tm.send({
       type: "navigation",
       location: createLocation("/b/c"),
-      action: Action.Push
+      action: Action.Push,
     });
     let state = tm.getState();
     expect(state.loaderData).toMatchInlineSnapshot(`
@@ -690,17 +690,17 @@ describe("action errors", () => {
                 module: "",
                 ErrorBoundary: FakeComponent,
                 hasLoader: false,
-                action
-              }
-            ]
-          }
-        ]
+                action,
+              },
+            ],
+          },
+        ],
       });
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
         submission: createActionSubmission("/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("child");
@@ -731,17 +731,17 @@ describe("action errors", () => {
                 module: "",
                 ErrorBoundary: FakeComponent,
                 hasLoader: false,
-                action
-              }
-            ]
-          }
-        ]
+                action,
+              },
+            ],
+          },
+        ],
       });
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
         submission: createActionSubmission("/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       expect(parentLoader.mock.calls.length).toBe(1);
       expect(actionRouteLoader.mock.calls.length).toBe(0);
@@ -775,17 +775,17 @@ describe("action errors", () => {
                 element: {},
                 module: "",
                 hasLoader: false,
-                action
-              }
-            ]
-          }
-        ]
+                action,
+              },
+            ],
+          },
+        ],
       });
       await tm.send({
         type: "navigation",
         location: createLocation("/child"),
         submission: createActionSubmission("/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("parent");
@@ -828,20 +828,20 @@ describe("action errors", () => {
                     module: "",
                     action,
                     hasLoader: false,
-                    ErrorBoundary: FakeComponent
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+                    ErrorBoundary: FakeComponent,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       });
 
       await tm.send({
         type: "navigation",
         location: createLocation("/parent/child"),
         submission: createActionSubmission("/parent/child"),
-        action: Action.Push
+        action: Action.Push,
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("root");
@@ -1776,7 +1776,7 @@ function createLocation(path: string, state: any = null): Location {
     search: search || "",
     hash: hash || "",
     key: String(++fakeKey),
-    state
+    state,
   };
 }
 
@@ -1796,7 +1796,7 @@ function createActionSubmission(action: string, body: string = "gosh=dang") {
     formData: makeFormDataFromBody(body),
     method: "POST",
     encType: "application/x-www-form-urlencoded",
-    key: String(++incrementingSubmissionKey)
+    key: String(++incrementingSubmissionKey),
   };
   return submission;
 }
@@ -1807,7 +1807,7 @@ function createLoaderSubmission(action: string, body: string = "gosh=dang") {
     formData: makeFormDataFromBody(body),
     method: "GET",
     encType: "application/x-www-form-urlencoded",
-    key: String(++incrementingSubmissionKey)
+    key: String(++incrementingSubmissionKey),
   };
   return submission;
 }
@@ -1824,7 +1824,7 @@ function createTestTransitionManager(
     routes: [],
     onChange() {},
     onRedirect() {},
-    ...init
+    ...init,
   });
 }
 
@@ -1860,10 +1860,10 @@ let setup = ({ url } = { url: "/" }) => {
         nextLoaderType === "navigation" ? nextLoaderId : nextLoaderFetchId;
       signal.onabort = loaderAbortHandlers.get(myId);
       return loaderDeferreds.get(myId).promise.then(
-        val => {
+        (val) => {
           return val;
         },
-        error => error
+        (error) => error
       );
     });
   };
@@ -1873,7 +1873,7 @@ let setup = ({ url } = { url: "/" }) => {
       let myType = nextActionType;
       let myId = myType === "navigation" ? nextActionId : nextActionFetchId;
       signal.onabort = actionAbortHandlers.get(myId);
-      return actionDeferreds.get(myId).promise.then(val => {
+      return actionDeferreds.get(myId).promise.then((val) => {
         if (myType === "navigation") {
           nextLoaderType = "navigation";
           nextLoaderId = myId;
@@ -1904,7 +1904,7 @@ let setup = ({ url } = { url: "/" }) => {
           loader: createLoader(),
           action: createAction(),
           element: {},
-          module: ""
+          module: "",
         },
         {
           path: "/foo",
@@ -1913,7 +1913,7 @@ let setup = ({ url } = { url: "/" }) => {
           loader: createLoader(),
           action: createAction(),
           element: {},
-          module: ""
+          module: "",
         },
         {
           path: "/foo/bar",
@@ -1922,7 +1922,7 @@ let setup = ({ url } = { url: "/" }) => {
           loader: createLoader(),
           action: createAction(),
           element: {},
-          module: ""
+          module: "",
         },
         {
           path: "/bar",
@@ -1931,7 +1931,7 @@ let setup = ({ url } = { url: "/" }) => {
           loader: createLoader(),
           action: createAction(),
           element: {},
-          module: ""
+          module: "",
         },
         {
           path: "/baz",
@@ -1940,7 +1940,7 @@ let setup = ({ url } = { url: "/" }) => {
           loader: createLoader(),
           action: createAction(),
           element: {},
-          module: ""
+          module: "",
         },
         {
           path: "/p/:param",
@@ -1949,17 +1949,17 @@ let setup = ({ url } = { url: "/" }) => {
           loader: createLoader(),
           action: createAction(),
           element: {},
-          module: ""
-        }
-      ]
-    }
+          module: "",
+        },
+      ],
+    },
   ];
 
   let tm = createTestTransitionManager(url, {
     onChange: handleChange,
     onRedirect: handleRedirect,
     loaderData: { root: "ROOT" },
-    routes
+    routes,
   });
 
   let navigate_ = (
@@ -2010,7 +2010,7 @@ let setup = ({ url } = { url: "/" }) => {
       type: "navigation",
       location,
       submission,
-      action: action || Action.Push
+      action: action || Action.Push,
     }).then(() => onChangeDeferreds.get(id).promise);
 
     return {
@@ -2018,13 +2018,13 @@ let setup = ({ url } = { url: "/" }) => {
       action: {
         resolve: resolveAction,
         redirect: redirectAction,
-        abortMock: actionAbortHandler.mock
+        abortMock: actionAbortHandler.mock,
       },
       loader: {
         resolve: resolveLoader,
         redirect: redirectLoader,
-        abortMock: loaderAbortHandler.mock
-      }
+        abortMock: loaderAbortHandler.mock,
+      },
     };
   };
 
@@ -2034,7 +2034,7 @@ let setup = ({ url } = { url: "/" }) => {
     post: (href: string, body?: string) =>
       navigate_(href, createActionSubmission(href, body)),
     submitGet: (href: string, body?: string) =>
-      navigate_(href, createLoaderSubmission(href, body))
+      navigate_(href, createLoaderSubmission(href, body)),
   };
 
   let fetch_ = (href: string, key?: string, submission?: Submission) => {
@@ -2116,15 +2116,15 @@ let setup = ({ url } = { url: "/" }) => {
         redirect: redirectAction,
         abortMock: actionAbortHandler.mock,
         catch: throwActionCatch,
-        throw: throwActionError
+        throw: throwActionError,
       },
       loader: {
         resolve: resolveLoader,
         redirect: redirectLoader,
         abortMock: loaderAbortHandler.mock,
         catch: throwLoaderCatch,
-        throw: throwLoaderError
-      }
+        throw: throwLoaderError,
+      },
     };
   };
 
@@ -2133,7 +2133,7 @@ let setup = ({ url } = { url: "/" }) => {
     post: (href: string, key?: string, body?: string) =>
       fetch_(href, key, createActionSubmission(href, body)),
     submitGet: (href: string, key?: string, body?: string) =>
-      fetch_(href, key, createLoaderSubmission(href, body))
+      fetch_(href, key, createLoaderSubmission(href, body)),
   };
 
   return {
@@ -2145,7 +2145,7 @@ let setup = ({ url } = { url: "/" }) => {
     handleChange,
     handleRedirect,
     rootLoaderMock: rootLoader.mock,
-    routes
+    routes,
   };
 };
 

@@ -16,9 +16,9 @@ export function ComplexComponent() {
 
   return (
     <>
-      <button onClick={() => setCount(c => c - 1)}>-</button>
+      <button onClick={() => setCount((c) => c - 1)}>-</button>
       <span>{count}</span>
-      <button onClick={() => setCount(c => c + 1)}>+</button>
+      <button onClick={() => setCount((c) => c + 1)}>+</button>
     </>
   );
 }

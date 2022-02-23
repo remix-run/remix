@@ -45,7 +45,8 @@ const Flex = React.forwardRef<HTMLDivElement, FlexProps>(
           [`${COMP_CLASS}--justify-content-${justifyContent}`]:
             justifyContent != null,
           [`${COMP_CLASS}--place-items-${placeItems}`]: placeItems != null,
-          [`${COMP_CLASS}--place-content-${placeContent}`]: placeContent != null
+          [`${COMP_CLASS}--place-content-${placeContent}`]:
+            placeContent != null,
         })}
         {...props}
       >
@@ -69,7 +70,7 @@ const FlexItem = React.forwardRef<HTMLDivElement, FlexItemProps>(
           [`${COMP_CLASS}__item--grow-${shrink}`]: shrink != null,
           [`${COMP_CLASS}__item--align-${align}`]: align != null,
           [`${COMP_CLASS}__item--justify-${justify}`]: justify != null,
-          [`${COMP_CLASS}__item--place-${place}`]: place != null
+          [`${COMP_CLASS}__item--place-${place}`]: place != null,
         })}
         {...props}
       >

@@ -11,7 +11,7 @@ expires.setSeconds(expires.getSeconds() + EXPIRATION_DURATION_IN_SECONDS);
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck1"],
   sameSite: true,
-  expires
+  expires,
 });
 
 const { getSession, commitSession, destroySession } =

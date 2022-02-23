@@ -6,7 +6,7 @@ import type { Todo } from "~/models";
 
 export const action: ActionFunction = async ({ request, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   let actionData: ActionData;

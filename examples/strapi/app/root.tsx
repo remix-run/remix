@@ -3,7 +3,7 @@ import React from "react";
 import { Links, LiveReload, Meta, Outlet } from "remix";
 
 export const meta: MetaFunction = () => ({
-  title: "Remix & Strapi"
+  title: "Remix & Strapi",
 });
 
 const App: React.FC = () => {

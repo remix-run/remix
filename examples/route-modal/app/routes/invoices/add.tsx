@@ -11,8 +11,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: styles
-    }
+      href: styles,
+    },
   ];
 };
 
@@ -20,7 +20,7 @@ export const action: ActionFunction = async ({ request }) => {
   // Here we can update our dabatase with the new invoice
 
   // This is just so we can see the transition
-  return new Promise(resolve =>
+  return new Promise((resolve) =>
     setTimeout(() => {
       resolve(redirect(`/invoices/`));
     }, 2000)

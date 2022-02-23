@@ -5,7 +5,7 @@ import {
   reactIsHydrated,
   collectResponses,
   disableJavaScript,
-  collectDataResponses
+  collectDataResponses,
 } from "./utils";
 
 const testPort = 3000;
@@ -26,14 +26,14 @@ describe("route module link export", () => {
       await page.goto(`${testServer}/`);
       await reactIsHydrated(page);
 
-      let cssResponses = collectResponses(page, url =>
+      let cssResponses = collectResponses(page, (url) =>
         url.pathname.endsWith(".css")
       );
 
       await page.click('a[href="/gists"]');
       await page.waitForSelector('[data-test-id="/gists/index"]');
 
-      let stylesheetResponses = cssResponses.filter(res => {
+      let stylesheetResponses = cssResponses.filter((res) => {
         // ignore prefetches
         return res.request().resourceType() === "stylesheet";
       });
@@ -43,7 +43,7 @@ describe("route module link export", () => {
 
     it("adds links to the document", async () => {
       await disableJavaScript(page);
-      let cssResponses = collectResponses(page, url =>
+      let cssResponses = collectResponses(page, (url) =>
         url.pathname.endsWith(".css")
       );
       await page.goto(`${testServer}/links`);
@@ -54,14 +54,14 @@ describe("route module link export", () => {
       await page.goto(`${testServer}/links`, { waitUntil: "networkidle0" });
       await reactIsHydrated(page);
 
-      let jsResponses = collectResponses(page, url =>
+      let jsResponses = collectResponses(page, (url) =>
         url.pathname.endsWith(".js")
       );
 
       await page.click('a[href="/gists/ryanflorence"]');
       await page.waitForSelector('[data-test-id="/gists/$username"]');
 
-      expect(jsResponses.every(res => res.fromCache())).toBe(true);
+      expect(jsResponses.every((res) => res.fromCache())).toBe(true);
     });
 
     it("preloads data for other pages and serves from browser cache on navigation", async () => {
