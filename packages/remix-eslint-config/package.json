@@ -33,8 +33,7 @@
   "peerDependencies": {
     "eslint": ">=8.1.0",
     "react": ">=17.0.0",
-    "react-dom": ">=17.0.0",
-    "remix": ">=0.20.1"
+    "react-dom": ">=17.0.0"
   },
   "peerDependenciesMeta": {
     "typescript": {
