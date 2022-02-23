@@ -92,10 +92,6 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
       await extractLocalTarball(projectDir, repo);
     }
   } else if (typeof parsed !== "undefined") {
-    // default to remix org if no owner is specified
-    if (!parsed.owner) {
-      parsed.owner = "remix-run";
-    }
     console.log("Fetching template from GitHub...");
     // TODO: handle HTTP errors
     await downloadAndExtractRepo(
@@ -201,6 +197,11 @@ async function downloadAndExtractRepo(
 
 async function gitUrlToRepoInfo(url: string): Promise<RepoInfo | undefined> {
   let parsed = gitUrlParse(url);
+
+  // default to remix org if no owner is specified
+  if (!parsed.owner) {
+    parsed.owner = "remix-run";
+  }
 
   if (!parsed.ref) {
     let res = await got(
