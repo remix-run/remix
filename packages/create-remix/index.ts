@@ -126,23 +126,29 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
     JSON.stringify(appPkg, null, 2)
   );
 
-  if (install || repo) {
-    execSync("npm install", { stdio: "inherit", cwd: projectDir });
-  }
-
   let setupScriptDir = path.join(projectDir, "remix.init");
   let setupScript = path.resolve(projectDir, "remix.init", "index.js");
-  if (fse.existsSync(setupScript)) {
-    try {
-      let init = require(setupScript);
-      await init(projectDir);
-      fse.removeSync(setupScriptDir);
-    } catch (error) {
-      console.error(
-        `⚠️  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
-      );
-      console.error(error);
+  let hasSetupScript = fse.existsSync(setupScript);
+
+  if (install) {
+    execSync("npm install", { stdio: "inherit", cwd: projectDir });
+
+    if (hasSetupScript) {
+      try {
+        let init = require(setupScript);
+        await init(projectDir);
+        fse.removeSync(setupScriptDir);
+      } catch (error) {
+        console.error(
+          `⚠️  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
+        );
+        console.error(error);
+      }
     }
+  } else if (repo && hasSetupScript) {
+    console.log(
+      `\n\n You've opted out of running \`npm install\` in your new project.\n\n You'll need to manually install dependencies and run \`node ${setupScript}\`.\n\n`
+    );
   }
 
   if (!quiet) {

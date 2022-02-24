@@ -77,10 +77,18 @@ async function run() {
   );
 
   if (flags.template) {
+    let answers = await inquirer.prompt<{ install: boolean }>([
+      {
+        name: "install",
+        type: "confirm",
+        message: "Do you want me to run `npm install`?",
+        default: true
+      }
+    ]);
     await createApp({
       projectDir,
       lang: "ts",
-      install: false,
+      install: answers.install,
       repo: flags.template
     });
 
