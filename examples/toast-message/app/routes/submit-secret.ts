@@ -4,7 +4,7 @@ import {
   commitSession,
   getSession,
   setErrorMessage,
-  setSuccessMessage
+  setSuccessMessage,
 } from "~/message.server";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -18,7 +18,7 @@ export const action: ActionFunction = async ({ request }) => {
     return json(
       { ok: false },
       {
-        headers: { "Set-Cookie": await commitSession(session) }
+        headers: { "Set-Cookie": await commitSession(session) },
       }
     );
   }
@@ -28,7 +28,7 @@ export const action: ActionFunction = async ({ request }) => {
     return json(
       { ok: true },
       {
-        headers: { "Set-Cookie": await commitSession(session) }
+        headers: { "Set-Cookie": await commitSession(session) },
       }
     );
   } else {
@@ -36,7 +36,7 @@ export const action: ActionFunction = async ({ request }) => {
     return json(
       { ok: false },
       {
-        headers: { "Set-Cookie": await commitSession(session) }
+        headers: { "Set-Cookie": await commitSession(session) },
       }
     );
   }

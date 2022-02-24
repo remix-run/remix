@@ -13,8 +13,8 @@ export const { commitSession, getSession } = createCookieSessionStorage({
     sameSite: "lax",
     expires: new Date(Date.now() + ONE_YEAR),
     secrets: ["SUPER_SECRET"],
-    secure: true
-  }
+    secure: true,
+  },
 });
 
 export function setSuccessMessage(session: Session, message: string) {

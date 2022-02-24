@@ -4,7 +4,7 @@ import {
   commitSession,
   getSession,
   setErrorMessage,
-  setSuccessMessage
+  setSuccessMessage,
 } from "~/message.server";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -16,19 +16,19 @@ export const action: ActionFunction = async ({ request }) => {
   if (!number) {
     setErrorMessage(session, "Number is required!");
     return redirect("/", {
-      headers: { "Set-Cookie": await commitSession(session) }
+      headers: { "Set-Cookie": await commitSession(session) },
     });
   }
 
   if (Number(number) === 10) {
     setSuccessMessage(session, "Awesome");
     return redirect("/", {
-      headers: { "Set-Cookie": await commitSession(session) }
+      headers: { "Set-Cookie": await commitSession(session) },
     });
   } else {
     setErrorMessage(session, "Wrong! Guess again");
     return redirect("/", {
-      headers: { "Set-Cookie": await commitSession(session) }
+      headers: { "Set-Cookie": await commitSession(session) },
     });
   }
 };
@@ -59,7 +59,7 @@ export default function () {
         </label>
         <button
           type="button"
-          onClick={event => {
+          onClick={(event) => {
             fetcher.submit(event.currentTarget.form);
           }}
         >

@@ -7,7 +7,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 import type { LoaderFunction, MetaFunction } from "remix";
 
@@ -21,7 +21,7 @@ type LoaderData = {
 
 export const meta: MetaFunction = () => {
   return {
-    title: "Remix + Toast notifications"
+    title: "Remix + Toast notifications",
   };
 };
 
