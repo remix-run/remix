@@ -4,6 +4,7 @@ import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import { createApp } from "create-remix";
+import retry from "retry";
 
 import {
   addCypress,
@@ -57,6 +58,7 @@ async function createCloudflareProject() {
           build_command: "npm run build",
           destination_dir: "public",
           root_dir: "",
+          fast_builds: true,
         },
       }),
     }
@@ -66,7 +68,7 @@ async function createCloudflareProject() {
     if (promise.headers.get("Content-Type").includes("application/json")) {
       console.error(await promise.json());
     }
-    throw new Error(`Failed to create cloudflare pages project`);
+    throw new Error(`Failed to create Cloudflare Pages project`);
   }
 }
 
@@ -86,8 +88,46 @@ async function createCloudflareDeployment() {
     if (promise.headers.get("Content-Type").includes("application/json")) {
       console.error(await promise.json());
     }
-    throw new Error(`Failed to create cloudflare pages project`);
+    throw new Error(`Failed to create Cloudflare Pages project`);
   }
+
+  let deployment = await promise.json();
+
+  return deployment.result.id;
+}
+
+function checkDeploymentStatus() {
+  let operation = retry.operation({ retries: 20 });
+  let url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`;
+
+  return new Promise((resolve, reject) => {
+    operation.attempt(async (currentAttempt) => {
+      console.log(`Checking deployment status; attempt ${currentAttempt}`);
+      let response = await fetch(url, {
+        headers: {
+          "X-Auth-Email": process.env.CF_EMAIL,
+          "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
+        },
+      });
+
+      if (response.status >= 200 && response.status < 400) {
+        let data = await response.json();
+        let deployment = data.result[0];
+        let latest = deployment.latest_stage;
+        if (latest.name === "deploy" && latest.status === "success") {
+          resolve("Pages deployed successfully");
+        } else {
+          let message = `Deployment not complete; latest stage: ${latest.name}/${latest.status}`;
+          console.error(message);
+          operation.retry(new Error(message));
+        }
+      } else {
+        let message = `URL responded with status ${response.status}`;
+        console.error(message);
+        operation.retry(new Error(message));
+      }
+    });
+  });
 }
 
 let octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -117,9 +157,6 @@ try {
   // validate dependencies are available
   await validatePackageVersions(PROJECT_DIR);
 
-  // create a new github repo
-  let repo = await createRepoIfNeeded(APP_NAME);
-
   // add cypress to the project
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
@@ -135,6 +172,9 @@ try {
 
   // run cypress against the dev server
   runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
+
+  // create a new github repo
+  let repo = await createRepoIfNeeded(APP_NAME);
 
   spawnSync("git", ["init"], spawnOpts);
   spawnSync(
@@ -164,19 +204,16 @@ try {
 
   await createCloudflareProject();
   await createCloudflareDeployment();
-  console.log(
-    "Successfully created cloudflare pages project, the build is in progress, but will take a bit before it's ready to run cypress against it",
-    "we'll sleep for 5 minutes to give it time to build"
-  );
+  console.log("Successfully created Cloudflare Pages project");
 
-  // builds typically take between 2 and 3 minutes
-  await new Promise((resolve) => setTimeout(resolve, 60_000 * 3));
+  // wait for deployment to complete
+  await checkDeploymentStatus();
 
   let appUrl = `https://${APP_NAME}.pages.dev`;
 
   await checkUrl(appUrl);
 
-  // run cypress against the cloudflare pages server
+  // run cypress against the Cloudflare Pages server
   runCypress(PROJECT_DIR, false, appUrl);
 
   if (currentGitUser.email && currentGitUser.name) {
