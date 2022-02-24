@@ -1,5 +1,4 @@
 import postcss from "postcss";
-import type { Result as PostCSSResult } from "postcss";
 import cssModules from "postcss-modules";
 import path from "path";
 import * as fse from "fs-extra";
@@ -8,8 +7,17 @@ import type * as esbuild from "esbuild";
 import { getFileHash } from "../utils/crypto";
 import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
+import { cssModulesVirtualModule } from "../virtualModules";
+import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
-type CSSModuleClassMap = { [key: string]: string };
+export interface CssModulesRef {
+  current: {
+    filePath?: string | undefined;
+    content: string;
+  };
+}
+
+type CSSModuleClassMap = Record<string, string>;
 
 const suffixMatcher = /\.module\.css?$/;
 
@@ -153,13 +161,14 @@ async function processCss(file: string) {
   let json: CSSModuleClassMap = {};
 
   let source = await fse.readFile(file, "utf-8");
-  let result = await postcss([
+
+  let { css } = await postcss([
     cssModules({
       localsConvention: "camelCase",
       generateScopedName: "[name]__[local]___[hash:base64:8]",
       hashPrefix: "remix",
       getJSON(_, data) {
-        json = { ...data };
+        json = { ...json, ...data };
         return json;
       },
     }),
@@ -169,7 +178,7 @@ async function processCss(file: string) {
   });
 
   // TODO: Support sourcemaps when using .module.css files
-  return { css: result.css, json };
+  return { css, json };
 }
 
 function getResolvedFilePath(
@@ -181,4 +190,57 @@ function getResolvedFilePath(
   return args.path.startsWith("~/")
     ? path.resolve(config.appDirectory, args.path.replace(/^~\//, ""))
     : path.resolve(args.resolveDir, args.path);
+}
+
+/**
+ * Creates a virtual module called `@remix-run/dev/css-modules` that exports the
+ * URL of the compiled CSS that users will use in their route's `link` export.
+ */
+export function serverCssModulesModulePlugin(
+  assetsManifestPromiseRef: AssetsManifestPromiseRef
+): esbuild.Plugin {
+  let filter = cssModulesVirtualModule.filter;
+  return {
+    name: "css-modules-module",
+    setup(build) {
+      build.onResolve({ filter }, async () => {
+        let filePath = (await assetsManifestPromiseRef.current)?.cssModules;
+        return {
+          path: filePath,
+          namespace: "server-css-modules-module",
+        };
+      });
+
+      build.onLoad({ filter }, async (args) => {
+        return {
+          resolveDir: args.path,
+          loader: "css",
+        };
+      });
+    },
+  };
+}
+
+export function browserCssModulesModulePlugin(
+  cssModulesFilePath: string | undefined
+): esbuild.Plugin {
+  let filter = cssModulesVirtualModule.filter;
+  return {
+    name: "css-modules-module",
+    setup(build) {
+      build.onResolve({ filter }, async () => {
+        return {
+          path: cssModulesFilePath,
+          namespace: "browser-css-modules-module",
+        };
+      });
+
+      build.onLoad({ filter }, async (args) => {
+        return {
+          resolveDir: args.path,
+          loader: "css",
+        };
+      });
+    },
+  };
 }
