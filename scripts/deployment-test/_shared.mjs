@@ -80,7 +80,7 @@ export function runCypress(dir, dev, url) {
   }
 }
 
-export async function checkUrl(url) {
+export function checkUrl(url) {
   let operation = retry.operation({ retries: 10 });
 
   return new Promise((resolve, reject) => {
@@ -88,11 +88,12 @@ export async function checkUrl(url) {
       try {
         let response = await fetch(url);
         if (response.status >= 200 && response.status < 400) {
-          resolve("App server is up");
+          resolve("URL responded with status " + response.status);
         } else {
-          throw new Error(`App server is not up: ${response.status}`);
+          throw new Error(`URL responded with status ${response.status}`);
         }
       } catch (error) {
+        console.error(error);
         reject(operation.retry(error));
       }
     });
