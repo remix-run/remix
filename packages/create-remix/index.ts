@@ -71,13 +71,18 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
 
   let appPkg: any;
 
-  let type: "url" | "file";
-  let parsed: RepoInfo | undefined;
+  let type: "url" | "file" | "directory";
+  let parsed: parseUrl.Result | undefined;
 
   // check if the "repo" is a file on disk; if so, use that
   // otherwise, parse the git url (or partial git url))
   if (fse.existsSync(repo)) {
-    type = "file";
+    let stat = fse.statSync(repo);
+    if (stat.isDirectory()) {
+      type = "directory";
+    } else {
+      type = "file";
+    }
   } else if (repo.startsWith("file://")) {
     type = "file";
     repo = URL.fileURLToPath(repo);
@@ -86,7 +91,10 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
     parsed = await gitUrlToRepoInfo(repo);
   }
 
-  if (type === "file") {
+  if (type === "directory") {
+    console.log("Copying directory...");
+    fse.copySync(repo, projectDir);
+  } else if (type === "file") {
     if (repo.endsWith(".tar.gz")) {
       console.log(`Extracting local tarball...`);
       await extractLocalTarball(projectDir, repo);
