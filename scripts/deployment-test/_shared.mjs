@@ -111,7 +111,8 @@ export async function validatePackageVersions(directory) {
   await Promise.all(
     remixDeps.map((key) => {
       let version = allDeps[key];
-      return checkUrl(`https://registry.npmjs.org/${key}/${version}`);
+      let pinnedVersion = semver.coerce(version);
+      return checkUrl(`https://registry.npmjs.org/${key}/${pinnedVersion}`);
     })
   );
 }
