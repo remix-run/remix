@@ -31,11 +31,13 @@ export interface AssetsManifest {
       hasErrorBoundary: boolean;
     };
   };
+  cssModules: string | undefined;
 }
 
 export async function createAssetsManifest(
   config: RemixConfig,
-  metafile: esbuild.Metafile
+  metafile: esbuild.Metafile,
+  cssModulesPath: string | undefined
 ): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
@@ -106,7 +108,12 @@ export async function createAssetsManifest(
   optimizeRoutes(routes, entry.imports);
   let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
-  return { version, entry, routes };
+  return {
+    version,
+    entry,
+    routes,
+    cssModules: cssModulesPath ? resolveUrl(cssModulesPath) : undefined,
+  };
 }
 
 type ImportsCache = { [routeId: string]: string[] };

@@ -168,7 +168,7 @@ async function processCss(file: string) {
       generateScopedName: "[name]__[local]___[hash:base64:8]",
       hashPrefix: "remix",
       getJSON(_, data) {
-        json = { ...json, ...data };
+        json = { ...data };
         return json;
       },
     }),
