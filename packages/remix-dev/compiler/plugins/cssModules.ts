@@ -165,7 +165,12 @@ async function processCss(file: string) {
   let { css } = await postcss([
     cssModules({
       localsConvention: "camelCase",
-      generateScopedName: "[name]__[local]___[hash:base64:8]",
+      // [name]  -> CSS modules file-name (button.module.css -> button-module)
+      // [local] -> locally assigned classname
+      // example:
+      //   in button.module.css: .button {}
+      //   generated classname:  .button-module__button_wtIDeq {}
+      generateScopedName: "[name]__[local]_[hash:base64:8]",
       hashPrefix: "remix",
       getJSON(_, data) {
         json = { ...data };
