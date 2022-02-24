@@ -34,7 +34,7 @@ export type CookieOptions = CookieParseOptions &
  *
  * @see https://remix.run/api/remix#cookie-api
  */
-export interface Cookie {
+export interface Cookie<Value = any> {
   /**
    * The name of the cookie, used in the `Cookie` and `Set-Cookie` headers.
    */
@@ -60,13 +60,13 @@ export interface Cookie {
   parse(
     cookieHeader: string | null,
     options?: CookieParseOptions
-  ): Promise<any>;
+  ): Promise<Value | null | "">;
 
   /**
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  serialize(value: any, options?: CookieSerializeOptions): Promise<string>;
+  serialize(value: Value, options?: CookieSerializeOptions): Promise<string>;
 }
 
 /**
@@ -74,10 +74,10 @@ export interface Cookie {
  *
  * @see https://remix.run/api/remix#createcookie
  */
-export function createCookie(
+export function createCookie<Value extends any = any>(
   name: string,
   cookieOptions: CookieOptions = {}
-): Cookie {
+): Cookie<Value> {
   let { secrets, ...options } = {
     secrets: [],
     path: "/",
@@ -99,12 +99,17 @@ export function createCookie(
     },
     async parse(cookieHeader, parseOptions) {
       if (!cookieHeader) return null;
-      let cookies = parse(cookieHeader, { ...options, ...parseOptions });
-      return name in cookies
-        ? cookies[name] === ""
-          ? ""
-          : await decodeCookieValue(cookies[name], secrets)
-        : null;
+      const cookies = parse(cookieHeader, { ...options, ...parseOptions });
+
+      if (name in cookies) {
+        if (cookies[name] === "") {
+          return "";
+        } else {
+          return decodeCookieValue<Value>(cookies[name], secrets);
+        }
+      }
+
+      return null;
     },
     async serialize(value, serializeOptions) {
       return serialize(
@@ -147,10 +152,10 @@ async function encodeCookieValue(
   return encoded;
 }
 
-async function decodeCookieValue(
+async function decodeCookieValue<ParsedValue>(
   value: string,
   secrets: string[]
-): Promise<any> {
+): Promise<ParsedValue | null> {
   if (secrets.length > 0) {
     for (let secret of secrets) {
       let unsignedValue = await unsign(value, secret);
