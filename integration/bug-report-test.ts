@@ -1,5 +1,5 @@
+import type { AppFixture, Fixture } from "./helpers/create-fixture";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
 let app: AppFixture;
@@ -36,27 +36,36 @@ beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+      "app/routes/form.jsx": js`
+        import { useSearchParams, useFetcher, Form } from "remix"
 
-        export function loader() {
-          return json("pizza");
-        }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+        export default function FormPage() {
+          const [params] = useSearchParams()
+          const redirects = params.get("redirects") ?? 0
+          const fetcher = useFetcher()
+          return <>
+            <p>{'redirects: ' + redirects}</p>
+            <form action="/action" method="post">
+              <button name="redirects" value={redirects} data-testid="browser">browser form</button>
+            </form>
+            <Form action="/action" method="post">
+              <button name="redirects" value={redirects} data-testid="remix">remix form</button>
+            </Form>
+            <fetcher.Form action="/action" method="post">
+              <button name="redirects" value={redirects} data-testid="fetcher">fetcher form</button>
+            </fetcher.Form>
+          </>
         }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/routes/action.jsx": js`
+        import { redirect } from 'remix'
+        export async function action({ request }) {
+          const data = await request.formData()
+          const redirects = data.get("redirects")
+          const referrer = new URL(request.headers.get("referer"))
+          referrer.searchParams.set("redirects", Number(redirects) + 1)
+          return redirect(referrer.href)
         }
       `,
     },
@@ -73,15 +82,18 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
+it("should redirect via referrer header", async () => {
   // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
   // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+
+  await app.goto("/form");
+  expect(await app.getHtml()).toMatch("redirects: 0");
+  await app.clickElement("[data-testid=browser]");
+  expect(await app.getHtml()).toMatch("redirects: 1");
+  await app.clickElement("[data-testid=fetcher]");
+  expect(await app.getHtml()).toMatch("redirects: 2");
+  await app.clickElement("[data-testid=remix]");
+  expect(await app.getHtml()).toMatch("redirects: 3");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
