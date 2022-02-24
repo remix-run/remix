@@ -5,7 +5,7 @@ import sortPackageJSON from "sort-package-json";
 import got from "got";
 import gunzip from "gunzip-maybe";
 import tar from "tar-fs";
-import gitUrlParse from "git-url-parse";
+import parseUrl from "parse-github-url";
 import stream from "stream";
 import { promisify } from "util";
 import URL from "url";
@@ -161,13 +161,6 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
   }
 }
 
-export interface RepoInfo {
-  owner: string;
-  name: string;
-  branch: string;
-  filePath: string;
-}
-
 async function extractLocalTarball(
   projectDir: string,
   filePath: string
@@ -195,15 +188,19 @@ async function downloadAndExtractRepo(
   );
 }
 
-async function gitUrlToRepoInfo(url: string): Promise<RepoInfo | undefined> {
-  let parsed = gitUrlParse(url);
+async function gitUrlToRepoInfo(url: string): Promise<parseUrl.Result> {
+  let parsed = parseUrl(url);
+
+  if (!parsed) {
+    throw new Error(`Invalid git url: ${url}`);
+  }
 
   // default to remix org if no owner is specified
   if (!parsed.owner) {
     parsed.owner = "remix-run";
   }
 
-  if (!parsed.ref) {
+  if (!parsed.branch) {
     let res = await got(
       `https://api.github.com/repos/${parsed.owner}/${parsed.name}`
     );
@@ -213,15 +210,10 @@ async function gitUrlToRepoInfo(url: string): Promise<RepoInfo | undefined> {
     }
 
     let repo = JSON.parse(res.body.toString());
-    parsed.ref = repo.default_branch;
+    parsed.branch = repo.default_branch;
   }
 
-  return {
-    filePath: parsed.filepath,
-    name: parsed.name,
-    owner: parsed.owner,
-    branch: parsed.ref
-  };
+  return parsed;
 }
 
 export { createApp };
