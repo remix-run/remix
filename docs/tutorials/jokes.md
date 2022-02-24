@@ -1338,7 +1338,7 @@ In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.ht
 
 There are two packages that we need to get started:
 
-- `prisma` for interact with our database and schema during development
+- `prisma` for interacting with our database and schema during development.
 - `@prisma/client` for making queries to our database during runtime.
 
 💿 Install the prisma packages:
