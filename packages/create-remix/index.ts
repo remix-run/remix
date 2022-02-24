@@ -17,23 +17,23 @@ let pipeline = promisify(stream.pipeline);
 
 export let servers: { [key: string]: string } = {
   "Architect (AWS Lambda)":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/arc",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/arc",
   "Cloudflare Pages":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/cloudflare-workers",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-workers",
   "Cloudflare Workers":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/cloudflare-pages",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-pages",
   "Deno (experimental)":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/deno",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/deno",
   "Express Server":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/express",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/express",
   "Fly.io":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/fly",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/fly",
   Netlify:
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/netlify",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/netlify",
   "Remix App Server":
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/remix",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/remix",
   Vercel:
-    "https://github.com/remix-run/remix/tree/main/packages/create-remix/templates/vercel"
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/vercel"
 } as const;
 
 export type Server = typeof servers[keyof typeof servers];
@@ -72,7 +72,7 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
   let appPkg: any;
 
   let type: "url" | "file" | "directory";
-  let parsed: parseUrl.Result | undefined;
+  let url: string | undefined;
 
   // check if the "repo" is a file on disk; if so, use that
   // otherwise, parse the git url (or partial git url))
@@ -88,7 +88,12 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
     repo = URL.fileURLToPath(repo);
   } else {
     type = "url";
-    parsed = await gitUrlToRepoInfo(repo);
+    try {
+      let parsed = await gitUrlToRepoInfo(repo);
+      url = `https://github.com/${parsed.owner}/${parsed.name}/archive/refs/heads/${parsed.branch}.tar.gz`;
+    } catch (error) {
+      url = repo;
+    }
   }
 
   if (type === "directory") {
@@ -99,15 +104,11 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
       console.log(`Extracting local tarball...`);
       await extractLocalTarball(projectDir, repo);
     }
-  } else if (typeof parsed !== "undefined") {
-    console.log("Fetching template from GitHub...");
-    // TODO: handle HTTP errors
-    await downloadAndExtractRepo(
-      projectDir,
-      `https://github.com/${parsed.owner}/${parsed.name}/archive/refs/heads/${parsed.branch}.tar.gz`
-    );
+  } else if (typeof url !== "undefined") {
+    console.log("Fetching template from remote...");
+    await downloadAndExtractRepo(projectDir, url);
   } else {
-    console.log(`️🚨 Oops, ${repo} is not a valid github repo`);
+    console.log(`️🚨 Oops, ${url} is not a valid url`);
     throw new Error();
   }
 
@@ -205,7 +206,7 @@ async function downloadAndExtractRepo(
 async function gitUrlToRepoInfo(url: string): Promise<parseUrl.Result> {
   let parsed = parseUrl(url);
 
-  if (!parsed) {
+  if (!parsed || !parsed.repo) {
     throw new Error(`Invalid git url: ${url}`);
   }
 
