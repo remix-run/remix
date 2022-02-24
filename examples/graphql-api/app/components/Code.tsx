@@ -12,7 +12,7 @@ export const Code = (props: CodeProps) => {
 
   return (
     <details>
-      <summary>{summary}</summary>
+      <summary style={{ cursor: "pointer" }}>{summary}</summary>
       <code>
         <pre>{JSON.stringify(data, null, 2)}</pre>
       </code>

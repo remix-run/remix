@@ -1,50 +1,13 @@
 import { Link, useLoaderData } from "remix";
-import type { ApolloError } from "apollo-server-errors";
-import type { LoaderFunction } from "remix";
 
 import { Code } from "~/components/Code";
-import { fetchFromGraphQL } from "~/utils/index";
-import type { Characters } from "~/generated/types";
+import type { LoaderData } from "~/routes/api/characters";
 
-type LoaderData = {
-  data: { characters: Characters };
-  errors?: ApolloError[];
-};
-
-export const loader: LoaderFunction = async () => {
-  const getCharactersQuery = `
-    fragment CharacterFields on Character {
-      gender
-      id
-      image
-      name
-      origin {
-        dimension
-        name
-        type
-      }
-      species
-      status
-      type
-    }
-
-    fragment GetCharactersFields on Characters {
-      results {
-        ...CharacterFields
-      }
-    }
-
-    query getCharacters($page: Int) {
-      characters(page: $page) {
-        ...GetCharactersFields
-      }
-    }
-  `;
-
-  const res = await fetchFromGraphQL(getCharactersQuery, { page: 1 });
-
-  return res.json();
-};
+/**
+ * @description Here we simply re-export the loader used in our resource route
+ * which allows this route to fetch from the GraphQL API directly
+ */
+export { loader } from "~/routes/api/characters";
 
 /**
  * @description This route demonstrates fetching a list of characters from
@@ -65,7 +28,7 @@ export default function () {
         above to see what the Remix loader returned.
       </p>
       <hr style={{ margin: "40px auto" }} />
-      {characters.map(character => {
+      {characters.map((character) => {
         if (!character) return null;
 
         const { image } = character;

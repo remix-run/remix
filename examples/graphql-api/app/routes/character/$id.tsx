@@ -1,43 +1,20 @@
 import { Link, useLoaderData } from "remix";
-import type { ApolloError } from "apollo-server-errors";
 import type { LoaderFunction } from "remix";
 
 import { Code } from "~/components/Code";
-import { fetchFromGraphQL } from "~/utils/index";
-import type { Character } from "~/generated/types";
+import type { LoaderData } from "~/routes/api/character";
 
-type LoaderData = {
-  data: { character: Character };
-  errors?: ApolloError[];
-};
-
-export const loader: LoaderFunction = async args => {
+/**
+ * @description This loader fetches from the Resource route using fetch.
+ */
+export const loader: LoaderFunction = async (args) => {
   const { params } = args;
 
-  const getCharacterQuery = `
-      fragment CharacterFields on Character {
-        gender
-        id
-        image
-        name
-        origin {
-          dimension
-          name
-          type
-        }
-        species
-        status
-        type
-      }
+  const url = `http://localhost:3000/api/character?id=${params.id}`;
+  const res = await fetch(url, {
+    method: "GET",
+  });
 
-      query getCharacter($id: ID!) {
-        character(id: $id) {
-          ...CharacterFields
-        }
-      }
-    `;
-
-  const res = await fetchFromGraphQL(getCharacterQuery, { id: params.id });
   return res.json();
 };
 

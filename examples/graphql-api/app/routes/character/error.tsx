@@ -11,7 +11,10 @@ type LoaderData = {
   errors?: ApolloError[];
 };
 
-export const loader: LoaderFunction = async _args => {
+/**
+ * @description Here we query an external GraphQL API directly via "fetch".
+ */
+export const loader: LoaderFunction = async (_args) => {
   const getCharacterQuery = `
     fragment CharacterFields on Character {
       gender
