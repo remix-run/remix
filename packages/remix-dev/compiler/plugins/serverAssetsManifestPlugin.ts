@@ -3,8 +3,9 @@ import jsesc from "jsesc";
 
 import invariant from "../../invariant";
 import { assetsManifestVirtualModule } from "../virtualModules";
+import type { AssetsManifest } from "../../compiler/assets";
 
-export type AssetsManifestPromiseRef = { current?: Promise<unknown> };
+export type AssetsManifestPromiseRef = { current?: Promise<AssetsManifest> };
 
 /**
  * Creates a virtual module called `@remix-run/dev/assets-manifest` that exports
