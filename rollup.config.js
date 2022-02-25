@@ -37,7 +37,11 @@ function createRemix() {
       external() {
         return true;
       },
-      input: [`${SOURCE_DIR}/cli.ts`, `${SOURCE_DIR}/index.ts`],
+      input: [
+        `${SOURCE_DIR}/cli.ts`,
+        `${SOURCE_DIR}/index.ts`,
+        `${SOURCE_DIR}/utils.ts`
+      ],
       output: {
         format: "cjs",
         dir: OUTPUT_DIR,

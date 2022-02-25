@@ -19,14 +19,15 @@ const help = `
     --template, -t      The template to use for the app
 
   Examples:
+    $ npx create-remix
     $ npx create-remix --template express-template
     $ npx create-remix --template :username/:repo
     $ npx create-remix --template https://github.com/:username/:repo
     $ npx create-remix --template https://github.com/:username/:repo/tree/:branch
     $ npx create-remix --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+    $ npx create-remix --template https://example.com/remix-stack.tar.gz
     $ npx create-remix --template /my/remix-stack
     $ npx create-remix --template /my/remix-stack.tar.gz
-    $ npx create-remix --template https://example.com/remix-stack.tar.gz
     $ npx create-remix --template file:///Users/michael/michael-stackson.tar.gz
 `;
 
@@ -89,7 +90,7 @@ async function run() {
       projectDir,
       lang: "ts",
       install: answers.install,
-      repo: flags.template
+      repoURL: flags.template
     });
 
     return;
@@ -130,7 +131,7 @@ async function run() {
   await createApp({
     projectDir,
     lang: answers.lang,
-    repo: answers.server,
+    repoURL: answers.server,
     install: answers.install
   });
 

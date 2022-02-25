@@ -2,38 +2,32 @@ import path from "path";
 import { execSync } from "child_process";
 import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
+import { URL, fileURLToPath } from "url";
+import parseURL from "parse-github-url";
 import got from "got";
-import gunzip from "gunzip-maybe";
-import tar from "tar-fs";
-import parseUrl from "parse-github-url";
-import stream from "stream";
-import { promisify } from "util";
-import URL from "url";
 
 import cliPkgJson from "./package.json";
-
-// this is natively a promise in node 15+ stream/promises
-let pipeline = promisify(stream.pipeline);
+import { downloadAndExtractRepo, extractLocalTarball } from "./utils";
 
 export let servers: { [key: string]: string } = {
   "Architect (AWS Lambda)":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/arc",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/arc",
   "Cloudflare Pages":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-workers",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/cloudflare-workers",
   "Cloudflare Workers":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-pages",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/cloudflare-pages",
   "Deno (experimental)":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/deno",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/deno",
   "Express Server":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/express",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/express",
   "Fly.io":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/fly",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/fly",
   Netlify:
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/netlify",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/netlify",
   "Remix App Server":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/remix",
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/remix",
   Vercel:
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/vercel"
+    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/vercel"
 } as const;
 
 export type Server = typeof servers[keyof typeof servers];
@@ -45,24 +39,32 @@ export interface CreateAppArgs {
   lang: Lang;
   install: boolean;
   quiet?: boolean;
-  repo: string;
+  repoURL: string;
   githubPAT?: string;
 }
 
-async function createApp({
+export async function createApp({
   projectDir,
   install,
   quiet,
-  repo,
+  repoURL,
   lang,
   githubPAT = process.env.GITHUB_TOKEN
 }: CreateAppArgs) {
+  console.log({
+    projectDir,
+    install,
+    quiet,
+    repoURL,
+    lang,
+    githubPAT
+  });
+
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
-    console.log(
+    throw new Error(
       `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
     );
-    throw new Error();
   }
 
   // Create the app directory
@@ -70,57 +72,91 @@ async function createApp({
   let projectDirIsCurrentDir = relativeProjectDir === "";
   if (!projectDirIsCurrentDir) {
     if (fse.existsSync(projectDir)) {
-      console.log(
+      throw new Error(
         `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
-      throw new Error();
     }
   }
 
-  let appPkg: any;
+  /**
+   * First we'll need to determine if the template we got is
+   * tarball URL (github or otherwise)
+   * github owner/repo
+   * example in remix-run org
+   * template in remix-run org
+   * file on disk
+   * directory on disk
+   */
 
-  let type: "url" | "file" | "directory";
-  let url: string | undefined;
-
-  // check if the "repo" is a file on disk; if so, use that
-  // otherwise, parse the git url (or partial git url))
-  if (fse.existsSync(repo)) {
-    let stat = fse.statSync(repo);
-    if (stat.isDirectory()) {
-      type = "directory";
-    } else {
-      type = "file";
-    }
-  } else if (repo.startsWith("file://")) {
-    type = "file";
-    repo = URL.fileURLToPath(repo);
-  } else {
-    type = "url";
+  if (repoURL.startsWith("file://")) {
     try {
-      let parsed = await gitUrlToRepoInfo(repo, githubPAT);
-      url = `https://github.com/${parsed.owner}/${parsed.name}/archive/refs/heads/${parsed.branch}.tar.gz`;
+      repoURL = fileURLToPath(repoURL);
     } catch (error) {
-      url = repo;
+      throw new Error(`Unable to convert file URL to path`);
     }
-  }
-
-  if (type === "directory") {
-    console.log("Copying directory...");
-    fse.copySync(repo, projectDir);
-  } else if (type === "file") {
-    if (repo.endsWith(".tar.gz")) {
-      console.log(`Extracting local tarball...`);
-      await extractLocalTarball(projectDir, repo);
+  } else if (fse.existsSync(repoURL)) {
+    if (fse.statSync(repoURL).isDirectory()) {
+      if (!quiet) {
+        console.log(`Copying files from ${repoURL}, this might take a moment.`);
+      }
+      fse.copySync(repoURL, projectDir);
+    } else if (repoURL.endsWith(".tar.gz")) {
+      if (!quiet) {
+        console.log(
+          `Extracting files from local tarball ${repoURL}. This might take a moment.`
+        );
+      }
+      await extractLocalTarball(projectDir, repoURL);
+    } else {
+      throw new Error(`2. Unable to parse the URL "${repoURL}" as a file URL.`);
     }
-  } else if (typeof url !== "undefined") {
-    console.log("Fetching template from remote...");
-    await downloadAndExtractRepo(projectDir, url, githubPAT);
   } else {
-    console.log(`️🚨 Oops, ${url} is not a valid url`);
-    throw new Error();
+    repoURL = new URL(repoURL).toString();
+    let parsed = parseURL(repoURL);
+    if (!parsed) {
+      throw new Error(`Invalid repo URL`);
+    } else {
+      // default to remix org if no owner is specified
+      if (!parsed.owner) {
+        parsed.owner = "remix-run";
+        parsed.name = parsed.pathname;
+        parsed.repo = `remix-run/${parsed.name}`;
+        parsed.repository = `remix-run/${parsed.name}`;
+      }
+
+      if (!parsed.branch) {
+        let url = `https://api.github.com/repos/${parsed.owner}/${parsed.name}`;
+        let res = await got(url, {
+          headers: { authorization: `token ${githubPAT}` }
+        });
+
+        if (res.statusCode !== 200) {
+          throw new Error(
+            `Error fetching repo info for ${url}: ${res.statusCode}`
+          );
+        }
+
+        let repo = JSON.parse(res.body.toString());
+        parsed.branch = repo.default_branch;
+      }
+
+      console.log({ parsed });
+
+      let tarballURL = `https://codeload.github.com/${parsed.owner}/${parsed.name}/tar.gz/${parsed.branch}`;
+
+      if (!quiet) {
+        console.log(
+          `Downloading files from repo ${repoURL}. This might take a moment.`
+        );
+      }
+
+      await downloadAndExtractRepo(projectDir, tarballURL, githubPAT);
+    }
+
+    throw new Error("Invalid repo URL");
   }
 
-  appPkg = require(path.join(projectDir, "package.json"));
+  let appPkg = require(path.join(projectDir, "package.json"));
 
   // add current versions of remix deps
   ["dependencies", "devDependencies"].forEach(pkgKey => {
@@ -163,7 +199,7 @@ async function createApp({
         console.error(error);
       }
     }
-  } else if (repo && hasSetupScript) {
+  } else if (repoURL && hasSetupScript) {
     console.log(
       `\n\n You've opted out of running \`npm install\` in your new project.\n\n You'll need to manually install dependencies in the \`${setupScriptDir}\` directory and run \`npx remix init\`.\n\n`
     );
@@ -184,72 +220,3 @@ async function createApp({
     }
   }
 }
-
-async function extractLocalTarball(
-  projectDir: string,
-  filePath: string
-): Promise<void> {
-  let readStream = fse.createReadStream(filePath).pipe(gunzip());
-  let writeStream = tar.extract(projectDir);
-  await pipeline(readStream, writeStream);
-}
-
-async function downloadAndExtractRepo(
-  projectDir: string,
-  url: string,
-  githubPAT?: string
-): Promise<void> {
-  let desiredDir = path.basename(projectDir);
-  let cwd = path.dirname(projectDir);
-  await pipeline(
-    got
-      .stream(url, { headers: { authorization: `token ${githubPAT}` } })
-      .pipe(gunzip()),
-    tar.extract(cwd, {
-      map(header) {
-        let originalDirName = header.name.split("/")[0];
-        header.name = header.name.replace(originalDirName, desiredDir);
-        return header;
-      }
-    })
-  );
-}
-
-async function gitUrlToRepoInfo(
-  url: string,
-  githubPAT?: string
-): Promise<parseUrl.Result> {
-  let parsed = parseUrl(url);
-
-  if (!parsed) {
-    throw new Error(`Invalid git url: ${url}`);
-  }
-
-  // default to remix org if no owner is specified
-  if (!parsed.owner) {
-    parsed.owner = "remix-run";
-    parsed.name = parsed.pathname;
-    parsed.repo = `remix-run/${parsed.name}`;
-    parsed.repository = `remix-run/${parsed.name}`;
-  }
-
-  console.log(`Fetching ${parsed.owner}/${parsed.repo}...`);
-
-  if (!parsed.branch) {
-    let res = await got(
-      `https://api.github.com/repos/${parsed.owner}/${parsed.name}`,
-      { headers: { authorization: `token ${githubPAT}` } }
-    );
-
-    if (res.statusCode !== 200) {
-      throw new Error(`Error fetching repo info for ${url}: ${res.statusCode}`);
-    }
-
-    let repo = JSON.parse(res.body.toString());
-    parsed.branch = repo.default_branch;
-  }
-
-  return parsed;
-}
-
-export { createApp };
