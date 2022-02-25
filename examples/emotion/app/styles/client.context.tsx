@@ -5,7 +5,7 @@ export interface ClientStyleContextData {
 }
 
 const ClientStyleContext = createContext<ClientStyleContextData>({
-  reset: () => {}
+  reset: () => {},
 });
 
 export default ClientStyleContext;

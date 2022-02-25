@@ -5,7 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch
+  useCatch,
 } from "remix";
 import { useContext, useEffect } from "react";
 import { withEmotionCache } from "@emotion/react";
@@ -42,7 +42,7 @@ const Document = withEmotionCache(
       // re-inject tags
       const tags = emotionCache.sheet.tags;
       emotionCache.sheet.flush();
-      tags.forEach(tag => {
+      tags.forEach((tag) => {
         (emotionCache.sheet as any)._insertTag(tag);
       });
 
