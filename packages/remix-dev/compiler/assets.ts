@@ -6,6 +6,7 @@ import invariant from "../invariant";
 import { getRouteModuleExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
+import type { CssModulesResults } from "./plugins/cssModules";
 
 type Route = RemixConfig["routes"][string];
 
@@ -31,13 +32,13 @@ export interface AssetsManifest {
       hasErrorBoundary: boolean;
     };
   };
-  cssModules: string | undefined;
+  cssModules: (CssModulesResults & { fileUrl: string }) | undefined;
 }
 
 export async function createAssetsManifest(
   config: RemixConfig,
   metafile: esbuild.Metafile,
-  cssModulesPath: string | undefined
+  cssModules: CssModulesResults | undefined
 ): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
@@ -112,7 +113,9 @@ export async function createAssetsManifest(
     version,
     entry,
     routes,
-    cssModules: cssModulesPath ? resolveUrl(cssModulesPath) : undefined,
+    cssModules: cssModules
+      ? { ...cssModules, fileUrl: resolveUrl(cssModules.filePath) }
+      : undefined,
   };
 }
 

@@ -9,67 +9,29 @@ import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
 import { cssModulesVirtualModule } from "../virtualModules";
 import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
-
-export interface CssModulesRef {
-  current: {
-    filePath?: string | undefined;
-    content: string;
-  };
-}
-
-type CSSModuleClassMap = Record<string, string>;
+import type { CssModulesBuild } from "../../compiler";
 
 const suffixMatcher = /\.module\.css?$/;
 
 /**
- * Loads *.module.css files on the server build and returns the hashed JSON so
- * we can get the right classnames in the HTML.
+ * Loads *.module.css files and returns the hashed JSON so we can get the right
+ * classnames in the HTML.
  */
-export function serverCssModulesPlugin(config: RemixConfig): esbuild.Plugin {
-  return {
-    name: "server-css-modules",
-    async setup(build) {
-      build.onResolve({ filter: suffixMatcher }, (args) => {
-        return {
-          path: getResolvedFilePath(config, args),
-          namespace: "server-css-modules",
-        };
-      });
-
-      build.onLoad({ filter: suffixMatcher }, async (args) => {
-        try {
-          let { json } = await processCssCached(config, args.path);
-
-          return {
-            contents: JSON.stringify(json),
-            loader: "json",
-          };
-        } catch (err: any) {
-          return {
-            errors: [{ text: err.message }],
-          };
-        }
-      });
-    },
-  };
-}
-
-/**
- * Loads *.module.css files in the browser build and calls back with the
- * processed CSS so it can be compiled into a single global file.
- */
-export function browserCssModulesPlugin(
+export function cssModulesPlugin(
   config: RemixConfig,
-  handleProcessedCss: (css: string) => void
+  handleProcessedCss: (
+    filePath: string,
+    css: string,
+    json: CssModuleClassMap
+  ) => void
 ): esbuild.Plugin {
   return {
-    name: "browser-css-modules",
+    name: "css-modules",
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, (args) => {
         return {
           path: getResolvedFilePath(config, args),
-          namespace: "browser-css-modules",
-          // It's safe to remove this import if the classnames aren't used anywhere.
+          namespace: "css-modules",
           sideEffects: false,
         };
       });
@@ -77,9 +39,7 @@ export function browserCssModulesPlugin(
       build.onLoad({ filter: suffixMatcher }, async (args) => {
         try {
           let { css, json } = await processCssCached(config, args.path);
-
-          handleProcessedCss(css);
-
+          handleProcessedCss(args.path, css, json);
           return {
             contents: JSON.stringify(json),
             loader: "json",
@@ -94,40 +54,91 @@ export function browserCssModulesPlugin(
   };
 }
 
-interface ProcessedCSS {
-  css: string;
-  json: CSSModuleClassMap;
+/**
+ * This plugin is for the browser + server builds. It doesn't actually process
+ * the CSS, but it resolves the import paths and yields to the CSS Modules build
+ * for the results.
+ */
+export function cssModulesFakerPlugin(
+  config: RemixConfig,
+  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef
+): esbuild.Plugin {
+  return {
+    name: "css-modules-faker",
+    async setup(build) {
+      build.onResolve({ filter: suffixMatcher }, (args) => {
+        return {
+          path: getResolvedFilePath(config, args),
+          namespace: "css-modules",
+          sideEffects: false,
+        };
+      });
+
+      build.onLoad({ filter: suffixMatcher }, async (args) => {
+        let res = await cssModulesBuildPromiseRef.current!;
+        let { json } = res.moduleMap[args.path];
+        return {
+          contents: JSON.stringify(json),
+          loader: "json",
+        };
+      });
+    },
+  };
 }
 
-let memoryCssCache = new Map<
-  string,
-  { hash: string; processedCssPromise: Promise<ProcessedCSS> }
->();
+/**
+ * Creates a virtual module called `@remix-run/dev/css-modules` that exports the
+ * URL of the compiled CSS that users will use in their route's `link` export.
+ */
+export function cssModulesVirtualModulePlugin(
+  assetsManifestPromiseRef: AssetsManifestPromiseRef
+): esbuild.Plugin {
+  let filter = cssModulesVirtualModule.filter;
+  return {
+    name: "css-modules-virtual-module",
+    setup(build) {
+      build.onResolve({ filter }, async ({ path }) => {
+        return {
+          path,
+          namespace: "css-modules-virtual-module",
+        };
+      });
+
+      build.onLoad({ filter }, async () => {
+        let fileUrl = (await assetsManifestPromiseRef.current)?.cssModules
+          ?.fileUrl;
+
+        return {
+          loader: "js",
+          contents: `export default ${
+            fileUrl
+              ? `"${fileUrl}"`
+              : // If there is no CSS module file the import should return undefined.
+                // Users should check for a value and conditionally render a
+                // link only if we have modules. This way we can avoid annoying
+                // errors if they delete any references to CSS modules, though
+                // perhaps a dev warning would be helpful if they intended to
+                // remove CSS modules but left the virtual module import!
+                "undefined"
+          }`,
+        };
+      });
+    },
+  };
+}
 
 async function processCssCached(
   config: RemixConfig,
   filePath: string
-): Promise<ProcessedCSS> {
+): Promise<CssModuleFileContents> {
   let file = path.resolve(config.appDirectory, filePath);
   let hash = await getFileHash(file);
-
-  // Use an in-memory cache to prevent browser + server builds from compiling
-  // the same CSS at the same time. They can re-use each other's work!
-  let cached = memoryCssCache.get(file);
-  if (cached) {
-    if (cached.hash === hash) {
-      return cached.processedCssPromise;
-    } else {
-      // Contents of the file changed, get it out of the in-memory cache.
-      memoryCssCache.delete(file);
-    }
-  }
 
   // Use an on-disk cache to speed up dev server boot.
   let processedCssPromise = (async function () {
     let key = file + ".cssmodule";
 
-    let cached: (ProcessedCSS & { hash: string }) | null = null;
+    let cached: (CssModuleFileContents & { hash: string }) | null = null;
     try {
       cached = await cache.getJson(config.cacheDirectory, key);
     } catch (error) {
@@ -136,7 +147,6 @@ async function processCssCached(
 
     if (!cached || cached.hash !== hash) {
       let { css, json } = await processCss(filePath);
-
       cached = { hash, css, json };
 
       try {
@@ -152,16 +162,12 @@ async function processCssCached(
     };
   })();
 
-  memoryCssCache.set(file, { hash, processedCssPromise });
-
   return processedCssPromise;
 }
 
 async function processCss(file: string) {
-  let json: CSSModuleClassMap = {};
-
+  let json: CssModuleClassMap = {};
   let source = await fse.readFile(file, "utf-8");
-
   let { css } = await postcss([
     cssModules({
       localsConvention: "camelCase",
@@ -191,61 +197,35 @@ function getResolvedFilePath(
   args: { path: string; resolveDir: string }
 ) {
   // TODO: Ideally we should deal with the "~/" higher up in the build process
-  // if possible.
+  // if possible. Also ... what if the user changes this alias in their
+  // tsconfig? Do we support that?
   return args.path.startsWith("~/")
     ? path.resolve(config.appDirectory, args.path.replace(/^~\//, ""))
     : path.resolve(args.resolveDir, args.path);
 }
 
-/**
- * Creates a virtual module called `@remix-run/dev/css-modules` that exports the
- * URL of the compiled CSS that users will use in their route's `link` export.
- */
-export function serverCssModulesModulePlugin(
-  assetsManifestPromiseRef: AssetsManifestPromiseRef
-): esbuild.Plugin {
-  let filter = cssModulesVirtualModule.filter;
-  return {
-    name: "css-modules-module",
-    setup(build) {
-      build.onResolve({ filter }, async () => {
-        let filePath = (await assetsManifestPromiseRef.current)?.cssModules;
-        return {
-          path: filePath,
-          namespace: "server-css-modules-module",
-        };
-      });
-
-      build.onLoad({ filter }, async (args) => {
-        return {
-          resolveDir: args.path,
-          loader: "css",
-        };
-      });
-    },
-  };
+export async function getCssModulesFilePath(config: RemixConfig, css: string) {
+  let hash = (await getFileHash(css)).slice(0, 8).toUpperCase();
+  return path.relative(
+    config.assetsBuildDirectory,
+    path.resolve(`__css-modules-${hash}.css`)
+  );
 }
 
-export function browserCssModulesModulePlugin(
-  cssModulesFilePath: string | undefined
-): esbuild.Plugin {
-  let filter = cssModulesVirtualModule.filter;
-  return {
-    name: "css-modules-module",
-    setup(build) {
-      build.onResolve({ filter }, async () => {
-        return {
-          path: cssModulesFilePath,
-          namespace: "browser-css-modules-module",
-        };
-      });
-
-      build.onLoad({ filter }, async (args) => {
-        return {
-          resolveDir: args.path,
-          loader: "css",
-        };
-      });
-    },
-  };
+export interface CssModulesBuildPromiseRef {
+  current?: Promise<CssModulesBuild>;
 }
+
+export interface CssModuleFileContents {
+  css: string;
+  json: CssModuleClassMap;
+}
+
+export type CssModuleFileMap = Record<string, CssModuleFileContents>;
+
+export interface CssModulesResults {
+  filePath: string;
+  moduleMap: CssModuleFileMap;
+}
+
+export type CssModuleClassMap = Record<string, string>;

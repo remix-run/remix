@@ -22,6 +22,16 @@ import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManif
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
+import type {
+  CssModuleClassMap,
+  CssModulesResults,
+  CssModulesBuildPromiseRef,
+} from "./compiler/plugins/cssModules";
+import {
+  cssModulesPlugin,
+  cssModulesFakerPlugin,
+  getCssModulesFilePath,
+} from "./compiler/plugins/cssModules";
 import { writeFileSafe } from "./compiler/utils/fs";
 
 // When we build Remix, this shim file is copied directly into the output
@@ -77,14 +87,20 @@ export async function build(
   }: BuildOptions = {}
 ): Promise<void> {
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
+  let cssModulesBuildPromiseRef: CssModulesBuildPromiseRef = {};
 
-  await buildEverything(config, assetsManifestPromiseRef, {
-    mode,
-    target,
-    sourcemap,
-    onWarning,
-    onBuildFailure,
-  });
+  await buildEverything(
+    config,
+    assetsManifestPromiseRef,
+    cssModulesBuildPromiseRef,
+    {
+      mode,
+      target,
+      sourcemap,
+      onWarning,
+      onBuildFailure,
+    }
+  );
 }
 
 interface WatchOptions extends BuildOptions {
@@ -122,20 +138,25 @@ export async function watch(
   };
 
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
-  let [browserBuild, serverBuild] = await buildEverything(
+  let cssModulesBuildPromiseRef: CssModulesBuildPromiseRef = {};
+  let [cssModulesBuild, browserBuild, serverBuild] = await buildEverything(
     config,
     assetsManifestPromiseRef,
+    cssModulesBuildPromiseRef,
     options
   );
 
-  let initialBuildComplete = !!browserBuild && !!serverBuild;
+  let initialBuildComplete =
+    !!cssModulesBuild && !!browserBuild && !!serverBuild;
   if (initialBuildComplete) {
     onInitialBuild?.();
   }
 
   function disposeBuilders() {
+    cssModulesBuild?.rebuild?.dispose();
     browserBuild?.rebuild?.dispose();
     serverBuild?.rebuild?.dispose();
+    cssModulesBuild = undefined;
     browserBuild = undefined;
     serverBuild = undefined;
   }
@@ -154,28 +175,35 @@ export async function watch(
     let builders = await buildEverything(
       config,
       assetsManifestPromiseRef,
+      cssModulesBuildPromiseRef,
       options
     );
     if (onRebuildFinish) onRebuildFinish();
-    browserBuild = builders[0];
-    serverBuild = builders[1];
+
+    [cssModulesBuild, browserBuild, serverBuild] = builders;
   }, 500);
 
   let rebuildEverything = debounce(async () => {
     if (onRebuildStart) onRebuildStart();
 
-    if (!browserBuild?.rebuild || !serverBuild?.rebuild) {
+    if (
+      !cssModulesBuild?.rebuild ||
+      !browserBuild?.rebuild ||
+      !serverBuild?.rebuild
+    ) {
       disposeBuilders();
 
       try {
-        [browserBuild, serverBuild] = await buildEverything(
+        [cssModulesBuild, browserBuild, serverBuild] = await buildEverything(
           config,
           assetsManifestPromiseRef,
+          cssModulesBuildPromiseRef,
           options
         );
 
         if (!initialBuildComplete) {
-          initialBuildComplete = !!browserBuild && !!serverBuild;
+          initialBuildComplete =
+            !!cssModulesBuild && !!browserBuild && !!serverBuild;
           if (initialBuildComplete) {
             onInitialBuild?.();
           }
@@ -189,16 +217,19 @@ export async function watch(
 
     // If we get here and can't call rebuild something went wrong and we
     // should probably blow as it's not really recoverable.
+    let cssModulesBuildPromise = cssModulesBuild.rebuild();
     let browserBuildPromise = browserBuild.rebuild();
     let assetsManifestPromise = browserBuildPromise.then((build) =>
-      generateAssetsManifest(config, build.metafile!)
+      generateAssetsManifest(config, build.metafile!, cssModulesBuildPromiseRef)
     );
 
     // Assign the assetsManifestPromise to a ref so the server build can await
     // it when loading the @remix-run/dev/assets-manifest virtual module.
     assetsManifestPromiseRef.current = assetsManifestPromise;
+    cssModulesBuildPromiseRef.current = cssModulesBuildPromise;
 
     await Promise.all([
+      cssModulesBuildPromise,
       assetsManifestPromise,
       serverBuild
         .rebuild()
@@ -278,39 +309,79 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+interface BrowserBuild extends esbuild.BuildResult {}
+interface ServerBuild extends esbuild.BuildResult {}
+
+interface BuildInvalidate {
+  (): Promise<CssModulesBuildIncremental>;
+  dispose(): void;
+}
+export interface CssModulesBuild extends CssModulesResults {
+  result: esbuild.BuildResult;
+  rebuild?: BuildInvalidate;
+}
+
+interface CssModulesBuildIncremental extends CssModulesBuild {
+  rebuild: BuildInvalidate;
+}
+
 async function buildEverything(
   config: RemixConfig,
   assetsManifestPromiseRef: AssetsManifestPromiseRef,
+  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef,
   options: Required<BuildOptions> & { incremental?: boolean }
-): Promise<(esbuild.BuildResult | undefined)[]> {
+): Promise<
+  [
+    CssModulesBuild | undefined,
+    BrowserBuild | undefined,
+    ServerBuild | undefined
+  ]
+> {
   try {
-    let browserBuildPromise = createBrowserBuild(config, options);
+    let cssModulesPromise = createCssModulesBuild(
+      config,
+      options,
+      assetsManifestPromiseRef
+    );
+
+    let browserBuildPromise = createBrowserBuild(
+      config,
+      cssModulesBuildPromiseRef,
+      options
+    );
     let assetsManifestPromise = browserBuildPromise.then((build) =>
-      generateAssetsManifest(config, build.metafile!)
+      generateAssetsManifest(config, build.metafile!, cssModulesBuildPromiseRef)
     );
 
     // Assign the assetsManifestPromise to a ref so the server build can await
     // it when loading the @remix-run/dev/assets-manifest virtual module.
     assetsManifestPromiseRef.current = assetsManifestPromise;
 
+    // Assign the cssModulesBuildPromiseRef to a ref so both server and client builds
+    // can await it when loading the @remix-run/dev/css-modules virtual module.
+    cssModulesBuildPromiseRef.current = cssModulesPromise;
+
     let serverBuildPromise = createServerBuild(
       config,
-      options,
-      assetsManifestPromiseRef
+      assetsManifestPromiseRef,
+      cssModulesBuildPromiseRef,
+      options
     );
 
     return await Promise.all([
+      cssModulesPromise,
       assetsManifestPromise.then(() => browserBuildPromise),
       serverBuildPromise,
     ]);
   } catch (err) {
     options.onBuildFailure(err as Error);
-    return [undefined, undefined];
+    return [undefined, undefined, undefined];
   }
 }
 
 async function createBrowserBuild(
   config: RemixConfig,
+  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef,
   options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   // For the browser build, exclude node built-ins that don't have a
@@ -369,6 +440,7 @@ async function createBrowserBuild(
       ),
     },
     plugins: [
+      cssModulesFakerPlugin(config, cssModulesBuildPromiseRef),
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
@@ -379,8 +451,9 @@ async function createBrowserBuild(
 
 async function createServerBuild(
   config: RemixConfig,
-  options: Required<BuildOptions> & { incremental?: boolean },
-  assetsManifestPromiseRef: AssetsManifestPromiseRef
+  assetsManifestPromiseRef: AssetsManifestPromiseRef,
+  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef,
+  options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   let dependencies = await getAppDependencies(config);
 
@@ -398,6 +471,7 @@ async function createServerBuild(
   }
 
   let plugins: esbuild.Plugin[] = [
+    cssModulesFakerPlugin(config, cssModulesBuildPromiseRef),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
@@ -455,11 +529,148 @@ async function createServerBuild(
     });
 }
 
+async function createCssModulesBuild(
+  config: RemixConfig,
+  options: Required<BuildOptions> & { incremental?: boolean },
+  assetsManifestPromiseRef: AssetsManifestPromiseRef
+): Promise<CssModulesBuild> {
+  // ... find all .module.css files
+  // aggregate the contents, keep an object of the JSON
+  // run the full build (we don't care about JS modules...)
+  // output only a single file to public/build
+  // return result to browser/server builds
+
+  let cssModulesContent = "";
+  let cssModulesJson: CssModuleClassMap = {};
+  let cssModulesMap: Record<string, { css: string; json: CssModuleClassMap }> =
+    {};
+  function handleProcessedCss(
+    filePath: string,
+    css: string,
+    json: CssModuleClassMap
+  ) {
+    cssModulesContent += css;
+    cssModulesJson = { ...cssModulesJson, ...json };
+    cssModulesMap = {
+      ...cssModulesMap,
+      [filePath]: {
+        css,
+        json,
+      },
+    };
+  }
+
+  // The rest of this is copied from the server build
+
+  let dependencies = await getAppDependencies(config);
+
+  let stdin: esbuild.StdinOptions | undefined;
+  let entryPoints: string[] | undefined;
+
+  if (config.serverEntryPoint) {
+    entryPoints = [config.serverEntryPoint];
+  } else {
+    stdin = {
+      contents: config.serverBuildTargetEntryModule,
+      resolveDir: config.rootDirectory,
+      loader: "ts",
+    };
+  }
+
+  let plugins: esbuild.Plugin[] = [
+    mdxPlugin(config),
+    cssModulesPlugin(config, handleProcessedCss),
+    emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
+    serverRouteModulesPlugin(config),
+    serverEntryModulePlugin(config),
+    serverAssetsManifestPlugin(assetsManifestPromiseRef),
+    serverBareModulesPlugin(config, dependencies),
+  ];
+
+  if (config.serverPlatform !== "node") {
+    plugins.unshift(NodeModulesPolyfillPlugin());
+  }
+
+  return esbuild
+    .build({
+      absWorkingDir: config.rootDirectory,
+      stdin,
+      entryPoints,
+      outfile: config.serverBuildPath,
+      write: false,
+      platform: config.serverPlatform,
+      format: config.serverModuleFormat,
+      treeShaking: true,
+      minify:
+        options.mode === BuildMode.Production &&
+        !!config.serverBuildTarget &&
+        ["cloudflare-workers", "cloudflare-pages"].includes(
+          config.serverBuildTarget
+        ),
+      mainFields:
+        config.serverModuleFormat === "esm"
+          ? ["module", "main"]
+          : ["main", "module"],
+      target: options.target,
+      inject: [reactShim],
+      loader: loaders,
+      bundle: true,
+      logLevel: "silent",
+      incremental: options.incremental,
+      sourcemap: options.sourcemap ? "inline" : false,
+      // The server build needs to know how to generate asset URLs for imports
+      // of CSS and other files.
+      assetNames: "_assets/[name]-[hash]",
+      publicPath: config.publicPath,
+      define: {
+        "process.env.NODE_ENV": JSON.stringify(options.mode),
+        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+          config.devServerPort
+        ),
+      },
+      plugins,
+    })
+    .then(async (build) => {
+      return {
+        result: build,
+        rebuild: (() => {
+          if (!options.incremental) {
+            return undefined;
+          }
+          let builder = (async () => {
+            // Clear CSS modules data before rebuild
+            cssModulesContent = "";
+            cssModulesMap = {};
+            let result = await build.rebuild!();
+            return {
+              result,
+              rebuild: builder,
+              filePath: await getCssModulesFilePath(config, cssModulesContent),
+              moduleMap: cssModulesMap,
+            };
+          }) as BuildInvalidate;
+          // TODO: unsure about this, check back w/ esbuild docs to clarify what
+          // dispose is doing and see if we need to clear any internal state
+          builder.dispose = build.rebuild!.dispose;
+          return builder;
+        })(),
+        filePath: await getCssModulesFilePath(config, cssModulesContent),
+        moduleMap: cssModulesMap,
+      };
+    });
+}
+
 async function generateAssetsManifest(
   config: RemixConfig,
-  metafile: esbuild.Metafile
+  metafile: esbuild.Metafile,
+  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef
 ): Promise<AssetsManifest> {
-  let assetsManifest = await createAssetsManifest(config, metafile);
+  let cssModulesResults = await cssModulesBuildPromiseRef.current;
+  let assetsManifest = await createAssetsManifest(
+    config,
+    metafile,
+    cssModulesResults
+  );
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
 
   assetsManifest.url = config.publicPath + filename;
