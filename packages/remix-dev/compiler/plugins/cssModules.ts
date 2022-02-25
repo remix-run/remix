@@ -4,7 +4,7 @@ import path from "path";
 import * as fse from "fs-extra";
 import type * as esbuild from "esbuild";
 
-import { getFileHash } from "../utils/crypto";
+import { getFileHash, getHash } from "../utils/crypto";
 import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
 import { cssModulesVirtualModule } from "../virtualModules";
@@ -204,9 +204,9 @@ function getResolvedFilePath(
     : path.resolve(args.resolveDir, args.path);
 }
 
-export async function getCssModulesFilePath(config: RemixConfig, css: string) {
-  let hash = (await getFileHash(css)).slice(0, 8).toUpperCase();
-  return path.relative(
+export function getCssModulesFilePath(config: RemixConfig, css: string) {
+  let hash = getHash(css).slice(0, 8).toUpperCase();
+  return path.resolve(
     config.assetsBuildDirectory,
     path.resolve(`__css-modules-${hash}.css`)
   );
