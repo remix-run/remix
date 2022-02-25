@@ -16,24 +16,15 @@ import cliPkgJson from "./package.json";
 let pipeline = promisify(stream.pipeline);
 
 export let servers: { [key: string]: string } = {
-  "Architect (AWS Lambda)":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/arc",
-  "Cloudflare Pages":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-workers",
-  "Cloudflare Workers":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-pages",
-  "Deno (experimental)":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/deno",
-  "Express Server":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/express",
-  "Fly.io":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/fly",
-  Netlify:
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/netlify",
-  "Remix App Server":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/remix",
-  Vercel:
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/vercel"
+  "Architect (AWS Lambda)": `https://github.com/remix-run/arc-template`,
+  "Cloudflare Pages": `https://github.com/remix-run/cloudflare-workers-template`,
+  "Cloudflare Workers": `https://github.com/remix-run/cloudflare-pages-template`,
+  "Deno (experimental)": `https://github.com/remix-run/deno-template`,
+  "Express Server": `https://github.com/remix-run/express-template`,
+  "Fly.io": `https://github.com/remix-run/fly-template`,
+  Netlify: `https://github.com/remix-run/netlify-template`,
+  "Remix App Server": `https://github.com/remix-run/remix-template`,
+  Vercel: `https://github.com/remix-run/vercel-template`
 } as const;
 
 export type Server = typeof servers[keyof typeof servers];
