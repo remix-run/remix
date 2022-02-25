@@ -196,6 +196,25 @@ export async function dev(remixRoot: string, modeArg?: string) {
   }
 }
 
+export async function init(remixRoot: string) {
+  let setupScriptDir = path.join(remixRoot, "remix.init");
+  let setupScript = path.resolve(remixRoot, "remix.init", "index.js");
+  let hasSetupScript = fse.existsSync(setupScript);
+
+  if (!hasSetupScript) return;
+
+  try {
+    let init = require(setupScript);
+    await init({ rootDirectory: remixRoot });
+    fse.removeSync(setupScriptDir);
+  } catch (error) {
+    console.error(
+      `⚠️  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
+    );
+    console.error(error);
+  }
+}
+
 function purgeAppRequireCache(buildPath: string) {
   for (let key in require.cache) {
     if (key.startsWith(buildPath)) {

@@ -9,6 +9,7 @@ Usage
   $ remix dev [remixRoot]
   $ remix setup [remixPlatform]
   $ remix routes [remixRoot]
+  $ remix init [remixRoot]
 
 Options
   --help              Print this help message and exit
@@ -31,6 +32,7 @@ Examples
   $ remix setup node
   $ remix routes my-website
   $ remix routes my-website --json
+  $ remix init my-website
 `;
 
 const cli = meow(helpText, {
@@ -86,6 +88,9 @@ switch (cli.input[0]) {
     if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
     if (cli.flags.debug) inspector.open();
     commands.dev(cli.input[1], process.env.NODE_ENV).catch(handleError);
+    break;
+  case "init":
+    commands.init(cli.input[1]).catch(handleError);
     break;
   default:
     // `remix ./my-project` is shorthand for `remix dev ./my-project`
