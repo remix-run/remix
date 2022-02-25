@@ -46,7 +46,7 @@ const Document = withEmotionCache(
         (emotionCache.sheet as any)._insertTag(tag);
       });
 
-      // reset cache to reapply global styles
+      // reset cache to re-apply global styles
       clientStyleData.reset();
     }, []);
 
