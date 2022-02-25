@@ -18,9 +18,9 @@
     "@remix-run/server-runtime": "1.2.2"
   },
   "peerDependencies": {
-    "@cloudflare/workers-types": "^2.2.2"
+    "@cloudflare/workers-types": "^2.2.2 || ^3.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^2.2.2"
+    "@cloudflare/workers-types": "^2.2.2 || ^3.0.0"
   }
 }
