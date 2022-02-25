@@ -86,9 +86,9 @@ You'll probably see the screen just go blank with `null`. You've got a route but
 ```tsx filename=app/routes/posts/index.tsx
 export default function Posts() {
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -127,9 +127,9 @@ export default function Posts() {
   const posts = useLoaderData();
   console.log(posts);
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -145,7 +145,7 @@ import { Link, useLoaderData } from "remix";
 export default function Posts() {
   const posts = useLoaderData();
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
       <ul>
         {posts.map((post) => (
@@ -154,7 +154,7 @@ export default function Posts() {
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
@@ -188,7 +188,7 @@ export const loader = async () => {
 export default function Posts() {
   const posts = useLoaderData<Post[]>();
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
       <ul>
         {posts.map((post) => (
@@ -197,7 +197,7 @@ export default function Posts() {
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
@@ -433,9 +433,9 @@ touch app/routes/posts/\$slug.tsx
 ```tsx filename=app/routes/posts/$slug.tsx
 export default function PostSlug() {
   return (
-    <div>
+    <main>
       <h1>Some Post</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -454,9 +454,9 @@ export const loader = async ({ params }) => {
 export default function PostSlug() {
   const slug = useLoaderData();
   return (
-    <div>
+    <main>
       <h1>Some Post: {slug}</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -515,9 +515,9 @@ export const loader: LoaderFunction = async ({
 export default function PostSlug() {
   const post = useLoaderData();
   return (
-    <div>
+    <main>
       <h1>{post.title}</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -566,7 +566,7 @@ export async function getPost(slug: string) {
 export default function PostSlug() {
   const post = useLoaderData();
   return (
-    <div dangerouslySetInnerHTML={{ __html: post.html }} />
+    <main dangerouslySetInnerHTML={{ __html: post.html }} />
   );
 }
 ```
