@@ -291,30 +291,28 @@ export function getNewMatchesForLinks(
 ): ClientMatch[] {
   let path = parsePathPatch(page);
 
-  let prevUrl = new URL(
-    location.pathname + location.search + location.hash,
-    window.origin
-  );
-  let url = new URL(page, window.origin);
-  let filterByRouteProps = filterByRoutePropsFactory(
-    currentMatches,
-    prevUrl,
-    url
-  );
-
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
-  let newMatches =
-    mode === "data" && location.search !== path.search
-      ? nextMatches.filter(filterByRouteProps)
-      : nextMatches.filter((match, index) => {
-          return (
-            (mode === "assets" || match.route.hasLoader) &&
-            shouldReloadForMatch(currentMatches, match, index)
-          );
-        });
+  if (mode === "data" && location.search !== path.search) {
+    let prevUrl = new URL(
+      location.pathname + location.search + location.hash,
+      window.origin
+    );
+    let url = new URL(page, window.origin);
+    let filterByRouteProps = filterByRoutePropsFactory(
+      currentMatches,
+      prevUrl,
+      url
+    );
+    return nextMatches.filter(filterByRouteProps);
+  }
 
-  return newMatches;
+  return nextMatches.filter((match, index) => {
+    return (
+      (mode === "assets" || match.route.hasLoader) &&
+      shouldReloadForMatch(currentMatches, match, index)
+    );
+  });
 }
 
 export function getDataLinkHrefs(
