@@ -9,7 +9,6 @@ import {
   filterByRoutePropsFactory,
   shouldReloadForMatch,
 } from "./routeMatching";
-// import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, RouteModule } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 

@@ -1343,7 +1343,7 @@ function filterMatchesToLoad(
   }
 
   let prevUrl = createUrl(createHref(state.location));
-  let filterByRouteProps2 = filterByRoutePropsFactory(
+  let filterByRouteProps = filterByRoutePropsFactory(
     state.matches,
     prevUrl,
     url,
@@ -1356,7 +1356,7 @@ function filterMatchesToLoad(
   }
 
   if (fetcher?.type === "actionReload") {
-    return matches.filter(filterByRouteProps2);
+    return matches.filter(filterByRouteProps);
   } else if (
     // mutation, reload for fresh data
     state.transition.type === "actionReload" ||
@@ -1366,7 +1366,7 @@ function filterMatchesToLoad(
     // search affects all loaders
     url.searchParams.toString() !== state.location.search.substring(1)
   ) {
-    return matches.filter(filterByRouteProps2);
+    return matches.filter(filterByRouteProps);
   }
 
   return matches.filter((match, index, arr) => {
