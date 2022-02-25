@@ -302,6 +302,8 @@ export function getNewMatchesForLinks(
     url
   );
 
+  // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
+  // version doesn't care about submissions
   let newMatches =
     mode === "data" && location.search !== path.search
       ? nextMatches.filter(filterByRouteProps)
