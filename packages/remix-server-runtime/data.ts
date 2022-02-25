@@ -3,6 +3,7 @@ import type { ServerRoute } from "./routes";
 import { json, isResponse, isRedirectResponse } from "./responses";
 
 /**
+ * @deprecated Please switch to use Generics type
  * An object of arbitrary for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
