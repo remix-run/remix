@@ -4,9 +4,13 @@ import { Action } from "history";
 import type { Location } from "history";
 
 import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
+import type { ClientMatch, RouteMatch } from "./routeMatching";
+import {
+  filterByRoutePropsFactory,
+  matchClientRoutes,
+  shouldReloadForMatch,
+} from "./routeMatching";
 import type { ClientRoute } from "./routes";
-import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
 
 export interface CatchData<T = any> {
@@ -233,8 +237,6 @@ type FetcherStates<TData = any> = {
 
 export type Fetcher<TData = any> =
   FetcherStates<TData>[keyof FetcherStates<TData>];
-
-type ClientMatch = RouteMatch<ClientRoute>;
 
 type DataResult = {
   match: ClientMatch;
@@ -1340,46 +1342,13 @@ function filterMatchesToLoad(
     });
   }
 
-  let isNew = (match: ClientMatch, index: number) => {
-    // [a] -> [a, b]
-    if (!state.matches[index]) return true;
-
-    // [a, b] -> [a, c]
-    return match.route.id !== state.matches[index].route.id;
-  };
-
-  let matchPathChanged = (match: ClientMatch, index: number) => {
-    return (
-      // param change, /users/123 -> /users/456
-      state.matches[index].pathname !== match.pathname ||
-      // splat param changed, which is not present in match.path
-      // e.g. /files/images/avatar.jpg -> files/finances.xls
-      (state.matches[index].route.path?.endsWith("*") &&
-        state.matches[index].params["*"] !== match.params["*"])
-    );
-  };
-
-  let filterByRouteProps = (match: ClientMatch, index: number) => {
-    if (!match.route.loader) {
-      return false;
-    }
-
-    if (isNew(match, index) || matchPathChanged(match, index)) {
-      return true;
-    }
-
-    if (match.route.shouldReload) {
-      let prevUrl = createUrl(createHref(state.location));
-      return match.route.shouldReload({
-        prevUrl,
-        url,
-        submission,
-        params: match.params,
-      });
-    }
-
-    return true;
-  };
+  let prevUrl = createUrl(createHref(state.location));
+  let filterByRouteProps2 = filterByRoutePropsFactory(
+    state.matches,
+    prevUrl,
+    url,
+    submission
+  );
 
   let isInRootCatchBoundary = state.matches.length === 1;
   if (isInRootCatchBoundary) {
@@ -1387,7 +1356,7 @@ function filterMatchesToLoad(
   }
 
   if (fetcher?.type === "actionReload") {
-    return matches.filter(filterByRouteProps);
+    return matches.filter(filterByRouteProps2);
   } else if (
     // mutation, reload for fresh data
     state.transition.type === "actionReload" ||
@@ -1397,7 +1366,7 @@ function filterMatchesToLoad(
     // search affects all loaders
     url.searchParams.toString() !== state.location.search.substring(1)
   ) {
-    return matches.filter(filterByRouteProps);
+    return matches.filter(filterByRouteProps2);
   }
 
   return matches.filter((match, index, arr) => {
@@ -1407,8 +1376,7 @@ function filterMatchesToLoad(
     }
 
     return (
-      match.route.loader &&
-      (isNew(match, index) || matchPathChanged(match, index))
+      match.route.loader && shouldReloadForMatch(state.matches, match, index)
     );
   });
 }
