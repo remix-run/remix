@@ -151,20 +151,21 @@ async function createApp({
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
 
     if (hasSetupScript) {
+      execSync("npm install", { stdio: "inherit", cwd: setupScriptDir });
       try {
         let init = require(setupScript);
-        await init(projectDir);
+        await init({ rootDirectory: projectDir });
         fse.removeSync(setupScriptDir);
       } catch (error) {
         console.error(
-          `⚠️  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
+          `⚠️  Error running \`remix.init\`. We've kept the \`remix.init\` directory around so you can fix it and rerun "npx remix init".\n\n`
         );
         console.error(error);
       }
     }
   } else if (repo && hasSetupScript) {
     console.log(
-      `\n\n You've opted out of running \`npm install\` in your new project.\n\n You'll need to manually install dependencies and run \`node ${setupScript}\`.\n\n`
+      `\n\n You've opted out of running \`npm install\` in your new project.\n\n You'll need to manually install dependencies in the \`${setupScriptDir}\` directory and run \`npx remix init\`.\n\n`
     );
   }
 
@@ -216,7 +217,7 @@ async function downloadAndExtractRepo(
 
 async function gitUrlToRepoInfo(
   url: string,
-  githubPAT: string
+  githubPAT?: string
 ): Promise<parseUrl.Result> {
   let parsed = parseUrl(url);
 
