@@ -4,7 +4,7 @@ import {
   Meta,
   NavLink,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 import { useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
