@@ -46,9 +46,17 @@ export interface CreateAppArgs {
   install: boolean;
   quiet?: boolean;
   repo: string;
+  githubPAT?: string;
 }
 
-async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
+async function createApp({
+  projectDir,
+  install,
+  quiet,
+  repo,
+  lang,
+  githubPAT = process.env.PRIVATE_GITHUB_TOKEN
+}: CreateAppArgs) {
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
     console.log(
@@ -89,7 +97,7 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
   } else {
     type = "url";
     try {
-      let parsed = await gitUrlToRepoInfo(repo);
+      let parsed = await gitUrlToRepoInfo(repo, githubPAT);
       url = `https://github.com/${parsed.owner}/${parsed.name}/archive/refs/heads/${parsed.branch}.tar.gz`;
     } catch (error) {
       url = repo;
@@ -106,7 +114,7 @@ async function createApp({ projectDir, install, quiet, repo }: CreateAppArgs) {
     }
   } else if (typeof url !== "undefined") {
     console.log("Fetching template from remote...");
-    await downloadAndExtractRepo(projectDir, url);
+    await downloadAndExtractRepo(projectDir, url, githubPAT);
   } else {
     console.log(`️🚨 Oops, ${url} is not a valid url`);
     throw new Error();
@@ -187,12 +195,15 @@ async function extractLocalTarball(
 
 async function downloadAndExtractRepo(
   projectDir: string,
-  url: string
+  url: string,
+  githubPAT?: string
 ): Promise<void> {
   let desiredDir = path.basename(projectDir);
   let cwd = path.dirname(projectDir);
   await pipeline(
-    got.stream(url).pipe(gunzip()),
+    got
+      .stream(url, { headers: { authorization: `token ${githubPAT}` } })
+      .pipe(gunzip()),
     tar.extract(cwd, {
       map(header) {
         let originalDirName = header.name.split("/")[0];
@@ -203,21 +214,30 @@ async function downloadAndExtractRepo(
   );
 }
 
-async function gitUrlToRepoInfo(url: string): Promise<parseUrl.Result> {
+async function gitUrlToRepoInfo(
+  url: string,
+  githubPAT: string
+): Promise<parseUrl.Result> {
   let parsed = parseUrl(url);
 
-  if (!parsed || !parsed.repo) {
+  if (!parsed) {
     throw new Error(`Invalid git url: ${url}`);
   }
 
   // default to remix org if no owner is specified
   if (!parsed.owner) {
     parsed.owner = "remix-run";
+    parsed.name = parsed.pathname;
+    parsed.repo = `remix-run/${parsed.name}`;
+    parsed.repository = `remix-run/${parsed.name}`;
   }
+
+  console.log(`Fetching ${parsed.owner}/${parsed.repo}...`);
 
   if (!parsed.branch) {
     let res = await got(
-      `https://api.github.com/repos/${parsed.owner}/${parsed.name}`
+      `https://api.github.com/repos/${parsed.owner}/${parsed.name}`,
+      { headers: { authorization: `token ${githubPAT}` } }
     );
 
     if (res.statusCode !== 200) {
