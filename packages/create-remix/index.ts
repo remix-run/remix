@@ -55,7 +55,7 @@ async function createApp({
   quiet,
   repo,
   lang,
-  githubPAT = process.env.PRIVATE_GITHUB_TOKEN
+  githubPAT = process.env.GITHUB_TOKEN
 }: CreateAppArgs) {
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
