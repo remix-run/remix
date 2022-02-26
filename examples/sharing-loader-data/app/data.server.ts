@@ -9,17 +9,17 @@ export async function getWorkshops() {
     {
       id: "1",
       title: "Making Cookies",
-      description: `Let's make some cookies! 🍪`
+      description: `Let's make some cookies! 🍪`,
     },
     {
       id: "2",
       title: "Baking Bread",
-      description: `Let's bake some bread! 🍞`
+      description: `Let's bake some bread! 🍞`,
     },
     {
       id: "3",
       title: "Cooking Chicken",
-      description: `Let's cook some chicken! 🍗`
-    }
+      description: `Let's cook some chicken! 🍗`,
+    },
   ];
 }

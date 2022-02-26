@@ -18,7 +18,7 @@ async function getRootPackageJson() {
 async function addCypress(directory, url) {
   let rootPkgJson = await getRootPackageJson();
 
-  await updatePackageConfig(directory, config => {
+  await updatePackageConfig(directory, (config) => {
     config.devDependencies["start-server-and-test"] =
       rootPkgJson.dependencies["start-server-and-test"];
     config.devDependencies["cypress"] = rootPkgJson.dependencies["cypress"];
@@ -35,7 +35,7 @@ async function addCypress(directory, url) {
 function getSpawnOpts(dir) {
   return {
     cwd: dir,
-    stdio: "inherit"
+    stdio: "inherit",
   };
 }
 
@@ -43,7 +43,7 @@ function runCypress(dir, dev, url) {
   let spawnOpts = getSpawnOpts(dir);
   let cypressSpawnOpts = {
     ...spawnOpts,
-    env: { ...process.env, CYPRESS_BASE_URL: url }
+    env: { ...process.env, CYPRESS_BASE_URL: url },
   };
   if (dev) {
     // run the tests against the dev server
@@ -74,5 +74,5 @@ export {
   getSpawnOpts,
   runCypress,
   addCypress,
-  getRootPackageJson
+  getRootPackageJson,
 };

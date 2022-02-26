@@ -5,14 +5,18 @@ function createNote(title: string, body: string, userId: string) {
     data: {
       title,
       body,
-      userId
-    }
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
+    },
   });
 }
 
 function deleteNote(id: string) {
   return prisma.note.delete({
-    where: { id }
+    where: { id },
   });
 }
 

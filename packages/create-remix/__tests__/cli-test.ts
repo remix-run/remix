@@ -13,7 +13,7 @@ const keys = {
   up: "\x1B\x5B\x41",
   down: "\x1B\x5B\x42",
   enter: "\x0D",
-  space: "\x20"
+  space: "\x20",
 };
 
 const createRemix = path.resolve(
@@ -23,12 +23,12 @@ const createRemix = path.resolve(
 
 describe("create-remix cli", () => {
   // TODO: Rewrite this test
-  it.skip("guides the user through the process", async done => {
+  it.skip("guides the user through the process", async (done) => {
     let cli = spawn("node", [createRemix], {});
     let promptCount = 0;
     let previousPrompt: string;
 
-    cli.stdout.on("data", async data => {
+    cli.stdout.on("data", async (data) => {
       let prompt = cleanPrompt(data);
       if (
         !prompt ||
@@ -64,7 +64,7 @@ describe("create-remix cli", () => {
             "Netlify",
             "Vercel",
             "Cloudflare Workers",
-            "Cloudflare Pages"
+            "Cloudflare Pages",
           ]);
           cli.stdin.write(keys.enter);
           break;
@@ -73,7 +73,7 @@ describe("create-remix cli", () => {
           // TypeScript or JavaScript?
           expect(getPromptChoices(prompt)).toEqual([
             "TypeScript",
-            "JavaScript"
+            "JavaScript",
           ]);
           cli.stdin.write(keys.enter);
           break;
@@ -163,7 +163,7 @@ function cleanPrompt<T extends { toString(): string }>(data: T): string {
   return stripAnsi(data.toString())
     .trim()
     .split("\n")
-    .map(s => s.replace(/\s+$/, ""))
+    .map((s) => s.replace(/\s+$/, ""))
     .join("\n");
 }
 
@@ -171,7 +171,7 @@ function getPromptChoices(prompt: string) {
   return prompt
     .slice(prompt.indexOf("❯") + 2)
     .split("\n")
-    .map(s => s.trim());
+    .map((s) => s.trim());
 }
 
 function isSamePrompt(

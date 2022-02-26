@@ -86,9 +86,9 @@ You'll probably see the screen just go blank with `null`. You've got a route but
 ```tsx filename=app/routes/posts/index.tsx
 export default function Posts() {
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -114,12 +114,12 @@ export const loader = async () => {
   return [
     {
       slug: "my-first-post",
-      title: "My First Post"
+      title: "My First Post",
     },
     {
       slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You"
-    }
+      title: "A Mixtape I Made Just For You",
+    },
   ];
 };
 
@@ -127,9 +127,9 @@ export default function Posts() {
   const posts = useLoaderData();
   console.log(posts);
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -145,16 +145,16 @@ import { Link, useLoaderData } from "remix";
 export default function Posts() {
   const posts = useLoaderData();
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
       <ul>
-        {posts.map(post => (
+        {posts.map((post) => (
           <li key={post.slug}>
             <Link to={post.slug}>{post.title}</Link>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
@@ -175,12 +175,12 @@ export const loader = async () => {
   const posts: Post[] = [
     {
       slug: "my-first-post",
-      title: "My First Post"
+      title: "My First Post",
     },
     {
       slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You"
-    }
+      title: "A Mixtape I Made Just For You",
+    },
   ];
   return posts;
 };
@@ -188,16 +188,16 @@ export const loader = async () => {
 export default function Posts() {
   const posts = useLoaderData<Post[]>();
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
       <ul>
-        {posts.map(post => (
+        {posts.map((post) => (
           <li key={post.slug}>
             <Link to={post.slug}>{post.title}</Link>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
@@ -226,12 +226,12 @@ export function getPosts() {
   const posts: Post[] = [
     {
       slug: "my-first-post",
-      title: "My First Post"
+      title: "My First Post",
     },
     {
       slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You"
-    }
+      title: "A Mixtape I Made Just For You",
+    },
   ];
   return posts;
 }
@@ -333,7 +333,7 @@ const postsPath = path.join(__dirname, "..", "posts");
 export async function getPosts() {
   const dir = await fs.readdir(postsPath);
   return Promise.all(
-    dir.map(async filename => {
+    dir.map(async (filename) => {
       const file = await fs.readFile(
         path.join(postsPath, filename)
       );
@@ -342,7 +342,7 @@ export async function getPosts() {
       );
       return {
         slug: filename.replace(/\.md$/, ""),
-        title: attributes.title
+        title: attributes.title,
       };
     })
   );
@@ -389,7 +389,7 @@ function isValidPostAttributes(
 export async function getPosts() {
   const dir = await fs.readdir(postsPath);
   return Promise.all(
-    dir.map(async filename => {
+    dir.map(async (filename) => {
       const file = await fs.readFile(
         path.join(postsPath, filename)
       );
@@ -402,7 +402,7 @@ export async function getPosts() {
       );
       return {
         slug: filename.replace(/\.md$/, ""),
-        title: attributes.title
+        title: attributes.title,
       };
     })
   );
@@ -433,9 +433,9 @@ touch app/routes/posts/\$slug.tsx
 ```tsx filename=app/routes/posts/$slug.tsx
 export default function PostSlug() {
   return (
-    <div>
+    <main>
       <h1>Some Post</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -454,9 +454,9 @@ export const loader = async ({ params }) => {
 export default function PostSlug() {
   const slug = useLoaderData();
   return (
-    <div>
+    <main>
       <h1>Some Post: {slug}</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -470,7 +470,7 @@ import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   return params.slug;
 };
@@ -482,7 +482,7 @@ Now let's actually read the post from the file system.
 
 Put this function anywhere in the `app/post.ts` module:
 
-```tsx filename=app/post.ts lines=[2,4]
+```tsx filename=app/post.ts
 // ...
 export async function getPost(slug: string) {
   const filepath = path.join(postsPath, slug + ".md");
@@ -506,7 +506,7 @@ import invariant from "tiny-invariant";
 import { getPost } from "~/post";
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   invariant(params.slug, "expected params.slug");
   return getPost(params.slug);
@@ -515,9 +515,9 @@ export const loader: LoaderFunction = async ({
 export default function PostSlug() {
   const post = useLoaderData();
   return (
-    <div>
+    <main>
       <h1>{post.title}</h1>
-    </div>
+    </main>
   );
 }
 ```
@@ -566,7 +566,7 @@ export async function getPost(slug: string) {
 export default function PostSlug() {
   const post = useLoaderData();
   return (
-    <div dangerouslySetInnerHTML={{ __html: post.html }} />
+    <main dangerouslySetInnerHTML={{ __html: post.html }} />
   );
 }
 ```
@@ -602,7 +602,7 @@ export default function Admin() {
       <nav>
         <h1>Admin</h1>
         <ul>
-          {posts.map(post => (
+          {posts.map((post) => (
             <li key={post.slug}>
               <Link to={`/posts/${post.slug}`}>
                 {post.title}
@@ -705,7 +705,7 @@ export default function Admin() {
       <nav>
         <h1>Admin</h1>
         <ul>
-          {posts.map(post => (
+          {posts.map((post) => (
             <li key={post.slug}>
               <Link to={`/posts/${post.slug}`}>
                 {post.title}
@@ -854,7 +854,7 @@ import type { ActionFunction } from "remix";
 import { createPost } from "~/post";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
 
@@ -877,7 +877,7 @@ Let's add some validation before we create the post.
 ```tsx filename=app/routes/admin/new.tsx lines=[11-14,16-18]
 //...
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
 
@@ -960,7 +960,7 @@ type PostError = {
 };
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
 
@@ -989,9 +989,9 @@ For some real fun, disable JavaScript in your dev tools and try it out. Because 
 ```tsx filename=app/routes/admin/new.tsx lines=[5-6]
 // ...
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
-  await new Promise(res => setTimeout(res, 1000));
+  await new Promise((res) => setTimeout(res, 1000));
 
   const formData = await request.formData();
 
@@ -1010,7 +1010,7 @@ import {
   useTransition,
   useActionData,
   Form,
-  redirect
+  redirect,
 } from "remix";
 
 // ...

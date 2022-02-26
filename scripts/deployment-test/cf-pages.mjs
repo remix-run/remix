@@ -16,7 +16,7 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "cloudflare-pages",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
   });
 }
 
@@ -28,7 +28,7 @@ async function createCloudflareProject() {
       headers: {
         "X-Auth-Email": process.env.CF_EMAIL,
         "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name: APP_NAME,
@@ -39,15 +39,15 @@ async function createCloudflareProject() {
             repo_name: APP_NAME,
             production_branch: "main",
             pr_comments_enabled: true,
-            deployments_enabled: true
-          }
+            deployments_enabled: true,
+          },
         },
         build_config: {
           build_command: "npm run build",
           destination_dir: "public",
-          root_dir: ""
-        }
-      })
+          root_dir: "",
+        },
+      }),
     }
   );
 
@@ -66,8 +66,8 @@ async function createCloudflareDeployment() {
       method: "POST",
       headers: {
         "X-Auth-Email": process.env.CF_EMAIL,
-        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY
-      }
+        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
+      },
     }
   );
 
@@ -105,7 +105,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -137,7 +137,7 @@ try {
       "remote",
       "add",
       "origin",
-      `https://${process.env.GITHUB_TOKEN}@github.com/${repo.full_name}.git`
+      `https://${process.env.GITHUB_TOKEN}@github.com/${repo.full_name}.git`,
     ],
     spawnOpts
   );
@@ -151,7 +151,7 @@ try {
   );
 
   // sleep for 5 minutes to be safe...
-  await new Promise(resolve => setTimeout(resolve, 60_000 * 5));
+  await new Promise((resolve) => setTimeout(resolve, 60_000 * 5));
 
   // run cypress against the cloudflare pages server
   runCypress(PROJECT_DIR, false, `https://${APP_NAME}.pages.dev`);

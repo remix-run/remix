@@ -21,7 +21,7 @@ describe("action", () => {
   it("can upload file without JavaScript", async () => {
     await Promise.all([
       page.goto(`${testServer}/actions`),
-      Utils.disableJavaScript(page)
+      Utils.disableJavaScript(page),
     ]);
 
     let html = await Utils.getHtml(page, "#form");
@@ -50,7 +50,7 @@ describe("action", () => {
 
     let [response] = await Promise.all([
       page.waitForNavigation(),
-      page.click("#submit")
+      page.click("#submit"),
     ]);
 
     expect(response!.status()).toBe(200);
@@ -154,7 +154,7 @@ describe("action", () => {
   it("rejects too big of an upload without JavaScript", async () => {
     await Promise.all([
       page.goto(`${testServer}/actions`),
-      Utils.disableJavaScript(page)
+      Utils.disableJavaScript(page),
     ]);
 
     let html = await Utils.getHtml(page, "#form");
@@ -185,7 +185,7 @@ describe("action", () => {
 
     let [response] = await Promise.all([
       page.waitForNavigation(),
-      page.click("#submit")
+      page.click("#submit"),
     ]);
 
     expect(response!.status()).toBe(500);

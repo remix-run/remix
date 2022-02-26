@@ -9,13 +9,13 @@ type LoaderData = {
 export const action: ActionFunction = async ({ request }) => {
   await authenticator.authenticate("sb", request, {
     successRedirect: "/private",
-    failureRedirect: "/login"
+    failureRedirect: "/login",
   });
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
   await supabaseStrategy.checkSession(request, {
-    successRedirect: "/private"
+    successRedirect: "/private",
   });
 
   const session = await sessionStorage.getSession(

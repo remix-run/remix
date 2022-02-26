@@ -9,7 +9,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useTransition
+  useTransition,
 } from "remix";
 
 export const links: LinksFunction = () => {

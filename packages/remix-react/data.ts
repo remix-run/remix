@@ -92,6 +92,6 @@ function getActionInit(
     body,
     signal,
     credentials: "same-origin",
-    headers
+    headers,
   };
 }

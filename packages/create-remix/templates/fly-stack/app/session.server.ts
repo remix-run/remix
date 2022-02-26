@@ -11,8 +11,8 @@ const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: [process.env.SESSION_SECRET],
-    secure: process.env.NODE_ENV === "production"
-  }
+    secure: process.env.NODE_ENV === "production",
+  },
 });
 
 const USER_SESSION_KEY = "userId";
@@ -24,7 +24,6 @@ async function getSession(request: Request) {
 async function getUserId(request: Request) {
   const session = await getSession(request);
   const userId = session.get(USER_SESSION_KEY);
-  if (!userId || typeof userId !== "string") return null;
   return userId;
 }
 
@@ -32,9 +31,8 @@ async function requireUserId(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
 ) {
-  const session = await getSession(request);
-  const userId = session.get("userId");
-  if (!userId || typeof userId !== "string") {
+  const userId = await getUserId(request);
+  if (!userId) {
     const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
   }
@@ -50,8 +48,8 @@ async function createUserSession(
   session.set(USER_SESSION_KEY, userId);
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 }
 
@@ -59,8 +57,8 @@ async function logout(request: Request) {
   const session = await getSession(request);
   return redirect("/login", {
     headers: {
-      "Set-Cookie": await sessionStorage.destroySession(session)
-    }
+      "Set-Cookie": await sessionStorage.destroySession(session),
+    },
   });
 }
 
@@ -70,5 +68,5 @@ export {
   getUserId,
   requireUserId,
   createUserSession,
-  logout
+  logout,
 };

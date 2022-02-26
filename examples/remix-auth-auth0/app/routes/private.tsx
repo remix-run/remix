@@ -7,7 +7,7 @@ type LoaderData = { profile: Auth0Profile };
 
 export const loader: LoaderFunction = async ({ request }) => {
   const profile = await auth.isAuthenticated(request, {
-    failureRedirect: "/"
+    failureRedirect: "/",
   });
 
   return json<LoaderData>({ profile });

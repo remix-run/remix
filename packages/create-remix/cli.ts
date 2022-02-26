@@ -22,7 +22,7 @@ run().then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(error);
     process.exit(1);
   }
@@ -32,15 +32,15 @@ async function run() {
   let { input, flags, showHelp, showVersion, pkg } = meow(help, {
     flags: {
       help: { type: "boolean", default: false, alias: "h" },
-      version: { type: "boolean", default: false, alias: "v" }
-    }
+      version: { type: "boolean", default: false, alias: "v" },
+    },
   });
 
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
   let anim = chalkAnimation.rainbow(`\nR E M I X - v${pkg.version}\n`);
-  await new Promise(res => setTimeout(res, 1500));
+  await new Promise((res) => setTimeout(res, 1500));
   anim.stop();
 
   console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
@@ -57,8 +57,8 @@ async function run() {
               type: "input",
               name: "dir",
               message: "Where would you like to create your app?",
-              default: "./my-remix-app"
-            }
+              default: "./my-remix-app",
+            },
           ])
         ).dir
   );
@@ -88,13 +88,13 @@ async function run() {
       choices: [
         {
           name: "A pre-configured stack ready for production",
-          value: "stack"
+          value: "stack",
         },
         {
           name: "Just the basics",
-          value: "basic"
-        }
-      ]
+          value: "basic",
+        },
+      ],
     },
     {
       name: "stack",
@@ -106,8 +106,8 @@ async function run() {
       },
       choices: [
         { name: "Fly.io", value: "fly-stack" },
-        { name: "Architect (AWS Lambda)", value: "arc-stack" }
-      ]
+        { name: "Architect (AWS Lambda)", value: "arc-stack" },
+      ],
     },
     {
       name: "server",
@@ -127,8 +127,8 @@ async function run() {
         { name: "Vercel", value: "vercel" },
         { name: "Cloudflare Pages", value: "cloudflare-pages" },
         { name: "Cloudflare Workers", value: "cloudflare-workers" },
-        { name: "Deno (experimental)", value: "deno" }
-      ]
+        { name: "Deno (experimental)", value: "deno" },
+      ],
     },
     {
       name: "lang",
@@ -139,15 +139,15 @@ async function run() {
       },
       choices: [
         { name: "TypeScript", value: "ts" },
-        { name: "JavaScript", value: "js" }
-      ]
+        { name: "JavaScript", value: "js" },
+      ],
     },
     {
       name: "install",
       type: "confirm",
       message: "Do you want me to run `npm install`?",
-      default: true
-    }
+      default: true,
+    },
   ]);
 
   if (answers.stack) {
@@ -155,14 +155,14 @@ async function run() {
       projectDir,
       lang: "ts",
       stack: answers.stack,
-      install: answers.install
+      install: answers.install,
     });
   } else {
     await createApp({
       projectDir,
       lang: answers.lang,
       server: answers.server,
-      install: answers.install
+      install: answers.install,
     });
   }
 }

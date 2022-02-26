@@ -204,7 +204,7 @@ export async function prefetchStyleLinks(
 
   // don't block for non-matching media queries
   let matchingLinks = styleLinks.filter(
-    link => !link.media || window.matchMedia(link.media).matches
+    (link) => !link.media || window.matchMedia(link.media).matches
   );
 
   await Promise.all(matchingLinks.map(prefetchStyleLink));
@@ -213,7 +213,7 @@ export async function prefetchStyleLinks(
 async function prefetchStyleLink(
   descriptor: HtmlLinkDescriptor
 ): Promise<void> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     let link = document.createElement("link");
     Object.assign(link, descriptor);
 
@@ -262,7 +262,7 @@ export async function getStylesheetPrefetchLinks(
   routeModules: RouteModules
 ) {
   let links = await Promise.all(
-    matches.map(async match => {
+    matches.map(async (match) => {
       let mod = await loadRouteModule(match.route, routeModules);
       return mod.links ? mod.links() : [];
     })
@@ -271,7 +271,7 @@ export async function getStylesheetPrefetchLinks(
   return links
     .flat(1)
     .filter(isHtmlLinkDescriptor)
-    .filter(link => link.rel === "stylesheet" || link.rel === "preload")
+    .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
     .map(({ rel, ...attrs }) =>
       rel === "preload"
         ? { rel: "prefetch", ...attrs }
@@ -327,7 +327,7 @@ export function getNewMatchesForLinks(
                 location.pathname + location.search + location.hash,
                 window.origin
               ),
-              url: new URL(page, window.origin)
+              url: new URL(page, window.origin),
             });
           }
           return true;
@@ -350,8 +350,8 @@ export function getDataLinkHrefs(
   let path = parsePathPatch(page);
   return dedupeHrefs(
     matches
-      .filter(match => manifest.routes[match.route.id].hasLoader)
-      .map(match => {
+      .filter((match) => manifest.routes[match.route.id].hasLoader)
+      .map((match) => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
         searchParams.set("_data", match.route.id);
@@ -366,7 +366,7 @@ export function getModuleLinkHrefs(
 ): string[] {
   return dedupeHrefs(
     matches
-      .map(match => {
+      .map((match) => {
         let route = manifestPatch.routes[match.route.id];
         let hrefs = [route.module];
         if (route.imports) {
@@ -387,7 +387,7 @@ function getCurrentPageModulePreloadHrefs(
 ): string[] {
   return dedupeHrefs(
     matches
-      .map(match => {
+      .map((match) => {
         let route = manifest.routes[match.route.id];
         let hrefs = [route.module];
 

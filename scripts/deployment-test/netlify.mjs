@@ -15,7 +15,7 @@ async function createNewApp() {
     install: false,
     lang: "ts",
     server: "netlify",
-    projectDir: PROJECT_DIR
+    projectDir: PROJECT_DIR,
   });
 }
 
@@ -24,8 +24,8 @@ let client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
 function createNetlifySite() {
   return client.createSite({
     body: {
-      name: APP_NAME
-    }
+      name: APP_NAME,
+    },
   });
 }
 
@@ -43,7 +43,7 @@ try {
       path.join(PROJECT_DIR, "cypress.json")
     ),
 
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);

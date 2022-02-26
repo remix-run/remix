@@ -3,18 +3,17 @@ import {
   AbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  formatServerError
 } from "@remix-run/node";
 import type {
   APIGatewayProxyEventHeaders,
   APIGatewayProxyEventV2,
   APIGatewayProxyHandlerV2,
-  APIGatewayProxyStructuredResultV2
+  APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { Response as NodeResponse } from "@remix-run/node";
@@ -41,13 +40,13 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
-  let platform: ServerPlatform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, _context) => {
@@ -81,7 +80,7 @@ export function createRemixRequest(
         ? Buffer.from(event.body, "base64").toString()
         : event.body,
     abortController,
-    signal: abortController?.signal
+    signal: abortController?.signal,
   });
 }
 
@@ -145,6 +144,6 @@ export async function sendRemixResponse(
     headers: Object.fromEntries(response.headers),
     cookies,
     body,
-    isBase64Encoded
+    isBase64Encoded,
   };
 }

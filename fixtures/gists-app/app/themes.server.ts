@@ -3,8 +3,8 @@ import { createCookieSessionStorage } from "remix";
 export let sessionStorage = createCookieSessionStorage({
   cookie: {
     name: "theme-css",
-    secrets: ["fjdlafjdkla"]
-  }
+    secrets: ["fjdlafjdkla"],
+  },
 });
 
 export let defaultStyles: Record<string, string> = {
@@ -17,5 +17,5 @@ export let defaultStyles: Record<string, string> = {
   "--nc-lk-2": "#0070F3",
   "--nc-lk-tx": "#FFFFFF",
   "--nc-ac-1": "#7928CA",
-  "--nc-ac-tx": "#FFFFFF"
+  "--nc-ac-tx": "#FFFFFF",
 };
