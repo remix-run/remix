@@ -71,7 +71,7 @@ export default function ActionsDemo() {
             <i>What is more useful when it is broken?</i>
           </p>
           <label>
-            <div>Answer:</div>
+            Answer:
             <input ref={answerRef} name="answer" type="text" />
           </label>
           <div>
