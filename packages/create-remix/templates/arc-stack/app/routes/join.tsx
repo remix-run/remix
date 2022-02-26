@@ -56,7 +56,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export const meta: MetaFunction = () => ({
-  title: "Join"
+  title: "Join",
 });
 
 export default function JoinPage() {
@@ -133,7 +133,7 @@ export default function JoinPage() {
         <Link
           to={{
             pathname: "/login",
-            search: returnTo ? `?returnTo=${returnTo}` : undefined
+            search: returnTo ? `?returnTo=${returnTo}` : undefined,
           }}
         >
           Log in

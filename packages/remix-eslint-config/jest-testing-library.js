@@ -14,13 +14,13 @@ module.exports = {
     {
       files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],
       env: {
-        "jest/globals": true
+        "jest/globals": true,
       },
       rules: {
         ...jestRules,
         ...jestDomRules,
-        ...testingLibraryRules
-      }
-    }
-  ]
+        ...testingLibraryRules,
+      },
+    },
+  ],
 };

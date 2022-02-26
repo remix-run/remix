@@ -11,8 +11,8 @@ const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: [process.env.SESSION_SECRET],
-    secure: process.env.NODE_ENV === "production"
-  }
+    secure: process.env.NODE_ENV === "production",
+  },
 });
 
 const USER_SESSION_KEY = "userId";
@@ -48,8 +48,8 @@ async function createUserSession(
   session.set(USER_SESSION_KEY, userId);
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 }
 
@@ -57,8 +57,8 @@ async function logout(request: Request) {
   const session = await getSession(request);
   return redirect("/login", {
     headers: {
-      "Set-Cookie": await sessionStorage.destroySession(session)
-    }
+      "Set-Cookie": await sessionStorage.destroySession(session),
+    },
   });
 }
 
@@ -68,5 +68,5 @@ export {
   getUserId,
   requireUserId,
   createUserSession,
-  logout
+  logout,
 };

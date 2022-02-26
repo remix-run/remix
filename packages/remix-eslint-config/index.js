@@ -5,6 +5,8 @@ const importRules = require("./rules/import");
 const reactRules = require("./rules/react");
 const jsxA11yRules = require("./rules/jsx-a11y");
 const typescriptRules = require("./rules/typescript");
+const importSettings = require("./settings/import");
+const reactSettings = require("./settings/react");
 
 /**
  * @see https://github.com/eslint/eslint/issues/3458
@@ -12,39 +14,29 @@ const typescriptRules = require("./rules/typescript");
  */
 require("@rushstack/eslint-patch/modern-module-resolution");
 
-module.exports = {
+/**
+ * @type {import("eslint").Linter.Config}
+ */
+const config = {
   parser: "@babel/eslint-parser",
   parserOptions: {
     sourceType: "module",
-    ecmaVersion: 2019,
     requireConfigFile: false,
+    ecmaVersion: "latest",
     babelOptions: {
-      presets: ["@babel/preset-react"]
-    }
+      presets: ["@babel/preset-react"],
+    },
   },
   env: {
     browser: true,
     commonjs: true,
     es6: true,
-    node: true
+    node: true,
   },
   plugins: ["import", "react", "react-hooks", "jsx-a11y"],
   settings: {
-    react: {
-      version: "detect"
-    },
-    "import/ignore": ["node_modules", "\\.(css|md|svg|json)$"],
-    "import/parsers": {
-      [require.resolve("@typescript-eslint/parser")]: [".ts", ".tsx", ".d.ts"]
-    },
-    "import/resolver": {
-      [require.resolve("eslint-import-resolver-node")]: {
-        extensions: [".js", ".jsx", ".ts", ".tsx"]
-      },
-      [require.resolve("eslint-import-resolver-typescript")]: {
-        alwaysTryTypes: true
-      }
-    }
+    ...reactSettings,
+    ...importSettings,
   },
 
   // NOTE: Omit rules related to code style/formatting. Eslint should report
@@ -59,7 +51,7 @@ module.exports = {
     ...coreRules,
     ...importRules,
     ...reactRules,
-    ...jsxA11yRules
+    ...jsxA11yRules,
   },
   overrides: [
     {
@@ -70,14 +62,16 @@ module.exports = {
         sourceType: "module",
         ecmaVersion: 2019,
         ecmaFeatures: {
-          jsx: true
+          jsx: true,
         },
-        warnOnUnsupportedTypeScriptVersion: true
+        warnOnUnsupportedTypeScriptVersion: true,
       },
       plugins: ["@typescript-eslint"],
       rules: {
-        ...typescriptRules
-      }
-    }
-  ]
+        ...typescriptRules,
+      },
+    },
+  ],
 };
+
+module.exports = config;

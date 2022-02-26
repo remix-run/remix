@@ -6,13 +6,13 @@ export default {
     {
       name: "caption",
       title: "Caption",
-      type: "string"
+      type: "string",
     },
     {
       name: "summaries",
       title: "Summaries",
       type: "array",
-      of: [{ type: "plotSummary" }]
-    }
-  ]
+      of: [{ type: "plotSummary" }],
+    },
+  ],
 };

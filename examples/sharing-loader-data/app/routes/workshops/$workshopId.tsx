@@ -6,7 +6,7 @@ import { getWorkshops } from "~/data.server";
 export const loader: LoaderFunction = async ({ params }) => {
   const { workshopId } = params;
   const workshops = await getWorkshops();
-  const workshop = workshops.find(w => w.id === workshopId);
+  const workshop = workshops.find((w) => w.id === workshopId);
   if (!workshop) {
     throw new Response("Workshop not found", { status: 404 });
   }
@@ -19,12 +19,12 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export default function WorkshopRoute() {
-  const parentData = useMatches().find(m => m.pathname === "/workshops")
+  const parentData = useMatches().find((m) => m.pathname === "/workshops")
     ?.data as {
     workshops: Array<Workshop>;
   };
   const params = useParams();
-  const workshop = parentData.workshops.find(w => w.id === params.workshopId);
+  const workshop = parentData.workshops.find((w) => w.id === params.workshopId);
   if (!workshop) {
     throw new Error("This should be impossible.");
   }

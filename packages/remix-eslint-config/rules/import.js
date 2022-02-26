@@ -5,5 +5,5 @@ const ERROR = 2;
 module.exports = {
   "import/first": ERROR,
   "import/no-amd": ERROR,
-  "import/no-webpack-loader-syntax": ERROR
+  "import/no-webpack-loader-syntax": ERROR,
 };

@@ -18,7 +18,7 @@ type QueueData = {
 export const queue: Queue =
   global.__notifierQueue ||
   (global.__notifierQueue = new Queue<QueueData>(QUEUE_NAME, {
-    connection: redis
+    connection: redis,
   }));
 
 // Workers are where the meat of our processing lives within a queue.
@@ -29,16 +29,16 @@ const worker: Worker =
   global.__notifierWorker ||
   (global.__notifierWorker = new Worker<QueueData>(
     QUEUE_NAME,
-    async job => {
+    async (job) => {
       console.log(`Sending email to ${job.data.emailAddress}`);
 
       // Delay 1 second to simulate sending an email, be it for user registration, a newsletter, etc.
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       console.log(`Email sent to ${job.data.emailAddress}`);
     },
     {
-      connection: redis
+      connection: redis,
     }
   ));
 
@@ -48,5 +48,5 @@ const worker: Worker =
 const scheduler: QueueScheduler =
   global.__notifierScheduler ||
   (global.__notifierScheduler = new QueueScheduler(QUEUE_NAME, {
-    connection: redis
+    connection: redis,
   }));

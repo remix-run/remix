@@ -12,13 +12,10 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@architect/functions": "^4.1.1",
+    "@architect/functions": "^5.0.2",
     "@types/aws-lambda": "^8.10.82",
     "@remix-run/node": "1.2.2",
     "@remix-run/server-runtime": "1.2.2"
-  },
-  "peerDependencies": {
-    "@architect/architect": "^8.3.7"
   },
   "devDependencies": {
     "@types/architect__functions": "^3.13.6",

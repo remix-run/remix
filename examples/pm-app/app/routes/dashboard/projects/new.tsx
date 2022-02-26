@@ -5,7 +5,7 @@ import {
   redirect,
   useActionData,
   useLoaderData,
-  useCatch
+  useCatch,
 } from "remix";
 import type { ActionFunction, LoaderFunction, LinksFunction } from "remix";
 import type { UserSecure } from "~/models";
@@ -20,7 +20,7 @@ import {
   MemberSearch,
   MemberSearchCombobox,
   MemberSearchHiddenField,
-  MemberSearchSelections
+  MemberSearchSelections,
 } from "~/ui/member-search";
 
 export const links: LinksFunction = () => {
@@ -29,14 +29,14 @@ export const links: LinksFunction = () => {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const allUsers = await getUsers();
 
   const loaderData: LoaderData = {
     user: secureUser,
-    allUsers: allUsers
+    allUsers: allUsers,
   };
 
   return loaderData;
@@ -44,7 +44,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export const action: ActionFunction = async ({ request }) => {
   const currentUser = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   // 1. Get/setup form data from the request
@@ -56,7 +56,7 @@ export const action: ActionFunction = async ({ request }) => {
   const fieldErrors: FieldErrors = {
     description: null,
     name: null,
-    members: null
+    members: null,
   };
 
   // 2. Validate the form data
@@ -72,7 +72,7 @@ export const action: ActionFunction = async ({ request }) => {
     }
   } catch (_) {
     const data: ActionData = {
-      formError: `Something went wrong. Please try again later.`
+      formError: `Something went wrong. Please try again later.`,
     };
     return json(data);
   }
@@ -95,12 +95,12 @@ export const action: ActionFunction = async ({ request }) => {
       name,
       description,
       ownerId: currentUser.id,
-      members
+      members,
     });
     return redirect(`dashboard/projects/${project.id}`);
   } catch (_) {
     const data: ActionData = {
-      formError: `Something went wrong. Please try again later.`
+      formError: `Something went wrong. Please try again later.`,
     };
     return json(data);
   }
@@ -113,7 +113,7 @@ function NewProject() {
   const { allUsers, user } = loaderData;
 
   const selectableUsers = React.useMemo(() => {
-    return allUsers.filter(u => u.id !== user.id);
+    return allUsers.filter((u) => u.id !== user.id);
   }, [allUsers, user.id]);
 
   // We don't show the combobox initially to prevent SSR jank. We show and hide
@@ -124,7 +124,7 @@ function NewProject() {
   }
 
   function handleNameChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setNameComplete(complete => {
+    setNameComplete((complete) => {
       if (complete && !event.target.value) {
         return false;
       }

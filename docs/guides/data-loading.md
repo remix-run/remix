@@ -34,7 +34,7 @@ export default function Products() {
   return (
     <div>
       <h1>Products</h1>
-      {products.map(product => (
+      {products.map((product) => (
         <div>{product.name}</div>
       ))}
     </div>
@@ -75,8 +75,8 @@ export let loader: LoaderFunction = async ({ params }) => {
   return fakeDb.project.findMany({
     where: {
       userId: params.userId,
-      projectId: params.projectId
-    }
+      projectId: params.projectId,
+    },
   });
 };
 ```
@@ -113,7 +113,7 @@ export default function GistsRoute() {
   let gists = useLoaderData();
   return (
     <ul>
-      {gists.map(gist => (
+      {gists.map((gist) => (
         <li>
           <a href={gist.html_url}>{gist.id}</a>
         </li>
@@ -146,8 +146,8 @@ import { db } from "~/db.server";
 export let loader: LoaderFunction = async ({ params }) => {
   return db.product.findMany({
     where: {
-      categoryId: params.categoryId
-    }
+      categoryId: params.categoryId,
+    },
   });
 };
 
@@ -176,8 +176,8 @@ async function getLoaderData() {
     select: {
       id: true,
       name: true,
-      imgSrc: true
-    }
+      imgSrc: true,
+    },
   });
   return { products };
 }
@@ -207,7 +207,7 @@ import type { LoaderFunction } from "remix";
 
 export let loader: LoaderFunction = async ({ params }) => {
   return PRODUCTS_KV.get(`product-${params.productId}`, {
-    type: "json"
+    type: "json",
   });
 };
 
@@ -229,10 +229,10 @@ While loading data it's common for a record to be "not found". As soon as you kn
 ```tsx lines=[10-13]
 export let loader: LoaderFunction = async ({
   params,
-  request
+  request,
 }) => {
   let product = await db.product.findOne({
-    where: { id: params.productId }
+    where: { id: params.productId },
   });
 
   if (!product) {
@@ -395,7 +395,7 @@ export default function ProductFilters() {
   return (
     <Form
       method="get"
-      onChange={e => submit(e.currentTarget)}
+      onChange={(e) => submit(e.currentTarget)}
     >
       {/* ... */}
     </Form>
@@ -494,7 +494,7 @@ export default function ProductFilters() {
           id="nike"
           name="brand"
           value="nike"
-          onChange={e => submit(e.currentTarget.form)}
+          onChange={(e) => submit(e.currentTarget.form)}
           checked={brands.includes("nike")}
         />
         <Link to="?brand=nike">(only)</Link>
@@ -542,7 +542,7 @@ export default function ProductFilters() {
           id="nike"
           name="brand"
           value="nike"
-          onChange={e => {
+          onChange={(e) => {
             // update checkbox state w/o submitting the form
             setNikeChecked(true);
           }}
@@ -583,7 +583,7 @@ function SearchCheckbox({ name, value }) {
       name={name}
       value={value}
       checked={checked}
-      onChange={e => setChecked(e.target.checked)}
+      onChange={(e) => setChecked(e.target.checked)}
     />
   );
 }
@@ -656,7 +656,7 @@ export async function loader() {
     date: new Date(),
     someMethod() {
       return "hello!";
-    }
+    },
   };
 }
 

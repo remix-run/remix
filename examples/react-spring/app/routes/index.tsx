@@ -3,14 +3,14 @@ import { useSpring, animated, config } from "react-spring";
 export default function () {
   const [{ x }, interpolate] = useSpring(() => ({
     from: { x: 0 },
-    config: config.wobbly
+    config: config.wobbly,
   }));
 
   const { opacity } = useSpring({
     from: { opacity: 0 },
     opacity: 1,
     config: config.slow,
-    delay: 200
+    delay: 200,
   });
 
   return (
@@ -27,7 +27,7 @@ export default function () {
         cursor: "pointer",
         opacity,
         color: x.to({ range: [0, 1], output: ["#000", "#f00"] }),
-        scale: x.to({ range: [0, 1], output: [1, 1.5] })
+        scale: x.to({ range: [0, 1], output: [1, 1.5] }),
       }}
     >
       Remix

@@ -28,7 +28,7 @@ interface UrlFilter {
 export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
   let responses: Response[] = [];
 
-  page.on("response", res => {
+  page.on("response", (res) => {
     if (!filter || filter(new URL(res.url()))) {
       responses.push(res);
     }
@@ -40,7 +40,7 @@ export function collectResponses(page: Page, filter?: UrlFilter): Response[] {
 export function collectDataResponses(page: Page, routeId?: string) {
   return collectResponses(
     page,
-    url =>
+    (url) =>
       url.searchParams.has("_data") &&
       (routeId === undefined || url.searchParams.get("_data") === routeId)
   );

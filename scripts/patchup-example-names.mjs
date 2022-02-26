@@ -4,7 +4,7 @@ import path from "path";
 let dirPath = path.join(process.cwd(), "examples");
 let dir = await fs.readdir(dirPath);
 
-dir.forEach(async name => {
+dir.forEach(async (name) => {
   let fullPath = path.join(dirPath, name);
   let stat = await fs.stat(fullPath);
   if (stat.isDirectory()) {

@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import type {
   SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 import arc from "@architect/functions";
@@ -66,7 +66,7 @@ export function createArcTableSessionStorage({
         // (2^32). However, the larger id space should help to avoid collisions
         // with existing ids when creating new sessions, which speeds things up.
         let id = [...randomBytes]
-          .map(x => x.toString(16).padStart(2, "0"))
+          .map((x) => x.toString(16).padStart(2, "0"))
           .join("");
 
         if (await table.get({ [props.idx]: id })) {
@@ -75,7 +75,7 @@ export function createArcTableSessionStorage({
 
         let params = {
           [props.idx]: id,
-          ...data
+          ...data,
         };
         if (props.ttl) {
           params[props.ttl] = expires
@@ -100,7 +100,7 @@ export function createArcTableSessionStorage({
       const table = await getTable();
       let params = {
         [props.idx]: id,
-        ...data
+        ...data,
       };
       if (props.ttl) {
         params[props.ttl] = expires
@@ -112,6 +112,6 @@ export function createArcTableSessionStorage({
     async deleteData(id) {
       const table = await getTable();
       await table.delete({ [props.idx]: id });
-    }
+    },
   });
 }

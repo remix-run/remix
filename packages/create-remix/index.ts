@@ -20,7 +20,7 @@ export type Stack = "fly-stack" | "arc-stack";
 
 export let appType = {
   basic: "basic",
-  stack: "stack"
+  stack: "stack",
 } as const;
 
 export type AppType = typeof appType[keyof typeof appType];
@@ -98,7 +98,7 @@ async function createApp({
   // rename dotfiles
   let dotfiles = ["gitignore", "github", "dockerignore", "env.example"];
   await Promise.all(
-    dotfiles.map(async dotfile => {
+    dotfiles.map(async (dotfile) => {
       if (fse.existsSync(path.join(projectDir, dotfile))) {
         return fse.rename(
           path.join(projectDir, dotfile),
@@ -114,14 +114,14 @@ async function createApp({
   appPkg.dependencies = appPkg.dependencies || {};
   appPkg.devDependencies = appPkg.devDependencies || {};
   let serverPkg = require(path.join(serverTemplate, "package.json"));
-  ["dependencies", "devDependencies", "scripts"].forEach(key => {
+  ["dependencies", "devDependencies", "scripts"].forEach((key) => {
     Object.assign(appPkg[key], serverPkg[key]);
   });
 
   appPkg.main = serverPkg.main;
 
   // add current versions of remix deps
-  ["dependencies", "devDependencies"].forEach(pkgKey => {
+  ["dependencies", "devDependencies"].forEach((pkgKey) => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
         // Templates created from experimental, alpha, beta releases should pin

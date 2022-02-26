@@ -11,8 +11,8 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
-    }
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css",
+    },
   ];
 }
 ```
@@ -189,7 +189,7 @@ Note that these are not routes, but they export `links` functions as if they wer
 import styles from "./styles.css";
 
 export const links = () => [
-  { rel: "stylesheet", href: styles }
+  { rel: "stylesheet", href: styles },
 ];
 
 export const Button = React.forwardRef(
@@ -214,7 +214,7 @@ import styles from "./styles.css";
 
 export const links = () => [
   ...buttonLinks(),
-  { rel: "stylesheet", href: styles }
+  { rel: "stylesheet", href: styles },
 ];
 
 export const PrimaryButton = React.forwardRef(
@@ -236,13 +236,13 @@ Consider that `routes/index.js` uses the primary button component:
 import styles from "~/styles/index.css";
 import {
   PrimaryButton,
-  links as primaryButtonLinks
+  links as primaryButtonLinks,
 } from "~/components/primary-button";
 
 export function links() {
   return [
     ...primaryButtonLinks(),
-    { rel: "stylesheet", href: styles }
+    { rel: "stylesheet", href: styles },
   ];
 }
 ```
@@ -270,7 +270,7 @@ export default function Category() {
   const products = useLoaderData();
   return (
     <TileGrid>
-      {products.map(product => (
+      {products.map((product) => (
         <ProductTile key={product.id}>
           <ProductDetails product={product} />
           <AddFavoriteButton id={product.id} />
@@ -286,19 +286,19 @@ The component imports are already there, we just need to surface the assets:
 ```js filename=app/routes/$category.js lines=[3,7,11,15,22-25]
 import {
   TileGrid,
-  links as tileGridLinks
+  links as tileGridLinks,
 } from "~/components/tile-grid";
 import {
   ProductTile,
-  links as productTileLinks
+  links as productTileLinks,
 } from "~/components/product-tile";
 import {
   ProductDetails,
-  links as productDetailsLinks
+  links as productDetailsLinks,
 } from "~/components/product-details";
 import {
   AddFavoriteButton,
-  links as addFavoriteLinks
+  links as addFavoriteLinks,
 } from "~/components/add-favorite-button";
 import styles from "~/styles/$category.css";
 
@@ -308,7 +308,7 @@ export function links() {
     ...productTileLinks(),
     ...productDetailsLinks(),
     ...addFavoriteLinks(),
-    { rel: "stylesheet", href: styles }
+    { rel: "stylesheet", href: styles },
   ];
 }
 
@@ -343,9 +343,9 @@ export const links = () => [
     rel: "preload",
     href: "/icons/clipboard.svg",
     as: "image",
-    type: "image/svg+xml"
+    type: "image/svg+xml",
   },
-  { rel: "stylesheet", href: styles }
+  { rel: "stylesheet", href: styles },
 ];
 
 export const CopyToClipboard = React.forwardRef(
@@ -368,23 +368,23 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href: mainStyles
+      href: mainStyles,
     },
     {
       rel: "stylesheet",
       href: largeStyles,
-      media: "(min-width: 1024px)"
+      media: "(min-width: 1024px)",
     },
     {
       rel: "stylesheet",
       href: xlStyles,
-      media: "(min-width: 1280px)"
+      media: "(min-width: 1280px)",
     },
     {
       rel: "stylesheet",
       href: darkStyles,
-      media: "(prefers-color-scheme: dark)"
-    }
+      media: "(prefers-color-scheme: dark)",
+    },
   ];
 }
 ```
@@ -405,10 +405,10 @@ Initialize a tailwind config so we can tell it which files to generate classes f
 module.exports = {
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
-    extend: {}
+    extend: {},
   },
   variants: {},
-  plugins: []
+  plugins: [],
 };
 ```
 
@@ -494,8 +494,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
-    }
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css",
+    },
   ];
 };
 ```
@@ -521,8 +521,8 @@ Here's how to set it up:
    ```js filename=postcss.config.js
    module.exports = {
      plugins: {
-       autoprefixer: {}
-     }
+       autoprefixer: {},
+     },
    };
    ```
 
@@ -671,7 +671,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
      Meta,
      Outlet,
      Scripts,
-     ScrollRestoration
+     ScrollRestoration,
    } from "remix";
 
    export default function App() {
@@ -733,7 +733,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
      return new Response("<!DOCTYPE html>" + markup, {
        status: responseStatusCode,
-       headers: responseHeaders
+       headers: responseHeaders,
      });
    }
    ```
