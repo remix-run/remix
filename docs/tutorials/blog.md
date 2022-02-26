@@ -338,7 +338,8 @@ export async function getPosts() {
         path.join(postsPath, filename)
       );
       const { attributes } = parseFrontMatter(
-        file.toString()
+        file.toString(),
+        { allowUnsafe: true }
       );
       return {
         slug: filename.replace(/\.md$/, ""),
@@ -394,7 +395,8 @@ export async function getPosts() {
         path.join(postsPath, filename)
       );
       const { attributes } = parseFrontMatter(
-        file.toString()
+        file.toString(),
+        { allowUnsafe: true }
       );
       invariant(
         isValidPostAttributes(attributes),
@@ -487,7 +489,10 @@ Put this function anywhere in the `app/post.ts` module:
 export async function getPost(slug: string) {
   const filepath = path.join(postsPath, slug + ".md");
   const file = await fs.readFile(filepath);
-  const { attributes } = parseFrontMatter(file.toString());
+  const { attributes } = parseFrontMatter(
+    file.toString(),
+    { allowUnsafe: true }
+  );
   invariant(
     isValidPostAttributes(attributes),
     `Post ${filepath} is missing attributes`
@@ -548,7 +553,8 @@ export async function getPost(slug: string) {
   const filepath = path.join(postsPath, slug + ".md");
   const file = await fs.readFile(filepath);
   const { attributes, body } = parseFrontMatter(
-    file.toString()
+    file.toString(),
+    { allowUnsafe: true }
   );
   invariant(
     isValidPostAttributes(attributes),
