@@ -7,14 +7,14 @@ const stitches = createStitches({
       steel: "#363645",
       black: "#000",
       white: "#fff",
-      grey: "#666"
-    }
+      grey: "#666",
+    },
   },
   media: {
     tabletUp: "(min-width: 768px)",
     desktopUp: "(min-width: 1024px)",
-    largeDesktopUp: "(min-width: 1680px)"
-  }
+    largeDesktopUp: "(min-width: 1680px)",
+  },
 });
 
 const { styled, globalCss, getCssText } = stitches;

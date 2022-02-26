@@ -2,7 +2,7 @@ import { Link } from "remix";
 import { styled } from "../styles/stitches.config";
 
 const Container = styled("div", {
-  backgroundColor: "#d6d6d6"
+  backgroundColor: "#d6d6d6",
 });
 
 export default function Jokes() {

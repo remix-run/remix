@@ -4,7 +4,7 @@ import { styled } from "../styles/stitches.config";
 const Container = styled("div", {
   fontFamily: "system-ui, sans-serif",
   lineHeight: 1.4,
-  backgroundColor: "#999"
+  backgroundColor: "#999",
 });
 
 export default function Index() {

@@ -7,7 +7,7 @@ export interface ClientStyleContextData {
 
 const ClientStyleContext = createContext<ClientStyleContextData>({
   reset: () => {},
-  sheet: ""
+  sheet: "",
 });
 
 export default ClientStyleContext;

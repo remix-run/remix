@@ -5,7 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch
+  useCatch,
 } from "remix";
 import { useContext, useEffect } from "react";
 import ServerStyleContext from "./styles/server.context";
@@ -16,7 +16,7 @@ import { styled } from "./styles/stitches.config";
 
 const Container = styled("div", {
   backgroundColor: "#ff0000",
-  padding: "1em"
+  padding: "1em",
 });
 
 export const meta: MetaFunction = () => {
