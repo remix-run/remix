@@ -1,39 +1,24 @@
-import { styled } from "@stitches/react";
+import { Link } from "remix";
+import { styled } from "../styles/stitches.config";
+
+const Container = styled("div", {
+  fontFamily: "system-ui, sans-serif",
+  lineHeight: 1.4,
+  backgroundColor: "#999"
+});
 
 export default function Index() {
   return (
     <Container>
-      <h1>Welcome to Remix</h1>
+      <h1>Welcome to Remix with Emotion Example</h1>
       <ul>
         <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
+          <Link to="/jokes">Jokes</Link>
         </li>
         <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
+          <Link to="/jokes-error">Jokes: Error</Link>
         </li>
       </ul>
     </Container>
   );
 }
-
-const Container = styled("div", {
-  fontFamily: "system-ui, sans-serif",
-  lineHeight: 1.4
-});
