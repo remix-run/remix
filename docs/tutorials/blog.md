@@ -533,7 +533,7 @@ There are a lot of markdown parsers, we'll use "marked" for this tutorial becaus
 ```sh
 npm add marked
 # if using typescript
-npm add @types/marked
+npm add @types/marked -D
 ```
 
 ```tsx filename=app/post.ts lines=[5,11,18,19]
