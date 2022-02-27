@@ -18,16 +18,3 @@ export enum BuildTarget {
   CloudflareWorkers = "cloudflare-workers",
   Node14 = "node14",
 }
-
-export function isBuildTarget(target: any): target is BuildTarget {
-  return (
-    target === BuildTarget.Browser ||
-    target === BuildTarget.Server ||
-    target === BuildTarget.Node14
-  );
-}
-
-export interface BuildOptions {
-  mode: BuildMode;
-  target: BuildTarget;
-}
