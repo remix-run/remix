@@ -39,3 +39,4 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 - [How to get the raw request body in action or loader ( for stripe integration) ? · Discussion #1978 · remix-run/remix](https://github.com/remix-run/remix/discussions/1978)
 - [Remix | Environment Variables](https://remix.run/docs/en/v1/guides/envvars)
 - [Stripe API reference – Node](https://stripe.com/docs/api/authentication?lang=node)
+- [getDomainUrl dynamically](https://github.com/kentcdodds/kentcdodds.com/blob/ebb36d82009685e14da3d4b5d0ce4d577ed09c63/app/utils/misc.tsx#L229-L237)
