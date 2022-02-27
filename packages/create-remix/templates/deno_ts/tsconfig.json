@@ -1,11 +1,6 @@
 {
-  "files": ["./server.js","./app/**/*.ts"],
   "compilerOptions": {
-    "lib": ["deno.ns", "dom", "dom.iterable", "es2019"],
-    "jsx": "react",
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["./app/*"]
-    }
+    "target": "esnext",
+    "lib": ["dom", "dom.iterable", "dom.asynciterable", "deno.ns"]
   }
 }
