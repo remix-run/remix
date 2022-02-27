@@ -260,12 +260,12 @@ export async function readConfig(
   remixRoot?: string,
   serverMode = ServerMode.Production
 ): Promise<RemixConfig> {
-  if (!remixRoot) {
-    remixRoot = process.env.REMIX_ROOT || process.cwd();
-  }
-
   if (!isValidServerMode(serverMode)) {
     throw new Error(`Invalid server mode "${serverMode}"`);
+  }
+
+  if (!remixRoot) {
+    remixRoot = process.env.REMIX_ROOT || process.cwd();
   }
 
   let rootDirectory = path.resolve(remixRoot);
@@ -428,9 +428,8 @@ function addTrailingSlash(path: string): string {
   return path.endsWith("/") ? path : path + "/";
 }
 
-const entryExts = [".js", ".jsx", ".ts", ".tsx"];
-
 function findEntry(dir: string, basename: string): string | undefined {
+  let entryExts = [".js", ".jsx", ".ts", ".tsx"];
   for (let ext of entryExts) {
     let file = path.resolve(dir, basename + ext);
     if (fse.existsSync(file)) return path.relative(dir, file);
