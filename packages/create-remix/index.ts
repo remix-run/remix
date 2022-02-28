@@ -4,30 +4,30 @@ import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
 import { URL, fileURLToPath } from "url";
 import parseURL from "parse-github-url";
-import got from "got";
+import fetch from "node-fetch";
 
 import cliPkgJson from "./package.json";
 import { downloadAndExtractRepo, extractLocalTarball } from "./utils";
 
 export let servers: { [key: string]: string } = {
   "Architect (AWS Lambda)":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/arc",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/arc",
   "Cloudflare Pages":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/cloudflare-workers",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-workers",
   "Cloudflare Workers":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/cloudflare-pages",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-pages",
   "Deno (experimental)":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/deno",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/deno",
   "Express Server":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/express",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/express",
   "Fly.io":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/fly",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/fly",
   Netlify:
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/netlify",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/netlify",
   "Remix App Server":
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/remix",
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/remix",
   Vercel:
-    "https://github.com/remix-run/remix/blob/logan/support-remote-repos-in-create-remix/templates/vercel"
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/vercel"
 } as const;
 
 export type Server = typeof servers[keyof typeof servers];
@@ -80,39 +80,33 @@ export async function createApp({
 
   /**
    * First we'll need to determine if the template we got is
+   * file on disk
+   * directory on disk
    * tarball URL (github or otherwise)
    * github owner/repo
    * example in remix-run org
    * template in remix-run org
-   * file on disk
-   * directory on disk
    */
-
   if (repoURL.startsWith("file://")) {
     try {
       repoURL = fileURLToPath(repoURL);
     } catch (error) {
       throw new Error(`Unable to convert file URL to path`);
     }
-  } else if (fse.existsSync(repoURL)) {
+  }
+
+  if (fse.existsSync(repoURL)) {
     if (fse.statSync(repoURL).isDirectory()) {
-      if (!quiet) {
-        console.log(`Copying files from ${repoURL}, this might take a moment.`);
-      }
       fse.copySync(repoURL, projectDir);
     } else if (repoURL.endsWith(".tar.gz")) {
-      if (!quiet) {
-        console.log(
-          `Extracting files from local tarball ${repoURL}. This might take a moment.`
-        );
-      }
       await extractLocalTarball(projectDir, repoURL);
     } else {
-      throw new Error(`2. Unable to parse the URL "${repoURL}" as a file URL.`);
+      throw new Error(`Unable to parse the URL "${repoURL}" as a file path.`);
     }
   } else {
     repoURL = new URL(repoURL).toString();
     let parsed = parseURL(repoURL);
+
     if (!parsed) {
       throw new Error(`Invalid repo URL`);
     } else {
@@ -120,27 +114,25 @@ export async function createApp({
       if (!parsed.owner) {
         parsed.owner = "remix-run";
         parsed.name = parsed.pathname;
-        parsed.repo = `remix-run/${parsed.name}`;
-        parsed.repository = `remix-run/${parsed.name}`;
+        parsed.repo = `remix-run/remix`;
+        parsed.repository = `remix-run/remix`;
       }
 
-      if (!parsed.branch) {
+      // our url parser defaults the branch to master...
+      if (parsed.branch === "master") {
         let url = `https://api.github.com/repos/${parsed.owner}/${parsed.name}`;
-        let res = await got(url, {
-          headers: { authorization: `token ${githubPAT}` }
-        });
+        let res = await fetch(
+          url,
+          githubPAT ? { headers: { Authorization: `token ${githubPAT}` } } : {}
+        );
 
-        if (res.statusCode !== 200) {
-          throw new Error(
-            `Error fetching repo info for ${url}: ${res.statusCode}`
-          );
+        if (res.status !== 200) {
+          throw new Error(`Error fetching repo info for ${url}: ${res.status}`);
         }
 
-        let repo = JSON.parse(res.body.toString());
+        let repo = await res.json();
         parsed.branch = repo.default_branch;
       }
-
-      console.log({ parsed });
 
       let tarballURL = `https://codeload.github.com/${parsed.owner}/${parsed.name}/tar.gz/${parsed.branch}`;
 
@@ -150,10 +142,15 @@ export async function createApp({
         );
       }
 
-      await downloadAndExtractRepo(projectDir, tarballURL, githubPAT);
+      await downloadAndExtractRepo(projectDir, tarballURL, {
+        token: githubPAT,
+        lang,
+        filePath: parsed.filepath,
+        isRemixTemplate:
+          parsed.repo === "remix-run/remix" &&
+          parsed.filepath?.includes("packages/create-remix/templates")
+      });
     }
-
-    throw new Error("Invalid repo URL");
   }
 
   let appPkg = require(path.join(projectDir, "package.json"));
@@ -201,7 +198,7 @@ export async function createApp({
     }
   } else if (repoURL && hasSetupScript) {
     console.log(
-      `\n\n You've opted out of running \`npm install\` in your new project.\n\n You'll need to manually install dependencies in the \`${setupScriptDir}\` directory and run \`npx remix init\`.\n\n`
+      `You've opted out of running \`npm install\` in your new project.\nYou'll need to manually install dependencies in the \`${setupScriptDir}\` directory and run \`npx remix init\`.`
     );
   }
 

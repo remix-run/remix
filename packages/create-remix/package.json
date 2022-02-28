@@ -20,7 +20,6 @@
     "chalk-animation": "^1.6.0",
     "fs-extra": "^10.0.0",
     "parse-github-url": "^1.0.2",
-    "got": "^11.8.3",
     "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",
