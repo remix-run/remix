@@ -377,22 +377,22 @@ export async function readConfig(
   let routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile },
   };
+  function addRoutes(data) {
+    for (let key of Object.keys(data)) {
+      let route = data[key];
+      routes[route.id] = { ...route, parentId: route.parentId || "root" };
+    }
+  }
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = defineConventionalRoutes(
       appDirectory,
       appConfig.ignoredRouteFiles
     );
-    for (let key of Object.keys(conventionalRoutes)) {
-      let route = conventionalRoutes[key];
-      routes[route.id] = { ...route, parentId: route.parentId || "root" };
-    }
+    addRoutes(conventionalRoutes);
   }
   if (appConfig.routes) {
     let manualRoutes = await appConfig.routes(defineRoutes);
-    for (let key of Object.keys(manualRoutes)) {
-      let route = manualRoutes[key];
-      routes[route.id] = { ...route, parentId: route.parentId || "root" };
-    }
+    addRoutes(manualRoutes);
   }
 
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
