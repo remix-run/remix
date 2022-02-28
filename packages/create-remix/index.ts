@@ -13,9 +13,9 @@ export let servers: { [key: string]: string } = {
   "Architect (AWS Lambda)":
     "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/arc",
   "Cloudflare Pages":
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-workers",
-  "Cloudflare Workers":
     "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-pages",
+  "Cloudflare Workers":
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/cloudflare-workers",
   "Deno (experimental)":
     "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/deno",
   "Express Server":
