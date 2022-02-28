@@ -6,7 +6,9 @@
     "start": "cross-env NODE_ENV=production remix-serve build"
   },
   "dependencies": {
-    "@remix-run/serve": "*",
+    "@remix-run/serve": "*"
+  },
+  "devDependencies": {
     "cross-env": "^7.0.3"
   }
 }
