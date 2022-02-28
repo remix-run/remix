@@ -428,8 +428,9 @@ function addTrailingSlash(path: string): string {
   return path.endsWith("/") ? path : path + "/";
 }
 
+const entryExts = [".js", ".jsx", ".ts", ".tsx"];
+
 function findEntry(dir: string, basename: string): string | undefined {
-  let entryExts = [".js", ".jsx", ".ts", ".tsx"];
   for (let ext of entryExts) {
     let file = path.resolve(dir, basename + ext);
     if (fse.existsSync(file)) return path.relative(dir, file);
