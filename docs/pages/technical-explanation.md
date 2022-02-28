@@ -114,7 +114,9 @@ export default function Projects() {
   return (
     <div>
       {projects.map((project) => (
-        <Link to={project.slug}>{project.title}</Link>
+        <Link key={project.slug} to={project.slug}>
+          {project.title}
+        </Link>
       ))}
 
       <Form method="post">
@@ -182,7 +184,9 @@ export default function Projects() {
   return (
     <div>
       {projects.map((project) => (
-        <Link to={project.slug}>{project.title}</Link>
+        <Link key={project.slug} to={project.slug}>
+          {project.title}
+        </Link>
       ))}
 
       <Form method="post">

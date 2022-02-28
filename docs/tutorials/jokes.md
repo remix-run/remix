@@ -1338,7 +1338,7 @@ In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.ht
 
 There are two packages that we need to get started:
 
-- `prisma` for interact with our database and schema during development
+- `prisma` for interacting with our database and schema during development.
 - `@prisma/client` for making queries to our database during runtime.
 
 💿 Install the prisma packages:
@@ -1595,7 +1595,7 @@ export default function Users() {
   return (
     <ul>
       {data.users.map((user) => (
-        <li>{user.name}</li>
+        <li key={user.id}>{user.name}</li>
       ))}
     </ul>
   );
@@ -2630,14 +2630,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -2868,10 +2861,7 @@ To check our work, I added a `console.log` to `app/routes/login.tsx` after the `
 {
   user: {
     id: '1dc45f54-4061-4d9e-8a6d-28d6df6a8d7f',
-    createdAt: 2021-11-21T00:28:52.560Z,
-    updatedAt: 2021-11-21T00:28:52.560Z,
-    username: 'kody',
-    passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u'
+    username: 'kody'
   }
 }
 ```
@@ -3276,7 +3266,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[76-91,93-100]
+```ts filename=app/utils/session.server.ts lines=[75-90,92-99]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3802,14 +3792,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -5135,14 +5118,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-errormessage={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"

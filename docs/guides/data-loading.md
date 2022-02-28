@@ -26,7 +26,10 @@ import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export let loader: LoaderFunction = async () => {
-  return [{ name: "Pants" }, { name: "Jacket" }];
+  return [
+    { id: "1", name: "Pants" },
+    { id: "2", name: "Jacket" },
+  ];
 };
 
 export default function Products() {
@@ -35,7 +38,7 @@ export default function Products() {
     <div>
       <h1>Products</h1>
       {products.map((product) => (
-        <div>{product.name}</div>
+        <div key={product.id}>{product.name}</div>
       ))}
     </div>
   );
@@ -114,7 +117,7 @@ export default function GistsRoute() {
   return (
     <ul>
       {gists.map((gist) => (
-        <li>
+        <li key={gist.id}>
           <a href={gist.html_url}>{gist.id}</a>
         </li>
       ))}
@@ -162,7 +165,7 @@ export default function ProductCategory() {
 }
 ```
 
-If you are using TypeScript, you can use type inference to use Primsa Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
+If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
 
 ```tsx filename=tsx filename=app/routes/products/$productId.tsx
 import { useLoaderData, json } from "remix";

@@ -10,7 +10,7 @@ export const loader = async () => {
 export default function Posts() {
   const posts = useLoaderData<Post[]>();
   return (
-    <div>
+    <main>
       <h1>Posts</h1>
       <ul>
         {posts.map((post) => (
@@ -19,6 +19,6 @@ export default function Posts() {
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }

@@ -22,7 +22,7 @@ export const action: ActionFunction = async ({ request }) => {
   return redirect("/");
 };
 
-export default function () {
+export default function IndexRoute() {
   const data = useLoaderData();
   const actionMessage = useActionData<string>();
 

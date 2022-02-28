@@ -2482,7 +2482,7 @@ export default function CompaniesRoute() {
       sort === "ASC" ? "DESC" : "ASC"
     );
   }
-  const context: ContextType = { sort };
+  const context: ContextType = { invoiceSort };
   const outlet = <Outlet context={context} />;
 
   const params = useParams();
@@ -2549,10 +2549,10 @@ export const loader: LoaderFunction = async ({
 
 export default function CompanyRoute() {
   const data = useLoaderData<LoaderData>();
-  const { sort } = useOutletContext<ContextType>();
+  const { invoiceSort } = useOutletContext<ContextType>();
 
   const sortedInvoices =
-    sort === "ASC"
+    invoiceSort === "ASC"
       ? data.company.invoices
       : data.company.invoices.reverse();
 
