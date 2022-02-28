@@ -12,6 +12,12 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 If the external APIs are metered and charged for the number of API calls made, it's pretty easy to burst through the API quota during development. Also, we need an active network during development. For some, this may be an issue. So instead, we can mock the external API using MSW, which intercepts the API calls from the server and returns a mocked response.
 
+## Relevant files
+
+- [mocks](./mocks/index.js)
+
+- [package.json](./package.json)
+
 ## Related Links
 
 - [MSW][msw]
