@@ -423,6 +423,11 @@ function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
+  const isCloudflareRuntime = [
+    "cloudflare-workers",
+    "cloudflare-pages"
+  ].includes(config.serverBuildTarget ?? "");
+
   return esbuild
     .build({
       absWorkingDir: config.rootDirectory,
@@ -433,21 +438,12 @@ function createServerBuild(
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production &&
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        ),
-      mainFields:
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        )
-          ? ["browser", "module", "main"]
-          : config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
+      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
+      mainFields: isCloudflareRuntime
+        ? ["browser", "module", "main"]
+        : config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
       target: options.target,
       inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
