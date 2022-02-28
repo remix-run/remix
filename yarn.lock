@@ -9,14 +9,13 @@
   dependencies:
     "@jridgewell/trace-mapping" "^0.3.0"
 
-"@architect/functions@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@architect/functions/-/functions-4.1.1.tgz#4520f6070858f8731c1da403e40591f3909fcfec"
-  integrity sha512-x0+B/V9Jo5onksOce6iYdYeLh5F91dOp5fTnGJdkgOFCS+N0YN9zlI2asdPIs1Rb6xxCwoH1nuzs/jnNkupQWA==
+"@architect/functions@^5.0.2":
+  version "5.0.3"
+  resolved "https://registry.yarnpkg.com/@architect/functions/-/functions-5.0.3.tgz#e0781e75bfb5d8404171c6ce8bd86e283491e8f1"
+  integrity sha512-C9+yqNAthyhXfhKl0BxLabNlbLo3ReefN598pr7OidMXU/wkSjR72xlpBmr/pnnZYGlJ8+yNr9OxU99d4S/hZQ==
   dependencies:
-    aws-serverless-express "^3.4.0"
-    cookie "^0.4.1"
-    cookie-signature "^1.1.0"
+    cookie "^0.4.2"
+    cookie-signature "^1.2.0"
     csrf "^3.1.0"
     node-webtokens "^1.0.4"
     run-parallel "^1.2.0"
@@ -2567,14 +2566,6 @@
     "@typescript-eslint/types" "5.12.1"
     eslint-visitor-keys "^3.0.0"
 
-"@vendia/serverless-express@^3.4.0":
-  version "3.4.0"
-  resolved "https://registry.yarnpkg.com/@vendia/serverless-express/-/serverless-express-3.4.0.tgz#156f47d364b067ae6fa678a914c51887f494321a"
-  integrity sha512-/UAAbi9qRjUtjRISt5MJ1sfhtrHb26hqQ0nvE5qhMLsAdR5H7ErBwPD8Q/v2OENKm0iWsGwErIZEg7ebUeFDjQ==
-  dependencies:
-    binary-case "^1.0.0"
-    type-is "^1.6.16"
-
 "@vercel/node@^1.8.3":
   version "1.12.1"
   resolved "https://registry.npmjs.org/@vercel/node/-/node-1.12.1.tgz"
@@ -3148,15 +3139,6 @@ aws-sdk@^2.820.0:
     uuid "3.3.2"
     xml2js "0.4.19"
 
-aws-serverless-express@^3.4.0:
-  version "3.4.0"
-  resolved "https://registry.yarnpkg.com/aws-serverless-express/-/aws-serverless-express-3.4.0.tgz#74153b8cc80dbd2c6a32a51e6d353a325c2710d7"
-  integrity sha512-YG9ZjAOI9OpwqDDWzkRc3kKJYJuR7gTMjLa3kAWopO17myoprxskCUyCEee+RKe34tcR4UNrVtgAwW5yDe74bw==
-  dependencies:
-    "@vendia/serverless-express" "^3.4.0"
-    binary-case "^1.0.0"
-    type-is "^1.6.16"
-
 axe-core@^4.3.5:
   version "4.3.5"
   resolved "https://registry.npmjs.org/axe-core/-/axe-core-4.3.5.tgz"
@@ -3303,11 +3285,6 @@ big.js@^5.2.2:
   version "5.2.2"
   resolved "https://registry.npmjs.org/big.js/-/big.js-5.2.2.tgz"
   integrity sha512-vyL2OymJxmarO8gxMr0mhChsO9QGwhynfuu4+MHTAW6czfq9humCB7rKpUjDd9YUiDPU4mzpyupFSvOClAwbmQ==
-
-binary-case@^1.0.0:
-  version "1.1.4"
-  resolved "https://registry.yarnpkg.com/binary-case/-/binary-case-1.1.4.tgz#d687104d59e38f2b9e658d3a58936963c59ab931"
-  integrity sha512-9Kq8m6NZTAgy05Ryuh7U3Qc4/ujLQU1AZ5vMw4cr3igTdi5itZC6kCNrRr2X8NzPiDn2oUIFTfa71DKMnue/Zg==
 
 binary-extensions@^2.0.0:
   version "2.2.0"
@@ -3980,6 +3957,11 @@ cookie-signature@^1.1.0:
   resolved "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.1.0.tgz"
   integrity sha512-Alvs19Vgq07eunykd3Xy2jF0/qSNv2u7KDbAek9H5liV1UMijbqFs5cycZvv5dVsvseT/U4H8/7/w8Koh35C4A==
 
+cookie-signature@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/cookie-signature/-/cookie-signature-1.2.0.tgz#4deed303f5f095e7a02c979e3fcb19157f5eaeea"
+  integrity sha512-R0BOPfLGTitaKhgKROKZQN6iyq2iDQcH1DOF8nJoaWapguX5bC2w+Q/I9NmmM5lfcvEarnLZr+cCvmEYYSXvYA==
+
 cookie@0.4.0:
   version "0.4.0"
   resolved "https://registry.npmjs.org/cookie/-/cookie-0.4.0.tgz"
@@ -3989,6 +3971,11 @@ cookie@^0.4.1:
   version "0.4.1"
   resolved "https://registry.npmjs.org/cookie/-/cookie-0.4.1.tgz"
   integrity sha512-ZwrFkGJxUR3EIoXtO+yVE69Eb7KlixbaeAWfBQB9vVsNn/o+Yw69gBWSSDK825hQNdN+wF8zELf3dFNl/kxkUA==
+
+cookie@^0.4.2:
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.4.2.tgz#0e41f24de5ecf317947c82fc789e06a884824432"
+  integrity sha512-aSWTXFzaKWkvHO1Ny/s+ePFpvKsPnjc551iI41v3ny/ow6tBG5Vd+FuqGNhh1LxOmVzOlGUriIlOaokOvhaStA==
 
 cookiejar@^2.1.2:
   version "2.1.2"
@@ -10211,7 +10198,7 @@ type-fest@^2.11.1:
   resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-2.11.2.tgz#5534a919858bc517492cd3a53a673835a76d2e71"
   integrity sha512-reW2Y2Mpn0QNA/5fvtm5doROLwDPu2zOm5RtY7xQQS05Q7xgC8MOZ3yPNaP9m/s/sNjjFQtHo7VCNqYW2iI+Ig==
 
-type-is@^1.6.16, type-is@^1.6.18, type-is@~1.6.17, type-is@~1.6.18:
+type-is@^1.6.18, type-is@~1.6.17, type-is@~1.6.18:
   version "1.6.18"
   resolved "https://registry.npmjs.org/type-is/-/type-is-1.6.18.tgz"
   integrity sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==
