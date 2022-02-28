@@ -1,5 +1,3 @@
-// import { rest } from "msw";
-// import { setupServer } from "msw/node";
 const { rest } = require("msw");
 const { setupServer } = require("msw/node");
 
