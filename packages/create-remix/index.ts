@@ -51,15 +51,6 @@ export async function createApp({
   lang,
   githubPAT = process.env.GITHUB_TOKEN
 }: CreateAppArgs) {
-  console.log({
-    projectDir,
-    install,
-    quiet,
-    repoURL,
-    lang,
-    githubPAT
-  });
-
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
     throw new Error(
