@@ -10,7 +10,8 @@
     "rules",
     "settings",
     "index.js",
-    "jest.js"
+    "jest.js",
+    "jest-testing-library.js"
   ],
   "dependencies": {
     "@babel/core": "^7.17.5",
