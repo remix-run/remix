@@ -27,7 +27,24 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
+  cssModules: CssModulesResults | undefined;
 }
+
+// TODO: This should ideally be in one place; duped for now from remix-dev
+interface CssModulesResults {
+  filePath: string;
+  fileUrl: string;
+  moduleMap: CssModuleFileMap;
+}
+
+interface CssModuleFileContents {
+  css: string;
+  json: CssModuleClassMap;
+}
+
+type CssModuleFileMap = Record<string, CssModuleFileContents>;
+
+type CssModuleClassMap = Record<string, string>;
 
 export function createEntryMatches(
   matches: RouteMatch<ServerRoute>[],

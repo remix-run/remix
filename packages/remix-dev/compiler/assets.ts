@@ -5,7 +5,7 @@ import type { RemixConfig } from "../config";
 import invariant from "../invariant";
 import { getRouteModuleExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
-import { createUrl } from "./utils/url";
+import { resolveUrl } from "./utils/url";
 import type { CssModulesResults } from "./plugins/cssModules";
 
 type Route = RemixConfig["routes"][string];
@@ -32,7 +32,7 @@ export interface AssetsManifest {
       hasErrorBoundary: boolean;
     };
   };
-  cssModules: (CssModulesResults & { fileUrl: string }) | undefined;
+  cssModules: CssModulesResults | undefined;
 }
 
 export async function createAssetsManifest(
@@ -40,19 +40,12 @@ export async function createAssetsManifest(
   metafile: esbuild.Metafile,
   cssModules: CssModulesResults | undefined
 ): Promise<AssetsManifest> {
-  function resolveUrl(outputPath: string): string {
-    return createUrl(
-      config.publicPath,
-      path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
-    );
-  }
-
   function resolveImports(
     imports: esbuild.Metafile["outputs"][string]["imports"]
   ): string[] {
     return imports
       .filter((im) => im.kind === "import-statement")
-      .map((im) => resolveUrl(im.path));
+      .map((im) => resolveUrl(config, im.path));
   }
 
   let entryClientFile = path.resolve(
@@ -80,7 +73,7 @@ export async function createAssetsManifest(
     );
     if (entryPointFile === entryClientFile) {
       entry = {
-        module: resolveUrl(key),
+        module: resolveUrl(config, key),
         imports: resolveImports(output.imports),
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
@@ -94,7 +87,7 @@ export async function createAssetsManifest(
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: resolveUrl(key),
+        module: resolveUrl(config, key),
         imports: resolveImports(output.imports),
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
@@ -113,9 +106,7 @@ export async function createAssetsManifest(
     version,
     entry,
     routes,
-    cssModules: cssModules
-      ? { ...cssModules, fileUrl: resolveUrl(cssModules.filePath) }
-      : undefined,
+    cssModules,
   };
 }
 
