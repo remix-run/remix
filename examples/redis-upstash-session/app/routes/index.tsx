@@ -26,7 +26,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   });
 };
 
-export default function () {
+export default function IndexRoute() {
   const data = useLoaderData();
   return <div>{data.message}</div>;
 }

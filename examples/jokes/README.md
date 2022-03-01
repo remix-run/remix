@@ -32,10 +32,11 @@ From your terminal:
 
 ```sh
 npm install
+npx prisma migrate dev
 npm run dev
 ```
 
-This starts your app in development mode, rebuilding assets on file changes.
+This prepares the local dev database and starts your app in development mode, rebuilding assets on file changes.
 
 ## Deployment
 
@@ -43,6 +44,12 @@ First, build your app for production:
 
 ```sh
 npm run build
+```
+
+Then apply any database changes:
+
+```sh
+npx prisma migrate deploy
 ```
 
 Then run the app in production mode:

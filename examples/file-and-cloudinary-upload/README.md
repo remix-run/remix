@@ -1,4 +1,4 @@
-# Upload images too cloudinary
+# Upload images to cloudinary
 
 This is a simple example of using the remix buildin [uploadHandler](https://remix.run/docs/en/v1/api/remix#uploadhandler) and Form with multipart data to upload a file with the built-in local uploader and upload an image file to cloudinary with a custom uploader and display it.
 
