@@ -11,6 +11,7 @@ import {
   useMatches,
 } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
+import cssModuleStyles from "@remix-run/dev/modules.css";
 
 import favicon from "../public/favicon.ico";
 import stylesHref from "./styles/app.css";
@@ -23,8 +24,9 @@ export function links() {
     },
     { rel: "stylesheet", href: stylesHref },
     { rel: "stylesheet", href: "/resources/theme-css" },
+    cssModuleStyles != null && { rel: "stylesheet", href: cssModuleStyles },
     { rel: "shortcut icon", href: favicon },
-  ];
+  ].filter(Boolean);
 }
 
 export async function loader({ request }) {
