@@ -7,7 +7,6 @@ import type * as esbuild from "esbuild";
 import { getFileHash, getHash } from "../utils/crypto";
 import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
-import { cssModulesVirtualModule } from "../virtualModules";
 import { resolveUrl } from "../utils/url";
 import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 

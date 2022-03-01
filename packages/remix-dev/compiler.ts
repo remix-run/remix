@@ -201,7 +201,7 @@ export async function watch(
 
     let browserBuildPromise = browserBuild.rebuild();
     let assetsManifestPromise = browserBuildPromise.then((build) =>
-      generateAssetsManifest(config, build)
+      generateAssetsManifest(config, build.metafile!, build.cssModules)
     );
 
     // Assign the assetsManifestPromise to a ref so the server build can await
@@ -294,8 +294,8 @@ interface BuildInvalidate {
   (): Promise<BrowserBuildIncremental>;
   dispose(): void;
 }
-export interface BrowserBuild extends CssModulesResults {
-  result: esbuild.BuildResult;
+export interface BrowserBuild extends Omit<esbuild.BuildResult, "rebuild"> {
+  cssModules: CssModulesResults;
   rebuild?: BuildInvalidate;
 }
 
@@ -312,7 +312,7 @@ async function buildEverything(
     let browserBuildPromise = createBrowserBuild(config, options);
 
     let assetsManifestPromise = browserBuildPromise.then((build) =>
-      generateAssetsManifest(config, build)
+      generateAssetsManifest(config, build.metafile!, build.cssModules)
     );
 
     // Assign the assetsManifestPromise to a ref so the server build can await
@@ -433,7 +433,7 @@ async function createBrowserBuild(
       await fse.writeFile(filePath, cssModulesContent);
 
       return {
-        result: build,
+        ...build,
         rebuild: (() => {
           if (!options.incremental) {
             return undefined;
@@ -452,11 +452,13 @@ async function createBrowserBuild(
             await fse.writeFile(filePath, cssModulesContent);
 
             return {
-              result,
+              ...result,
               rebuild: builder,
-              filePath,
-              fileUrl,
-              moduleMap: cssModulesMap,
+              cssModules: {
+                filePath,
+                fileUrl,
+                moduleMap: cssModulesMap,
+              },
             };
           }) as BuildInvalidate;
           // TODO: unsure about this, check back w/ esbuild docs to clarify what
@@ -464,9 +466,11 @@ async function createBrowserBuild(
           builder.dispose = build.rebuild!.dispose;
           return builder;
         })(),
-        filePath,
-        fileUrl,
-        moduleMap: cssModulesMap,
+        cssModules: {
+          filePath,
+          fileUrl,
+          moduleMap: cssModulesMap,
+        },
       };
     });
 }
@@ -552,17 +556,13 @@ async function createServerBuild(
 
 async function generateAssetsManifest(
   config: RemixConfig,
-  build: BrowserBuild
+  metafile: esbuild.Metafile,
+  cssModules: CssModulesResults | undefined
 ): Promise<AssetsManifest> {
-  let cssModulesResults: CssModulesResults = {
-    filePath: build.filePath,
-    fileUrl: build.fileUrl,
-    moduleMap: build.moduleMap,
-  };
   let assetsManifest = await createAssetsManifest(
     config,
-    build.result.metafile!,
-    cssModulesResults
+    metafile!,
+    cssModules
   );
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
 

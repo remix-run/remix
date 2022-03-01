@@ -12,8 +12,3 @@ export const assetsManifestVirtualModule: VirtualModule = {
   id: "@remix-run/dev/assets-manifest",
   filter: /^@remix-run\/dev\/assets-manifest$/,
 };
-
-export const cssModulesVirtualModule: VirtualModule = {
-  id: "@remix-run/dev/modules.css",
-  filter: /^@remix-run\/dev\/modules\.css$/,
-};
