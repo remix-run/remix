@@ -1,12 +1,14 @@
-# Remix Auth Supabase
+# Remix Auth - Supabase Strategy with oauth (GitHub)
 
-Authentication using Remix Auth with the SupabaseStrategy.
+Authentication using `signIn with oauth provider`.
+
+[Enable GitHub Auth for your project](https://supabase.com/docs/guides/auth/auth-github)
 
 ## Preview
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/remix-auth-supabase/email-password)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/remix-auth-supabase/oauth-github)
 
 ## Setup
 
@@ -17,11 +19,13 @@ cp .env.example .env
 ```
 
 2. Go to https://app.supabase.io/project/{PROJECT}/api?page=auth to find your secrets
-3. Add your `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE` in `.env`
+3. Add your `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE` and `PUBLIC_SUPABASE_ANON_KEY` in `.env`
 
 ```env
 SUPABASE_SERVICE_KEY="{SERVICE_KEY}"
+PUBLIC_SUPABASE_ANON_KEY="{ANON_KEY}"
 SUPABASE_URL="https://{YOUR_INSTANCE_NAME}.supabase.co"
+
 ```
 
 ## Using the Remix Auth & SupabaseStrategy 🚀
@@ -34,10 +38,6 @@ You must use `checkSession` instead of `isAuthenticated`
 
 This is using Remix Auth, `remix-auth-supabase` and `supabase-js` packages.
 
-> Thanks to Remix, we can securely use server only authentication with `supabase.auth.api.signInWithEmail`
->
-> This function should only be called on a server (`loader` or `action` functions).
->
 > **⚠️ Never expose your `service_role` key in the browser**
 
 The `/login` route renders a form with a email and password input. After a submit it runs some validations and store `user` object, `access_token` and `refresh_token` in the session.
@@ -46,10 +46,10 @@ The `/private` routes redirects the user to `/login` if it's not logged-in, or s
 
 **Handle refreshing of tokens** (if expired) or redirects to `/login` if it fails
 
-More use cases can be found on [Remix Auth Supabase - Use cases](https://github.com/mitchelvanbever/remix-auth-supabase#using-the-authenticator--strategy-)
+More use cases can be found on [Supabase Strategy - Use cases](https://github.com/mitchelvanbever/remix-auth-supabase#using-the-authenticator--strategy-)
 
 ## Related Links
 
 - [Remix Auth](https://github.com/sergiodxa/remix-auth)
-- [Remix Auth Supabase](https://github.com/mitchelvanbever/remix-auth-supabase)
+- [Supabase Strategy](https://github.com/mitchelvanbever/remix-auth-supabase)
 - [supabase-js](https://github.com/supabase/supabase-js)

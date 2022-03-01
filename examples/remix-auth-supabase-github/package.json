@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix-example-remix-auth-supabase",
+  "name": "remix-app",
   "description": "",
   "license": "",
   "scripts": {
@@ -13,12 +13,12 @@
     "@remix-run/react": "1.2.3",
     "@remix-run/serve": "1.2.3",
     "@supabase/supabase-js": "^1.29.1",
+    "cross-env": "^7.0.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "1.2.3",
     "remix-auth": "^3.2.1",
-    "remix-auth-supabase": "^3.1.0",
-    "cross-env": "^7.0.3"
+    "remix-auth-supabase": "^3.1.0"
   },
   "devDependencies": {
     "@remix-run/dev": "1.2.3",
