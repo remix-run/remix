@@ -382,25 +382,6 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
       await fs.writeFile(filePath, init.files[filename]);
     })
   );
-  await renamePkgJsonApp(dir);
-}
-
-/**
- * This prevents the console for spitting out a bunch of junk like this for
- * every fixture:
- *
- *    jest-haste-map: Haste module naming collision: remix-app-template-js
- *
- * I found some github issues that says that `modulePathIgnorePatterns` should
- * help, so I added it to our `jest.config.js`, but it doesn't seem to help, so
- * I bruteforced it here.
- */
-async function renamePkgJsonApp(dir: string) {
-  let pkgPath = path.join(dir, "package.json");
-  let pkg = await fs.readFile(pkgPath);
-  let obj = JSON.parse(pkg.toString());
-  obj.name = path.basename(dir);
-  await fs.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
 }
 
 export async function getHtml(page: Page, selector?: string) {
