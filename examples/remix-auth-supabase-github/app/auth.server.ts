@@ -11,8 +11,8 @@ export const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: ["s3cr3t"], // This should be an env variable
-    secure: process.env.NODE_ENV === "production"
-  }
+    secure: process.env.NODE_ENV === "production",
+  },
 });
 
 export const supabaseStrategy = new SupabaseStrategy(
@@ -20,7 +20,7 @@ export const supabaseStrategy = new SupabaseStrategy(
     supabaseClient: supabaseAdmin,
     sessionStorage,
     sessionKey: "sb:session",
-    sessionErrorKey: "sb:error"
+    sessionErrorKey: "sb:error",
   },
   async ({ req, supabaseClient }) => {
     const form = await req.formData();
@@ -54,7 +54,7 @@ export const oAuthStrategy = new SupabaseStrategy(
     supabaseClient: supabaseAdmin,
     sessionStorage,
     sessionKey: "sb:session",
-    sessionErrorKey: "sb:error"
+    sessionErrorKey: "sb:error",
   },
   async ({ req }) => {
     const form = await req.formData();
@@ -69,7 +69,7 @@ export const oAuthStrategy = new SupabaseStrategy(
 
 export const authenticator = new Authenticator<Session>(sessionStorage, {
   sessionKey: supabaseStrategy.sessionKey,
-  sessionErrorKey: supabaseStrategy.sessionErrorKey
+  sessionErrorKey: supabaseStrategy.sessionErrorKey,
 });
 
 authenticator.use(supabaseStrategy);
