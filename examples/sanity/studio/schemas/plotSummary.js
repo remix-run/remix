@@ -6,17 +6,17 @@ export default {
     {
       title: "Summary",
       name: "summary",
-      type: "text"
+      type: "text",
     },
     {
       title: "Author",
       name: "author",
-      type: "string"
+      type: "string",
     },
     {
       title: "Link to author",
       name: "url",
-      type: "url"
-    }
-  ]
+      type: "url",
+    },
+  ],
 };

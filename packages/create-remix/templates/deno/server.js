@@ -7,7 +7,7 @@ const remixHandler = createRequestHandlerWithStaticFiles({
   build,
   // process.env.NODE_ENV is provided by Remix at compile time
   mode: process.env.NODE_ENV,
-  getLoadContext: () => ({})
+  getLoadContext: () => ({}),
 });
 
 const port = Deno.env.get("PORT") || "8000";

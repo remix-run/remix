@@ -5,7 +5,7 @@ import { json } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const formData = await request.formData();

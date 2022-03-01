@@ -1,4 +1,5 @@
 name: release
+
 on:
   release:
     types: [published]
@@ -56,34 +57,22 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          cache: "npm"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        run: yarn build
-
-      - run: mkdir -p deployment-test
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
 
       - name: Deploy to Arc
-        run: node ./scripts/deployment-test/arc.mjs
+        run: node ./arc.mjs
+        working-directory: ./scripts/deployment-test
         env:
           CI: true
           AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
@@ -101,34 +90,22 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          cache: "npm"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        run: yarn build
-
-      - run: mkdir -p deployment-test
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
 
       - name: Deploy to Cloudflare Pages
-        run: node ./scripts/deployment-test/cf-pages.mjs
+        run: node ./cf-pages.mjs
+        working-directory: ./scripts/deployment-test
         env:
           CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
           CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
@@ -147,37 +124,22 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          cache: "npm"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        run: yarn build
-
-      - run: mkdir -p deployment-test
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
-
-      - name: Install Wrangler
-        run: npm install -g @cloudflare/wrangler
+        working-directory: ./scripts/deployment-test
 
       - name: Deploy to Cloudflare Workers
-        run: node ./scripts/deployment-test/cf-workers.mjs
+        run: node ./cf-workers.mjs
+        working-directory: ./scripts/deployment-test
         env:
           CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
@@ -194,37 +156,25 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          cache: "npm"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        run: yarn build
-
-      - run: mkdir -p deployment-test
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
 
       - name: Install the Fly CLI
         run: curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
 
       - name: Deploy to Fly
-        run: node ./scripts/deployment-test/fly.mjs
+        run: node ./fly.mjs
+        working-directory: ./scripts/deployment-test
         env:
           FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
 
@@ -240,34 +190,22 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          cache: "npm"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        run: yarn build
-
-      - run: mkdir -p deployment-test
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
 
       - name: Deploy to Netlify
-        run: node ./scripts/deployment-test/netlify.mjs
+        run: node ./netlify.mjs
+        working-directory: ./scripts/deployment-test
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
@@ -283,34 +221,22 @@ jobs:
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          cache: "npm"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        run: yarn build
-
-      - run: mkdir -p deployment-test
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
         run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
 
       - name: Deploy to Vercel
-        run: node ./scripts/deployment-test/vercel.mjs
+        run: node ./vercel.mjs
+        working-directory: ./scripts/deployment-test
         env:
           VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}

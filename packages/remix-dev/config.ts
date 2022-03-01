@@ -386,7 +386,7 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile }
+    root: { path: "", id: "root", file: rootRouteFile },
   };
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = defineConventionalRoutes(
@@ -412,7 +412,7 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
-  let esbuild = appConfig.esbuild || (conf => conf);
+  let esbuild = appConfig.esbuild || ((conf) => conf);
 
   return {
     appDirectory,
@@ -434,7 +434,7 @@ export async function readConfig(
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
     mdx,
-    esbuild
+    esbuild,
   };
 }
 

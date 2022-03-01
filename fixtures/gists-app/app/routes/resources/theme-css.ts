@@ -12,8 +12,8 @@ export let action: ActionFunction = async ({ request }) => {
   if (formData.get("event") === "reset") {
     return redirect("/resources/settings", {
       headers: {
-        "Set-Cookie": await sessionStorage.destroySession(session)
-      }
+        "Set-Cookie": await sessionStorage.destroySession(session),
+      },
     });
   }
 
@@ -27,8 +27,8 @@ export let action: ActionFunction = async ({ request }) => {
 
   return redirect("/resources/settings", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 };
 
@@ -43,15 +43,15 @@ export let loader: LoaderFunction = async ({ request }) => {
     .map(([key, value]) =>
       defaultStyles[key] && value ? `${key}: ${value};` : false
     )
-    .filter(s => s)
+    .filter((s) => s)
     .join("\n  ")}
 }
   `,
     {
       headers: {
         "Content-Type": "text/css; charset=UTF-8",
-        "x-has-custom": Object.keys(custom).length > 0 ? "yes" : "no"
-      }
+        "x-has-custom": Object.keys(custom).length > 0 ? "yes" : "no",
+      },
     }
   );
 };

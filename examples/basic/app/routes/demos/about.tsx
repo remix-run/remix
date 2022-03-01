@@ -5,7 +5,7 @@ import stylesUrl from "~/styles/demos/about.css";
 
 export const meta: MetaFunction = () => {
   return {
-    title: "About Remix"
+    title: "About Remix",
   };
 };
 

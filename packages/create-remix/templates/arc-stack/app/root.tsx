@@ -4,7 +4,7 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 import type { LinksFunction } from "remix";
 import globalStyles from "./styles/global.css";
@@ -13,8 +13,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: globalStyles
-    }
+      href: globalStyles,
+    },
   ];
 };
 

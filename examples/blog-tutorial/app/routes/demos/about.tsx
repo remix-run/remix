@@ -5,7 +5,7 @@ import stylesUrl from "~/styles/demos/about.css";
 
 export const meta: MetaFunction = () => {
   return {
-    title: "About Remix"
+    title: "About Remix",
   };
 };
 
@@ -15,7 +15,7 @@ export const links: LinksFunction = () => {
 
 export default function Index() {
   return (
-    <div className="about">
+    <main className="about">
       <div className="about__intro">
         <h2>About Us</h2>
         <p>
@@ -39,6 +39,6 @@ export default function Index() {
         <hr />
         <Outlet />
       </div>
-    </div>
+    </main>
   );
 }

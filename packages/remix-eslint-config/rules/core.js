@@ -4,13 +4,13 @@ const ERROR = 2;
 
 module.exports = {
   "array-callback-return": WARN,
-  "constructor-super": ERROR,
   "getter-return": WARN,
-  "new-cap": [WARN, { capIsNew: false, newIsCap: true }],
+  "new-parens": WARN,
   "no-array-constructor": WARN,
   "no-caller": ERROR,
   "no-cond-assign": [WARN, "except-parens"],
   "no-const-assign": ERROR,
+  "no-control-regex": WARN,
   "no-dupe-args": WARN,
   "no-dupe-class-members": WARN,
   "no-dupe-keys": WARN,
@@ -40,10 +40,10 @@ module.exports = {
         ["&", "|", "^", "~", "<<", ">>", ">>>"],
         ["==", "!=", "===", "!==", ">", ">=", "<", "<="],
         ["&&", "||"],
-        ["in", "instanceof"]
+        ["in", "instanceof"],
       ],
-      allowSamePrecedence: false
-    }
+      allowSamePrecedence: false,
+    },
   ],
   "no-unsafe-negation": WARN,
   "no-new-func": WARN,
@@ -65,20 +65,20 @@ module.exports = {
     {
       allowShortCircuit: true,
       allowTernary: true,
-      allowTaggedTemplates: true
-    }
+      allowTaggedTemplates: true,
+    },
   ],
   "no-unused-labels": WARN,
   "no-unused-vars": [
     WARN,
     {
       args: "none",
-      ignoreRestSiblings: true
-    }
+      ignoreRestSiblings: true,
+    },
   ],
   "no-use-before-define": [
     WARN,
-    { classes: false, functions: false, variables: false }
+    { classes: false, functions: false, variables: false },
   ],
   "no-useless-computed-key": WARN,
   "no-useless-concat": WARN,
@@ -89,10 +89,10 @@ module.exports = {
     {
       ignoreDestructuring: false,
       ignoreImport: false,
-      ignoreExport: false
-    }
+      ignoreExport: false,
+    },
   ],
   "require-yield": WARN,
   "use-isnan": WARN,
-  "valid-typeof": WARN
+  "valid-typeof": WARN,
 };

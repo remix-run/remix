@@ -13,7 +13,7 @@ interface User {
 export let loader: LoaderFunction = async (): User[] => {
   return [
     { name: "Michael Jackson", id: "mjackson" },
-    { name: "Ryan Florence", id: "ryanflorence" }
+    { name: "Ryan Florence", id: "ryanflorence" },
   ];
 };
 
@@ -23,7 +23,7 @@ export let links: LinksFunction = () => {
   let nonMatching = {
     rel: "stylesheet",
     href: blueTextHref,
-    media: "(prefers-color-scheme: beef)"
+    media: "(prefers-color-scheme: beef)",
   };
 
   let fails = { rel: "stylesheet", href: "/fails.css" };
@@ -41,7 +41,7 @@ export default function LinksPage() {
   return (
     <div data-test-id="/links">
       <h2>Links Page</h2>
-      {users.map(user => (
+      {users.map((user) => (
         <li key={user.id}>
           <Link to={`/gists/${user.id}`} prefetch="none">
             {user.name}

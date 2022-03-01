@@ -5,7 +5,7 @@ import {
   NavLink,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 
 const Nav = () => {

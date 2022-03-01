@@ -5,7 +5,7 @@ import {
   redirect,
   useLoaderData,
   useLocation,
-  useActionData
+  useActionData,
 } from "remix";
 import type { Note } from "@prisma/client";
 import type { ActionFunction, LoaderFunction, MetaFunction } from "remix";
@@ -113,7 +113,7 @@ export default function Index() {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 8
+          gap: 8,
         }}
       >
         <div>
@@ -169,7 +169,7 @@ export default function Index() {
         <p>No notes yet</p>
       ) : (
         <ul style={{ paddingLeft: 0 }}>
-          {data.notes.map(note => (
+          {data.notes.map((note) => (
             <li
               key={note.id}
               style={{ display: "flex", gap: 16, alignItems: "center" }}
