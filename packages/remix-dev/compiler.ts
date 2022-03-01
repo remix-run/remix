@@ -341,7 +341,7 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  const esbuildConfig: esbuild.BuildOptions & {} = {
+  const esbuildConfig: esbuild.BuildOptions = {
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
