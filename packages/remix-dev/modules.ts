@@ -3,15 +3,17 @@ declare module "*.aac" {
   export default asset;
 }
 
-// TODO: This isn't working right now because CSS modules still match `*.css`
-// and I haven't yet figured out how to match all *except* for modules.
-// See https://github.com/microsoft/TypeScript/issues/38638
-declare module "*.module.css" {
-  const classes: { readonly [key: string]: string };
-  export default classes;
-}
 declare module "*.css" {
-  const asset: string;
+  // This needs to be any because TS cannot differentiate between *.css &
+  // *.module.css. In an ideal world we could make it an object for modules and
+  // a string for regular CSS, but in practice I don't think the typing provides
+  // much value in either scenario. For users to get TS benefits w/ modules
+  // they'd need a declaration file for individual CSS module files. Would be
+  // nice if we could generate that for them.
+  //
+  // See https://github.com/microsoft/TypeScript/issues/38638 for TS limitations
+  // with wildcard matching.
+  const asset: any;
   export default asset;
 }
 declare module "*.eot" {

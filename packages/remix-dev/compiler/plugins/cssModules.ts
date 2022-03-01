@@ -8,8 +8,8 @@ import { getFileHash, getHash } from "../utils/crypto";
 import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
 import { cssModulesVirtualModule } from "../virtualModules";
-import type { CssModulesBuild } from "../../compiler";
 import { resolveUrl } from "../utils/url";
+import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
 const suffixMatcher = /\.module\.css?$/;
 
@@ -62,7 +62,7 @@ export function cssModulesPlugin(
  */
 export function cssModulesFakerPlugin(
   config: RemixConfig,
-  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef
+  assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): esbuild.Plugin {
   return {
     name: "css-modules-faker",
@@ -76,77 +76,11 @@ export function cssModulesFakerPlugin(
       });
 
       build.onLoad({ filter: suffixMatcher }, async (args) => {
-        let res = await cssModulesBuildPromiseRef.current!;
-        let { json } = res.moduleMap[args.path];
+        let res = await assetsManifestPromiseRef.current;
+        let json = res?.cssModules?.moduleMap[args.path].json || {};
         return {
           contents: JSON.stringify(json),
           loader: "json",
-        };
-      });
-    },
-  };
-}
-
-/**
- * Creates a virtual module called `@remix-run/dev/modules.css` that exports the
- * URL of the compiled CSS that users will use in their route's `link` export.
- */
-export function cssModulesVirtualModulePlugin(
-  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef
-): esbuild.Plugin {
-  let filter = cssModulesVirtualModule.filter;
-  return {
-    name: "css-modules-virtual-module",
-    setup(build) {
-      build.onResolve({ filter }, async ({ path }) => {
-        return {
-          path,
-          namespace: "css-modules-virtual-module",
-        };
-      });
-
-      build.onLoad({ filter }, async () => {
-        let fileUrl = (await cssModulesBuildPromiseRef.current)?.fileUrl;
-
-        return {
-          loader: "js",
-          contents: `export default ${
-            fileUrl
-              ? `"${fileUrl}"`
-              : // If there is no CSS module file the import should return undefined.
-                // Users should check for a value and conditionally render a
-                // link only if we have modules. This way we can avoid annoying
-                // errors if they delete any references to CSS modules, though
-                // perhaps a dev warning would be helpful if they intended to
-                // remove CSS modules but left the virtual module import!
-                "undefined"
-          }`,
-        };
-      });
-    },
-  };
-}
-
-/**
- * We also need a 'faker' plugin for the virtual module since we don't know the
- * URL yet. This is basically a noop that just feeds us an empty string since it
- * doesn't really matter at this stage on the build.
- */
-export function cssModulesVirtualModuleFakerPlugin(): esbuild.Plugin {
-  let filter = cssModulesVirtualModule.filter;
-  return {
-    name: "css-modules-virtual-module-faker",
-    setup(build) {
-      build.onResolve({ filter }, async ({ path }) => {
-        return {
-          path,
-          namespace: "css-modules-virtual-module",
-        };
-      });
-      build.onLoad({ filter }, async () => {
-        return {
-          loader: "js",
-          contents: `export default "";`,
         };
       });
     },
@@ -242,10 +176,6 @@ export function getCssModulesFileReferences(
   );
   let fileUrl = resolveUrl(config, filePath);
   return [filePath, fileUrl];
-}
-
-export interface CssModulesBuildPromiseRef {
-  current?: Promise<CssModulesBuild>;
 }
 
 export interface CssModuleFileContents {
