@@ -8,8 +8,8 @@ import { getFileHash, getHash } from "../utils/crypto";
 import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
 import { cssModulesVirtualModule } from "../virtualModules";
-import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 import type { CssModulesBuild } from "../../compiler";
+import { resolveUrl } from "../utils/url";
 
 const suffixMatcher = /\.module\.css?$/;
 
@@ -29,8 +29,9 @@ export function cssModulesPlugin(
     name: "css-modules",
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, (args) => {
+        let path = getResolvedFilePath(config, args);
         return {
-          path: getResolvedFilePath(config, args),
+          path,
           namespace: "css-modules",
           sideEffects: false,
         };
@@ -87,11 +88,11 @@ export function cssModulesFakerPlugin(
 }
 
 /**
- * Creates a virtual module called `@remix-run/dev/css-modules` that exports the
+ * Creates a virtual module called `@remix-run/dev/modules.css` that exports the
  * URL of the compiled CSS that users will use in their route's `link` export.
  */
 export function cssModulesVirtualModulePlugin(
-  assetsManifestPromiseRef: AssetsManifestPromiseRef
+  cssModulesBuildPromiseRef: CssModulesBuildPromiseRef
 ): esbuild.Plugin {
   let filter = cssModulesVirtualModule.filter;
   return {
@@ -105,8 +106,7 @@ export function cssModulesVirtualModulePlugin(
       });
 
       build.onLoad({ filter }, async () => {
-        let fileUrl = (await assetsManifestPromiseRef.current)?.cssModules
-          ?.fileUrl;
+        let fileUrl = (await cssModulesBuildPromiseRef.current)?.fileUrl;
 
         return {
           loader: "js",
@@ -121,6 +121,32 @@ export function cssModulesVirtualModulePlugin(
                 // remove CSS modules but left the virtual module import!
                 "undefined"
           }`,
+        };
+      });
+    },
+  };
+}
+
+/**
+ * We also need a 'faker' plugin for the virtual module since we don't know the
+ * URL yet. This is basically a noop that just feeds us an empty string since it
+ * doesn't really matter at this stage on the build.
+ */
+export function cssModulesVirtualModuleFakerPlugin(): esbuild.Plugin {
+  let filter = cssModulesVirtualModule.filter;
+  return {
+    name: "css-modules-virtual-module-faker",
+    setup(build) {
+      build.onResolve({ filter }, async ({ path }) => {
+        return {
+          path,
+          namespace: "css-modules-virtual-module",
+        };
+      });
+      build.onLoad({ filter }, async () => {
+        return {
+          loader: "js",
+          contents: `export default "";`,
         };
       });
     },
@@ -204,12 +230,18 @@ function getResolvedFilePath(
     : path.resolve(args.resolveDir, args.path);
 }
 
-export function getCssModulesFilePath(config: RemixConfig, css: string) {
+export function getCssModulesFileReferences(
+  config: RemixConfig,
+  css: string
+): [filePath: string, fileUrl: string] {
   let hash = getHash(css).slice(0, 8).toUpperCase();
-  return path.resolve(
+  let filePath = path.resolve(
     config.assetsBuildDirectory,
-    path.resolve(`__css-modules-${hash}.css`)
+    "_assets",
+    `__css-modules-${hash}.css`
   );
+  let fileUrl = resolveUrl(config, filePath);
+  return [filePath, fileUrl];
 }
 
 export interface CssModulesBuildPromiseRef {
@@ -225,6 +257,7 @@ export type CssModuleFileMap = Record<string, CssModuleFileContents>;
 
 export interface CssModulesResults {
   filePath: string;
+  fileUrl: string;
   moduleMap: CssModuleFileMap;
 }
 

@@ -2,6 +2,14 @@ declare module "*.aac" {
   const asset: string;
   export default asset;
 }
+
+// TODO: This isn't working right now because CSS modules still match `*.css`
+// and I haven't yet figured out how to match all *except* for modules.
+// See https://github.com/microsoft/TypeScript/issues/38638
+declare module "*.module.css" {
+  const classes: { readonly [key: string]: string };
+  export default classes;
+}
 declare module "*.css" {
   const asset: string;
   export default asset;

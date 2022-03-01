@@ -24,13 +24,15 @@ import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlu
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import type {
   CssModuleClassMap,
-  CssModulesResults,
   CssModulesBuildPromiseRef,
+  CssModulesResults,
 } from "./compiler/plugins/cssModules";
 import {
   cssModulesPlugin,
   cssModulesFakerPlugin,
-  getCssModulesFilePath,
+  cssModulesVirtualModulePlugin,
+  cssModulesVirtualModuleFakerPlugin,
+  getCssModulesFileReferences,
 } from "./compiler/plugins/cssModules";
 import { writeFileSafe } from "./compiler/utils/fs";
 
@@ -218,6 +220,8 @@ export async function watch(
     // If we get here and can't call rebuild something went wrong and we
     // should probably blow as it's not really recoverable.
     let cssModulesBuildPromise = cssModulesBuild.rebuild();
+    cssModulesBuildPromiseRef.current = cssModulesBuildPromise;
+
     let browserBuildPromise = browserBuild.rebuild();
     let assetsManifestPromise = browserBuildPromise.then((build) =>
       generateAssetsManifest(config, build.metafile!, cssModulesBuildPromiseRef)
@@ -226,7 +230,6 @@ export async function watch(
     // Assign the assetsManifestPromise to a ref so the server build can await
     // it when loading the @remix-run/dev/assets-manifest virtual module.
     assetsManifestPromiseRef.current = assetsManifestPromise;
-    cssModulesBuildPromiseRef.current = cssModulesBuildPromise;
 
     await Promise.all([
       cssModulesBuildPromise,
@@ -338,17 +341,18 @@ async function buildEverything(
   ]
 > {
   try {
-    let cssModulesPromise = createCssModulesBuild(
-      config,
-      options,
-      assetsManifestPromiseRef
-    );
+    let cssModulesBuildPromise = createCssModulesBuild(config, options);
+
+    // Assign the cssModulesBuildPromiseRef to a ref so both server and client
+    // builds can await it when loading the virtual module.
+    cssModulesBuildPromiseRef.current = cssModulesBuildPromise;
 
     let browserBuildPromise = createBrowserBuild(
       config,
       cssModulesBuildPromiseRef,
       options
     );
+
     let assetsManifestPromise = browserBuildPromise.then((build) =>
       generateAssetsManifest(config, build.metafile!, cssModulesBuildPromiseRef)
     );
@@ -356,10 +360,6 @@ async function buildEverything(
     // Assign the assetsManifestPromise to a ref so the server build can await
     // it when loading the @remix-run/dev/assets-manifest virtual module.
     assetsManifestPromiseRef.current = assetsManifestPromise;
-
-    // Assign the cssModulesBuildPromiseRef to a ref so both server and client builds
-    // can await it when loading the @remix-run/dev/css-modules virtual module.
-    cssModulesBuildPromiseRef.current = cssModulesPromise;
 
     let serverBuildPromise = createServerBuild(
       config,
@@ -369,7 +369,7 @@ async function buildEverything(
     );
 
     return await Promise.all([
-      cssModulesPromise,
+      cssModulesBuildPromise,
       assetsManifestPromise.then(() => browserBuildPromise),
       serverBuildPromise,
     ]);
@@ -441,6 +441,7 @@ async function createBrowserBuild(
     },
     plugins: [
       cssModulesFakerPlugin(config, cssModulesBuildPromiseRef),
+      cssModulesVirtualModulePlugin(cssModulesBuildPromiseRef),
       mdxPlugin(config),
       browserRouteModulesPlugin(config, /\?browser$/),
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
@@ -472,6 +473,7 @@ async function createServerBuild(
 
   let plugins: esbuild.Plugin[] = [
     cssModulesFakerPlugin(config, cssModulesBuildPromiseRef),
+    cssModulesVirtualModulePlugin(cssModulesBuildPromiseRef),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
@@ -531,8 +533,7 @@ async function createServerBuild(
 
 async function createCssModulesBuild(
   config: RemixConfig,
-  options: Required<BuildOptions> & { incremental?: boolean },
-  assetsManifestPromiseRef: AssetsManifestPromiseRef
+  options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<CssModulesBuild> {
   // ... find all .module.css files
   // aggregate the contents, keep an object of the JSON
@@ -560,66 +561,54 @@ async function createCssModulesBuild(
     };
   }
 
-  // The rest of this is copied from the server build
+  // The rest of this is copied from the browser build
 
   let dependencies = await getAppDependencies(config);
+  let dependencyNames = Object.keys(dependencies);
+  let externals = nodeBuiltins.filter((mod) => !dependencyNames.includes(mod));
+  let fakeBuiltins = nodeBuiltins.filter((mod) =>
+    dependencyNames.includes(mod)
+  );
 
-  let stdin: esbuild.StdinOptions | undefined;
-  let entryPoints: string[] | undefined;
-
-  if (config.serverEntryPoint) {
-    entryPoints = [config.serverEntryPoint];
-  } else {
-    stdin = {
-      contents: config.serverBuildTargetEntryModule,
-      resolveDir: config.rootDirectory,
-      loader: "ts",
-    };
+  if (fakeBuiltins.length > 0) {
+    throw new Error(
+      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
+        ", "
+      )} before continuing.`
+    );
   }
 
-  let plugins: esbuild.Plugin[] = [
-    mdxPlugin(config),
-    cssModulesPlugin(config, handleProcessedCss),
-    emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
-    serverRouteModulesPlugin(config),
-    serverEntryModulePlugin(config),
-    serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, dependencies),
-  ];
-
-  if (config.serverPlatform !== "node") {
-    plugins.unshift(NodeModulesPolyfillPlugin());
+  let entryPoints: esbuild.BuildOptions["entryPoints"] = {
+    "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
+  };
+  for (let id of Object.keys(config.routes)) {
+    // All route entry points are virtual modules that will be loaded by the
+    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+    // that we don't want to run in the browser (i.e. action & loader).
+    entryPoints[id] =
+      path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
   return esbuild
     .build({
-      absWorkingDir: config.rootDirectory,
-      stdin,
       entryPoints,
-      outfile: config.serverBuildPath,
-      write: false,
-      platform: config.serverPlatform,
-      format: config.serverModuleFormat,
-      treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production &&
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        ),
-      mainFields:
-        config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
-      target: options.target,
+      outdir: config.assetsBuildDirectory,
+      platform: "browser",
+      format: "esm",
+      external: externals,
       inject: [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
+      splitting: true,
+      sourcemap: options.sourcemap,
+      metafile: true,
       incremental: options.incremental,
-      sourcemap: options.sourcemap ? "inline" : false,
-      // The server build needs to know how to generate asset URLs for imports
-      // of CSS and other files.
+      mainFields: ["browser", "module", "main"],
+      treeShaking: true,
+      minify: options.mode === BuildMode.Production,
+      entryNames: "[dir]/[name]-[hash]",
+      chunkNames: "_shared/[name]-[hash]",
       assetNames: "_assets/[name]-[hash]",
       publicPath: config.publicPath,
       define: {
@@ -628,9 +617,24 @@ async function createCssModulesBuild(
           config.devServerPort
         ),
       },
-      plugins,
+      plugins: [
+        cssModulesPlugin(config, handleProcessedCss),
+        cssModulesVirtualModuleFakerPlugin(),
+        mdxPlugin(config),
+        browserRouteModulesPlugin(config, /\?browser$/),
+        emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+        NodeModulesPolyfillPlugin(),
+      ],
     })
     .then(async (build) => {
+      let [filePath, fileUrl] = getCssModulesFileReferences(
+        config,
+        cssModulesContent
+      );
+
+      await fse.ensureDir(path.dirname(filePath));
+      await fse.writeFile(filePath, cssModulesContent);
+
       return {
         result: build,
         rebuild: (() => {
@@ -642,10 +646,19 @@ async function createCssModulesBuild(
             cssModulesContent = "";
             cssModulesMap = {};
             let result = await build.rebuild!();
+            let [filePath, fileUrl] = getCssModulesFileReferences(
+              config,
+              cssModulesContent
+            );
+
+            await fse.ensureDir(path.dirname(filePath));
+            await fse.writeFile(filePath, cssModulesContent);
+
             return {
               result,
               rebuild: builder,
-              filePath: await getCssModulesFilePath(config, cssModulesContent),
+              filePath,
+              fileUrl,
               moduleMap: cssModulesMap,
             };
           }) as BuildInvalidate;
@@ -654,7 +667,8 @@ async function createCssModulesBuild(
           builder.dispose = build.rebuild!.dispose;
           return builder;
         })(),
-        filePath: await getCssModulesFilePath(config, cssModulesContent),
+        filePath,
+        fileUrl,
         moduleMap: cssModulesMap,
       };
     });
