@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 import getPort from "get-port";
+import type { BuildOptions } from "esbuild";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -28,6 +29,12 @@ export type ServerBuildTarget =
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
+
+export type EsbuildConfig = BuildOptions;
+export type EsbuildContext = {
+  isServer: boolean;
+  dev: boolean;
+};
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -147,6 +154,11 @@ export interface AppConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle?: Array<string | RegExp>;
+
+  esbuild?: <T extends EsbuildConfig | (EsbuildConfig & { write: false })>(
+    config: T,
+    context: EsbuildContext
+  ) => T | void;
 }
 
 /**
@@ -250,6 +262,11 @@ export interface RemixConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle: Array<string | RegExp>;
+
+  esbuild: <T extends EsbuildConfig | (EsbuildConfig & { write: false })>(
+    config: T,
+    context: EsbuildContext
+  ) => T | void;
 }
 
 /**
@@ -395,6 +412,8 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  let esbuild = appConfig.esbuild || (conf => conf);
+
   return {
     appDirectory,
     cacheDirectory,
@@ -414,7 +433,8 @@ export async function readConfig(
     serverBuildTargetEntryModule,
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
-    mdx
+    mdx,
+    esbuild
   };
 }
 

@@ -341,7 +341,7 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  return esbuild.build({
+  const esbuildConfig: esbuild.BuildOptions & {} = {
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
@@ -374,7 +374,14 @@ async function createBrowserBuild(
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
       NodeModulesPolyfillPlugin()
     ]
-  });
+  };
+  let esbuildContext = {
+    isServer: false,
+    dev: options.mode === BuildMode.Development
+  };
+  return esbuild.build(
+    config.esbuild(esbuildConfig, esbuildContext) || esbuildConfig
+  );
 }
 
 async function createServerBuild(
@@ -410,45 +417,51 @@ async function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
+  const esbuildConfig: esbuild.BuildOptions & { write: false } = {
+    absWorkingDir: config.rootDirectory,
+    stdin,
+    entryPoints,
+    outfile: config.serverBuildPath,
+    write: false,
+    platform: config.serverPlatform,
+    format: config.serverModuleFormat,
+    treeShaking: true,
+    minify:
+      options.mode === BuildMode.Production &&
+      !!config.serverBuildTarget &&
+      ["cloudflare-workers", "cloudflare-pages"].includes(
+        config.serverBuildTarget
+      ),
+    mainFields:
+      config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
+    target: options.target,
+    inject: [reactShim],
+    loader: loaders,
+    bundle: true,
+    logLevel: "silent",
+    incremental: options.incremental,
+    sourcemap: options.sourcemap ? "inline" : false,
+    // The server build needs to know how to generate asset URLs for imports
+    // of CSS and other files.
+    assetNames: "_assets/[name]-[hash]",
+    publicPath: config.publicPath,
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(options.mode),
+      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+        config.devServerPort
+      )
+    },
+    plugins
+  };
+
+  let esbuildContext = {
+    isServer: true,
+    dev: options.mode === BuildMode.Development
+  };
   return esbuild
-    .build({
-      absWorkingDir: config.rootDirectory,
-      stdin,
-      entryPoints,
-      outfile: config.serverBuildPath,
-      write: false,
-      platform: config.serverPlatform,
-      format: config.serverModuleFormat,
-      treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production &&
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        ),
-      mainFields:
-        config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
-      target: options.target,
-      inject: [reactShim],
-      loader: loaders,
-      bundle: true,
-      logLevel: "silent",
-      incremental: options.incremental,
-      sourcemap: options.sourcemap ? "inline" : false,
-      // The server build needs to know how to generate asset URLs for imports
-      // of CSS and other files.
-      assetNames: "_assets/[name]-[hash]",
-      publicPath: config.publicPath,
-      define: {
-        "process.env.NODE_ENV": JSON.stringify(options.mode),
-        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-          config.devServerPort
-        )
-      },
-      plugins
-    })
+    .build(config.esbuild(esbuildConfig, esbuildContext) || esbuildConfig)
     .then(async build => {
       await writeServerBuildResult(config, build.outputFiles);
       return build;
