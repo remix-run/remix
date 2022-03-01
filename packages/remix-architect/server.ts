@@ -3,20 +3,22 @@ import {
   AbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  formatServerError
 } from "@remix-run/node";
 import type {
   APIGatewayProxyEventHeaders,
   APIGatewayProxyEventV2,
-  APIGatewayProxyHandlerV2
+  APIGatewayProxyHandlerV2,
+  APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { Response as NodeResponse } from "@remix-run/node";
+
+import { isBinaryType } from "./binary-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -38,13 +40,13 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
-  getLoadContext: GetLoadContextFunction;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
-  let platform: ServerPlatform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, _context) => {
@@ -58,53 +60,8 @@ export function createRequestHandler({
       loadContext
     )) as unknown as NodeResponse;
 
-    let cookies: string[] = [];
-
-    // Arc/AWS API Gateway will send back set-cookies outside of response headers.
-    for (let [key, values] of Object.entries(response.headers.raw())) {
-      if (key.toLowerCase() === "set-cookie") {
-        for (let value of values) {
-          cookies.push(value);
-        }
-      }
-    }
-
-    if (cookies.length) {
-      response.headers.delete("set-cookie");
-    }
-
-    if (abortController.signal.aborted) {
-      response.headers.set("Connection", "close");
-    }
-
-    return {
-      statusCode: response.status,
-      headers: Object.fromEntries(response.headers),
-      cookies,
-      body: await response.text()
-    };
+    return sendRemixResponse(response, abortController);
   };
-}
-
-export function createRemixHeaders(
-  requestHeaders: APIGatewayProxyEventHeaders,
-  requestCookies?: string[]
-): NodeHeaders {
-  let headers = new NodeHeaders();
-
-  for (let [header, value] of Object.entries(requestHeaders)) {
-    if (value) {
-      headers.append(header, value);
-    }
-  }
-
-  if (requestCookies) {
-    for (let cookie of requestCookies) {
-      headers.append("Cookie", cookie);
-    }
-  }
-
-  return headers;
 }
 
 export function createRemixRequest(
@@ -123,6 +80,70 @@ export function createRemixRequest(
         ? Buffer.from(event.body, "base64").toString()
         : event.body,
     abortController,
-    signal: abortController?.signal
+    signal: abortController?.signal,
   });
+}
+
+export function createRemixHeaders(
+  requestHeaders: APIGatewayProxyEventHeaders,
+  requestCookies?: string[]
+): NodeHeaders {
+  let headers = new NodeHeaders();
+
+  for (let [header, value] of Object.entries(requestHeaders)) {
+    if (value) {
+      headers.append(header, value);
+    }
+  }
+
+  if (requestCookies) {
+    headers.append("Cookie", requestCookies.join("; "));
+  }
+
+  return headers;
+}
+
+export async function sendRemixResponse(
+  response: NodeResponse,
+  abortController: AbortController
+): Promise<APIGatewayProxyStructuredResultV2> {
+  let cookies: string[] = [];
+
+  // Arc/AWS API Gateway will send back set-cookies outside of response headers.
+  for (let [key, values] of Object.entries(response.headers.raw())) {
+    if (key.toLowerCase() === "set-cookie") {
+      for (let value of values) {
+        cookies.push(value);
+      }
+    }
+  }
+
+  if (cookies.length) {
+    response.headers.delete("set-cookie");
+  }
+
+  if (abortController.signal.aborted) {
+    response.headers.set("Connection", "close");
+  }
+
+  let contentType = response.headers.get("content-type");
+  let isBinary = isBinaryType(contentType);
+  let body;
+  let isBase64Encoded = false;
+
+  if (isBinary) {
+    const blob = await response.arrayBuffer();
+    body = Buffer.from(blob).toString("base64");
+    isBase64Encoded = true;
+  } else {
+    body = await response.text();
+  }
+
+  return {
+    statusCode: response.status,
+    headers: Object.fromEntries(response.headers),
+    cookies,
+    body,
+    isBase64Encoded,
+  };
 }

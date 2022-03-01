@@ -26,7 +26,10 @@ import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export let loader: LoaderFunction = async () => {
-  return [{ name: "Pants" }, { name: "Jacket" }];
+  return [
+    { id: "1", name: "Pants" },
+    { id: "2", name: "Jacket" },
+  ];
 };
 
 export default function Products() {
@@ -34,8 +37,8 @@ export default function Products() {
   return (
     <div>
       <h1>Products</h1>
-      {products.map(product => (
-        <div>{product.name}</div>
+      {products.map((product) => (
+        <div key={product.id}>{product.name}</div>
       ))}
     </div>
   );
@@ -75,8 +78,8 @@ export let loader: LoaderFunction = async ({ params }) => {
   return fakeDb.project.findMany({
     where: {
       userId: params.userId,
-      projectId: params.projectId
-    }
+      projectId: params.projectId,
+    },
   });
 };
 ```
@@ -113,8 +116,8 @@ export default function GistsRoute() {
   let gists = useLoaderData();
   return (
     <ul>
-      {gists.map(gist => (
-        <li>
+      {gists.map((gist) => (
+        <li key={gist.id}>
           <a href={gist.html_url}>{gist.id}</a>
         </li>
       ))}
@@ -140,13 +143,14 @@ And then your routes can import it and make queries against it:
 ```tsx filename=app/routes/products/$categoryId.tsx
 import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
+
 import { db } from "~/db.server";
 
 export let loader: LoaderFunction = async ({ params }) => {
   return db.product.findMany({
     where: {
-      categoryId: params.categoryId
-    }
+      categoryId: params.categoryId,
+    },
   });
 };
 
@@ -155,6 +159,41 @@ export default function ProductCategory() {
   return (
     <div>
       <p>{products.length} Products</p>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
+
+```tsx filename=tsx filename=app/routes/products/$productId.tsx
+import { useLoaderData, json } from "remix";
+
+import { db } from "~/db.server";
+
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
+
+async function getLoaderData() {
+  const products = await db.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      imgSrc: true,
+    },
+  });
+  return { products };
+}
+
+export let loader = async () => {
+  return json<LoaderData>(await getLoaderData());
+};
+
+export default function Product() {
+  let product = useLoaderData<LoaderData>();
+  return (
+    <div>
+      <p>Product {product.id}</p>
       {/* ... */}
     </div>
   );
@@ -171,7 +210,7 @@ import type { LoaderFunction } from "remix";
 
 export let loader: LoaderFunction = async ({ params }) => {
   return PRODUCTS_KV.get(`product-${params.productId}`, {
-    type: "json"
+    type: "json",
   });
 };
 
@@ -188,15 +227,15 @@ export default function Product() {
 
 ## Not Found
 
-While loading data its common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
 export let loader: LoaderFunction = async ({
   params,
-  request
+  request,
 }) => {
   let product = await db.product.findOne({
-    where: { id: params.productId }
+    where: { id: params.productId },
   });
 
   if (!product) {
@@ -337,7 +376,7 @@ export default function ProductFilters() {
         id="adidas"
         name="brand"
         value="adidas"
-        defaultChecked={brands.includes("nike")}
+        defaultChecked={brands.includes("adidas")}
       />
 
       <button type="submit">Update</button>
@@ -348,7 +387,7 @@ export default function ProductFilters() {
 
 You might want to auto submit the form on any field change, for that there is [`useSubmit`][use-submit]:
 
-```tsx lines=[1,4,9]
+```tsx lines=[1,4,11]
 import { useSubmit, useSearchParams } from "remix";
 
 export default function ProductFilters() {
@@ -359,7 +398,7 @@ export default function ProductFilters() {
   return (
     <Form
       method="get"
-      onChange={e => submit(e.currentTarget)}
+      onChange={(e) => submit(e.currentTarget)}
     >
       {/* ... */}
     </Form>
@@ -458,7 +497,7 @@ export default function ProductFilters() {
           id="nike"
           name="brand"
           value="nike"
-          onChange={e => submit(e.currentTarget.form)}
+          onChange={(e) => submit(e.currentTarget.form)}
           checked={brands.includes("nike")}
         />
         <Link to="?brand=nike">(only)</Link>
@@ -495,7 +534,7 @@ export default function ProductFilters() {
   // (form submission or link click)
   React.useEffect(() => {
     setNikeChecked(brands.includes("nike"));
-  }, [searchParams]);
+  }, [brands, searchParams]);
 
   return (
     <Form method="get">
@@ -506,7 +545,7 @@ export default function ProductFilters() {
           id="nike"
           name="brand"
           value="nike"
-          onChange={e => {
+          onChange={(e) => {
             // update checkbox state w/o submitting the form
             setNikeChecked(true);
           }}
@@ -539,7 +578,7 @@ function SearchCheckbox({ name, value }) {
 
   React.useEffect(() => {
     setChecked(all.includes(value));
-  }, [searchParams]);
+  }, [all, searchParams, value]);
 
   return (
     <input
@@ -547,7 +586,7 @@ function SearchCheckbox({ name, value }) {
       name={name}
       value={value}
       checked={checked}
-      onChange={e => setChecked(e.target.checked)}
+      onChange={(e) => setChecked(e.target.checked)}
     />
   );
 }
@@ -620,7 +659,7 @@ export async function loader() {
     date: new Date(),
     someMethod() {
       return "hello!";
-    }
+    },
   };
 }
 
@@ -666,4 +705,4 @@ export default function RouteComp() {
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#userloaderdata
+[useloaderdata]: ../api/remix#useloaderdata

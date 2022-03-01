@@ -5,7 +5,7 @@ import {
   Meta,
   Scripts,
   ScrollRestoration,
-  json
+  json,
 } from "remix";
 import notion from "./notion.server";
 
@@ -21,18 +21,18 @@ export const action: ActionFunction = async ({ request }) => {
         title: [
           {
             text: {
-              content: firstname
-            }
-          }
-        ]
+              content: firstname,
+            },
+          },
+        ],
       },
       Lastname: {
-        rich_text: [{ text: { content: lastname } }]
+        rich_text: [{ text: { content: lastname } }],
       },
       Email: {
-        rich_text: [{ text: { content: email } }]
-      }
-    }
+        rich_text: [{ text: { content: email } }],
+      },
+    },
   } as any);
   return json({ success: true });
 };
@@ -74,7 +74,7 @@ export default function App() {
         </div>
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );

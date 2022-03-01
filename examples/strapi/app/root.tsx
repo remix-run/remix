@@ -3,7 +3,7 @@ import React from "react";
 import { Links, LiveReload, Meta, Outlet } from "remix";
 
 export const meta: MetaFunction = () => ({
-  title: "Remix & Strapi"
+  title: "Remix & Strapi",
 });
 
 const App: React.FC = () => {
@@ -17,7 +17,7 @@ const App: React.FC = () => {
       </head>
       <body>
         <Outlet />
-        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
+        <LiveReload />
       </body>
     </html>
   );

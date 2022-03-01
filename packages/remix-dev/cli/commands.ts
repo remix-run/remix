@@ -7,13 +7,16 @@ import WebSocket from "ws";
 import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
+import getPort from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
+import { loadEnv } from "../env";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
+import { log } from "../log";
 
 export async function setup(platformArg?: string) {
   let platform = isSetupPlatform(platformArg)
@@ -22,7 +25,7 @@ export async function setup(platformArg?: string) {
 
   await setupRemix(platform);
 
-  console.log(`Successfully setup Remix for ${platform}.`);
+  log(`Successfully setup Remix for ${platform}.`);
 }
 
 export async function routes(
@@ -43,7 +46,7 @@ export async function build(
 ): Promise<void> {
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Production;
 
-  console.log(`Building Remix app in ${mode} mode...`);
+  log(`Building Remix app in ${mode} mode...`);
 
   if (modeArg === BuildMode.Production && sourcemap) {
     console.warn(
@@ -61,7 +64,7 @@ export async function build(
   let config = await readConfig(remixRoot);
   await compiler.build(config, { mode: mode, sourcemap });
 
-  console.log(`Built in ${prettyMs(Date.now() - start)}`);
+  log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
 type WatchCallbacks = {
@@ -87,7 +90,7 @@ export async function watch(
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
-      wss.clients.forEach(client => {
+      wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(event));
         }
@@ -121,7 +124,7 @@ export async function watch(
     },
     onFileDeleted(file) {
       log(`File deleted: ${path.relative(process.cwd(), file)}`);
-    }
+    },
   });
 
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
@@ -130,18 +133,17 @@ export async function watch(
   exitHook(() => {
     resolve();
   });
-  return new Promise<void>(r => {
+  return new Promise<void>((r) => {
     resolve = r;
   }).then(async () => {
     wss.close();
     await closeWatcher();
     fse.emptyDirSync(config.assetsBuildDirectory);
-    fse.emptyDirSync(config.serverBuildDirectory);
+    fse.rmSync(config.serverBuildPath);
   });
 }
 
 export async function dev(remixRoot: string, modeArg?: string) {
-  // TODO: Warn about the need to install @remix-run/serve if it isn't there?
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -156,14 +158,24 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
-  let port = process.env.PORT || 3000;
+
+  await loadEnv(config.rootDirectory);
+
+  let port = await getPort({
+    port: process.env.PORT ? Number(process.env.PORT) : 3000,
+  });
+
+  if (config.serverEntryPoint) {
+    throw new Error("remix dev is not supported for custom servers.");
+  }
 
   let app = express();
+  app.disable("x-powered-by");
   app.use((_, __, next) => {
-    purgeAppRequireCache(config.serverBuildDirectory);
+    purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildDirectory, mode));
+  app.use(createApp(config.serverBuildPath, mode));
 
   let server: Server | null = null;
 
@@ -172,16 +184,16 @@ export async function dev(remixRoot: string, modeArg?: string) {
       onInitialBuild: () => {
         let address = Object.values(os.networkInterfaces())
           .flat()
-          .find(ip => ip?.family == "IPv4" && !ip.internal)?.address;
+          .find((ip) => ip?.family == "IPv4" && !ip.internal)?.address;
 
         if (!address) {
-          throw new Error("Could not find an IPv4 address.");
+          address = "localhost";
         }
 
         server = app.listen(port, () => {
           console.log(`Remix App Server started at http://${address}:${port}`);
         });
-      }
+      },
     });
   } finally {
     server!?.close();

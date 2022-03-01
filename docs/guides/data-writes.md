@@ -110,7 +110,7 @@ The data is made available to the server's request handler so you can create the
 export async function action({ request }) {
   const body = await request.formData();
   const project = await createProject(body);
-  redirect(`/projects/${project.id}`);
+  return redirect(`/projects/${project.id}`);
 }
 ```
 
@@ -120,7 +120,7 @@ If you're newer to web development, you may not have ever used a form this way. 
 
 ```js
 <form
-  onSubmit={event => {
+  onSubmit={(event) => {
     event.preventDefault();
     // good luck!
   }}
@@ -181,7 +181,7 @@ import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
   const project = await createProject(formData);
@@ -199,7 +199,7 @@ Of course, we started complicating things to try to create better user experienc
 
 ### Form Validation
 
-It's common to validate forms both client-side and server-side. It's also (unfortunately) common to only validate client-side, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
+It's common to validate forms both client-side and server-side. It's also (unfortunately) common to only validate client-side, which leads to various issues with your data that we don't have time to get into right now. Point is, if you're validating in only one place, do it on the server. You'll find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
 
 We know, we know, you want to animate in nice validation errors and stuff. We'll get to that. But right now we're just building a basic HTML form and user flow. We'll keep it simple first, then make it fancy.
 
@@ -213,7 +213,7 @@ If there are validation errors, we want to go back to the form and display them.
 
 ```tsx [5,7-10]
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
@@ -233,7 +233,7 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 import { redirect, useActionData } from "remix";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
 };
@@ -321,7 +321,7 @@ import {
   redirect,
   useActionData,
   Form,
-  useTransition
+  useTransition,
 } from "remix";
 
 // ...
@@ -418,7 +418,7 @@ function ValidationMessage({ error, isSubmitting }) {
         opacity: show ? 1 : 0,
         height: show ? "1em" : 0,
         color: "red",
-        transition: "all 300ms ease-in-out"
+        transition: "all 300ms ease-in-out",
       }}
     >
       {error}
@@ -429,7 +429,7 @@ function ValidationMessage({ error, isSubmitting }) {
 
 Now we can wrap our old error messages in this new fancy component, and even turn the borders of our fields red that have errors:
 
-```tsx [21-24, 31-34, 44-47, 53-56]
+```tsx [21-24, 31-34, 44-48, 53-56]
 export default function NewProject() {
   const transition = useTransition();
   const actionData = useActionData();
@@ -453,7 +453,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.name
                   ? "red"
-                  : ""
+                  : "",
               }}
             />
           </label>
@@ -476,7 +476,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.description
                   ? "red"
-                  : ""
+                  : "",
               }}
             />
           </label>

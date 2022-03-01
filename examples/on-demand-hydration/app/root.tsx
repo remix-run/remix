@@ -4,7 +4,7 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 import { useShouldHydrate } from "remix-utils";
 
@@ -22,7 +22,7 @@ export default function App() {
         <Outlet />
         <ScrollRestoration />
         {shouldHydrate && <Scripts />}
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );

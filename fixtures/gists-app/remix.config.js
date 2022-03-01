@@ -2,7 +2,7 @@ const fsp = require("fs").promises;
 const path = require("path");
 
 /**
- * @type {import("@remix-run/dev/config").AppConfig}
+ * @type {import("@remix-run/dev").AppConfig}
  */
 module.exports = {
   appDirectory: "./app",
@@ -11,24 +11,25 @@ module.exports = {
   serverBuildDirectory: "./build",
   devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
+  server: "./server.js",
 
-  mdx: async filename => {
+  mdx: async (filename) => {
     const [rehypeHighlight, remarkToc] = await Promise.all([
-      import("rehype-highlight").then(mod => mod.default),
-      import("remark-toc").then(mod => mod.default)
+      import("rehype-highlight").then((mod) => mod.default),
+      import("remark-toc").then((mod) => mod.default),
     ]);
 
     return {
       remarkPlugins: [remarkToc],
-      rehypePlugins: [rehypeHighlight]
+      rehypePlugins: [rehypeHighlight],
     };
   },
 
   // custom routes
-  routes: async defineRoutes => {
+  routes: async (defineRoutes) => {
     let pages = await fsp.readdir(path.join(__dirname, "app", "pages"));
 
-    return defineRoutes(route => {
+    return defineRoutes((route) => {
       // create some custom routes from the pages/ dir
       for (let page of pages) {
         // skip MDX pages for now...
@@ -43,5 +44,5 @@ module.exports = {
         route(":messageId", "pages/child.jsx");
       });
     });
-  }
+  },
 };

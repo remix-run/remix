@@ -5,14 +5,14 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch
+  useCatch,
 } from "remix";
 
 import { ChakraProvider, Box, Heading } from "@chakra-ui/react";
 
 function Document({
   children,
-  title = "App title"
+  title = "App title",
 }: {
   children: React.ReactNode;
   title?: string;
@@ -30,7 +30,7 @@ function Document({
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );

@@ -16,7 +16,7 @@ We recommend you create a function that validates the user session that can be a
 ```tsx filename=app/session.js lines=[9-22]
 import {
   createCookieSessionStorage,
-  redirect
+  redirect,
 } from "remix";
 
 // somewhere you've got a session storage
@@ -31,7 +31,7 @@ export async function requireUserSession(request) {
   // put in the session when the user authenticated
   if (!session.has("userId")) {
     // if there is no user session, redirect to login
-    throw new redirect("/login");
+    throw redirect("/login");
   }
 
   return session;
@@ -47,7 +47,7 @@ export async function loader({ request }) {
 
   // otherwise the code continues to execute
   const projects = await fakeDb.projects.scan({
-    userId: session.get("userId")
+    userId: session.get("userId"),
   });
   return projects;
 }
@@ -84,7 +84,7 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
 export async function action({ request }) {
   let formData = await request.formData();
-  let action = formData.get("_action");
+  let action = formData.get("action");
   switch (action) {
     case "update": {
       // do your update
@@ -114,13 +114,13 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="_action" value="create">
+        <button type="submit" name="action" value="create">
           Update
         </button>
       </Form>
 
       <Form method="post">
-        <button type="submit" name="_action" value="delete">
+        <button type="submit" name="action" value="delete">
           Delete
         </button>
       </Form>
@@ -133,13 +133,98 @@ You can also use a hidden input field:
 
 ```jsx lines=[2]
 <Form method="post">
-  <input type="hidden" name="_action" value="create" />
+  <input type="hidden" name="action" value="create" />
   <button type="submit">Create</button>
 </Form>
 ```
 
-<docs-error>Do not use `action` as your field name!</docs-error>
+## How can I have structured data in a form?
 
-You may wonder why we used `<button name="_action">` instead of `<button name="action">`. You can use whatever you want, but just not `"action"`!
+If you're used to doing fetches with a content type of `application/json`, you may wonder how forms fit into this. [`FormData`][form-data] is a bit different than JSON.
 
-Without getting into browser decisions decades ago, form elements have the `form.action` property in the DOM to know where to post to, as well as a property for every one of it's input element descendants by name. In our case: `form._action`. If you use `action`, there's a conflict and the submission will fail.
+- It can't have nested data, it's just "key value".
+- It _can_ have multiple entries on one key, unlike JSON.
+
+If you're wanting to send structured data simply to post arrays, you can use the same key on multiple inputs:
+
+```jsx
+<Form method="post">
+  <p>Select the categories for this video:</p>
+  <label>
+    <input type="checkbox" name="category" value="comedy" />{" "}
+    Comedy
+  </label>
+  <label>
+    <input type="checkbox" name="category" value="music" />{" "}
+    Music
+  </label>
+  <label>
+    <input type="checkbox" name="category" value="howto" />{" "}
+    How-To
+  </label>
+</Form>
+```
+
+Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. Access the checkbox values with `formData.getAll()` in your action.
+
+```tsx
+export async function action({ request }) {
+  const formData = await request.formData();
+  let categories = formData.getAll("category");
+  // ["comedy", "music"]
+}
+```
+
+Using the same input name and `formData.getAll()` covers most cases for wanting to submit structured data in your forms.
+
+If you still want to submit nested structures as well, you can use non-standard form field naming conventions and the [`query-string`][query-string] package from npm:
+
+```tsx
+<>
+  // arrays with []
+  <input name="category[]" value="comedy" />
+  <input name="category[]" value="comedy" />
+  // nested structures parentKey[childKey]
+  <input name="user[name]" value="Ryan" />
+</>
+```
+
+And then in your action:
+
+```tsx
+import queryString from "query-string";
+
+// in your action:
+export async function action({ request }) {
+  // use `request.text()`, not `request.formData` to get the form data as a url
+  // encoded form query string
+  let formQueryString = await request.text();
+
+  // parse it into an object
+  let obj = queryString.parse(formQueryString);
+}
+```
+
+Some folks even dump their JSON into a hidden field. Note that this approach won't work with progressive enhancement. If that's not important to your app, this is an easy way to send structured data.
+
+```tsx
+<input
+  type="hidden"
+  name="json"
+  value={JSON.stringify(obj)}
+/>
+```
+
+And then parse it in the action:
+
+```tsx
+export async function action({ request }) {
+  let formData = await request.formData();
+  let obj = JSON.parse(formData.get("json"));
+}
+```
+
+Again, `formData.getAll()` is often all you need, we encourage you to give it a shot!
+
+[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[query-string]: https://www.npmjs.com/package/query-string

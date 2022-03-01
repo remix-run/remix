@@ -1,0 +1,24 @@
+name: Fly Deploy Staging
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Deploy to Staging
+        uses: superfly/flyctl-actions@1.1
+        with:
+          args: "deploy --config ./fly.staging.toml"

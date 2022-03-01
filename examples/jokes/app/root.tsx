@@ -53,7 +53,7 @@ function Document({
       <body>
         {children}
         <Scripts />
-        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
+        <LiveReload />
       </body>
     </html>
   );

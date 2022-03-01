@@ -1,5 +1,8 @@
 /**
- * A JSON response. Converts `data` to JSON and sets the `Content-Type` header.
+ * This is a shortcut for creating `application/json` responses. Converts `data`
+ * to JSON and sets the `Content-Type` header.
+ *
+ * @see https://remix.run/api/remix#json
  */
 export function json<Data>(
   data: Data,
@@ -17,13 +20,15 @@ export function json<Data>(
 
   return new Response(JSON.stringify(data), {
     ...responseInit,
-    headers
+    headers,
   });
 }
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
  * Defaults to "302 Found".
+ *
+ * @see https://remix.run/api/remix#redirect
  */
 export function redirect(
   url: string,
@@ -41,7 +46,7 @@ export function redirect(
 
   return new Response(null, {
     ...responseInit,
-    headers
+    headers,
   });
 }
 

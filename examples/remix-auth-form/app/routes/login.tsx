@@ -9,7 +9,7 @@ type LoaderData = {
 export const action: ActionFunction = async ({ request }) => {
   await auth.authenticate("form", request, {
     successRedirect: "/private",
-    failureRedirect: "/login"
+    failureRedirect: "/login",
   });
 };
 
@@ -27,7 +27,7 @@ export default function Screen() {
 
   return (
     <Form method="post">
-      {error && <div>{error.message}</div>}
+      {error ? <div>{error.message}</div> : null}
       <div>
         <label htmlFor="email">Email</label>
         <input

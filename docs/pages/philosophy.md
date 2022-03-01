@@ -25,7 +25,7 @@ There are a lot of ways Remix helps you send less stuff over the network and we 
 
 Consider [the Github Gist API](https://api.github.com/gists). This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser you make the user download all of it. It might look like this:
 
-```js
+```jsx
 export default function Gists() {
   const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"
@@ -35,14 +35,14 @@ export default function Gists() {
   }
   return (
     <ul>
-      {gists.map(gist => (
-        <li>
+      {gists.map((gist) => (
+        <li key={gist.id}>
           <a href={gist.html_url}>
             {gist.description}, {gist.owner.login}
           </a>
           <ul>
-            {Object.keys(gist.files).map(key => (
-              <li>{key}</li>
+            {Object.keys(gist.files).map((key) => (
+              <li key={key}>{key}</li>
             ))}
           </ul>
         </li>
@@ -58,11 +58,12 @@ With Remix, you can filter down the data _on the server_ before sending it to th
 export async function loader() {
   const res = await fetch("https://api.github.com/gists");
   const json = await res.json();
-  return json.map(gist => {
+  return json.map((gist) => {
     return {
+      description: gist.description,
       url: gist.html_url,
       files: Object.keys(gist.files),
-      owner: gist.owner.login
+      owner: gist.owner.login,
     };
   });
 }
@@ -71,14 +72,14 @@ export default function Gists() {
   const gists = useLoaderData();
   return (
     <ul>
-      {gists.map(gist => (
-        <li>
+      {gists.map((gist) => (
+        <li key={gist.id}>
           <a href={gist.url}>
             {gist.description}, {gist.owner}
           </a>
           <ul>
-            {gist.files.map(key => (
-              <li>{key}</li>
+            {gist.files.map((key) => (
+              <li key={key}>{key}</li>
             ))}
           </ul>
         </li>

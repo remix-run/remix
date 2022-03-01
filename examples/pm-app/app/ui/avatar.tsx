@@ -8,7 +8,7 @@ function Avatar({
   avatar,
   nameFirst,
   nameLast,
-  size = "md"
+  size = "md",
 }: AvatarProps) {
   if (!avatar && !nameFirst && !nameLast) {
     return null;

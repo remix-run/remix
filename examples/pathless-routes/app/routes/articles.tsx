@@ -6,7 +6,7 @@ export const meta: MetaFunction = () => {
   return { title: "Articles" };
 };
 
-export default function () {
+export default function ArticlesRoute() {
   return (
     <>
       <div>

@@ -30,8 +30,8 @@ export const sessionStorage = createCookieSessionStorage({
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true
-  }
+    httpOnly: true,
+  },
 });
 
 export function getUserSession(request: Request) {
@@ -56,7 +56,7 @@ export async function requireUserId(
   const userId = session.get(sessionUserKey);
   if (!userId || typeof userId !== "string") {
     const searchParams = new URLSearchParams([
-      ["redirectTo", opts.redirect || new URL(request.url).pathname]
+      ["redirectTo", opts.redirect || new URL(request.url).pathname],
     ]);
     throw redirect(`/${opts.loginURL}?${searchParams}`);
   }
@@ -109,8 +109,8 @@ export async function logout(request: Request, opts: { redirect: string }) {
   );
   return redirect(opts.redirect, {
     headers: {
-      "Set-Cookie": await sessionStorage.destroySession(session)
-    }
+      "Set-Cookie": await sessionStorage.destroySession(session),
+    },
   });
 }
 
@@ -122,7 +122,7 @@ export async function createUserSession(
   session.set(sessionUserKey, userId);
   return redirect(opts.redirect, {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 }

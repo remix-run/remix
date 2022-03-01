@@ -20,6 +20,7 @@ Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -49,6 +50,7 @@ The compiler will now analyze the code in `routes/posts.tsx` and only keep code 
 
 ```tsx
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 
 export function meta() {
@@ -73,8 +75,9 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
-```tsx bad lines=5
+```tsx bad lines=[6]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -96,8 +99,9 @@ export default function Posts() {
 
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
-```tsx bad lines=3,5
+```tsx bad lines=[4,6]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
 
@@ -117,8 +121,9 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
-```tsx [6]
+```tsx lines=[7]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
@@ -154,7 +159,7 @@ export function removeTrailingSlash(loader) {
     const url = new URL(request.url);
     if (url.pathname.endsWith("/")) {
       return redirect(request.url.slice(0, -1), {
-        status: 308
+        status: 308,
       });
     }
     return loader(arg);
@@ -182,7 +187,7 @@ import { redirect } from "remix";
 export function removeTrailingSlash(url) {
   if (url.pathname.endsWith("/")) {
     throw redirect(request.url.slice(0, -1), {
-      status: 308
+      status: 308,
     });
   }
 }
@@ -205,14 +210,16 @@ It reads much nicer as well when you've got a lot of these:
 // this
 export const loader = async ({ request }) => {
   return removeTrailingSlash(request.url, () => {
-    return withSession(request, session => {
-      return requireUser(session, user => {
+    return withSession(request, (session) => {
+      return requireUser(session, (user) => {
         return json(user);
       });
     });
   });
 };
+```
 
+```ts
 // vs. this
 export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
@@ -306,7 +313,7 @@ function useLocalStorage(key) {
     localStorage.getItem(key)
   );
 
-  const setWithLocalStorage = nextState => {
+  const setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 
@@ -322,9 +329,9 @@ function useLocalStorage(key) {
 
   useEffect(() => {
     setState(localStorage.getItem(key));
-  }, []);
+  }, [key]);
 
-  const setWithLocalStorage = nextState => {
+  const setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 

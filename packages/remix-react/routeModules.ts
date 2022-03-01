@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Location } from "history";
 import type { ComponentType } from "react";
 import type { Params } from "react-router"; // TODO: import/export from react-router-dom
@@ -24,17 +26,23 @@ export interface RouteModule {
 
 /**
  * A React component that is rendered when the server throws a Response.
+ *
+ * @see https://remix.run/api/conventions#catchboundary
  */
 export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
+ *
+ * @see https://remix.run/api/conventions#errorboundary
  */
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
  * the document on route transitions.
+ *
+ * @see https://remix.run/api/remix#meta-links-scripts
  */
 export interface LinksFunction {
   (): LinkDescriptor[];
@@ -44,6 +52,8 @@ export interface LinksFunction {
  * A function that returns an object of name + content pairs to use for
  * `<meta>` tags for a route. These tags will be merged with (and take
  * precedence over) tags from parent routes.
+ *
+ * @see https://remix.run/api/remix#meta-links-scripts
  */
 export interface MetaFunction {
   (args: {
@@ -74,6 +84,8 @@ export interface HtmlMetaDescriptor {
  * about to reload the route. A common case is a root loader with nothing but
  * environment variables: after form submissions the root probably doesn't need
  * to be reloaded.
+ *
+ * @see https://remix.run/api/conventions#unstable_shouldreload
  */
 export interface ShouldReloadFunction {
   (args: {
@@ -91,6 +103,8 @@ export type RouteComponent = ComponentType<{}>;
 
 /**
  * An arbitrary object that is associated with a route.
+ *
+ * @see https://remix.run/api/conventions#handle
  */
 export type RouteHandle = any;
 

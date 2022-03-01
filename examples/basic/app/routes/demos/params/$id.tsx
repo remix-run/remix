@@ -75,6 +75,7 @@ export function CatchBoundary() {
           {caught.status} {caught.statusText}
         </p>
       );
+      break;
   }
 
   return (
@@ -107,6 +108,6 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export const meta: MetaFunction = ({ data }) => {
   return {
-    title: data ? `Param: ${data.param}` : "Oops..."
+    title: data ? `Param: ${data.param}` : "Oops...",
   };
 };

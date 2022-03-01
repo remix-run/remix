@@ -2,8 +2,8 @@ module.exports = {
   purge: ["./app/**/*.{js,jsx,ts,tsx}"],
   darkMode: false,
   theme: {
-    extend: {}
+    extend: {},
   },
   variants: {},
-  plugins: []
+  plugins: [],
 };

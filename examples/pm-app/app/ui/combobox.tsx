@@ -6,7 +6,7 @@ import {
   ComboboxOption as ReachComboboxOption,
   ComboboxOptionText,
   ComboboxPopover as ReachComboboxPopover,
-  ComboboxButton as ReachComboboxButton
+  ComboboxButton as ReachComboboxButton,
 } from "@reach/combobox";
 import type {
   ComboboxProps as ReachComboboxProps,
@@ -14,7 +14,7 @@ import type {
   ComboboxListProps as ReachComboboxListProps,
   ComboboxOptionProps as ReachComboboxOptionProps,
   ComboboxPopoverProps as ReachComboboxPopoverProps,
-  ComboboxButtonProps as ReachComboboxButtonProps
+  ComboboxButtonProps as ReachComboboxButtonProps,
 } from "@reach/combobox";
 import cx from "clsx";
 import { useFieldContext, Field } from "~/ui/form";
@@ -29,7 +29,7 @@ const Combobox = React.forwardRef<HTMLDivElement, ComboboxProps>(
         {...props}
         className={cx(props.className, "ui--combobox", {
           "ui--combobox--invalid": context?.invalid,
-          "ui--combobox--disabled": context?.disabled
+          "ui--combobox--disabled": context?.disabled,
         })}
       />
     );
@@ -155,7 +155,7 @@ export {
   ComboboxPopover,
   ComboboxList,
   ComboboxOption,
-  ComboboxButton
+  ComboboxButton,
 };
 
 export type {
@@ -164,5 +164,5 @@ export type {
   ComboboxPopoverProps,
   ComboboxListProps,
   ComboboxOptionProps,
-  ComboboxButtonProps
+  ComboboxButtonProps,
 };

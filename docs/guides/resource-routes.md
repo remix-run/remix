@@ -48,8 +48,8 @@ export async function loader({ params }) {
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```
@@ -75,10 +75,10 @@ app/routes/reports/$id/pdf.ts
 
 # with a file extension
 # /reports/123.pdf
-app/routes/reports/$id/[.pdf].ts
+app/routes/reports/$id[.pdf].ts
 
 # or like this, the resulting URL is the same
-app/routes/reports/$id.[.pdf].ts
+app/routes/reports/$id[.]pdf.ts
 ```
 
 ## Handling different request methods
@@ -90,7 +90,7 @@ import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   // handle "GET" request
 
@@ -104,7 +104,7 @@ To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 import type { ActionFunction } from "remix";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   switch (request.method) {
     case "POST": {
@@ -128,11 +128,12 @@ export const action: ActionFunction = async ({
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```ts
-import { ActionFunction, json } from "remix";
+import type { ActionFunction } from "remix";
+import { json } from "remix";
 import crypto from "crypto";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   if (request.method !== "POST") {
     return json({ message: "Method not allowed" }, 405);
