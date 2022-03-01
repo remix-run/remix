@@ -20,8 +20,8 @@ if (!window.env.PUBLIC_SUPABASE_ANON_KEY)
 // const supabaseOptions = {
 //   fetch, // see ⚠️ cloudflare
 //   schema: "public",
-//   persistSession: true,
-//   autoRefreshToken: true,
+//   persistSession: false,
+//   autoRefreshToken: false,
 //   detectSessionInUrl: true,
 //   headers: { "x-application-name": "{my-site-name}" }
 // };
@@ -30,7 +30,8 @@ if (!window.env.PUBLIC_SUPABASE_ANON_KEY)
 // Use Remix fetch polyfill for node (See https://remix.run/docs/en/v1/other-api/node)
 export const supabaseClient = createClient(
   window.env.SUPABASE_URL,
-  window.env.PUBLIC_SUPABASE_ANON_KEY
+  window.env.PUBLIC_SUPABASE_ANON_KEY,
+  { autoRefreshToken: false, persistSession: false }
 );
 
 export const signInWithGithub = (
@@ -38,7 +39,7 @@ export const signInWithGithub = (
 ) =>
   supabaseClient.auth.signIn(
     {
-      provider: "github"
+      provider: "github",
     },
     { redirectTo }
   );
