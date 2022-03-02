@@ -1,15 +1,48 @@
 {
+  "name": "remix-app-template-js",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
   "scripts": {
     "postinstall": "remix setup node",
     "build": "remix build",
+    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
     "dev": "cross-env NODE_ENV=development netlify dev",
-    "start": "cross-env NODE_ENV=production netlify dev"
+    "start": "cross-env NODE_ENV=production netlify dev",
+    "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
+    "deploy": "npm run build && wrangler publish",
+    "dev:deno": "cross-env NODE_ENV=development deno run --watch --allow-net --allow-read --allow-env ./build/index.js",
+    "dev:node": "cross-env NODE_ENV=development nodemon ./build/index.js"
   },
   "dependencies": {
     "@netlify/functions": "^0.10.0",
-    "@remix-run/netlify": "*"
+    "@remix-run/cloudflare-pages": "^1.2.2",
+    "@remix-run/cloudflare-workers": "^1.2.2",
+    "@remix-run/deno": "^1.2.2",
+    "@remix-run/express": "^1.2.2",
+    "@remix-run/netlify": "^1.2.2",
+    "@remix-run/react": "^1.2.2",
+    "compression": "^1.7.4",
+    "cross-env": "^7.0.3",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0",
+    "npm-run-all": "^4.1.5",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "^1.2.2"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "@cloudflare/workers-types": "^2.2.2",
+    "@remix-run/dev": "^1.2.2",
+    "cross-env": "^7.0.3",
+    "miniflare": "^2.1.0",
+    "nodemon": "^2.0.15",
+    "npm-run-all": "^4.1.5",
+    "wrangler": "beta"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }
