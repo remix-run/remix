@@ -28,6 +28,7 @@ describe("remix cli", () => {
             $ remix dev [remixRoot]
             $ remix setup [remixPlatform]
             $ remix routes [remixRoot]
+            $ remix init [remixRoot]
 
           Options
             --help              Print this help message and exit
@@ -50,6 +51,7 @@ describe("remix cli", () => {
             $ remix setup node
             $ remix routes my-website
             $ remix routes my-website --json
+            $ remix init my-website
 
         "
       `);

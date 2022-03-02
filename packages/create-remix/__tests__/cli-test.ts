@@ -131,14 +131,15 @@ describe("create-remix cli", () => {
             --template, -t      The template to use for the app
 
           Examples:
+            $ npx create-remix
             $ npx create-remix --template express-template
             $ npx create-remix --template :username/:repo
             $ npx create-remix --template https://github.com/:username/:repo
             $ npx create-remix --template https://github.com/:username/:repo/tree/:branch
             $ npx create-remix --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+            $ npx create-remix --template https://example.com/remix-stack.tar.gz
             $ npx create-remix --template /my/remix-stack
             $ npx create-remix --template /my/remix-stack.tar.gz
-            $ npx create-remix --template https://example.com/remix-stack.tar.gz
             $ npx create-remix --template file:///Users/michael/michael-stackson.tar.gz
 
         "
@@ -164,14 +165,15 @@ describe("create-remix cli", () => {
             --template, -t      The template to use for the app
 
           Examples:
+            $ npx create-remix
             $ npx create-remix --template express-template
             $ npx create-remix --template :username/:repo
             $ npx create-remix --template https://github.com/:username/:repo
             $ npx create-remix --template https://github.com/:username/:repo/tree/:branch
             $ npx create-remix --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+            $ npx create-remix --template https://example.com/remix-stack.tar.gz
             $ npx create-remix --template /my/remix-stack
             $ npx create-remix --template /my/remix-stack.tar.gz
-            $ npx create-remix --template https://example.com/remix-stack.tar.gz
             $ npx create-remix --template file:///Users/michael/michael-stackson.tar.gz
 
         "
