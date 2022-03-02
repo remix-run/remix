@@ -436,6 +436,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
   };
 
   function update(updates: Partial<TransitionManagerState>) {
+    if (updates.transition) {
+      console.debug(
+        `[transition] transition set to ${updates.transition.state}/${updates.transition.type}`
+      );
+    }
+
     state = Object.assign({}, state, updates);
     init.onChange(state);
   }
@@ -446,6 +452,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function getFetcher<TData = any>(key: string): Fetcher<TData> {
     return state.fetchers.get(key) || IDLE_FETCHER;
+  }
+
+  function setFetcher(key: string, fetcher: Fetcher): void {
+    console.debug(
+      `[transition] fetcher set to ${fetcher.state}/${fetcher.type} (key: ${key})`
+    );
+    state.fetchers.set(key, fetcher);
   }
 
   function deleteFetcher(key: string): void {
@@ -557,7 +570,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       submission,
       data: currentFetcher?.data || undefined,
     };
-    state.fetchers.set(key, fetcher);
+    setFetcher(key, fetcher);
 
     update({ fetchers: new Map(state.fetchers) });
 
@@ -581,7 +594,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         data: result.value,
         submission: undefined,
       };
-      state.fetchers.set(key, doneFetcher);
+      setFetcher(key, doneFetcher);
       update({ fetchers: new Map(state.fetchers) });
       return;
     }
@@ -600,7 +613,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       data: result.value,
       submission,
     };
-    state.fetchers.set(key, loadFetcher);
+    setFetcher(key, loadFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
 
@@ -660,7 +673,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       data: result.value,
       submission: undefined,
     };
-    state.fetchers.set(key, doneFetcher);
+    setFetcher(key, doneFetcher);
 
     let abortedKeys = abortStaleFetchLoads(loadId);
     if (abortedKeys) {
@@ -718,7 +731,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         data: fetcher.data,
         submission: undefined,
       };
-      state.fetchers.set(key, doneFetcher);
+      setFetcher(key, doneFetcher);
     }
   }
 
@@ -752,7 +765,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       data: currentFetcher?.data || undefined,
     };
 
-    state.fetchers.set(key, fetcher);
+    setFetcher(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
     let controller = new AbortController();
@@ -787,7 +800,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       data: result.value,
       submission: undefined,
     };
-    state.fetchers.set(key, doneFetcher);
+    setFetcher(key, doneFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
   }
@@ -813,7 +826,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       data: currentFetcher?.data || undefined,
     };
 
-    state.fetchers.set(key, fetcher);
+    setFetcher(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
     let controller = new AbortController();
@@ -846,7 +859,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       data: result.value,
       submission: undefined,
     };
-    state.fetchers.set(key, doneFetcher);
+    setFetcher(key, doneFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
   }
