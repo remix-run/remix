@@ -139,4 +139,73 @@ describe("compiler", () => {
       `"<div id=\\"esm-only-pkg\\">esm-only-pkg</div>"`
     );
   });
+
+  describe("overridable build config", () => {
+    beforeAll(async () => {
+      fixture = await createFixture({
+        files: {
+          "app/routes/index.jsx": js`
+          import { module } from "original-pkg";
+          
+          export default function Index() {
+            return <div id="index">{module}</div>
+          }
+        `,
+          "app/replaced-pkg.js": js`
+          export const module = "replaced-pkg";
+        `,
+          "remix.config.js": js`
+          const path = require('path');
+          function alias(options) {
+            return {
+              name: 'alias',
+              setup(build) {
+                build.onResolve({ filter: new RegExp('^(' + Object.keys(options).join('|') + ')$') }, args => ({
+                  path: options[args.path],
+                }));
+              },
+            };
+          };
+          
+          module.exports = {
+            esbuild: (config) => {
+              console.log(config)
+              config.plugins = [
+                alias({ 'original-pkg': path.resolve(__dirname, 'app/replaced-pkg.js') }),
+                ...config.plugins
+              ]
+              
+              return config
+            },
+          };
+        `,
+          "node_modules/original-pkg/package.json": `{
+          "name": "original-pkg",
+          "version": "1.0.0",
+          "main": "./index.js"
+        }`,
+          "node_modules/original-pkg/index.js": js`
+          module.exports = { module: "original-pkg" };
+        `,
+        },
+      });
+
+      app = await createAppFixture(fixture);
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    test("replaces the package by alias plugin", async () => {
+      await app.disableJavaScript();
+      let res = await app.goto("/", true);
+      expect(res.status()).toBe(200); // server rendered fine
+
+      // rendered the page instead of the error boundary
+      expect(await app.getHtml("#index")).toMatchInlineSnapshot(
+        `"<div id=\\"index\\">replaced-pkg</div>"`
+      );
+    });
+  });
 });
