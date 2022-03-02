@@ -63,6 +63,7 @@
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
     "aws-sdk": "^2.1055.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "chalk": "^4.1.0",
     "cheerio": "^1.0.0-rc.3",
     "concurrently": "^7.0.0",
