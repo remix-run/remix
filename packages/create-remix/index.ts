@@ -2,7 +2,7 @@ import path from "path";
 import { execSync } from "child_process";
 import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
-import { URL, fileURLToPath } from "url";
+import { fileURLToPath } from "url";
 import parseURL from "parse-github-url";
 import fetch from "node-fetch";
 
@@ -39,7 +39,7 @@ export interface CreateAppArgs {
   lang: Lang;
   install: boolean;
   quiet?: boolean;
-  repoURL: string;
+  from: string;
   githubPAT?: string;
 }
 
@@ -47,7 +47,7 @@ export async function createApp({
   projectDir,
   install,
   quiet,
-  repoURL,
+  from,
   lang,
   githubPAT = process.env.GITHUB_TOKEN
 }: CreateAppArgs) {
@@ -78,25 +78,27 @@ export async function createApp({
    * example in remix-run org
    * template in remix-run org
    */
-  if (repoURL.startsWith("file://")) {
+  if (from.startsWith("file://")) {
     try {
-      repoURL = fileURLToPath(repoURL);
+      from = fileURLToPath(from);
     } catch (error) {
       throw new Error(`Unable to convert file URL to path`);
     }
   }
 
-  if (fse.existsSync(repoURL)) {
-    if (fse.statSync(repoURL).isDirectory()) {
-      fse.copySync(repoURL, projectDir);
-    } else if (repoURL.endsWith(".tar.gz")) {
-      await extractLocalTarball(projectDir, repoURL);
+  if (fse.existsSync(from)) {
+    if (fse.statSync(from).isDirectory()) {
+      fse.copySync(from, projectDir);
+    } else if (from.endsWith(".tar.gz")) {
+      await extractLocalTarball(projectDir, from);
     } else {
-      throw new Error(`Unable to parse the URL "${repoURL}" as a file path.`);
+      throw new Error(`Unable to parse the URL "${from}" as a file path.`);
     }
   } else {
-    repoURL = new URL(repoURL).toString();
-    let parsed = parseURL(repoURL);
+    // repoURL = new URL(repoURL).toString();
+    let parsed = parseURL(from);
+
+    console.log({ parsed });
 
     if (!parsed) {
       throw new Error(`Invalid repo URL`);
@@ -129,17 +131,14 @@ export async function createApp({
 
       if (!quiet) {
         console.log(
-          `Downloading files from repo ${repoURL}. This might take a moment.`
+          `Downloading files from repo ${from}. This might take a moment.`
         );
       }
 
       await downloadAndExtractRepo(projectDir, tarballURL, {
         token: githubPAT,
         lang,
-        filePath: parsed.filepath,
-        isRemixTemplate:
-          parsed.repo === "remix-run/remix" &&
-          parsed.filepath?.includes("packages/create-remix/templates")
+        filePath: parsed.filepath
       });
     }
   }
@@ -162,34 +161,21 @@ export async function createApp({
   appPkg = sortPackageJSON(appPkg);
 
   // write package.json
-  await fse.writeFile(
-    path.join(projectDir, "package.json"),
-    JSON.stringify(appPkg, null, 2)
-  );
+  await fse.writeJSON(path.join(projectDir, "package.json"), appPkg);
 
-  let setupScriptDir = path.join(projectDir, "remix.init");
-  let setupScript = path.resolve(projectDir, "remix.init", "index.js");
-  let hasSetupScript = fse.existsSync(setupScript);
+  let setupScripts = [
+    path.resolve(projectDir, "remix.init", "index.js"),
+    path.resolve(projectDir, "remix.init.js")
+  ];
+
+  let hasSetupScript = setupScripts.some(script => fse.existsSync(script));
 
   if (install) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
-
-    if (hasSetupScript) {
-      execSync("npm install", { stdio: "inherit", cwd: setupScriptDir });
-      try {
-        let init = require(setupScript);
-        await init({ rootDirectory: projectDir });
-        fse.removeSync(setupScriptDir);
-      } catch (error) {
-        console.error(
-          `⚠️  Error running \`remix.init\`. We've kept the \`remix.init\` directory around so you can fix it and rerun "npx remix init".\n\n`
-        );
-        console.error(error);
-      }
-    }
-  } else if (repoURL && hasSetupScript) {
+    execSync("npx remix init", { stdio: "inherit", cwd: projectDir });
+  } else if (from && hasSetupScript) {
     console.log(
-      `You've opted out of running \`npm install\` in your new project.\nYou'll need to manually install dependencies in the \`${setupScriptDir}\` directory and run \`npx remix init\`.`
+      `You've opted out of running \`npm install\` in your new project.\nYou'll need to manually run \`npx remix init\`.`
     );
   }
 

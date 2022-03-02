@@ -1,5 +1,6 @@
 import * as path from "path";
 import os from "os";
+import { execSync } from "child_process";
 import * as fse from "fs-extra";
 import exitHook from "exit-hook";
 import prettyMs from "pretty-ms";
@@ -198,18 +199,40 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
 export async function init(remixRoot: string) {
   let setupScriptDir = path.join(remixRoot, "remix.init");
-  let setupScript = path.resolve(remixRoot, "remix.init", "index.js");
-  let hasSetupScript = fse.existsSync(setupScript);
 
-  if (!hasSetupScript) return;
+  let setupScript = path.resolve(setupScriptDir, "index.js");
+  let rootSetupScript = path.resolve(remixRoot, "remix.init.js");
+
+  let hasSetupScript = await fse.pathExists(setupScript);
+  let hasRootSetupScript = await fse.pathExists(rootSetupScript);
+
+  if (!hasSetupScript && !hasRootSetupScript) {
+    return;
+  }
+
+  if (hasSetupScript && hasRootSetupScript) {
+    throw new Error(
+      `🚨 Both ${setupScript} and ${rootSetupScript} exist. Please remove one of them.`
+    );
+  }
 
   try {
-    let init = require(setupScript);
+    let init: any;
+    if (hasSetupScript) {
+      execSync("npm install", { stdio: "inherit", cwd: setupScriptDir });
+      init = require(setupScript);
+    } else {
+      init = require(rootSetupScript);
+    }
+
     await init({ rootDirectory: remixRoot });
-    fse.removeSync(setupScriptDir);
-  } catch (error) {
+
+    if (hasSetupScript) {
+      fse.removeSync(setupScriptDir);
+    }
+  } catch (error: unknown) {
     console.error(
-      `⚠️  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
+      `🚨  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
     );
     console.error(error);
   }

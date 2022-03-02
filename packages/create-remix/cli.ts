@@ -4,8 +4,7 @@ import inquirer from "inquirer";
 import meow from "meow";
 
 import type { Lang, Server } from ".";
-import { servers } from ".";
-import { createApp } from ".";
+import { createApp, servers } from ".";
 
 const help = `
   Usage:
@@ -90,7 +89,7 @@ async function run() {
       projectDir,
       lang: "ts",
       install: answers.install,
-      repoURL: flags.template
+      from: flags.template
     });
 
     return;
@@ -131,7 +130,7 @@ async function run() {
   await createApp({
     projectDir,
     lang: answers.lang,
-    repoURL: answers.server,
+    from: answers.server,
     install: answers.install
   });
 
