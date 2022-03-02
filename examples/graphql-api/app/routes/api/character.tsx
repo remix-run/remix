@@ -1,7 +1,7 @@
 import type { ApolloError } from "apollo-server-errors";
 import type { LoaderFunction } from "remix";
 
-import { fetchFromGraphQL } from "~/utils/index";
+import { fetchFromGraphQL, gql } from "~/utils";
 import type { Character } from "~/generated/types";
 
 export type LoaderData = {
@@ -15,7 +15,7 @@ export const loader: LoaderFunction = async (args): Promise<LoaderData> => {
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
 
-  const getCharacterQuery = `
+  const getCharacterQuery = gql`
     fragment CharacterFields on Character {
       gender
       id

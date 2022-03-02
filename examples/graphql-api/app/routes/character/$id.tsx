@@ -22,14 +22,16 @@ export const loader: LoaderFunction = async (args) => {
  * @description This route fetches the details of a single character using
  * the Remix loader & route params.
  */
-export default function () {
+export default function Character() {
   const loader = useLoaderData<LoaderData>();
   const { data } = loader;
 
   const character = data.character;
 
   const renderCharacter = () => {
-    if (!character) return null;
+    if (!character) {
+      return null;
+    }
 
     return (
       <div style={{ display: "flex", gap: 16 }}>
