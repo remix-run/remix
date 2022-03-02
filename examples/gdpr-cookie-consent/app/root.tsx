@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Links,
   LiveReload,
@@ -7,36 +8,27 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
-  ActionFunction,
-  redirect,
-  Form
+  useFetcher
 } from "remix";
 import { gdprConsent } from "./cookies";
 
-export const loader: LoaderFunction = async ({request}) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = (await gdprConsent.parse(cookieHeader)) || {};
   return { track: cookie.gdprConsent };
-}
-
-export const action: ActionFunction = async ({request}) => {
-  const formData = await request.formData();
-  const cookieHeader = request.headers.get("Cookie");
-  const cookie = (await gdprConsent.parse(cookieHeader)) || {};
-
-  if (formData.get("accept-gdpr") === "true") {
-    cookie.gdprConsent = true;
-  }
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await gdprConsent.serialize(cookie)
-    }
-  });
-}
+};
 
 export default function App() {
-  const {track} = useLoaderData();
+  const { track } = useLoaderData();
+  const analyticsFetcher = useFetcher();
+  React.useEffect(() => {
+    if (track) {
+      const script = document.createElement("script");
+      script.src = "/dummy-analytics-script.js";
+      document.body.append(script);
+    }
+  }, [track]);
+
   return (
     <html lang="en">
       <head>
@@ -47,20 +39,24 @@ export default function App() {
       </head>
       <body>
         <Outlet />
-        {!track && <div style={{
-      backgroundColor: '#ccc',
-      padding: 10,
-      position: 'fixed',
-      bottom: 0,
-     }}>
-        <Form method="post" reloadDocument>
-         We use Cookies...
-         {/* You can pass values on the submission button  */}
-         <button name="accept-gdpr" value="true" type="submit">Accept</button>
-       </Form>
-    </div>}
+        {!track && (
+          <div
+            style={{
+              backgroundColor: "#ccc",
+              padding: 10,
+              position: "fixed",
+              bottom: 0
+            }}
+          >
+            <analyticsFetcher.Form method="post" action="/enable-analytics">
+              We use Cookies...
+              <button name="accept-gdpr" value="true" type="submit">
+                Accept
+              </button>
+            </analyticsFetcher.Form>
+          </div>
+        )}
         <ScrollRestoration />
-        { track && <script src="/dummy-analytics-script.js"></script> }
         <Scripts />
         <LiveReload />
       </body>
