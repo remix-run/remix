@@ -186,7 +186,6 @@ Open up that URL and you should be presented with a minimal page pointing to som
 💿 Now stop the server and delete all this stuff:
 
 - `app/routes`
-- `app/styles`
 
 We're going to trim this down the bare bones and introduce things incrementally.
 
