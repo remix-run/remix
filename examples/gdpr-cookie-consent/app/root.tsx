@@ -1,6 +1,5 @@
 import * as React from "react";
-import type {
-  LoaderFunction} from "remix";
+import type { LoaderFunction } from "remix";
 import {
   Links,
   LiveReload,
