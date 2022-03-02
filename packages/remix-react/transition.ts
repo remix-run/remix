@@ -9,6 +9,10 @@ import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
 
+////////////////////////////////////////////////////////////////////////////////
+//#region Types and Utils
+////////////////////////////////////////////////////////////////////////////////
+
 export interface CatchData<T = any> {
   status: number;
   statusText: string;
@@ -280,7 +284,6 @@ export type FetcherEvent = {
 
 export type DataEvent = NavigationEvent | FetcherEvent;
 
-////////////////////////////////////////////////////////////////////////////////
 function isActionSubmission(
   submission: Submission
 ): submission is ActionSubmission {
@@ -390,7 +393,11 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
   data: undefined,
   submission: undefined,
 };
+//#endregion
 
+////////////////////////////////////////////////////////////////////////////////
+//#region createTransitionManager
+////////////////////////////////////////////////////////////////////////////////
 export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
@@ -1236,7 +1243,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     },
   };
 }
+//#endregion
 
+////////////////////////////////////////////////////////////////////////////////
+//#region createTransitionManager sub-functions
 ////////////////////////////////////////////////////////////////////////////////
 function isIndexRequestAction(action: string) {
   let indexRequest = false;
@@ -1574,3 +1584,4 @@ function isErrorResult(result: DataResult) {
 function createUrl(href: string) {
   return new URL(href, window.location.origin);
 }
+//#endregion
