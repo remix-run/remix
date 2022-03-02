@@ -1,1 +1,1 @@
-console.log('tracking user data');
+console.log("tracking user data");

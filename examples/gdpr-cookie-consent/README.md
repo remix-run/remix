@@ -3,7 +3,6 @@
 Create a simple GDPR consent form.
 Till the user doesn't click on the `Accept` button, she will see a banner prompting to accept cookies.
 
-
 ## Preview
 
 Open this example on [CodeSandbox](https://codesandbox.com):
@@ -18,8 +17,6 @@ Once they submit the consent form, a dummy tracking [script](public/dummy-analyt
 > If you want to reset the example delete the `gdpr-consent` cookie in the `Application`/`cookies` in the browser's developer tools.
 
 The example is using [Remix Cookie API](https://remix.run/docs/en/v1/api/remix#cookies).
-
-
 
 ## Related Links
 
