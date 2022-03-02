@@ -1,4 +1,5 @@
-import { ActionFunction, json } from "remix";
+import type { ActionFunction} from "remix";
+import { json } from "remix";
 import { gdprConsent } from "~/cookies";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -14,8 +15,8 @@ export const action: ActionFunction = async ({ request }) => {
     { success: true },
     {
       headers: {
-        "Set-Cookie": await gdprConsent.serialize(cookie)
-      }
+        "Set-Cookie": await gdprConsent.serialize(cookie),
+      },
     }
   );
 };

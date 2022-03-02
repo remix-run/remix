@@ -1,14 +1,15 @@
 import * as React from "react";
+import type {
+  LoaderFunction} from "remix";
 import {
   Links,
   LiveReload,
-  LoaderFunction,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
   useLoaderData,
-  useFetcher
+  useFetcher,
 } from "remix";
 import { gdprConsent } from "./cookies";
 
@@ -45,7 +46,7 @@ export default function App() {
               backgroundColor: "#ccc",
               padding: 10,
               position: "fixed",
-              bottom: 0
+              bottom: 0,
             }}
           >
             <analyticsFetcher.Form method="post" action="/enable-analytics">
