@@ -462,6 +462,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function deleteFetcher(key: string): void {
+    console.debug(`[transition] deleting fetcher (key: ${key})`);
     if (fetchControllers.has(key)) abortFetcher(key);
     fetchReloadIds.delete(key);
     state.fetchers.delete(key);
@@ -472,6 +473,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       case "navigation": {
         let { action, location, submission } = event;
 
+        console.debug(
+          `[transition] navigation send() - ${action} ${location.pathname}`
+        );
         let matches = matchClientRoutes(routes, location);
 
         if (!matches) {
@@ -482,40 +486,52 @@ export function createTransitionManager(init: TransitionManagerInit) {
               route: routes[0],
             },
           ];
+          console.debug("[transition]   handling not found navigation");
           await handleNotFoundNavigation(location, matches);
         } else if (!submission && isHashChangeOnly(location)) {
+          console.debug("[transition]   handling hash change");
           await handleHashChange(location, matches);
         }
         // back/forward button, treat all as normal navigation
         else if (action === Action.Pop) {
+          console.debug(
+            "[transition]   handling Action.Pop (back/forward button)"
+          );
           await handleLoad(location, matches);
         }
         // <Form method="post | put | delete | patch">
         else if (submission && isActionSubmission(submission)) {
+          console.debug("[transition]   handling form action submission");
           await handleActionSubmissionNavigation(location, submission, matches);
         }
         // <Form method="get"/>
         else if (submission && isLoaderSubmission(submission)) {
+          console.debug("[transition]   handling form loader submission");
           await handleLoaderSubmissionNavigation(location, submission, matches);
         }
         // action=>redirect
         else if (isActionRedirectLocation(location)) {
+          console.debug("[transition]   handling form action redirect");
           await handleActionRedirect(location, matches);
         }
         // <Form method="get"> --> loader=>redirect
         else if (isLoaderSubmissionRedirectLocation(location)) {
+          console.debug("[transition]   handling form loader redirect");
           await handleLoaderSubmissionRedirect(location, matches);
         }
         // loader=>redirect
         else if (isLoaderRedirectLocation(location)) {
+          console.debug("[transition]   handling loader redirect");
           await handleLoaderRedirect(location, matches);
         }
         // useSubmission()=>redirect
         else if (isFetchActionRedirect(location)) {
+          console.debug("[transition]   handling fetcher action redirect");
           await handleFetchActionRedirect(location, matches);
         }
         // <Link>, navigate()
         else {
+          console.debug("[transition]   handling link navigation");
           await handleLoad(location, matches);
         }
 
@@ -525,6 +541,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
       case "fetcher": {
         let { key, submission, href } = event;
+        console.debug(
+          `[transition] fetcher send() - ${event.submission?.method} ${href} (key: ${key})`
+        );
 
         let matches = matchClientRoutes(routes, href);
         invariant(matches, "No matches found");
@@ -533,10 +552,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
         if (fetchControllers.has(key)) abortFetcher(key);
 
         if (submission && isActionSubmission(submission)) {
+          console.debug(
+            `[transition]   handling fetcher action submission (key: ${key})`
+          );
           await handleActionFetchSubmission(key, submission, match);
         } else if (submission && isLoaderSubmission(submission)) {
+          console.debug(
+            `[transition]   handling fetcher loader submission (key: ${key})`
+          );
           await handleLoaderFetchSubmission(href, key, submission, match);
         } else {
+          console.debug(
+            `[transition]   handling fetcher loader fetch (key: ${key})`
+          );
           await handleLoaderFetch(href, key, match);
         }
 
@@ -577,8 +605,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
 
+    console.debug(`[transition] fetcher calling action (key: ${key})`);
     let result = await callAction(submission, match, controller.signal);
     if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher action aborted (key: ${key})`);
       return;
     }
 
@@ -626,6 +656,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let matchesToLoad = state.nextMatches || state.matches;
     let hrefToLoad = createHref(state.transition.location || state.location);
 
+    console.debug(`[transition] fetcher calling loaders (key: ${key})`);
     let results = await callLoaders(
       state,
       createUrl(hrefToLoad),
@@ -639,6 +670,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     );
 
     if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher loaders aborted (key: ${key})`);
       return;
     }
 
@@ -677,6 +709,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let abortedKeys = abortStaleFetchLoads(loadId);
     if (abortedKeys) {
+      console.debug(
+        `[transition] marking aborted fetchers as done (keys: ${abortedKeys})`
+      );
       markFetchersDone(abortedKeys);
     }
 
@@ -687,6 +722,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let { transition } = state;
       invariant(transition.state === "loading", "Expected loading transition");
 
+      console.debug(
+        `[transition] setting transition back to idle due to aborted navigation (key: ${key})`
+      );
       update({
         location: transition.location,
         matches: state.nextMatches,
@@ -774,6 +812,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchControllers.delete(key);
 
     if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher loader aborted (key: ${key})`);
       return;
     }
 
@@ -1160,6 +1199,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     pendingNavigationController = controller;
     navigationLoadId = ++incrementingLoadId;
 
+    console.debug("[transition] calling loaders for loadPageData");
     let results = await callLoaders(
       state,
       createUrl(createHref(location)),
@@ -1172,11 +1212,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     );
 
     if (controller.signal.aborted) {
+      console.debug("[transition] transition loaders aborted");
       return;
     }
 
     let redirect = findRedirect(results);
     if (redirect) {
+      console.debug(
+        `[transition] transition loaders redirected to ${redirect.location}`
+      );
       // loader redirected during an action reload, treat it like an
       // actionRedirect instead so that all the loaders get called again and the
       // submission sticks around for optimistic/pending UI.
@@ -1216,6 +1260,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let abortedIds = abortStaleFetchLoads(navigationLoadId);
     if (abortedIds) {
+      console.debug(
+        `[transition] marking aborted fetchers as done (keys: ${abortedIds})`
+      );
       markFetchersDone(abortedIds);
     }
 
@@ -1235,10 +1282,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function abortNormalNavigation() {
-    pendingNavigationController?.abort();
+    if (pendingNavigationController) {
+      console.debug(`[transition] aborting pending navigation`);
+      pendingNavigationController.abort();
+      // TODO: Should this be cleared now so it doesn't stick around for
+      // subsequent navigations and make logs look weird?
+      // Or just remove this log?
+      // pendingNavigationController = undefined;
+    }
   }
 
   function abortFetcher(key: string) {
+    console.debug(`[transition] aborting fetcher (key: ${key})`);
     let controller = fetchControllers.get(key);
     invariant(controller, `Expected fetch controller: ${key}`);
     controller.abort();
