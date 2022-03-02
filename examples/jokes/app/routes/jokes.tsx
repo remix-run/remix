@@ -11,12 +11,18 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const jokeListItems = await db.joke.findMany({
-    take: 5,
-    select: { id: true, name: true },
-    orderBy: { createdAt: "desc" },
-  });
   const user = await getUser(request);
+
+  // in the official deployed version of the app, we don't want to deploy
+  // a site with unmoderated content, so we only show users their own jokes
+  const jokeListItems = user
+    ? await db.joke.findMany({
+        take: 5,
+        select: { id: true, name: true },
+        where: { jokesterId: user.id },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
 
   const data: LoaderData = {
     jokeListItems,

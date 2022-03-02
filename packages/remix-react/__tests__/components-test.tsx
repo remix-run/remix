@@ -91,20 +91,20 @@ function itPrefetchesPageLinks<
               hasCatchBoundary: false,
               hasErrorBoundary: false,
               id: "idk",
-              module: "idk"
-            }
+              module: "idk",
+            },
           },
           entry: { imports: [], module: "" },
           url: "",
-          version: ""
+          version: "",
         },
         matches: [],
         clientRoutes: [
-          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" }
+          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" },
         ],
         routeData: {},
         appState: {} as any,
-        transitionManager: {} as any
+        transitionManager: {} as any,
       };
       return (
         <RemixEntryContext.Provider value={context}>
@@ -113,7 +113,7 @@ function itPrefetchesPageLinks<
       );
     }
 
-    setIntentEvents.forEach(event => {
+    setIntentEvents.forEach((event) => {
       it(`prefetches page links on ${event}`, () => {
         const { container, unmount } = render(
           withContext(
@@ -141,7 +141,7 @@ function itPrefetchesPageLinks<
                 prefetch: "intent",
                 [eventHandler]: () => {
                   ranHandler = true;
-                }
+                },
               } as any)}
             />
           )

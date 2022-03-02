@@ -15,6 +15,7 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
+import { loadEnv } from "../env";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
 import { log } from "../log";
 
@@ -90,7 +91,7 @@ export async function watch(
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
-      wss.clients.forEach(client => {
+      wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(event));
         }
@@ -124,7 +125,7 @@ export async function watch(
     },
     onFileDeleted(file) {
       log(`File deleted: ${path.relative(process.cwd(), file)}`);
-    }
+    },
   });
 
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
@@ -133,7 +134,7 @@ export async function watch(
   exitHook(() => {
     resolve();
   });
-  return new Promise<void>(r => {
+  return new Promise<void>((r) => {
     resolve = r;
   }).then(async () => {
     wss.close();
@@ -144,7 +145,6 @@ export async function watch(
 }
 
 export async function dev(remixRoot: string, modeArg?: string) {
-  // TODO: Warn about the need to install @remix-run/serve if it isn't there?
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -159,8 +159,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+
+  await loadEnv(config.rootDirectory);
+
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : 3000
+    port: process.env.PORT ? Number(process.env.PORT) : 3000,
   });
 
   if (config.serverEntryPoint) {
@@ -168,6 +171,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   }
 
   let app = express();
+  app.disable("x-powered-by");
   app.use((_, __, next) => {
     purgeAppRequireCache(config.serverBuildPath);
     next();
@@ -181,7 +185,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
       onInitialBuild: () => {
         let address = Object.values(os.networkInterfaces())
           .flat()
-          .find(ip => ip?.family == "IPv4" && !ip.internal)?.address;
+          .find((ip) => ip?.family == "IPv4" && !ip.internal)?.address;
 
         if (!address) {
           address = "localhost";
@@ -190,7 +194,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
         server = app.listen(port, () => {
           console.log(`Remix App Server started at http://${address}:${port}`);
         });
-      }
+      },
     });
   } finally {
     server!?.close();

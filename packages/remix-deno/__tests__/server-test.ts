@@ -3,7 +3,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/se
 import {
   createRequestHandler,
   createRequestHandlerWithStaticFiles,
-  serveStaticFiles
+  serveStaticFiles,
 } from "../server";
 
 jest.mock("@remix-run/server-runtime");
@@ -28,11 +28,11 @@ describe("deno request handler", () => {
   });
 
   it("handles requests", async () => {
-    mockedCreateRequestHandler.mockImplementation(() => async req => {
+    mockedCreateRequestHandler.mockImplementation(() => async (req) => {
       return new Response(`URL: ${new URL(req.url).pathname}`);
     });
     let handler = createRequestHandler({
-      build: undefined
+      build: undefined,
     });
 
     let response = await handler(new Request("http://test.com/foo/bar"));
@@ -42,11 +42,11 @@ describe("deno request handler", () => {
 
   it("handles errors", async () => {
     let error = new Error("test error");
-    mockedCreateRequestHandler.mockImplementation(() => async req => {
+    mockedCreateRequestHandler.mockImplementation(() => async (req) => {
       throw error;
     });
     let handler = createRequestHandler({
-      build: undefined
+      build: undefined,
     });
 
     let response = await handler(new Request("http://test.com/foo/bar"));
@@ -65,7 +65,7 @@ describe("deno request handler", () => {
     let context = {};
     let handler = createRequestHandler({
       build: undefined,
-      getLoadContext: async () => context
+      getLoadContext: async () => context,
     });
 
     let response = await handler(new Request("http://test.com/foo/bar"));
@@ -78,7 +78,7 @@ describe("deno request handler", () => {
 describe("deno static files", () => {
   let options = {
     publicDir: "./public",
-    assetsPublicPath: "/build/"
+    assetsPublicPath: "/build/",
   };
 
   it("throws when no file", async () => {
@@ -128,7 +128,7 @@ describe("deno static files", () => {
 
     let request = new Request("http://test.com/test/bar.css");
     let response = await serveStaticFiles(request, {
-      cacheControl: "public, max-age=1"
+      cacheControl: "public, max-age=1",
     });
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/css");
@@ -143,7 +143,7 @@ describe("deno static files", () => {
 
     let request = new Request("http://test.com/test/bar.css");
     let response = await serveStaticFiles(request, {
-      cacheControl: () => "public, max-age=2"
+      cacheControl: () => "public, max-age=2",
     });
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/css");
@@ -160,11 +160,11 @@ describe("deno combined request handler", () => {
       throw error;
     });
 
-    mockedCreateRequestHandler.mockImplementation(() => async req => {
+    mockedCreateRequestHandler.mockImplementation(() => async (req) => {
       return new Response(`URL: ${new URL(req.url).pathname}`);
     });
     let handler = createRequestHandlerWithStaticFiles({
-      build: undefined
+      build: undefined,
     });
 
     let response = await handler(new Request("http://test.com/foo/bar"));
@@ -177,11 +177,11 @@ describe("deno combined request handler", () => {
       return "file content";
     });
 
-    mockedCreateRequestHandler.mockImplementation(() => async req => {
+    mockedCreateRequestHandler.mockImplementation(() => async (req) => {
       return new Response(`URL: ${new URL(req.url).pathname}`);
     });
     let handler = createRequestHandlerWithStaticFiles({
-      build: undefined
+      build: undefined,
     });
 
     let response = await handler(new Request("http://test.com/foo/bar.css"));

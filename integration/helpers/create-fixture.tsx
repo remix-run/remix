@@ -9,7 +9,10 @@ import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
 
-import { createRequestHandler } from "../../packages/remix-server-runtime";
+import {
+  createRequestHandler,
+  ServerPlatform,
+} from "../../packages/remix-server-runtime";
 import type { Server } from "../../packages/create-remix";
 import { createApp } from "../../packages/create-remix";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
@@ -31,7 +34,7 @@ export let js = String.raw;
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform = {};
+  let platform: ServerPlatform = {};
   let handler = createRequestHandler(app, platform);
 
   let requestDocument = async (href: string, init?: RequestInit) => {
@@ -59,8 +62,8 @@ export async function createFixture(init: FixtureInit) {
         "Content-Type":
           data instanceof URLSearchParams
             ? "application/x-www-form-urlencoded"
-            : "multipart/form-data"
-      }
+            : "multipart/form-data",
+      },
     });
   };
 
@@ -77,7 +80,7 @@ export async function createFixture(init: FixtureInit) {
     requestDocument,
     requestData,
     postDocument,
-    getBrowserAsset
+    getBrowserAsset,
   };
 }
 
@@ -86,7 +89,7 @@ export async function createAppFixture(fixture: Fixture) {
     port: number;
     stop: () => Promise<void>;
   }> => {
-    return new Promise(async accept => {
+    return new Promise(async (accept) => {
       let port = await getPort();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
@@ -98,7 +101,7 @@ export async function createAppFixture(fixture: Fixture) {
       let server = app.listen(port);
 
       let stop = (): Promise<void> => {
-        return new Promise(res => {
+        return new Promise((res) => {
           server.close(() => res());
         });
       };
@@ -116,7 +119,7 @@ export async function createAppFixture(fixture: Fixture) {
   let start = async () => {
     let [{ stop, port }, { browser, page }] = await Promise.all([
       startAppServer(),
-      launchPuppeteer()
+      launchPuppeteer(),
     ]);
 
     let serverUrl = `http://localhost:${port}`;
@@ -163,7 +166,7 @@ export async function createAppFixture(fixture: Fixture) {
        */
       goto: async (href: string, waitForHydration?: true) => {
         return page.goto(`${serverUrl}${href}`, {
-          waitUntil: waitForHydration ? "networkidle0" : undefined
+          waitUntil: waitForHydration ? "networkidle0" : undefined,
         });
       },
 
@@ -305,6 +308,15 @@ export async function createAppFixture(fixture: Fixture) {
       getHtml: (selector?: string) => getHtml(page, selector),
 
       /**
+       * Get a cheerio instance of an element from the page.
+       *
+       * @param selector CSS Selector for the element's HTML you want
+       */
+      getElement: async (selector: string) => {
+        return getElement(await getHtml(page), selector);
+      },
+
+      /**
        * Keeps the fixture running for as many seconds as you want so you can go
        * poke around in the browser to see what's up.
        *
@@ -315,8 +327,8 @@ export async function createAppFixture(fixture: Fixture) {
         jest.setTimeout(ms);
         console.log(`🙈 Poke around for ${seconds} seconds 👉 ${serverUrl}`);
         cp.exec(`open ${serverUrl}${href}`);
-        return new Promise(res => setTimeout(res, ms));
-      }
+        return new Promise((res) => setTimeout(res, ms));
+      },
     };
   };
 
@@ -338,11 +350,11 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     lang: "js",
     from: templateDir,
     projectDir,
-    quiet: true
+    quiet: true,
   });
   await Promise.all([
     writeTestFiles(init, projectDir),
-    installRemix(projectDir)
+    installRemix(projectDir),
   ]);
   build(projectDir);
 
@@ -352,10 +364,10 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
 function build(projectDir: string) {
   // TODO: log errors (like syntax errors in the fixture file strings)
   cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
-    cwd: projectDir
+    cwd: projectDir,
   });
   cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
-    cwd: projectDir
+    cwd: projectDir,
   });
 }
 
@@ -370,7 +382,7 @@ async function installRemix(projectDir: string) {
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
   await Promise.all(
-    Object.keys(init.files).map(async filename => {
+    Object.keys(init.files).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
       await fs.writeFile(filePath, init.files[filename]);
@@ -402,13 +414,25 @@ export async function getHtml(page: Page, selector?: string) {
   return selector ? selectHtml(html, selector) : prettyHtml(html);
 }
 
-export function selectHtml(source: string, selector: string) {
-  let el = cheerio(selector, source);
+export function getAttribute(
+  source: string,
+  selector: string,
+  attributeName: string
+) {
+  let el = getElement(source, selector);
+  return el.attr(attributeName);
+}
 
+export function getElement(source: string, selector: string) {
+  let el = cheerio(selector, source);
   if (!el.length) {
     throw new Error(`No element matches selector "${selector}"`);
   }
+  return el;
+}
 
+export function selectHtml(source: string, selector: string) {
+  let el = getElement(source, selector);
   return prettyHtml(cheerio.html(el)).trim();
 }
 
@@ -446,14 +470,14 @@ async function doAndWait(
     };
     timeoutEvent = setTimeout(() => {
       console.warn("Warning, wait for the address below to time out:");
-      console.warn(waiting.map(a => a.url()).join("\n"));
+      console.warn(waiting.map((a) => a.url()).join("\n"));
       return clear().then(() => res(null));
     }, timeout);
     pollEvent = setInterval(() => {
       if (waiting.length == 0) {
         return clear().then(() => res(null));
       }
-      waiting = waiting.filter(a => a.response() == null);
+      waiting = waiting.filter((a) => a.response() == null);
     }, pollTime);
   });
 }
@@ -466,7 +490,7 @@ export function collectResponses(
 ): HTTPResponse[] {
   let responses: HTTPResponse[] = [];
 
-  page.on("response", res => {
+  page.on("response", (res) => {
     if (!filter || filter(new URL(res.url()))) {
       responses.push(res);
     }
@@ -476,5 +500,5 @@ export function collectResponses(
 }
 
 export function collectDataResponses(page: Page) {
-  return collectResponses(page, url => url.searchParams.has("_data"));
+  return collectResponses(page, (url) => url.searchParams.has("_data"));
 }

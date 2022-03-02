@@ -6,13 +6,13 @@ import {
   useActionData,
   useSearchParams,
   useLoaderData,
-  useCatch
+  useCatch,
 } from "remix";
 import type {
   ActionFunction,
   RouteComponent,
   LoaderFunction,
-  LinksFunction
+  LinksFunction,
 } from "remix";
 import type { UserSecure, TodoDataUnordered, Project } from "~/models";
 import { Heading } from "~/ui/section-heading";
@@ -24,7 +24,7 @@ import {
   FieldProvider,
   Label,
   Textarea,
-  Select
+  Select,
 } from "~/ui/form";
 import { Button } from "~/ui/button";
 import { createTodoList, getUserProjects } from "~/db.server";
@@ -39,14 +39,14 @@ export const links: LinksFunction = () => {
 
 export const loader: LoaderFunction = async ({ request, params }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const projects = await getUserProjects(secureUser.id);
 
   const loaderData: LoaderData = {
     user: secureUser,
-    projects
+    projects,
   };
 
   return loaderData;
@@ -54,7 +54,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
 export const action: ActionFunction = async ({ request, context, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   // 1. Get/setup form data from the request
@@ -72,7 +72,7 @@ export const action: ActionFunction = async ({ request, context, params }) => {
     description: null,
     name: null,
     todos: null,
-    project: null
+    project: null,
   };
 
   // 2. Validate the form data
@@ -91,7 +91,7 @@ export const action: ActionFunction = async ({ request, context, params }) => {
     }
   } catch (_) {
     const data: ActionData = {
-      formError: `Something went wrong. Please try again later.`
+      formError: `Something went wrong. Please try again later.`,
     };
     return json(data);
   }
@@ -114,7 +114,7 @@ export const action: ActionFunction = async ({ request, context, params }) => {
       name,
       description,
       todos,
-      projectId
+      projectId,
     });
 
     return projectId
@@ -122,7 +122,7 @@ export const action: ActionFunction = async ({ request, context, params }) => {
       : redirect(`dashboard/todo-lists/${todoList.id}`);
   } catch (_) {
     const data: ActionData = {
-      formError: `Something went wrong. Please try again later.`
+      formError: `Something went wrong. Please try again later.`,
     };
     return json(data);
   }
@@ -191,7 +191,7 @@ const NewTodoList: RouteComponent = () => {
                 <option value="null" disabled>
                   Select a project...
                 </option>
-                {projects.map(project => (
+                {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
@@ -218,7 +218,7 @@ const NewTodoList: RouteComponent = () => {
                     onBlur={handleTodoListBlur}
                     onKeyDown={handleTodoListKeyDown}
                   >
-                    {todos.map(todo => {
+                    {todos.map((todo) => {
                       // TODO: Feature: Allow drag/drop sorting
                       return (
                         <li
@@ -231,7 +231,7 @@ const NewTodoList: RouteComponent = () => {
                           <TokenDismissButton
                             className="new-todo-list__todo-dismiss"
                             type="button"
-                            onClick={e => {
+                            onClick={(e) => {
                               const target = e.currentTarget;
                               const parent =
                                 target.parentElement?.parentElement
@@ -240,8 +240,8 @@ const NewTodoList: RouteComponent = () => {
                                 parent?.querySelector<HTMLInputElement>(
                                   'input[type="text"]'
                                 )?.value;
-                              setTodos(todos =>
-                                todos.filter(t => t._tempId !== todo._tempId)
+                              setTodos((todos) =>
+                                todos.filter((t) => t._tempId !== todo._tempId)
                               );
                               if (state === "WRITING_TODO") {
                                 window.requestAnimationFrame(() => {
@@ -271,16 +271,16 @@ const NewTodoList: RouteComponent = () => {
                     type="text"
                     key={todos.length}
                     onBlur={() => setState("IDLE")}
-                    onKeyDown={e => {
+                    onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const target = e.target as HTMLInputElement;
                         const value = target.value;
                         if (value.trim()) {
-                          setTodos(todos =>
+                          setTodos((todos) =>
                             todos.concat({
                               name: value,
-                              _tempId: Date.now()
+                              _tempId: Date.now(),
                             })
                           );
                           const parent = target.parentElement;
@@ -307,7 +307,7 @@ const NewTodoList: RouteComponent = () => {
                   <button
                     type="button"
                     className="new-todo-list__new-button"
-                    onClick={e => {
+                    onClick={(e) => {
                       e.preventDefault();
                       const button = e.currentTarget;
                       const parent = button.parentElement;
@@ -405,7 +405,7 @@ function handleTodoListKeyDown(event: React.KeyboardEvent<HTMLUListElement>) {
       "ArrowLeft",
       "ArrowRight",
       "Home",
-      "End"
+      "End",
     ].includes(event.key)
   ) {
     return;
@@ -416,7 +416,7 @@ function handleTodoListKeyDown(event: React.KeyboardEvent<HTMLUListElement>) {
   const listButtons = Array.from(
     list.querySelectorAll<HTMLButtonElement>("li button")
   );
-  const currentIndex = listButtons.findIndex(el => el === activeElement);
+  const currentIndex = listButtons.findIndex((el) => el === activeElement);
 
   switch (event.key) {
     case "ArrowLeft":

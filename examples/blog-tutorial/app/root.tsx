@@ -7,7 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  Link
+  Link,
 } from "remix";
 import type { LinksFunction } from "remix";
 
@@ -29,9 +29,9 @@ export const links: LinksFunction = () => {
     {
       rel: "stylesheet",
       href: darkStylesUrl,
-      media: "(prefers-color-scheme: dark)"
+      media: "(prefers-color-scheme: dark)",
     },
-    { rel: "stylesheet", href: deleteMeRemixStyles }
+    { rel: "stylesheet", href: deleteMeRemixStyles },
   ];
 };
 
@@ -52,7 +52,7 @@ export default function App() {
 
 function Document({
   children,
-  title
+  title,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -101,9 +101,9 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
           </nav>
         </div>
       </header>
-      <main className="remix-app__main">
+      <div className="remix-app__main">
         <div className="container remix-app__main-content">{children}</div>
-      </main>
+      </div>
       <footer className="remix-app__footer">
         <div className="container remix-app__footer-content">
           <p>&copy; You!</p>

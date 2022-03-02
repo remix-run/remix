@@ -19,7 +19,7 @@ export default function handleRequest(
     "<!DOCTYPE html>" + injectStylesIntoStaticMarkup(markup),
     {
       status: responseStatusCode,
-      headers: responseHeaders
+      headers: responseHeaders,
     }
   );
 }

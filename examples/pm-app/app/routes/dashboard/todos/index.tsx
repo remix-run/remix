@@ -7,7 +7,7 @@ import type { Todo } from "~/models";
 export const loader = async () => {
   const todos = await getAllTodos();
   return {
-    todos
+    todos,
   };
 };
 
@@ -44,7 +44,7 @@ export default function Llllll() {
 
   return (
     <div>
-      {todos.map(todo => {
+      {todos.map((todo) => {
         let inputKey = keyMap.get(todo.id);
         if (inputKey == null) {
           inputKey = Math.random().toString().slice(2);

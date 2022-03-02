@@ -4,7 +4,7 @@ import {
   Scripts,
   useLoaderData,
   LiveReload,
-  useCatch
+  useCatch,
 } from "remix";
 import { Outlet } from "react-router-dom";
 

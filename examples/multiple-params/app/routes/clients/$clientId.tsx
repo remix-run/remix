@@ -10,13 +10,13 @@ type LoaderData = {
 export const loader: LoaderFunction = async ({ params }) => {
   if (!params.clientId) {
     throw new Response(`No client ID provided`, {
-      status: 404
+      status: 404,
     });
   }
   const client = await getClient(params.clientId);
   if (!client) {
     throw new Response(`No client found by ID ${params.clientId}`, {
-      status: 404
+      status: 404,
     });
   }
 

@@ -27,7 +27,7 @@ export let servers: { [key: string]: string } = {
   "Remix App Server":
     "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/remix",
   Vercel:
-    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/vercel"
+    "https://github.com/remix-run/remix/blob/main/packages/create-remix/templates/vercel",
 } as const;
 
 export type Server = typeof servers[keyof typeof servers];
@@ -49,7 +49,7 @@ export async function createApp({
   quiet,
   from,
   lang,
-  githubPAT = process.env.GITHUB_TOKEN
+  githubPAT = process.env.GITHUB_TOKEN,
 }: CreateAppArgs) {
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
@@ -138,7 +138,7 @@ export async function createApp({
       await downloadAndExtractRepo(projectDir, tarballURL, {
         token: githubPAT,
         lang,
-        filePath: parsed.filepath
+        filePath: parsed.filepath,
       });
     }
   }
@@ -146,7 +146,7 @@ export async function createApp({
   let appPkg = require(path.join(projectDir, "package.json"));
 
   // add current versions of remix deps
-  ["dependencies", "devDependencies"].forEach(pkgKey => {
+  ["dependencies", "devDependencies"].forEach((pkgKey) => {
     for (let key in appPkg[pkgKey]) {
       if (appPkg[pkgKey][key] === "*") {
         // Templates created from experimental, alpha, beta releases should pin
@@ -165,10 +165,10 @@ export async function createApp({
 
   let setupScripts = [
     path.resolve(projectDir, "remix.init", "index.js"),
-    path.resolve(projectDir, "remix.init.js")
+    path.resolve(projectDir, "remix.init.js"),
   ];
 
-  let hasSetupScript = setupScripts.some(script => fse.existsSync(script));
+  let hasSetupScript = setupScripts.some((script) => fse.existsSync(script));
 
   if (install) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });

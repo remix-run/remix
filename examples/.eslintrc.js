@@ -3,6 +3,6 @@ module.exports = {
     "prefer-const": "error",
 
     // because in our examples we shouldn't care
-    "import/order": "off"
-  }
+    "import/order": "off",
+  },
 };

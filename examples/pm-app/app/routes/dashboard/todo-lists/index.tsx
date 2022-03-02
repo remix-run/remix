@@ -7,12 +7,12 @@ import { requireUser } from "~/session.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const lists = await getAllTodoLists();
   return {
-    lists
+    lists,
   };
 };
 
@@ -22,7 +22,7 @@ export default function AllLists() {
 
   return (
     <div>
-      {lists.map(list => {
+      {lists.map((list) => {
         return (
           <div key={list.id} className="flex gap-2">
             <div>Name: {list.name}</div>
@@ -37,7 +37,7 @@ export default function AllLists() {
               Todos:{" "}
               {list.todos.length > 0 ? (
                 <ul>
-                  {list.todos.map(todo => (
+                  {list.todos.map((todo) => (
                     <li key={todo.id}>{todo.name}</li>
                   ))}
                 </ul>

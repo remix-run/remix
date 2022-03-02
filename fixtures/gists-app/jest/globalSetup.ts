@@ -6,7 +6,7 @@ function installDeps(dir: string): Promise<void> {
   return new Promise((accept, reject) => {
     spawn("yarn", ["install"], {
       cwd: dir,
-      stdio: "inherit"
+      stdio: "inherit",
     })
       .on("error", reject)
       .on("close", () => {
@@ -19,7 +19,7 @@ function runBuild(dir: string): Promise<void> {
   return new Promise((accept, reject) => {
     spawn("yarn", ["build"], {
       cwd: dir,
-      stdio: "inherit"
+      stdio: "inherit",
     })
       .on("error", reject)
       .on("close", () => {
@@ -29,10 +29,10 @@ function runBuild(dir: string): Promise<void> {
 }
 
 async function startServer(dir: string): Promise<ChildProcess> {
-  return new Promise(accept => {
+  return new Promise((accept) => {
     let proc = spawn("yarn", ["start"], {
       cwd: dir,
-      stdio: "inherit"
+      stdio: "inherit",
     });
 
     // Give the server some time to be ready.
