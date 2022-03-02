@@ -10,18 +10,17 @@ import prettier from "prettier";
 import getPort from "get-port";
 
 import { createRequestHandler } from "../../packages/remix-server-runtime";
-import { formatServerError } from "../../packages/remix-node";
+import type { Server } from "../../packages/create-remix";
 import { createApp } from "../../packages/create-remix";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import type { ServerBuild } from "../../packages/remix-server-runtime";
-import type { CreateAppArgs } from "../../packages/create-remix";
 import { TMP_DIR } from "./global-setup";
 
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
   files: { [filename: string]: string };
-  server?: CreateAppArgs["server"];
+  server?: Server;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -32,7 +31,7 @@ export let js = String.raw;
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform = { formatServerError };
+  let platform = {};
   let handler = createRequestHandler(app, platform);
 
   let requestDocument = async (href: string, init?: RequestInit) => {
@@ -328,10 +327,16 @@ export async function createAppFixture(fixture: Fixture) {
 export async function createFixtureProject(init: FixtureInit): Promise<string> {
   let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
 
+  let templateDir = path.join(
+    process.cwd(),
+    "templates",
+    init.server ? init.server : "remix"
+  );
+
   await createApp({
     install: false,
     lang: "js",
-    server: init.server || "remix",
+    from: templateDir,
     projectDir,
     quiet: true
   });
