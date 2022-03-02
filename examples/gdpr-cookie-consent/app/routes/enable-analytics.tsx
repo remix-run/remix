@@ -1,4 +1,4 @@
-import type { ActionFunction} from "remix";
+import type { ActionFunction } from "remix";
 import { json } from "remix";
 import { gdprConsent } from "~/cookies";
 
