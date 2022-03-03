@@ -16,9 +16,9 @@ jobs:
         uses: styfle/cancel-workflow-action@0.9.1
 
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Deploy to Staging
-        uses: superfly/flyctl-actions@1.1
+        uses: superfly/flyctl-actions@1.3
         with:
           args: "deploy --config ./fly.staging.toml"
