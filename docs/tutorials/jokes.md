@@ -4063,7 +4063,13 @@ export function ErrorBoundary() {
 
 </details>
 
-Ok great, with those in place, let's check what happens when there's an error. Go ahead and just add this to the default component, loader, or action of each of the routes. Here's what I get:
+Ok great, with those in place, let's check what happens when there's an error. Go ahead and just add this to the default component, loader, or action of each of the routes.
+
+```ts
+throw new Error("Testing Error Boundary")
+```
+
+Here's what I get:
 
 ![App error](/jokes-tutorial/img/app-level-error.png)
 
