@@ -44,7 +44,10 @@ export const createCookieSessionStorageFactory =
     async commitSession(session, options) {
       const serializedCookie = await cookie.serialize(session.data, options);
       if (serializedCookie.length > 4096) {
-        throw new Error('Cookie length will exceed browser maximum. Length: ' + serializedCookie.length)
+        throw new Error(
+          "Cookie length will exceed browser maximum. Length: " +
+            serializedCookie.length
+        );
       }
       return serializedCookie;
     },
