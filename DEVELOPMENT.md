@@ -127,3 +127,38 @@ REMIX_LOCAL_DEV_OUTPUT_DIRECTORY=../my-remix-app yarn watch
 ```
 
 Now - any time you make changes in the Remix repository, the they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.
+
+### Transition Manager Flows
+
+The transition manager is a complex and heavily async bit of logic that is foundational to Remix's ability to manage data loading, submission, error handling, and interruptions. Due to the user-driven nature of interruptions we don't quite believe it can be modeled as a finite state machine, however we have modeled some of the happy path flows below for clarity.
+
+```mermaid
+graph LR
+  %% <Link> transition
+  idle -->|link clicked| loading/normalLoad
+  loading/normalLoad -->|loaders completed| idle
+  loading/normalLoad -->|loader redirected| loading/normalRedirect
+  loading/normalRedirect --> loading/normalRedirect
+  loading/normalRedirect -->|loaders completed| idle
+
+  %% <Form method=get>
+  idle -->|form method=get| submitting/loaderSubmission
+  submitting/loaderSubmission -->|loaders completed| idle
+  submitting/loaderSubmission -->|loader redirected| loading/loaderSubmissionRedirect
+  loading/loaderSubmissionRedirect --> loading/loaderSubmissionRedirect
+  loading/loaderSubmissionRedirect -->|loaders completed| idle
+
+  %% <Form method=post>
+  idle -->|form method=post| submitting/actionSubmission
+  submitting/actionSubmission -->|action returned| loading/actionReload
+  submitting/actionSubmission -->|action redirected| loading/actionRedirect
+  loading/actionReload -->|loaders completed| idle
+  loading/actionReload -->|loader redirected| loading/actionRedirect
+  loading/actionRedirect --> loading/actionRedirect
+  loading/actionRedirect -->|loaders completed| idle
+
+  %% fetcher action redirect
+  idle -->|fetcher action redirects| loading/fetchActionRedirect
+  loading/fetchActionRedirect --> loading/fetchActionRedirect
+  loading/fetchActionRedirect -->|loaders completed| idle
+```
