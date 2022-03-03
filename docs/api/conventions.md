@@ -18,7 +18,6 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
-  devServerPort: 8002,
   ignoredRouteFiles: [".*"],
   publicPath: "/build/",
   routes(defineRoutes) {
@@ -153,7 +152,6 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "build",
-  devServerPort: 8002,
   ignoredRouteFiles: [".*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
