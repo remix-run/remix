@@ -9,5 +9,4 @@ module.exports = {
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "server/index.js",
   // publicPath: "/_static/build/",
-  // devServerPort: 8002
 };
