@@ -1,6 +1,6 @@
-// This file lists all exports from this package that are available to `import
-// "remix"`. We need to name all exports individually so esbuild is able to
-// remove the ones we don't need in the browser builds.
+// Re-export everything from this package that is available in `remix`.
+// Note: We need to name all exports individually so the compiler is able
+// to remove the ones we don't need in the browser builds.
 
 export type {
   RemixBrowserProps,
