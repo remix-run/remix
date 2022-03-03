@@ -9,7 +9,6 @@ module.exports = {
   publicBuildDirectory: "./public/build",
   publicPath: "/build/",
   serverBuildDirectory: "./build",
-  devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
   server: "./server.js",
 
