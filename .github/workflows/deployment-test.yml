@@ -9,13 +9,13 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -41,13 +41,13 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -74,13 +74,13 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -105,13 +105,13 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -139,13 +139,13 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
@@ -169,13 +169,13 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
           cache: "npm"
