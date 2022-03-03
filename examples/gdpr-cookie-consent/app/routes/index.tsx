@@ -1,4 +1,4 @@
-export default function () {
+export default function Index() {
   return (
     <div>
       <h2>Example of content on your app.</h2>
