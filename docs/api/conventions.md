@@ -63,6 +63,27 @@ There is no delay by default.
 
 The port number to use for the dev websocket server. Defaults to 8002.
 
+### esbuild
+
+You can define a function to extend the use of `esbuild` to extend its settings.  
+[esbuild - Build API](https://esbuild.github.io/api/#build-api)
+
+```js
+module.exports = {
+  esbuild: (config, { dev, isServer }) => {
+    // Modify esbuild config here
+    return config
+  },
+}
+```
+
+The `esbuild` is run separately to build the browser and server code. Distinguish by reference to `isServer` in the second argument object.
+
+The properties of the second argument object are as follows.
+
+- `dev`: `Boolean` - It is true in the developing execution.
+- `isServer`: `Boolean` - It can distinguish whether the build is being run for the browser or for the server.
+
 ### ignoredRouteFiles
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to

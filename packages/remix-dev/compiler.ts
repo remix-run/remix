@@ -379,9 +379,7 @@ async function createBrowserBuild(
     isServer: false,
     dev: options.mode === BuildMode.Development,
   };
-  return esbuild.build(
-    config.esbuild(esbuildConfig, esbuildContext) || esbuildConfig
-  );
+  return esbuild.build(config.esbuild(esbuildConfig, esbuildContext));
 }
 
 async function createServerBuild(
@@ -461,7 +459,7 @@ async function createServerBuild(
     dev: options.mode === BuildMode.Development,
   };
   return esbuild
-    .build(config.esbuild(esbuildConfig, esbuildContext) || esbuildConfig)
+    .build(config.esbuild(esbuildConfig, esbuildContext))
     .then(async (build) => {
       await writeServerBuildResult(config, build.outputFiles);
       return build;

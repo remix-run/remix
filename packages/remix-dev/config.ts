@@ -35,6 +35,12 @@ export type EsbuildContext = {
   isServer: boolean;
   dev: boolean;
 };
+export type ExtendsEsbuildFunction = <
+  T extends EsbuildConfig | (EsbuildConfig & { write: false })
+>(
+  config: T,
+  context: EsbuildContext
+) => T;
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -155,10 +161,11 @@ export interface AppConfig {
    */
   serverDependenciesToBundle?: Array<string | RegExp>;
 
-  esbuild?: <T extends EsbuildConfig | (EsbuildConfig & { write: false })>(
-    config: T,
-    context: EsbuildContext
-  ) => T | void;
+  /**
+   * A function to extend the default esbuild configuration. The modified
+   * config is returned.
+   */
+  esbuild?: ExtendsEsbuildFunction;
 }
 
 /**
@@ -263,10 +270,10 @@ export interface RemixConfig {
    */
   serverDependenciesToBundle: Array<string | RegExp>;
 
-  esbuild: <T extends EsbuildConfig | (EsbuildConfig & { write: false })>(
-    config: T,
-    context: EsbuildContext
-  ) => T | void;
+  /**
+   * A function to extend the default esbuild configuration.
+   */
+  esbuild: ExtendsEsbuildFunction;
 }
 
 /**
