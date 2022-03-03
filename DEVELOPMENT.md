@@ -132,6 +132,10 @@ Now - any time you make changes in the Remix repository, the they will be writte
 
 The transition manager is a complex and heavily async bit of logic that is foundational to Remix's ability to manage data loading, submission, error handling, and interruptions. Due to the user-driven nature of interruptions we don't quite believe it can be modeled as a finite state machine, however we have modeled some of the happy path flows below for clarity.
 
+#### Transitions
+
+_Note: This does not depict error or interruption flows_
+
 ```mermaid
 graph LR
   %% <Link> transition
@@ -167,4 +171,36 @@ graph LR
   loading/fetchActionRedirect --> loading/fetchActionRedirect
   end
   loading/fetchActionRedirect -->|loaders completed| idle
+```
+
+#### Fetchers
+
+_Note: This does not depict error or interruption flows, nor the ability to re-use fetchers once they've reached `idle/done`._
+
+```mermaid
+graph LR
+  idle/init -->|"load"| loading/normalLoad
+  idle/init -->|"submit (get)"| submitting/loaderSubmission
+  idle/init -->|"submit (post)"| submitting/actionSubmission
+
+  subgraph "Normal Fetch"
+  loading/normalLoad -.->|loader redirected| T1{transition}
+  end
+  loading/normalLoad -->|loader completed| idle/done
+  T1{transition} -.-> idle/done
+
+  subgraph "Loader Submission"
+  submitting/loaderSubmission -.->|"loader redirected"| T2{transition}
+  end
+  submitting/loaderSubmission -->|loader completed| idle/done
+  T2{transition} -.-> idle/done
+
+  subgraph "Action Submission"
+  submitting/actionSubmission -->|action completed| loading/actionReload
+  submitting/actionSubmission -->|action redirected| loading/actionSubmissionRedirect
+  loading/actionSubmissionRedirect -.-> T3{transition}
+  loading/actionReload -.-> |loaders redirected| T3{transition}
+  end
+  T3{transition} -.-> idle/done
+  loading/actionReload --> |loaders completed| idle/done
 ```
