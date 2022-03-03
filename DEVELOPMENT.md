@@ -184,23 +184,26 @@ graph LR
   idle/init -->|"submit (post)"| submitting/actionSubmission
 
   subgraph "Normal Fetch"
-  loading/normalLoad -.->|loader redirected| T1{transition}
+  loading/normalLoad -.->|loader redirected| T1{{transition}}
   end
   loading/normalLoad -->|loader completed| idle/done
-  T1{transition} -.-> idle/done
+  T1{{transition}} -.-> idle/done
 
   subgraph "Loader Submission"
-  submitting/loaderSubmission -.->|"loader redirected"| T2{transition}
+  submitting/loaderSubmission -.->|"loader redirected"| T2{{transition}}
   end
   submitting/loaderSubmission -->|loader completed| idle/done
-  T2{transition} -.-> idle/done
+  T2{{transition}} -.-> idle/done
 
   subgraph "Action Submission"
   submitting/actionSubmission -->|action completed| loading/actionReload
   submitting/actionSubmission -->|action redirected| loading/actionSubmissionRedirect
-  loading/actionSubmissionRedirect -.-> T3{transition}
-  loading/actionReload -.-> |loaders redirected| T3{transition}
+  loading/actionSubmissionRedirect -.-> T3{{transition}}
+  loading/actionReload -.-> |loaders redirected| T3{{transition}}
   end
-  T3{transition} -.-> idle/done
+  T3{{transition}} -.-> idle/done
   loading/actionReload --> |loaders completed| idle/done
+
+  classDef transition fill:lightgreen;
+  class T1,T2,T3 transition;
 ```
