@@ -136,29 +136,35 @@ The transition manager is a complex and heavily async bit of logic that is found
 graph LR
   %% <Link> transition
   idle -->|link clicked| loading/normalLoad
-  loading/normalLoad -->|loaders completed| idle
+  idle -->|form method=get| submitting/loaderSubmission
+  idle -->|form method=post| submitting/actionSubmission
+  idle -->|fetcher action redirects| loading/fetchActionRedirect
+
+  subgraph "&lt;Link&gt; transition"
   loading/normalLoad -->|loader redirected| loading/normalRedirect
   loading/normalRedirect --> loading/normalRedirect
+  end
+  loading/normalLoad -->|loaders completed| idle
   loading/normalRedirect -->|loaders completed| idle
 
-  %% <Form method=get>
-  idle -->|form method=get| submitting/loaderSubmission
-  submitting/loaderSubmission -->|loaders completed| idle
+  subgraph "&lt;Form method=get&gt;"
   submitting/loaderSubmission -->|loader redirected| loading/loaderSubmissionRedirect
   loading/loaderSubmissionRedirect --> loading/loaderSubmissionRedirect
+  end
+  submitting/loaderSubmission -->|loaders completed| idle
   loading/loaderSubmissionRedirect -->|loaders completed| idle
 
-  %% <Form method=post>
-  idle -->|form method=post| submitting/actionSubmission
+  subgraph "&lt;Form method=post&gt;"
   submitting/actionSubmission -->|action returned| loading/actionReload
   submitting/actionSubmission -->|action redirected| loading/actionRedirect
-  loading/actionReload -->|loaders completed| idle
   loading/actionReload -->|loader redirected| loading/actionRedirect
   loading/actionRedirect --> loading/actionRedirect
+  end
+  loading/actionReload -->|loaders completed| idle
   loading/actionRedirect -->|loaders completed| idle
 
-  %% fetcher action redirect
-  idle -->|fetcher action redirects| loading/fetchActionRedirect
+  subgraph "Fetcher action redirect"
   loading/fetchActionRedirect --> loading/fetchActionRedirect
+  end
   loading/fetchActionRedirect -->|loaders completed| idle
 ```
