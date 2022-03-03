@@ -5,7 +5,7 @@
   "license": "",
   "scripts": {
     "build": "remix build",
-    "dev": "node -r dotenv/config node_modules/.bin/remix dev",
+    "dev": "remix dev",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   },
@@ -20,7 +20,6 @@
     "@remix-run/dev": "1.2.3",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
-    "dotenv": "^10.0.0",
     "typescript": "^4.5.4"
   },
   "engines": {
