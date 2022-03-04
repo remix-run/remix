@@ -121,6 +121,64 @@ function remix() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
+function remixCssModules() {
+  let sourceDir = "packages/remix-css-modules";
+  let outputDir = "build/node_modules/@remix-run/css-modules";
+  let version = getVersion(sourceDir);
+
+  return [
+    {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: [`${sourceDir}/index.ts`],
+      output: {
+        banner: createBanner("@remix-run/css-modules", version),
+        dir: outputDir,
+        format: "cjs",
+        preserveModules: true,
+        exports: "named",
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
+          ],
+        }),
+      ],
+    },
+    {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: [`${sourceDir}/index.ts`],
+      output: {
+        banner: createBanner("@remix-run/css-modules", version),
+        dir: `${outputDir}/esm`,
+        format: "esm",
+        preserveModules: true,
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+      ],
+    },
+  ];
+}
+
+/** @returns {import("rollup").RollupOptions[]} */
 function remixDev() {
   let sourceDir = "packages/remix-dev";
   let outputDir = "build/node_modules/@remix-run/dev";
@@ -834,6 +892,7 @@ export default function rollup(options) {
   let builds = [
     ...createRemix(options),
     ...remix(options),
+    ...remixCssModules(options),
     ...remixDev(options),
     ...remixDeno(options),
     ...remixServerRuntime(options),
