@@ -11,9 +11,27 @@ let examplesDir = path.resolve(rootDir, "examples");
 let remixPackages = {
   adapters: ["architect", "express", "netlify", "vercel"],
   runtimes: ["cloudflare-workers", "cloudflare-pages", "deno", "node"],
-  core: ["dev", "server-runtime", "react", "eslint-config"],
+  core: ["dev", "server-runtime", "react", "css-modules", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
+  },
+
+  // Would be nice to keep this all in the same place as it's currently easy to
+  // forget to update this in the various places we need to handle our packages.
+  //
+  // TODO: Test when publishing with an experimental release to ensure no
+  // conflicts
+  get allForPublishing() {
+    return [
+      "dev",
+      "server-runtime", // publish server-runtime before platforms
+      ...this.runtimes, // publish node before node servers
+      ...this.adapters, // publish express before serve
+      "react",
+      "serve",
+      "css-modules",
+      "eslint-config",
+    ];
   },
 };
 
