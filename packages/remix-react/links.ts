@@ -334,7 +334,7 @@ export function getNewMatchesForLinks(
         })
       : nextMatches.filter((match, index) => {
           return (
-            match.route.hasLoader &&
+            (mode === "assets" || match.route.hasLoader) &&
             (isNew(match, index) || matchPathChanged(match, index))
           );
         });

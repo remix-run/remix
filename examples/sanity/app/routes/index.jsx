@@ -1,5 +1,4 @@
-import { useLoaderData } from "remix";
-import { Link } from "react-router-dom";
+import { Link, useLoaderData } from "remix";
 
 import { getClient } from "~/lib/sanity/getClient";
 

@@ -439,7 +439,7 @@ function usePrefetchBehavior(
  *
  * @see https://remix.run/api/remix#navlink
  */
-export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
+let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -459,14 +459,15 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     );
   }
 );
-
+NavLink.displayName = "NavLink";
+export { NavLink };
 /**
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
  *
  * @see https://remix.run/api/remix#link
  */
-export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
+let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -486,6 +487,8 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     );
   }
 );
+Link.displayName = "Link";
+export { Link };
 
 export function composeEventHandlers<
   EventType extends React.SyntheticEvent | Event
@@ -854,15 +857,17 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
  *
  * @see https://remix.run/api/remix#form
  */
-export let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
+let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
   return <FormImpl {...props} ref={ref} />;
 });
+Form.displayName = "Form";
+export { Form };
 
 interface FormImplProps extends FormProps {
   fetchKey?: string;
 }
 
-export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
+let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   (
     {
       reloadDocument = false,
@@ -951,6 +956,8 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     );
   }
 );
+FormImpl.displayName = "FormImpl";
+export { FormImpl };
 
 function isActionRequestMethod(method: string): boolean {
   method = method.toLowerCase();
@@ -1053,6 +1060,9 @@ export function useSubmit(): SubmitFunction {
   return useSubmitImpl();
 }
 
+let defaultMethod = "get";
+let defaultEncType = "application/x-www-form-urlencoded";
+
 export function useSubmitImpl(key?: string): SubmitFunction {
   let navigate = useNavigate();
   let defaultAction = useFormAction();
@@ -1070,9 +1080,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           options as any
         ).submissionTrigger;
 
-        method = options.method || target.method;
-        action = options.action || target.action;
-        encType = options.encType || target.enctype;
+        method =
+          options.method || target.getAttribute("method") || defaultMethod;
+        action =
+          options.action || target.getAttribute("action") || defaultAction;
+        encType =
+          options.encType || target.getAttribute("enctype") || defaultEncType;
+
         formData = new FormData(target);
 
         if (submissionTrigger && submissionTrigger.name) {
@@ -1092,11 +1106,20 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         // <button>/<input type="submit"> may override attributes of <form>
 
         method =
-          options.method || target.getAttribute("formmethod") || form.method;
+          options.method ||
+          target.getAttribute("formmethod") ||
+          form.getAttribute("method") ||
+          defaultMethod;
         action =
-          options.action || target.getAttribute("formaction") || form.action;
+          options.action ||
+          target.getAttribute("formaction") ||
+          form.getAttribute("action") ||
+          defaultAction;
         encType =
-          options.encType || target.getAttribute("formenctype") || form.enctype;
+          options.encType ||
+          target.getAttribute("formenctype") ||
+          form.getAttribute("enctype") ||
+          defaultEncType;
         formData = new FormData(form);
 
         // Include name + value from a <button>
@@ -1284,10 +1307,14 @@ export function useTransition(): Transition {
 }
 
 function createFetcherForm(fetchKey: string) {
-  return React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
-    // TODO: make ANOTHER form w/o a fetchKey prop
-    return <FormImpl {...props} ref={ref} fetchKey={fetchKey} />;
-  });
+  let FetcherForm = React.forwardRef<HTMLFormElement, FormProps>(
+    (props, ref) => {
+      // TODO: make ANOTHER form w/o a fetchKey prop
+      return <FormImpl {...props} ref={ref} fetchKey={fetchKey} />;
+    }
+  );
+  FetcherForm.displayName = "fetcher.Form";
+  return FetcherForm;
 }
 
 let fetcherId = 0;

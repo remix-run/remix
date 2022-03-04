@@ -10,7 +10,9 @@
     "remix": "*"
   },
   "devDependencies": {
-    "@remix-run/dev": "*"
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "eslint": "^8.9.0"
   },
   "engines": {
     "node": ">=14"

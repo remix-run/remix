@@ -11,6 +11,7 @@ import { uploadImage } from "~/utils/utils.server";
 type ActionData = {
   errorMsg?: string;
   imgSrc?: string;
+  imgDesc?: string;
 };
 
 export const action: ActionFunction = async ({ request }) => {

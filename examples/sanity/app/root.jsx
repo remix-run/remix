@@ -1,21 +1,9 @@
-import {
-  Meta,
-  Links,
-  Scripts,
-  useLoaderData,
-  LiveReload,
-  useCatch,
-} from "remix";
-import { Outlet } from "react-router-dom";
+import { Links, LiveReload, Meta, Outlet, Scripts, useCatch } from "remix";
 
 import stylesUrl from "./styles/global.css";
 
 export function links() {
   return [{ rel: "stylesheet", href: stylesUrl }];
-}
-
-export async function loader() {
-  return { date: new Date() };
 }
 
 function Document({ children, title }) {
@@ -38,8 +26,6 @@ function Document({ children, title }) {
 }
 
 export default function App() {
-  const data = useLoaderData();
-
   return (
     <Document>
       <Outlet />
