@@ -129,16 +129,9 @@ function remixCssModules() {
   return [
     {
       external(id) {
-        if (id === "@remix-run/dev/assets-manifest") {
-          return true;
-        }
         return isBareModuleId(id);
       },
-      input: [
-        `${sourceDir}/index.ts`,
-        `${sourceDir}/browser.ts`,
-        `${sourceDir}/server.ts`,
-      ],
+      input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
       output: {
         banner: createBanner("@remix-run/css-modules", version),
         dir: outputDir,
@@ -164,12 +157,9 @@ function remixCssModules() {
     },
     {
       external(id) {
-        if (id === "@remix-run/dev/assets-manifest") {
-          return true;
-        }
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/index.ts`],
+      input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
       output: {
         banner: createBanner("@remix-run/css-modules", version),
         dir: `${outputDir}/esm`,
