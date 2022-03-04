@@ -74,5 +74,13 @@
   },
   "engines": {
     "node": ">=14"
+  },
+  "peerDependencies": {
+    "@remix-run/serve": "1.5.1"
+  },
+  "peerDependenciesMeta": {
+    "@remix-run/serve": {
+      "optional": true
+    }
   }
 }
