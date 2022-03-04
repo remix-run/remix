@@ -440,6 +440,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       console.debug(
         `[transition] transition set to ${updates.transition.state}/${updates.transition.type}`
       );
+      if (updates.transition === IDLE_TRANSITION) {
+        pendingNavigationController = undefined;
+      }
     }
 
     state = Object.assign({}, state, updates);
@@ -1285,10 +1288,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     if (pendingNavigationController) {
       console.debug(`[transition] aborting pending navigation`);
       pendingNavigationController.abort();
-      // TODO: Should this be cleared now so it doesn't stick around for
-      // subsequent navigations and make logs look weird?
-      // Or just remove this log?
-      // pendingNavigationController = undefined;
     }
   }
 
