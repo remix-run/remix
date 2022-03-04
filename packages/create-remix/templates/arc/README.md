@@ -7,15 +7,13 @@
 
 Both Remix and Architect have their own local servers, each of which is responsible for unique tasks related to local development.
 
-To start t both alongside one another, run:
+To start both alongside one another, run:
 
 ```sh
 $ npm run dev
 ```
 
 Open up [http://localhost:3333](http://localhost:3333) and you should be ready to go!
-
-If you'd rather run everything in a single tab, you can look at [concurrently](https://npm.im/concurrently) or similar tools to run both processes in one tab.
 
 
 ### TypeScript
