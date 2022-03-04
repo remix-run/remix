@@ -9,10 +9,10 @@ import {
   useCatch,
   useLoaderData,
   useMatches,
+  LiveReload,
 } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
-// TODO: This will be a separate module now instead of the virtual module
-// import cssModuleStyles from "@remix-run/dev/modules.css";
+import cssModuleStylesheetUrl from "@remix-run/css-modules";
 
 import favicon from "../public/favicon.ico";
 import stylesHref from "./styles/app.css";
@@ -24,6 +24,7 @@ export function links() {
       href: normalizeHref,
     },
     { rel: "stylesheet", href: stylesHref },
+    { rel: "stylesheet", href: cssModuleStylesheetUrl },
     { rel: "stylesheet", href: "/resources/theme-css" },
     // cssModuleStyles != null && { rel: "stylesheet", href: cssModuleStyles },
     { rel: "shortcut icon", href: favicon },
@@ -31,6 +32,7 @@ export function links() {
 }
 
 export async function loader({ request }) {
+  console.log({ server: cssModuleStylesheetUrl });
   return {
     enableScripts: new URL(request.url).searchParams.get("disableJs") == null,
   };
@@ -46,6 +48,10 @@ export default function Root() {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
+  });
+
+  useEffect(() => {
+    console.log({ client: cssModuleStylesheetUrl });
   });
 
   let data = useLoaderData();
@@ -75,6 +81,7 @@ export default function Root() {
           <>
             <ScrollRestoration />
             <Scripts />
+            <LiveReload />
           </>
         ) : null}
       </body>
@@ -129,6 +136,7 @@ export function CatchBoundary() {
               ) : null}
             </div>
             <Scripts />
+            <LiveReload />
           </body>
         </html>
       );
@@ -156,6 +164,7 @@ export function ErrorBoundary({ error }) {
           <pre>{error.message}</pre>
         </div>
         <Scripts />
+        <LiveReload />
       </body>
     </html>
   );

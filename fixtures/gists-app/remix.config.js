@@ -12,6 +12,7 @@ module.exports = {
   devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
   server: "./server.js",
+  devServerBroadcastDelay: 500,
 
   mdx: async (filename) => {
     const [rehypeHighlight, remarkToc] = await Promise.all([
