@@ -30,6 +30,8 @@ import {
   cssModulesPlugin,
   cssModulesFakerPlugin,
   getCssModulesFileReferences,
+  browserCssModulesStylesheetPlugin,
+  serverCssModulesStylesheetPlugin,
 } from "./compiler/plugins/cssModules";
 import { writeFileSafe } from "./compiler/utils/fs";
 
@@ -417,6 +419,7 @@ async function createBrowserBuild(
       },
       plugins: [
         cssModulesPlugin(config, handleProcessedCss),
+        browserCssModulesStylesheetPlugin(),
         mdxPlugin(config),
         browserRouteModulesPlugin(config, /\?browser$/),
         emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
@@ -424,13 +427,11 @@ async function createBrowserBuild(
       ],
     })
     .then(async (build) => {
-      let [filePath, fileUrl] = getCssModulesFileReferences(
-        config,
-        cssModulesContent
-      );
+      let [globalStylesheetFilePath, globalStylesheetFileUrl] =
+        getCssModulesFileReferences(config, cssModulesContent);
 
-      await fse.ensureDir(path.dirname(filePath));
-      await fse.writeFile(filePath, cssModulesContent);
+      await fse.ensureDir(path.dirname(globalStylesheetFilePath));
+      await fse.writeFile(globalStylesheetFilePath, cssModulesContent);
 
       return {
         ...build,
@@ -443,20 +444,18 @@ async function createBrowserBuild(
             cssModulesContent = "";
             cssModulesMap = {};
             let result = await build.rebuild!();
-            let [filePath, fileUrl] = getCssModulesFileReferences(
-              config,
-              cssModulesContent
-            );
+            let [globalStylesheetFilePath, globalStylesheetFileUrl] =
+              getCssModulesFileReferences(config, cssModulesContent);
 
-            await fse.ensureDir(path.dirname(filePath));
-            await fse.writeFile(filePath, cssModulesContent);
+            await fse.ensureDir(path.dirname(globalStylesheetFilePath));
+            await fse.writeFile(globalStylesheetFilePath, cssModulesContent);
 
             return {
               ...result,
               rebuild: builder,
               cssModules: {
-                filePath,
-                fileUrl,
+                globalStylesheetFilePath,
+                globalStylesheetFileUrl,
                 moduleMap: cssModulesMap,
               },
             };
@@ -467,8 +466,8 @@ async function createBrowserBuild(
           return builder;
         })(),
         cssModules: {
-          filePath,
-          fileUrl,
+          globalStylesheetFilePath,
+          globalStylesheetFileUrl,
           moduleMap: cssModulesMap,
         },
       };
@@ -497,6 +496,7 @@ async function createServerBuild(
 
   let plugins: esbuild.Plugin[] = [
     cssModulesFakerPlugin(config, assetsManifestPromiseRef),
+    serverCssModulesStylesheetPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),

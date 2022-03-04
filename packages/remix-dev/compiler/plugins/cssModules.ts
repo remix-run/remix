@@ -69,7 +69,7 @@ export function cssModulesFakerPlugin(
       build.onResolve({ filter: suffixMatcher }, (args) => {
         return {
           path: getResolvedFilePath(config, args),
-          namespace: "css-modules",
+          namespace: "css-modules-faker",
           sideEffects: false,
         };
       });
@@ -80,6 +80,36 @@ export function cssModulesFakerPlugin(
         return {
           contents: JSON.stringify(json),
           loader: "json",
+        };
+      });
+    },
+  };
+}
+
+export function serverCssModulesStylesheetPlugin(): esbuild.Plugin {
+  let filter = /^@remix-run\/css-modules$/;
+  return {
+    name: "server-css-modules-stylesheet",
+    async setup(build) {
+      build.onResolve({ filter }, ({ path }) => {
+        return {
+          path: path + "/server",
+          namespace: "server-css-modules-stylesheet",
+        };
+      });
+    },
+  };
+}
+
+export function browserCssModulesStylesheetPlugin(): esbuild.Plugin {
+  let filter = /^@remix-run\/css-modules$/;
+  return {
+    name: "browser-css-modules-stylesheet",
+    async setup(build) {
+      build.onResolve({ filter }, ({ path }) => {
+        return {
+          path: path + "/browser",
+          namespace: "browser-css-modules-stylesheet",
         };
       });
     },
@@ -166,7 +196,7 @@ function getResolvedFilePath(
 export function getCssModulesFileReferences(
   config: RemixConfig,
   css: string
-): [filePath: string, fileUrl: string] {
+): [globalStylesheetFilePath: string, globalStylesheetFileUrl: string] {
   let hash = getHash(css).slice(0, 8).toUpperCase();
   let filePath = path.resolve(
     config.assetsBuildDirectory,
@@ -185,8 +215,8 @@ export interface CssModuleFileContents {
 export type CssModuleFileMap = Record<string, CssModuleFileContents>;
 
 export interface CssModulesResults {
-  filePath: string;
-  fileUrl: string;
+  globalStylesheetFilePath: string;
+  globalStylesheetFileUrl: string;
   moduleMap: CssModuleFileMap;
 }
 

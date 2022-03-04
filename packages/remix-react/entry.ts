@@ -27,8 +27,8 @@ export interface AssetsManifest {
 
 // TODO: This should ideally be in one place; duped for now from remix-dev
 interface CssModulesResults {
-  filePath: string;
-  fileUrl: string;
+  globalStylesheetFilePath: string;
+  globalStylesheetFileUrl: string;
   moduleMap: CssModuleFileMap;
 }
 
