@@ -1,3 +1,4 @@
+import type { LinksFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -9,9 +10,9 @@ import {
 
 import tailwind from "./tailwind.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: tailwind }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: tailwind },
+];
 
 export default function App() {
   return (
