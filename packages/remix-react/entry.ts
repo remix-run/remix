@@ -34,6 +34,7 @@ interface CssModulesResults {
 
 interface CssModuleFileContents {
   css: string;
+  sourceMap: string | null;
   json: CssModuleClassMap;
 }
 
