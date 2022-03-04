@@ -8,6 +8,7 @@
     "start": "cross-env NODE_ENV=production arc sandbox"
   },
   "dependencies": {
+    "@architect/architect": "^10.0.5",
     "@remix-run/architect": "*",
     "cross-env": "^7.0.3"
   },

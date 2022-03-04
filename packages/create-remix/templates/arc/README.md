@@ -2,37 +2,40 @@
 
 - [Remix Docs](https://remix.run/docs)
 
-## Architect Setup
-
-When deploying to AWS Lambda with Architect, you'll need:
-
-- Architect (`arc`) CLI
-- AWS SDK
-
-Architect recommends installing these globally:
-
-```sh
-$ npm i -g @architect/architect aws-sdk
-```
 
 ## Development
 
-You will be running two processes during development when using Architect as your server.
+Both Remix and Architect have their own local servers, each of which is responsible for unique tasks related to local development.
 
-- Your Architect server sandbox in one
-- The Remix development server in another
+To start t both alongside one another, run:
 
 ```sh
-# in one tab
-$ arc sandbox
-
-# in another
 $ npm run dev
 ```
 
 Open up [http://localhost:3333](http://localhost:3333) and you should be ready to go!
 
 If you'd rather run everything in a single tab, you can look at [concurrently](https://npm.im/concurrently) or similar tools to run both processes in one tab.
+
+
+### TypeScript
+
+To develop in TypeScript, install Architect's official TS plugin:
+
+```sh
+$ npm i @architect/plugin-typescript
+```
+
+Then add the following to the `app.arc` file:
+
+```arc
+@plugins
+architect/plugin-typescript
+
+@aws
+runtime typescript
+```
+
 
 ## Deploying
 
@@ -41,9 +44,9 @@ Before you can deploy, you'll need to do some setup with AWS:
 - First [install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 - Then [follow the Architect setup instructions](https://arc.codes/docs/en/guides/get-started/detailed-aws-setup).
 
-If you make it through all of that, you're ready to deploy!
+Once you make it through all of that, you're ready to deploy!
 
-1. build the app for production:
+1. Build the app for production:
 
    ```sh
    $ npm run build
@@ -52,7 +55,7 @@ If you make it through all of that, you're ready to deploy!
 2. Deploy with `arc`
 
    ```sh
-   $ arc deploy production
+   $ npx arc deploy production
    ```
 
 You're in business!
