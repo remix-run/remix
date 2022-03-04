@@ -24,11 +24,5 @@ A simple way to post form data to a [Notion](https://www.notion.so/) DB.
 ## Key Files
 
 1. [.env](./.env) - Stores your Notion integration key and DB ID.
-2. [package.json](./package.json) - the `dev` script is modified to use dotenv
-
-```
-"dev": "node -r dotenv/config node_modules/.bin/remix dev",
-```
-
-3. [notion.server.ts](./app/notion.server.ts) - Initializes the Notion client and exports it for use across your application.
-4. [root.tsx](./app/root.tsx) - imports the notion client from the `notion.server.ts` file, and calls the Notion API with the submitted form data via the action function.
+2. [notion.server.ts](./app/notion.server.ts) - Initializes the Notion client and exports it for use across your application.
+3. [root.tsx](./app/root.tsx) - imports the notion client from the `notion.server.ts` file, and calls the Notion API with the submitted form data via the action function.
