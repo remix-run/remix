@@ -22,6 +22,7 @@
     "packages/remix-architect",
     "packages/remix-cloudflare-pages",
     "packages/remix-cloudflare-workers",
+    "packages/remix-css-modules",
     "packages/remix-deno",
     "packages/remix-dev",
     "packages/remix-eslint-config",
