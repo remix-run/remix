@@ -34,6 +34,8 @@ architect/plugin-typescript
 runtime typescript
 ```
 
+Head here to learn more about [developing in TypeScript with Architect](https://arc.codes/docs/en/guides/developer-experience/using-typescript).
+
 
 ## Deploying
 
