@@ -343,11 +343,14 @@ async function createBrowserBuild(
 ): Promise<BrowserBuild> {
   let cssModulesContent = "";
   let cssModulesJson: CssModuleClassMap = {};
-  let cssModulesMap: Record<string, { css: string; json: CssModuleClassMap }> =
-    {};
+  let cssModulesMap: Record<
+    string,
+    { css: string; json: CssModuleClassMap; sourceMap: string | null }
+  > = {};
   function handleProcessedCss(
     filePath: string,
     css: string,
+    sourceMap: string | null,
     json: CssModuleClassMap
   ) {
     cssModulesContent += css;
@@ -357,6 +360,8 @@ async function createBrowserBuild(
       [filePath]: {
         css,
         json,
+        // TODO: Implement sourcemaps
+        sourceMap: null,
       },
     };
   }
@@ -419,7 +424,6 @@ async function createBrowserBuild(
       },
       plugins: [
         cssModulesPlugin(config, handleProcessedCss),
-        browserCssModulesStylesheetPlugin(),
         mdxPlugin(config),
         browserRouteModulesPlugin(config, /\?browser$/),
         emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
@@ -496,7 +500,6 @@ async function createServerBuild(
 
   let plugins: esbuild.Plugin[] = [
     cssModulesFakerPlugin(config, assetsManifestPromiseRef),
-    serverCssModulesStylesheetPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
