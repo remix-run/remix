@@ -1,12 +1,12 @@
 import {
-  Meta,
   Links,
-  Scripts,
-  useLoaderData,
   LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
   useCatch,
+  useLoaderData,
 } from "remix";
-import { Outlet } from "react-router-dom";
 
 import stylesUrl from "./styles/global.css";
 
