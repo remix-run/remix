@@ -4,7 +4,7 @@ import inquirer from "inquirer";
 import meow from "meow";
 
 import type { Lang, Server } from ".";
-import { createApp, servers } from ".";
+import { createApp } from ".";
 
 const help = `
   Usage:
@@ -106,9 +106,17 @@ async function run() {
       message:
         "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
       loop: false,
-      choices: Object.entries(servers).map(([server, url]) => {
-        return { name: server, value: url };
-      }),
+      choices: [
+        { name: "Architect (AWS Lambda)", value: "arc" },
+        { name: "Cloudflare Pages", value: "cloudflare-pages" },
+        { name: "Cloudflare Workers", value: "cloudflare-workers" },
+        { name: "Deno (experimental)", value: "deno" },
+        { name: "Express Server", value: "express" },
+        { name: "Fly.io", value: "fly" },
+        { name: "Netlify", value: "netlify" },
+        { name: "Remix App Server", value: "remix" },
+        { name: "Vercel", value: "vercel" },
+      ],
     },
     {
       name: "lang",

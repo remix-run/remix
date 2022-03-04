@@ -49,19 +49,38 @@ export async function downloadAndExtractRepo(
       map(header) {
         let originalDirName = header.name.split("/")[0];
         header.name = header.name.replace(originalDirName, desiredDir);
-        return header;
-      },
-      ignore(name) {
         if (options.filePath) {
           // add a trailing slash to the file path so we dont overmatch
+          if (
+            header.name.startsWith(
+              path.join(desiredDir, options.filePath) + path.sep
+            )
+          ) {
+            header.name = header.name.replace(options.filePath + path.sep, "");
+          } else {
+            header.name = "__IGNORE__" + header.name;
+          }
+        }
+
+        return header;
+      },
+      ignore(name, header) {
+        // name is the original projectDir, but
+        // we need the header's name as we changed it above
+        // to point to their desired dir
+        if (options.filePath) {
+          if (!header) {
+            throw new Error(`missing header for file ${name}`);
+          }
+
           // return true if we should IGNORE this file
-          return !name.startsWith(
-            path.join(projectDir, options.filePath) + path.sep
-          );
+          if (header.name.startsWith("__IGNORE__")) {
+            return true;
+          }
         }
 
         return false;
-      }
+      },
     })
   );
 }

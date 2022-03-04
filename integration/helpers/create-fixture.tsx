@@ -9,14 +9,14 @@ import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
 
-import {
-  createRequestHandler,
-  ServerPlatform,
-} from "../../packages/remix-server-runtime";
+import { createRequestHandler } from "../../packages/remix-server-runtime";
 import type { Server } from "../../packages/create-remix";
 import { createApp } from "../../packages/create-remix";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
-import type { ServerBuild } from "../../packages/remix-server-runtime";
+import type {
+  ServerBuild,
+  ServerPlatform,
+} from "../../packages/remix-server-runtime";
 import { TMP_DIR } from "./global-setup";
 
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
@@ -172,7 +172,7 @@ export async function createAppFixture(fixture: Fixture) {
 
       /**
        * Finds a link on the page with a matching href, clicks it, and waits for
-       * the network to be idle before contininuing.
+       * the network to be idle before continuing.
        *
        * @param href The href of the link you want to click
        * @param options `{ wait }` waits for the network to be idle before moving on
@@ -209,7 +209,7 @@ export async function createAppFixture(fixture: Fixture) {
       /**
        * Finds the first submit button with `formAction` that matches the
        * `action` supplied, clicks it, and optionally waits for the network to
-       * be idle before contininuing.
+       * be idle before continuing.
        *
        * @param action The formAction of the button you want to click
        * @param options `{ wait }` waits for the network to be idle before moving on
@@ -399,7 +399,7 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
  *
  * I found some github issues that says that `modulePathIgnorePatterns` should
  * help, so I added it to our `jest.config.js`, but it doesn't seem to help, so
- * I bruteforced it here.
+ * I brute-forced it here.
  */
 async function renamePkgJsonApp(dir: string) {
   let pkgPath = path.join(dir, "package.json");

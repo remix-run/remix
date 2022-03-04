@@ -19,7 +19,6 @@
     "@iarna/toml": "^2.2.5",
     "chalk-animation": "^1.6.0",
     "fs-extra": "^10.0.0",
-    "parse-github-url": "^1.0.2",
     "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",
@@ -30,7 +29,6 @@
   },
   "devDependencies": {
     "@types/chalk-animation": "^1.6.0",
-    "@types/parse-github-url": "^1.0.0",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/inquirer": "^7.3.1",
     "@types/tar-fs": "^2.0.1"
