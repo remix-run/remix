@@ -1,32 +1,33 @@
 {
-  "private": true,
   "name": "remix-example-sanity",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
-    "build": "remix build",
-    "dev": "remix dev",
+    "build": "cross-env NODE_ENV=production remix build",
+    "dev": "cross-env NODE_ENV=development remix dev",
     "postinstall": "remix setup node",
-    "start": "remix-serve build"
+    "start": "cross-env NODE_ENV=production remix-serve build"
   },
   "dependencies": {
     "@remix-run/react": "1.2.3",
     "@remix-run/serve": "1.2.3",
     "@sanity/block-content-to-react": "^3.0.0",
-    "@sanity/groq-store": "^0.2.2",
+    "@sanity/groq-store": "^0.3.1",
     "@sanity/image-url": "^1.0.1",
-    "dotenv": "^10.0.0",
-    "picosanity": "^3.0.2",
+    "cross-env": "^7.0.3",
+    "picosanity": "^3.0.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-router-dom": "^6.0.2",
     "remix": "1.2.3"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.2.3"
+    "@remix-run/dev": "1.2.3",
+    "@remix-run/eslint-config": "1.2.3",
+    "eslint": "^8.10.0"
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

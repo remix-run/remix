@@ -1,32 +1,37 @@
 {
-  "private": true,
   "name": "remix-example-strapi",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
-    "build": "remix build",
-    "dev": "npx concurrently \"remix dev\" \"cd strapi && npm run develop\"",
+    "build": "cross-env NODE_ENV=production remix build",
+    "dev": "run-p dev:*",
+    "dev:remix": "cross-env NODE_ENV=development remix dev",
     "postinstall": "remix setup node",
-    "start": "remix-serve build"
+    "dev:strapi": "cd strapi && npm run develop",
+    "start": "cross-env NODE_ENV=production remix-serve build"
   },
   "dependencies": {
     "@remix-run/react": "1.2.3",
     "@remix-run/serve": "1.2.3",
-    "marked": "^4.0.8",
+    "cross-env": "^7.0.3",
+    "marked": "^4.0.12",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "1.2.3"
   },
   "devDependencies": {
     "@remix-run/dev": "1.2.3",
-    "@types/marked": "^4.0.1",
-    "@types/react": "^17.0.38",
-    "@types/react-dom": "^17.0.11",
-    "concurrently": "^7.0.0",
-    "typescript": "^4.5.4"
+    "@remix-run/eslint-config": "1.2.3",
+    "@types/marked": "^4.0.2",
+    "@types/react": "^17.0.39",
+    "@types/react-dom": "^17.0.13",
+    "eslint": "^8.10.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^4.6.2"
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }
