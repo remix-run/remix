@@ -5,7 +5,6 @@ import {
   Outlet,
   Scripts,
   useCatch,
-  useLoaderData,
 } from "remix";
 
 import stylesUrl from "./styles/global.css";
@@ -38,8 +37,6 @@ function Document({ children, title }) {
 }
 
 export default function App() {
-  const data = useLoaderData();
-
   return (
     <Document>
       <Outlet />
