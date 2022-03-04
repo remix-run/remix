@@ -1,0 +1,18 @@
+{
+  "name": "@remix-run/css-modules",
+  "description": "Entrypoint for stylesheets created by CSS Modules in Remix",
+  "version": "1.2.3",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-css-modules"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/dev": "1.2.3",
+    "@remix-run/server-runtime": "1.2.3"
+  }
+}
