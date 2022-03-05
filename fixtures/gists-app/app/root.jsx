@@ -24,9 +24,11 @@ export function links() {
       href: normalizeHref,
     },
     { rel: "stylesheet", href: stylesHref },
-    { rel: "stylesheet", href: cssModuleStylesheetUrl },
+    cssModuleStylesheetUrl && {
+      rel: "stylesheet",
+      href: cssModuleStylesheetUrl,
+    },
     { rel: "stylesheet", href: "/resources/theme-css" },
-    // cssModuleStyles != null && { rel: "stylesheet", href: cssModuleStyles },
     { rel: "shortcut icon", href: favicon },
   ].filter(Boolean);
 }
