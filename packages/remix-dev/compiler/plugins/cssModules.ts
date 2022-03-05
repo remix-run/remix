@@ -14,11 +14,9 @@ import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 const suffixMatcher = /\.module\.css?$/;
 
 // TODO: Remove when finished comparing Parcel + PostCSS
-const USE_PARCEL = false;
+const USE_PARCEL = true;
 
-let ParcelCSS: {
-  transform(opts: ParcelTransformOptions): ParcelTransformResult;
-};
+let parcelTransform: (opts: ParcelTransformOptions) => ParcelTransformResult;
 const decoder = new TextDecoder();
 
 /**
@@ -40,12 +38,20 @@ export function cssModulesPlugin(
       build.onResolve({ filter: suffixMatcher }, async (args) => {
         if (USE_PARCEL) {
           try {
-            if (!ParcelCSS) {
-              ParcelCSS = (await import("@remix-run/css-modules")).ParcelCSS;
+            if (!parcelTransform) {
+              parcelTransform = (await import("@parcel/css")).default.transform;
+              console.log({ parcelTransform });
               console.warn(
-                chalk.yellow(`CSS Modules support in Remix is experimental. It's implementation may change. If you find a bug, please report it by opening an issue on GitHub:
+                chalk.yellow(`
+--------------------------------------------------------------------------------
 
-      https://github.com/remix-run/remix/issues/new?labels=bug&template=bug_report.yml`)
+CSS Modules support in Remix is experimental. It's implementation may change.
+If you find a bug, please report it by opening an issue on GitHub:
+
+https://github.com/remix-run/remix/issues/new?labels=bug&template=bug_report.yml
+
+--------------------------------------------------------------------------------
+`)
               );
             }
           } catch (_) {
@@ -222,7 +228,7 @@ async function processCssWithParcel(
   let json: CssModuleClassMap = {};
   let source = await fse.readFile(file);
 
-  let res = ParcelCSS.transform({
+  let res = parcelTransform({
     filename: path.relative(config.appDirectory, file),
     code: source,
     cssModules: true,
@@ -234,7 +240,7 @@ async function processCssWithParcel(
     // but other frameworks may support it. We might want to do more research
     // here, but in the mean time any dependencies should be imported as a
     // separate global stylesheet and loaded before the CSS Modules stylesheet.
-    analyzeDependencies: false,
+    analyzeDependencies: true,
     sourceMap: true,
     drafts: {
       nesting: true,
@@ -363,6 +369,11 @@ interface ParcelCSSModuleExport {
   name: string;
   isReferenced: boolean;
   composes: ParcelComposeData[];
+}
+
+interface ParcelComposeData {
+  type: "local" | "global" | "dependency";
+  name: string;
 }
 
 interface ParcelComposeData {
