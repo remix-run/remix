@@ -1,10 +1,12 @@
 import * as path from "path";
 import { builtinModules as nodeBuiltins } from "module";
+import * as os from "os";
 import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import { promises as fsp } from "fs";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -23,6 +25,7 @@ import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlu
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
+import { getJSXImportSource } from "./compiler/utils/tsconfig";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -33,6 +36,7 @@ interface BuildConfig {
   mode: BuildMode;
   target: BuildTarget;
   sourcemap: boolean;
+  write?: boolean;
 }
 
 function defaultWarningHandler(message: string, key: string) {
@@ -74,16 +78,18 @@ export async function build(
     sourcemap = false,
     onWarning = defaultWarningHandler,
     onBuildFailure = defaultBuildFailureHandler,
+    write = true,
   }: BuildOptions = {}
-): Promise<void> {
+): Promise<(esbuild.BuildResult | undefined)[]> {
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
 
-  await buildEverything(config, assetsManifestPromiseRef, {
+  return await buildEverything(config, assetsManifestPromiseRef, {
     mode,
     target,
     sourcemap,
     onWarning,
     onBuildFailure,
+    write,
   });
 }
 
@@ -110,6 +116,7 @@ export async function watch(
     onFileChanged,
     onFileDeleted,
     onInitialBuild,
+    write = true,
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
   let options = {
@@ -119,6 +126,7 @@ export async function watch(
     onBuildFailure,
     onWarning,
     incremental: true,
+    write,
   };
 
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
@@ -284,6 +292,21 @@ async function buildEverything(
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   try {
+    let customShimCleanup: CustomShimCleanupFn | null = null;
+
+    if (!config.customJSXShimPath) {
+      let jsxImportSource = await getJSXImportSource(config.rootDirectory);
+      if (jsxImportSource) {
+        let { filePath, done } = await createCustomJSXFactoryShim(
+          jsxImportSource,
+          config.rootDirectory
+        );
+
+        config.customJSXShimPath = filePath;
+        customShimCleanup = done;
+      }
+    }
+
     let browserBuildPromise = createBrowserBuild(config, options);
     let assetsManifestPromise = browserBuildPromise.then((build) =>
       generateAssetsManifest(config, build.metafile!)
@@ -299,11 +322,16 @@ async function buildEverything(
       assetsManifestPromiseRef
     );
 
-    return await Promise.all([
+    let buildResults = await Promise.all([
       assetsManifestPromise.then(() => browserBuildPromise),
       serverBuildPromise,
     ]);
+
+    await customShimCleanup?.();
+
+    return buildResults;
   } catch (err) {
+    console.error(err);
     options.onBuildFailure(err as Error);
     return [undefined, undefined];
   }
@@ -347,7 +375,8 @@ async function createBrowserBuild(
     platform: "browser",
     format: "esm",
     external: externals,
-    inject: [reactShim],
+    inject: [reactShim].concat(config.customJSXShimPath ?? []),
+    jsxFactory: config.customJSXShimPath && "jsx",
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -374,6 +403,7 @@ async function createBrowserBuild(
       emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
       NodeModulesPolyfillPlugin(),
     ],
+    write: options.write,
   });
 }
 
@@ -431,7 +461,8 @@ async function createServerBuild(
           ? ["module", "main"]
           : ["main", "module"],
       target: options.target,
-      inject: [reactShim],
+      inject: [reactShim].concat(config.customJSXShimPath ?? []),
+      jsxFactory: config.customJSXShimPath && "jsx",
       loader: loaders,
       bundle: true,
       logLevel: "silent",
@@ -484,4 +515,55 @@ async function writeServerBuildResult(
       break;
     }
   }
+}
+
+type CustomShimCleanupFn = () => Promise<void>;
+
+/**
+ * Creates a temporary directory and file to inject to esbuild
+ * that exports the given `importSource` as `React`. When esbuild
+ * is finished, the `done()` function will clean up the temporary
+ * directory.
+ *
+ * See https://github.com/evanw/esbuild/issues/1169; when inline
+ * inject is available in esbuild temporary directory/file creation
+ * can be removed.
+ */
+async function createCustomJSXFactoryShim(
+  importSource: string,
+  rootDir: string
+): Promise<{ filePath: string; done: CustomShimCleanupFn }> {
+  let temporaryDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "remix-"));
+  let customShimFile = path.join(
+    temporaryDirectory,
+    "jsx-import-source-shim.js"
+  );
+
+  let importSourcePath = require.resolve(importSource, {
+    paths: [rootDir],
+  });
+
+  let importSourceExists = await fse.pathExists(importSourcePath);
+  if (!importSourceExists) {
+    throw new Error(
+      `Unable to find module "${importSource}" for custom shim in "${importSourcePath}"`
+    );
+  }
+
+  await fsp.writeFile(
+    customShimFile,
+    // Using JSON.stringify will escape any " and \ in the import source path.
+    `export { jsx } from ${JSON.stringify(importSourcePath)}`
+  );
+
+  return {
+    filePath: customShimFile,
+    async done() {
+      try {
+        await fsp.unlink(temporaryDirectory);
+      } catch (e) {
+        // Temporary folders may not be removed on some systems, which is okay.
+      }
+    },
+  };
 }

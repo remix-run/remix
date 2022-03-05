@@ -29,5 +29,5 @@ export function isBuildTarget(target: any): target is BuildTarget {
 
 export interface BuildOptions {
   mode: BuildMode;
-  target: BuildTarget;
+  target?: BuildTarget;
 }

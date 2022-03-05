@@ -31,6 +31,7 @@
     "read-package-json-fast": "^2.0.2",
     "remark-frontmatter": "^4.0.0",
     "remark-mdx-frontmatter": "^1.0.1",
+    "strip-json-comments": "^4.0.0",
     "ws": "^7.4.5",
     "xdm": "^2.0.0"
   },
