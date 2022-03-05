@@ -32,7 +32,6 @@ export function links() {
 }
 
 export async function loader({ request }) {
-  console.log({ server: cssModuleStylesheetUrl });
   return {
     enableScripts: new URL(request.url).searchParams.get("disableJs") == null,
   };
@@ -48,10 +47,6 @@ export default function Root() {
   useEffect(() => {
     // We use this in the tests to wait for React to hydrate the page.
     window.reactIsHydrated = true;
-  });
-
-  useEffect(() => {
-    console.log({ client: cssModuleStylesheetUrl });
   });
 
   let data = useLoaderData();
