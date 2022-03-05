@@ -1,5 +1,4 @@
-declare module "@remix-run/dev/assets-manifest" {
-  import type { AssetsManifest } from "@remix-run/dev";
-  const manifest: AssetsManifest;
-  export default manifest;
-}
+import type { AssetsManifest } from "@remix-run/dev";
+declare const manifest: AssetsManifest;
+export type { AssetsManifest };
+export default manifest;
