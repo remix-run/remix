@@ -108,7 +108,7 @@ describe("building", () => {
       expectBuildToHaveFiles(output, expectedBuildFiles);
     });
 
-    it('with a custom "jsxImportSource", calls the JSX factory', async () => {
+    it('calls the JSX custom factory with a custom "jsxImportSource"', async () => {
       let [_, buildOutput] = await generateBuild(
         await readConfig(customJSXAppRoot),
         {
@@ -136,7 +136,7 @@ describe("building", () => {
       expect(jsxFn).toBeCalledWith("div", null);
     });
 
-    it('without a "jsxImportSource", calls the default React factory', async () => {
+    it('calls the default React factory without a "jsxImportSource"', async () => {
       let [_, buildOutput] = await generateBuild(config, {
         mode: BuildMode.Development,
       });
