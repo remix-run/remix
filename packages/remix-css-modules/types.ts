@@ -28,16 +28,18 @@ export interface GlobalCssModuleReference {
   name: string;
 }
 
-export interface DependencyCssModuleReference {
+interface DependencyCssModuleReference {
   type: "dependency";
   name: string;
   /** The dependency specifier for the referenced file. */
   specifier: string;
 }
 
-export type Dependency = ImportDependency | UrlDependency;
+export type CssModuleDependency =
+  | CssModuleImportDependency
+  | CssModuleUrlDependency;
 
-export interface ImportDependency {
+interface CssModuleImportDependency {
   type: "import";
   /** The url of the `@import` dependency. */
   url: string;
@@ -46,20 +48,20 @@ export interface ImportDependency {
   /** The `supports()` query for the `@import` rule. */
   supports: string | null;
   /** The source location where the `@import` rule was found. */
-  loc: SourceLocation;
+  loc: CssModuleSourceLocation;
 }
 
-export interface UrlDependency {
+interface CssModuleUrlDependency {
   type: "url";
   /** The url of the dependency. */
   url: string;
   /** The source location where the `url()` was found. */
-  loc: SourceLocation;
+  loc: CssModuleSourceLocation;
   /** The placeholder that the url was replaced with. */
   placeholder: string;
 }
 
-interface SourceLocation {
+interface CssModuleSourceLocation {
   /** The file path in which the dependency exists. */
   filePath: string;
   /** The start location of the dependency. */
