@@ -23,15 +23,13 @@ import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlu
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import type {
-  CssModuleClassMap,
+  CssModuleFileContents,
   CssModulesResults,
 } from "./compiler/plugins/cssModules";
 import {
   cssModulesPlugin,
   cssModulesFakerPlugin,
   getCssModulesFileReferences,
-  browserCssModulesStylesheetPlugin,
-  serverCssModulesStylesheetPlugin,
 } from "./compiler/plugins/cssModules";
 import { writeFileSafe } from "./compiler/utils/fs";
 
@@ -342,24 +340,19 @@ async function createBrowserBuild(
   options: BuildOptions & { incremental?: boolean }
 ): Promise<BrowserBuild> {
   let cssModulesContent = "";
-  let cssModulesJson: CssModuleClassMap = {};
-  let cssModulesMap: Record<
-    string,
-    { css: string; json: CssModuleClassMap; sourceMap: string | null }
-  > = {};
+  let cssModulesMap: Record<string, CssModuleFileContents> = {};
   function handleProcessedCss(
     filePath: string,
-    css: string,
-    sourceMap: string | null,
-    json: CssModuleClassMap
+    { css, dependencies, moduleExports, json }: CssModuleFileContents
   ) {
     cssModulesContent += css;
-    cssModulesJson = { ...cssModulesJson, ...json };
     cssModulesMap = {
       ...cssModulesMap,
       [filePath]: {
         css,
         json,
+        moduleExports,
+        dependencies,
         // TODO: Implement sourcemaps
         sourceMap: null,
       },

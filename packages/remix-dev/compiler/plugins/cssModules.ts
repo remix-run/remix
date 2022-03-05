@@ -1,5 +1,3 @@
-import postcss from "postcss";
-import cssModules from "postcss-modules";
 import path from "path";
 import chalk from "chalk";
 import * as fse from "fs-extra";
@@ -13,9 +11,6 @@ import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
 const suffixMatcher = /\.module\.css?$/;
 
-// TODO: Remove when finished comparing Parcel + PostCSS
-const USE_PARCEL = true;
-
 let parcelTransform: (opts: ParcelTransformOptions) => ParcelTransformResult;
 const decoder = new TextDecoder();
 
@@ -27,22 +22,18 @@ export function cssModulesPlugin(
   config: RemixConfig,
   handleProcessedCss: (
     filePath: string,
-    css: string,
-    sourceMap: string | null,
-    json: CssModuleClassMap
+    { css, sourceMap, json }: CssModuleFileContents
   ) => void
 ): esbuild.Plugin {
   return {
     name: "css-modules",
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, async (args) => {
-        if (USE_PARCEL) {
-          try {
-            if (!parcelTransform) {
-              parcelTransform = (await import("@parcel/css")).default.transform;
-              console.log({ parcelTransform });
-              console.warn(
-                chalk.yellow(`
+        try {
+          if (!parcelTransform) {
+            parcelTransform = (await import("@parcel/css")).default.transform;
+            console.warn(
+              chalk.yellow(`
 --------------------------------------------------------------------------------
 
 CSS Modules support in Remix is experimental. It's implementation may change.
@@ -52,18 +43,22 @@ https://github.com/remix-run/remix/issues/new?labels=bug&template=bug_report.yml
 
 --------------------------------------------------------------------------------
 `)
-              );
-            }
-          } catch (_) {
-            throw _;
-            //           throw Error(
-            //             `A CSS Modules file was imported, but the required \`@remix-run/css-modules\` dependency was not found.
-
-            // Install the dependency by running the following command and restart your app.
-
-            // npm install @remix-run/css-modules`
-            //           );
+            );
           }
+        } catch (_) {
+          console.error(`
+--------------------------------------------------------------------------------
+
+A CSS Modules file was imported, but the required \`@remix-run/css-modules\`
+dependency was not found.
+
+Install the dependency by running the following command, then restart your app.
+
+    npm install @remix-run/css-modules
+
+--------------------------------------------------------------------------------
+`);
+          throw _;
         }
 
         let path = getResolvedFilePath(config, args);
@@ -76,13 +71,10 @@ https://github.com/remix-run/remix/issues/new?labels=bug&template=bug_report.yml
 
       build.onLoad({ filter: suffixMatcher }, async (args) => {
         try {
-          let { css, json, sourceMap } = await processCssCached(
-            config,
-            args.path
-          );
-          handleProcessedCss(args.path, css, sourceMap, json);
+          let processed = await processCssCached(config, args.path);
+          handleProcessedCss(args.path, processed);
           return {
-            contents: JSON.stringify(json),
+            contents: JSON.stringify(processed.json),
             loader: "json",
           };
         } catch (err: any) {
@@ -127,36 +119,6 @@ export function cssModulesFakerPlugin(
   };
 }
 
-export function serverCssModulesStylesheetPlugin(): esbuild.Plugin {
-  let filter = /^@remix-run\/css-modules$/;
-  return {
-    name: "server-css-modules-stylesheet",
-    async setup(build) {
-      build.onResolve({ filter }, ({ path }) => {
-        return {
-          path: path + "/server",
-          namespace: "server-css-modules-stylesheet",
-        };
-      });
-    },
-  };
-}
-
-export function browserCssModulesStylesheetPlugin(): esbuild.Plugin {
-  let filter = /^@remix-run\/css-modules$/;
-  return {
-    name: "browser-css-modules-stylesheet",
-    async setup(build) {
-      build.onResolve({ filter }, ({ path }) => {
-        return {
-          path: path + "/browser",
-          namespace: "browser-css-modules-stylesheet",
-        };
-      });
-    },
-  };
-}
-
 async function processCssCached(
   config: RemixConfig,
   filePath: string
@@ -167,7 +129,6 @@ async function processCssCached(
   // Use an on-disk cache to speed up dev server boot.
   let processedCssPromise = (async function () {
     let key = file + ".cssmodule";
-
     let cached: (CssModuleFileContents & { hash: string }) | null = null;
     try {
       cached = await cache.getJson(config.cacheDirectory, key);
@@ -176,52 +137,21 @@ async function processCssCached(
     }
 
     if (!cached || cached.hash !== hash) {
-      let { css, json, sourceMap } = await processCss(config, filePath);
-      cached = { hash, css, json, sourceMap };
-
+      let processed = await processCss(config, filePath);
+      cached = { hash, ...processed };
       try {
         await cache.putJson(config.cacheDirectory, key, cached);
       } catch (error) {
         // Ignore cache put errors.
       }
     }
-
     return cached;
   })();
 
   return processedCssPromise;
 }
 
-async function processCssWithPostCss(
-  file: string
-): Promise<CssModuleFileContents> {
-  let json: CssModuleClassMap = {};
-  let source = await fse.readFile(file, "utf-8");
-  let { css, map: mapRaw } = await postcss([
-    cssModules({
-      localsConvention: "camelCase",
-      // [name]  -> CSS modules file-name (button.module.css -> button-module)
-      // [local] -> locally assigned classname
-      // example:
-      //   in button.module.css: .button {}
-      //   generated classname:  .button-module__button_wtIDeq {}
-      generateScopedName: "[name]__[local]_[hash:base64:8]",
-      hashPrefix: "remix",
-      getJSON(_, data) {
-        json = { ...data };
-        return json;
-      },
-    }),
-  ]).process(source, {
-    from: undefined,
-    map: true,
-  });
-
-  let sourceMap = mapRaw ? mapRaw.toString() : null;
-  return { css, json, sourceMap };
-}
-
-async function processCssWithParcel(
+async function processCss(
   config: RemixConfig,
   file: string
 ): Promise<CssModuleFileContents> {
@@ -233,18 +163,9 @@ async function processCssWithParcel(
     code: source,
     cssModules: true,
     minify: process.env.NODE_ENV === "production",
-    // Users will not be able to @import other stylesheets in modules with this
-    // limitation, nor can you compose classes from outside stylesheets as we'd
-    // have to decide where and how we want to handle duplicate dependencies in
-    // various stylesheets. This is not a feature in CSS Modules specifically,
-    // but other frameworks may support it. We might want to do more research
-    // here, but in the mean time any dependencies should be imported as a
-    // separate global stylesheet and loaded before the CSS Modules stylesheet.
     analyzeDependencies: true,
     sourceMap: true,
-    drafts: {
-      nesting: true,
-    },
+    drafts: { nesting: true },
   });
 
   let parcelExports = res.exports || {};
@@ -260,16 +181,13 @@ async function processCssWithParcel(
   let css = decoder.decode(res.code);
   let sourceMap = res.map ? decoder.decode(res.map) : null;
 
-  return { css, json, sourceMap };
-}
-
-async function processCss(
-  config: RemixConfig,
-  file: string
-): Promise<CssModuleFileContents> {
-  return await (USE_PARCEL
-    ? processCssWithParcel(config, file)
-    : processCssWithPostCss(file));
+  return {
+    css,
+    json,
+    sourceMap,
+    moduleExports: res.exports || {},
+    dependencies: res.dependencies || [],
+  };
 }
 
 function getResolvedFilePath(
@@ -302,10 +220,11 @@ export function getCssModulesFileReferences(
  * When a user composes classnames in CSS modules, the value returned for the
  * JSON map is a concat'd version of all the classname strings composed. Note
  * that the user may compose classnames referenced in other CSS module files,
- * but that will require us to juggle dependencies and we're not quite ready for
- * that yet. Will revisit that later.
+ * but that will require us to juggle dependencies which is a little tricky with
+ * the current build since we don't know for sure if that dependency has been
+ * processed yet. Coming back to this.
  */
-function getComposedClassNames(name: string, composes: ParcelComposeData[]) {
+function getComposedClassNames(name: string, composes: CssModuleReference[]) {
   return composes.reduce((prev, cur) => {
     // skip dependencies for now
     if (cur.type === "dependency") return prev;
@@ -315,8 +234,10 @@ function getComposedClassNames(name: string, composes: ParcelComposeData[]) {
 
 export interface CssModuleFileContents {
   css: string;
-  json: CssModuleClassMap;
   sourceMap: string | null;
+  json: CssModuleClassMap;
+  moduleExports: CssModuleExports;
+  dependencies: CssModuleDependency[];
 }
 
 export type CssModuleFileMap = Record<string, CssModuleFileContents>;
@@ -329,54 +250,97 @@ export interface CssModulesResults {
 
 export type CssModuleClassMap = Record<string, string>;
 
-// Copy/pasted some types to avoid imports since we're doing that dynamically
+// Copy/pasted some types from @parcel/css to avoid dependency issues
 interface ParcelTransformOptions {
   filename: string;
   code: Buffer;
   minify?: boolean;
   sourceMap?: boolean;
-  targets?: ParcelTargets;
   cssModules?: boolean;
   drafts?: { [key: string]: boolean };
   analyzeDependencies?: boolean;
   unusedSymbols?: string[];
 }
 
-interface ParcelTargets {
-  android?: number;
-  chrome?: number;
-  edge?: number;
-  firefox?: number;
-  ie?: number;
-  ios_saf?: number;
-  opera?: number;
-  safari?: number;
-  samsung?: number;
-}
-
 interface ParcelTransformResult {
   code: Buffer;
   map: Buffer | void;
-  exports: ParcelCSSModuleExports | void;
-  dependencies: any[] | void;
+  exports: CssModuleExports | void;
+  dependencies: CssModuleDependency[] | void;
 }
 
-type ParcelCSSModuleExports = {
-  [name: string]: ParcelCSSModuleExport;
+/**
+ * Many of these types were copied from @parcel/css and modified slightly for
+ * our needs. Some of this data will end up in the assets manifest but we don't
+ * want more than we need.
+ */
+
+type CssModuleExports = {
+  [name: string]: CssModuleExport;
 };
 
-interface ParcelCSSModuleExport {
+interface CssModuleExport {
   name: string;
-  isReferenced: boolean;
-  composes: ParcelComposeData[];
+  composes: CssModuleReference[];
 }
 
-interface ParcelComposeData {
-  type: "local" | "global" | "dependency";
+type CssModuleReference =
+  | LocalCssModuleReference
+  | GlobalCssModuleReference
+  | DependencyCssModuleReference;
+
+interface LocalCssModuleReference {
+  type: "local";
   name: string;
 }
 
-interface ParcelComposeData {
-  type: "local" | "global" | "dependency";
+interface GlobalCssModuleReference {
+  type: "global";
   name: string;
+}
+
+interface DependencyCssModuleReference {
+  type: "dependency";
+  name: string;
+  /** The dependency specifier for the referenced file. */
+  specifier: string;
+}
+
+type CssModuleDependency = CssModuleImportDependency | CssModuleUrlDependency;
+
+interface CssModuleImportDependency {
+  type: "import";
+  /** The url of the `@import` dependency. */
+  url: string;
+  /** The media query for the `@import` rule. */
+  media: string | null;
+  /** The `supports()` query for the `@import` rule. */
+  supports: string | null;
+  /** The source location where the `@import` rule was found. */
+  loc: CssModuleSourceLocation;
+}
+
+interface CssModuleUrlDependency {
+  type: "url";
+  /** The url of the dependency. */
+  url: string;
+  /** The source location where the `url()` was found. */
+  loc: CssModuleSourceLocation;
+  /** The placeholder that the url was replaced with. */
+  placeholder: string;
+}
+
+interface CssModuleSourceLocation {
+  /** The file path in which the dependency exists. */
+  filePath: string;
+  /** The start location of the dependency. */
+  start: {
+    line: number;
+    column: number;
+  };
+  /** The end location (inclusive) of the dependency. */
+  end: {
+    line: number;
+    column: number;
+  };
 }
