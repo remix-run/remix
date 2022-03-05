@@ -1,3 +1,8 @@
 .button {
   color: white;
 }
+
+.inner {
+  composes: button;
+  font-weight: bold;
+}

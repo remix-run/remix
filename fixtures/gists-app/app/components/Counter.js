@@ -10,7 +10,7 @@ export default function Counter() {
       onClick={() => setCount(count + 1)}
       className={styles.button}
     >
-      {`Clicked ${count}`}
+      <span className={styles.inner}>{`Clicked ${count}`}</span>
     </button>
   );
 }
