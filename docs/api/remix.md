@@ -59,7 +59,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 ```tsx
 <>
-  <Link /> // defaults to "none"
+  <Link /> {/* defaults to "none" */}
   <Link prefetch="none" />
   <Link prefetch="intent" />
   <Link prefetch="render" />

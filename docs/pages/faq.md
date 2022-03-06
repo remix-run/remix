@@ -181,10 +181,10 @@ If you still want to submit nested structures as well, you can use non-standard 
 
 ```tsx
 <>
-  // arrays with []
+  {/* arrays with [] */}
   <input name="category[]" value="comedy" />
   <input name="category[]" value="comedy" />
-  // nested structures parentKey[childKey]
+  {/* nested structures parentKey[childKey] */}
   <input name="user[name]" value="Ryan" />
 </>
 ```
