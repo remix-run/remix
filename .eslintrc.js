@@ -11,6 +11,7 @@ module.exports = {
       files: ["**/*.md/*.js", "**/*.md/*.jsx", "**/*.md/*.ts", "**/*.md/*.tsx"],
       rules: {
         "no-unreachable": "off",
+        "prefer-const": "error",
       },
     },
     {
