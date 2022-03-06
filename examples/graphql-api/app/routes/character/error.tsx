@@ -49,7 +49,7 @@ export const loader: LoaderFunction = async (_args) => {
  * @description This route triggers an error of type "ApolloError" which is
  * an array of errors coming back from the GraphQL API.
  */
-export default function () {
+export default function CharacterError() {
   const loader = useLoaderData<LoaderData>();
 
   return (
