@@ -49,3 +49,5 @@ the '/realtime' route renders a "like" button that keep track of number of likes
 - [useSubscription – react-supabase](https://react-supabase.vercel.app/documentation/realtime/use-subscription)
 - [How to create a real-time UI with NextJS and Supabase](https://pablopunk.com/posts/how-to-create-a-real-time-ui-with-nextjs-and-supabase)
 - [Supabase Client | Supabase](https://supabase.com/docs/reference/javascript/supabase-client)
+- [Refresh Route Data API · Discussion #1996 · remix-run/remix](https://github.com/remix-run/remix/discussions/1996)
+- [Realtime – Vercel Docs](https://vercel.com/docs/concepts/solutions/realtime)
