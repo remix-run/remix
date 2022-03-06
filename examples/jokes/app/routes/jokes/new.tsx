@@ -142,6 +142,11 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p className="form-validation-error" role="alert">
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
