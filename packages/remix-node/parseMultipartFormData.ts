@@ -77,10 +77,6 @@ export async function internalParseFormData(
             } catch (error: any) {
               // Emit error to busboy to bail early if possible
               busboy.emit("error", error);
-              // It's possible that the handler is doing stuff and fails
-              // *after* busboy has finished. Rethrow the error for surfacing
-              // in the Promise.all(fileWorkQueue) below.
-              throw error;
             } finally {
               filestream.resume();
             }
