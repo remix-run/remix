@@ -24,6 +24,9 @@ async function run() {
 
   let prerelease = semver.prerelease(taggedVersion);
   let tag = prerelease ? prerelease[0] : "latest";
+  
+  // Publish eslint config directly from the package directory
+   publish(path.join(packageDir, "remix-eslint-config"), tag);
 
   // Publish all @remix-run/* packages
   for (let name of [
