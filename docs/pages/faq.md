@@ -83,8 +83,8 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
 export async function action({ request }) {
-  let formData = await request.formData();
-  let action = formData.get("_action");
+  const formData = await request.formData();
+  const action = formData.get("_action");
   switch (action) {
     case "update": {
       // do your update
@@ -101,7 +101,7 @@ export async function action({ request }) {
 }
 
 export default function Projects() {
-  let project = useLoaderData();
+  const project = useLoaderData();
   return (
     <>
       <h2>Update Project</h2>
@@ -176,7 +176,7 @@ Each checkbox has the name: "category". Since `FormData` can have multiple value
 ```tsx
 export async function action({ request }) {
   const formData = await request.formData();
-  let categories = formData.getAll("category");
+  const categories = formData.getAll("category");
   // ["comedy", "music"]
 }
 ```
@@ -204,10 +204,10 @@ import queryString from "query-string";
 export async function action({ request }) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
-  let formQueryString = await request.text();
+  const formQueryString = await request.text();
 
   // parse it into an object
-  let obj = queryString.parse(formQueryString);
+  const obj = queryString.parse(formQueryString);
 }
 ```
 
@@ -225,8 +225,8 @@ And then parse it in the action:
 
 ```tsx
 export async function action({ request }) {
-  let formData = await request.formData();
-  let obj = JSON.parse(formData.get("json"));
+  const formData = await request.formData();
+  const obj = JSON.parse(formData.get("json"));
 }
 ```
 
