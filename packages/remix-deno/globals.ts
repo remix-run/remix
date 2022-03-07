@@ -1,3 +1,4 @@
+/* eslint-disable prefer-let/prefer-let */
 import { sign, unsign } from "./cookieSigning";
 
 declare global {

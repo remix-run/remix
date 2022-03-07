@@ -1,7 +1,7 @@
+import * as React from "react";
 // TODO: We eventually might not want to import anything directly from `history`
 // and leverage `react-router` here instead
 import type { Location } from "history";
-import React, { useContext } from "react";
 
 import type {
   CatchBoundaryComponent,
@@ -122,7 +122,7 @@ let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
 export function useCatch<
   Result extends ThrownResponse = ThrownResponse
 >(): Result {
-  return useContext(RemixCatchContext) as Result;
+  return React.useContext(RemixCatchContext) as Result;
 }
 
 type RemixCatchBoundaryProps = React.PropsWithChildren<{

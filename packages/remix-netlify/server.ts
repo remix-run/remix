@@ -100,9 +100,9 @@ export function createRemixHeaders(
 ): NodeHeaders {
   let headers = new NodeHeaders();
 
-  for (const [key, values] of Object.entries(requestHeaders)) {
+  for (let [key, values] of Object.entries(requestHeaders)) {
     if (values) {
-      for (const value of values) {
+      for (let value of values) {
         headers.append(key, value);
       }
     }
@@ -150,7 +150,7 @@ export async function sendRemixResponse(
   let isBase64Encoded = false;
 
   if (isBinary) {
-    const blob = await response.arrayBuffer();
+    let blob = await response.arrayBuffer();
     body = Buffer.from(blob).toString("base64");
     isBase64Encoded = true;
   } else {

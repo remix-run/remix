@@ -9,8 +9,10 @@ export type InternalUnsignFunctionDoNotUseMe = (
 ) => Promise<string | false>;
 
 declare global {
+  /* eslint-disable prefer-let/prefer-let */
   var sign: InternalSignFunctionDoNotUseMe;
   var unsign: InternalUnsignFunctionDoNotUseMe;
+  /* eslint-enable prefer-let/prefer-let */
 }
 
 // TODO: Once node v16 is available on AWS we should use the globally provided

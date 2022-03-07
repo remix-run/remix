@@ -26,9 +26,9 @@ export let loader: LoaderFunction = async ({ request }) => {
 };
 
 function reloadCss() {
-  var links = document.getElementsByTagName("link");
-  for (var cl in links) {
-    var link = links[cl];
+  let links = document.getElementsByTagName("link");
+  for (let cl in links) {
+    let link = links[cl];
     if (link.rel === "stylesheet") link.href += "";
   }
 }

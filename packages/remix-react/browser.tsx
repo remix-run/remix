@@ -10,9 +10,11 @@ import type { EntryContext } from "./entry";
 import type { RouteModules } from "./routeModules";
 
 declare global {
+  /* eslint-disable prefer-let/prefer-let */
   var __remixContext: EntryContext;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  /* eslint-enable prefer-let/prefer-let */
 }
 
 export interface RemixBrowserProps {}

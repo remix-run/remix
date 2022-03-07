@@ -74,7 +74,7 @@ describe("vercel createRequestHandler", () => {
     // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
     it("handles body as stream", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const stream = Readable.from("hello world");
+        let stream = Readable.from("hello world");
         return new NodeResponse(stream, { status: 200 }) as unknown as Response;
       });
 
@@ -100,7 +100,7 @@ describe("vercel createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
         headers.append(
           "Set-Cookie",
           "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
