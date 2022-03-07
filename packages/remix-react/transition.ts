@@ -221,6 +221,12 @@ type FetcherStates<TData = any> = {
     submission: ActionSubmission;
     data: TData;
   };
+  LoadingActionRedirect: {
+    state: "loading";
+    type: "actionRedirect";
+    submission: ActionSubmission;
+    data: undefined;
+  };
   Loading: {
     state: "loading";
     type: "normalLoad";
@@ -406,6 +412,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let incrementingLoadId = 0;
   let navigationLoadId = -1;
   let fetchReloadIds = new Map<string, number>();
+  let fetchRedirectIds = new Set<string>();
 
   let matches = matchClientRoutes(routes, init.location);
 
@@ -468,6 +475,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     console.debug(`[transition] deleting fetcher (key: ${key})`);
     if (fetchControllers.has(key)) abortFetcher(key);
     fetchReloadIds.delete(key);
+    fetchRedirectIds.delete(key);
     state.fetchers.delete(key);
   }
 
@@ -620,14 +628,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
         isRedirect: true,
         type: "fetchAction",
       };
+      fetchRedirectIds.add(key);
       init.onRedirect(result.value.location, locationState);
-      let doneFetcher: FetcherStates["Done"] = {
-        state: "idle",
-        type: "done",
-        data: result.value,
-        submission: undefined,
+      let loadingFetcher: FetcherStates["LoadingActionRedirect"] = {
+        state: "loading",
+        type: "actionRedirect",
+        submission,
+        data: undefined,
       };
-      setFetcher(key, doneFetcher);
+      setFetcher(key, loadingFetcher);
       update({ fetchers: new Map(state.fetchers) });
       return;
     }
@@ -1261,6 +1270,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
+    markFetchRedirectsDone();
+
     let abortedIds = abortStaleFetchLoads(navigationLoadId);
     if (abortedIds) {
       console.debug(
@@ -1297,6 +1308,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
     invariant(controller, `Expected fetch controller: ${key}`);
     controller.abort();
     fetchControllers.delete(key);
+  }
+
+  function markFetchRedirectsDone(): void {
+    let doneKeys = [];
+    for (let key of fetchRedirectIds) {
+      let fetcher = state.fetchers.get(key);
+      invariant(fetcher, `Expected fetcher: ${key}`);
+      if (fetcher.type === "actionRedirect") {
+        fetchRedirectIds.delete(key);
+        doneKeys.push(key);
+      }
+    }
+    markFetchersDone(doneKeys);
   }
 
   return {
