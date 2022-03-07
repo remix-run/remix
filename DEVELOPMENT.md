@@ -97,3 +97,33 @@ git commit -m "fix: squashed a super gnarly bug"
 yarn run version patch
 yarn run publish
 ```
+
+## Local Development Tips and Tricks
+
+### Environment Variables
+
+This repository supports handful of environment variables to streamline the local development/testing process.
+
+**`REMIX_DEBUG`**
+
+By default, the Remix `rollup` build will strip any `console.debug` calls to avoid cluttering up the console during application usage. These `console.debug` statements can be preserved by setting `REMIX_DEBUG=true` during your local build.
+
+```sh
+REMIX_DEBUG=true yarn watch
+```
+
+**`REMIX_LOCAL_DEV_OUTPUT_DIRECTORY`**
+
+When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you just need to restart your local Remix application server to pick up the changes.
+
+```sh
+# Tab 1 - create an run a local remix application
+npx create-remix
+cd my-remix-app
+npm run dev
+
+# Tab 2 - remix repository
+REMIX_LOCAL_DEV_OUTPUT_DIRECTORY=../my-remix-app yarn watch
+```
+
+Now - any time you make changes in the Remix repository, the they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.

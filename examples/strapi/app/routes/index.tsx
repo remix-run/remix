@@ -1,5 +1,5 @@
+import * as React from "react";
 import type { LoaderFunction } from "remix";
-import React from "react";
 import { useLoaderData } from "remix";
 import { marked } from "marked";
 

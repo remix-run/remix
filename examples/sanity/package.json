@@ -15,7 +15,6 @@
     "@sanity/block-content-to-react": "^3.0.0",
     "@sanity/groq-store": "^0.2.2",
     "@sanity/image-url": "^1.0.1",
-    "dotenv": "^10.0.0",
     "picosanity": "^3.0.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

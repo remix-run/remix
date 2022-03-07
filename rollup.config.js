@@ -10,9 +10,9 @@ function isBareModuleId(id) {
 
 let executableBanner = "#!/usr/bin/env node\n";
 
-function createBanner(libraryName, version) {
+function createBanner(packageName, version) {
   return `/**
- * ${libraryName} v${version}
+ * ${packageName} v${version}
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -23,15 +23,15 @@ function createBanner(libraryName, version) {
  */`;
 }
 
-function getVersion(sourceDir) {
-  return require(`./${sourceDir}/package.json`).version;
+function getVersion(packageDir) {
+  return require(`./${packageDir}/package.json`).version;
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
 function createRemix() {
-  let SOURCE_DIR = "packages/create-remix";
-  let OUTPUT_DIR = "build/node_modules/create-remix";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/create-remix";
+  let outputDir = "build/node_modules/create-remix";
+  let version = getVersion(sourceDir);
 
   return [
     {
@@ -39,13 +39,13 @@ function createRemix() {
         return true;
       },
       input: [
-        `${SOURCE_DIR}/cli.ts`,
-        `${SOURCE_DIR}/index.ts`,
-        `${SOURCE_DIR}/utils.ts`
+        `${sourceDir}/cli.ts`,
+        `${sourceDir}/index.ts`,
+        `${sourceDir}/utils.ts`,
       ],
       output: {
         format: "cjs",
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         banner: executableBanner + createBanner("create-remix", version),
       },
       plugins: [
@@ -57,12 +57,12 @@ function createRemix() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
             {
-              src: `${SOURCE_DIR}/templates/*`,
-              dest: `${OUTPUT_DIR}/templates`,
+              src: `${sourceDir}/templates/*`,
+              dest: `${outputDir}/templates`,
             },
           ],
         }),
@@ -73,19 +73,19 @@ function createRemix() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remix() {
-  let SOURCE_DIR = "packages/remix";
-  let OUTPUT_DIR = "build/node_modules/remix";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix";
+  let outputDir = "build/node_modules/remix";
+  let version = getVersion(sourceDir);
 
   return [
     {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         format: "cjs",
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         banner: createBanner("remix", version),
       },
       plugins: [
@@ -96,9 +96,9 @@ function remix() {
         }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
       ],
@@ -107,10 +107,10 @@ function remix() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("remix", version),
-        dir: `${OUTPUT_DIR}/esm`,
+        dir: `${outputDir}/esm`,
         format: "esm",
       },
       plugins: [
@@ -126,9 +126,9 @@ function remix() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixDev() {
-  let SOURCE_DIR = "packages/remix-dev";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/dev";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-dev";
+  let outputDir = "build/node_modules/@remix-run/dev";
+  let version = getVersion(sourceDir);
 
   return [
     {
@@ -136,14 +136,14 @@ function remixDev() {
         return isBareModuleId(id);
       },
       input: [
-        `${SOURCE_DIR}/cli/commands.ts`,
-        `${SOURCE_DIR}/compiler.ts`,
-        `${SOURCE_DIR}/config.ts`,
-        `${SOURCE_DIR}/index.ts`,
+        `${sourceDir}/cli/commands.ts`,
+        `${sourceDir}/compiler.ts`,
+        `${sourceDir}/config.ts`,
+        `${sourceDir}/index.ts`,
       ],
       output: {
         banner: createBanner("@remix-run/dev", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
         preserveModules: true,
         exports: "named",
@@ -157,12 +157,12 @@ function remixDev() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
             {
-              src: `${SOURCE_DIR}/compiler/shims`,
-              dest: `${OUTPUT_DIR}/compiler`,
+              src: `${sourceDir}/compiler/shims`,
+              dest: `${outputDir}/compiler`,
             },
           ],
         }),
@@ -183,10 +183,10 @@ function remixDev() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/cli.ts`,
+      input: `${sourceDir}/cli.ts`,
       output: {
         banner: executableBanner + createBanner("@remix-run/dev", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
       },
       plugins: [
@@ -202,10 +202,10 @@ function remixDev() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/server-build.ts`,
+      input: `${sourceDir}/server-build.ts`,
       output: {
         banner: executableBanner + createBanner("@remix-run/dev", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
       },
       plugins: [
@@ -222,19 +222,19 @@ function remixDev() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServerRuntime() {
-  let SOURCE_DIR = "packages/remix-server-runtime";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/server-runtime";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-server-runtime";
+  let outputDir = "build/node_modules/@remix-run/server-runtime";
+  let version = getVersion(sourceDir);
 
   return [
     {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/server-runtime", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
         preserveModules: true,
         exports: "named",
@@ -248,9 +248,9 @@ function remixServerRuntime() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
       ],
@@ -259,10 +259,10 @@ function remixServerRuntime() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/server-runtime", version),
-        dir: `${OUTPUT_DIR}/esm`,
+        dir: `${outputDir}/esm`,
         format: "esm",
         preserveModules: true,
       },
@@ -279,10 +279,10 @@ function remixServerRuntime() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/server.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/server-runtime", version),
-        dir: `${OUTPUT_DIR}/magicExports`,
+        dir: `${outputDir}/magicExports`,
         format: "cjs",
       },
       plugins: [
@@ -297,10 +297,10 @@ function remixServerRuntime() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/server.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/server-runtime", version),
-        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        dir: `${outputDir}/magicExports/esm`,
         format: "esm",
       },
       plugins: [
@@ -316,19 +316,19 @@ function remixServerRuntime() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixNode() {
-  let SOURCE_DIR = "packages/remix-node";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/node";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-node";
+  let outputDir = "build/node_modules/@remix-run/node";
+  let version = getVersion(sourceDir);
 
   return [
     {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/node", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
         preserveModules: true,
         exports: "named",
@@ -342,9 +342,9 @@ function remixNode() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
       ],
@@ -353,10 +353,10 @@ function remixNode() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/node", version),
-        dir: `${OUTPUT_DIR}/magicExports`,
+        dir: `${outputDir}/magicExports`,
         format: "cjs",
       },
       plugins: [
@@ -371,10 +371,10 @@ function remixNode() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/node", version),
-        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        dir: `${outputDir}/magicExports/esm`,
         format: "esm",
       },
       plugins: [
@@ -390,19 +390,19 @@ function remixNode() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflareWorkers() {
-  let SOURCE_DIR = "packages/remix-cloudflare-workers";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/cloudflare-workers";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-cloudflare-workers";
+  let outputDir = "build/node_modules/@remix-run/cloudflare-workers";
+  let version = getVersion(sourceDir);
 
   return [
     {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-workers", version),
-        dir: `${OUTPUT_DIR}/magicExports`,
+        dir: `${outputDir}/magicExports`,
         format: "cjs",
       },
       plugins: [
@@ -417,10 +417,10 @@ function remixCloudflareWorkers() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-workers", version),
-        dir: `${OUTPUT_DIR}/esm`,
+        dir: `${outputDir}/esm`,
         format: "esm",
         preserveModules: true,
       },
@@ -437,10 +437,10 @@ function remixCloudflareWorkers() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-workers", version),
-        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        dir: `${outputDir}/magicExports/esm`,
         format: "esm",
       },
       plugins: [
@@ -456,19 +456,19 @@ function remixCloudflareWorkers() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflarePages() {
-  let SOURCE_DIR = "packages/remix-cloudflare-pages";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/cloudflare-pages";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-cloudflare-pages";
+  let outputDir = "build/node_modules/@remix-run/cloudflare-pages";
+  let version = getVersion(sourceDir);
 
   return [
     {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-pages", version),
-        dir: `${OUTPUT_DIR}/magicExports`,
+        dir: `${outputDir}/magicExports`,
         format: "cjs",
       },
       plugins: [
@@ -483,10 +483,10 @@ function remixCloudflarePages() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-pages", version),
-        dir: `${OUTPUT_DIR}/esm`,
+        dir: `${outputDir}/esm`,
         format: "esm",
         preserveModules: true,
       },
@@ -503,10 +503,10 @@ function remixCloudflarePages() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/cloudflare-pages", version),
-        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        dir: `${outputDir}/magicExports/esm`,
         format: "esm",
       },
       plugins: [
@@ -520,19 +520,21 @@ function remixCloudflarePages() {
   ];
 }
 
+/** @returns {import("rollup").RollupOptions[]} */
 function remixDeno() {
-  let SOURCE_DIR = "packages/remix-deno";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/deno";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-deno";
+  let outputDir = "build/node_modules/@remix-run/deno";
+  let version = getVersion(sourceDir);
+
   return [
     {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/deno", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "esm",
         preserveModules: true,
       },
@@ -545,9 +547,9 @@ function remixDeno() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
       ],
@@ -556,10 +558,10 @@ function remixDeno() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/magicExports/platform.ts`,
+      input: `${sourceDir}/magicExports/remix.ts`,
       output: {
         banner: createBanner("@remix-run/deno", version),
-        dir: `${OUTPUT_DIR}/magicExports/esm`,
+        dir: `${outputDir}/magicExports/esm`,
         format: "esm",
       },
       plugins: [
@@ -573,25 +575,24 @@ function remixDeno() {
   ];
 }
 
-/** @return {import("rollup").RollupOptions[]} */
-function getServerConfig(name) {
-  let LIBRARY_NAME = `@remix-run/${name}`;
-  let SOURCE_DIR = `packages/remix-${name}`;
-  let OUTPUT_DIR = `build/node_modules/${LIBRARY_NAME}`;
-  let HAS_MAGIC_EXPORTS = fse.existsSync(
-    `${SOURCE_DIR}/magicExports/platform.ts`
-  );
-  let version = getVersion(SOURCE_DIR);
+/** @returns {import("rollup").RollupOptions[]} */
+function getAdapterConfig(adapterName) {
+  let packageName = `@remix-run/${adapterName}`;
+  let sourceDir = `packages/remix-${adapterName}`;
+  let outputDir = `build/node_modules/${packageName}`;
+  let version = getVersion(sourceDir);
+
+  let hasMagicExports = fse.existsSync(`${sourceDir}/magicExports/remix.ts`);
 
   return [
     {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${SOURCE_DIR}/index.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
-        banner: createBanner(LIBRARY_NAME, version),
-        dir: OUTPUT_DIR,
+        banner: createBanner(packageName, version),
+        dir: outputDir,
         format: "cjs",
         preserveModules: true,
         exports: "auto",
@@ -605,23 +606,23 @@ function getServerConfig(name) {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
       ],
     },
-    ...(HAS_MAGIC_EXPORTS
+    ...(hasMagicExports
       ? [
           {
             external() {
               return true;
             },
-            input: `${SOURCE_DIR}/magicExports/platform.ts`,
+            input: `${sourceDir}/magicExports/remix.ts`,
             output: {
-              banner: createBanner(LIBRARY_NAME, version),
-              dir: `${OUTPUT_DIR}/magicExports`,
+              banner: createBanner(packageName, version),
+              dir: `${outputDir}/magicExports`,
               format: "cjs",
             },
             plugins: [
@@ -636,10 +637,10 @@ function getServerConfig(name) {
             external() {
               return true;
             },
-            input: `${SOURCE_DIR}/magicExports/platform.ts`,
+            input: `${sourceDir}/magicExports/remix.ts`,
             output: {
-              banner: createBanner(LIBRARY_NAME, version),
-              dir: `${OUTPUT_DIR}/magicExports/esm`,
+              banner: createBanner(packageName, version),
+              dir: `${outputDir}/magicExports/esm`,
               format: "esm",
             },
             plugins: [
@@ -658,32 +659,32 @@ function getServerConfig(name) {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServerAdapters() {
   return [
-    ...getServerConfig("architect"),
-    ...getServerConfig("cloudflare-pages"),
-    ...getServerConfig("cloudflare-workers"),
-    ...getServerConfig("express"),
-    ...getServerConfig("vercel"),
-    ...getServerConfig("netlify"),
+    ...getAdapterConfig("architect"),
+    ...getAdapterConfig("cloudflare-pages"),
+    ...getAdapterConfig("cloudflare-workers"),
+    ...getAdapterConfig("express"),
+    ...getAdapterConfig("netlify"),
+    ...getAdapterConfig("vercel"),
   ];
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixReact() {
-  let SOURCE_DIR = "packages/remix-react";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/react";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-react";
+  let outputDir = "build/node_modules/@remix-run/react";
+  let version = getVersion(sourceDir);
 
-  /** @type {import("rollup").RollupOptions} */
   // This CommonJS build of remix-react is for node; both for use in running our
   // server and for 3rd party tools that work with node.
+  /** @type {import("rollup").RollupOptions} */
   let remixReactCJS = {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${SOURCE_DIR}/index.tsx`,
+    input: `${sourceDir}/index.tsx`,
     output: {
       banner: createBanner("@remix-run/react", version),
-      dir: OUTPUT_DIR,
+      dir: outputDir,
       format: "cjs",
       preserveModules: true,
       exports: "auto",
@@ -697,9 +698,9 @@ function remixReact() {
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copy({
         targets: [
-          { src: `LICENSE.md`, dest: OUTPUT_DIR },
-          { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-          { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+          { src: `LICENSE.md`, dest: outputDir },
+          { src: `${sourceDir}/package.json`, dest: outputDir },
+          { src: `${sourceDir}/README.md`, dest: outputDir },
         ],
       }),
     ],
@@ -711,10 +712,10 @@ function remixReact() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${SOURCE_DIR}/index.tsx`,
+    input: `${sourceDir}/index.tsx`,
     output: {
       banner: createBanner("@remix-run/react", version),
-      dir: `${OUTPUT_DIR}/esm`,
+      dir: `${outputDir}/esm`,
       format: "esm",
       preserveModules: true,
     },
@@ -728,15 +729,15 @@ function remixReact() {
     ],
   };
 
-  /** @returns {import("rollup").RollupOptions[]} */
+  /** @type {import("rollup").RollupOptions[]} */
   let remixReactMagicExportsCJS = {
     external() {
       return true;
     },
-    input: `${SOURCE_DIR}/magicExports/client.ts`,
+    input: `${sourceDir}/magicExports/remix.ts`,
     output: {
       banner: createBanner("@remix-run/react", version),
-      dir: `${OUTPUT_DIR}/magicExports`,
+      dir: `${outputDir}/magicExports`,
       format: "cjs",
     },
     plugins: [
@@ -748,15 +749,15 @@ function remixReact() {
     ],
   };
 
-  /** @returns {import("rollup").RollupOptions[]} */
+  /** @type {import("rollup").RollupOptions[]} */
   let remixReactMagicExportsESM = {
     external() {
       return true;
     },
-    input: `${SOURCE_DIR}/magicExports/client.ts`,
+    input: `${sourceDir}/magicExports/remix.ts`,
     output: {
       banner: createBanner("@remix-run/react", version),
-      dir: `${OUTPUT_DIR}/magicExports/esm`,
+      dir: `${outputDir}/magicExports/esm`,
       format: "esm",
     },
     plugins: [
@@ -778,19 +779,19 @@ function remixReact() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServe() {
-  let SOURCE_DIR = "packages/remix-serve";
-  let OUTPUT_DIR = "build/node_modules/@remix-run/serve";
-  let version = getVersion(SOURCE_DIR);
+  let sourceDir = "packages/remix-serve";
+  let outputDir = "build/node_modules/@remix-run/serve";
+  let version = getVersion(sourceDir);
 
   return [
     {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${SOURCE_DIR}/index.ts`, `${SOURCE_DIR}/env.ts`],
+      input: [`${sourceDir}/index.ts`, `${sourceDir}/env.ts`],
       output: {
         banner: createBanner("@remix-run/serve", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
         preserveModules: true,
         exports: "auto",
@@ -804,9 +805,9 @@ function remixServe() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/package.json`, dest: OUTPUT_DIR },
-            { src: `${SOURCE_DIR}/README.md`, dest: OUTPUT_DIR },
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
       ],
@@ -815,10 +816,10 @@ function remixServe() {
       external() {
         return true;
       },
-      input: `${SOURCE_DIR}/cli.ts`,
+      input: `${sourceDir}/cli.ts`,
       output: {
         banner: executableBanner + createBanner("@remix-run/serve", version),
-        dir: OUTPUT_DIR,
+        dir: outputDir,
         format: "cjs",
       },
       plugins: [
