@@ -1335,7 +1335,7 @@ describe("fetcher redirects", () => {
     expect(t.getFetcher(A.key).type).toBe("actionSubmission");
     let AR = await A.action.redirect("/bar");
     expect(t.getFetcher(A.key).state).toBe("loading");
-    expect(t.getFetcher(A.key).type).toBe("actionSubmissionRedirect");
+    expect(t.getFetcher(A.key).type).toBe("actionRedirect");
     let state = t.getState();
     expect(state.transition.type).toBe("fetchActionRedirect");
     expect(state.transition.location).toBe(AR.location);

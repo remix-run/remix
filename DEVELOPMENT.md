@@ -197,8 +197,8 @@ graph LR
 
   subgraph "Action Submission"
   submitting/actionSubmission -->|action completed| loading/actionReload
-  submitting/actionSubmission -->|action redirected| loading/actionSubmissionRedirect
-  loading/actionSubmissionRedirect -.-> T3{{transition}}
+  submitting/actionSubmission -->|action redirected| loading/actionRedirect
+  loading/actionRedirect -.-> T3{{transition}}
   loading/actionReload -.-> |loaders redirected| T3{{transition}}
   end
   T3{{transition}} -.-> idle/done

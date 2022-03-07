@@ -221,9 +221,9 @@ type FetcherStates<TData = any> = {
     submission: ActionSubmission;
     data: TData;
   };
-  LoadingSubmissionActionRedirect: {
+  LoadingActionRedirect: {
     state: "loading";
-    type: "actionSubmissionRedirect";
+    type: "actionRedirect";
     submission: ActionSubmission;
     data: undefined;
   };
@@ -630,9 +630,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       };
       fetchRedirectIds.add(key);
       init.onRedirect(result.value.location, locationState);
-      let loadingFetcher: FetcherStates["LoadingSubmissionActionRedirect"] = {
+      let loadingFetcher: FetcherStates["LoadingActionRedirect"] = {
         state: "loading",
-        type: "actionSubmissionRedirect",
+        type: "actionRedirect",
         submission,
         data: undefined,
       };
@@ -1315,7 +1315,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     for (let key of fetchRedirectIds) {
       let fetcher = state.fetchers.get(key);
       invariant(fetcher, `Expected fetcher: ${key}`);
-      if (fetcher.type === "actionSubmissionRedirect") {
+      if (fetcher.type === "actionRedirect") {
         fetchRedirectIds.delete(key);
         doneKeys.push(key);
       }
