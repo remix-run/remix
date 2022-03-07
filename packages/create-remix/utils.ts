@@ -84,3 +84,140 @@ export async function downloadAndExtractRepo(
     })
   );
 }
+
+export async function getTarballUrl(
+  from: string,
+  lang: Lang,
+  token?: string | undefined
+) {
+  let template = await isRemixTemplate(from, lang);
+
+  if (template) {
+    let possibleTemplateName = lang === "ts" ? `${from}-ts` : from;
+    return {
+      // TODO: change branch ref to main before merge
+      tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix`,
+      filePath: `templates/${possibleTemplateName}`,
+    };
+  }
+
+  let example = await isRemixExample(from);
+  if (example) {
+    return {
+      tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
+      filePath: `examples/${from}`,
+    };
+  }
+
+  let info = await getRepoInfo(from, token);
+
+  if (!info) {
+    throw new Error(`Could not find repo ${from}`);
+  }
+
+  return {
+    tarballURL: `https://codeload.github.com/${info.owner}/${info.name}/tar.gz/${info.branch}`,
+    filePath: info.filePath,
+  };
+}
+
+export async function getRepoInfo(
+  from: string,
+  token?: string | undefined
+): Promise<
+  | {
+      owner: string;
+      name: string;
+      branch: string;
+      filePath: string;
+    }
+  | undefined
+> {
+  try {
+    let url = new URL(from);
+    let [, owner, name, t, branch, ...file] = url.pathname.split("/");
+
+    console.log({ t });
+
+    if (t === undefined) {
+      let temp = await getDefaultBranch(`${owner}/${name}`, token);
+      if (temp) {
+        branch = temp;
+      }
+    }
+
+    if (owner && name && branch && t === "tree") {
+      return { owner, name, branch, filePath: file.join("/") };
+    }
+  } catch (error: unknown) {
+    // invalid url, but it could be a github shorthand for
+    // :owner/:repo
+    try {
+      let url = new URL(from, "https://github.com");
+      let [, owner, name] = url.pathname.split("/");
+      let branch = await getDefaultBranch(`${owner}/${name}`, token);
+      return { owner, name, branch, filePath: "" };
+    } catch (error) {
+      throw new Error(`Unable to parse the URL "${from}" as a URL.`);
+    }
+  }
+}
+
+async function getDefaultBranch(
+  repo: string,
+  token: string | undefined
+): Promise<string> {
+  const response = await fetch(`https://api.github.com/repos/${repo}`, {
+    headers: {
+      Authorization: token ? `token ${token}` : "",
+      Accept: "application/vnd.github.v3+json",
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`Error fetching repo: ${response.status}`);
+  }
+
+  let info = await response.json();
+  return info.default_branch;
+}
+
+export async function isRemixTemplate(
+  name: string,
+  lang: Lang
+): Promise<string | undefined> {
+  // TODO: remove `?ref` before we merge
+  let promise = await fetch(
+    `https://api.github.com/repos/remix-run/remix/contents/templates?ref=logan/support-remote-repos-in-create-remix`,
+    {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+      },
+    }
+  );
+  let results = await promise.json();
+  let possibleTemplateName = lang === "ts" ? `${name}-ts` : name;
+  let template = results.find((result: any) => {
+    return result.name === possibleTemplateName;
+  });
+  if (!template) return undefined;
+  return template.html_url;
+}
+
+export async function isRemixExample(name: string) {
+  // TODO: remove `?ref` before we merge
+  let promise = await fetch(
+    `https://api.github.com/repos/remix-run/remix/contents/examples?ref=main`,
+    {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+      },
+    }
+  );
+  let results = await promise.json();
+  let example = results.find((result: any) => {
+    return result.name === name;
+  });
+  if (!example) return undefined;
+  return example.html_url;
+}

@@ -4,6 +4,13 @@ import util from "util";
 import semver from "semver";
 import stripAnsi from "strip-ansi";
 
+import {
+  getRepoInfo,
+  getTarballUrl,
+  isRemixExample,
+  isRemixTemplate,
+} from "../utils";
+
 const DEFAULT_APP_NAME = "my-remix-app";
 
 const execFile = util.promisify(childProcess.execFile);
@@ -22,6 +29,92 @@ const createRemix = path.resolve(
 );
 
 describe("create-remix cli", () => {
+  describe("getRepoInfo", () => {
+    it("works for github shorthand", async () => {
+      expect(await getRepoInfo("mcansh/snkrs")).toEqual({
+        owner: "mcansh",
+        name: "snkrs",
+        branch: "main",
+        filePath: "",
+      });
+    });
+
+    it("works for full github urls", async () => {
+      expect(await getRepoInfo("https://github.com/mcansh/snkrs")).toEqual({
+        owner: "mcansh",
+        name: "snkrs",
+        branch: "main",
+        filePath: "",
+      });
+    });
+
+    it("works for sub directories", async () => {
+      expect(
+        await getRepoInfo(
+          "https://github.com/remix-run/remix/tree/main/examples/basic"
+        )
+      ).toEqual({
+        owner: "remix-run",
+        name: "remix",
+        branch: "main",
+        filePath: "examples/basic",
+      });
+    });
+  });
+
+  describe("getTarballUrl", () => {
+    it("works for github shorthands", async () => {
+      expect(await getTarballUrl("mcansh/snkrs", "ts")).toMatchInlineSnapshot(`
+      Object {
+        "filePath": "",
+        "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/main",
+      }
+    `);
+    });
+
+    it("works for full github urls", async () => {
+      expect(
+        await getTarballUrl("https://github.com/mcansh/snkrs/tree/other", "ts")
+      ).toMatchInlineSnapshot(`
+        Object {
+        "filePath": "",
+        "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/other",
+      }
+      `);
+    });
+
+    it("works for sub directories", async () => {
+      expect(
+        await getTarballUrl(
+          "https://github.com/remix-run/remix/tree/main/examples/basic",
+          "ts"
+        )
+      ).toMatchInlineSnapshot(`
+      Object {
+        "filePath": "examples/basic",
+        "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
+      }
+      `);
+    });
+  });
+
+  it("supports remix templates", async () => {
+    expect(await isRemixTemplate("arc", "ts")).toBe(
+      "https://github.com/remix-run/remix/tree/logan/support-remote-repos-in-create-remix/templates/arc-ts"
+    );
+    expect(await isRemixTemplate("arc", "js")).toBe(
+      "https://github.com/remix-run/remix/tree/logan/support-remote-repos-in-create-remix/templates/arc"
+    );
+    expect(await isRemixTemplate("doesnt-exist", "ts")).toBeUndefined();
+  });
+
+  it("supports remix examples", async () => {
+    expect(isRemixExample("basic")).toBe(
+      "https://github.com/remix-run/remix/tree/main/examples/basic"
+    );
+    expect(await isRemixExample("doesnt-exist")).toBeUndefined();
+  });
+
   // TODO: Rewrite this test
   it.skip("guides the user through the process", async (done) => {
     let cli = spawn("node", [createRemix], {});

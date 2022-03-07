@@ -3,10 +3,13 @@ import { execSync } from "child_process";
 import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
 
 import cliPkgJson from "./package.json";
-import { downloadAndExtractRepo, extractLocalTarball } from "./utils";
+import {
+  downloadAndExtractRepo,
+  extractLocalTarball,
+  getTarballUrl,
+} from "./utils";
 
 export type Server =
   | "arc"
@@ -82,62 +85,7 @@ export async function createApp({
       throw new Error(`Unable to parse the URL "${from}" as a file path.`);
     }
   } else {
-    let template = await isRemixTemplate(from, lang);
-    let tarballURL: string = from;
-    let examplePath: string = "";
-
-    if (template) {
-      console.log("🚀 Using Remix template:", template);
-      let possibleTemplateName = lang === "ts" ? `${from}-ts` : from;
-      examplePath = `templates/${possibleTemplateName}`;
-      tarballURL = `https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix`;
-      from = template;
-    } else {
-      let example = await isRemixExample(from);
-      if (example) {
-        console.log("🚀 Using Remix example:", example);
-        examplePath = `examples/${from}`;
-        tarballURL = `https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix`;
-        from = example;
-      } else {
-        console.log("cloning third party tarball");
-        let url: URL;
-        try {
-          url = new URL(from);
-          if (url.hostname === "github.com") {
-            let [, username, name, t, branch, ...file] =
-              url.pathname.split("/");
-            console.log({
-              username,
-              name,
-              t,
-              branch,
-              file,
-            });
-          }
-        } catch (error) {
-          // invalid url, but it could be a github shorthand for
-          // :owner/:repo
-          url = new URL(from, "https://github.com");
-          tarballURL = `https://codeload.github.com/${from}/tar.gz/main`;
-        }
-      }
-    }
-
-    // if (!parsed.ref) {
-    //   let url = `https://api.github.com/repos/${parsed.owner}/${parsed.name}`;
-    //   let res = await fetch(
-    //     url,
-    //     githubPAT ? { headers: { Authorization: `token ${githubPAT}` } } : {}
-    //   );
-
-    //   if (res.status !== 200) {
-    //     throw new Error(`Error fetching repo info for ${url}: ${res.status}`);
-    //   }
-
-    //   let repo = await res.json();
-    //   parsed.ref = repo.default_branch;
-    // }
+    let { tarballURL, filePath } = await getTarballUrl(from, lang, githubPAT);
 
     if (!quiet) {
       console.log(
@@ -145,15 +93,10 @@ export async function createApp({
       );
     }
 
-    console.log({
-      tarballURL,
-      examplePath,
-    });
-
     await downloadAndExtractRepo(projectDir, tarballURL, {
       token: githubPAT,
       lang,
-      filePath: examplePath,
+      filePath,
     });
   }
 
@@ -207,44 +150,4 @@ export async function createApp({
       );
     }
   }
-}
-
-async function isRemixTemplate(
-  name: string,
-  lang: Lang
-): Promise<string | undefined> {
-  // TODO: remove `?ref` before we merge
-  let promise = await fetch(
-    `https://api.github.com/repos/remix-run/remix/contents/templates?ref=logan/support-remote-repos-in-create-remix`,
-    {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-      },
-    }
-  );
-  let results = await promise.json();
-  let possibleTemplateName = lang === "ts" ? `${name}-ts` : name;
-  console.log({ possibleTemplateName });
-
-  let template = results.find(
-    (result: any) => result.name === possibleTemplateName
-  );
-  if (!template) return undefined;
-  return template.html_url;
-}
-
-async function isRemixExample(name: string) {
-  // TODO: remove `?ref` before we merge
-  let promise = await fetch(
-    `https://api.github.com/repos/remix-run/remix/contents/examples?ref=logan/support-remote-repos-in-create-remix`,
-    {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-      },
-    }
-  );
-  let results = await promise.json();
-  let example = results.find((result: any) => result.name === name);
-  if (!example) return undefined;
-  return example.html_url;
 }
