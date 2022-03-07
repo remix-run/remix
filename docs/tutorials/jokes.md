@@ -2108,7 +2108,10 @@ export default function NewJokeRoute() {
         </div>
         <div>
           {actionData?.formError ? (
-            <p className="form-validation-error" role="alert">
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
               {actionData.formError}
             </p>
           ) : null}
@@ -3248,7 +3251,10 @@ export default function NewJokeRoute() {
         </div>
         <div>
           {actionData?.formError ? (
-            <p className="form-validation-error" role="alert">
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
               {actionData.formError}
             </p>
           ) : null}
@@ -4492,7 +4498,10 @@ export default function NewJokeRoute() {
         </div>
         <div>
           {actionData?.formError ? (
-            <p className="form-validation-error" role="alert">
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
               {actionData.formError}
             </p>
           ) : null}
@@ -6074,7 +6083,10 @@ export default function NewJokeRoute() {
         </div>
         <div>
           {actionData?.formError ? (
-            <p className="form-validation-error" role="alert">
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
               {actionData.formError}
             </p>
           ) : null}
