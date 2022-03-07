@@ -11,9 +11,9 @@ interface ClientCacheProviderProps {
 function ClientCacheProvider({ children }: ClientCacheProviderProps) {
   const [sheet, setSheet] = useState(getCssText());
 
-  function reset() {
+  const reset = React.useCallback(() => {
     setSheet(getCssText());
-  }
+  }, []);
 
   return (
     <ClientStyleContext.Provider value={{ reset, sheet }}>

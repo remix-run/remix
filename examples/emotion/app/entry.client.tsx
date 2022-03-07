@@ -12,9 +12,9 @@ interface ClientCacheProviderProps {
 function ClientCacheProvider({ children }: ClientCacheProviderProps) {
   const [cache, setCache] = useState(createEmotionCache());
 
-  function reset() {
+  const reset = React.useCallback(() => {
     setCache(createEmotionCache());
-  }
+  }, []);
 
   return (
     <ClientStyleContext.Provider value={{ reset }}>
