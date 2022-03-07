@@ -1,22 +1,20 @@
 import type { NextFunction } from "express";
-import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import type {
   Request as GcfRequest,
   Response as GcfResponse,
 } from "@google-cloud/functions-framework";
 import type { 
   RequestInit as NodeRequestInit,
-  Response as NodeResponse
+  
  } from "@remix-run/node";
 import {
+  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  Response as NodeResponse,
   writeReadableStreamToWritable
-} from "@remix-run/node";
-import {
-  // This has been added as a global in node 15+
-  AbortController,
 } from "@remix-run/node";
 import { Readable } from 'stream'
 
@@ -31,11 +29,9 @@ export interface GetLoadContextFunction {
   (req: GcfRequest, res: GcfResponse): AppLoadContext;
 }
 
-//export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export type RequestHandler = (
   req: GcfRequest,
   res: GcfResponse,
-  next: NextFunction
 ) => Promise<void>;
 
 /**
@@ -52,7 +48,7 @@ export function createRequestHandler({
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (req: GcfRequest, res: GcfResponse, next: NextFunction) => {
+  return async (req: GcfRequest, res: GcfResponse) => {
     try {
       let request = createRemixRequest(req);
       let loadContext =
@@ -67,9 +63,8 @@ export function createRequestHandler({
 
       await sendRemixResponse(res, response);
     } catch (error) {
-      // Express doesn't support async functions, so we have to pass along the
-      // error manually using next().
-      next(error);
+        console.error(error);
+        await sendRemixResponse(res ,new NodeResponse("Internal Error", { status: 500 }));
     }
   };
 }
@@ -86,7 +81,7 @@ export function createRemixHeaders(
           headers.append(key, value);
         }
       } else {
-        headers.set(key, values as any);
+        headers.set(key, values);
       }
     }
   }
@@ -112,8 +107,8 @@ export function createRemixRequest(
     signal: controller.signal,
   };
 
-  if (hasBody(req)) {
-    init.body = createRemixBody(req);
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    init.body = req.rawBody;
   }
 
   return new NodeRequest(url.href, init);
@@ -137,28 +132,4 @@ async function sendRemixResponse(
   } else {
     res.end();
   }
-}
-/**
- * Google Cloud Functions includes middleware that processes incoming requests based on their headers and sets the request body to
- * a javascript object. But Remix doesn't like that, remix has its own request processing logic, so we have to turn the body back into
- * something that Remix is expecting. In this case a Buffer with URLSearchParams encoded data works.
- *
- * @param req the request passed in from the Google Cloud Function
- */
-function createRemixBody(req: GcfRequest) {
-  let s = new Readable()
-  s.push((new URLSearchParams(req.body).toString()).toString());
-  s.push(null);
-  return s;
-}
-
-function hasBody(req: GcfRequest): boolean {
-  let body = req.body;
-  if (!body) {
-    return false;
-  }
-  for (var x in body) {
-    return true;
-  }
-  return false;
 }

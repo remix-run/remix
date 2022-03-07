@@ -1,0 +1,24 @@
+{
+  "name": "@remix-run/google-cloud-functions",
+  "version": "1.5.1",
+  "description": "Google Cloud Functions server request handler for Remix",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-gcloud-functions-gen2"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.1.1",
+    "@remix-run/node": "1.5.1"
+  },
+  "peerDependencies": {
+    "express": "^4.17.1"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}
