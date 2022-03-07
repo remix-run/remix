@@ -137,8 +137,6 @@ export async function getRepoInfo(
     let url = new URL(from);
     let [, owner, name, t, branch, ...file] = url.pathname.split("/");
 
-    console.log({ t });
-
     if (t === undefined) {
       let temp = await getDefaultBranch(`${owner}/${name}`, token);
       if (temp) {
@@ -153,8 +151,11 @@ export async function getRepoInfo(
     // invalid url, but it could be a github shorthand for
     // :owner/:repo
     try {
-      let url = new URL(from, "https://github.com");
-      let [, owner, name] = url.pathname.split("/");
+      let parts = from.split("/");
+      if (parts.length === 1) {
+        parts.unshift("remix-run");
+      }
+      let [owner, name] = parts;
       let branch = await getDefaultBranch(`${owner}/${name}`, token);
       return { owner, name, branch, filePath: "" };
     } catch (error) {
