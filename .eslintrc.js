@@ -1,28 +1,20 @@
 module.exports = {
-  root: true,
   extends: [
-    require.resolve("./packages/remix-eslint-config/index.js"),
-    require.resolve("./packages/remix-eslint-config/jest-testing-library.js"),
+    require.resolve("./packages/remix-eslint-config/internal.js"),
     "plugin:markdown/recommended",
   ],
+  rules: {
+    "prefer-let/prefer-let": "off",
+  },
   overrides: [
     {
-      // all ```jsx & ```tsx code blocks in .md files
-      files: ["**/*.md/*.js", "**/*.md/*.jsx", "**/*.md/*.ts", "**/*.md/*.tsx"],
+      files: [
+        "packages/create-remix/templates/**/*.js?(x)",
+        "packages/create-remix/templates/**/*.ts?(x)",
+      ],
       rules: {
-        "no-unreachable": "off",
-        "jsx-a11y/alt-text": "off",
-        "jsx-a11y/anchor-has-content": "off",
-        "react/jsx-no-comment-textnodes": "off",
-        "react/jsx-no-undef": "off",
-      },
-    },
-    {
-      // all ```ts & ```tsx code blocks in .md files
-      files: ["**/*.md/*.ts", "**/*.md/*.tsx"],
-      rules: {
-        "@typescript-eslint/no-unused-expressions": "off",
-        "@typescript-eslint/no-unused-vars": "off",
+        "prefer-const": "warn",
+        "prefer-let/prefer-let": "off",
       },
     },
     {
@@ -35,36 +27,19 @@ module.exports = {
       },
     },
     {
-      files: ["fixtures/gists-app/jest/**/*.js"],
-      env: {
-        "jest/globals": true,
-      },
-    },
-    {
-      files: ["examples/**/*.js", "examples/**/*.jsx"],
+      files: [
+        "packages/remix-server-runtime/**/*.js?(x)",
+        "packages/remix-server-runtime/**/*.ts?(x)",
+      ],
       rules: {
-        "no-unused-vars": "off",
-      },
-    },
-    {
-      files: ["examples/**/*.ts", "examples/**/*.tsx"],
-      rules: {
-        "@typescript-eslint/no-unused-vars": "off",
+        "node/no-unsupported-features/node-builtins": [
+          "error",
+          {
+            version: ">=14.0.0",
+            ignores: [],
+          },
+        ],
       },
     },
   ],
-  rules: {
-    "@typescript-eslint/consistent-type-imports": "error",
-    "import/order": [
-      "error",
-      {
-        "newlines-between": "always",
-        groups: [
-          ["builtin", "external", "internal"],
-          ["parent", "sibling", "index"],
-        ],
-      },
-    ],
-    "jest/no-disabled-tests": "off",
-  },
 };

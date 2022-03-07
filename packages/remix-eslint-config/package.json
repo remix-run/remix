@@ -10,6 +10,7 @@
     "rules",
     "settings",
     "index.js",
+    "internal.js",
     "jest.js"
   ],
   "dependencies": {
