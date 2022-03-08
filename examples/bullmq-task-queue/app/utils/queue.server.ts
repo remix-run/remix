@@ -13,9 +13,13 @@ declare global {
   var __registeredQueues: Record<string, RegisteredQueue> | undefined;
 }
 
-const registeredQueues = global.__registeredQueues || (global.__registeredQueues = {});
+const registeredQueues =
+  global.__registeredQueues || (global.__registeredQueues = {});
 
-export function Queue<Payload>(name: string, handler: Processor<Payload>): BullQueue<Payload> {
+export function Queue<Payload>(
+  name: string,
+  handler: Processor<Payload>
+): BullQueue<Payload> {
   if (registeredQueues[name]) {
     return registeredQueues[name].queue;
   }
