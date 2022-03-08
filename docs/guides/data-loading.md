@@ -22,14 +22,14 @@ One of the primary features of Remix is simplifying interactions with the server
 Each [route module][route-module] can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
 
 ```tsx filename=app/routes/products.tsx lines=[1,2,4-6,9]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async () => {
-  return [
+  return json([
     { id: "1", name: "Pants" },
     { id: "2", name: "Jacket" },
-  ];
+  ]);
 };
 
 export default function Products() {
@@ -73,18 +73,21 @@ Given the following URLs, the params would be parsed as follows:
 
 These params are most useful for looking up data:
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[6,7]
+```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[8,9]
+import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
   params,
 }) => {
-  return fakeDb.project.findMany({
-    where: {
-      userId: params.userId,
-      projectId: params.projectId,
-    },
-  });
+  return json(
+    await fakeDb.project.findMany({
+      where: {
+        userId: params.userId,
+        projectId: params.projectId,
+      },
+    })
+  );
 };
 ```
 
@@ -112,10 +115,12 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 
 Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
-```tsx filename=app/routes/gists.jsx lines=[2]
+```tsx filename=app/routes/gists.jsx lines=[4]
+import { json, useLoaderData } from "remix";
+
 export async function loader() {
   const res = await fetch("https://api.github.com/gists");
-  return res.json();
+  return json(await res.json());
 }
 
 export default function GistsRoute() {
@@ -147,7 +152,7 @@ export { db };
 And then your routes can import it and make queries against it:
 
 ```tsx filename=app/routes/products/$categoryId.tsx
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 import { db } from "~/db.server";
@@ -155,11 +160,13 @@ import { db } from "~/db.server";
 export const loader: LoaderFunction = async ({
   params,
 }) => {
-  return db.product.findMany({
-    where: {
-      categoryId: params.categoryId,
-    },
-  });
+  return json(
+    await db.product.findMany({
+      where: {
+        categoryId: params.categoryId,
+      },
+    })
+  );
 };
 
 export default function ProductCategory() {
@@ -213,15 +220,17 @@ export default function Product() {
 If you picked Cloudflare Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
 
 ```tsx filename=app/routes/products/$productId.tsx
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
   params,
 }) => {
-  return PRODUCTS_KV.get(`product-${params.productId}`, {
-    type: "json",
-  });
+  return json(
+    await PRODUCTS_KV.get(`product-${params.productId}`, {
+      type: "json",
+    })
+  );
 };
 
 export default function Product() {
@@ -256,7 +265,10 @@ export const loader: LoaderFunction = async ({
   }
 
   const cart = await getCart(request);
-  return { product, inCart: cart.includes(product.id) };
+  return json({
+    product,
+    inCart: cart.includes(product.id),
+  });
 };
 ```
 
@@ -264,7 +276,8 @@ export const loader: LoaderFunction = async ({
 
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
-```tsx filename=routes/products.tsx lines=[1,4,5]
+```tsx filename=routes/products.tsx lines=[7,8]
+import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
@@ -272,7 +285,7 @@ export const loader: LoaderFunction = async ({
 }) => {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
-  return fakeProductSearch(term);
+  return json(await fakeProductSearch(term));
 };
 ```
 
@@ -344,11 +357,13 @@ Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 
 Note that `brand` is repeated in the URL search string since both checkboxes were named `"brand"`. In your loader you can get access to all of those values with [`searchParams.getAll`][search-params-getall]
 
-```tsx lines=[3]
+```tsx lines=[5]
+import { json } from "remix";
+
 export async function loader({ request }) {
   const url = new URL(request.url);
   const brands = url.searchParams.getAll("brand");
-  return getProducts({ brands });
+  return json(await getProducts({ brands }));
 }
 ```
 
@@ -692,7 +707,7 @@ Additionally, Remix will call your loaders for you, in no case should you ever t
 
 ```tsx bad nocopy
 export const loader = async () => {
-  return fakeDb.products.findMany();
+  return json(await fakeDb.products.findMany());
 };
 
 export default function RouteComp() {

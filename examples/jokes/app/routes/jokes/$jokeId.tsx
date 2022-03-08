@@ -1,5 +1,5 @@
 import type { LoaderFunction, ActionFunction, MetaFunction } from "remix";
-import { useLoaderData, useCatch, redirect, useParams } from "remix";
+import { json, useLoaderData, useCatch, redirect, useParams } from "remix";
 import type { Joke } from "@prisma/client";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
@@ -31,7 +31,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     throw new Response("What a joke! Not found.", { status: 404 });
   }
   const data: LoaderData = { joke, isOwner: userId === joke.jokesterId };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({ request, params }) => {

@@ -88,7 +88,7 @@ Route modules have three primary exports: `loader`, `action`, and `default` (com
 // Loaders only run on the server and provide data
 // to your component on GET requests
 export async function loader() {
-  return db.projects.findAll();
+  return json(await db.projects.findAll());
 }
 
 // Actions only run on the server and handle POST
@@ -98,10 +98,10 @@ export async function action({ request }) {
   const form = await request.formData();
   const errors = validate(form);
   if (errors) {
-    return { errors };
+    return json({ errors });
   }
   await createProject({ title: form.get("title") });
-  return { ok: true };
+  return json({ ok: true });
 }
 
 // The default export is the component that will be

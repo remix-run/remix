@@ -49,7 +49,7 @@ export async function loader({ request }) {
   const projects = await fakeDb.projects.scan({
     userId: session.get("userId"),
   });
-  return projects;
+  return json(projects);
 }
 ```
 
