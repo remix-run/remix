@@ -1577,17 +1577,18 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
+import { json } from "remix";
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
-export let loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
   };
-  return data;
+  return json(data);
 };
 
 export default function Users() {
@@ -1618,7 +1619,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 ```tsx filename=app/routes/jokes.tsx lines=[1-2,4,11-13,15-20,23,47-51]
 import type { LinksFunction, LoaderFunction } from "remix";
-import { Link, Outlet, useLoaderData } from "remix";
+import { json, Link, Outlet, useLoaderData } from "remix";
 
 import { db } from "~/utils/db.server";
 import stylesUrl from "~/styles/jokes.css";
@@ -1635,7 +1636,7 @@ export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     jokeListItems: await db.joke.findMany(),
   };
-  return data;
+  return json(data);
 };
 
 export default function JokesRoute() {
@@ -1706,7 +1707,7 @@ export const loader: LoaderFunction = async () => {
       orderBy: { createdAt: "desc" },
     }),
   };
-  return data;
+  return json(data);
 };
 ```
 
@@ -1752,7 +1753,7 @@ const joke = await db.joke.findUnique({
 
 ```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,5,7,9-18,21]
 import type { LoaderFunction } from "remix";
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -1767,7 +1768,7 @@ export const loader: LoaderFunction = async ({
   });
   if (!joke) throw new Error("Joke not found");
   const data: LoaderData = { joke };
-  return data;
+  return json(data);
 };
 
 export default function JokeRoute() {
@@ -1812,7 +1813,7 @@ const [randomJoke] = await db.joke.findMany({
 
 ```tsx filename=app/routes/jokes/index.tsx lines=[3,5,7,9-18,21]
 import type { LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
+import { json, useLoaderData, Link } from "remix";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -1827,7 +1828,7 @@ export const loader: LoaderFunction = async () => {
     skip: randomRowNumber,
   });
   const data: LoaderData = { randomJoke };
-  return data;
+  return json(data);
 };
 
 export default function JokesIndexRoute() {
@@ -3409,7 +3410,7 @@ export async function createUserSession(
 ```tsx filename=app/routes/jokes.tsx lines=[6,14,30,52-63]
 import type { User } from "@prisma/client";
 import type { LinksFunction, LoaderFunction } from "remix";
-import { Link, Outlet, useLoaderData } from "remix";
+import { json, Link, Outlet, useLoaderData } from "remix";
 
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
@@ -3438,7 +3439,7 @@ export const loader: LoaderFunction = async ({
     jokeListItems,
     user,
   };
-  return data;
+  return json(data);
 };
 
 export default function JokesRoute() {
@@ -4213,9 +4214,10 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,20-24,41-52]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[6,21-25,42-53]
 import type { LoaderFunction } from "remix";
 import {
+  json,
   Link,
   useLoaderData,
   useCatch,
@@ -4239,7 +4241,7 @@ export const loader: LoaderFunction = async ({
     });
   }
   const data: LoaderData = { joke };
-  return data;
+  return json(data);
 };
 
 export default function JokeRoute() {
@@ -4283,7 +4285,7 @@ export function ErrorBoundary() {
 
 ```tsx filename=app/routes/jokes/index.tsx lines=[2,16-20,39-52]
 import type { LoaderFunction } from "remix";
-import { useLoaderData, Link, useCatch } from "remix";
+import { json, useLoaderData, Link, useCatch } from "remix";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -4303,7 +4305,7 @@ export const loader: LoaderFunction = async () => {
     });
   }
   const data: LoaderData = { randomJoke };
-  return data;
+  return json(data);
 };
 
 export default function JokesIndexRoute() {
@@ -4373,7 +4375,7 @@ export const loader: LoaderFunction = async ({
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
@@ -4571,10 +4573,11 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,7,12,31-61,71-80,89-95,103-109]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,8,13,32-62,72-81,90-96,104-110]
 import type { Joke } from "@prisma/client";
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
+  json,
   Link,
   useLoaderData,
   useCatch,
@@ -4599,7 +4602,7 @@ export const loader: LoaderFunction = async ({
     });
   }
   const data: LoaderData = { joke };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
@@ -4704,10 +4707,11 @@ Now that people will get a proper error message if they try to delete a joke tha
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,17,23,34,79-90]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[14,18,24,35,80-91]
 import type { Joke } from "@prisma/client";
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
+  json,
   Link,
   useLoaderData,
   useCatch,
@@ -4740,7 +4744,7 @@ export const loader: LoaderFunction = async ({
     joke,
     isOwner: userId === joke.jokesterId,
   };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
@@ -5275,13 +5279,14 @@ export default function Login() {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,21-36]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,22-37]
 import type {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
 } from "remix";
 import {
+  json,
   Link,
   useLoaderData,
   useCatch,
@@ -5332,7 +5337,7 @@ export const loader: LoaderFunction = async ({
     joke,
     isOwner: userId === joke.jokesterId,
   };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
@@ -5763,13 +5768,14 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[19,97]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[20,98]
 import type {
   LoaderFunction,
   ActionFunction,
   MetaFunction,
 } from "remix";
 import {
+  json,
   useLoaderData,
   useCatch,
   redirect,
@@ -5821,7 +5827,7 @@ export const loader: LoaderFunction = async ({
     joke,
     isOwner: userId === joke.jokesterId,
   };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
@@ -5937,7 +5943,7 @@ export const loader: LoaderFunction = async ({
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
