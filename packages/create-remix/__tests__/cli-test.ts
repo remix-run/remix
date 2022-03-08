@@ -155,6 +155,19 @@ describe("create-remix cli", () => {
       ).resolves.toBeUndefined();
     });
 
+    it("works for remote tarballs", async () => {
+      let projectDir = getTmpDir();
+      await expect(
+        createApp({
+          from: "https://github.com/remix-run/remix/blob/6ae8676dfeb6a79c7d30c925408d1b043623f307/packages/create-remix/__tests__/arc.tar.gz?raw=true",
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
+    });
+
     it.skip("works for a path to a tarball on disk", async () => {
       let projectDir = getTmpDir();
       await expect(
