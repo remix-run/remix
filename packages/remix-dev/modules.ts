@@ -1,90 +1,91 @@
+/* eslint-disable prefer-let/prefer-let */
 declare module "*.aac" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.css" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.eot" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.flac" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.gif" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.jpeg" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.jpg" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.md" {
   import type { ComponentType as MdComponentType } from "react";
-  export let attributes: any;
-  export let filename: string;
-  let Component: MdComponentType;
+  export const attributes: any;
+  export const filename: string;
+  const Component: MdComponentType;
   export default Component;
 }
 declare module "*.mdx" {
   import type { ComponentType as MdxComponentType } from "react";
-  export let attributes: any;
-  export let filename: string;
-  let Component: MdxComponentType;
+  export const attributes: any;
+  export const filename: string;
+  const Component: MdxComponentType;
   export default Component;
 }
 declare module "*.mp3" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.mp4" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.ogg" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.otf" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.png" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.svg" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.ttf" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.wav" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.webm" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.webp" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.woff" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
 declare module "*.woff2" {
-  let asset: string;
+  const asset: string;
   export default asset;
 }
