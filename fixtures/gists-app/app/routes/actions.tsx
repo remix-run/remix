@@ -10,7 +10,7 @@ import type { HeadersFunction, ActionFunction } from "remix";
 import { uploadHandler } from "../uploadHandler.server";
 
 export async function loader() {
-  return "ay! data from the loader!";
+  return json("ay! data from the loader!");
 }
 
 export let action: ActionFunction = async ({ request }) => {

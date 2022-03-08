@@ -49,8 +49,10 @@ export let loader: LoaderFunction = async ({ request }) => {
 
   if (searchParams.has("q")) {
     // await new Promise(res => setTimeout(res, 1000));
-    return tasks.filter((task) =>
-      task.name.toLowerCase().includes(searchParams.get("q")!.toLowerCase())
+    return json(
+      tasks.filter((task) =>
+        task.name.toLowerCase().includes(searchParams.get("q")!.toLowerCase())
+      )
     );
   }
 

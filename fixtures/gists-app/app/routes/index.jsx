@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link } from "remix";
+import { json, Link } from "remix";
 
 import Shared from "../components/Shared";
 // import Guitar from "../components/Guitar";
@@ -18,7 +18,7 @@ export async function loader() {
     console.log(serverMessage);
   }
 
-  return null;
+  return json(null);
 }
 
 export function headers() {

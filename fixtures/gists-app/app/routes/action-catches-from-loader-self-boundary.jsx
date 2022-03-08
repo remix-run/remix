@@ -14,7 +14,7 @@ export async function loader({ request }) {
     throw json("loader catch data!", { status: 401 });
   }
 
-  return null;
+  return json(null);
 }
 
 export default function ActionCatches() {

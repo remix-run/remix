@@ -3,7 +3,7 @@ import { Link, json, useCatch, useLocation } from "remix";
 export async function loader({ request }) {
   let url = new URL(request.url);
   if (url.searchParams.get("authed")) {
-    return {};
+    return json({});
   }
 
   throw json("catch data!", { status: 401 });

@@ -1,11 +1,11 @@
-import { Form, useLoaderData } from "remix";
+import { Form, json, useLoaderData } from "remix";
 
 export async function action() {
   throw new Error("I am an action error!");
 }
 
 export async function loader() {
-  return "nope";
+  return json("nope");
 }
 
 export default function ActionErrors() {

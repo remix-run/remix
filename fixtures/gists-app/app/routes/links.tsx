@@ -1,6 +1,5 @@
 import type { LinksFunction, LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
-
+import { json, useLoaderData, Link } from "remix";
 import redTextHref from "~/styles/redText.css";
 import blueTextHref from "~/styles/blueText.css";
 import guitar from "~/components/guitar.jpg";
@@ -10,11 +9,11 @@ interface User {
   id: string;
 }
 
-export let loader: LoaderFunction = async (): User[] => {
-  return [
+export let loader: LoaderFunction = async () => {
+  return json<User[]>([
     { name: "Michael Jackson", id: "mjackson" },
     { name: "Ryan Florence", id: "ryanflorence" },
-  ];
+  ]);
 };
 
 export let links: LinksFunction = () => {

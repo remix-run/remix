@@ -1,4 +1,4 @@
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 let fakeGists = [
   {
@@ -19,11 +19,11 @@ let fakeGists = [
 
 export async function loader() {
   if (process.env.NODE_ENV !== "development") {
-    return Promise.resolve(fakeGists);
+    return json(fakeGists);
   }
 
   let res = await fetch(`https://api.github.com/gists`);
-  return res.json();
+  return json(await res.json());
 }
 
 export function headers() {

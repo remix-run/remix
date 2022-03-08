@@ -1,5 +1,5 @@
 import type { MetaFunction, LoaderFunction, ActionFunction } from "remix";
-import { useLoaderData, useSubmit, Form, Link, redirect } from "remix";
+import { json, useLoaderData, useSubmit, Form, Link, redirect } from "remix";
 
 import { userPrefsCookie } from "../cookies";
 
@@ -21,7 +21,7 @@ export let meta: MetaFunction = () => {
 };
 
 export let loader: LoaderFunction = async ({ request }) => {
-  return getUserPrefs(request.headers.get("Cookie"));
+  return json(await getUserPrefs(request.headers.get("Cookie")));
 };
 
 export let action: ActionFunction = async ({ request }) => {

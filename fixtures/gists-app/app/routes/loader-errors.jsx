@@ -8,7 +8,7 @@ export async function loader({ request }) {
   if (params.has("catch")) {
     throw json("catch data!", { status: 401 });
   }
-  return null;
+  return json(null);
 }
 
 export default function LoaderErrors() {
