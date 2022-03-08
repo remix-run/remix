@@ -12,7 +12,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   // Jobs are queued and not processed immediately.
-  // This function is asyncronous because it is writing
+  // This function is asynchronous because it is writing
   // the job to redis for our worker to later pick up.
   await queue.add("notification email", {
     emailAddress: email,
