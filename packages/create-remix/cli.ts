@@ -82,26 +82,18 @@ async function run() {
   );
 
   if (flags.template) {
-    let answers = await inquirer.prompt<{ install: boolean; lang: Lang }>([
+    let answers = await inquirer.prompt<{ install: boolean }>([
       {
         name: "install",
         type: "confirm",
         message: "Do you want me to run `npm install`?",
         default: true,
       },
-      {
-        name: "lang",
-        type: "list",
-        message: "TypeScript or JavaScript?",
-        choices: [
-          { name: "TypeScript", value: "ts" },
-          { name: "JavaScript", value: "js" },
-        ],
-      },
     ]);
     await createApp({
       projectDir,
-      lang: answers.lang,
+      // it doesn't matter what it is, we'll use the template's native language
+      lang: "ts",
       install: answers.install,
       from: flags.template,
     });

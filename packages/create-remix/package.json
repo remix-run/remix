@@ -16,12 +16,9 @@
     "create-remix": "cli.js"
   },
   "dependencies": {
-    "@babel/core": "^7.17.5",
-    "@babel/preset-typescript": "^7.16.7",
     "@iarna/toml": "^2.2.5",
     "chalk-animation": "^1.6.0",
     "fs-extra": "^10.0.0",
-    "glob": "^7.2.0",
     "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.0.0",
     "meow": "^7.1.1",

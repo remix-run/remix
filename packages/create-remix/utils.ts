@@ -1,16 +1,10 @@
 import stream from "stream";
 import { promisify } from "util";
 import path from "path";
-import { execSync } from "child_process";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import gunzip from "gunzip-maybe";
 import tar from "tar-fs";
-import fs from "fs";
-import glob from "glob";
-import babel from "@babel/core";
-// @ts-expect-error
-import babelPresetTS from "@babel/preset-typescript";
 
 import type { Lang } from ".";
 
@@ -96,18 +90,6 @@ export async function downloadAndExtractRepo(
       },
     })
   );
-
-  if (options.lang === "js") {
-    convertToJavaScript(projectDir);
-    if (fse.existsSync(path.join(projectDir, "tsconfig.json"))) {
-      fse.renameSync(
-        path.join(projectDir, "tsconfig.json"),
-        path.join(projectDir, "jsconfig.json")
-      );
-    }
-    fse.removeSync(path.join(projectDir, "remix.env.d.ts"));
-    execSync(`npm run format --if-present`, { cwd: projectDir });
-  }
 }
 
 export async function getTarballUrl(
@@ -121,7 +103,7 @@ export async function getTarballUrl(
     return {
       // TODO: change branch ref to main before merge
       tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix`,
-      filePath: `templates/${from}`,
+      filePath: `templates/${template}`,
     };
   }
 
@@ -129,7 +111,7 @@ export async function getTarballUrl(
   if (example) {
     return {
       tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
-      filePath: `examples/${from}`,
+      filePath: `examples/${example}`,
     };
   }
 
@@ -225,9 +207,12 @@ export async function isRemixTemplate(
     throw new CreateRemixError(`Error fetching repo: ${promise.status}`);
   }
   let results = await promise.json();
-  let template = results.find((result: any) => result.name === name);
+  let possibleTemplateName = lang === "ts" ? `${name}-ts` : name;
+  let template = results.find((result: any) => {
+    return result.name === possibleTemplateName;
+  });
   if (!template) return undefined;
-  return template.html_url;
+  return template.name;
 }
 
 export async function isRemixExample(name: string, token?: string) {
@@ -247,30 +232,5 @@ export async function isRemixExample(name: string, token?: string) {
   let results = await promise.json();
   let example = results.find((result: any) => result.name === name);
   if (!example) return undefined;
-  return example.html_url;
-}
-
-// Compiles away all TS from TS(X) files and renames them to .js
-function convertToJavaScript(projectDir: string) {
-  glob
-    .sync(path.join(projectDir, "app/**/*.+(ts|tsx)"), {
-      ignore: ["*.d.ts"],
-    })
-    .forEach((filepath) => {
-      let contents = fs.readFileSync(filepath, { encoding: "utf-8" });
-      let result = babel.transformSync(contents, {
-        babelrc: false,
-        presets: [babelPresetTS],
-        filename: filepath,
-      });
-
-      if (!result?.code) {
-        console.log(`🚨 Error compiling ${filepath}`);
-        return;
-      }
-
-      fs.writeFileSync(filepath, result.code);
-      fs.renameSync(filepath, filepath.replace(/\.ts$/, ".js"));
-      fs.renameSync(filepath, filepath.replace(/\.tsx$/, ".jsx"));
-    });
+  return example.name;
 }
