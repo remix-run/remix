@@ -1583,7 +1583,7 @@ import type { User } from "@prisma/client";
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
-export const loader: LoaderFunction = async () => {
+export let loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
   };

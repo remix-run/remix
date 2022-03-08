@@ -50,15 +50,15 @@ Express (or Node.js) is the actual server, Remix is just a handler on that serve
 ```ts
 export function createRequestHandler({ build }) {
   // creates a Fetch API request handler from the server build
-  const handleRequest = createRemixRequestHandler(build);
+  let handleRequest = createRemixRequestHandler(build);
 
   // returns an express.js specific handler for the express server
   return async (req, res) => {
     // adapts the express.req to a Fetch API request
-    const request = createRemixRequest(req);
+    let request = createRemixRequest(req);
 
     // calls the app handler and receives a Fetch API response
-    const response = await handleRequest(request);
+    let response = await handleRequest(request);
 
     // adapts the Fetch API response to the express.res
     sendRemixResponse(res, response);

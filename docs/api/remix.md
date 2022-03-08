@@ -98,10 +98,10 @@ import { NavLink } from "remix";
 function NavList() {
   // This styling will be applied to a <NavLink> when the
   // route that it links to is currently selected.
-  const activeStyle = {
+  let activeStyle = {
     textDecoration: "underline",
   };
-  const activeClassName = "underline";
+  let activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -1443,8 +1443,8 @@ It's to be used in place of `request.formData()`.
 For example:
 
 ```tsx lines=[2-5,7,23]
-export const action: ActionFunction = async ({ request }) => {
-  const formData = await unstable_parseMultipartFormData(
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1452,7 +1452,7 @@ export const action: ActionFunction = async ({ request }) => {
   // the returned value for the file field is whatever our uploadHandler returns.
   // Let's imagine we're uploading the avatar to s3,
   // so our uploadHandler returns the URL.
-  const avatarUrl = formData.get("avatar");
+  let avatarUrl = formData.get("avatar");
 
   // update the currently logged in user's avatar in our database
   await updateUserAvatar(request, avatarUrl);
@@ -1488,18 +1488,18 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-const uploadHandler = unstable_createFileUploadHandler({
+let uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
-export const action: ActionFunction = async ({ request }) => {
-  const formData = await unstable_parseMultipartFormData(
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  const file = formData.get("avatar");
+  let file = formData.get("avatar");
 
   // file is a "NodeFile" which has a similar API to "File"
   // ... etc
@@ -1525,17 +1525,17 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-const uploadHandler = unstable_createMemoryUploadHandler({
+let uploadHandler = unstable_createMemoryUploadHandler({
   maxFileSize: 500_000,
 });
 
-export const action: ActionFunction = async ({ request }) => {
-  const formData = await unstable_parseMultipartFormData(
+export let action: ActionFunction = async ({ request }) => {
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  const file = formData.get("avatar");
+  let file = formData.get("avatar");
 
   // file is a "File" (https://mdn.io/File) polyfilled for node
   // ... etc
@@ -1560,7 +1560,7 @@ import type {
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-export const action: ActionFunction = async ({ request }) => {
+export let action: ActionFunction = async ({ request }) => {
   const userId = getUserId(request);
 
   function uploadStreamToCloudinary(
@@ -1583,7 +1583,7 @@ export const action: ActionFunction = async ({ request }) => {
     });
   }
 
-  const uploadHandler: UploadHandler = async ({
+  let uploadHandler: UploadHandler = async ({
     name,
     stream,
   }) => {
@@ -1608,12 +1608,12 @@ export const action: ActionFunction = async ({ request }) => {
     return uploadedImage.secure_url;
   };
 
-  const formData = await unstable_parseMultipartFormData(
+  let formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  const imageUrl = formData.get("avatar");
+  let imageUrl = formData.get("avatar");
 
   // because our uploadHandler returns a string, that's what the imageUrl will be.
   // ... etc
@@ -1641,17 +1641,17 @@ import type { UploadHandler } from "remix";
 import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export const fileUploadHandler =
+export let fileUploadHandler =
   unstable_createFileUploadHandler({
     directory: "public/calendar-events",
   });
 
-export const cloudinaryUploadHandler =
+export let cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
     folder: "/my-site/avatars",
   });
 
-export const multHandler: UploadHandler = (args) => {
+export let multHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
     return fileUploadHandler(args);
   } else if (args.name === "eventBanner") {
@@ -1896,7 +1896,7 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-const cookie = createCookie("user-prefs", {
+let cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01"),
 });
 
@@ -2084,8 +2084,8 @@ Returns `true` if an object is a Remix session.
 ```js
 import { isSession } from "remix";
 
-const sessionData = { foo: "bar" };
-const session = createSession(sessionData, "remix-session");
+let sessionData = { foo: "bar" };
+let session = createSession(sessionData, "remix-session");
 console.log(isSession(session));
 // true
 ```
