@@ -85,7 +85,6 @@ module.exports = {
         "no-unused-expressions": OFF,
         "no-unused-labels": OFF,
         "no-unused-vars": OFF,
-        "prefer-const": WARN,
         "prefer-let/prefer-let": OFF,
       },
     },

@@ -11,16 +11,6 @@ module.exports = {
   overrides: [
     {
       files: [
-        "packages/create-remix/templates/**/*.js?(x)",
-        "packages/create-remix/templates/**/*.ts?(x)",
-      ],
-      rules: {
-        "prefer-const": "warn",
-        "prefer-let/prefer-let": "off",
-      },
-    },
-    {
-      files: [
         "packages/create-remix/templates/cloudflare-workers/**/*.js",
         "packages/remix-cloudflare-workers/**/*.ts",
       ],
