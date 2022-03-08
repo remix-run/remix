@@ -46,7 +46,7 @@ export function createPagesFunctionHandler<Env = any>({
     try {
       response = await (context.env as any).ASSETS.fetch(
         context.request.url,
-        context.request.clone()
+        context.request
       );
       response =
         response && response.status >= 200 && response.status < 400

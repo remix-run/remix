@@ -462,7 +462,7 @@ async function renderDocumentRequest({
   let handleDocumentRequest = build.entry.module.default;
   try {
     return await handleDocumentRequest(
-      request,
+      request.clone(),
       responseStatusCode,
       responseHeaders,
       entryContext
@@ -482,7 +482,7 @@ async function renderDocumentRequest({
 
     try {
       return await handleDocumentRequest(
-        request,
+        request.clone(),
         responseStatusCode,
         responseHeaders,
         entryContext
