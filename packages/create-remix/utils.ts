@@ -8,6 +8,13 @@ import tar from "tar-fs";
 
 import type { Lang } from ".";
 
+export class CreateRemixError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CreateRemixError";
+  }
+}
+
 // this is natively a promise in node 15+ stream/promises
 let pipeline = promisify(stream.pipeline);
 
@@ -90,7 +97,7 @@ export async function getTarballUrl(
   lang: Lang,
   token?: string | undefined
 ) {
-  let template = await isRemixTemplate(from, lang);
+  let template = await isRemixTemplate(from, lang, token);
 
   if (template) {
     let possibleTemplateName = lang === "ts" ? `${from}-ts` : from;
@@ -101,7 +108,7 @@ export async function getTarballUrl(
     };
   }
 
-  let example = await isRemixExample(from);
+  let example = await isRemixExample(from, token);
   if (example) {
     return {
       tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
@@ -159,7 +166,7 @@ export async function getRepoInfo(
       let branch = await getDefaultBranch(`${owner}/${name}`, token);
       return { owner, name, branch, filePath: "" };
     } catch (error) {
-      throw new Error(`Unable to parse the URL "${from}" as a URL.`);
+      throw new CreateRemixError(`Unable to parse the URL "${from}" as a URL.`);
     }
   }
 }
@@ -176,7 +183,7 @@ async function getDefaultBranch(
   });
 
   if (response.status !== 200) {
-    throw new Error(`Error fetching repo: ${response.status}`);
+    throw new CreateRemixError(`Error fetching repo: ${response.status}`);
   }
 
   let info = await response.json();
@@ -185,7 +192,8 @@ async function getDefaultBranch(
 
 export async function isRemixTemplate(
   name: string,
-  lang: Lang
+  lang: Lang,
+  token?: string
 ): Promise<string | undefined> {
   // TODO: remove `?ref` before we merge
   let promise = await fetch(
@@ -193,9 +201,13 @@ export async function isRemixTemplate(
     {
       headers: {
         Accept: "application/vnd.github.v3+json",
+        Authorization: token ? `token ${token}` : "",
       },
     }
   );
+  if (!promise.ok) {
+    throw new CreateRemixError(`Error fetching repo: ${promise.status}`);
+  }
   let results = await promise.json();
   let possibleTemplateName = lang === "ts" ? `${name}-ts` : name;
   let template = results.find((result: any) => {
@@ -205,16 +217,20 @@ export async function isRemixTemplate(
   return template.html_url;
 }
 
-export async function isRemixExample(name: string) {
+export async function isRemixExample(name: string, token?: string) {
   // TODO: remove `?ref` before we merge
   let promise = await fetch(
     `https://api.github.com/repos/remix-run/remix/contents/examples?ref=main`,
     {
       headers: {
         Accept: "application/vnd.github.v3+json",
+        Authorization: token ? `token ${token}` : "",
       },
     }
   );
+  if (!promise.ok) {
+    throw new CreateRemixError(`Error fetching repo: ${promise.status}`);
+  }
   let results = await promise.json();
   let example = results.find((result: any) => {
     return result.name === name;

@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 
 import cliPkgJson from "./package.json";
 import {
+  CreateRemixError,
   downloadAndExtractRepo,
   extractLocalTarball,
   getTarballUrl,
@@ -43,7 +44,7 @@ export async function createApp({
 }: CreateAppArgs) {
   let versions = process.versions;
   if (versions?.node && parseInt(versions.node) < 14) {
-    throw new Error(
+    throw new CreateRemixError(
       `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
     );
   }
@@ -53,7 +54,7 @@ export async function createApp({
   let projectDirIsCurrentDir = relativeProjectDir === "";
   if (!projectDirIsCurrentDir) {
     if (fse.existsSync(projectDir)) {
-      throw new Error(
+      throw new CreateRemixError(
         `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
     }
@@ -71,8 +72,8 @@ export async function createApp({
   if (from.startsWith("file://")) {
     try {
       from = fileURLToPath(from);
-    } catch (error) {
-      throw new Error(`Unable to convert file URL to path`);
+    } catch (error: unknown) {
+      throw new CreateRemixError(`Unable to convert file URL to path`);
     }
   }
 
@@ -82,7 +83,9 @@ export async function createApp({
     } else if (from.endsWith(".tar.gz")) {
       await extractLocalTarball(projectDir, from);
     } else {
-      throw new Error(`Unable to parse the URL "${from}" as a file path.`);
+      throw new CreateRemixError(
+        `Unable to parse the URL "${from}" as a file path.`
+      );
     }
   } else {
     let { tarballURL, filePath } = await getTarballUrl(from, lang, githubPAT);

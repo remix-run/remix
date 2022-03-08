@@ -4,12 +4,7 @@ import util from "util";
 import semver from "semver";
 import stripAnsi from "strip-ansi";
 
-import {
-  getRepoInfo,
-  getTarballUrl,
-  isRemixExample,
-  isRemixTemplate,
-} from "../utils";
+import { getTarballUrl } from "../utils";
 
 const DEFAULT_APP_NAME = "my-remix-app";
 
@@ -29,57 +24,30 @@ const createRemix = path.resolve(
 );
 
 describe("create-remix cli", () => {
-  describe("getRepoInfo", () => {
-    it("works for github shorthand", async () => {
-      expect(await getRepoInfo("mcansh/snkrs")).toEqual({
-        owner: "mcansh",
-        name: "snkrs",
-        branch: "main",
-        filePath: "",
-      });
-    });
-
-    it("works for full github urls", async () => {
-      expect(await getRepoInfo("https://github.com/mcansh/snkrs")).toEqual({
-        owner: "mcansh",
-        name: "snkrs",
-        branch: "main",
-        filePath: "",
-      });
-    });
-
-    it("works for sub directories", async () => {
-      expect(
-        await getRepoInfo(
-          "https://github.com/remix-run/remix/tree/main/examples/basic"
-        )
-      ).toEqual({
-        owner: "remix-run",
-        name: "remix",
-        branch: "main",
-        filePath: "examples/basic",
-      });
-    });
-  });
-
   describe("getTarballUrl", () => {
     it("works for github shorthands", async () => {
-      expect(await getTarballUrl("mcansh/snkrs", "ts")).toMatchInlineSnapshot(`
-      Object {
-        "filePath": "",
-        "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/main",
-      }
-    `);
+      expect(
+        await getTarballUrl("mcansh/snkrs", "ts", process.env.GITHUB_TOKEN)
+      ).toMatchInlineSnapshot(`
+        Object {
+          "filePath": "",
+          "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/main",
+        }
+      `);
     });
 
     it("works for full github urls", async () => {
       expect(
-        await getTarballUrl("https://github.com/mcansh/snkrs/tree/other", "ts")
+        await getTarballUrl(
+          "https://github.com/mcansh/snkrs/tree/other",
+          "ts",
+          process.env.GITHUB_TOKEN
+        )
       ).toMatchInlineSnapshot(`
         Object {
-        "filePath": "",
-        "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/other",
-      }
+          "filePath": "",
+          "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/other",
+        }
       `);
     });
 
@@ -87,32 +55,38 @@ describe("create-remix cli", () => {
       expect(
         await getTarballUrl(
           "https://github.com/remix-run/remix/tree/main/examples/basic",
-          "ts"
+          "ts",
+          process.env.GITHUB_TOKEN
         )
       ).toMatchInlineSnapshot(`
-      Object {
-        "filePath": "examples/basic",
-        "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
-      }
+        Object {
+          "filePath": "examples/basic",
+          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
+        }
       `);
     });
-  });
 
-  it("supports remix templates", async () => {
-    expect(await isRemixTemplate("arc", "ts")).toBe(
-      "https://github.com/remix-run/remix/tree/logan/support-remote-repos-in-create-remix/templates/arc-ts"
-    );
-    expect(await isRemixTemplate("arc", "js")).toBe(
-      "https://github.com/remix-run/remix/tree/logan/support-remote-repos-in-create-remix/templates/arc"
-    );
-    expect(await isRemixTemplate("doesnt-exist", "ts")).toBeUndefined();
-  });
+    it("works for remix examples", async () => {
+      expect(await getTarballUrl("basic", "ts", process.env.GITHUB_TOKEN))
+        .toMatchInlineSnapshot(`
+        Object {
+          "filePath": "examples/basic",
+          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
+        }
+      `);
 
-  it("supports remix examples", async () => {
-    expect(isRemixExample("basic")).toBe(
-      "https://github.com/remix-run/remix/tree/main/examples/basic"
-    );
-    expect(await isRemixExample("doesnt-exist")).toBeUndefined();
+      await expect(
+        getTarballUrl("not-found", "ts", process.env.GITHUB_TOKEN)
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Unable to parse the URL \\"not-found\\" as a URL."`
+      );
+    });
+
+    // TODO: enable tests once stacks are live
+    it.skip("works for remix templates", async () => {
+      expect(await getTarballUrl("basic", "ts")).toMatchInlineSnapshot();
+      expect(await getTarballUrl("not-found", "ts")).toThrowError();
+    });
   });
 
   // TODO: Rewrite this test

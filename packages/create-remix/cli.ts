@@ -5,6 +5,7 @@ import meow from "meow";
 
 import type { Lang, Server } from ".";
 import { createApp } from ".";
+import { CreateRemixError } from "./utils";
 
 const help = `
   Usage:
@@ -34,9 +35,13 @@ run().then(
   () => {
     process.exit(0);
   },
-  (error) => {
-    console.error(error);
-    process.exit(1);
+  (error: unknown) => {
+    if (error instanceof CreateRemixError) {
+      console.error(error.message);
+      process.exit(1);
+    } else {
+      throw error;
+    }
   }
 );
 
