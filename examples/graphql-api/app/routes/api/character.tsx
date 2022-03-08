@@ -1,5 +1,6 @@
 import type { ApolloError } from "apollo-server-errors";
 import type { LoaderFunction } from "remix";
+import { json } from "remix";
 
 import { fetchFromGraphQL, gql } from "~/utils";
 import type { Character } from "~/generated/types";
@@ -41,5 +42,5 @@ export const loader: LoaderFunction = async (args): Promise<LoaderData> => {
   const res = await fetchFromGraphQL(getCharacterQuery, { id });
   const data = await res.json();
 
-  return data;
+  return json(data);
 };

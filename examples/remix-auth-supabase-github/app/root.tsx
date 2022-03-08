@@ -1,5 +1,6 @@
 import type { LoaderFunction } from "remix";
 import {
+  json,
   Links,
   LiveReload,
   Meta,
@@ -10,12 +11,12 @@ import {
 } from "remix";
 
 export const loader: LoaderFunction = () => {
-  return {
+  return json({
     env: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       PUBLIC_SUPABASE_ANON_KEY: process.env.PUBLIC_SUPABASE_ANON_KEY,
     },
-  };
+  });
 };
 
 export default function App() {

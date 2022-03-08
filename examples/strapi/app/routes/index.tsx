@@ -1,7 +1,7 @@
-import type { LoaderFunction } from "remix";
-import React from "react";
-import { useLoaderData } from "remix";
 import { marked } from "marked";
+import React from "react";
+import type { LoaderFunction } from "remix";
+import { json, useLoaderData } from "remix";
 
 type Post = {
   title: string;
@@ -30,13 +30,13 @@ export const loader: LoaderFunction = async () => {
   const response = await fetch("http://localhost:1337/api/posts");
   const postResponse = (await response.json()) as PostResponse;
 
-  return postResponse.data.map((post) => ({
+  return json(postResponse.data.map((post) => ({
     ...post,
     attributes: {
       ...post.attributes,
       article: marked(post.attributes.article),
     },
-  }));
+  })));
 };
 
 const Posts: React.FC = () => {

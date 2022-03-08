@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { LoaderFunction } from "remix";
 import {
+  json,
   Links,
   LiveReload,
   Meta,
@@ -15,7 +16,7 @@ import { gdprConsent } from "./cookies";
 export const loader: LoaderFunction = async ({ request }) => {
   const cookieHeader = request.headers.get("Cookie");
   const cookie = (await gdprConsent.parse(cookieHeader)) || {};
-  return { track: cookie.gdprConsent };
+  return json({ track: cookie.gdprConsent });
 };
 
 export default function App() {
