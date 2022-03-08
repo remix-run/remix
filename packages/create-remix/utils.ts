@@ -105,6 +105,7 @@ export async function downloadAndExtractRepo(
         path.join(projectDir, "jsconfig.json")
       );
     }
+    fse.removeSync(path.join(projectDir, "remix.env.d.ts"));
     execSync(`npm run format --if-present`, { cwd: projectDir });
   }
 }
