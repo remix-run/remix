@@ -55,7 +55,38 @@ export async function callRouteAction({
     );
   }
 
-  return isResponse(result) ? result : json(result);
+  if (!isResponse(result)) {
+    console.warn(
+      `You returned a values other than a \`Response\` object from the action for route "${match.route.id}". This is deprecated and will result in a server error in a future version of Remix.
+
+To fix this and remove the warning, you can return the same value passed into our \`json\` helper function which will construct a \`Response\` instance:
+
+
+    // before
+    export async function action() {
+      return someData;
+    }
+
+    // after
+    import { json } from "remix";
+
+    export async function action() {
+      return json(someData);
+    }
+
+    // You can also return an \`Response\` directly:
+    export async function action() {
+      return new Response(someData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+`
+    );
+    return json(result);
+  }
+  return result;
 }
 
 export async function callRouteLoader({
@@ -102,7 +133,38 @@ export async function callRouteLoader({
     );
   }
 
-  return isResponse(result) ? result : json(result);
+  if (!isResponse(result)) {
+    console.warn(
+      `You returned a values other than a \`Response\` object from the loader for route "${match.route.id}". This is deprecated and will result in a server error in a future version of Remix.
+
+  To fix this and remove the warning, you can return the same value passed into our \`json\` helper function which will construct a \`Response\` instance:
+
+
+      // before
+      export async function loader() {
+        return someData;
+      }
+
+      // after
+      import { json } from "remix";
+
+      export async function loader() {
+        return json(someData);
+      }
+
+      // You can also return an \`Response\` directly:
+      export async function loader() {
+        return new Response(someData, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+  `
+    );
+    return json(result);
+  }
+  return result;
 }
 
 function stripIndexParam(request: Request) {
