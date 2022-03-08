@@ -1,8 +1,7 @@
 module.exports = {
   rules: {
-    "prefer-const": "warn",
-
     // because in our templates we shouldn't care
+    "prefer-let/prefer-let": "off",
     "import/order": "off",
   },
 };

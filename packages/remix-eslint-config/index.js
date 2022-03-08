@@ -35,7 +35,6 @@ const config = {
     browser: true,
     commonjs: true,
     es6: true,
-    node: true,
   },
   plugins: ["import", "react", "react-hooks", "jsx-a11y"],
   settings: {

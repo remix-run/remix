@@ -7,11 +7,12 @@
   "license": "MIT",
   "files": [
     "README.md",
-    "rules",
-    "settings",
     "index.js",
     "internal.js",
-    "jest.js"
+    "jest.js",
+    "node.js",
+    "rules",
+    "settings"
   ],
   "dependencies": {
     "@babel/core": "^7.17.5",

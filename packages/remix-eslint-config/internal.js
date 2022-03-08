@@ -19,6 +19,9 @@ module.exports = {
     require.resolve("./index.js"),
     require.resolve("./jest-testing-library.js"),
   ],
+  env: {
+    node: true,
+  },
   plugins: [
     // Plugins used in the internal config should be installed in our
     // repositories. We don't want to ship these as dependencies to consumers
