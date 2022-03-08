@@ -23,12 +23,12 @@ Remix can help you build optimistic UI with [`useTransition`][use-transition] an
 Consider the workflow for viewing and creating a new project. The project route loads the project and renders it.
 
 ```tsx filename=app/routes/project/$id.tsx
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 import { ProjectView } from "~/components/project";
 
 export async function loader({ params }) {
-  return findProject(params.id);
+  return json(await findProject(params.id));
 }
 
 export default function ProjectRoute() {

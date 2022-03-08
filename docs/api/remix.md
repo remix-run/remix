@@ -98,10 +98,10 @@ import { NavLink } from "remix";
 function NavList() {
   // This styling will be applied to a <NavLink> when the
   // route that it links to is currently selected.
-  let activeStyle = {
+  const activeStyle = {
     textDecoration: "underline",
   };
-  let activeClassName = "underline";
+  const activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -269,10 +269,10 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 This hook returns the JSON parsed data from your route loader function.
 
 ```tsx lines=[1,8]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 export async function loader() {
-  return fakeDb.invoices.findAll();
+  return json(await fakeDb.invoices.findAll());
 }
 
 export default function Invoices() {
@@ -286,12 +286,12 @@ export default function Invoices() {
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
 ```tsx lines=[1,10,19]
-import { useActionData, Form } from "remix";
+import { json, useActionData, Form } from "remix";
 
 export async function action({ request }) {
   const body = await request.formData();
   const name = body.get("visitorsName");
-  return { message: `Hello, ${name}` };
+  return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
@@ -457,10 +457,10 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
 ```tsx filename=app/routes/prefs.tsx lines=[1,13,17]
-import { useSubmit, useTransition } from "remix";
+import { json, useSubmit, useTransition } from "remix";
 
 export async function loader() {
-  await getUserPreferences();
+  return json(await getUserPreferences());
 }
 
 export async function action({ request }) {
@@ -978,7 +978,9 @@ Anytime you show the user avatar, you could put a hover effect that fetches data
 
 ```tsx filename=routes/user/$id/details.tsx
 export async function loader({ params }) {
-  return fakeDb.user.find({ where: { id: params.id } });
+  return json(
+    await fakeDb.user.find({ where: { id: params.id } })
+  );
 }
 
 function UserAvatar({ partialUser }) {
@@ -1016,7 +1018,9 @@ If the user needs to select a city, you could have a loader that returns a list 
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return searchCities(url.searchParams.get("city-query"));
+  return json(
+    await searchCities(url.searchParams.get("city-query"))
+  );
 }
 
 function CitySearchCombobox() {
@@ -1435,15 +1439,17 @@ Would be useful to understand [the Browser File API](https://developer.mozilla.o
 It's to be used in place of `request.formData()`.
 
 ```diff
-- let formData = await request.formData();
-+ let formData = await unstable_parseMultipartFormData(request, uploadHandler);
+- const formData = await request.formData();
++ const formData = await unstable_parseMultipartFormData(request, uploadHandler);
 ```
 
 For example:
 
 ```tsx lines=[2-5,7,23]
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1451,7 +1457,7 @@ export let action: ActionFunction = async ({ request }) => {
   // the returned value for the file field is whatever our uploadHandler returns.
   // Let's imagine we're uploading the avatar to s3,
   // so our uploadHandler returns the URL.
-  let avatarUrl = formData.get("avatar");
+  const avatarUrl = formData.get("avatar");
 
   // update the currently logged in user's avatar in our database
   await updateUserAvatar(request, avatarUrl);
@@ -1487,18 +1493,20 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createFileUploadHandler({
+const uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "NodeFile" which has a similar API to "File"
   // ... etc
@@ -1524,17 +1532,19 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createMemoryUploadHandler({
+const uploadHandler = unstable_createMemoryUploadHandler({
   maxFileSize: 500_000,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "File" (https://mdn.io/File) polyfilled for node
   // ... etc
@@ -1559,7 +1569,9 @@ import type {
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const userId = getUserId(request);
 
   function uploadStreamToCloudinary(
@@ -1582,7 +1594,7 @@ export let action: ActionFunction = async ({ request }) => {
     });
   }
 
-  let uploadHandler: UploadHandler = async ({
+  const uploadHandler: UploadHandler = async ({
     name,
     stream,
   }) => {
@@ -1607,12 +1619,12 @@ export let action: ActionFunction = async ({ request }) => {
     return uploadedImage.secure_url;
   };
 
-  let formData = await unstable_parseMultipartFormData(
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let imageUrl = formData.get("avatar");
+  const imageUrl = formData.get("avatar");
 
   // because our uploadHandler returns a string, that's what the imageUrl will be.
   // ... etc
@@ -1640,17 +1652,17 @@ import type { UploadHandler } from "remix";
 import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export let fileUploadHandler =
+export const fileUploadHandler =
   unstable_createFileUploadHandler({
     directory: "public/calendar-events",
   });
 
-export let cloudinaryUploadHandler =
+export const cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
     folder: "/my-site/avatars",
   });
 
-export let multHandler: UploadHandler = (args) => {
+export const multHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
     return fileUploadHandler(args);
   } else if (args.name === "eventBanner") {
@@ -1698,7 +1710,7 @@ export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: cookie.showBanner };
+  return json({ showBanner: cookie.showBanner });
 }
 
 export async function action({ request }) {
@@ -1895,7 +1907,7 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01"),
 });
 
@@ -2083,8 +2095,8 @@ Returns `true` if an object is a Remix session.
 ```js
 import { isSession } from "remix";
 
-let sessionData = { foo: "bar" };
-let session = createSession(sessionData, "remix-session");
+const sessionData = { foo: "bar" };
+const session = createSession(sessionData, "remix-session");
 console.log(isSession(session));
 // true
 ```

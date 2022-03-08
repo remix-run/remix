@@ -220,7 +220,7 @@ export const action: ActionFunction = async ({
 
   if (errors) {
     const values = Object.fromEntries(formData);
-    return { errors, values };
+    return json({ errors, values });
   }
 
   return redirect(`/projects/${project.id}`);

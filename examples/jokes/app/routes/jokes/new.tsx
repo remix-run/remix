@@ -17,7 +17,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
