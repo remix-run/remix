@@ -19,14 +19,11 @@ $ npm i -g @architect/architect aws-sdk
 
 You will be running two processes during development when using Architect as your server.
 
-- Your Architect server sandbox in one
-- The Remix development server in another
+- Your Architect server sandbox 
+- The Remix development server
 
 ```sh
-# in one tab
-$ arc sandbox
-
-# in another
+# run both arcitect server sandbox & remix development server with run-p
 $ npm run dev
 ```
 
