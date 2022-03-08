@@ -1,4 +1,3 @@
-/* eslint-disable prefer-let/prefer-let */
 import { sign, unsign } from "./cookieSigning";
 
 declare global {
@@ -11,8 +10,10 @@ declare global {
 
   // This is here because we need it in our node setup,
   // but not in an actual deno project.
+  /* eslint-disable prefer-let/prefer-let */
   // @ts-ignore
   var process: Process;
+  /* eslint-enable prefer-let/prefer-let */
 }
 
 export function installGlobals() {
