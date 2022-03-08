@@ -1,15 +1,21 @@
 import childProcess from "child_process";
 import path from "path";
 import util from "util";
+import { pathToFileURL } from "url";
 import semver from "semver";
 import stripAnsi from "strip-ansi";
 
 import { getTarballUrl } from "../utils";
+import { createApp } from "..";
 
 const DEFAULT_APP_NAME = "my-remix-app";
 
 const execFile = util.promisify(childProcess.execFile);
 const spawn = childProcess.spawn;
+
+function getTmpDir() {
+  return path.join(process.cwd(), ".tmp", Math.random().toString(32).slice(2));
+}
 
 const keys = {
   up: "\x1B\x5B\x41",
@@ -25,6 +31,36 @@ const createRemix = path.resolve(
 
 describe("create-remix cli", () => {
   describe("getTarballUrl", () => {
+    it("works for remix examples", async () => {
+      expect(await getTarballUrl("basic", "ts", process.env.GITHUB_TOKEN))
+        .toMatchInlineSnapshot(`
+        Object {
+          "filePath": "examples/basic",
+          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
+        }
+      `);
+
+      await expect(
+        getTarballUrl("not-found", "ts", process.env.GITHUB_TOKEN)
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Unable to parse the URL \\"not-found\\" as a URL."`
+      );
+    });
+
+    it("works for remix templates", async () => {
+      expect(await getTarballUrl("basic", "ts")).toMatchInlineSnapshot(`
+        Object {
+          "filePath": "examples/basic",
+          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
+        }
+      `);
+      await expect(
+        getTarballUrl("not-found", "ts", process.env.GITHUB_TOKEN)
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `"Unable to parse the URL \\"not-found\\" as a URL."`
+      );
+    });
+
     it("works for github shorthands", async () => {
       expect(
         await getTarballUrl("mcansh/snkrs", "ts", process.env.GITHUB_TOKEN)
@@ -51,6 +87,16 @@ describe("create-remix cli", () => {
       `);
     });
 
+    it("works when only supplying a repo name", async () => {
+      expect(await getTarballUrl("arc-stack", "ts", process.env.GITHUB_TOKEN))
+        .toMatchInlineSnapshot(`
+        Object {
+          "filePath": "",
+          "tarballURL": "https://codeload.github.com/remix-run/arc-stack/tar.gz/main",
+        }
+      `);
+    });
+
     it("works for sub directories", async () => {
       expect(
         await getTarballUrl(
@@ -65,27 +111,89 @@ describe("create-remix cli", () => {
         }
       `);
     });
+  });
 
-    it("works for remix examples", async () => {
-      expect(await getTarballUrl("basic", "ts", process.env.GITHUB_TOKEN))
-        .toMatchInlineSnapshot(`
-        Object {
-          "filePath": "examples/basic",
-          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
-        }
-      `);
-
+  // TODO: add tests for checking local tarballs, local directories, file URLS, and remote tarballs
+  describe("creates a new app from a template", () => {
+    // this also tests sub directories
+    it("works for examples in the remix repo", async () => {
+      let projectDir = getTmpDir();
       await expect(
-        getTarballUrl("not-found", "ts", process.env.GITHUB_TOKEN)
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Unable to parse the URL \\"not-found\\" as a URL."`
-      );
+        createApp({
+          from: "basic",
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
     });
 
-    // TODO: enable tests once stacks are live
-    it.skip("works for remix templates", async () => {
-      expect(await getTarballUrl("basic", "ts")).toMatchInlineSnapshot();
-      expect(await getTarballUrl("not-found", "ts")).toThrowError();
+    it("works for templates in the remix org", async () => {
+      let projectDir = getTmpDir();
+      await expect(
+        createApp({
+          from: "arc-stack",
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    it("works for GitHub username/repo combo", async () => {
+      let projectDir = getTmpDir();
+      await expect(
+        createApp({
+          from: "mcansh/snkrs",
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    it.skip("works for a path to a tarball on disk", async () => {
+      let projectDir = getTmpDir();
+      await expect(
+        createApp({
+          from: path.join(__dirname, "arc.tar.gz"),
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    it("works for a file path to a directory on disk", async () => {
+      let projectDir = getTmpDir();
+      await expect(
+        createApp({
+          from: path.join(process.cwd(), "examples/basic"),
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    it("works for a file URL on disk", async () => {
+      let projectDir = getTmpDir();
+      await expect(
+        createApp({
+          from: pathToFileURL(
+            path.join(process.cwd(), "examples/basic")
+          ).toString(),
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+        })
+      ).resolves.toBeUndefined();
     });
   });
 

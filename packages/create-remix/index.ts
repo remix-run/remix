@@ -91,9 +91,7 @@ export async function createApp({
     let { tarballURL, filePath } = await getTarballUrl(from, lang, githubPAT);
 
     if (!quiet) {
-      console.log(
-        `Downloading files from repo ${from}. This might take a moment.`
-      );
+      console.log(`Downloading files. This might take a moment.`);
     }
 
     await downloadAndExtractRepo(projectDir, tarballURL, {
