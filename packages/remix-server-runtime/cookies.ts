@@ -177,12 +177,12 @@ async function decodeCookieValue(
 }
 
 function encodeData(value: any): string {
-  return btoa(JSON.stringify(value));
+  return btoa(unescape(encodeURIComponent(JSON.stringify(value))));
 }
 
 function decodeData(value: string): any {
   try {
-    return JSON.parse(atob(value));
+    return JSON.parse(decodeURIComponent(escape(atob(value))));
   } catch (error) {
     return {};
   }
