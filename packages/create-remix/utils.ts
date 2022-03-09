@@ -27,6 +27,55 @@ export async function extractLocalTarball(
   await pipeline(readStream, writeStream);
 }
 
+export async function downloadAndExtractTemplateOrExample(
+  projectDir: string,
+  name: string,
+  type: "templates" | "examples",
+  options: {
+    token?: string;
+    lang: Lang;
+  }
+) {
+  let response = await fetch(
+    "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    options.token
+      ? { headers: { Authorization: `token ${options.token}` } }
+      : {}
+  );
+
+  if (response.status !== 200) {
+    throw new Error(`Error fetching repo: ${response.status}`);
+  }
+
+  let cwd = path.dirname(projectDir);
+  let desiredDir = path.basename(projectDir);
+  await pipeline(
+    response.body.pipe(gunzip()),
+    tar.extract(cwd, {
+      map(header) {
+        let originalDirName = header.name.split("/")[0];
+        header.name = header.name.replace(originalDirName, desiredDir);
+        if (!header.name.startsWith(path.join(desiredDir, type, name))) {
+          header.name = "__IGNORE__";
+        } else {
+          header.name = header.name.replace(
+            path.join(desiredDir, type, name),
+            desiredDir
+          );
+        }
+        return header;
+      },
+      ignore(_filename, header) {
+        if (!header) {
+          throw new Error(`Header is undefined`);
+        }
+
+        return header.name === "__IGNORE__";
+      },
+    })
+  );
+}
+
 export async function downloadAndExtractTarball(
   projectDir: string,
   url: string,
@@ -36,7 +85,6 @@ export async function downloadAndExtractTarball(
     filePath?: string | null | undefined;
   }
 ): Promise<void> {
-  let desiredDir = path.basename(projectDir);
   let cwd = path.dirname(projectDir);
 
   let response = await fetch(
@@ -52,42 +100,14 @@ export async function downloadAndExtractTarball(
 
   await pipeline(
     response.body.pipe(gunzip()),
-    tar.extract(cwd, {
-      strip: options.filePath ? 0 : 1,
-      map(header) {
-        let originalDirName = header.name.split("/")[0];
-        header.name = header.name.replace(originalDirName, desiredDir);
+    tar.extract(projectDir, {
+      strip: options.filePath ? options.filePath.split("/").length + 1 : 1,
+      ignore(name) {
         if (options.filePath) {
-          // add a trailing slash to the file path so we dont overmatch
-          if (
-            header.name.startsWith(
-              path.join(desiredDir, options.filePath) + path.sep
-            )
-          ) {
-            header.name = header.name.replace(options.filePath + path.sep, "");
-          } else {
-            header.name = "__IGNORE__" + header.name;
-          }
+          return !name.startsWith(path.join(cwd, options.filePath));
+        } else {
+          return false;
         }
-
-        return header;
-      },
-      ignore(name, header) {
-        // name is the original projectDir, but
-        // we need the header's name as we changed it above
-        // to point to their desired dir
-        if (options.filePath) {
-          if (!header) {
-            throw new Error(`missing header for file ${name}`);
-          }
-
-          // return true if we should IGNORE this file
-          if (header.name.startsWith("__IGNORE__")) {
-            return true;
-          }
-        }
-
-        return false;
       },
     })
   );
@@ -95,35 +115,12 @@ export async function downloadAndExtractTarball(
 
 export async function getTarballUrl(
   from: string,
-  lang: Lang,
   token?: string | undefined
-): Promise<{ tarballURL: string; filePath: string }> {
-  // TODO: check this isn't a url first
-  let template = await isRemixTemplate(from, lang, token);
-
-  if (template) {
-    return {
-      // TODO: change branch ref to main before merge
-      tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix`,
-      filePath: `templates/${template}`,
-    };
-  }
-
-  let example = await isRemixExample(from, token);
-  if (example) {
-    return {
-      tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
-      filePath: `examples/${example}`,
-    };
-  }
-
+): Promise<{ tarballURL: string; filePath: string } | undefined> {
   let info = await getRepoInfo(from, token);
 
   if (!info) {
-    return {
-      tarballURL: from,
-      filePath: "",
-    };
+    return undefined;
   }
 
   return {
@@ -175,7 +172,8 @@ export async function getRepoInfo(
       let branch = await getDefaultBranch(`${owner}/${name}`, token);
       return { owner, name, branch, filePath: "" };
     } catch (error) {
-      throw new CreateRemixError(`Unable to parse the URL "${from}" as a URL.`);
+      // invalid url, but we can try to match a template or example
+      return undefined;
     }
   }
 }

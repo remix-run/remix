@@ -13,10 +13,6 @@ const DEFAULT_APP_NAME = "my-remix-app";
 const execFile = util.promisify(childProcess.execFile);
 const spawn = childProcess.spawn;
 
-function getTmpDir() {
-  return path.join(process.cwd(), ".tmp", Math.random().toString(32).slice(2));
-}
-
 const keys = {
   up: "\x1B\x5B\x41",
   down: "\x1B\x5B\x42",
@@ -32,13 +28,12 @@ const createRemix = path.resolve(
 describe("create-remix cli", () => {
   describe("getTarballUrl", () => {
     it("works for remix examples", async () => {
-      expect(await getTarballUrl("basic", "ts", process.env.GITHUB_TOKEN))
-        .toMatchInlineSnapshot(`
-        Object {
-          "filePath": "examples/basic",
-          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
-        }
-      `);
+      expect(
+        await getTarballUrl("basic", "ts", process.env.GITHUB_TOKEN)
+      ).toEqual({
+        filePath: "examples/basic",
+        tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
+      });
 
       await expect(
         getTarballUrl("not-found", "ts", process.env.GITHUB_TOKEN)
@@ -48,28 +43,22 @@ describe("create-remix cli", () => {
     });
 
     it("works for remix templates", async () => {
-      expect(await getTarballUrl("basic", "ts")).toMatchInlineSnapshot(`
-        Object {
-          "filePath": "examples/basic",
-          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
-        }
-      `);
+      expect(await getTarballUrl("basic", "ts")).toEqual({
+        filePath: "examples/basic",
+        tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
+      });
       await expect(
         getTarballUrl("not-found", "ts", process.env.GITHUB_TOKEN)
-      ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `"Unable to parse the URL \\"not-found\\" as a URL."`
-      );
+      ).rejects.toThrowError('Unable to parse the URL "not-found" as a URL.');
     });
 
     it("works for github shorthands", async () => {
       expect(
         await getTarballUrl("mcansh/snkrs", "ts", process.env.GITHUB_TOKEN)
-      ).toMatchInlineSnapshot(`
-        Object {
-          "filePath": "",
-          "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/main",
-        }
-      `);
+      ).toEqual({
+        filePath: "",
+        tarballURL: `https://codeload.github.com/mcansh/snkrs/tar.gz/main`,
+      });
     });
 
     it("works for full github urls", async () => {
@@ -79,22 +68,19 @@ describe("create-remix cli", () => {
           "ts",
           process.env.GITHUB_TOKEN
         )
-      ).toMatchInlineSnapshot(`
-        Object {
-          "filePath": "",
-          "tarballURL": "https://codeload.github.com/mcansh/snkrs/tar.gz/other",
-        }
-      `);
+      ).toEqual({
+        filePath: "",
+        tarballURL: `https://codeload.github.com/mcansh/snkrs/tar.gz/other`,
+      });
     });
 
     it("works when only supplying a repo name", async () => {
-      expect(await getTarballUrl("arc-stack", "ts", process.env.GITHUB_TOKEN))
-        .toMatchInlineSnapshot(`
-        Object {
-          "filePath": "",
-          "tarballURL": "https://codeload.github.com/remix-run/arc-stack/tar.gz/main",
-        }
-      `);
+      expect(
+        await getTarballUrl("arc-stack", "ts", process.env.GITHUB_TOKEN)
+      ).toEqual({
+        filePath: "",
+        tarballURL: `https://codeload.github.com/remix-run/arc-stack/tar.gz/main`,
+      });
     });
 
     it("works for sub directories", async () => {
@@ -104,20 +90,26 @@ describe("create-remix cli", () => {
           "ts",
           process.env.GITHUB_TOKEN
         )
-      ).toMatchInlineSnapshot(`
-        Object {
-          "filePath": "examples/basic",
-          "tarballURL": "https://codeload.github.com/remix-run/remix/tar.gz/main",
-        }
-      `);
+      ).toEqual({
+        filePath: "examples/basic",
+        tarballURL: `https://codeload.github.com/remix-run/remix/tar.gz/main`,
+      });
     });
   });
 
-  // TODO: add tests for checking local tarballs, local directories, file URLS, and remote tarballs
   describe("creates a new app from a template", () => {
+    let projectDir: string;
+
+    beforeEach(() => {
+      projectDir = path.join(
+        process.cwd(),
+        ".tmp",
+        Math.random().toString(32).slice(2)
+      );
+    });
+
     // this also tests sub directories
     it("works for examples in the remix repo", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: "basic",
@@ -131,7 +123,6 @@ describe("create-remix cli", () => {
     });
 
     it("works for templates in the remix org", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: "arc-stack",
@@ -145,7 +136,6 @@ describe("create-remix cli", () => {
     });
 
     it("works for GitHub username/repo combo", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: "mcansh/snkrs",
@@ -159,7 +149,6 @@ describe("create-remix cli", () => {
     });
 
     it("works for remote tarballs", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: "https://github.com/remix-run/remix/blob/6ae8676dfeb6a79c7d30c925408d1b043623f307/packages/create-remix/__tests__/arc.tar.gz?raw=true",
@@ -172,7 +161,6 @@ describe("create-remix cli", () => {
     });
 
     it.skip("works for a path to a tarball on disk", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: path.join(__dirname, "arc.tar.gz"),
@@ -185,7 +173,6 @@ describe("create-remix cli", () => {
     });
 
     it("works for a file path to a directory on disk", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: path.join(process.cwd(), "examples/basic"),
@@ -198,7 +185,6 @@ describe("create-remix cli", () => {
     });
 
     it("works for a file URL on disk", async () => {
-      let projectDir = getTmpDir();
       await expect(
         createApp({
           from: pathToFileURL(

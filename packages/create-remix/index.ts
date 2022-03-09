@@ -8,8 +8,11 @@ import cliPkgJson from "./package.json";
 import {
   CreateRemixError,
   downloadAndExtractTarball,
+  downloadAndExtractTemplateOrExample,
   extractLocalTarball,
   getTarballUrl,
+  isRemixExample,
+  isRemixTemplate,
 } from "./utils";
 
 export type Server =
@@ -88,17 +91,53 @@ export async function createApp({
       );
     }
   } else {
-    let { tarballURL, filePath } = await getTarballUrl(from, lang, githubPAT);
+    let parsed = await getTarballUrl(from, githubPAT);
+    console.log({ parsed });
 
-    if (!quiet) {
-      console.log(`Downloading files. This might take a moment.`);
+    if (parsed) {
+      if (!quiet) {
+        console.log(`Downloading files. This might take a moment.`);
+      }
+      await downloadAndExtractTarball(projectDir, parsed.tarballURL, {
+        token: githubPAT,
+        lang,
+        filePath: parsed.filePath,
+      });
+    } else {
+      let template = await isRemixTemplate(from, lang, githubPAT);
+      console.log({ template });
+      if (template) {
+        if (!quiet) {
+          console.log(`Downloading files. This might take a moment.`);
+        }
+        await downloadAndExtractTemplateOrExample(
+          projectDir,
+          template,
+          "templates",
+          { lang, token: githubPAT }
+        );
+      }
+
+      let example = await isRemixExample(from, githubPAT);
+      console.log({ example });
+      if (example) {
+        if (!quiet) {
+          console.log(`Downloading files. This might take a moment.`);
+        }
+        await downloadAndExtractTemplateOrExample(
+          projectDir,
+          example,
+          "examples",
+          { lang, token: githubPAT }
+        );
+      }
+
+      await downloadAndExtractTarball(projectDir, from, {
+        token: githubPAT,
+        lang,
+        filePath: "",
+      });
     }
-
-    await downloadAndExtractTarball(projectDir, tarballURL, {
-      token: githubPAT,
-      lang,
-      filePath,
-    });
   }
 
   let appPkg = require(path.join(projectDir, "package.json"));
