@@ -73,12 +73,8 @@ module.exports = {
         // All examples and docs, including code blocks in .md files
         "examples/**/*.js?(x)",
         "examples/**/*.ts?(x)",
-        "examples/**/*.md/*.js?(x)",
-        "examples/**/*.md/*.ts?(x)",
         "docs/**/*.js?(x)",
         "docs/**/*.ts?(x)",
-        "docs/**/*.md/*.js?(x)",
-        "docs/**/*.md/*.ts?(x)",
       ],
       rules: {
         "import/order": OFF,
@@ -92,9 +88,7 @@ module.exports = {
       files: [
         // All examples and docs, including code blocks in .md files (TypeScript only)
         "examples/**/*.ts?(x)",
-        "examples/**/*.md/*.ts?(x)",
         "docs/**/*.ts?(x)",
-        "docs/**/*.md/*.ts?(x)",
       ],
       rules: {
         "@typescript-eslint/no-unused-expressions": OFF,
