@@ -125,6 +125,7 @@ describe("create-remix cli", () => {
           lang: "ts",
           projectDir,
           quiet: true,
+          githubPAT: process.env.GITHUB_TOKEN,
         })
       ).resolves.toBeUndefined();
     });
@@ -138,6 +139,7 @@ describe("create-remix cli", () => {
           lang: "ts",
           projectDir,
           quiet: true,
+          githubPAT: process.env.GITHUB_TOKEN,
         })
       ).resolves.toBeUndefined();
     });
@@ -151,6 +153,7 @@ describe("create-remix cli", () => {
           lang: "ts",
           projectDir,
           quiet: true,
+          githubPAT: process.env.GITHUB_TOKEN,
         })
       ).resolves.toBeUndefined();
     });

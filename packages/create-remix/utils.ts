@@ -27,7 +27,7 @@ export async function extractLocalTarball(
   await pipeline(readStream, writeStream);
 }
 
-export async function downloadAndExtractRepo(
+export async function downloadAndExtractTarball(
   projectDir: string,
   url: string,
   options: {
@@ -54,8 +54,6 @@ export async function downloadAndExtractRepo(
     response.body.pipe(gunzip()),
     tar.extract(cwd, {
       map(header) {
-        let originalDirName = header.name.split("/")[0];
-        header.name = header.name.replace(originalDirName, desiredDir);
         if (options.filePath) {
           // add a trailing slash to the file path so we dont overmatch
           if (
@@ -67,6 +65,9 @@ export async function downloadAndExtractRepo(
           } else {
             header.name = "__IGNORE__" + header.name;
           }
+        } else {
+          let originalDirName = header.name.split("/")[0];
+          header.name = header.name.replace(originalDirName, desiredDir);
         }
 
         return header;
@@ -96,7 +97,8 @@ export async function getTarballUrl(
   from: string,
   lang: Lang,
   token?: string | undefined
-) {
+): Promise<{ tarballURL: string; filePath: string }> {
+  // TODO: check this isn't a url first
   let template = await isRemixTemplate(from, lang, token);
 
   if (template) {
@@ -118,7 +120,10 @@ export async function getTarballUrl(
   let info = await getRepoInfo(from, token);
 
   if (!info) {
-    throw new Error(`Could not find repo ${from}`);
+    return {
+      tarballURL: from,
+      filePath: "",
+    };
   }
 
   return {
@@ -140,6 +145,10 @@ export async function getRepoInfo(
 ): Promise<RepoInfo | undefined> {
   try {
     let url = new URL(from);
+    if (url.hostname !== "github.com") {
+      return;
+    }
+
     let [, owner, name, t, branch, ...file] = url.pathname.split("/");
 
     if (t === undefined) {
@@ -152,6 +161,8 @@ export async function getRepoInfo(
     if (owner && name && branch && t === "tree") {
       return { owner, name, branch, filePath: file.join("/") };
     }
+
+    return;
   } catch (error: unknown) {
     // invalid url, but it could be a github shorthand for
     // :owner/:repo

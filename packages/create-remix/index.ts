@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import cliPkgJson from "./package.json";
 import {
   CreateRemixError,
-  downloadAndExtractRepo,
+  downloadAndExtractTarball,
   extractLocalTarball,
   getTarballUrl,
 } from "./utils";
@@ -94,7 +94,7 @@ export async function createApp({
       console.log(`Downloading files. This might take a moment.`);
     }
 
-    await downloadAndExtractRepo(projectDir, tarballURL, {
+    await downloadAndExtractTarball(projectDir, tarballURL, {
       token: githubPAT,
       lang,
       filePath,
