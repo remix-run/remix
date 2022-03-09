@@ -695,7 +695,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 💿 Add an outlet to the admin page
 
 ```tsx filename=app/routes/admin.tsx lines=[1,21]
-import { Outlet, Link, useLoaderData } from "remix";
+import { json, Outlet, Link, useLoaderData } from "remix";
 
 //...
 export default function Admin() {
