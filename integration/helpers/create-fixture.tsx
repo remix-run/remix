@@ -372,7 +372,6 @@ function build(projectDir: string) {
   });
   cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
     cwd: projectDir,
-    stdio: "inherit",
   });
 }
 
