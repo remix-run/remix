@@ -53,7 +53,10 @@ export async function downloadAndExtractTarball(
   await pipeline(
     response.body.pipe(gunzip()),
     tar.extract(cwd, {
+      strip: options.filePath ? 0 : 1,
       map(header) {
+        let originalDirName = header.name.split("/")[0];
+        header.name = header.name.replace(originalDirName, desiredDir);
         if (options.filePath) {
           // add a trailing slash to the file path so we dont overmatch
           if (
@@ -65,9 +68,6 @@ export async function downloadAndExtractTarball(
           } else {
             header.name = "__IGNORE__" + header.name;
           }
-        } else {
-          let originalDirName = header.name.split("/")[0];
-          header.name = header.name.replace(originalDirName, desiredDir);
         }
 
         return header;
