@@ -46,7 +46,7 @@ module.exports = {
   },
   overrides: [
     {
-      // all ```jsx & ```tsx code blocks in .md files
+      // all code blocks in .md files
       files: ["**/*.md/*.js?(x)", "**/*.md/*.ts?(x)"],
       rules: {
         "no-unreachable": OFF,
