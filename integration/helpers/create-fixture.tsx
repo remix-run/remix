@@ -216,12 +216,22 @@ export async function createAppFixture(fixture: Fixture) {
        */
       clickSubmitButton: async (
         action: string,
-        options: { wait: boolean } = { wait: true }
+        options: { wait: boolean; method?: string } = { wait: true }
       ) => {
-        let selector = `button[formaction="${action}"]`;
+        let selector: string;
+        if (options.method) {
+          selector = `button[formAction="${action}"][formMethod="${options.method}"]`;
+        } else {
+          selector = `button[formAction="${action}"]`;
+        }
+
         let el = await page.$(selector);
         if (!el) {
-          selector = `form[action="${action}"] button[type="submit"]`;
+          if (options.method) {
+            selector = `form[action="${action}"] button[type="submit"][formMethod="${options.method}"]`;
+          } else {
+            selector = `form[action="${action}"] button[type="submit"]`;
+          }
           el = await page.$(selector);
           if (!el) {
             throw new Error(`Can't find button for: ${action}`);
@@ -362,6 +372,7 @@ function build(projectDir: string) {
   });
   cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
     cwd: projectDir,
+    stdio: "inherit",
   });
 }
 
