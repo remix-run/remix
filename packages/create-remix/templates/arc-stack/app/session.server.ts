@@ -24,15 +24,15 @@ const USER_SESSION_KEY = "userId";
 export async function getSession(
   input: string | Request | null
 ): Promise<Session> {
-  const cookieHeader =
+  let cookieHeader =
     input instanceof Request ? input.headers.get("Cookie") : input;
 
   return sessionStorage.getSession(cookieHeader);
 }
 
 export async function getUserId(request: Request) {
-  const session = await getSession(request);
-  const user = session.get(USER_SESSION_KEY);
+  let session = await getSession(request);
+  let user = session.get(USER_SESSION_KEY);
   if (!user) return null;
   return user;
 }
@@ -41,9 +41,9 @@ export async function requireUser(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
 ) {
-  const user = await getUserId(request);
+  let user = await getUserId(request);
   if (!user) {
-    const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
+    let searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
   }
   return user;
@@ -54,7 +54,7 @@ export async function createUserSession(
   userId: string,
   redirectTo: string
 ) {
-  const session = await getSession(request);
+  let session = await getSession(request);
   session.set(USER_SESSION_KEY, userId);
   return redirect(redirectTo, {
     headers: {
@@ -64,7 +64,7 @@ export async function createUserSession(
 }
 
 export async function logout(request: Request) {
-  const session = await getSession(request);
+  let session = await getSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await sessionStorage.destroySession(session),

@@ -9,7 +9,7 @@ import { createUserSession, getUserId } from "~/session.server";
 import { createUser, getUserByEmail } from "~/models/user";
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await getUserId(request);
+  let userId = await getUserId(request);
   if (userId) return redirect("/");
   return {};
 };
@@ -22,10 +22,10 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const formData = await request.formData();
+  let formData = await request.formData();
 
-  const email = formData.get("email");
-  const password = formData.get("password");
+  let email = formData.get("email");
+  let password = formData.get("password");
 
   if (typeof email !== "string" || email.length === 0) {
     return json<ActionData>(
@@ -41,7 +41,7 @@ export const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const existingUser = await getUserByEmail(email);
+  let existingUser = await getUserByEmail(email);
 
   if (existingUser) {
     return json<ActionData>(
@@ -50,7 +50,7 @@ export const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const user = await createUser(email, password);
+  let user = await createUser(email, password);
 
   return createUserSession(request, user.pk, "/");
 };
@@ -60,11 +60,11 @@ export const meta: MetaFunction = () => ({
 });
 
 export default function JoinPage() {
-  const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("redirectTo") ?? undefined;
-  const actionData = useActionData<ActionData>();
-  const emailRef = React.useRef<HTMLInputElement>(null);
-  const passwordRef = React.useRef<HTMLInputElement>(null);
+  let [searchParams] = useSearchParams();
+  let returnTo = searchParams.get("redirectTo") ?? undefined;
+  let actionData = useActionData<ActionData>();
+  let emailRef = React.useRef<HTMLInputElement>(null);
+  let passwordRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (actionData?.errors?.email) {

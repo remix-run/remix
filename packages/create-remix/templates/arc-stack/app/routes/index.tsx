@@ -8,20 +8,19 @@ import {
   useLoaderData,
   useLocation,
 } from "remix";
+import Alert from "@reach/alert";
 
 import { requireUser } from "~/session.server";
-
-import Alert from "@reach/alert";
 import { createNote, deleteNote, getNotes } from "~/models/note";
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await requireUser(request);
+  let userId = await requireUser(request);
 
   console.log({ userId });
 
   if (!userId) return redirect("/login");
 
-  const notes = await getNotes(userId);
+  let notes = await getNotes(userId);
 
   return json({ notes });
 };
@@ -34,16 +33,16 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const userId = await requireUser(request);
+  let userId = await requireUser(request);
 
-  const formData = await request.formData();
+  let formData = await request.formData();
 
-  const actionType = formData.get("_action");
+  let actionType = formData.get("_action");
 
   switch (actionType) {
     case "delete-note": {
-      const pk = formData.get("pk");
-      const sk = formData.get("sk");
+      let pk = formData.get("pk");
+      let sk = formData.get("sk");
 
       if (typeof pk !== "string") {
         throw new Response("pk must be a string", { status: 400 });
@@ -58,8 +57,8 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     case "create-note": {
-      const title = formData.get("title");
-      const body = formData.get("body");
+      let title = formData.get("title");
+      let body = formData.get("body");
 
       if (typeof title !== "string" || title.length === 0) {
         return json<ActionData>(
@@ -90,11 +89,11 @@ export const meta: MetaFunction = () => {
 };
 
 export default function IndexPage() {
-  const location = useLocation();
-  const data = useLoaderData();
-  const actionData = useActionData<ActionData>();
-  const titleRef = React.useRef<HTMLInputElement>(null);
-  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+  let location = useLocation();
+  let data = useLoaderData();
+  let actionData = useActionData<ActionData>();
+  let titleRef = React.useRef<HTMLInputElement>(null);
+  let bodyRef = React.useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
     if (actionData?.errors?.title) {

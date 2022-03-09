@@ -22,8 +22,8 @@ async function getSession(request: Request) {
 }
 
 async function getUserId(request: Request) {
-  const session = await getSession(request);
-  const userId = session.get(USER_SESSION_KEY);
+  let session = await getSession(request);
+  let userId = session.get(USER_SESSION_KEY);
   return userId;
 }
 
@@ -31,9 +31,9 @@ async function requireUserId(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
 ) {
-  const userId = await getUserId(request);
+  let userId = await getUserId(request);
   if (!userId) {
-    const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
+    let searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
   }
   return userId;
@@ -44,7 +44,7 @@ async function createUserSession(
   userId: string,
   redirectTo: string
 ) {
-  const session = await getSession(request);
+  let session = await getSession(request);
   session.set(USER_SESSION_KEY, userId);
   return redirect(redirectTo, {
     headers: {
@@ -54,7 +54,7 @@ async function createUserSession(
 }
 
 async function logout(request: Request) {
-  const session = await getSession(request);
+  let session = await getSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await sessionStorage.destroySession(session),

@@ -2,8 +2,8 @@ import arc from "@architect/functions";
 import bcrypt from "bcryptjs";
 
 async function getUserByEmail(email: string) {
-  const db = await arc.tables();
-  const result = await db.people.query({
+  let db = await arc.tables();
+  let result = await db.people.query({
     KeyConditionExpression: "pk = :pk",
     ExpressionAttributeValues: { ":pk": `email#${email}` },
   });
@@ -12,8 +12,8 @@ async function getUserByEmail(email: string) {
 }
 
 async function getUserPasswordByEmail(email: string) {
-  const db = await arc.tables();
-  const result = await db.password.query({
+  let db = await arc.tables();
+  let result = await db.password.query({
     KeyConditionExpression: "pk = :pk",
     ExpressionAttributeValues: { ":pk": `email#${email}` },
   });
@@ -22,8 +22,8 @@ async function getUserPasswordByEmail(email: string) {
 }
 
 async function createUser(email: string, password: string) {
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const db = await arc.tables();
+  let hashedPassword = await bcrypt.hash(password, 10);
+  let db = await arc.tables();
   await db.password.put({
     pk: `email#${email}`,
     password: hashedPassword,
@@ -33,19 +33,19 @@ async function createUser(email: string, password: string) {
     pk: `email#${email}`,
   });
 
-  const user = await getUserByEmail(email);
+  let user = await getUserByEmail(email);
 
   return user;
 }
 
 async function verifyLogin(email: string, password: string) {
-  const user = await getUserPasswordByEmail(email);
+  let user = await getUserPasswordByEmail(email);
 
   if (!user) {
     return undefined;
   }
 
-  const isValid = await bcrypt.compare(password, user.password);
+  let isValid = await bcrypt.compare(password, user.password);
   if (!isValid) {
     return undefined;
   }

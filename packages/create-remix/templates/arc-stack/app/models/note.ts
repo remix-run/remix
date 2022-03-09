@@ -2,9 +2,9 @@ import cuid from "cuid";
 import arc from "@architect/functions";
 
 export async function getNotes(email: string) {
-  const db = await arc.tables();
+  let db = await arc.tables();
 
-  const result = await db.notes.query({
+  let result = await db.notes.query({
     KeyConditionExpression: "pk = :pk",
     ExpressionAttributeValues: { ":pk": email },
   });
@@ -21,7 +21,7 @@ export async function createNote({
   body: string;
   email: string;
 }) {
-  const db = await arc.tables();
+  let db = await arc.tables();
 
   return db.notes.put({
     // our primary key is the email
@@ -40,6 +40,6 @@ export async function deleteNote({
   noteId: string;
   email: string;
 }) {
-  const db = await arc.tables();
+  let db = await arc.tables();
   return db.notes.delete({ pk: email, sk: noteId });
 }

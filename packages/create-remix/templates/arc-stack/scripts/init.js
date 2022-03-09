@@ -7,9 +7,9 @@ function getRandomString(length) {
 }
 
 async function main(PROJECT_DIR) {
-  const ENV_PATH = path.join(PROJECT_DIR, ".env");
+  let ENV_PATH = path.join(PROJECT_DIR, ".env");
 
-  const env = `NODE_ENV="development"\nSESSION_SECRET="${getRandomString(16)}"`;
+  let env = `NODE_ENV="development"\nSESSION_SECRET="${getRandomString(16)}"`;
 
   await fs.writeFile(ENV_PATH, env);
 }

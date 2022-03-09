@@ -1,10 +1,11 @@
 import bcrypt from "@node-rs/bcrypt";
 import type { User } from "@prisma/client";
+
 import { prisma } from "~/db.server";
 
 async function createUser(email: string, password: string): Promise<User> {
-  const hashedPassword = await bcrypt.hash(password);
-  const user = await prisma.user.create({
+  let hashedPassword = await bcrypt.hash(password);
+  let user = await prisma.user.create({
     data: {
       email,
       password: {
@@ -22,7 +23,7 @@ async function verifyLogin(
   email: string,
   password: string
 ): Promise<User | undefined> {
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { email },
     include: {
       password: true,
@@ -33,13 +34,13 @@ async function verifyLogin(
     return undefined;
   }
 
-  const isValid = await bcrypt.verify(password, user.password.hash);
+  let isValid = await bcrypt.verify(password, user.password.hash);
 
   if (!isValid) {
     return undefined;
   }
 
-  const { password: _password, ...userWithoutPassword } = user;
+  let { password: _password, ...userWithoutPassword } = user;
 
   return userWithoutPassword;
 }

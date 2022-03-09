@@ -20,8 +20,8 @@ interface LoaderData {
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await requireUserId(request);
-  const notes = await prisma.note.findMany({ where: { userId: userId } });
+  let userId = await requireUserId(request);
+  let notes = await prisma.note.findMany({ where: { userId: userId } });
   return json<LoaderData>({ notes });
 };
 
@@ -33,14 +33,14 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const userId = await requireUserId(request);
+  let userId = await requireUserId(request);
 
-  const formData = await request.formData();
-  const actionType = formData.get("_action");
+  let formData = await request.formData();
+  let actionType = formData.get("_action");
 
   switch (actionType) {
     case "delete-note": {
-      const noteId = formData.get("noteId");
+      let noteId = formData.get("noteId");
       if (typeof noteId !== "string") {
         throw new Response("noteId must be a string", { status: 400 });
       }
@@ -51,8 +51,8 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     case "create-note": {
-      const title = formData.get("title");
-      const body = formData.get("body");
+      let title = formData.get("title");
+      let body = formData.get("body");
 
       if (typeof title !== "string" || title.length === 0) {
         return json<ActionData>(
@@ -84,11 +84,11 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  const location = useLocation();
-  const data = useLoaderData<LoaderData>();
-  const actionData = useActionData<ActionData>();
-  const titleRef = React.useRef<HTMLInputElement>(null);
-  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+  let location = useLocation();
+  let data = useLoaderData<LoaderData>();
+  let actionData = useActionData<ActionData>();
+  let titleRef = React.useRef<HTMLInputElement>(null);
+  let bodyRef = React.useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
     if (actionData?.errors?.title) {

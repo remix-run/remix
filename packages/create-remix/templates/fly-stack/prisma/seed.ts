@@ -4,9 +4,9 @@ import bcrypt from "@node-rs/bcrypt";
 const prisma = new PrismaClient();
 
 async function seed() {
-  const hashedPassword = await bcrypt.hash("mysupergoodpassword", 10);
+  let hashedPassword = await bcrypt.hash("mysupergoodpassword", 10);
 
-  const user = await prisma.user.create({
+  let user = await prisma.user.create({
     data: {
       email: "you@example.com",
       password: hashedPassword,

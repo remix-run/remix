@@ -13,33 +13,33 @@ function getRandomString(length) {
 }
 
 async function main(PROJECT_DIR) {
-  const README_PATH = path.join(PROJECT_DIR, "README.md");
-  const FLY_TOML_PROD_PATH = path.join(PROJECT_DIR, "fly.production.toml");
-  const FLY_TOML_STAGING_PATH = path.join(PROJECT_DIR, "fly.staging.toml");
-  const EXAMPLE_ENV_PATH = path.join(PROJECT_DIR, ".env.example");
-  const ENV_PATH = path.join(PROJECT_DIR, ".env");
+  let README_PATH = path.join(PROJECT_DIR, "README.md");
+  let FLY_TOML_PROD_PATH = path.join(PROJECT_DIR, "fly.production.toml");
+  let FLY_TOML_STAGING_PATH = path.join(PROJECT_DIR, "fly.staging.toml");
+  let EXAMPLE_ENV_PATH = path.join(PROJECT_DIR, ".env.example");
+  let ENV_PATH = path.join(PROJECT_DIR, ".env");
 
-  const REPLACER = "[YOUR_APP_NAME]";
+  let REPLACER = "[YOUR_APP_NAME]";
 
-  const DIR_NAME = path.basename(path.resolve(PROJECT_DIR));
-  const SUFFIX = getRandomString(2);
-  const APP_NAME = DIR_NAME + "-" + SUFFIX;
+  let DIR_NAME = path.basename(path.resolve(PROJECT_DIR));
+  let SUFFIX = getRandomString(2);
+  let APP_NAME = DIR_NAME + "-" + SUFFIX;
 
-  const [prodContent, stagingContent, readme, env] = await Promise.all([
+  let [prodContent, stagingContent, readme, env] = await Promise.all([
     fs.readFile(FLY_TOML_PROD_PATH, "utf-8"),
     fs.readFile(FLY_TOML_STAGING_PATH, "utf-8"),
     fs.readFile(README_PATH, "utf-8"),
     fs.readFile(EXAMPLE_ENV_PATH, "utf-8"),
   ]);
 
-  const newEnv = env + `\nSESSION_SECRET="${getRandomString(16)}"`;
+  let newEnv = env + `\nSESSION_SECRET="${getRandomString(16)}"`;
 
-  const prodToml = toml.parse(prodContent);
-  const stagingToml = toml.parse(stagingContent);
+  let prodToml = toml.parse(prodContent);
+  let stagingToml = toml.parse(stagingContent);
   prodToml.app = prodToml.app.replace(REPLACER, APP_NAME);
   stagingToml.app = stagingToml.app.replace(REPLACER, APP_NAME);
 
-  const newReadme = readme.replace(
+  let newReadme = readme.replace(
     new RegExp(escapeRegExp(REPLACER), "g"),
     APP_NAME
   );
