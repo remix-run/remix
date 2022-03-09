@@ -317,7 +317,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,11,13-28]
+```tsx filename=app/post.ts lines=[1-3,11,13-29]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
