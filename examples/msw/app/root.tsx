@@ -1,7 +1,13 @@
 import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
-import { json } from "remix";
-import { Links, LiveReload, Meta, Scripts, ScrollRestoration } from "remix";
+import {
+  json,
+  Links,
+  LiveReload,
+  Meta,
+  Scripts,
+  ScrollRestoration,
+  useLoaderData,
+} from "remix";
 
 type LoaderData = { message: string };
 
