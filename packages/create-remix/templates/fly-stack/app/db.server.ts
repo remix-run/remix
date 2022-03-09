@@ -2,9 +2,11 @@ import { PrismaClient } from "@prisma/client";
 
 let prisma: PrismaClient;
 
+/* eslint-disable prefer-let/prefer-let */
 declare global {
   var __db__: PrismaClient;
 }
+/* eslint-disable prefer-let/prefer-let */
 
 // this is needed because in development we don't want to restart
 // the server with every change, but we want to make sure we don't
