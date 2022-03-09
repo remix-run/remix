@@ -13,7 +13,7 @@
     "test": "jest",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
-    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",
+    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md . --fix",
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint"
   },
   "workspaces": [
