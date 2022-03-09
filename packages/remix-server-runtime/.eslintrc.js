@@ -7,7 +7,6 @@ module.exports = {
       { name: "__dirname", message: restrictedGlobalsError },
       { name: "__filename", message: restrictedGlobalsError },
       { name: "Buffer", message: restrictedGlobalsError },
-      { name: "process", message: restrictedGlobalsError },
     ],
     "import/no-nodejs-modules": "error",
   },
