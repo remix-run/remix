@@ -79,13 +79,5 @@ module.exports = {
         "prefer-let/prefer-let": OFF,
       },
     },
-    {
-      files: [
-        // All examples and docs, including code blocks in .md files (TypeScript only)
-        "examples/**/*.ts?(x)",
-      ],
-      rules: {
-      },
-    },
   ],
 };
