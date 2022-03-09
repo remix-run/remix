@@ -383,6 +383,18 @@ export interface RemixConfig {
   tsconfigPath: string | undefined;
 
   future: FutureConfig;
+  /**
+   * A list of patterns that determined if a module is transpiled and included
+   * in the server bundle. This can be useful when consuming ESM only packages
+   * in a CJS build.
+   */
+  serverDependenciesToBundle: Array<string | RegExp>;
+
+  /**
+   * A flag to warn only when adding node builtins modules to projects.
+   */
+   warnOnFakeBuiltins: boolean;
+
 }
 
 /**
@@ -747,6 +759,8 @@ export async function readConfig(
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
+  let warnOnFakeBuiltins = appConfig.warnOnFakeBuiltins? appConfig.warnOnFakeBuiltins: false
+
   return {
     appDirectory,
     cacheDirectory,
@@ -778,6 +792,7 @@ export async function readConfig(
     watchPaths,
     tsconfigPath,
     future,
+    warnOnFakeBuiltins
   };
 }
 
