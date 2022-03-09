@@ -121,19 +121,31 @@ export async function createApp({
   // write package.json
   await fse.writeJSON(path.join(projectDir, "package.json"), appPkg);
 
-  let setupScripts = [
-    path.resolve(projectDir, "remix.init", "index.js"),
-    path.resolve(projectDir, "remix.init.js"),
-  ];
+  let setupScriptDir = path.join(projectDir, "remix.init");
 
-  let hasSetupScript = setupScripts.some((script) => fse.existsSync(script));
+  let setupScript = path.resolve(setupScriptDir, "index.js");
+  let rootSetupScript = path.resolve(projectDir, "remix.init.js");
+
+  let hasSetupScript = fse.existsSync(setupScript);
+  let hasRootSetupScript = fse.existsSync(rootSetupScript);
 
   if (install) {
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
-    execSync("npx remix init", { stdio: "inherit", cwd: projectDir });
+    if (hasSetupScript || hasRootSetupScript) {
+      try {
+        execSync("npx remix init", { stdio: "inherit", cwd: projectDir });
+        if (hasSetupScript) {
+          fse.removeSync(setupScriptDir);
+        } else if (hasRootSetupScript) {
+          fse.removeSync(rootSetupScript);
+        }
+      } catch (error: unknown) {
+        console.error("🚨  Error running `remix.init`");
+      }
+    }
   } else if (from && hasSetupScript) {
     console.log(
-      `You've opted out of running \`npm install\` in your new project.\nYou'll need to manually run \`npx remix init\`.`
+      `You've opted out of running \`npm install\`.\nYou'll need to manually run \`npx remix init\`.`
     );
   }
 

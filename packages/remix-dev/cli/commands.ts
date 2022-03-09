@@ -220,26 +220,16 @@ export async function init(remixRoot: string) {
     );
   }
 
-  try {
-    let init: any;
-    if (hasSetupScript) {
-      execSync("npm install", { stdio: "inherit", cwd: setupScriptDir });
-      init = require(setupScript);
-    } else {
-      init = require(rootSetupScript);
-    }
-
-    await init({ rootDirectory: remixRoot });
-
-    if (hasSetupScript) {
-      fse.removeSync(setupScriptDir);
-    }
-  } catch (error: unknown) {
-    console.error(
-      `🚨  Error running \`remix.init\` script. We've kept the \`remix.init\` directory around so you can fix it and rerun "remix init".\n\n`
-    );
-    console.error(error);
+  let init: any;
+  if (hasSetupScript) {
+    // TODO: check for npm/yarn/pnpm
+    execSync("npm install", { stdio: "inherit", cwd: setupScriptDir });
+    init = require(setupScript);
+  } else {
+    init = require(rootSetupScript);
   }
+
+  await init({ rootDirectory: remixRoot });
 }
 
 function purgeAppRequireCache(buildPath: string) {
