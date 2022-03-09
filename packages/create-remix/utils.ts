@@ -1,6 +1,7 @@
 import stream from "stream";
 import { promisify } from "util";
 import path from "path";
+import { fileURLToPath } from "url";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import gunzip from "gunzip-maybe";
@@ -37,7 +38,9 @@ export async function downloadAndExtractTemplateOrExample(
   }
 ) {
   let response = await fetch(
-    "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    type === "templates"
+      ? "https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix"
+      : "https://codeload.github.com/remix-run/remix/tar.gz/main",
     options.token
       ? { headers: { Authorization: `token ${options.token}` } }
       : {}
@@ -49,19 +52,19 @@ export async function downloadAndExtractTemplateOrExample(
 
   let cwd = path.dirname(projectDir);
   let desiredDir = path.basename(projectDir);
+  let exampleOrTemplateName =
+    type === "templates" && options.lang === "ts" ? `${name}-ts` : name;
+  let templateDir = path.join(desiredDir, type, exampleOrTemplateName);
   await pipeline(
     response.body.pipe(gunzip()),
     tar.extract(cwd, {
       map(header) {
         let originalDirName = header.name.split("/")[0];
         header.name = header.name.replace(originalDirName, desiredDir);
-        if (!header.name.startsWith(path.join(desiredDir, type, name))) {
+        if (!header.name.startsWith(templateDir + path.sep)) {
           header.name = "__IGNORE__";
         } else {
-          header.name = header.name.replace(
-            path.join(desiredDir, type, name),
-            desiredDir
-          );
+          header.name = header.name.replace(templateDir, desiredDir);
         }
         return header;
       },
@@ -83,6 +86,7 @@ export async function downloadAndExtractTarball(
     token?: string;
     lang: Lang;
     filePath?: string | null | undefined;
+    strip?: number;
   }
 ): Promise<void> {
   let cwd = path.dirname(projectDir);
@@ -101,7 +105,9 @@ export async function downloadAndExtractTarball(
   await pipeline(
     response.body.pipe(gunzip()),
     tar.extract(projectDir, {
-      strip: options.filePath ? options.filePath.split("/").length + 1 : 1,
+      strip:
+        options.strip ??
+        (options.filePath ? options.filePath.split("/").length + 1 : 1),
       ignore(name) {
         if (options.filePath) {
           return !name.startsWith(path.join(cwd, options.filePath));
@@ -116,11 +122,11 @@ export async function downloadAndExtractTarball(
 export async function getTarballUrl(
   from: string,
   token?: string | undefined
-): Promise<{ tarballURL: string; filePath: string } | undefined> {
+): Promise<{ tarballURL: string; filePath: string }> {
   let info = await getRepoInfo(from, token);
 
   if (!info) {
-    return undefined;
+    throw new CreateRemixError(`Could not find repo: ${from}`);
   }
 
   return {
@@ -242,4 +248,36 @@ export async function isRemixExample(name: string, token?: string) {
   let example = results.find((result: any) => result.name === name);
   if (!example) return undefined;
   return example.name;
+}
+
+type TemplateType =
+  // in the remix repo
+  | "template"
+  // in the remix repo
+  | "example"
+  // a github repo
+  | "repo"
+  // remote tarball url
+  | "remoteTarball"
+  // local directory
+  | "local";
+
+export async function detectTemplateType(
+  from: string,
+  lang: Lang,
+  token?: string
+): Promise<TemplateType> {
+  if (from.startsWith("file://")) return "local";
+  if (fse.existsSync(from)) return "local";
+
+  let template = await isRemixTemplate(from, lang, token);
+  if (template) return "template";
+
+  let example = await isRemixExample(from, token);
+  if (example) return "example";
+
+  let info = await getRepoInfo(from, token);
+  if (info) return "repo";
+
+  return "remoteTarball";
 }

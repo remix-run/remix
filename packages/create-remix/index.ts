@@ -1,18 +1,17 @@
 import path from "path";
+import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import fse from "fs-extra";
 import sortPackageJSON from "sort-package-json";
-import { fileURLToPath } from "url";
 
 import cliPkgJson from "./package.json";
 import {
   CreateRemixError,
+  detectTemplateType,
   downloadAndExtractTarball,
   downloadAndExtractTemplateOrExample,
   extractLocalTarball,
   getTarballUrl,
-  isRemixExample,
-  isRemixTemplate,
 } from "./utils";
 
 export type Server =
@@ -72,72 +71,60 @@ export async function createApp({
    * example in remix-run org
    * template in remix-run org
    */
-  if (from.startsWith("file://")) {
-    try {
-      from = fileURLToPath(from);
-    } catch (error: unknown) {
-      throw new CreateRemixError(`Unable to convert file URL to path`);
+  let templateType = await detectTemplateType(from, lang, githubPAT);
+  let options = { lang, token: githubPAT };
+  switch (templateType) {
+    case "local": {
+      let filepath = from.startsWith("file://") ? fileURLToPath(from) : from;
+      if (!fse.existsSync(filepath)) {
+        throw new CreateRemixError(`️🚨 Oops, "${filepath}" does not exist.`);
+      }
+      if (fse.statSync(filepath).isDirectory()) {
+        await fse.copy(filepath, projectDir);
+        break;
+      }
+      if (from.endsWith(".tar.gz")) {
+        await extractLocalTarball(projectDir, filepath);
+        break;
+      }
     }
-  }
-
-  if (fse.existsSync(from)) {
-    if (fse.statSync(from).isDirectory()) {
-      await fse.copy(from, projectDir);
-    } else if (from.endsWith(".tar.gz")) {
-      await extractLocalTarball(projectDir, from);
-    } else {
-      throw new CreateRemixError(
-        `Unable to parse the URL "${from}" as a file path.`
-      );
-    }
-  } else {
-    let parsed = await getTarballUrl(from, githubPAT);
-    console.log({ parsed });
-
-    if (parsed) {
-      if (!quiet) {
-        console.log(`Downloading files. This might take a moment.`);
-      }
-      await downloadAndExtractTarball(projectDir, parsed.tarballURL, {
-        token: githubPAT,
-        lang,
-        filePath: parsed.filePath,
-      });
-    } else {
-      let template = await isRemixTemplate(from, lang, githubPAT);
-      console.log({ template });
-      if (template) {
-        if (!quiet) {
-          console.log(`Downloading files. This might take a moment.`);
-        }
-        await downloadAndExtractTemplateOrExample(
-          projectDir,
-          template,
-          "templates",
-          { lang, token: githubPAT }
-        );
-      }
-
-      let example = await isRemixExample(from, githubPAT);
-      console.log({ example });
-      if (example) {
-        if (!quiet) {
-          console.log(`Downloading files. This might take a moment.`);
-        }
-        await downloadAndExtractTemplateOrExample(
-          projectDir,
-          example,
-          "examples",
-          { lang, token: githubPAT }
-        );
-      }
-
+    case "remoteTarball": {
       await downloadAndExtractTarball(projectDir, from, {
-        token: githubPAT,
-        lang,
-        filePath: "",
+        ...options,
+        strip: 2,
       });
+      break;
     }
+    case "example": {
+      await downloadAndExtractTemplateOrExample(
+        projectDir,
+        from,
+        "examples",
+        options
+      );
+      break;
+    }
+    case "template": {
+      await downloadAndExtractTemplateOrExample(
+        projectDir,
+        from,
+        "templates",
+        options
+      );
+      break;
+    }
+    case "repo": {
+      let { filePath, tarballURL } = await getTarballUrl(from, githubPAT);
+      await downloadAndExtractTarball(projectDir, tarballURL, {
+        ...options,
+        filePath,
+      });
+      break;
+    }
+    default:
+      throw new CreateRemixError(
+        `Unable to determine template type for "${from}"`
+      );
   }
 
   let appPkg = require(path.join(projectDir, "package.json"));
