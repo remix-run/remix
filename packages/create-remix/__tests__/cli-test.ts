@@ -25,6 +25,11 @@ const createRemix = path.resolve(
   "../../../build/node_modules/create-remix/cli.js"
 );
 
+const remixDev = path.resolve(
+  __dirname,
+  "../../../build/node_modules/@remix-run/dev/cli.js"
+);
+
 describe("create-remix cli", () => {
   describe("creates a new app from a template", () => {
     let projectDir: string;
@@ -208,6 +213,28 @@ describe("create-remix cli", () => {
           githubPAT: process.env.GITHUB_TOKEN,
         })
       ).resolves.toBeUndefined();
+
+      expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+    }, 60_000);
+
+    it("runs remix.init.js when using `remix init`", async () => {
+      await expect(
+        createApp({
+          from: path.join(__dirname, "remix-init.tar.gz"),
+          install: false,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+          githubPAT: process.env.GITHUB_TOKEN,
+        })
+      ).resolves.toBeUndefined();
+
+      let { stdout, stderr } = await execFile("node", [remixDev, "init"], {
+        cwd: projectDir,
+      });
+
+      expect(stdout.trim()).toBe("");
+      expect(stderr.trim()).toBe("");
 
       expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     }, 60_000);
