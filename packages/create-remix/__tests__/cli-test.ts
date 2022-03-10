@@ -190,7 +190,7 @@ describe("create-remix cli", () => {
     it("throws an error when invalid remix.init.js", async () => {
       await expect(
         createApp({
-          from: "arc-stack",
+          from: path.join(__dirname, "failing-remix-init.tar.gz"),
           install: true,
           lang: "ts",
           projectDir,
