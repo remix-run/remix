@@ -1,5 +1,6 @@
 ---
 title: Philosophy
+order: 1
 ---
 
 # Philosophy
