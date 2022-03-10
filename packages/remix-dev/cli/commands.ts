@@ -202,6 +202,10 @@ export async function dev(remixRoot: string, modeArg?: string) {
 }
 
 export async function init(remixRoot: string) {
+  if (!remixRoot) {
+    remixRoot = process.env.REMIX_ROOT || process.cwd();
+  }
+
   let setupScriptDir = path.join(remixRoot, "remix.init");
 
   let setupScript = path.resolve(setupScriptDir, "index.js");

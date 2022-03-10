@@ -159,14 +159,22 @@ export async function createApp({
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
     if (hasSetupScript || hasRootSetupScript) {
       try {
-        execSync("npx remix init", { stdio: "inherit", cwd: projectDir });
+        const remixDev = path.resolve(
+          projectDir,
+          "node_modules/@remix-run/dev/cli.js"
+        );
+
+        execSync(`node ${remixDev} init`, {
+          stdio: "inherit",
+          cwd: projectDir,
+        });
         if (hasSetupScript) {
           fse.removeSync(setupScriptDir);
         } else if (hasRootSetupScript) {
           fse.removeSync(rootSetupScript);
         }
       } catch (error: unknown) {
-        console.error("🚨  Error running `remix.init`");
+        throw new Error("🚨 Error running `remix.init`");
       }
     }
   } else if (from && hasSetupScript) {

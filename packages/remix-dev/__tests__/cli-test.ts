@@ -51,6 +51,7 @@ describe("remix cli", () => {
             $ remix setup node
             $ remix routes my-website
             $ remix routes my-website --json
+            $ remix init
             $ remix init my-website
 
         "
