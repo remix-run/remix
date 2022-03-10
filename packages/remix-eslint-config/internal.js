@@ -71,8 +71,6 @@ module.exports = {
     {
       files: [
         // All examples and docs, including code blocks in .md files
-        "docs/**/*.js?(x)",
-        "docs/**/*.ts?(x)",
         "examples/**/*.js?(x)",
         "examples/**/*.ts?(x)",
       ],
