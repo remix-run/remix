@@ -82,16 +82,5 @@ module.exports = {
         "prefer-let/prefer-let": OFF,
       },
     },
-    {
-      files: [
-        // All TS examples and docs, including code blocks in .md files
-        "docs/**/*.ts?(x)",
-        "examples/**/*.ts?(x)",
-      ],
-      rules: {
-        "@typescript-eslint/no-unused-expressions": OFF,
-        "@typescript-eslint/no-unused-vars": OFF,
-      },
-    },
   ],
 };
