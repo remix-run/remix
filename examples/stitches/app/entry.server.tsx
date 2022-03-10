@@ -11,7 +11,7 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  const sheet = getCssText();
+  let sheet = getCssText();
 
   let markup = renderToString(
     <ServerStyleContext.Provider value={sheet}>
@@ -19,7 +19,8 @@ export default function handleRequest(
     </ServerStyleContext.Provider>
   );
 
-  markup = markup.replace("__STYLES__", sheet);
+  sheet = getCssText();
+  markup = markup.replace(/<style id=\"stitches\">.*\<\/style>/g, `<style id="stitches">${sheet}</style>`);
 
   responseHeaders.set("Content-Type", "text/html");
 
