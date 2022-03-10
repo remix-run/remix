@@ -1,7 +1,6 @@
 import stream from "stream";
 import { promisify } from "util";
 import path from "path";
-import { fileURLToPath } from "url";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import gunzip from "gunzip-maybe";

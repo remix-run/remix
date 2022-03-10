@@ -181,6 +181,36 @@ describe("create-remix cli", () => {
         fse.existsSync(path.join(projectDir, "app/root.tsx"))
       ).toBeTruthy();
     });
+
+    it("throws an error when invalid remix.init.js", async () => {
+      await expect(
+        createApp({
+          from: "arc-stack",
+          install: true,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+          githubPAT: process.env.GITHUB_TOKEN,
+        })
+      ).rejects.toThrowError("🚨 Error running `remix.init`");
+    });
+
+    // TODO: enable once this is live
+    // fails due to `remix init` not being in the released compiler
+    it.skip("runs remix.init.js when installing dependencies", async () => {
+      await expect(
+        createApp({
+          from: path.join(__dirname, "remix-init.tar.gz"),
+          install: true,
+          lang: "ts",
+          projectDir,
+          quiet: true,
+          githubPAT: process.env.GITHUB_TOKEN,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+    }, 60_000);
   });
 
   // TODO: Rewrite this test
