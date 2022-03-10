@@ -331,7 +331,6 @@ async function buildEverything(
 
     return buildResults;
   } catch (err) {
-    console.error(err);
     options.onBuildFailure(err as Error);
     return [undefined, undefined];
   }
