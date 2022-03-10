@@ -4,8 +4,8 @@ import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
 import stripAnsi from "strip-ansi";
+import fse from "fs-extra";
 
-import { getTarballUrl } from "../utils";
 import { createApp } from "..";
 
 const DEFAULT_APP_NAME = "my-remix-app";
@@ -62,6 +62,12 @@ describe("create-remix cli", () => {
           githubPAT: process.env.GITHUB_TOKEN,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for GitHub username/repo combo", async () => {
@@ -75,6 +81,12 @@ describe("create-remix cli", () => {
           githubPAT: process.env.GITHUB_TOKEN,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for remote tarballs", async () => {
@@ -82,11 +94,17 @@ describe("create-remix cli", () => {
         createApp({
           from: "https://github.com/remix-run/remix/blob/6ae8676dfeb6a79c7d30c925408d1b043623f307/packages/create-remix/__tests__/arc.tar.gz?raw=true",
           install: false,
-          lang: "ts",
+          lang: "js",
           projectDir,
           quiet: true,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.jsx"))
+      ).toBeTruthy();
     });
 
     it("works for a path to a tarball on disk", async () => {
@@ -94,11 +112,17 @@ describe("create-remix cli", () => {
         createApp({
           from: path.join(__dirname, "arc.tar.gz"),
           install: false,
-          lang: "ts",
+          lang: "js",
           projectDir,
           quiet: true,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.jsx"))
+      ).toBeTruthy();
     });
 
     it("works for a file URL to a tarball on disk", async () => {
@@ -106,11 +130,17 @@ describe("create-remix cli", () => {
         createApp({
           from: pathToFileURL(path.join(__dirname, "arc.tar.gz")).toString(),
           install: false,
-          lang: "ts",
+          lang: "js",
           projectDir,
           quiet: true,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.jsx"))
+      ).toBeTruthy();
     });
 
     it("works for a file path to a directory on disk", async () => {
@@ -123,6 +153,12 @@ describe("create-remix cli", () => {
           quiet: true,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for a file URL to a directory on disk", async () => {
@@ -137,6 +173,12 @@ describe("create-remix cli", () => {
           quiet: true,
         })
       ).resolves.toBeUndefined();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
   });
 

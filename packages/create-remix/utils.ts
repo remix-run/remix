@@ -24,7 +24,7 @@ export async function extractLocalTarball(
   filePath: string
 ): Promise<void> {
   let readStream = fse.createReadStream(filePath).pipe(gunzip());
-  let writeStream = tar.extract(projectDir);
+  let writeStream = tar.extract(projectDir, { strip: 2 });
   await pipeline(readStream, writeStream);
 }
 
