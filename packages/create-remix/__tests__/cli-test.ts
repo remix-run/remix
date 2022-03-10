@@ -51,7 +51,8 @@ describe("create-remix cli", () => {
       ).resolves.toBeUndefined();
     });
 
-    it("works for templates in the remix org", async () => {
+    // TODO: enable once this is live
+    it.skip("works for templates in the remix org", async () => {
       await expect(
         createApp({
           from: "arc-stack",
