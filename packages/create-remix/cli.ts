@@ -1,5 +1,5 @@
 import * as path from "path";
-import chalkAnimation from "chalk-animation";
+import { execSync } from "child_process";
 import inquirer from "inquirer";
 import meow from "meow";
 
@@ -52,10 +52,6 @@ async function run() {
   if (flags.help) showHelp();
   if (flags.version) showVersion();
 
-  let anim = chalkAnimation.rainbow(`\nR E M I X - v${pkg.version}\n`);
-  await new Promise((res) => setTimeout(res, 1500));
-  anim.stop();
-
   console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
   console.log();
 
@@ -76,26 +72,6 @@ async function run() {
         ).dir
   );
 
-  if (flags.template) {
-    let answers = await inquirer.prompt<{ install: boolean }>([
-      {
-        name: "install",
-        type: "confirm",
-        message: "Do you want me to run `npm install`?",
-        default: true,
-      },
-    ]);
-    await createApp({
-      projectDir,
-      // it doesn't matter what it is, we'll use the template's native language
-      lang: "ts",
-      install: answers.install,
-      from: flags.template,
-    });
-
-    return;
-  }
-
   let answers = await inquirer.prompt<{
     server: Server;
     lang: Lang;
@@ -104,8 +80,10 @@ async function run() {
     {
       name: "server",
       type: "list",
-      message:
-        "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
+      when() {
+        return flags.template === undefined;
+      },
+      message: `Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.`,
       loop: false,
       choices: [
         { name: "Remix App Server", value: "remix" },
@@ -136,13 +114,21 @@ async function run() {
     },
   ]);
 
-  await createApp({
+  let args: Array<string> = [
     projectDir,
-    lang: answers.lang,
-    from: answers.server,
-    install: answers.install,
-  });
+    `--template ${answers.server ? answers.server : flags.template}`,
+    `--remix-version ${pkg.version}`,
+  ];
 
+  if (!answers.install) {
+    args.push("--no-install");
+  }
+
+  if (answers.lang === "js") {
+    args.push("--no-typescript");
+  }
+
+  execSync(`npx @remix-run/dev ${args.join(" ")}`);
   return;
 }
 
