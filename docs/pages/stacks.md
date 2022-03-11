@@ -70,7 +70,7 @@ This allows you to not have to regularly update your template to the latest vers
 
 #### `remix.init/index.js`
 
-If the template has a `remix.init.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
+If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
 
 You could even use `remix.init/index.js` to ask further questions of the developer for additional configuration (using something like [inquirer][inquirer]). Of course, sometimes you'll need dependencies installed to do this, but those deps are only useful during initialization. So, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those dependencies before running your script.
 
