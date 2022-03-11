@@ -18,6 +18,7 @@
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@remix-run/server-runtime": "1.2.3",
     "cacache": "^15.0.5",
+    "chalk": "^5.0.1",
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
     "esbuild": "0.14.22",
@@ -31,6 +32,7 @@
     "read-package-json-fast": "^2.0.2",
     "remark-frontmatter": "^4.0.0",
     "remark-mdx-frontmatter": "^1.0.1",
+    "sort-package-json": "^1.54.0",
     "ws": "^7.4.5",
     "xdm": "^2.0.0"
   },

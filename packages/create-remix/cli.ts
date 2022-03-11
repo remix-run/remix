@@ -3,9 +3,18 @@ import chalkAnimation from "chalk-animation";
 import inquirer from "inquirer";
 import meow from "meow";
 
-import type { Lang, Server } from ".";
-import { createApp } from ".";
-import { CreateRemixError } from "./utils";
+type Lang = "ts" | "js";
+
+type Server =
+  | "arc"
+  | "cloudflare-pages"
+  | "cloudflare-workers"
+  | "deno"
+  | "express"
+  | "fly"
+  | "netlify"
+  | "remix"
+  | "vercel";
 
 const help = `
   Usage:
@@ -30,20 +39,6 @@ const help = `
     $ npx create-remix --template /my/remix-stack.tar.gz
     $ npx create-remix --template file:///Users/michael/michael-stackson.tar.gz
 `;
-
-run().then(
-  () => {
-    process.exit(0);
-  },
-  (error: unknown) => {
-    if (error instanceof CreateRemixError) {
-      console.error(error.message);
-      process.exit(1);
-    } else {
-      throw error;
-    }
-  }
-);
 
 async function run() {
   let { input, flags, showHelp, showVersion, pkg } = meow(help, {
@@ -150,3 +145,13 @@ async function run() {
 
   return;
 }
+
+run().then(
+  () => {
+    process.exit(0);
+  },
+  (error: Error) => {
+    console.error(error);
+    process.exit(1);
+  }
+);

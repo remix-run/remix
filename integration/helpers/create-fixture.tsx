@@ -9,27 +9,26 @@ import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
 
-import { createRequestHandler } from "../../packages/remix-server-runtime";
-import type { Server } from "../../packages/create-remix";
-import { createApp } from "../../packages/create-remix";
-import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import type {
   ServerBuild,
   ServerPlatform,
 } from "../../packages/remix-server-runtime";
+import { createRequestHandler } from "../../packages/remix-server-runtime";
+import { createApp } from "../../packages/remix-dev";
+import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import { TMP_DIR } from "./global-setup";
 
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
   files: { [filename: string]: string };
-  server?: Server;
+  template?: string;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
-export let js = String.raw;
+export const js = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -337,21 +336,20 @@ export async function createAppFixture(fixture: Fixture) {
 
 ////////////////////////////////////////////////////////////////////////////////
 export async function createFixtureProject(init: FixtureInit): Promise<string> {
-  let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
-
-  let templateDir = path.join(
+  let appTemplate = path.join(
     process.cwd(),
     "templates",
-    init.server ? init.server : "remix"
+    init.template ? init.template : "remix"
   );
+  let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
 
   await createApp({
-    install: false,
-    lang: "js",
-    from: templateDir,
+    appTemplate,
     projectDir,
-    quiet: true,
+    installDeps: false,
+    useTypeScript: false,
   });
+  // TODO: init if necessary?
   await Promise.all([
     writeTestFiles(init, projectDir),
     installRemix(projectDir),

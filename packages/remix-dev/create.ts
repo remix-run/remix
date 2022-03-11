@@ -5,20 +5,149 @@ import fse from "fs-extra";
 import fetch from "node-fetch";
 import gunzip from "gunzip-maybe";
 import tar from "tar-fs";
+import * as semver from "semver";
+import { fileURLToPath } from "url";
+import { execSync } from "child_process";
+import sortPackageJSON from "sort-package-json";
 
-import type { Lang } from ".";
+import packageJson from "./package.json";
 
-export class CreateRemixError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "CreateRemixError";
+const remixDevPackageVersion = packageJson.version;
+
+interface CreateAppArgs {
+  appTemplate: string;
+  projectDir: string;
+  remixVersion?: string;
+  installDeps: boolean;
+  useTypeScript: boolean;
+  githubPAT?: string;
+}
+
+export async function createApp({
+  appTemplate,
+  projectDir,
+  remixVersion = remixDevPackageVersion,
+  installDeps,
+  useTypeScript,
+  githubPAT = process.env.GITHUB_TOKEN,
+}: CreateAppArgs) {
+  // Check the node version
+  let versions = process.versions;
+  if (versions?.node && semver.major(versions.node) < 14) {
+    throw new Error(
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+    );
+  }
+
+  // Create the app directory
+  let relativeProjectDir = path.relative(process.cwd(), projectDir);
+  let projectDirIsCurrentDir = relativeProjectDir === "";
+  if (!projectDirIsCurrentDir) {
+    if (fse.existsSync(projectDir)) {
+      throw new Error(
+        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
+      );
+    }
+  }
+
+  /**
+   * Grab the template
+   * First we'll need to determine if the template we got is
+   * - file on disk
+   * - directory on disk
+   * - tarball URL (github or otherwise)
+   * - github owner/repo
+   * - example in remix-run org
+   * - template in remix-run org
+   */
+  let templateType = await detectTemplateType(
+    appTemplate,
+    useTypeScript,
+    githubPAT
+  );
+  let options = { useTypeScript, token: githubPAT };
+  switch (templateType) {
+    case "local": {
+      let filepath = appTemplate.startsWith("file://")
+        ? fileURLToPath(appTemplate)
+        : appTemplate;
+      if (!fse.existsSync(filepath)) {
+        throw new Error(`️🚨 Oops, "${filepath}" does not exist.`);
+      }
+      if (fse.statSync(filepath).isDirectory()) {
+        await fse.copy(filepath, projectDir);
+        break;
+      }
+      if (appTemplate.endsWith(".tar.gz")) {
+        await extractLocalTarball(projectDir, filepath);
+        break;
+      }
+    }
+    case "remoteTarball": {
+      await downloadAndExtractTarball(projectDir, appTemplate, {
+        ...options,
+        strip: 2,
+      });
+      break;
+    }
+    case "example": {
+      await downloadAndExtractTemplateOrExample(
+        projectDir,
+        appTemplate,
+        "examples",
+        options
+      );
+      break;
+    }
+    case "template": {
+      await downloadAndExtractTemplateOrExample(
+        projectDir,
+        appTemplate,
+        "templates",
+        options
+      );
+      break;
+    }
+    case "repo": {
+      let { filePath, tarballURL } = await getTarballUrl(
+        appTemplate,
+        githubPAT
+      );
+      await downloadAndExtractTarball(projectDir, tarballURL, {
+        ...options,
+        filePath,
+      });
+      break;
+    }
+    default:
+      throw new Error(`Unable to determine template type for "${appTemplate}"`);
+  }
+
+  // Update remix deps
+  let appPkg = require(path.join(projectDir, "package.json"));
+  ["dependencies", "devDependencies"].forEach((pkgKey) => {
+    for (let key in appPkg[pkgKey]) {
+      if (appPkg[pkgKey][key] === "*") {
+        appPkg[pkgKey][key] = semver.prerelease(remixVersion)
+          ? // Templates created from prereleases should pin to a specific version
+            remixVersion
+          : "^" + remixVersion;
+      }
+    }
+  });
+  appPkg = sortPackageJSON(appPkg);
+  await fse.writeJSON(path.join(projectDir, "package.json"), appPkg);
+
+  if (installDeps) {
+    // TODO: use yarn/pnpm/npm
+    execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 }
 
 // this is natively a promise in node 15+ stream/promises
-let pipeline = promisify(stream.pipeline);
+const pipeline = promisify(stream.pipeline);
 
-export async function extractLocalTarball(
+async function extractLocalTarball(
   projectDir: string,
   filePath: string
 ): Promise<void> {
@@ -27,13 +156,13 @@ export async function extractLocalTarball(
   await pipeline(readStream, writeStream);
 }
 
-export async function downloadAndExtractTemplateOrExample(
+async function downloadAndExtractTemplateOrExample(
   projectDir: string,
   name: string,
   type: "templates" | "examples",
   options: {
     token?: string;
-    lang: Lang;
+    useTypeScript: boolean;
   }
 ) {
   let response = await fetch(
@@ -52,7 +181,7 @@ export async function downloadAndExtractTemplateOrExample(
   let cwd = path.dirname(projectDir);
   let desiredDir = path.basename(projectDir);
   let exampleOrTemplateName =
-    type === "templates" && options.lang === "ts" ? `${name}-ts` : name;
+    type === "templates" && options.useTypeScript ? `${name}-ts` : name;
   let templateDir = path.join(desiredDir, type, exampleOrTemplateName);
   await pipeline(
     response.body.pipe(gunzip()),
@@ -78,12 +207,11 @@ export async function downloadAndExtractTemplateOrExample(
   );
 }
 
-export async function downloadAndExtractTarball(
+async function downloadAndExtractTarball(
   projectDir: string,
   url: string,
   options: {
     token?: string;
-    lang: Lang;
     filePath?: string | null | undefined;
     strip?: number;
   }
@@ -118,14 +246,14 @@ export async function downloadAndExtractTarball(
   );
 }
 
-export async function getTarballUrl(
+async function getTarballUrl(
   from: string,
   token?: string | undefined
 ): Promise<{ tarballURL: string; filePath: string }> {
   let info = await getRepoInfo(from, token);
 
   if (!info) {
-    throw new CreateRemixError(`Could not find repo: ${from}`);
+    throw new Error(`Could not find repo: ${from}`);
   }
 
   return {
@@ -141,7 +269,7 @@ interface RepoInfo {
   filePath: string;
 }
 
-export async function getRepoInfo(
+async function getRepoInfo(
   from: string,
   token?: string | undefined
 ): Promise<RepoInfo | undefined> {
@@ -195,16 +323,16 @@ async function getDefaultBranch(
   });
 
   if (response.status !== 200) {
-    throw new CreateRemixError(`Error fetching repo: ${response.status}`);
+    throw new Error(`Error fetching repo: ${response.status}`);
   }
 
   let info = await response.json();
   return info.default_branch;
 }
 
-export async function isRemixTemplate(
+async function isRemixTemplate(
   name: string,
-  lang: Lang,
+  useTypeScript: boolean,
   token?: string
 ): Promise<string | undefined> {
   // TODO: remove `?ref` before we merge
@@ -218,10 +346,10 @@ export async function isRemixTemplate(
     }
   );
   if (!promise.ok) {
-    throw new CreateRemixError(`Error fetching repo: ${promise.status}`);
+    throw new Error(`Error fetching repo: ${promise.status}`);
   }
   let results = await promise.json();
-  let possibleTemplateName = lang === "ts" ? `${name}-ts` : name;
+  let possibleTemplateName = useTypeScript ? `${name}-ts` : name;
   let template = results.find((result: any) => {
     return result.name === possibleTemplateName;
   });
@@ -229,7 +357,7 @@ export async function isRemixTemplate(
   return template.name;
 }
 
-export async function isRemixExample(name: string, token?: string) {
+async function isRemixExample(name: string, token?: string) {
   // TODO: remove `?ref` before we merge
   let promise = await fetch(
     `https://api.github.com/repos/remix-run/remix/contents/examples?ref=main`,
@@ -241,7 +369,7 @@ export async function isRemixExample(name: string, token?: string) {
     }
   );
   if (!promise.ok) {
-    throw new CreateRemixError(`Error fetching repo: ${promise.status}`);
+    throw new Error(`Error fetching repo: ${promise.status}`);
   }
   let results = await promise.json();
   let example = results.find((result: any) => result.name === name);
@@ -261,22 +389,15 @@ type TemplateType =
   // local directory
   | "local";
 
-export async function detectTemplateType(
-  from: string,
-  lang: Lang,
+async function detectTemplateType(
+  template: string,
+  useTypeScript: boolean,
   token?: string
 ): Promise<TemplateType> {
-  if (from.startsWith("file://")) return "local";
-  if (fse.existsSync(from)) return "local";
-
-  let template = await isRemixTemplate(from, lang, token);
-  if (template) return "template";
-
-  let example = await isRemixExample(from, token);
-  if (example) return "example";
-
-  let info = await getRepoInfo(from, token);
-  if (info) return "repo";
-
+  if (template.startsWith("file://")) return "local";
+  if (fse.existsSync(template)) return "local";
+  if (await isRemixTemplate(template, useTypeScript, token)) return "template";
+  if (await isRemixExample(template, token)) return "example";
+  if (await getRepoInfo(template, token)) return "repo";
   return "remoteTarball";
 }

@@ -3660,6 +3660,11 @@ chalk@^4.0.0, chalk@^4.1.0, chalk@^4.1.1:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
+chalk@^5.0.1:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/chalk/-/chalk-5.0.1.tgz#ca57d71e82bb534a296df63bbacc4a1c22b2a4b6"
+  integrity sha512-Fo07WOYGqMfCWHOzSXOt2CxDbC6skS/jO9ynEcmpANMoPrD+W1r1K6Vx7iNm+AQmETU1Xr2t+n8nzkV9t6xh3w==
+
 char-regex@^1.0.2:
   version "1.0.2"
   resolved "https://registry.npmjs.org/char-regex/-/char-regex-1.0.2.tgz"
@@ -9669,7 +9674,7 @@ sort-object-keys@^1.1.3:
 
 sort-package-json@^1.54.0:
   version "1.54.0"
-  resolved "https://registry.npmjs.org/sort-package-json/-/sort-package-json-1.54.0.tgz#2096ccce1ef0221a6bf8ec3046ec6b9ae8d2c726"
+  resolved "https://registry.yarnpkg.com/sort-package-json/-/sort-package-json-1.54.0.tgz#2096ccce1ef0221a6bf8ec3046ec6b9ae8d2c726"
   integrity sha512-MA0nRiSfZ4/CNM/9rz70Hwq4PpvtBc3v532tzQSmoaLSdeBB3cCd488xmNruLL0fb/ZdbKlcaDDudwnrObbjBw==
   dependencies:
     detect-indent "^6.0.0"

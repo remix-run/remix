@@ -15,9 +15,70 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
+import { createApp } from "../create";
 import { loadEnv } from "../env";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
 import { log } from "../log";
+
+export async function create({
+  appTemplate,
+  projectDir,
+  remixVersion,
+  installDeps,
+  useTypeScript,
+  githubPAT,
+}: {
+  appTemplate: string;
+  projectDir: string;
+  remixVersion?: string;
+  installDeps: boolean;
+  useTypeScript: boolean;
+  githubPAT?: string;
+}) {
+  // pretty colors
+  // ask questions
+
+  await createApp({
+    appTemplate,
+    projectDir,
+    remixVersion,
+    installDeps,
+    useTypeScript,
+    githubPAT,
+  });
+
+  await init(projectDir);
+
+  // remove the init dir
+
+  let relProjectDir = path.relative(process.cwd(), projectDir);
+  let projectDirIsCurrentDir = relProjectDir === "";
+
+  if (projectDirIsCurrentDir) {
+    console.log(
+      `💿 That's it! Check the README for development and deploy instructions!`
+    );
+  } else {
+    console.log(
+      `💿 That's it! \`cd\` into "${path.resolve(
+        process.cwd(),
+        projectDir
+      )}" and check the README for development and deploy instructions!`
+    );
+  }
+}
+
+export async function init(remixRoot: string) {
+  let initScriptDir = path.join(remixRoot, "remix.init");
+  let initScript = path.resolve(initScriptDir, "index.js");
+
+  if (await fse.pathExists(initScript)) {
+    // TODO: check for npm/yarn/pnpm
+    execSync("npm install", { stdio: "inherit", cwd: initScriptDir });
+    let initFn = require(initScript);
+    await initFn({ rootDirectory: remixRoot });
+  }
+}
 
 export async function setup(platformArg?: string) {
   let platform = isSetupPlatform(platformArg)
@@ -199,41 +260,6 @@ export async function dev(remixRoot: string, modeArg?: string) {
   } finally {
     server!?.close();
   }
-}
-
-export async function init(remixRoot: string) {
-  if (!remixRoot) {
-    remixRoot = process.env.REMIX_ROOT || process.cwd();
-  }
-
-  let setupScriptDir = path.join(remixRoot, "remix.init");
-
-  let setupScript = path.resolve(setupScriptDir, "index.js");
-  let rootSetupScript = path.resolve(remixRoot, "remix.init.js");
-
-  let hasSetupScript = await fse.pathExists(setupScript);
-  let hasRootSetupScript = await fse.pathExists(rootSetupScript);
-
-  if (!hasSetupScript && !hasRootSetupScript) {
-    return;
-  }
-
-  if (hasSetupScript && hasRootSetupScript) {
-    throw new Error(
-      `🚨 Both ${setupScript} and ${rootSetupScript} exist. Please remove one of them.`
-    );
-  }
-
-  let init: any;
-  if (hasSetupScript) {
-    // TODO: check for npm/yarn/pnpm
-    execSync("npm install", { stdio: "inherit", cwd: setupScriptDir });
-    init = require(setupScript);
-  } else {
-    init = require(rootSetupScript);
-  }
-
-  await init({ rootDirectory: remixRoot });
 }
 
 function purgeAppRequireCache(buildPath: string) {
