@@ -21,20 +21,25 @@ describe("remix cli", () => {
 
   describe("the --help flag", () => {
     it("prints help info", async () => {
-      let { stdout } = await execFile("node", [remix, "--help"]);
+      let { stdout } = await execFile("node", [remix, "--help"], {
+        env: {
+          ...process.env,
+          NO_COLOR: "1",
+        },
+      });
       expect(stdout).toMatchInlineSnapshot(`
         "
-          [94mR[39m [92mE[39m [93mM[39m [95mI[39m [91mX[39m
+          R E M I X
 
-          [4mUsage[24m:
-            $ remix create <[93mprojectDir[39m> --template <[93mtemplate[39m>
-            $ remix init [[93mprojectDir[39m]
-            $ remix build [[93mprojectDir[39m]
-            $ remix dev [[93mprojectDir[39m]
-            $ remix routes [[93mprojectDir[39m]
-            $ remix setup [[93mremixPlatform[39m]
+          Usage:
+            $ remix create <projectDir> --template <template>
+            $ remix init [projectDir]
+            $ remix build [projectDir]
+            $ remix dev [projectDir]
+            $ remix routes [projectDir]
+            $ remix setup [remixPlatform]
 
-          [4mOptions[24m:
+          Options:
             --help, -h          Print this help message and exit
             --version, -v       Print the CLI version and exit
             --no-color          Disable ANSI colors in console output
@@ -50,12 +55,12 @@ describe("remix cli", () => {
           \`routes\` Options:
             --json              Print the routes as JSON
 
-          [4mValues[24m:
-            - [93mprojectDir[39m        The Remix project directory
-            - [93mtemplate[39m          The project template to use
-            - [93mremixPlatform[39m     node, cloudflare-pages, cloudflare-workers, or deno
+          Values:
+            - projectDir        The Remix project directory
+            - template          The project template to use
+            - remixPlatform     node, cloudflare-pages, cloudflare-workers, or deno
 
-          [4mCreating a new project[24m:
+          Creating a new project:
 
             Remix projects are created from templates. A template can be:
 
@@ -78,7 +83,7 @@ describe("remix cli", () => {
             set the \`GITHUB_PAT\` environment variable to a personal access
             token with access to that repo.
 
-          [4mInitialize a project:[24m:
+          Initialize a project::
 
             Remix project templates may contain a \`remix.init\` directory
             with a script that initializes the project. This script automatically
@@ -87,19 +92,19 @@ describe("remix cli", () => {
 
             $ remix init
 
-          [4mBuild your project[24m:
+          Build your project:
 
             $ remix build
             $ remix build --sourcemap
             $ remix build my-app
 
-          [4mRun your project locally in development[24m:
+          Run your project locally in development:
 
             $ remix dev
             $ remix dev my-app
             $ remix dev --debug
 
-          [4mShow all routes in your app[24m:
+          Show all routes in your app:
 
             $ remix routes
             $ remix routes my-app
