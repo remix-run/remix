@@ -1,4 +1,5 @@
 import {
+  json,
   Links,
   LiveReload,
   Meta,
@@ -15,7 +16,7 @@ import { getCurrentUser } from "./db.server";
  */
 export const loader = async () => {
   const user = await getCurrentUser();
-  return { user };
+  return json({ user });
 };
 
 export default function App() {

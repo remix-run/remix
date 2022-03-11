@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 import { getClient } from "~/lib/sanity/getClient";
 import { filterDataToSingleItem } from "~/lib/sanity/filterDataToSingleItem";
@@ -18,13 +18,13 @@ export async function loader({ request, params }) {
   const queryParams = { slug: params.slug };
   const initialData = await getClient(preview).fetch(query, queryParams);
 
-  return {
+  return json({
     initialData,
     preview,
     // If `preview` mode is active, we'll need these for live updates
     query: preview ? query : null,
     queryParams: preview ? queryParams : null,
-  };
+  });
 }
 
 export default function Movie() {
