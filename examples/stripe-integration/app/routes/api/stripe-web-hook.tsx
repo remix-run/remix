@@ -1,4 +1,5 @@
-import { json, ActionFunction } from "remix";
+import type { ActionFunction } from "remix";
+import { json } from "remix";
 import stripe from "stripe";
 
 //[credit @kiliman to get this webhook working](https://github.com/remix-run/remix/discussions/1978)
@@ -18,9 +19,9 @@ export const action: ActionFunction = async ({ request }) => {
       {
         errors: [
           {
-            message: err.message
-          }
-        ]
+            message: err.message,
+          },
+        ],
       },
       400
     );
