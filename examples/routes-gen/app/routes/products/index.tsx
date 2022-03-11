@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import { route } from "routes-gen";
 
 type Post = {
@@ -20,7 +20,7 @@ const posts: Post[] = [
 ];
 
 export const loader: LoaderFunction = async () => {
-  return posts;
+  return json(posts);
 };
 
 export default function Products() {

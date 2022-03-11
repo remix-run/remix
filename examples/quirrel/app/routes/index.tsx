@@ -1,10 +1,11 @@
 import type { LoaderFunction } from "remix";
+import { json } from "remix";
 
 import greetingsQueue from "~/queues/greetings.server";
 
 export const loader: LoaderFunction = async () => {
   await greetingsQueue.enqueue("Groot");
-  return null;
+  return json({});
 };
 
 export default function Index() {

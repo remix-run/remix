@@ -1,9 +1,9 @@
 import type { LoaderFunction } from "remix";
-import { Link } from "remix";
+import { json, Link } from "remix";
 
 export const loader: LoaderFunction = async () => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  return null;
+  return json({});
 };
 
 export default function Screen() {

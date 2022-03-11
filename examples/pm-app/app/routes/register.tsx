@@ -34,7 +34,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   //     successRedirect: "/done",
   //   });
 
-  return {};
+  return json({});
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -102,19 +102,19 @@ export const action: ActionFunction = async ({ request }) => {
   // 3. Check for existing user
   const existingUser = await getUser("email", email);
   if (existingUser) {
-    return {
+    return json({
       fields,
       formError: `Sorry! That email is already taken.`,
-    };
+    });
   }
 
   // 4. Register a new user
   const user = await register({ email, password, nameFirst, nameLast });
   if (!user) {
-    return {
+    return json({
       fields,
       formError: `Something went wrong with registration. Please try again later!`,
-    };
+    });
   }
 
   // 5. Create a user session with the new user's ID
