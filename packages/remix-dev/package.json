@@ -27,6 +27,7 @@
     "fs-extra": "^10.0.0",
     "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",
+    "inquirer": "^8.2.1",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "minimatch": "^3.0.4",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@types/cacache": "^15.0.0",
+    "@types/inquirer": "^8.2.0",
     "@types/lodash.debounce": "^4.0.6",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/tar-fs": "^2.0.1",

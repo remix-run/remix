@@ -7,6 +7,7 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "resolveJsonModule": true,
 
     "declaration": true,
     "emitDeclarationOnly": true,

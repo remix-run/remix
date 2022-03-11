@@ -1,5 +1,7 @@
+import * as path from "path";
 import meow from "meow";
 import inspector from "inspector";
+import inquirer from "inquirer";
 
 import * as colors from "./colors";
 import * as commands from "./cli/commands";
@@ -99,12 +101,13 @@ ${colors.heading("Show all routes in your app")}:
 async function run() {
   let { flags, input, showHelp, showVersion } = meow(helpText, {
     description: false,
+    booleanDefault: undefined,
     flags: {
       help: { type: "boolean", alias: "h" },
       version: { type: "boolean", alias: "v" },
       template: { type: "string" },
-      install: { type: "boolean", default: true },
-      typescript: { type: "boolean", default: true },
+      install: { type: "boolean" },
+      typescript: { type: "boolean" },
       remixVersion: { type: "string", default: remixDevPackageVersion },
       json: { type: "boolean" },
       sourcemap: { type: "boolean" },
@@ -119,19 +122,78 @@ async function run() {
     case "create":
     // `remix new` is an alias for `remix create`
     case "new": {
-      let projectDir = input[1];
-      if (!projectDir) showHelp();
-      if (!flags.template) {
-        console.error(colors.error("Missing --template value"));
-        process.exit(1);
-      }
+      let projectDir = path.resolve(
+        process.cwd(),
+        input.length > 1
+          ? input[1]
+          : (
+              await inquirer.prompt<{ dir: string }>([
+                {
+                  type: "input",
+                  name: "dir",
+                  message: "Where would you like to create your app?",
+                  default: "./my-remix-app",
+                },
+              ])
+            ).dir
+      );
+
+      let answers = await inquirer.prompt<{
+        appTemplate: string;
+        useTypeScript: boolean;
+        install: boolean;
+      }>([
+        {
+          name: "appTemplate",
+          type: "list",
+          when() {
+            return flags.template === undefined;
+          },
+          message: `Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.`,
+          loop: false,
+          choices: [
+            { name: "Remix App Server", value: "remix" },
+            { name: "Express Server", value: "express" },
+            { name: "Architect (AWS Lambda)", value: "arc" },
+            { name: "Fly.io", value: "fly" },
+            { name: "Netlify", value: "netlify" },
+            { name: "Vercel", value: "vercel" },
+            { name: "Cloudflare Pages", value: "cloudflare-pages" },
+            { name: "Cloudflare Workers", value: "cloudflare-workers" },
+            { name: "Deno (experimental)", value: "deno" },
+          ],
+        },
+        {
+          name: "useTypeScript",
+          type: "list",
+          message: "TypeScript or JavaScript?",
+          when() {
+            return flags.typescript === undefined;
+          },
+          choices: [
+            { name: "TypeScript", value: true },
+            { name: "JavaScript", value: false },
+          ],
+        },
+        {
+          name: "install",
+          type: "confirm",
+          message: "Do you want me to run `npm install`?",
+          when() {
+            return flags.install === undefined;
+          },
+          default: true,
+        },
+      ]);
+
+      console.log({ answers, flags });
 
       await commands.create({
-        appTemplate: flags.template,
+        appTemplate: flags.template ?? answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install,
-        useTypeScript: flags.typescript,
+        installDeps: flags.install ?? answers.install,
+        useTypeScript: flags.typescript ?? answers.useTypeScript,
         githubPAT: process.env.GITHUB_PAT,
       });
       break;
