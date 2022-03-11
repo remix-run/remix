@@ -35,9 +35,6 @@ export async function create({
   useTypeScript: boolean;
   githubPAT?: string;
 }) {
-  // pretty colors
-  // ask questions
-
   await createApp({
     appTemplate,
     projectDir,
@@ -48,8 +45,6 @@ export async function create({
   });
 
   await init(projectDir);
-
-  // remove the init dir
 
   let relProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relProjectDir === "";
@@ -76,7 +71,12 @@ export async function init(remixRoot: string) {
     // TODO: check for npm/yarn/pnpm
     execSync("npm install", { stdio: "inherit", cwd: initScriptDir });
     let initFn = require(initScript);
-    await initFn({ rootDirectory: remixRoot });
+    try {
+      await initFn({ rootDirectory: remixRoot });
+      await fse.remove(initScriptDir);
+    } catch (error) {
+      console.error(`🚨 Oops, remix.init failed`, error);
+    }
   }
 }
 

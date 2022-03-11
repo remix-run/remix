@@ -151,9 +151,11 @@ async function extractLocalTarball(
   projectDir: string,
   filePath: string
 ): Promise<void> {
-  let readStream = fse.createReadStream(filePath).pipe(gunzip());
-  let writeStream = tar.extract(projectDir, { strip: 2 });
-  await pipeline(readStream, writeStream);
+  await pipeline(
+    fse.createReadStream(filePath),
+    gunzip(),
+    tar.extract(projectDir)
+  );
 }
 
 async function downloadAndExtractTemplateOrExample(

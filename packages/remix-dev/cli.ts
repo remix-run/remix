@@ -117,9 +117,9 @@ async function run() {
 
   switch (input[0]) {
     case "create":
-    case "new": // `remix new` is an alias for `remix create`
+    // `remix new` is an alias for `remix create`
+    case "new": {
       let projectDir = input[1];
-
       if (!projectDir) showHelp();
       if (!flags.template) {
         console.error(colors.error("Missing --template value"));
@@ -135,9 +135,13 @@ async function run() {
         githubPAT: process.env.GITHUB_PAT,
       });
       break;
-    case "init":
-      await commands.init(input[1]);
+    }
+    case "init": {
+      let remixRoot = input[1];
+      if (!remixRoot) remixRoot = process.env.REMIX_ROOT || process.cwd();
+      await commands.init(remixRoot);
       break;
+    }
     case "routes":
       await commands.routes(input[1], flags.json ? "json" : "jsx");
       break;
