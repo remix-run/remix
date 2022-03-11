@@ -1,6 +1,6 @@
 # Stripe Integration
 
-A demo of integrate stripe payment with remix so that you can collect payments via stripe
+A demo of integrate stripe payment with remix, it handles stripe function purely on the server side( getting sessions, redirect etc) and no stripe client needed on the client.
 
 Relevant files:
 
@@ -37,4 +37,5 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 - [Remix | Environment Variables](https://remix.run/docs/en/v1/guides/envvars)
 - [Stripe API reference – Node](https://stripe.com/docs/api/authentication?lang=node)
 - [Take webhooks live | Stripe Documentation](https://stripe.com/docs/webhooks/go-live)
+- [Server side redirect to Stripe Checkout - YouTube](https://www.youtube.com/watch?v=WSki6n502mk)
 - [code to Domain Url dynamically](https://github.com/kentcdodds/kentcdodds.com/blob/ebb36d82009685e14da3d4b5d0ce4d577ed09c63/app/utils/misc.tsx#L229-L237)

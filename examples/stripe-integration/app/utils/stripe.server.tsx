@@ -29,6 +29,5 @@ export const getStripeSession = async (
     success_url: `${domainUrl}/payment/success`,
     cancel_url: `${domainUrl}/payment/cancelled`
   });
-
-  return session.id;
+  return session.url;
 };

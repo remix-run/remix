@@ -1,17 +1,10 @@
-import { loadStripe } from "@stripe/stripe-js";
-import { Form, useActionData, useLoaderData } from "remix";
+import { Form, redirect, useLoaderData } from "remix";
 import type { ActionFunction } from "remix";
 import { getStripeSession, getDomainUrl } from "~/utils/stripe.server";
 
 type loaderData = {
   ENV: {
     PRICE_ID: string;
-  };
-};
-type actionData = {
-  id: string;
-  ENV: {
-    STRIPE_PUBLIC_KEY: string;
   };
 };
 export const loader = async (): Promise<loaderData> => {
@@ -21,33 +14,16 @@ export const loader = async (): Promise<loaderData> => {
     }
   };
 };
-export const action: ActionFunction = async ({
-  request
-}): Promise<actionData> => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
-  const id = await getStripeSession(
+  const stripeRedirectUrl = await getStripeSession(
     formData.get("price_id") as string,
     getDomainUrl(request)
   );
-  return {
-    id,
-    ENV: {
-      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY as string
-    }
-  };
+  return redirect(stripeRedirectUrl);
 };
-const checkout = async (sessionId: string, stripePublicKey: string) => {
-  const stripe = await loadStripe(stripePublicKey);
-  await stripe.redirectToCheckout({ sessionId });
-};
-
 const Buy = () => {
   const loaderData = useLoaderData<loaderData>();
-  const actionData = useActionData<actionData>();
-  if (actionData) {
-    checkout(actionData.id, actionData.ENV.STRIPE_PUBLIC_KEY);
-  }
-
   return (
     <>
       <Form method="post">
@@ -58,5 +34,4 @@ const Buy = () => {
     </>
   );
 };
-
 export default Buy;
