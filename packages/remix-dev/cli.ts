@@ -107,7 +107,7 @@ async function run() {
       version: { type: "boolean", alias: "v" },
       template: { type: "string" },
       install: { type: "boolean" },
-      typescript: { type: "boolean" },
+      typescript: { type: "boolean", default: true },
       remixVersion: { type: "string", default: remixDevPackageVersion },
       json: { type: "boolean" },
       sourcemap: { type: "boolean" },
@@ -168,7 +168,7 @@ async function run() {
           type: "list",
           message: "TypeScript or JavaScript?",
           when() {
-            return flags.typescript === undefined;
+            return flags.template === undefined;
           },
           choices: [
             { name: "TypeScript", value: true },
@@ -185,8 +185,6 @@ async function run() {
           default: true,
         },
       ]);
-
-      console.log({ answers, flags });
 
       await commands.create({
         appTemplate: flags.template ?? answers.appTemplate,
