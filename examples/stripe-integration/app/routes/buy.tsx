@@ -1,4 +1,4 @@
-import { Form, redirect, useLoaderData } from "remix";
+import { Form, json, redirect, useLoaderData } from "remix";
 import type { ActionFunction } from "remix";
 import { getStripeSession, getDomainUrl } from "~/utils/stripe.server";
 
