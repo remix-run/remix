@@ -161,7 +161,7 @@ describe("remix cli", () => {
         "create",
         projectDir,
         "--template",
-        "arc-stack",
+        "grunge-stack",
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
