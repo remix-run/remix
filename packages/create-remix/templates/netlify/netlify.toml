@@ -1,6 +1,5 @@
 [build]
   command = "remix build"
-  functions = "netlify/functions"
   publish = "public"
 
 [dev]
