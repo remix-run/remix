@@ -107,7 +107,7 @@ async function run() {
       version: { type: "boolean", alias: "v" },
       template: { type: "string" },
       install: { type: "boolean" },
-      typescript: { type: "boolean", default: true },
+      typescript: { type: "boolean" },
       remixVersion: { type: "string", default: remixDevPackageVersion },
       json: { type: "boolean" },
       sourcemap: { type: "boolean" },
@@ -127,64 +127,90 @@ async function run() {
         input.length > 1
           ? input[1]
           : (
-              await inquirer.prompt<{ dir: string }>([
-                {
-                  type: "input",
-                  name: "dir",
-                  message: "Where would you like to create your app?",
-                  default: "./my-remix-app",
-                },
-              ])
+              await inquirer
+                .prompt<{ dir: string }>([
+                  {
+                    type: "input",
+                    name: "dir",
+                    message: "Where would you like to create your app?",
+                    default: "./my-remix-app",
+                  },
+                ])
+                .catch((error) => {
+                  if (error.isTtyError) {
+                    showHelp(1);
+                    process.exit(1);
+                  } else {
+                    throw error;
+                  }
+                })
             ).dir
       );
 
-      let answers = await inquirer.prompt<{
-        appTemplate: string;
-        useTypeScript: boolean;
-        install: boolean;
-      }>([
-        {
-          name: "appTemplate",
-          type: "list",
-          when() {
-            return flags.template === undefined;
+      let answers = await inquirer
+        .prompt<{
+          appTemplate: string;
+          useTypeScript: boolean;
+          install: boolean;
+        }>([
+          {
+            name: "appTemplate",
+            type: "list",
+            when() {
+              return flags.template === undefined;
+            },
+            message: `Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.`,
+            loop: false,
+            choices: [
+              { name: "Remix App Server", value: "remix" },
+              { name: "Express Server", value: "express" },
+              { name: "Architect (AWS Lambda)", value: "arc" },
+              { name: "Fly.io", value: "fly" },
+              { name: "Netlify", value: "netlify" },
+              { name: "Vercel", value: "vercel" },
+              { name: "Cloudflare Pages", value: "cloudflare-pages" },
+              { name: "Cloudflare Workers", value: "cloudflare-workers" },
+              { name: "Deno (experimental)", value: "deno" },
+            ],
           },
-          message: `Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.`,
-          loop: false,
-          choices: [
-            { name: "Remix App Server", value: "remix" },
-            { name: "Express Server", value: "express" },
-            { name: "Architect (AWS Lambda)", value: "arc" },
-            { name: "Fly.io", value: "fly" },
-            { name: "Netlify", value: "netlify" },
-            { name: "Vercel", value: "vercel" },
-            { name: "Cloudflare Pages", value: "cloudflare-pages" },
-            { name: "Cloudflare Workers", value: "cloudflare-workers" },
-            { name: "Deno (experimental)", value: "deno" },
-          ],
-        },
-        {
-          name: "useTypeScript",
-          type: "list",
-          message: "TypeScript or JavaScript?",
-          when() {
-            return flags.template === undefined;
+          {
+            name: "useTypeScript",
+            type: "list",
+            message: "TypeScript or JavaScript?",
+            when() {
+              return flags.template === undefined;
+            },
+            choices: [
+              { name: "TypeScript", value: true },
+              { name: "JavaScript", value: false },
+            ],
           },
-          choices: [
-            { name: "TypeScript", value: true },
-            { name: "JavaScript", value: false },
-          ],
-        },
-        {
-          name: "install",
-          type: "confirm",
-          message: "Do you want me to run `npm install`?",
-          when() {
-            return flags.install === undefined;
+          {
+            name: "install",
+            type: "confirm",
+            message: "Do you want me to run `npm install`?",
+            when() {
+              return flags.install === undefined;
+            },
+            default: true,
           },
-          default: true,
-        },
-      ]);
+        ])
+        .catch((error) => {
+          if (error.isTtyError) {
+            console.warn(
+              `🚨 Your terminal doesn't support interactivity, using default configuration ` +
+                "\n" +
+                `if you'd like to use different settings, try passing them as arguments`
+            );
+            return {
+              appTemplate: "remix",
+              useTypeScript: true,
+              install: true,
+            };
+          } else {
+            throw error;
+          }
+        });
 
       await commands.create({
         appTemplate: flags.template ?? answers.appTemplate,
