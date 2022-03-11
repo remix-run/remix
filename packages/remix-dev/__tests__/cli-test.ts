@@ -9,7 +9,7 @@ const execFile = util.promisify(childProcess.execFile);
 
 const remix = path.resolve(
   __dirname,
-  "../../../build/node_modules/@remix-run/dev/cli"
+  "../../../build/node_modules/@remix-run/dev/cli.js"
 );
 
 describe("remix cli", () => {
@@ -131,10 +131,13 @@ describe("remix cli", () => {
 
   describe("the create command", () => {
     let tmpDir = path.join(process.cwd(), ".tmp");
+    function getProjectDir(name: string) {
+      return path.join(tmpDir, name + Math.random().toString(32).slice(2));
+    }
 
     // this also tests sub directories
     it("works for examples in the remix repo", async () => {
-      let projectDir = path.join(tmpDir, "example");
+      let projectDir = getProjectDir("example");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -152,7 +155,7 @@ describe("remix cli", () => {
 
     // TODO: enable once this is live
     it.skip("works for templates in the remix org", async () => {
-      let projectDir = path.join(tmpDir, "template");
+      let projectDir = getProjectDir("template");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -169,7 +172,7 @@ describe("remix cli", () => {
     });
 
     it("works for GitHub username/repo combo", async () => {
-      let projectDir = path.join(tmpDir, "repo");
+      let projectDir = getProjectDir("repo");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -186,7 +189,7 @@ describe("remix cli", () => {
     });
 
     it("works for remote tarballs", async () => {
-      let projectDir = path.join(tmpDir, "remote-tarball");
+      let projectDir = getProjectDir("remote-tarball");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -203,7 +206,7 @@ describe("remix cli", () => {
     });
 
     it("works for a path to a tarball on disk", async () => {
-      let projectDir = path.join(tmpDir, "local-tarball");
+      let projectDir = getProjectDir("local-tarball");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -220,7 +223,7 @@ describe("remix cli", () => {
     });
 
     it("works for a file URL to a tarball on disk", async () => {
-      let projectDir = path.join(tmpDir, "file-url-tarball");
+      let projectDir = getProjectDir("file-url-tarball");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -239,7 +242,7 @@ describe("remix cli", () => {
     });
 
     it("works for a file path to a directory on disk", async () => {
-      let projectDir = path.join(tmpDir, "local-directory");
+      let projectDir = getProjectDir("local-directory");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -256,7 +259,7 @@ describe("remix cli", () => {
     });
 
     it("works for a file URL to a directory on disk", async () => {
-      let projectDir = path.join(tmpDir, "file-url-directory");
+      let projectDir = getProjectDir("file-url-directory");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -273,7 +276,7 @@ describe("remix cli", () => {
     });
 
     it("runs remix.init script when installing dependencies", async () => {
-      let projectDir = path.join(tmpDir, "remix-init-auto");
+      let projectDir = getProjectDir("remix-init-auto");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -293,7 +296,7 @@ describe("remix cli", () => {
     }, 60_000);
 
     it("runs remix.init script when using `remix init`", async () => {
-      let projectDir = path.join(tmpDir, "remix-init-manual");
+      let projectDir = getProjectDir("remix-init-manual");
       let { stdout } = await execFile("node", [
         remix,
         "create",
@@ -320,7 +323,7 @@ describe("remix cli", () => {
     }, 60_000);
 
     it("throws an error when invalid remix.init script", async () => {
-      let projectDir = path.join(tmpDir, "invalid-remix-init");
+      let projectDir = getProjectDir("invalid-remix-init");
       let { stdout, stderr } = await execFile("node", [
         remix,
         "create",
