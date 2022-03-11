@@ -747,6 +747,7 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
 - `state === "loading"`
 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
+  - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
   - **load** - A route's loader is being called without a submission (`fetcher.load()`).
 
 #### `fetcher.submission`
