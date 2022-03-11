@@ -1382,8 +1382,10 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        nonce = undefined,
       }: {
         port?: number;
+        nonce?: string;
       }) {
         let setupLiveReload = ((port: number) => {
           let protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -1409,6 +1411,7 @@ export const LiveReload =
 
         return (
           <script
+            nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
               __html: `(${setupLiveReload})(${JSON.stringify(port)})`,
