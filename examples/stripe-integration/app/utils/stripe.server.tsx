@@ -19,15 +19,15 @@ export const getStripeSession = async (
   const lineItems = [
     {
       price: priceId,
-      quantity: 1
-    }
+      quantity: 1,
+    },
   ];
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
     line_items: lineItems,
     success_url: `${domainUrl}/payment/success`,
-    cancel_url: `${domainUrl}/payment/cancelled`
+    cancel_url: `${domainUrl}/payment/cancelled`,
   });
   return session.url;
 };

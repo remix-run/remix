@@ -14,9 +14,7 @@ export const action: ActionFunction = async ({ request }) => {
 export default function Buy() {
   return (
     <Form method="post">
-      <button type="submit">
-        buy
-      </button>
+      <button type="submit">buy</button>
     </Form>
   );
 }
