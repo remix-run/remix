@@ -2,36 +2,21 @@ import { Form, json, redirect, useLoaderData } from "remix";
 import type { ActionFunction } from "remix";
 import { getStripeSession, getDomainUrl } from "~/utils/stripe.server";
 
-type loaderData = {
-  ENV: {
-    PRICE_ID: string;
-  };
-};
-export const loader = async (): Promise<loaderData> => {
-  return json({
-    ENV: {
-      PRICE_ID: process.env.PRICE_ID as string
-    }
-  });
-};
 export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const stripeRedirectUrl = await getStripeSession(
-    formData.get("price_id") as string,
+    process.env.PRICE_ID as string,
     getDomainUrl(request)
   );
   return redirect(stripeRedirectUrl);
 };
-const Buy = () => {
-  const loaderData = useLoaderData<loaderData>();
+
+export default function Buy() {
   return (
-    <>
-      <Form method="post">
-        <button name="price_id" value={loaderData.ENV.PRICE_ID} type="submit">
-          buy
-        </button>
-      </Form>
-    </>
+    <Form method="post">
+      <button type="submit">
+        buy
+      </button>
+    </Form>
   );
-};
-export default Buy;
+}
