@@ -8,11 +8,11 @@ type loaderData = {
   };
 };
 export const loader = async (): Promise<loaderData> => {
-  return {
+  return json({
     ENV: {
       PRICE_ID: process.env.PRICE_ID as string
     }
-  };
+  });
 };
 export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
