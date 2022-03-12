@@ -143,7 +143,7 @@ A list of regex patterns that determined if a module is transpiled and included 
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
 
-```ts filename=remix.config.js lines=[11-16]
+```ts filename=remix.config.js lines=[10-15]
 /**
  * @type {import('@remix-run/dev').AppConfig}
  */
