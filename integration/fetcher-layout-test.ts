@@ -24,7 +24,7 @@ beforeAll(async () => {
             <div>
               <h1>Layout</h1>
               <button onClick={invokeFetcher}>Invoke Fetcher</button>
-              {!!fetcher.data && <p id="fetcher-data">{fetcher.data}</p>}
+              {!!fetcher.data && <p id="layout-fetcher-data">{fetcher.data}</p>}
               <Outlet />
             </div>
           );
@@ -32,14 +32,30 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout/index.jsx": js`
-        import { json, useLoaderData } from "remix";
+        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
 
         export let loader = ({ params }) => json("index data");
 
-        export default function LayoutChild() {
-          let data = useLoaderData();
+        export let action = ({ params }) => json("index action data");
 
-          return <p id="child-data">{data}</p>;
+        export default function LayoutIndex() {
+          let data = useLoaderData();
+          let fetcher = useFetcher();
+          let action = useFormAction(".", "post");
+
+          
+          let invokeFetcher = () => {
+            console.log({action});
+            fetcher.submit({}, { method: "post", action })
+          };
+
+          return (
+            <>
+              <p id="child-data">{data}</p>
+              <button id="index-fetcher" onClick={invokeFetcher}>Invoke Index Fetcher</button>
+              {!!fetcher.data && <p id="index-fetcher-data">{fetcher.data}</p>}
+            </>
+          );
         }
       `,
 
@@ -65,8 +81,17 @@ afterAll(async () => app.close());
 it("fetcher calls layout route action when at index route", async () => {
   await app.goto("/layout");
   await app.clickElement("button");
-  let dataElement = await app.getElement("#fetcher-data");
+  let dataElement = await app.getElement("#layout-fetcher-data");
   expect(dataElement.text()).toBe("layout action data");
+  dataElement = await app.getElement("#child-data");
+  expect(dataElement.text()).toBe("index data");
+});
+
+it("fetcher calls index route action when at index route", async () => {
+  await app.goto("/layout");
+  await app.clickElement("#index-fetcher");
+  let dataElement = await app.getElement("#index-fetcher-data");
+  expect(dataElement.text()).toBe("index action data");
   dataElement = await app.getElement("#child-data");
   expect(dataElement.text()).toBe("index data");
 });
@@ -74,7 +99,7 @@ it("fetcher calls layout route action when at index route", async () => {
 it("fetcher calls layout route action when at paramaterized route", async () => {
   await app.goto("/layout/foo");
   await app.clickElement("button");
-  let dataElement = await app.getElement("#fetcher-data");
+  let dataElement = await app.getElement("#layout-fetcher-data");
   expect(dataElement.text()).toBe("layout action data");
   dataElement = await app.getElement("#child-data");
   expect(dataElement.text()).toBe("foo");

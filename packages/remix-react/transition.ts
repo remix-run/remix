@@ -604,12 +604,17 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let indexRequest = false;
 
     for (let param of url.searchParams.getAll("index")) {
-      if (!param) {
-        indexRequest = true;
+      // only use bare `?index` params without a value
+      // ✅ /foo?index
+      // ✅ /foo?index&index=123
+      // ✅ /foo?index=123&index
+      // ❌ /foo?index=123
+      if (param === "") {
+        return true;
       }
     }
 
-    return indexRequest;
+    return false;
   }
 
   function getActionRequestMatch(url: URL, matches: RouteMatch<ClientRoute>[]) {
