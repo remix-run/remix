@@ -8,7 +8,6 @@ import {
   useCatch,
 } from "remix";
 import { useContext, useEffect } from "react";
-import ServerStyleContext from "./styles/server.context";
 import ClientStyleContext from "./styles/client.context";
 import type { MetaFunction } from "remix";
 
@@ -29,14 +28,13 @@ interface DocumentProps {
 }
 
 const Document = ({ children, title }: DocumentProps) => {
-  const serverStyleData = useContext(ServerStyleContext);
   const clientStyleData = useContext(ClientStyleContext);
 
   // Only executed on client
   useEffect(() => {
     // reset cache to re-apply global styles
     clientStyleData.reset();
-  }, [clientStyleData, serverStyleData]);
+  }, [clientStyleData]);
 
   return (
     <html lang="en">
