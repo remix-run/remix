@@ -11,14 +11,14 @@
   },
   "dependencies": {
     "@reach/dialog": "^0.16.2",
-    "@remix-run/react": "0.0.0-experimental-583953af",
-    "@remix-run/serve": "0.0.0-experimental-583953af",
+    "@remix-run/react": "0.0.0-experimental-9e5da5b0",
+    "@remix-run/serve": "0.0.0-experimental-9e5da5b0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "0.0.0-experimental-583953af"
+    "remix": "0.0.0-experimental-9e5da5b0"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-583953af",
+    "@remix-run/dev": "0.0.0-experimental-9e5da5b0",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "typescript": "^4.5.4"
