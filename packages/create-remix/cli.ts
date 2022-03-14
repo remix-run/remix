@@ -8,12 +8,14 @@ async function run() {
   console.log();
 
   let args: Array<string> = [
-    "create",
     ...process.argv.slice(2),
-    `--remix-version ${packageJson.version}`,
+    `--remix-version`,
+    packageJson.version,
   ];
 
-  execSync(`npx @remix-run/dev@${packageJson.version} ${shellEscape(args)}`);
+  execSync(
+    `npx @remix-run/dev@${packageJson.version} create -- ${shellEscape(args)}`
+  );
 }
 
 run().then(
