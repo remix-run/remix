@@ -19,7 +19,7 @@
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@remix-run/server-runtime": "1.2.3",
     "cacache": "^15.0.5",
-    "chalk": "^5.0.1",
+    "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
     "esbuild": "0.14.22",
