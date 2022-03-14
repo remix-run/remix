@@ -154,7 +154,7 @@ async function extractLocalTarball(
   await pipeline(
     fse.createReadStream(filePath),
     gunzip(),
-    tar.extract(projectDir)
+    tar.extract(projectDir, { strip: 1 })
   );
 }
 
