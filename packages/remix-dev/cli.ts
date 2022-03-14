@@ -224,7 +224,9 @@ async function run() {
     }
     case "init": {
       let remixRoot = input[1];
-      if (!remixRoot) remixRoot = process.env.REMIX_ROOT || process.cwd();
+      if (!remixRoot) {
+        remixRoot = process.env.REMIX_ROOT || process.cwd();
+      }
       await commands.init(remixRoot);
       break;
     }

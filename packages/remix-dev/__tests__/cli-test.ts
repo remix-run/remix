@@ -5,8 +5,6 @@ import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
 
-import run, { ENTER } from "./test-inquirer";
-
 const execFile = util.promisify(childProcess.execFile);
 
 const remix = path.resolve(
@@ -324,6 +322,34 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+      // deps can take a bit to install
+    }, 60_000);
+
+    it("throws an error when invalid remix.init script when automatically ran", async () => {
+      let projectDir = getProjectDir("invalid-remix-init-manual");
+      let { stdout } = await execFile("node", [
+        remix,
+        "create",
+        projectDir,
+        "--template",
+        path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
+        "--install",
+      ]);
+
+      expect(stdout.trim()).toContain(
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      );
+
+      let initResult = await execFile("node", [remix, "init", projectDir]);
+
+      expect(initResult.stdout.trim()).toContain("remix setup node");
+      expect(initResult.stderr.trim()).toContain(
+        `🚨 Oops, remix.init failed Error: 💣`
+      );
+      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      // we should keep remix.init around if the init script fails
+      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
 
