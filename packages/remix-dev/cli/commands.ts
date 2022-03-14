@@ -45,8 +45,11 @@ export async function create({
   });
 
   let initScriptDir = path.join(projectDir, "remix.init");
-  await init(projectDir);
-  await fse.remove(initScriptDir);
+  if (await fse.pathExists(initScriptDir)) {
+    log("Running remix.init script");
+    await init(projectDir);
+    await fse.remove(initScriptDir);
+  }
 
   let relProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relProjectDir === "";
@@ -71,7 +74,7 @@ export async function init(remixRoot: string) {
 
   if (await fse.pathExists(initScript)) {
     // TODO: check for npm/yarn/pnpm
-    execSync("npm install", { stdio: "inherit", cwd: initScriptDir });
+    execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
     let initFn = require(initScript);
     try {
       await initFn({ rootDirectory: remixRoot });
