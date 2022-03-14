@@ -1,5 +1,5 @@
-import * as React from "https://esm.sh/react?pin=v59";
-import { hydrate } from "https://esm.sh/react-dom?pin=v59";
-import { RemixBrowser } from "https://esm.sh/@remix-run/react?pin=v59";
+import React from "./deps/react.ts";
+import ReactDOM from "./deps/react-dom.ts";
+import { RemixBrowser } from "./deps/@remix-run/react.ts";
 
-hydrate(<RemixBrowser />, document);
+ReactDOM.hydrate(<RemixBrowser />, document);
