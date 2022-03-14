@@ -286,11 +286,12 @@ describe("remix cli", () => {
         projectDir,
         "--template",
         path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
-        "--no-install",
+        "--install",
       ]);
       expect(stdout.trim()).toContain(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
+      expect(stdout.trim()).toContain(`💿 Running remix.init script`);
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
@@ -321,7 +322,8 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+      // if you run `remix init` keep around the remix.init directory for future use
+      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
 
