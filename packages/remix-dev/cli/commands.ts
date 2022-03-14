@@ -44,7 +44,9 @@ export async function create({
     githubPAT,
   });
 
+  let initScriptDir = path.join(projectDir, "remix.init");
   await init(projectDir);
+  await fse.remove(initScriptDir);
 
   let relProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relProjectDir === "";
@@ -73,7 +75,6 @@ export async function init(remixRoot: string) {
     let initFn = require(initScript);
     try {
       await initFn({ rootDirectory: remixRoot });
-      await fse.remove(initScriptDir);
     } catch (error) {
       console.error(`🚨 Oops, remix.init failed`, error);
     }
