@@ -282,12 +282,12 @@ async function getRepoInfo(
     }
 
     let [, owner, name, t, branch, ...file] = url.pathname.split("/");
+    let filePath = file.join("/");
 
     if (t === undefined) {
-      let temp = await getDefaultBranch(`${owner}/${name}`, token);
-      if (temp) {
-        branch = temp;
-      }
+      let defaultBranch = await getDefaultBranch(`${owner}/${name}`, token);
+
+      return { owner, name, branch: defaultBranch, filePath };
     }
 
     if (owner && name && branch && t === "tree") {
@@ -325,7 +325,9 @@ async function getDefaultBranch(
   });
 
   if (response.status !== 200) {
-    throw new Error(`Error fetching repo: ${response.status}`);
+    throw new Error(
+      `Error fetching repo: ${response.status} ${response.statusText}`
+    );
   }
 
   let info = await response.json();
@@ -348,7 +350,9 @@ async function isRemixTemplate(
     }
   );
   if (!promise.ok) {
-    throw new Error(`Error fetching repo: ${promise.status}`);
+    throw new Error(
+      `Error fetching repo: ${promise.status} ${promise.statusText}`
+    );
   }
   let results = await promise.json();
   let possibleTemplateName = useTypeScript ? `${name}-ts` : name;
@@ -371,7 +375,9 @@ async function isRemixExample(name: string, token?: string) {
     }
   );
   if (!promise.ok) {
-    throw new Error(`Error fetching repo: ${promise.status}`);
+    throw new Error(
+      `Error fetching repo: ${promise.status} ${promise.statusText}`
+    );
   }
   let results = await promise.json();
   let example = results.find((result: any) => result.name === name);
@@ -396,10 +402,17 @@ async function detectTemplateType(
   useTypeScript: boolean,
   token?: string
 ): Promise<TemplateType> {
-  if (template.startsWith("file://")) return "local";
-  if (fse.existsSync(template)) return "local";
-  if (await isRemixTemplate(template, useTypeScript, token)) return "template";
-  if (await isRemixExample(template, token)) return "example";
-  if (await getRepoInfo(template, token)) return "repo";
+  if (template.startsWith("file://") || fse.existsSync(template)) {
+    return "local";
+  }
+  if (await isRemixTemplate(template, useTypeScript, token)) {
+    return "template";
+  }
+  if (await isRemixExample(template, token)) {
+    return "example";
+  }
+  if (await getRepoInfo(template, token)) {
+    return "repo";
+  }
   return "remoteTarball";
 }
