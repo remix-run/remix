@@ -10,8 +10,8 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/react": "1.2.3",
-    "@remix-run/serve": "1.2.3",
+    "@remix-run/react": "0.0.0-experimental-583953af",
+    "@remix-run/serve": "0.0.0-experimental-583953af",
     "@sanity/block-content-to-react": "^3.0.0",
     "@sanity/groq-store": "^0.2.2",
     "@sanity/image-url": "^1.0.1",
@@ -19,10 +19,10 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "^6.0.2",
-    "remix": "1.2.3"
+    "remix": "0.0.0-experimental-583953af"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.2.3"
+    "@remix-run/dev": "0.0.0-experimental-583953af"
   },
   "engines": {
     "node": ">=14"
