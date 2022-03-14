@@ -78,6 +78,8 @@ After the init script has been run, it is deleted so you don't need to worry abo
 
 #### Remove TypeScript
 
+> This feature is coming soon!
+
 If there's a `tsconfig.json` file in the root of the project, the Remix CLI will ask whether the user wants the TypeScript automatically removed from the template. We don't recommend this, but some folks just really want to write regular JavaScript.
 
 [repo access token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
