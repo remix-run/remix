@@ -198,7 +198,7 @@ describe("remix cli", () => {
         "create",
         projectDir,
         "--template",
-        "https://github.com/remix-run/remix/blob/6ae8676dfeb6a79c7d30c925408d1b043623f307/packages/create-remix/__tests__/arc.tar.gz?raw=true",
+        "https://github.com/remix-run/remix/blob/178f749972192fadac72139ae8b78908a898775b/packages/create-remix/__tests__/arc.tar.gz?raw=true",
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
