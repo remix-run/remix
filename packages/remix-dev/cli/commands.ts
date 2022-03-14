@@ -80,6 +80,7 @@ export async function init(remixRoot: string) {
       await initFn({ rootDirectory: remixRoot });
     } catch (error) {
       console.error(`🚨 Oops, remix.init failed`, error);
+      process.exit(1);
     }
   }
 }
