@@ -67,7 +67,7 @@ ${colors.heading("Creating a new project")}:
   $ remix create my-app --template https://example.com/remix-template.tar.gz
 
   To create a new project from a template in a private GitHub repo,
-  set the \`GITHUB_PAT\` environment variable to a personal access
+  set the \`GITHUB_TOKEN\` environment variable to a personal access
   token with access to that repo.
 
 ${colors.heading("Initialize a project:")}:
@@ -218,7 +218,7 @@ async function run() {
         remixVersion: flags.remixVersion,
         installDeps: flags.install ?? answers.install,
         useTypeScript: flags.typescript ?? answers.useTypeScript,
-        githubPAT: process.env.GITHUB_PAT,
+        githubPAT: process.env.GITHUB_TOKEN,
       });
       break;
     }

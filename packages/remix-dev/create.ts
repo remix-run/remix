@@ -133,7 +133,10 @@ export async function createApp({
     }
   });
   appPkg = sortPackageJSON(appPkg);
-  await fse.writeJSON(path.join(projectDir, "package.json"), appPkg);
+  await fse.writeJSON(path.join(projectDir, "package.json"), appPkg, {
+    spaces: 2,
+    replacer: null,
+  });
 
   if (installDeps) {
     // TODO: use yarn/pnpm/npm
