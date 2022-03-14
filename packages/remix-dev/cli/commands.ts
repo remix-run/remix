@@ -26,14 +26,14 @@ export async function create({
   remixVersion,
   installDeps,
   useTypeScript,
-  githubPAT,
+  githubToken,
 }: {
   appTemplate: string;
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
   useTypeScript: boolean;
-  githubPAT?: string;
+  githubToken?: string;
 }) {
   await createApp({
     appTemplate,
@@ -41,7 +41,7 @@ export async function create({
     remixVersion,
     installDeps,
     useTypeScript,
-    githubPAT,
+    githubToken,
   });
 
   let initScriptDir = path.join(projectDir, "remix.init");

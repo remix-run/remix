@@ -218,7 +218,7 @@ async function run() {
         remixVersion: flags.remixVersion,
         installDeps: flags.install ?? answers.install,
         useTypeScript: flags.typescript ?? answers.useTypeScript,
-        githubPAT: process.env.GITHUB_TOKEN,
+        githubToken: process.env.GITHUB_TOKEN,
       });
       break;
     }

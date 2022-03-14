@@ -20,7 +20,7 @@ interface CreateAppArgs {
   remixVersion?: string;
   installDeps: boolean;
   useTypeScript: boolean;
-  githubPAT?: string;
+  githubToken?: string;
 }
 
 export async function createApp({
@@ -29,7 +29,7 @@ export async function createApp({
   remixVersion = remixDevPackageVersion,
   installDeps,
   useTypeScript,
-  githubPAT = process.env.GITHUB_TOKEN,
+  githubToken = process.env.GITHUB_TOKEN,
 }: CreateAppArgs) {
   // Check the node version
   let versions = process.versions;
@@ -63,9 +63,9 @@ export async function createApp({
   let templateType = await detectTemplateType(
     appTemplate,
     useTypeScript,
-    githubPAT
+    githubToken
   );
-  let options = { useTypeScript, token: githubPAT };
+  let options = { useTypeScript, token: githubToken };
   switch (templateType) {
     case "local": {
       let filepath = appTemplate.startsWith("file://")
@@ -108,7 +108,7 @@ export async function createApp({
     case "repo": {
       let { filePath, tarballURL } = await getTarballUrl(
         appTemplate,
-        githubPAT
+        githubToken
       );
       await downloadAndExtractTarball(projectDir, tarballURL, {
         ...options,
