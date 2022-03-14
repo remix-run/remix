@@ -14,5 +14,11 @@
   },
   "bin": {
     "create-remix": "cli.js"
+  },
+  "dependencies": {
+    "shell-escape": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/shell-escape": "^0.2.0"
   }
 }

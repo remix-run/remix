@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
+import shellEscape from "shell-escape";
 
-import pkgJSON from "./package.json";
+import packageJson from "./package.json";
 
 async function run() {
   console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
@@ -8,11 +9,10 @@ async function run() {
 
   let args: Array<string> = [
     ...process.argv.slice(2),
-    `--remix-version ${pkgJSON.version}`,
+    `--remix-version ${packageJson.version}`,
   ];
 
-  execSync(`npx @remix-run/dev ${args.join(" ")}`);
-  return;
+  execSync(`npx @remix-run/dev@${packageJson.version} ${shellEscape(args)}`);
 }
 
 run().then(
