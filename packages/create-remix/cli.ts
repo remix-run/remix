@@ -8,6 +8,7 @@ async function run() {
   console.log();
 
   let args: Array<string> = [
+    "create",
     ...process.argv.slice(2),
     `--remix-version ${packageJson.version}`,
   ];
