@@ -291,7 +291,7 @@ async function getRepoInfo(
     }
 
     if (owner && name && branch && t === "tree") {
-      return { owner, name, branch, filePath: file.join("/") };
+      return { owner, name, branch, filePath };
     }
 
     return;
