@@ -5,6 +5,8 @@ import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
 
+import run, { ENTER } from "./test-inquirer";
+
 const execFile = util.promisify(childProcess.execFile);
 
 const remix = path.resolve(
@@ -130,9 +132,12 @@ describe("remix cli", () => {
   });
 
   describe("the create command", () => {
-    let tmpDir = path.join(process.cwd(), ".tmp");
     function getProjectDir(name: string) {
-      return path.join(tmpDir, name + Math.random().toString(32).slice(2));
+      return path.join(
+        process.cwd(),
+        ".tmp",
+        `${name}-${Math.random().toString(32).slice(2)}`
+      );
     }
 
     // this also tests sub directories
@@ -319,27 +324,6 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
-      // deps can take a bit to install
-    }, 60_000);
-
-    it("throws an error when invalid remix.init script when installing dependencies", async () => {
-      let projectDir = getProjectDir("invalid-remix-init");
-      let { stdout, stderr } = await execFile("node", [
-        remix,
-        "create",
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
-      ]);
-
-      expect(stdout.trim()).toContain(
-        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
-      );
-      expect(stderr.trim()).toContain(`🚨 Oops, remix.init failed Error: 💣`);
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-      // we should keep remix.init around if the init script fails
-      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
 
