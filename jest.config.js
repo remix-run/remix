@@ -5,19 +5,14 @@ module.exports = {
       displayName: "create-remix",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/create-remix/**/*-test.[jt]s?(x)"],
-      globalSetup: "<rootDir>/jest/buildRemix.ts",
-      setupFilesAfterEnv: [
-        "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts",
-      ],
+      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
       displayName: "integration",
       testEnvironment: "node",
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
-      setupFilesAfterEnv: [
-        "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts",
-      ],
+      setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
     },
     {
       displayName: "remix-architect",
@@ -39,6 +34,9 @@ module.exports = {
       displayName: "remix-dev",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-dev/**/*-test.[jt]s?(x)"],
+      setupFilesAfterEnv: [
+        "<rootDir>/packages/remix-dev/__tests__/setupAfterEnv.ts",
+      ],
     },
     {
       displayName: "remix-express",

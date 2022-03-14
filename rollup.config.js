@@ -38,7 +38,7 @@ function createRemix() {
       external() {
         return true;
       },
-      input: [`${sourceDir}/cli.ts`, `${sourceDir}/index.ts`],
+      input: `${sourceDir}/cli.ts`,
       output: {
         format: "cjs",
         dir: outputDir,
@@ -56,10 +56,6 @@ function createRemix() {
             { src: `LICENSE.md`, dest: outputDir },
             { src: `${sourceDir}/package.json`, dest: outputDir },
             { src: `${sourceDir}/README.md`, dest: outputDir },
-            {
-              src: `${sourceDir}/templates/*`,
-              dest: `${outputDir}/templates`,
-            },
           ],
         }),
       ],
@@ -128,11 +124,19 @@ function remixDev() {
 
   return [
     {
-      external(id) {
+      external(id, parent) {
+        if (
+          id === "./package.json" &&
+          parent === path.resolve(__dirname, "packages/remix-dev/create.ts")
+        ) {
+          return true;
+        }
+
         return isBareModuleId(id);
       },
       input: [
         `${sourceDir}/cli/commands.ts`,
+        `${sourceDir}/colors.ts`,
         `${sourceDir}/compiler.ts`,
         `${sourceDir}/config.ts`,
         `${sourceDir}/index.ts`,
