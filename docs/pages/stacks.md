@@ -57,7 +57,7 @@ The [token just needs `repo` access][repo access token].
 
 ### Custom Template Tips
 
-#### Remix deps
+#### Dependency versions
 
 If you set the any dependencies in package.json to `*`, the Remix CLI will change it to a semver carrot of the latest released version:
 
@@ -68,7 +68,7 @@ If you set the any dependencies in package.json to `*`, the Remix CLI will chang
 
 This allows you to not have to regularly update your template to the latest version of that specific package. Of course you do not have to put `*` if you'd prefer to manually manage the version for that package.
 
-#### `remix.init/index.js`
+#### Customize Initialization
 
 If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
 
@@ -76,7 +76,7 @@ You could even use `remix.init/index.js` to ask further questions of the develop
 
 After the init script has been run, it is deleted so you don't need to worry about it cluttering up the finished codebase.
 
-#### `tsconfig.json`
+#### Remove TypeScript
 
 If there's a `tsconfig.json` file in the root of the project, the Remix CLI will ask whether the user wants the TypeScript automatically removed from the template. We don't recommend this, but some folks just really want to write regular JavaScript.
 
