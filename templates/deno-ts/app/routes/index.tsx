@@ -1,4 +1,4 @@
-import * as React from "https://esm.sh/react?pin=v59";
+import React from "../deps/react.ts";
 
 export default function Index() {
   return (
