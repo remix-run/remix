@@ -327,25 +327,17 @@ describe("remix cli", () => {
 
     it("throws an error when invalid remix.init script when automatically ran", async () => {
       let projectDir = getProjectDir("invalid-remix-init-manual");
-      let { stdout } = await execFile("node", [
-        remix,
-        "create",
-        projectDir,
-        "--template",
-        path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
-        "--install",
-      ]);
+      await expect(
+        execFile("node", [
+          remix,
+          "create",
+          projectDir,
+          "--template",
+          path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
+          "--install",
+        ])
+      ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
 
-      expect(stdout.trim()).toContain(
-        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
-      );
-
-      let initResult = await execFile("node", [remix, "init", projectDir]);
-
-      expect(initResult.stdout.trim()).toContain("remix setup node");
-      expect(initResult.stderr.trim()).toContain(
-        `🚨 Oops, remix.init failed Error: 💣`
-      );
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       // we should keep remix.init around if the init script fails
@@ -368,14 +360,11 @@ describe("remix cli", () => {
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
 
-      let initResult = await execFile("node", [remix, "init"], {
-        cwd: projectDir,
-      });
-
-      expect(initResult.stdout.trim()).toContain("remix setup node");
-      expect(initResult.stderr.trim()).toContain(
-        `🚨 Oops, remix.init failed Error: 💣`
-      );
+      await expect(
+        execFile("node", [remix, "init"], {
+          cwd: projectDir,
+        })
+      ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       // we should keep remix.init around if the init script fails

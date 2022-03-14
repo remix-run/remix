@@ -45,10 +45,17 @@ export async function create({
   });
 
   let initScriptDir = path.join(projectDir, "remix.init");
-  if (await fse.pathExists(initScriptDir)) {
-    log("Running remix.init script");
-    await init(projectDir);
-    await fse.remove(initScriptDir);
+  let hasInitScript = await fse.pathExists(initScriptDir);
+  if (hasInitScript) {
+    console.log("💿 Running remix.init script");
+    if (installDeps) {
+      await init(projectDir);
+      await fse.remove(initScriptDir);
+    } else {
+      console.log(
+        "💿 You've opted out of running the remix.init script, you can run it manually with `npx remix init`"
+      );
+    }
   }
 
   let relProjectDir = path.relative(process.cwd(), projectDir);
@@ -79,8 +86,8 @@ export async function init(remixRoot: string) {
     try {
       await initFn({ rootDirectory: remixRoot });
     } catch (error) {
-      console.error(`🚨 Oops, remix.init failed`, error);
-      process.exit(1);
+      console.error(`🚨 Oops, remix.init failed`);
+      throw error;
     }
   }
 }
