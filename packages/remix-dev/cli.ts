@@ -149,15 +149,58 @@ async function run() {
 
       let answers = await inquirer
         .prompt<{
+          appType: "template" | "stack";
           appTemplate: string;
           useTypeScript: boolean;
           install: boolean;
         }>([
           {
-            name: "appTemplate",
+            name: "appType",
             type: "list",
+            message: "What type of app do you want to create?",
             when() {
               return flags.template === undefined;
+            },
+            choices: [
+              {
+                name: "A pre-configured stack ready for production",
+                value: "stack",
+              },
+              {
+                name: "Just the basics",
+                value: "template",
+              },
+            ],
+          },
+          {
+            name: "appTemplate",
+            type: "list",
+            when(answers) {
+              return answers.appType === "stack";
+            },
+            message: "Which Stack do you want? ",
+            loop: false,
+            suffix: "(Learn more about these stacks: https://remix.run/stacks)",
+            choices: [
+              {
+                name: "Blues",
+                value: "blues-stack",
+              },
+              {
+                name: "Indie",
+                value: "indie-stack",
+              },
+              {
+                name: "Grunge",
+                value: "grunge-stack",
+              },
+            ],
+          },
+          {
+            name: "appTemplate",
+            type: "list",
+            when(answers) {
+              return answers.appType === "template";
             },
             message: `Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.`,
             loop: false,
