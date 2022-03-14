@@ -84,10 +84,7 @@ export async function createApp({
       }
     }
     case "remoteTarball": {
-      await downloadAndExtractTarball(projectDir, appTemplate, {
-        ...options,
-        strip: 2,
-      });
+      await downloadAndExtractTarball(projectDir, appTemplate, options);
       break;
     }
     case "example": {
@@ -215,7 +212,6 @@ async function downloadAndExtractTarball(
   options: {
     token?: string;
     filePath?: string | null | undefined;
-    strip?: number;
   }
 ): Promise<void> {
   let cwd = path.dirname(projectDir);
@@ -234,9 +230,7 @@ async function downloadAndExtractTarball(
   await pipeline(
     response.body.pipe(gunzip()),
     tar.extract(projectDir, {
-      strip:
-        options.strip ??
-        (options.filePath ? options.filePath.split("/").length + 1 : 1),
+      strip: options.filePath ? options.filePath.split("/").length + 1 : 1,
       ignore(name) {
         if (options.filePath) {
           return !name.startsWith(path.join(cwd, options.filePath));
