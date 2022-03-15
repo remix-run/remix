@@ -1009,9 +1009,7 @@ export const meta: MetaFunction = () => {
 };
 ```
 
-There are a few special cases like `title` renders a `<title>` tag, `og:style` tags will render `<meta property content>`, the rest render `<meta name={key} content={value}/>`.
-
-In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
+There are a few special cases (read about those below). In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
 
 #### `HtmlMetaDescriptor`
 
@@ -1021,7 +1019,9 @@ The `meta` export from a route should return a single `HtmlMetaDescriptor` objec
 
 Almost every `meta` element takes a `name` and `content` attribute, with the exception of [OpenGraph tags](https://ogp.me/) which use `property` instead of `name`. In either case, the attributes represent a key/value pair for each tag. Each pair in the `HtmlMetaDescriptor` object represents a separate `meta` element, and Remix maps each to the correct attributes for that tag.
 
-The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title)
+The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title).
+
+As a convenience, `charSet: "utf-8"` will render a `<meta charSet="utf-8" />`.
 
 Examples:
 
@@ -1031,6 +1031,7 @@ import type { MetaFunction } from "remix";
 export const meta: MetaFunction = () => {
   return {
     title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
+    charSet: "utf-8",
     description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
     "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
   };

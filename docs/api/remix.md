@@ -9,31 +9,66 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 ## Components and Hooks
 
-### `<Meta>`, `<Links>`, `<Scripts>`
+### `<Meta>`, `<Links>`, `<Scripts>`, `<LiveReload>`, `<ScrollRestoration>`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx lines=[1,8-9,13]
-import { Meta, Links, Scripts, Outlet } from "remix";
+```tsx
+import type { MetaFunction, LinksFunction } from "remix";
+import {
+  Meta,
+  Links,
+  Scripts,
+  Outlet,
+  LiveReload,
+  ScrollRestoration,
+} from "remix";
+import globalStylesheetUrl from "./global-styles.css";
+
+export const links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: globalStylesheetUrl }];
+};
+
+export const meta: MetaFunction = () => {
+  return {
+    title: "My Amazing App",
+    viewport: "width=device-width,initial-scale=1",
+    charSet: "utf-8",
+  };
+};
 
 export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        {/* All meta exports on all routes will go here */}
         <Meta />
+
+        {/* All link exports on all routes will go here */}
         <Links />
       </head>
       <body>
+        {/* Child routes go here */}
         <Outlet />
+
+        {/* Manages scroll position for client-side transitions */}
+        <ScrollRestoration />
+
+        {/* Script tags go here */}
         <Scripts />
+
+        {/* Sets up automatic reload when you change code */}
+        {/* and only does anything during development */}
+        <LiveReload />
       </body>
     </html>
   );
 }
 ```
 
-You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hosting your static assets on a different server than your app, or `<Script nonce={nonce}/>` for certain content security policies.
+You can pass extra props to `<Scripts />` like `<Scripts crossOrigin />` for hosting your static assets on a different server than your app, or `<Script nonce={nonce}/>` for certain content security policies.
+
+Learn more about `meta` and `links` exports in the [conventions](/api/conventions) documentation.
 
 ### `<Link>`
 
@@ -1245,7 +1280,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
 
 3. Now we can put it all together in our root route with `useMatches`.
 
-   ```tsx [6, 21-32]
+   ```tsx [6, 20-31]
    // root.tsx
    import {
      Links,
@@ -1260,7 +1295,6 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
      return (
        <html lang="en">
          <head>
-           <meta charSet="utf-8" />
            <Links />
          </head>
          <body>
