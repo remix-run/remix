@@ -19,12 +19,14 @@ $ npm i -g @architect/architect aws-sdk
 
 The following command will run two processes during development when using Architect as your server.
 
-- Your Architect server sandbox in one
-- The Remix development server in another
+- Your Architect server sandbox
+- The Remix development server
 
 ```sh
 $ npm run dev
 ```
+
+Your file changes are watched, and assets are rebuilt upon change.
 
 Open up [http://localhost:3333](http://localhost:3333) and you should be ready to go!
 
