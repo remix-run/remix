@@ -1,5 +1,5 @@
+import * as React from "react";
 import type { MetaFunction } from "remix";
-import React from "react";
 import { Links, LiveReload, Meta, Outlet } from "remix";
 
 export const meta: MetaFunction = () => ({

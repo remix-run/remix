@@ -38,7 +38,7 @@ function createRemix() {
       external() {
         return true;
       },
-      input: [`${sourceDir}/cli.ts`, `${sourceDir}/index.ts`],
+      input: `${sourceDir}/cli.ts`,
       output: {
         format: "cjs",
         dir: outputDir,
@@ -56,10 +56,6 @@ function createRemix() {
             { src: `LICENSE.md`, dest: outputDir },
             { src: `${sourceDir}/package.json`, dest: outputDir },
             { src: `${sourceDir}/README.md`, dest: outputDir },
-            {
-              src: `${sourceDir}/templates/*`,
-              dest: `${outputDir}/templates`,
-            },
           ],
         }),
       ],
@@ -186,11 +182,19 @@ function remixDev() {
 
   return [
     {
-      external(id) {
+      external(id, parent) {
+        if (
+          id === "./package.json" &&
+          parent === path.resolve(__dirname, "packages/remix-dev/create.ts")
+        ) {
+          return true;
+        }
+
         return isBareModuleId(id);
       },
       input: [
         `${sourceDir}/cli/commands.ts`,
+        `${sourceDir}/colors.ts`,
         `${sourceDir}/compiler.ts`,
         `${sourceDir}/config.ts`,
         `${sourceDir}/index.ts`,
@@ -576,61 +580,6 @@ function remixCloudflarePages() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
-function remixDeno() {
-  let sourceDir = "packages/remix-deno";
-  let outputDir = "build/node_modules/@remix-run/deno";
-  let version = getVersion(sourceDir);
-
-  return [
-    {
-      external(id) {
-        return isBareModuleId(id);
-      },
-      input: `${sourceDir}/index.ts`,
-      output: {
-        banner: createBanner("@remix-run/deno", version),
-        dir: outputDir,
-        format: "esm",
-        preserveModules: true,
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-        nodeResolve({ extensions: [".ts", ".tsx"] }),
-        copy({
-          targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
-          ],
-        }),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/deno", version),
-        dir: `${outputDir}/magicExports/esm`,
-        format: "esm",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-      ],
-    },
-  ];
-}
-
-/** @returns {import("rollup").RollupOptions[]} */
 function getAdapterConfig(adapterName) {
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
@@ -895,7 +844,6 @@ export default function rollup(options) {
     ...remix(options),
     ...remixCssModules(options),
     ...remixDev(options),
-    ...remixDeno(options),
     ...remixServerRuntime(options),
     ...remixNode(options),
     ...remixCloudflarePages(options),

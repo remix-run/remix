@@ -387,43 +387,55 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  return esbuild
-    .build({
-      entryPoints,
-      outdir: config.assetsBuildDirectory,
-      platform: "browser",
-      format: "esm",
-      external: externals,
-      inject: [reactShim],
-      loader: loaders,
-      bundle: true,
-      logLevel: "silent",
-      splitting: true,
-      sourcemap: options.sourcemap,
-      metafile: true,
-      incremental: options.incremental,
-      mainFields: ["browser", "module", "main"],
-      treeShaking: true,
-      minify: options.mode === BuildMode.Production,
-      entryNames: "[dir]/[name]-[hash]",
-      chunkNames: "_shared/[name]-[hash]",
-      assetNames: "_assets/[name]-[hash]",
-      publicPath: config.publicPath,
-      define: {
-        "process.env.NODE_ENV": JSON.stringify(options.mode),
-        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-          config.devServerPort
-        ),
-      },
-      plugins: [
-        cssModulesPlugin(config, handleProcessedCss),
-        mdxPlugin(config),
-        browserRouteModulesPlugin(config, /\?browser$/),
-        emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-        NodeModulesPolyfillPlugin(),
-      ],
-    })
-    .then(async (build) => {
+  let plugins = [
+    cssModulesPlugin(config, handleProcessedCss),
+    mdxPlugin(config),
+    browserRouteModulesPlugin(config, /\?browser$/),
+    emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+    NodeModulesPolyfillPlugin(),
+  ];
+
+  if (config.serverBuildTarget === "deno") {
+    // @ts-expect-error
+    let { cache } = await import("esbuild-plugin-cache");
+    plugins.unshift(
+      cache({
+        importmap: {},
+        directory: path.join(config.cacheDirectory, "http-import-cache"),
+      })
+    );
+  }
+
+  return esbuild.build({
+    entryPoints,
+    outdir: config.assetsBuildDirectory,
+    platform: "browser",
+    format: "esm",
+    external: externals,
+    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
+    loader: loaders,
+    bundle: true,
+    logLevel: "silent",
+    splitting: true,
+    sourcemap: options.sourcemap,
+    metafile: true,
+    incremental: options.incremental,
+    mainFields: ["browser", "module", "main"],
+    treeShaking: true,
+    minify: options.mode === BuildMode.Production,
+    entryNames: "[dir]/[name]-[hash]",
+    chunkNames: "_shared/[name]-[hash]",
+    assetNames: "_assets/[name]-[hash]",
+    publicPath: config.publicPath,
+    define: {
+
+      "process.env.NODE_ENV": JSON.stringify(options.mode),
+      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+        config.devServerPort
+      ),
+    },
+    plugins,
+  }).then(async (build) => {
       let [globalStylesheetFilePath, globalStylesheetFileUrl] =
         getCssModulesFileReferences(config, cssModulesContent);
 
@@ -526,7 +538,7 @@ async function createServerBuild(
           ? ["module", "main"]
           : ["main", "module"],
       target: options.target,
-      inject: [reactShim],
+      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
