@@ -183,10 +183,9 @@ Remix App Server started at http://localhost:3000
 
 Open up that URL and you should be presented with a minimal page pointing to some docs.
 
-💿 Now stop the server and delete all this stuff:
+💿 Now stop the server and delete this directory:
 
 - `app/routes`
-- `app/styles`
 
 We're going to trim this down the bare bones and introduce things incrementally.
 
