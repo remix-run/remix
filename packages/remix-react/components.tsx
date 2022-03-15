@@ -668,6 +668,8 @@ export function Meta() {
         let isOpenGraphTag = name.startsWith("og:");
         return name === "title" ? (
           <title key="title">{value}</title>
+        ) : ["charset", "charSet"].includes(name) ? (
+          <meta key="charset" charSet={value as string} />
         ) : Array.isArray(value) ? (
           value.map((content) =>
             isOpenGraphTag ? (
