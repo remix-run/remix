@@ -10,7 +10,7 @@ let examplesDir = path.resolve(rootDir, "examples");
 
 let remixPackages = {
   adapters: ["architect", "express", "netlify", "vercel"],
-  runtimes: ["cloudflare-workers", "cloudflare-pages", "deno", "node"],
+  runtimes: ["cloudflare-workers", "cloudflare-pages", "node"],
   core: ["dev", "server-runtime", "react", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];

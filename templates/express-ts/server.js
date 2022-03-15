@@ -2,7 +2,6 @@ import express from "express";
 import compression from "compression";
 import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
-
 import * as serverBuild from "@remix-run/dev/server-build";
 
 const app = express();

@@ -1,4 +1,4 @@
-import { sign, unsign } from "./cookieSigning";
+import { sign, unsign } from "./cookieSigning.ts";
 
 declare global {
   interface ProcessEnv {
@@ -10,7 +10,7 @@ declare global {
 
   // This is here because we need it in our node setup,
   // but not in an actual deno project.
-  // @ts-ignore
+  // deno-lint-ignore no-var
   var process: Process;
 }
 
