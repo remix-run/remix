@@ -291,6 +291,7 @@ async function getRepoInfo(
 
     if (t === undefined) {
       let defaultBranch = await getDefaultBranch(`${owner}/${name}`, token);
+      if (!defaultBranch) return;
 
       return { owner, name, branch: defaultBranch, filePath };
     }
@@ -310,6 +311,7 @@ async function getRepoInfo(
       }
       let [owner, name] = parts;
       let branch = await getDefaultBranch(`${owner}/${name}`, token);
+      if (!branch) return;
       return { owner, name, branch, filePath: "" };
     } catch (error) {
       // invalid url, but we can try to match a template or example
@@ -321,21 +323,22 @@ async function getRepoInfo(
 async function getDefaultBranch(
   repo: string,
   token: string | undefined
-): Promise<string> {
-  const response = await fetch(`https://api.github.com/repos/${repo}`, {
+): Promise<string | undefined> {
+  const promise = await fetch(`https://api.github.com/repos/${repo}`, {
     headers: {
       Authorization: token ? `token ${token}` : "",
       Accept: "application/vnd.github.v3+json",
     },
   });
 
-  if (response.status !== 200) {
-    throw new Error(
-      `Error fetching repo: ${response.status} ${response.statusText}`
+  if (!promise.ok) {
+    console.error(
+      `Error fetching repo: ${promise.status} ${promise.statusText}, continuing`
     );
+    return;
   }
 
-  let info = await response.json();
+  let info = await promise.json();
   return info.default_branch;
 }
 
@@ -354,9 +357,10 @@ async function isRemixTemplate(
     }
   );
   if (!promise.ok) {
-    throw new Error(
-      `Error fetching repo: ${promise.status} ${promise.statusText}`
+    console.error(
+      `Error fetching repo: ${promise.status} ${promise.statusText}, continuing`
     );
+    return;
   }
   let results = await promise.json();
   let possibleTemplateName = useTypeScript ? `${name}-ts` : name;
@@ -378,9 +382,10 @@ async function isRemixExample(name: string, token?: string) {
     }
   );
   if (!promise.ok) {
-    throw new Error(
-      `Error fetching repo: ${promise.status} ${promise.statusText}`
+    console.error(
+      `Error fetching repo: ${promise.status} ${promise.statusText}, continuing`
     );
+    return;
   }
   let results = await promise.json();
   let example = results.find((result: any) => result.name === name);
