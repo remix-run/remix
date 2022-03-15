@@ -1009,9 +1009,7 @@ export const meta: MetaFunction = () => {
 };
 ```
 
-There are a few special cases like `title` renders a `<title>` tag, `og:style` tags will render `<meta property content>`, the rest render `<meta name={key} content={value}/>`.
-
-In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
+There are a few special cases (read about those below). In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
 
 #### `HtmlMetaDescriptor`
 
@@ -1021,7 +1019,9 @@ The `meta` export from a route should return a single `HtmlMetaDescriptor` objec
 
 Almost every `meta` element takes a `name` and `content` attribute, with the exception of [OpenGraph tags](https://ogp.me/) which use `property` instead of `name`. In either case, the attributes represent a key/value pair for each tag. Each pair in the `HtmlMetaDescriptor` object represents a separate `meta` element, and Remix maps each to the correct attributes for that tag.
 
-The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title)
+The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title).
+
+As a convenience, `charSet: "utf-8"` will render a `<meta charSet="utf-8" />`.
 
 Examples:
 
@@ -1031,8 +1031,10 @@ import type { MetaFunction } from "remix";
 export const meta: MetaFunction = () => {
   return {
     title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
+    charSet: "utf-8", // <meta charSet="utf-8" />
     description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
     "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
+    viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1"/>
   };
 };
 ```
@@ -1045,6 +1047,23 @@ export const meta: MetaFunction = () => {
 - `location` is a `window.location`-like object that has some data about the current route
 - `params` is an object containing route params
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
+
+```tsx
+export const meta: MetaFunction = ({ data, params }) => {
+  if (data) {
+    const { shake } = data as LoaderData;
+    return {
+      title: `${shake.name} milkshake`,
+      description: shake.summary,
+    };
+  } else {
+    return {
+      title: "Missing Shake",
+      description: `There is no shake with the ID of ${params.shakeId}. 😢`,
+    };
+  }
+};
+```
 
 ### `links`
 
