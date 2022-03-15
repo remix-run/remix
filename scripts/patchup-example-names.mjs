@@ -1,11 +1,13 @@
 import fs from "fs/promises";
 import path from "path";
 
-let dirPath = path.join(process.cwd(), "examples");
-let dir = await fs.readdir(dirPath);
+let examplePath = path.join(process.cwd(), "examples");
+let templatePath = path.join(process.cwd(), "templates");
+let examples = await fs.readdir(examplePath);
+let templates = await fs.readdir(templatePath);
 
-dir.forEach(async (name) => {
-  let fullPath = path.join(dirPath, name);
+async function update(dir, name) {
+  let fullPath = path.join(dir, name);
   let stat = await fs.stat(fullPath);
   if (stat.isDirectory()) {
     let pkgPath = path.join(fullPath, "package.json");
@@ -14,4 +16,12 @@ dir.forEach(async (name) => {
     obj.name = `remix-example-${name}`;
     await fs.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
   }
+}
+
+examples.forEach(async (name) => {
+  await update(examplePath, name);
+});
+
+templates.forEach(async (name) => {
+  await update(templatePath, name);
 });
