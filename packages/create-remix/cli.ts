@@ -7,16 +7,13 @@ async function run() {
   console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
   console.log();
 
-  let args: Array<string> = [
-    ...process.argv.slice(2),
-    // npm requires a `--` to separate the arguments from the script
-    `--`,
-    `--remix-version ${packageJson.version}`,
-  ];
+  let args = process.argv.slice(2);
 
   execSync(
     `npx @remix-run/dev@${packageJson.version} create ${shellEscape(args)}`,
-    { stdio: "inherit" }
+    {
+      stdio: "inherit",
+    }
   );
 }
 
