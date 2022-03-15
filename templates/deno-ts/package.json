@@ -16,5 +16,5 @@
   "engines": {
     "node": ">=14"
   },
-  "name": "remix-example-deno-ts"
+  "name": "remix-template-deno-ts"
 }
