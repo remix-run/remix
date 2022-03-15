@@ -884,7 +884,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let submit = useSubmitImpl(fetchKey);
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
-    let formAction = useFormAction(action, formMethod);
+    let formAction = useFormAction(action);
     let formRef = React.useRef<HTMLFormElement>();
     let ref = useComposedRefs(forwardedRef, formRef);
 
@@ -959,16 +959,6 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
 FormImpl.displayName = "FormImpl";
 export { FormImpl };
 
-function isActionRequestMethod(method: string): boolean {
-  method = method.toLowerCase();
-  return (
-    method === "post" ||
-    method === "put" ||
-    method === "patch" ||
-    method === "delete"
-  );
-}
-
 /**
  * Resolves a `<form action>` path relative to the current route.
  *
@@ -976,6 +966,7 @@ function isActionRequestMethod(method: string): boolean {
  */
 export function useFormAction(
   action = ".",
+  // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
@@ -983,7 +974,7 @@ export function useFormAction(
   let search = path.search;
   let isIndexRoute = id.endsWith("/index");
 
-  if (action === "." && isIndexRoute && isActionRequestMethod(method)) {
+  if (action === "." && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
