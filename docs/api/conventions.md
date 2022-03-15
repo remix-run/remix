@@ -1031,9 +1031,10 @@ import type { MetaFunction } from "remix";
 export const meta: MetaFunction = () => {
   return {
     title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
-    charSet: "utf-8",
+    charSet: "utf-8", // <meta charSet="utf-8" />
     description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
     "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
+    viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1"/>
   };
 };
 ```
@@ -1046,6 +1047,23 @@ export const meta: MetaFunction = () => {
 - `location` is a `window.location`-like object that has some data about the current route
 - `params` is an object containing route params
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
+
+```tsx
+export const meta: MetaFunction = ({ data, params }) => {
+  if (data) {
+    const { shake } = data as LoaderData;
+    return {
+      title: `${shake.name} milkshake`,
+      description: shake.summary,
+    };
+  } else {
+    return {
+      title: "Missing Shake",
+      description: `There is no shake with the ID of ${params.shakeId}. 😢`,
+    };
+  }
+};
+```
 
 ### `links`
 
