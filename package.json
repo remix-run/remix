@@ -10,7 +10,7 @@
     "publish": "node ./scripts/publish.js",
     "publish:private": "node ./scripts/publish-private.js",
     "release": "node ./scripts/release.js",
-    "test": "jest",
+    "test": "jest --runInBand",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md . --fix",

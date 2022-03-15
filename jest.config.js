@@ -1,5 +1,6 @@
 module.exports = {
   modulePathIgnorePatterns: ["<rootDir>/examples", "<rootDir>/.tmp"],
+  runInBand: true,
   projects: [
     {
       displayName: "create-remix",
