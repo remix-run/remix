@@ -8,12 +8,14 @@ async function run() {
   console.log();
 
   let args = process.argv.slice(2);
+  let escapedArgs = shellEscape(args);
+
+  let npxVersion = execSync(`npx --version`).toString().trim();
+  let flag = Number(npxVersion[0]) > 6 ? "--yes" : "";
 
   execSync(
-    `npx @remix-run/dev@${packageJson.version} create ${shellEscape(args)}`,
-    {
-      stdio: "inherit",
-    }
+    `npx ${flag} @remix-run/dev@${packageJson.version} create ${escapedArgs}`,
+    { stdio: "inherit" }
   );
 }
 
