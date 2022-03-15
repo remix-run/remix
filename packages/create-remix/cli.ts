@@ -8,12 +8,11 @@ async function run() {
   console.log();
 
   let args = process.argv.slice(2);
+  let escapedArgs = shellEscape(args);
 
   execSync(
-    `npx @remix-run/dev@${packageJson.version} create ${shellEscape(args)}`,
-    {
-      stdio: "inherit",
-    }
+    `npx --yes @remix-run/dev@${packageJson.version} create ${escapedArgs}`,
+    { stdio: "inherit" }
   );
 }
 
