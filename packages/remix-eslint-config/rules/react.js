@@ -1,4 +1,4 @@
-// const OFF = 0;
+const OFF = 0;
 const WARN = 1;
 const ERROR = 2;
 
@@ -19,6 +19,7 @@ module.exports = {
   "react/no-render-return-value": ERROR,
   "react/no-string-refs": WARN,
   "react/no-typos": WARN,
+  "react/react-in-jsx-scope": OFF,
   "react/require-render-return": ERROR,
   "react/style-prop-object": WARN,
 
