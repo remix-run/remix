@@ -23,6 +23,7 @@ import {
   LiveReload,
   ScrollRestoration,
 } from "remix";
+
 import globalStylesheetUrl from "./global-styles.css";
 
 export const links: LinksFunction = () => {
