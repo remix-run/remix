@@ -21,7 +21,7 @@
     "@remix-run/dev": "^1.2.3",
     "@remix-run/eslint-config": "^1.2.3",
     "@remix-run/serve": "^1.2.3",
-    "eslint": "^8.9.0"
+    "eslint": "^8.11.0"
   },
   "engines": {
     "node": ">=14"
