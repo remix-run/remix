@@ -5,8 +5,8 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "cross-env NODE_ENV=production remix build",
-    "dev": "cross-env NODE_ENV=development remix watch",
+    "build": "remix build",
+    "dev": "remix watch",
     "postinstall": "remix setup node",
     "start": "cross-env NODE_ENV=production node -r esbuild-register server/index.ts",
     "start:dev": "cross-env NODE_ENV=development node -r esbuild-register server/index.ts"
