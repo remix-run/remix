@@ -157,7 +157,8 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
-    it("works for templates in the remix org", async () => {
+    // TODO: enable once this is live
+    it.skip("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       let { stdout } = await execFile("node", [
         remix,
