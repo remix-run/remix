@@ -28,7 +28,7 @@ export async function createApp({
   projectDir,
   remixVersion = remixDevPackageVersion,
   installDeps,
-  useTypeScript,
+  useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
 }: CreateAppArgs) {
   // Check the node version
