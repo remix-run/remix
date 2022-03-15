@@ -558,17 +558,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
         let matches = matchClientRoutes(routes, href);
         invariant(matches, "No matches found");
-        let match = matches.slice(-1)[0];
-
         if (fetchControllers.has(key)) abortFetcher(key);
+
+        let match = getFetcherRequestMatch(
+          new URL(href, window.location.href),
+          matches
+        );
 
         if (submission && isActionSubmission(submission)) {
           console.debug(
             `[transition]   handling fetcher action submission (key: ${key})`
-          );
-          match = getActionRequestMatch(
-            new URL(href, window.location.href),
-            matches
           );
           await handleActionFetchSubmission(key, submission, match);
         } else if (submission && isLoaderSubmission(submission)) {
@@ -601,8 +600,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
   }
 
   function isIndexRequestUrl(url: URL) {
-    let indexRequest = false;
-
     for (let param of url.searchParams.getAll("index")) {
       // only use bare `?index` params without a value
       // ✅ /foo?index
@@ -617,7 +614,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return false;
   }
 
-  function getActionRequestMatch(url: URL, matches: RouteMatch<ClientRoute>[]) {
+  function getFetcherRequestMatch(url: URL, matches: RouteMatch<ClientRoute>[]) {
     let match = matches.slice(-1)[0];
 
     if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
