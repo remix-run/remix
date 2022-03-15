@@ -9,10 +9,15 @@ async function run() {
 
   let args: Array<string> = [
     ...process.argv.slice(2),
+    // npm requires a `--` to separate the arguments from the script
+    `--`,
     `--remix-version ${packageJson.version}`,
   ];
 
-  execSync(`npx @remix-run/dev@${packageJson.version} ${shellEscape(args)}`);
+  execSync(
+    `npx @remix-run/dev@${packageJson.version} create ${shellEscape(args)}`,
+    { stdio: "inherit" }
+  );
 }
 
 run().then(
