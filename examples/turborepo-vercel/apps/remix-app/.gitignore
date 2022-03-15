@@ -1,9 +1,10 @@
 node_modules
 
 .cache
+.env
 .vercel
 .output
 
-public/build
-api/_build
-api/index.js
+/build/
+/public/build
+/api/index.js

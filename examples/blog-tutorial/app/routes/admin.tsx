@@ -1,4 +1,4 @@
-import { Outlet, Link, useLoaderData } from "remix";
+import { json, Link, Outlet, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
@@ -9,7 +9,7 @@ export const links = () => {
 };
 
 export const loader = async () => {
-  return getPosts();
+  return json(await getPosts());
 };
 
 export default function Admin() {

@@ -1,5 +1,5 @@
 import type { LoaderFunction } from "remix";
-import { useParams, useMatches, useCatch } from "remix";
+import { json, useCatch, useMatches, useParams } from "remix";
 import type { Workshop } from "~/data.server";
 import { getWorkshops } from "~/data.server";
 
@@ -15,7 +15,7 @@ export const loader: LoaderFunction = async ({ params }) => {
   // to read into our database to handle the 404 case, we don't have to send
   // the client the workshop data in this route because we sent that to the client
   // in the parent route already and we can access that data via useMatches.
-  return null;
+  return json({});
 };
 
 export default function WorkshopRoute() {

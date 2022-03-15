@@ -22,7 +22,7 @@ For example, consider a UI Route that renders a report, note the link:
 
 ```tsx lines=[10-12] filename=app/routes/reports/$id.js
 export async function loader({ params }) {
-  return getReport(params.id);
+  return json(await getReport(params.id));
 }
 
 export default function Report() {

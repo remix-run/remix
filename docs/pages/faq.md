@@ -49,7 +49,7 @@ export async function loader({ request }) {
   const projects = await fakeDb.projects.scan({
     userId: session.get("userId"),
   });
-  return projects;
+  return json(projects);
 }
 ```
 
@@ -84,7 +84,7 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
 export async function action({ request }) {
   let formData = await request.formData();
-  let action = formData.get("_action");
+  let action = formData.get("action");
   switch (action) {
     case "update": {
       // do your update
@@ -114,13 +114,13 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="_action" value="create">
+        <button type="submit" name="action" value="create">
           Update
         </button>
       </Form>
 
       <Form method="post">
-        <button type="submit" name="_action" value="delete">
+        <button type="submit" name="action" value="delete">
           Delete
         </button>
       </Form>
@@ -133,16 +133,10 @@ You can also use a hidden input field:
 
 ```jsx lines=[2]
 <Form method="post">
-  <input type="hidden" name="_action" value="create" />
+  <input type="hidden" name="action" value="create" />
   <button type="submit">Create</button>
 </Form>
 ```
-
-<docs-error>Do not use `action` as your field name!</docs-error>
-
-You may wonder why we used `<button name="_action">` instead of `<button name="action">`. You can use whatever you want, but just not `"action"`!
-
-Without getting into browser decisions decades ago, form elements have the `form.action` property in the DOM to know where to post to. In our case: `form._action`. If you use `action`, there's a conflict and the submission will fail.
 
 ## How can I have structured data in a form?
 
