@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Update Example and Template names
+        run: node scripts/patchup-example-names.mjs
+
       - name: Format
         run: npm run format --if-present
 
