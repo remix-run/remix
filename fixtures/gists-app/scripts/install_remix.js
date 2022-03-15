@@ -9,6 +9,9 @@ let installDir = path.resolve(__dirname, "../node_modules");
 async function run() {
   // Install all remix packages
   await fs.ensureDir(installDir);
+  await fs.emptyDir(path.resolve(installDir, "@remix-run"));
+  await fs.emptyDir(path.resolve(installDir, "remix"));
+  await fs.emptyDir(path.resolve(installDir, "create-remix"));
   await fs.copy(buildDir, installDir);
 }
 
