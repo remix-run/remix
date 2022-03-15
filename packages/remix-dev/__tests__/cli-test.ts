@@ -282,6 +282,7 @@ describe("remix cli", () => {
           path.join(__dirname, "fixtures", "arc.tar.gz")
         ).toString(),
         "--no-install",
+        "--no-typescript",
       ]);
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
@@ -413,7 +414,7 @@ describe("remix cli", () => {
         })
       ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(fs.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
       // we should keep remix.init around if the init script fails
       expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
