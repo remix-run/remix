@@ -614,7 +614,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return false;
   }
 
-  function getFetcherRequestMatch(url: URL, matches: RouteMatch<ClientRoute>[]) {
+  function getFetcherRequestMatch(
+    url: URL,
+    matches: RouteMatch<ClientRoute>[]
+  ) {
     let match = matches.slice(-1)[0];
 
     if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
