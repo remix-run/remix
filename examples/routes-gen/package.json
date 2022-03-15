@@ -5,16 +5,15 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "cross-env NODE_ENV=production remix build",
-    "dev": "cross-env NODE_ENV=development remix dev",
+    "build": "remix build",
+    "dev": "remix dev",
     "postinstall": "remix setup node",
     "routes-gen": "routes-gen -d @routes-gen/remix",
-    "start": "cross-env NODE_ENV=production remix-serve build"
+    "start": "remix-serve build"
   },
   "dependencies": {
     "@remix-run/react": "1.3.0-pre.0",
     "@remix-run/serve": "1.3.0-pre.0",
-    "cross-env": "^7.0.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "1.3.0-pre.0",

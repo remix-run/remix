@@ -5,15 +5,14 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "cross-env NODE_ENV=production remix build && rollup -c",
-    "dev": "cross-env NODE_ENV=development remix dev",
+    "build": "remix build && rollup -c",
+    "dev": "remix dev",
     "postinstall": "remix setup node"
   },
   "dependencies": {
     "@remix-run/react": "1.2.3",
     "@remix-run/serve": "1.2.3",
     "@remix-run/vercel": "1.2.3",
-    "cross-env": "^7.0.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "1.2.3",
