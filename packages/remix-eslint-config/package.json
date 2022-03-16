@@ -1,16 +1,18 @@
 {
   "name": "@remix-run/eslint-config",
   "description": "ESLint configuration for Remix projects",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "repository": "https://github.com/remix-run/packages",
   "main": "index.js",
   "license": "MIT",
   "files": [
     "README.md",
-    "rules",
-    "settings",
     "index.js",
-    "jest.js"
+    "internal.js",
+    "jest.js",
+    "node.js",
+    "rules",
+    "settings"
   ],
   "dependencies": {
     "@babel/core": "^7.17.5",

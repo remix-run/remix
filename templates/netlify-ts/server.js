@@ -17,14 +17,14 @@ function getLoadContext(event, context) {
     netlifyGraphToken = event.authlifyToken;
   }
 
-  const authHeader = event.headers["authorization"];
-  const graphSignatureHeader = event.headers["x-netlify-graph-signature"];
+  let authHeader = event.headers["authorization"];
+  let graphSignatureHeader = event.headers["x-netlify-graph-signature"];
 
   if (authHeader != null && /Bearer /gi.test(authHeader)) {
     rawAuthorizationString = authHeader.split(" ")[1];
   }
 
-  const loadContext = {
+  let loadContext = {
     clientNetlifyGraphAccessToken: rawAuthorizationString,
     netlifyGraphToken: netlifyGraphToken,
     netlifyGraphSignature: graphSignatureHeader,

@@ -9,12 +9,11 @@ module.exports = {
   publicBuildDirectory: "./public/build",
   publicPath: "/build/",
   serverBuildDirectory: "./build",
-  devServerPort: 8002,
   ignoredRouteFiles: [".*", "blargh.ts"],
   server: "./server.js",
 
   mdx: async (filename) => {
-    const [rehypeHighlight, remarkToc] = await Promise.all([
+    let [rehypeHighlight, remarkToc] = await Promise.all([
       import("rehype-highlight").then((mod) => mod.default),
       import("remark-toc").then((mod) => mod.default),
     ]);

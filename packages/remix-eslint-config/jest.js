@@ -11,6 +11,9 @@ require("@rushstack/eslint-patch/modern-module-resolution");
  */
 const jestConfig = {
   plugins: ["jest"],
+  env: {
+    node: true,
+  },
   overrides: [
     {
       files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],

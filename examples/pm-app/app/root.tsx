@@ -1,5 +1,6 @@
 import type { LinksFunction, LoaderFunction } from "remix";
 import {
+  json,
   Links,
   LiveReload,
   Meta,
@@ -28,7 +29,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     },
   };
 
-  return data;
+  return json(data);
 };
 
 function Document({
