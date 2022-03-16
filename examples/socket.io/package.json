@@ -1,8 +1,9 @@
 {
-  "private": true,
   "name": "remix-example-socket.io",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix watch",
@@ -31,6 +32,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

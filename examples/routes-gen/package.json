@@ -1,14 +1,15 @@
 {
-  "private": true,
   "name": "remix-example-routes-gen",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
     "postinstall": "remix setup node",
-    "start": "remix-serve build",
-    "routes-gen": "routes-gen -d @routes-gen/remix"
+    "routes-gen": "routes-gen -d @routes-gen/remix",
+    "start": "remix-serve build"
   },
   "dependencies": {
     "@remix-run/react": "1.2.3",
@@ -27,6 +28,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

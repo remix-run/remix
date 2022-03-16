@@ -1,12 +1,13 @@
 {
-  "private": true,
   "name": "remix-example-basic",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
-    "postinstall": "remix setup node",
-    "dev": "remix dev",
     "build": "remix build",
+    "dev": "remix dev",
+    "postinstall": "remix setup node",
     "start": "remix-serve build"
   },
   "dependencies": {
@@ -24,6 +25,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

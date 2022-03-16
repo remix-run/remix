@@ -1,8 +1,9 @@
 {
-  "private": true,
   "name": "remix-example-tailwindcss",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "npm run build:css && remix build",
     "build:css": "tailwindcss -o ./app/tailwind.css",
@@ -30,6 +31,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

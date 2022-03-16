@@ -1,15 +1,16 @@
 {
-  "private": true,
   "name": "remix-example-graphql-api",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
+    "prebuild": "npm run generate:types",
     "build": "remix build",
+    "predev": "npm run generate:types",
     "dev": "remix dev",
     "generate:types": "graphql-codegen",
     "postinstall": "remix setup node",
-    "prebuild": "npm run generate:types",
-    "predev": "npm run generate:types",
     "start": "remix-serve build"
   },
   "dependencies": {
@@ -31,6 +32,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

@@ -1,8 +1,9 @@
 {
-  "private": true,
   "name": "remix-example-pm-app",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "dev:css": "postcss app/styles --base app/styles --dir app/dist/styles -w",
     "dev:remix": "remix dev",
@@ -58,6 +59,5 @@
   },
   "engines": {
     "node": ">=16"
-  },
-  "sideEffects": false
+  }
 }

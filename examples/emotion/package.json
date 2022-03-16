@@ -1,8 +1,9 @@
 {
-  "private": true,
   "name": "remix-example-emotion",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
@@ -10,10 +11,10 @@
     "start": "remix-serve build"
   },
   "dependencies": {
+    "@emotion/cache": "^11.7.1",
     "@emotion/react": "^11.7.1",
     "@emotion/server": "^11.4.0",
     "@emotion/styled": "^11.6.0",
-    "@emotion/cache": "^11.7.1",
     "@remix-run/react": "1.2.3",
     "@remix-run/serve": "1.2.3",
     "react": "^17.0.2",
@@ -28,6 +29,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

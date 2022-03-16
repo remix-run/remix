@@ -1,8 +1,9 @@
 {
-  "private": true,
   "name": "remix-example-remix-auth-supabase",
+  "private": true,
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
@@ -28,6 +29,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

@@ -1,11 +1,9 @@
 {
-  "private": true,
   "name": "remix-example-jokes",
+  "private": true,
   "description": "",
   "license": "",
-  "prisma": {
-    "seed": "node --require esbuild-register prisma/seed.ts"
-  },
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
@@ -33,5 +31,7 @@
   "engines": {
     "node": ">=14"
   },
-  "sideEffects": false
+  "prisma": {
+    "seed": "node --require esbuild-register prisma/seed.ts"
+  }
 }

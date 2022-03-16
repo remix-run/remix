@@ -1,4 +1,5 @@
 {
+  "name": "remix-template-deno-ts",
   "private": true,
   "sideEffects": false,
   "scripts": {
@@ -15,6 +16,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "name": "remix-template-deno-ts"
+  }
 }
