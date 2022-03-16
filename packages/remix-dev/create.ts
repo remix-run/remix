@@ -176,7 +176,7 @@ async function downloadAndExtractTemplateOrExample(
   }
 ) {
   let response = await fetch(
-    "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    "https://codeload.github.com/remix-run/remix/tar.gz/dev",
     options.token
       ? { headers: { Authorization: `token ${options.token}` } }
       : {}
