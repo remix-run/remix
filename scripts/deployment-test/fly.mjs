@@ -2,7 +2,7 @@ import path from "path";
 import { spawnSync } from "child_process";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
-import { createApp } from "create-remix";
+import { createApp } from "@remix-run/dev";
 
 import {
   addCypress,
@@ -22,11 +22,10 @@ let CYPRESS_DEV_URL = "http://localhost:3000";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "fly",
+    appTemplate: "fly",
+    installDeps: false,
+    useTypeScript: true,
     projectDir: PROJECT_DIR,
-    quiet: true,
   });
 }
 

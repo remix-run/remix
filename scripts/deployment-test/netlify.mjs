@@ -2,7 +2,7 @@ import path from "path";
 import { spawnSync } from "child_process";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";
-import { createApp } from "create-remix";
+import { createApp } from "@remix-run/dev";
 
 import {
   addCypress,
@@ -21,11 +21,10 @@ let CYPRESS_DEV_URL = "http://localhost:3000";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "netlify",
+    appTemplate: "netlify",
+    installDeps: false,
+    useTypeScript: true,
     projectDir: PROJECT_DIR,
-    quiet: true,
   });
 }
 
