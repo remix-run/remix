@@ -1,7 +1,13 @@
-import type { LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
-import { json } from "remix";
-import { Links, LiveReload, Meta, Scripts, ScrollRestoration } from "remix";
+import type { LoaderFunction, MetaFunction } from "remix";
+import {
+  json,
+  Links,
+  LiveReload,
+  Meta,
+  Scripts,
+  ScrollRestoration,
+  useLoaderData,
+} from "remix";
 
 type LoaderData = { message: string };
 
@@ -17,14 +23,18 @@ export const loader: LoaderFunction = async () => {
   return json<LoaderData>(data);
 };
 
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
+
 export default function App() {
   const loaderData = useLoaderData<LoaderData>();
 
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>

@@ -1,3 +1,5 @@
+import { AnimatePresence, motion } from "framer-motion";
+import type { MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -7,7 +9,12 @@ import {
   ScrollRestoration,
 } from "remix";
 import { useLocation, useOutlet } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export default function App() {
   const outlet = useOutlet();
@@ -15,8 +22,6 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>
