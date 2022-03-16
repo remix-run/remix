@@ -157,7 +157,7 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
 async function updateDeploymentScriptVersion(nextVersion) {
   let file = packageJson("deployment-test", "scripts");
   let json = await jsonfile.readFile(file);
-  json.dependencies["create-remix"] = nextVersion;
+  json.dependencies["@remix-run/dev"] = nextVersion;
   await jsonfile.writeFile(file, json, { spaces: 2 });
 
   console.log(
@@ -183,7 +183,7 @@ async function incrementRemixVersion(nextVersion) {
   // Update versions in the examples
   await updateExamplesRemixVersion(nextVersion);
 
-  // Update deployment script `create-remix` version
+  // Update deployment script `@remix-run/dev` version
   await updateDeploymentScriptVersion(nextVersion);
 
   // Commit and tag
