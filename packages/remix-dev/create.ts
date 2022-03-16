@@ -176,9 +176,7 @@ async function downloadAndExtractTemplateOrExample(
   }
 ) {
   let response = await fetch(
-    type === "templates"
-      ? "https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix"
-      : "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    "https://codeload.github.com/remix-run/remix/tar.gz/main",
     options.token
       ? { headers: { Authorization: `token ${options.token}` } }
       : {}
