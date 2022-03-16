@@ -2,6 +2,12 @@ name: test
 
 on:
   push:
+    branches:
+      - main
+      - dev
+      - release/*
+    tags-ignore:
+      - v*
     paths-ignore:
       - "docs/**"
       - "**/README.md"
