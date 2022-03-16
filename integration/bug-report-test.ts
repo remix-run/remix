@@ -38,26 +38,23 @@ beforeAll(async () => {
     files: {
       "app/routes/index.jsx": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { Form, useActionData } from "@remix-run/react";
 
-        export function loader() {
-          return json("pizza");
+        export async function action({ request }) {
+          let formData = await request.formData();
+          return json(Object.fromEntries(formData));
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          let actionData = useActionData();
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+            <div onClick={(event) => event.stopPropagation()}>
+              <pre>{JSON.stringify(actionData)}</pre>
+              <Form action="/?index" method="post">
+                <button type="submit" name="_action" value="add">Add</button>
+              </Form>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -74,15 +71,15 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
+it("when clicking on a submit button as a descendant of an element that stops propagation on click, still passes the clicked submit button's `name` and `value` props to the request payload", async () => {
   // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  // let response = await fixture.requestDocument("/");
+  // expect(await response.text()).toMatch("pizza");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.clickSubmitButton("/?index");
+  expect(await app.getHtml()).toMatch('{"_action":"add"}');
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
