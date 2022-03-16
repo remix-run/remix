@@ -5,11 +5,11 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "postinstall": "remix setup node",
-    "build": "cross-env NODE_ENV=production remix build",
-    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "build": "remix build",
+    "dev:remix": "remix watch",
     "dev:arc": "cross-env NODE_ENV=development arc sandbox",
-    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev": "remix build && run-p dev:*",
+    "postinstall": "remix setup node",
     "start": "cross-env NODE_ENV=production arc sandbox"
   },
   "dependencies": {

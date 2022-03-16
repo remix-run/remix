@@ -5,11 +5,11 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "postinstall": "remix setup cloudflare-pages",
-    "build": "cross-env NODE_ENV=production remix build",
-    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "build": "remix build",
+    "dev:remix": "remix watch",
     "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
-    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev": "remix build && run-p dev:*",
+    "postinstall": "remix setup cloudflare-pages",
     "start": "cross-env NODE_ENV=production npm run dev:wrangler"
   },
   "dependencies": {
