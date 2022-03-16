@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import setupPuppeteer from "jest-environment-puppeteer/setup";
 
-export const TMP_DIR = path.join(process.cwd(), ".tmp");
+export const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
 // TODO: get rid of React Router `console.warn` when no routes match when testing
 console.warn = () => {};
@@ -13,5 +13,5 @@ export default async function setup(globalConfig: any) {
     force: true,
     recursive: true,
   });
-  await fs.mkdir(TMP_DIR);
+  await fs.mkdir(TMP_DIR, { recursive: true });
 }

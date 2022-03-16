@@ -16,11 +16,16 @@ const remix = path.resolve(
   "../../../build/node_modules/@remix-run/dev/cli.js"
 );
 
+const TEMP_DIR = path.join(process.cwd(), ".tmp", "create-remix");
+
 describe("remix cli", () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     if (!fs.existsSync(remix)) {
       throw new Error(`Cannot run Remix CLI tests w/out building Remix`);
     }
+
+    await fsp.rm(TEMP_DIR, { force: true, recursive: true });
+    await fsp.mkdir(TEMP_DIR, { recursive: true });
   });
 
   describe("the --help flag", () => {
@@ -161,8 +166,7 @@ describe("remix cli", () => {
 
     function getProjectDir(name: string) {
       return path.join(
-        process.cwd(),
-        ".tmp",
+        TEMP_DIR,
         `${name}-${Math.random().toString(32).slice(2)}`
       );
     }
