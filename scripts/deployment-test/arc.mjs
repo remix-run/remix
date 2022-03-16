@@ -4,7 +4,7 @@ import aws from "aws-sdk";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
-import { createApp } from "create-remix";
+import { createApp } from "@remix-run/dev";
 
 import {
   addCypress,
@@ -26,11 +26,10 @@ let CYPRESS_DEV_URL = "http://localhost:3333";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "arc",
+    appTemplate: "arc",
+    installDeps: false,
+    useTypeScript: true,
     projectDir: PROJECT_DIR,
-    quiet: true,
   });
 }
 

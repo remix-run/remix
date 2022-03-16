@@ -3,7 +3,7 @@ import { execSync, spawnSync } from "child_process";
 import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
-import { createApp } from "create-remix";
+import { createApp } from "@remix-run/dev";
 import retry from "retry";
 
 import {
@@ -24,11 +24,10 @@ let CYPRESS_DEV_URL = "http://localhost:8788";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "cloudflare-pages",
+    appTemplate: "cloudflare-pages",
+    installDeps: false,
+    useTypeScript: true,
     projectDir: PROJECT_DIR,
-    quiet: true,
   });
 }
 
