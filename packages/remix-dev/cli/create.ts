@@ -520,7 +520,7 @@ async function deTypeScriptify(projectDir: string) {
     ...pkg,
     devDependencies: Object.fromEntries(
       Object.entries(devDeps).filter(([name]) => {
-        return !name.startsWith("@types/") || name !== "typescript";
+        return !name.startsWith("@types/") && name !== "typescript";
       })
     ),
   };
