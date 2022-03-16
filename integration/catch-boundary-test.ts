@@ -10,8 +10,10 @@ describe("CatchBoundary", () => {
 
   const HAS_BOUNDARY_LOADER = "/yes/loader";
   const HAS_BOUNDARY_ACTION = "/yes/action";
+  const HAS_BOUNDARY_NO_LOADER_OR_ACTION = "/yes/no-loader-or-action";
   const NO_BOUNDARY_ACTION = "/no/action";
   const NO_BOUNDARY_LOADER = "/no/loader";
+  const NO_BOUNDARY_NO_LOADER_OR_ACTION = "/no/no-loader-or-action";
 
   const NOT_FOUND_HREF = "/not/found";
 
@@ -54,6 +56,8 @@ describe("CatchBoundary", () => {
                 <Form method="post">
                   <button formAction="${HAS_BOUNDARY_ACTION}" type="submit" />
                   <button formAction="${NO_BOUNDARY_ACTION}" type="submit" />
+                  <button formAction="${HAS_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
+                  <button formAction="${NO_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
                 </Form>
 
                 <Link to="${HAS_BOUNDARY_LOADER}">
@@ -99,6 +103,21 @@ describe("CatchBoundary", () => {
                 </button>
               </Form>
             )
+          }
+        `,
+
+        [`app/routes${HAS_BOUNDARY_NO_LOADER_OR_ACTION}.jsx`]: js`
+          export function CatchBoundary() {
+            return <div>${OWN_BOUNDARY_TEXT}</div>
+          }
+          export default function Index() {
+            return <div/>
+          }
+        `,
+
+        [`app/routes${NO_BOUNDARY_NO_LOADER_OR_ACTION}.jsx`]: js`
+          export default function Index() {
+            return <div/>
           }
         `,
 
@@ -213,5 +232,33 @@ describe("CatchBoundary", () => {
     await app.goto("/");
     await app.clickLink(NO_BOUNDARY_LOADER);
     expect(await app.getHtml()).toMatch(ROOT_BOUNDARY_TEXT);
+  });
+
+  it("renders root boundary in document POST without action requests", async () => {
+    let res = await fixture.requestDocument(NO_BOUNDARY_NO_LOADER_OR_ACTION, {
+      method: "post",
+    });
+    expect(res.status).toBe(405);
+    expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
+  });
+
+  it("renders root boundary in action script transitions without action from other routes", async () => {
+    await app.goto("/");
+    await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
+    expect(await app.getHtml()).toMatch(ROOT_BOUNDARY_TEXT);
+  });
+
+  it("renders own boundary in document POST without action requests", async () => {
+    let res = await fixture.requestDocument(HAS_BOUNDARY_NO_LOADER_OR_ACTION, {
+      method: "post",
+    });
+    expect(res.status).toBe(405);
+    expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
+  });
+
+  it("renders own boundary in action script transitions without action from other routes", async () => {
+    await app.goto("/");
+    await app.clickSubmitButton(HAS_BOUNDARY_NO_LOADER_OR_ACTION);
+    expect(await app.getHtml()).toMatch(OWN_BOUNDARY_TEXT);
   });
 });
