@@ -139,7 +139,7 @@ describe("remix cli", () => {
     }
 
     // this also tests sub directories
-    it.skip("works for examples in the remix repo", async () => {
+    it("works for examples in the remix repo", async () => {
       let projectDir = getProjectDir("example");
       let { stdout } = await execFile("node", [
         remix,
@@ -156,8 +156,7 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
-    // TODO: enable once this is live
-    it.skip("works for templates in the remix org", async () => {
+    it("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       let { stdout } = await execFile("node", [
         remix,
@@ -191,7 +190,7 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
-    it.skip("works for remote tarballs", async () => {
+    it("works for remote tarballs", async () => {
       let projectDir = getProjectDir("remote-tarball");
       let { stdout } = await execFile("node", [
         remix,
