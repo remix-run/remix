@@ -178,8 +178,7 @@ describe("CatchBoundary", () => {
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  // FIXME: this is broken, the request returns but the page doesn't update
-  test.skip("own boundary, action, client transition from other route", async () => {
+  test("own boundary, action, client transition from other route", async () => {
     await app.goto("/");
     await app.clickSubmitButton(HAS_BOUNDARY_ACTION);
     expect(await app.getHtml()).toMatch(OWN_BOUNDARY_TEXT);
