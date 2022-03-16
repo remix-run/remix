@@ -1,6 +1,5 @@
 import fs from "fs/promises";
 import path from "path";
-import sort from "sort-package-json";
 
 let examplePath = path.join(process.cwd(), "examples");
 let templatePath = path.join(process.cwd(), "templates");
@@ -15,8 +14,7 @@ async function update(dir, name, base) {
     let pkg = await fs.readFile(pkgPath);
     let obj = JSON.parse(pkg);
     obj.name = `remix-${base}-${name}`;
-    let sorted = sort(obj);
-    await fs.writeFile(pkgPath, JSON.stringify(sorted, null, 2) + "\n");
+    await fs.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
   }
 }
 
