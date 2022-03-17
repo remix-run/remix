@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "remix-example-template",
+  "name": "remix-example-stripe-integration",
   "description": "",
   "license": "",
   "scripts": {
