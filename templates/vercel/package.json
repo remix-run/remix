@@ -10,16 +10,16 @@
     "postinstall": "remix setup node"
   },
   "dependencies": {
-    "@remix-run/react": "^1.2.3",
-    "@remix-run/vercel": "^1.2.3",
+    "@remix-run/react": "*",
+    "@remix-run/vercel": "*",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "^1.2.3"
+    "remix": "*"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.2.3",
-    "@remix-run/eslint-config": "^1.2.3",
-    "@remix-run/serve": "^1.2.3",
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "@remix-run/serve": "*",
     "eslint": "^8.11.0"
   },
   "engines": {
