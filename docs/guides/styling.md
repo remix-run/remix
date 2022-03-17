@@ -686,7 +686,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
    ```tsx filename=app/root.tsx lines=[22-24]
-   import { MetaFunction } from "remix";
+   import type { MetaFunction } from "remix";
    import {
      Links,
      LiveReload,
@@ -695,7 +695,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
      Scripts,
      ScrollRestoration,
    } from "remix";
-   
+
    export const meta: MetaFunction = () => ({
      charset: "utf-8",
      viewport: "width=device-width,initial-scale=1",
