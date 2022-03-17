@@ -111,7 +111,6 @@ export async function validatePackageVersions(directory) {
   await Promise.all(
     remixDeps.map((key) => {
       let version = allDeps[key];
-      console.log({ key, version });
       let pinnedVersion = version.replace("^", "");
       return checkUrl(`https://registry.npmjs.org/${key}/${pinnedVersion}`);
     })
