@@ -430,7 +430,7 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 {
   // ...
   "scripts": {
-    "build": "run-p build:*",
+    "build": "run-s build:*",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "cross-env NODE_ENV=production remix build",
     "dev": "run-p dev:*",
@@ -475,7 +475,7 @@ Then alter how Tailwind is generating your css:
 {
   // ...
   "scripts": {
-    "build": "run-p build:*",
+    "build": "run-s build:*",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "cross-env NODE_ENV=production remix build",
     "dev": "run-p dev:*",
