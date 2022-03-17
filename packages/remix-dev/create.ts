@@ -239,7 +239,7 @@ async function downloadAndExtractTarball(
   await pipeline(
     response.body.pipe(gunzip()),
     tar.extract(projectDir, {
-      strip: options.filePath ? options.filePath.split("/").length + 1 : 1,
+      strip: options.filePath ? options.filePath.split(path.sep).length + 1 : 1,
       ignore(name) {
         if (options.filePath) {
           return !name.startsWith(path.join(cwd, options.filePath));
