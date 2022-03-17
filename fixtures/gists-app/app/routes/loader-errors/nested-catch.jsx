@@ -1,6 +1,6 @@
 import { Link, json, useCatch, useLocation } from "remix";
 
-export function loader({ request }) {
+export async function loader({ request }) {
   let url = new URL(request.url);
   if (url.searchParams.get("authed")) {
     return {};

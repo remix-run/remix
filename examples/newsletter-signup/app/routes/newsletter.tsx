@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { ActionFunction } from "remix";
-import { Form, Link, useActionData, useTransition } from "remix";
+import { Form, json, Link, useActionData, useTransition } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
-  await new Promise(res => setTimeout(res, 1000));
+  await new Promise((res) => setTimeout(res, 1000));
   const formData = await request.formData();
   const email = formData.get("email");
 
@@ -15,11 +15,11 @@ export const action: ActionFunction = async ({ request }) => {
     method: "post",
     body: JSON.stringify({ email, api_key: API_KEY }),
     headers: {
-      "Content-Type": "application/json; charset=utf-8"
-    }
+      "Content-Type": "application/json; charset=utf-8",
+    },
   });
 
-  return res.json();
+  return json(await res.json());
 };
 
 export default function Newsletter() {

@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { Location, To } from "history";
 import { Action, createPath } from "history";
 import type { ReactElement } from "react";
@@ -26,7 +28,7 @@ export function RemixServer({ context, url }: RemixServerProps): ReactElement {
     search: url.search,
     hash: "",
     state: null,
-    key: "default"
+    key: "default",
   };
 
   let staticNavigator = {
@@ -72,7 +74,7 @@ export function RemixServer({ context, url }: RemixServerProps): ReactElement {
         `You cannot use navigator.block() on the server because it is a stateless ` +
           `environment.`
       );
-    }
+    },
   };
 
   return (

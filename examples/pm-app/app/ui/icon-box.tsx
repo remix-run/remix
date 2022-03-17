@@ -3,7 +3,7 @@ import cx from "clsx";
 
 function IconBox({
   icon,
-  className
+  className,
 }: {
   icon: React.ReactNode;
   className?: string;
@@ -19,7 +19,7 @@ function IconBox({
           "bg-current": !(className && /\bbg-[a-zA-Z]/g.test(className)),
           "rounded-lg": !(
             className && /\b(rounded[-\s]|rounded$)/g.test(className)
-          )
+          ),
         }
       )}
     >

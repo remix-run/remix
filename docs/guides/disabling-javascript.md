@@ -23,7 +23,7 @@ import {
   Links,
   Scripts,
   Outlet,
-  useMatches
+  useMatches,
 } from "remix";
 
 export default function App() {
@@ -31,7 +31,7 @@ export default function App() {
 
   // If at least one route wants to hydrate, this will return true
   const includeScripts = matches.some(
-    match => match.handle?.hydrate
+    (match) => match.handle?.hydrate
   );
 
   // then use the flag to render scripts or not
@@ -59,22 +59,29 @@ On any page, at anytime, you can flip between plain HTML and full client-side tr
 If you need one tiny bit of interactivity, use a `<script dangerouslySetInnerHTML>`.
 
 ```tsx
-<select id="qty">
-  <option>1</option>
-  <option>2</option>
-  <option value="contact">Contact Sales for more</option>
-</select>
-<script
-  dangerouslySetInnerHTML={{
-    __html: `
-      document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('qty').onchange = (event) => {
-          if (event.target.value === "contact") {
-            window.location.assign("/contact")
-          }
-        }
-      });
-    `,
-  }}
-/>
+return (
+  <>
+    <select id="qty">
+      <option>1</option>
+      <option>2</option>
+      <option value="contact">
+        Contact Sales for more
+      </option>
+    </select>
+
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('qty').onchange = (event) => {
+              if (event.target.value === "contact") {
+                window.location.assign("/contact")
+              }
+            }
+          });
+        `,
+      }}
+    />
+  </>
+);
 ```

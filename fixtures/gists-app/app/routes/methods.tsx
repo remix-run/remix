@@ -13,7 +13,7 @@ export let loader: LoaderFunction = async ({ request }) => {
   let session = await getSession(request.headers.get("Cookie"));
 
   return json({
-    body: JSON.parse(session.get("body") || null)
+    body: JSON.parse(session.get("body") || null),
   });
 };
 
@@ -36,13 +36,13 @@ export let action: ActionFunction = async ({ request }) => {
   session.flash("body", JSON.stringify(body));
 
   if (body.slow === "on") {
-    await new Promise(res => setTimeout(res, 2000));
+    await new Promise((res) => setTimeout(res, 2000));
   }
 
   return redirect("/methods", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 };
 
@@ -59,14 +59,19 @@ export default function Methods() {
 
   return (
     <div data-test-id="/methods">
-      <Form action="/methods" method={method} encType={enctype}>
+      <Form
+        action="/methods"
+        method={method}
+        encType={enctype}
+        id="methods-form"
+      >
         <p>
           <label>
             Method:{" "}
             <select
               value={method}
               name="selectedMethod"
-              onChange={event =>
+              onChange={(event) =>
                 setMethod(event.target.value as FormProps["method"])
               }
             >
@@ -83,7 +88,7 @@ export default function Methods() {
             <select
               value={enctype}
               name="selectedEnctype"
-              onChange={event =>
+              onChange={(event) =>
                 setEnctype(event.target.value as FormProps["encType"])
               }
             >
@@ -129,23 +134,35 @@ export default function Methods() {
         <p>
           <button type="submit" id="submit-with-data" name="data" value="c">
             {method} (with data)
+            <svg id="submit-button-with-svg-element" width="10" height="10">
+              <rect width="10" height="10" style={{ fill: "blue" }} />
+            </svg>
           </button>
           <button type="submit" id="submit">
             {method}
           </button>
         </p>
       </Form>
+      <button
+        type="submit"
+        id="submit-with-data-outside-form"
+        name="data"
+        value="d"
+        form="methods-form"
+      >
+        {method} (with data)
+      </button>
       <div
         id="results"
         style={{
           opacity: pendingForm ? 0.25 : 1,
           transition: "opacity 300ms",
-          transitionDelay: "50ms"
+          transitionDelay: "50ms",
         }}
       >
         {pendingForm ? (
           <dl>
-            {Object.keys(pendingForm).map(key => (
+            {Object.keys(pendingForm).map((key) => (
               <div key={key}>
                 <dt>{key}</dt>
                 <dd>{pendingForm![key]}</dd>
@@ -154,7 +171,7 @@ export default function Methods() {
           </dl>
         ) : data.body ? (
           <dl data-test-id={data.body.selectedMethod}>
-            {Object.keys(data.body).map(key => (
+            {Object.keys(data.body).map((key) => (
               <div key={key}>
                 <dt>{key}</dt>
                 <dd>{JSON.stringify(data.body[key])}</dd>

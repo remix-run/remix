@@ -1,17 +1,18 @@
+import type { LinksFunction } from "remix";
 import {
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 
 import tailwind from "./tailwind.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: tailwind }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: tailwind },
+];
 
 export default function App() {
   return (

@@ -12,7 +12,7 @@ function getTaggedVersion() {
 
 function publish(dir, tag) {
   execSync(`npm publish --access public --tag ${tag} ${dir}`, {
-    stdio: "inherit"
+    stdio: "inherit",
   });
 }
 
@@ -36,14 +36,13 @@ async function run() {
     "server-runtime", // publish before platforms
     "cloudflare-pages",
     "cloudflare-workers",
-    "deno",
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve
     "vercel",
     "netlify",
     "react",
-    "serve"
+    "serve",
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
@@ -59,7 +58,7 @@ run().then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(error);
     process.exit(1);
   }

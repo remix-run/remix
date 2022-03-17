@@ -3,7 +3,10 @@ import { isAbsolute, relative } from "path";
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
-import virtualModules from "../virtualModules";
+import {
+  serverBuildVirtualModule,
+  assetsManifestVirtualModule,
+} from "../virtualModules";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -30,11 +33,11 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
-        // These are our virutal modules, always bundle the because there is no
+        // These are our virutal modules, always bundle them because there is no
         // "real" file on disk to externalize.
         if (
-          path === virtualModules.serverBuildVirutalModule.path ||
-          path === virtualModules.assetsManifestVirtualModule.path
+          path === serverBuildVirtualModule.id ||
+          path === assetsManifestVirtualModule.id
         ) {
           return undefined;
         }
@@ -70,13 +73,22 @@ export function serverBareModulesPlugin(
             return undefined;
         }
 
+        for (let pattern of remixConfig.serverDependenciesToBundle) {
+          // bundle it if the path matches the pattern
+          if (
+            typeof pattern === "string" ? path === pattern : pattern.test(path)
+          ) {
+            return undefined;
+          }
+        }
+
         // Externalize everything else if we've gotten here.
         return {
           path,
-          external: true
+          external: true,
         };
       });
-    }
+    },
   };
 }
 
@@ -92,5 +104,10 @@ function getNpmPackageName(id: string): string {
 }
 
 function isBareModuleId(id: string): boolean {
-  return !id.startsWith(".") && !id.startsWith("~") && !isAbsolute(id);
+  return (
+    !id.startsWith("node:") &&
+    !id.startsWith(".") &&
+    !id.startsWith("~") &&
+    !isAbsolute(id)
+  );
 }

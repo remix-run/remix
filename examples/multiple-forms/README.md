@@ -14,4 +14,4 @@ We have a page with invitations to a party. We display who the invitation was se
 
 ## Related Links
 
-- [Actions](https://remix.run/docs/en/v1/api/conventions#action)
+- [Actions](https://remix.run/api/conventions#action)

@@ -1,5 +1,6 @@
 import type { LinksFunction, LoaderFunction } from "remix";
 import {
+  json,
   Links,
   LiveReload,
   Meta,
@@ -7,7 +8,7 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 
 import global from "~/dist/styles/global.css";
@@ -24,17 +25,17 @@ interface LoaderData {
 export const loader: LoaderFunction = async ({ request }) => {
   const data: LoaderData = {
     ENV: {
-      SITE_URL: process.env.SITE_URL
-    }
+      SITE_URL: process.env.SITE_URL,
+    },
   };
 
-  return data;
+  return json(data);
 };
 
 function Document({
   children,
   title,
-  ENV = {}
+  ENV = {},
 }: {
   children: React.ReactNode;
   title?: string;
@@ -52,7 +53,7 @@ function Document({
         {children}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.ENV = ${JSON.stringify(ENV)}`
+            __html: `window.ENV = ${JSON.stringify(ENV)}`,
           }}
         />
         <ScrollRestoration />

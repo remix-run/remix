@@ -4,28 +4,32 @@ import aws from "aws-sdk";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
+import { createApp } from "@remix-run/dev";
 
 import {
-  sha,
-  updatePackageConfig,
-  spawnOpts,
+  addCypress,
+  CYPRESS_CONFIG,
+  CYPRESS_SOURCE_DIR,
+  getAppDirectory,
+  getAppName,
+  getSpawnOpts,
   runCypress,
-  addCypress
+  updatePackageConfig,
+  validatePackageVersions,
 } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
 
-let APP_NAME = `remix-arc-${sha}`;
+let APP_NAME = getAppName("arc");
 let AWS_STACK_NAME = toLogicalID(APP_NAME) + "Staging";
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let PROJECT_DIR = getAppDirectory(APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 let CYPRESS_DEV_URL = "http://localhost:3333";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "arc",
-    projectDir: PROJECT_DIR
+    appTemplate: "arc",
+    installDeps: false,
+    useTypeScript: true,
+    projectDir: PROJECT_DIR,
   });
 }
 
@@ -34,43 +38,38 @@ let client = new aws.ApiGatewayV2({
   apiVersion: "latest",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
-  return deployments.Items.find(item => item.Name === AWS_STACK_NAME);
+  return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
 }
 
 try {
   await createNewApp();
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress"),
-    path.join(PROJECT_DIR, "cypress")
-  );
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
 
-  await fse.copy(
-    path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-    path.join(PROJECT_DIR, "cypress.json")
-  );
+  await Promise.all([
+    fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
+    fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    updatePackageConfig(PROJECT_DIR, (config) => {
+      config.devDependencies["@architect/architect"] = "latest";
+    }),
+  ]);
 
-  await addCypress(PROJECT_DIR, CYPRESS_DEV_URL);
-
-  await updatePackageConfig(PROJECT_DIR, config => {
-    config.devDependencies["@architect/architect"] = "latest";
-  });
-
-  // change to the project directory
-  process.chdir(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // run cypress against the dev server
-  runCypress(true, CYPRESS_DEV_URL);
+  runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // update our app.arc deployment name
   let fileContents = await fse.readFile(ARC_CONFIG_PATH);
@@ -94,7 +93,7 @@ try {
   }
 
   // run cypress against the deployed server
-  runCypress(false, deployment.ApiEndpoint);
+  runCypress(PROJECT_DIR, false, deployment.ApiEndpoint);
 
   process.exit(0);
 } catch (error) {

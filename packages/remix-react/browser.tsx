@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import type { BrowserHistory, Update } from "history";
 import { createBrowserHistory } from "history";
 import type { ReactElement } from "react";
@@ -7,11 +9,13 @@ import { RemixEntry } from "./components";
 import type { EntryContext } from "./entry";
 import type { RouteModules } from "./routeModules";
 
+/* eslint-disable prefer-let/prefer-let */
 declare global {
   var __remixContext: EntryContext;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
 }
+/* eslint-enable prefer-let/prefer-let */
 
 export interface RemixBrowserProps {}
 
@@ -31,7 +35,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     (_: Update, update: Update) => update,
     {
       action: history.action,
-      location: history.location
+      location: history.location,
     }
   );
 

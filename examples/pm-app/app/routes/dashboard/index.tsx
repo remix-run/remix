@@ -1,6 +1,6 @@
 import * as React from "react";
-import { useLoaderData, useCatch, useFetcher } from "remix";
 import type { LoaderFunction, LinksFunction } from "remix";
+import { json, useCatch, useFetcher, useLoaderData } from "remix";
 import type { UserSecure, Project } from "~/models";
 import { Heading, Section } from "~/ui/section-heading";
 import { MaxContainer } from "~/ui/max-container";
@@ -14,7 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuList,
-  DropdownMenuOptionsButton
+  DropdownMenuOptionsButton,
 } from "~/ui/dropdown-menu";
 import { requireUser } from "~/session.server";
 import { getUserProjects } from "~/db.server";
@@ -25,17 +25,17 @@ export const links: LinksFunction = () => {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const projects = await getUserProjects(secureUser.id);
 
   const data: LoaderData = {
     user: secureUser,
-    projects
+    projects,
   };
 
-  return data;
+  return json(data);
 };
 
 export default function DashboardIndex() {
@@ -113,7 +113,7 @@ export default function DashboardIndex() {
                           );
                           if (confirmed) {
                             deleteFetcher.submit(deleteFormRef.current, {
-                              replace: true
+                              replace: true,
                             });
                           }
                         }}
