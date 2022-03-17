@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/dev",
-  "version": "0.0.0-experimental-e5b3ab7c",
+  "version": "0.0.0-experimental-5ddceecc",
   "description": "Dev tools and CLI for Remix",
   "homepage": "https://remix.run",
   "license": "MIT",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
-    "@remix-run/server-runtime": "0.0.0-experimental-e5b3ab7c",
+    "@remix-run/server-runtime": "0.0.0-experimental-5ddceecc",
     "cacache": "^15.0.5",
     "chalk": "^4.1.2",
     "chalk-animation": "^1.6.0",
