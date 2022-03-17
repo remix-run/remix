@@ -223,7 +223,7 @@ async function downloadAndExtractTarball(
     filePath?: string | null | undefined;
   }
 ): Promise<void> {
-  let cwd = path.dirname(projectDir);
+  let desiredDir = path.basename(projectDir);
 
   let response = await fetch(
     url,
@@ -239,13 +239,28 @@ async function downloadAndExtractTarball(
   await pipeline(
     response.body.pipe(gunzip()),
     tar.extract(projectDir, {
-      strip: options.filePath ? options.filePath.split(path.sep).length + 1 : 1,
-      ignore(name) {
-        if (options.filePath) {
-          return !name.startsWith(path.join(cwd, options.filePath));
+      map(header) {
+        let originalDirName = header.name.split(path.sep)[0];
+        header.name = header.name.replace(originalDirName, desiredDir);
+
+        let templateFiles = options.filePath
+          ? path.join(desiredDir, options.filePath) + path.sep
+          : desiredDir + path.sep;
+
+        if (!header.name.startsWith(templateFiles)) {
+          header.name = "__IGNORE__";
         } else {
-          return false;
+          header.name = header.name.replace(templateFiles, "");
         }
+
+        return header;
+      },
+      ignore(_filename, header) {
+        if (!header) {
+          throw new Error(`Header is undefined`);
+        }
+
+        return header.name === "__IGNORE__";
       },
     })
   );

@@ -208,6 +208,23 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
+    it("works for different branches", async () => {
+      let projectDir = getProjectDir("diff-branch");
+      let { stdout } = await execFile("node", [
+        remix,
+        "create",
+        projectDir,
+        "--template",
+        "https://github.com/remix-run/remix/tree/dev/templates/arc",
+        "--no-install",
+      ]);
+      expect(stdout.trim()).toBe(
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      );
+      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+      expect(fs.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
+    });
+
     it("works for a path to a tarball on disk", async () => {
       let projectDir = getProjectDir("local-tarball");
       let { stdout } = await execFile("node", [
