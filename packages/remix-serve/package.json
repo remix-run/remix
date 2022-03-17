@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/serve",
   "description": "Production application server for Remix",
-  "version": "0.0.0-experimental-5ddceecc",
+  "version": "0.0.0-experimental-fde68a7",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,7 +15,7 @@
     "remix-serve": "cli.js"
   },
   "dependencies": {
-    "@remix-run/express": "0.0.0-experimental-5ddceecc",
+    "@remix-run/express": "0.0.0-experimental-fde68a7",
     "compression": "^1.7.4",
     "express": "^4.17.1",
     "morgan": "^1.10.0"

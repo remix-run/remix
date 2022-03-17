@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/cloudflare-workers",
   "description": "Cloudflare worker request handler for Remix",
-  "version": "0.0.0-experimental-5ddceecc",
+  "version": "0.0.0-experimental-fde68a7",
   "license": "MIT",
   "main": "./index.js",
   "module": "./esm/index.js",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/server-runtime": "0.0.0-experimental-5ddceecc"
+    "@remix-run/server-runtime": "0.0.0-experimental-fde68a7"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "^2.2.2"
