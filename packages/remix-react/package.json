@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/react",
   "description": "React DOM bindings for Remix",
-  "version": "0.0.0-experimental-f2df4787",
+  "version": "0.0.0-experimental-e5b3ab7c",
   "license": "MIT",
   "repository": {
     "type": "git",

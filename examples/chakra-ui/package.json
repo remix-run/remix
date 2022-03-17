@@ -14,16 +14,16 @@
     "@chakra-ui/react": "^1.8.6",
     "@emotion/react": "^11.8.1",
     "@emotion/styled": "^11.8.1",
-    "@remix-run/react": "0.0.0-experimental-f2df4787",
-    "@remix-run/serve": "0.0.0-experimental-f2df4787",
+    "@remix-run/react": "0.0.0-experimental-e5b3ab7c",
+    "@remix-run/serve": "0.0.0-experimental-e5b3ab7c",
     "framer-motion": "^5.6.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "0.0.0-experimental-f2df4787"
+    "remix": "0.0.0-experimental-e5b3ab7c"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-f2df4787",
-    "@remix-run/eslint-config": "0.0.0-experimental-f2df4787",
+    "@remix-run/dev": "0.0.0-experimental-e5b3ab7c",
+    "@remix-run/eslint-config": "0.0.0-experimental-e5b3ab7c",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
