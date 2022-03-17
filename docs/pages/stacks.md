@@ -8,6 +8,8 @@ order: 3
 
 Remix Stacks is a feature of the Remix CLI that allows you to generate a Remix project quickly and easily. There are several built-in and official stacks that are full blown applications. You can also make your own (read more below).
 
+[Read the feature announcement blog post](/blog/remix-stacks) and [watch Remix Stacks videos on YouTube](https://www.youtube.com/playlist?list=PLXoynULbYuEC8-gJCqyXo94RufAvSA6R3).
+
 The built-in official stacks come ready with common things you need for a production application including:
 
 - Database
