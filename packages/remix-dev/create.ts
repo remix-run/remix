@@ -195,7 +195,7 @@ async function downloadAndExtractTemplateOrExample(
     response.body.pipe(gunzip()),
     tar.extract(cwd, {
       map(header) {
-        let originalDirName = header.name.split("/")[0];
+        let originalDirName = header.name.split(path.sep)[0];
         header.name = header.name.replace(originalDirName, desiredDir);
         if (!header.name.startsWith(templateDir + path.sep)) {
           header.name = "__IGNORE__";
@@ -285,7 +285,7 @@ async function getRepoInfo(
     }
 
     let [, owner, name, t, branch, ...file] = url.pathname.split("/");
-    let filePath = file.join("/");
+    let filePath = file.join(path.sep);
 
     if (t === undefined) {
       let defaultBranch = await getDefaultBranch(`${owner}/${name}`, token);
