@@ -195,9 +195,13 @@ async function downloadAndExtractTemplateOrExample(
     response.body.pipe(gunzip()),
     tar.extract(cwd, {
       map(header) {
-        let originalDirName = header.name.split(path.sep)[0];
+        let originalDirName = header.name.split("/")[0];
         header.name = header.name.replace(originalDirName, desiredDir);
-        if (!header.name.startsWith(templateDir + path.sep)) {
+        // https://github.com/remix-run/remix/issues/2356#issuecomment-1071458832
+        if (path.sep === "\\") {
+          templateDir = templateDir.replace("\\", "/");
+        }
+        if (!header.name.startsWith(templateDir + "/")) {
           header.name = "__IGNORE__";
         } else {
           header.name = header.name.replace(templateDir, desiredDir);
