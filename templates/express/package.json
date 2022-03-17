@@ -13,19 +13,19 @@
     "start": "cross-env NODE_ENV=production node ./build/index.js"
   },
   "dependencies": {
-    "@remix-run/express": "^1.2.3",
-    "@remix-run/react": "^1.2.3",
+    "@remix-run/express": "*",
+    "@remix-run/react": "*",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "^1.2.3"
+    "remix": "*"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.2.3",
-    "@remix-run/eslint-config": "^1.2.3",
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
     "eslint": "^8.11.0",
     "nodemon": "^2.0.15",
     "npm-run-all": "^4.1.5"
