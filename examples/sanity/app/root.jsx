@@ -6,12 +6,17 @@ export function links() {
   return [{ rel: "stylesheet", href: stylesUrl }];
 }
 
+export function meta() {
+  return {
+    charset: "utf-8",
+    viewport: "width=device-width,initial-scale=1",
+  };
+}
+
 function Document({ children, title }) {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />

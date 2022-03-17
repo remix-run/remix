@@ -34,7 +34,7 @@ import {} from "remix";
 Builds your app for production. No need to add `NODE_ENV=production` to the command.
 
 ```sh
-$ remix build
+remix build
 ```
 
 ### `remix watch`
@@ -42,7 +42,7 @@ $ remix build
 Watches your application files and builds your app for development when files change.
 
 ```sh
-$ remix watch
+remix watch
 ```
 
 ### `remix dev`
@@ -50,5 +50,5 @@ $ remix watch
 Same as `watch` but also boots the [Remix app server](serve.md) in development mode if it's installed.
 
 ```sh
-$ remix dev
+remix dev
 ```

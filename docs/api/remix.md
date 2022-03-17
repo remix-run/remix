@@ -1481,7 +1481,7 @@ It's to be used in place of `request.formData()`.
 
 For example:
 
-```tsx lines=[2-5,7,23]
+```tsx lines=[4-7,9,25]
 export const action: ActionFunction = async ({
   request,
 }) => {
