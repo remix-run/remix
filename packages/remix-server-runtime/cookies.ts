@@ -69,15 +69,20 @@ export interface Cookie {
   serialize(value: any, options?: CookieSerializeOptions): Promise<string>;
 }
 
+export type CreateCookieFunction = (
+  name: string,
+  cookieOptions?: CookieOptions
+) => Cookie;
+
 /**
  * Creates a logical container for managing a browser cookie from the server.
  *
  * @see https://remix.run/api/remix#createcookie
  */
-export function createCookie(
-  name: string,
-  cookieOptions: CookieOptions = {}
-): Cookie {
+export const createCookie: CreateCookieFunction = (
+  name,
+  cookieOptions = {}
+) => {
   let { secrets, ...options } = {
     secrets: [],
     path: "/",
@@ -117,14 +122,16 @@ export function createCookie(
       );
     },
   };
-}
+};
+
+export type IsCookieFunction = (object: any) => object is Cookie;
 
 /**
  * Returns true if an object is a Remix cookie container.
  *
  * @see https://remix.run/api/remix#iscookie
  */
-export function isCookie(object: any): object is Cookie {
+export const isCookie: IsCookieFunction = (object): object is Cookie => {
   return (
     object != null &&
     typeof object.name === "string" &&
@@ -132,7 +139,7 @@ export function isCookie(object: any): object is Cookie {
     typeof object.parse === "function" &&
     typeof object.serialize === "function"
   );
-}
+};
 
 async function encodeCookieValue(
   value: any,
