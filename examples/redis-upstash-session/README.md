@@ -18,8 +18,8 @@ Sorry no preview as you'll need an account on Upstash for it
 - Create a new Redis database
 - Duplicate the local `.env.example` file to `.env` and change the URL & Token environment variables
   with your database info.
-- Run `$ npm install`
-- Run `$ npm run dev`
+- Run `npm install`
+- Run `npm run dev`
 
 ## Usage
 
