@@ -17,6 +17,7 @@
     "index.js",
     "internal.js",
     "jest.js",
+    "jest-testing-library.js",
     "node.js",
     "rules",
     "settings"
