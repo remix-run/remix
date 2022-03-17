@@ -176,9 +176,7 @@ async function downloadAndExtractTemplateOrExample(
   }
 ) {
   let response = await fetch(
-    type === "templates"
-      ? "https://codeload.github.com/remix-run/remix/tar.gz/logan/support-remote-repos-in-create-remix"
-      : "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    "https://codeload.github.com/remix-run/remix/tar.gz/main",
     options.token
       ? { headers: { Authorization: `token ${options.token}` } }
       : {}
@@ -322,7 +320,7 @@ async function getDefaultBranch(
   repo: string,
   token: string | undefined
 ): Promise<string> {
-  const response = await fetch(`https://api.github.com/repos/${repo}`, {
+  let response = await fetch(`https://api.github.com/repos/${repo}`, {
     headers: {
       Authorization: token ? `token ${token}` : "",
       Accept: "application/vnd.github.v3+json",
@@ -408,14 +406,14 @@ async function detectTemplateType(
   if (template.startsWith("file://") || fse.existsSync(template)) {
     return "local";
   }
-  if (await getRepoInfo(template, token)) {
-    return "repo";
-  }
   if (await isRemixTemplate(template, useTypeScript, token)) {
     return "template";
   }
   if (await isRemixExample(template, token)) {
     return "example";
+  }
+  if (await getRepoInfo(template, token)) {
+    return "repo";
   }
   return "remoteTarball";
 }

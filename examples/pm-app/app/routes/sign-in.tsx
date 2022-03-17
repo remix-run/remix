@@ -117,7 +117,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   await redirectUser(request, {
     redirect: "/dashboard",
   });
-  return {};
+  return json({});
 };
 
 export default function SignIn() {

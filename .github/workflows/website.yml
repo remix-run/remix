@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Refresh the docs
-        uses: fjogeleit/http-request-action@v1.8.1
+        uses: fjogeleit/http-request-action@v1.9.0
         with:
           url: "${{ secrets.DOCS_REFRESH_URL }}?ref=${{ github.ref }}"
           method: "POST"

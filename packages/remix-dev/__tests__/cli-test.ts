@@ -156,8 +156,7 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
-    // TODO: enable once this is live
-    it.skip("works for templates in the remix org", async () => {
+    it("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       let { stdout } = await execFile("node", [
         remix,
@@ -168,7 +167,8 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+        `💿 You've opted out of running the remix.init script, you can run it manually with \`npx remix init\`
+💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -318,7 +318,6 @@ describe("remix cli", () => {
       });
 
       expect(initResult.stdout.trim()).toBe("");
-      expect(initResult.stderr.trim()).toBe("");
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();

@@ -16,12 +16,12 @@ jobs:
         uses: styfle/cancel-workflow-action@0.9.1
 
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           token: ${{ secrets.FORMAT_PAT }}
 
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 14
 

@@ -33,7 +33,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 };
 
-export default function () {
+export default function Index() {
   const fetcher = useFetcher();
 
   return (

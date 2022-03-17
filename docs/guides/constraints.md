@@ -19,13 +19,13 @@ The Remix compiler will automatically remove server code from the browser bundle
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
 export async function loader() {
-  return prisma.post.findMany();
+  return json(await prisma.post.findMany());
 }
 
 export function meta() {
@@ -76,7 +76,7 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
 ```tsx bad lines=[6]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db";
@@ -84,7 +84,7 @@ import { prisma } from "../db";
 console.log(prisma);
 
 export async function loader() {
-  return prisma.post.findMany();
+  return json(await prisma.post.findMany());
 }
 
 export function meta() {
@@ -122,14 +122,14 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
 ```tsx lines=[7]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
 export async function loader() {
   console.log(prisma);
-  return prisma.post.findMany();
+  return json(await prisma.post.findMany());
 }
 
 export function meta() {
@@ -196,11 +196,13 @@ export function removeTrailingSlash(url) {
 And then use it like this:
 
 ```js bad filename=app/root.js
+import { json } from "remix";
+
 import { removeTrailingSlash } from "~/http";
 
 export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
-  return { some: "data" };
+  return json({ some: "data" });
 };
 ```
 

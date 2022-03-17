@@ -49,7 +49,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     projects,
   };
 
-  return loaderData;
+  return json(loaderData);
 };
 
 export const action: ActionFunction = async ({ request, context, params }) => {
