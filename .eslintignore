@@ -2,4 +2,5 @@
 **/tests/__snapshots/
 **/node_modules/
 !.eslintrc.js
+templates/deno-ts
 .tmp
