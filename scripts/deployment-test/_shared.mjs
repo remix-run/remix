@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 import { execSync, spawnSync } from "child_process";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
-import semver from "semver";
 import retry from "retry";
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,9 +87,9 @@ export function checkUrl(url) {
       try {
         let response = await fetch(url);
         if (response.status >= 200 && response.status < 400) {
-          resolve("URL responded with status " + response.status);
+          resolve(`${url} responded with status ${response.status}`);
         } else {
-          throw new Error(`URL responded with status ${response.status}`);
+          throw new Error(`${url} responded with status ${response.status}`);
         }
       } catch (error) {
         console.error(error);
@@ -112,7 +111,8 @@ export async function validatePackageVersions(directory) {
   await Promise.all(
     remixDeps.map((key) => {
       let version = allDeps[key];
-      let pinnedVersion = semver.coerce(version);
+      console.log({ key, version });
+      let pinnedVersion = version.replace("^", "");
       return checkUrl(`https://registry.npmjs.org/${key}/${pinnedVersion}`);
     })
   );
