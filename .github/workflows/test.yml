@@ -38,10 +38,12 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        with:
-          cond: runner.os == 'Windows'
-          if_true: yarn --frozen-lockfile --network-timeout 1000000
-          if_false: yarn --frozen-lockfile
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            yarn --frozen-lockfile --network-timeout 1000000
+          else
+            yarn --frozen-lockfile
+          fi
 
       - name: Build
         run: yarn build
