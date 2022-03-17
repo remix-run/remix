@@ -1,5 +1,6 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "https://esm.sh/mime";
+
 import { createRequestHandler as createRemixRequestHandler } from "./deps/@remix-run/server-runtime.ts";
 import type { ServerBuild } from "./deps/@remix-run/server-runtime.ts";
 
@@ -20,10 +21,10 @@ export function createRequestHandler<Context = unknown>({
   mode?: string;
   getLoadContext?: (request: Request) => Promise<Context> | Context;
 }) {
-  const remixHandler = createRemixRequestHandler(build, {}, mode);
+  let remixHandler = createRemixRequestHandler(build, {}, mode);
   return async (request: Request) => {
     try {
-      const loadContext = getLoadContext
+      let loadContext = getLoadContext
         ? await getLoadContext(request)
         : undefined;
 
@@ -48,10 +49,10 @@ export async function serveStaticFiles(
     assetsPublicPath?: string;
   }
 ) {
-  const url = new URL(request.url);
+  let url = new URL(request.url);
 
-  const headers = new Headers();
-  const contentType = mime.getType(url.pathname);
+  let headers = new Headers();
+  let contentType = mime.getType(url.pathname);
   if (contentType) {
     headers.set("Content-Type", contentType);
   }
@@ -64,7 +65,7 @@ export async function serveStaticFiles(
     headers.set("Cache-Control", defaultCacheControl(url, assetsPublicPath));
   }
 
-  const file = await Deno.readFile(path.join(publicDir, url.pathname));
+  let file = await Deno.readFile(path.join(publicDir, url.pathname));
 
   return new Response(file, { headers });
 }
@@ -87,7 +88,7 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
     assetsPublicPath?: string;
   };
 }) {
-  const remixHandler = createRequestHandler({ build, mode, getLoadContext });
+  let remixHandler = createRequestHandler({ build, mode, getLoadContext });
 
   return async (request: Request) => {
     try {

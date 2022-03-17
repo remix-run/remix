@@ -1,4 +1,5 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
+
 import type {
   SessionStorage,
   SessionIdStorageStrategy,
@@ -31,10 +32,10 @@ export function createFileSessionStorage({
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
-      const content = JSON.stringify({ data, expires });
+      let content = JSON.stringify({ data, expires });
 
       while (true) {
-        const randomBytes = crypto.getRandomValues(new Uint8Array(8));
+        let randomBytes = crypto.getRandomValues(new Uint8Array(8));
 
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
@@ -46,8 +47,8 @@ export function createFileSessionStorage({
         }
 
         try {
-          const file = getFile(dir, id);
-          const exists = await Deno.stat(file)
+          let file = getFile(dir, id);
+          let exists = await Deno.stat(file)
             .then((s) => s.isFile)
             .catch(() => false);
           if (exists) continue;
@@ -65,10 +66,10 @@ export function createFileSessionStorage({
     },
     async readData(id) {
       try {
-        const file = getFile(dir, id);
-        const content = JSON.parse(await Deno.readTextFile(file));
-        const data = content.data;
-        const expires =
+        let file = getFile(dir, id);
+        let content = JSON.parse(await Deno.readTextFile(file));
+        let data = content.data;
+        let expires =
           typeof content.expires === "string"
             ? new Date(content.expires)
             : null;
@@ -87,8 +88,8 @@ export function createFileSessionStorage({
       }
     },
     async updateData(id, data, expires) {
-      const content = JSON.stringify({ data, expires });
-      const file = getFile(dir, id);
+      let content = JSON.stringify({ data, expires });
+      let file = getFile(dir, id);
       await Deno.mkdir(path.dirname(file), { recursive: true }).catch(() => {});
       await Deno.writeTextFile(file, content);
     },

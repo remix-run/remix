@@ -1,5 +1,6 @@
 import { sign, unsign } from "./cookieSigning.ts";
 
+/* eslint-disable prefer-let/prefer-let */
 declare global {
   interface ProcessEnv {
     NODE_ENV: "development" | "production" | "test";
@@ -13,6 +14,7 @@ declare global {
   // deno-lint-ignore no-var
   var process: Process;
 }
+/* eslint-enable prefer-let/prefer-let */
 
 export function installGlobals() {
   window.sign = sign;
