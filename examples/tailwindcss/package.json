@@ -5,7 +5,7 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "run-p build:*",
+    "build": "run-s build:*",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "remix build",
     "dev": "run-p dev:*",
