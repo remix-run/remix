@@ -2,7 +2,7 @@ module.exports = (
   on: Cypress.PluginEvents,
   config: Cypress.PluginConfigOptions
 ) => {
-  const configOverrides: Partial<Cypress.PluginConfigOptions> = {
+  let configOverrides: Partial<Cypress.PluginConfigOptions> = {
     viewportWidth: 1030,
     viewportHeight: 800,
     integrationFolder: "cypress/e2e",

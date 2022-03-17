@@ -5,8 +5,8 @@ describe("CatchBoundary", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  const ROOT_BOUNDARY_TEXT = "ROOT_TEXT";
-  const OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT";
+  let ROOT_BOUNDARY_TEXT = "ROOT_TEXT";
+  let OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT";
 
   const HAS_BOUNDARY_LOADER = "/yes/loader";
   const HAS_BOUNDARY_ACTION = "/yes/action";
@@ -15,7 +15,7 @@ describe("CatchBoundary", () => {
   const NO_BOUNDARY_LOADER = "/no/loader";
   const NO_BOUNDARY_NO_LOADER_OR_ACTION = "/no/no-loader-or-action";
 
-  const NOT_FOUND_HREF = "/not/found";
+  let NOT_FOUND_HREF = "/not/found";
 
   beforeAll(async () => {
     fixture = await createFixture({

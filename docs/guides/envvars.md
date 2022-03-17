@@ -68,12 +68,12 @@ Instead we recommend keeping all of your environment variables on the server (al
 
    ```tsx [3-6]
    export async function loader() {
-     return {
+     return json({
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
          FAUNA_DB_URL: process.env.FAUNA_DB_URL,
        },
-     };
+     });
    }
 
    export function Root() {
@@ -96,11 +96,11 @@ Instead we recommend keeping all of your environment variables on the server (al
 
    ```tsx [10, 19-25]
    export async function loader() {
-     return {
+     return json({
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
        },
-     };
+     });
    }
 
    export function Root() {

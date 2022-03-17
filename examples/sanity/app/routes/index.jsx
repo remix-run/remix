@@ -1,5 +1,4 @@
-import { useLoaderData } from "remix";
-import { Link } from "react-router-dom";
+import { json, Link, useLoaderData } from "remix";
 
 import { getClient } from "~/lib/sanity/getClient";
 
@@ -21,7 +20,7 @@ export async function loader() {
     `*[_type == "movie"]{ _id, title, slug }`
   );
 
-  return { movies };
+  return json({ movies });
 }
 
 export default function Index() {

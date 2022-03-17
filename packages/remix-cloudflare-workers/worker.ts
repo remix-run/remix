@@ -110,13 +110,13 @@ export function createEventHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  const handleRequest = createRequestHandler({
+  let handleRequest = createRequestHandler({
     build,
     getLoadContext,
     mode,
   });
 
-  const handleEvent = async (event: FetchEvent) => {
+  let handleEvent = async (event: FetchEvent) => {
     let response = await handleAsset(event, build);
 
     if (!response) {

@@ -36,6 +36,8 @@ npx create-remix@latest --template my-username/my-repo
 
 Custom stacks give an enormous amount of power and flexibility and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
 
+<docs-success>Yes, we do recommend that you name your own stack after a music genre. In the future, we will have a page where you can list your open source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
+
 ### `--template`
 
 The template option can be any of the following values:

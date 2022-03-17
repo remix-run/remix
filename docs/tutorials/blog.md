@@ -108,10 +108,10 @@ So let's get to it and provide some data to our component.
 💿 Make the posts route "loader"
 
 ```tsx filename=app/routes/posts/index.tsx lines=[1,3-14,17-18]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 export const loader = async () => {
-  return [
+  return json([
     {
       slug: "my-first-post",
       title: "My First Post",
@@ -120,7 +120,7 @@ export const loader = async () => {
       slug: "90s-mixtape",
       title: "A Mixtape I Made Just For You",
     },
-  ];
+  ]);
 };
 
 export default function Posts() {
@@ -164,7 +164,7 @@ TypeScript is mad, so let's help it out:
 💿 Add the Post type and generic for `useLoaderData`
 
 ```tsx filename=app/routes/posts/index.tsx lines=[3-6,9,19,23]
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 export type Post = {
   slug: string;
@@ -182,7 +182,7 @@ export const loader = async () => {
       title: "A Mixtape I Made Just For You",
     },
   ];
-  return posts;
+  return json(posts);
 };
 
 export default function Posts() {
@@ -240,13 +240,13 @@ export function getPosts() {
 💿 Update the posts route to use our new posts module
 
 ```tsx filename=app/routes/posts/index.tsx
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
 export const loader = async () => {
-  return getPosts();
+  return json(await getPosts());
 };
 
 // ...
@@ -445,10 +445,10 @@ You can click one of your posts and should see the new page.
 💿 Add a loader to access the params
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[1,3-5,8,11]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 export const loader = async ({ params }) => {
-  return params.slug;
+  return json(params.slug);
 };
 
 export default function PostSlug() {
@@ -466,13 +466,13 @@ The part of the filename attached to the `$` becomes a named key on the `params`
 💿 Let's get some help from TypeScript for the loader function signature.
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[2,4]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
   params,
 }) => {
-  return params.slug;
+  return json(params.slug);
 };
 ```
 
@@ -499,7 +499,7 @@ export async function getPost(slug: string) {
 💿 Use the new `getPost` function in the route
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,10-11,15,18]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
 
@@ -509,7 +509,7 @@ export const loader: LoaderFunction = async ({
   params,
 }) => {
   invariant(params.slug, "expected params.slug");
-  return getPost(params.slug);
+  return json(await getPost(params.slug));
 };
 
 export default function PostSlug() {
@@ -586,13 +586,13 @@ touch app/routes/admin.tsx
 ```
 
 ```tsx filename=app/routes/admin.tsx
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
 export const loader = async () => {
-  return getPosts();
+  return json(await getPosts());
 };
 
 export default function Admin() {
@@ -791,7 +791,7 @@ export async function createPost(post) {
     path.join(postsPath, post.slug + ".md"),
     md
   );
-  return getPost(post.slug);
+  return json(await getPost(post.slug));
 }
 ```
 
@@ -841,7 +841,7 @@ export async function createPost(post: NewPost) {
     path.join(postsPath, post.slug + ".md"),
     md
   );
-  return getPost(post.slug);
+  return json(await getPost(post.slug));
 }
 
 //...
@@ -891,7 +891,7 @@ export const action: ActionFunction = async ({
   if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
-    return errors;
+    return json(errors);
   }
 
   await createPost({ title, slug, markdown });
@@ -970,7 +970,7 @@ export const action: ActionFunction = async ({
   if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
-    return errors;
+    return json(errors);
   }
 
   invariant(typeof title === "string");
