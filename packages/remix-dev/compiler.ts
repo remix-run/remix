@@ -44,7 +44,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
     if (failure.warnings) {
       let messages = esbuild.formatMessagesSync(failure.warnings, {
         kind: "warning",
-        color: true
+        color: true,
       });
       console.warn(...messages);
     }
@@ -52,7 +52,7 @@ function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
     if (failure.errors) {
       let messages = esbuild.formatMessagesSync(failure.errors, {
         kind: "error",
-        color: true
+        color: true,
       });
       console.error(...messages);
     }
@@ -73,7 +73,7 @@ export async function build(
     target = BuildTarget.Node14,
     sourcemap = false,
     onWarning = defaultWarningHandler,
-    onBuildFailure = defaultBuildFailureHandler
+    onBuildFailure = defaultBuildFailureHandler,
   }: BuildOptions = {}
 ): Promise<void> {
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
@@ -83,7 +83,7 @@ export async function build(
     target,
     sourcemap,
     onWarning,
-    onBuildFailure
+    onBuildFailure,
   });
 }
 
@@ -109,7 +109,7 @@ export async function watch(
     onFileCreated,
     onFileChanged,
     onFileDeleted,
-    onInitialBuild
+    onInitialBuild,
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
   let options = {
@@ -118,7 +118,7 @@ export async function watch(
     sourcemap,
     onBuildFailure,
     onWarning,
-    incremental: true
+    incremental: true,
   };
 
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
@@ -190,7 +190,7 @@ export async function watch(
     // If we get here and can't call rebuild something went wrong and we
     // should probably blow as it's not really recoverable.
     let browserBuildPromise = browserBuild.rebuild();
-    let assetsManifestPromise = browserBuildPromise.then(build =>
+    let assetsManifestPromise = browserBuildPromise.then((build) =>
       generateAssetsManifest(config, build.metafile!)
     );
 
@@ -202,8 +202,8 @@ export async function watch(
       assetsManifestPromise,
       serverBuild
         .rebuild()
-        .then(build => writeServerBuildResult(config, build.outputFiles!))
-    ]).catch(err => {
+        .then((build) => writeServerBuildResult(config, build.outputFiles!)),
+    ]).catch((err) => {
       disposeBuilders();
       onBuildFailure(err);
     });
@@ -221,15 +221,15 @@ export async function watch(
       ignoreInitial: true,
       awaitWriteFinish: {
         stabilityThreshold: 100,
-        pollInterval: 100
-      }
+        pollInterval: 100,
+      },
     })
-    .on("error", error => console.error(error))
-    .on("change", async file => {
+    .on("error", (error) => console.error(error))
+    .on("change", async (file) => {
       if (onFileChanged) onFileChanged(file);
       await rebuildEverything();
     })
-    .on("add", async file => {
+    .on("add", async (file) => {
       if (onFileCreated) onFileCreated(file);
       let newConfig: RemixConfig;
       try {
@@ -245,7 +245,7 @@ export async function watch(
         await rebuildEverything();
       }
     })
-    .on("unlink", async file => {
+    .on("unlink", async (file) => {
       if (onFileDeleted) onFileDeleted(file);
       if (isEntryPoint(config, file)) {
         await restartBuilders();
@@ -285,7 +285,7 @@ async function buildEverything(
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   try {
     let browserBuildPromise = createBrowserBuild(config, options);
-    let assetsManifestPromise = browserBuildPromise.then(build =>
+    let assetsManifestPromise = browserBuildPromise.then((build) =>
       generateAssetsManifest(config, build.metafile!)
     );
 
@@ -301,7 +301,7 @@ async function buildEverything(
 
     return await Promise.all([
       assetsManifestPromise.then(() => browserBuildPromise),
-      serverBuildPromise
+      serverBuildPromise,
     ]);
   } catch (err) {
     options.onBuildFailure(err as Error);
@@ -319,8 +319,8 @@ async function createBrowserBuild(
   // this is really just making sure we don't accidentally have any dependencies
   // on node built-ins in browser bundles.
   let dependencies = Object.keys(await getAppDependencies(config));
-  let externals = nodeBuiltins.filter(mod => !dependencies.includes(mod));
-  let fakeBuiltins = nodeBuiltins.filter(mod => dependencies.includes(mod));
+  let externals = nodeBuiltins.filter((mod) => !dependencies.includes(mod));
+  let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
 
   if (fakeBuiltins.length > 0) {
     throw new Error(
@@ -331,7 +331,7 @@ async function createBrowserBuild(
   }
 
   let entryPoints: esbuild.BuildOptions["entryPoints"] = {
-    "entry.client": path.resolve(config.appDirectory, config.entryClientFile)
+    "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
   };
   for (let id of Object.keys(config.routes)) {
     // All route entry points are virtual modules that will be loaded by the
@@ -341,13 +341,31 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
+  let plugins = [
+    mdxPlugin(config),
+    browserRouteModulesPlugin(config, /\?browser$/),
+    emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+    NodeModulesPolyfillPlugin(),
+  ];
+
+  if (config.serverBuildTarget === "deno") {
+    // @ts-expect-error
+    let { cache } = await import("esbuild-plugin-cache");
+    plugins.unshift(
+      cache({
+        importmap: {},
+        directory: path.join(config.cacheDirectory, "http-import-cache"),
+      })
+    );
+  }
+
   return esbuild.build({
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
     external: externals,
-    inject: [reactShim],
+    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -366,14 +384,9 @@ async function createBrowserBuild(
       "process.env.NODE_ENV": JSON.stringify(options.mode),
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         config.devServerPort
-      )
+      ),
     },
-    plugins: [
-      mdxPlugin(config),
-      browserRouteModulesPlugin(config, /\?browser$/),
-      emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-      NodeModulesPolyfillPlugin()
-    ]
+    plugins,
   });
 }
 
@@ -393,7 +406,7 @@ async function createServerBuild(
     stdin = {
       contents: config.serverBuildTargetEntryModule,
       resolveDir: config.rootDirectory,
-      loader: "ts"
+      loader: "ts",
     };
   }
 
@@ -403,11 +416,11 @@ async function createServerBuild(
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, dependencies)
+    serverBareModulesPlugin(config, dependencies),
   ];
 
   if (config.serverPlatform !== "node") {
-    plugins.push(NodeModulesPolyfillPlugin());
+    plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
   return esbuild
@@ -431,7 +444,7 @@ async function createServerBuild(
           ? ["module", "main"]
           : ["main", "module"],
       target: options.target,
-      inject: [reactShim],
+      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
@@ -445,11 +458,11 @@ async function createServerBuild(
         "process.env.NODE_ENV": JSON.stringify(options.mode),
         "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
           config.devServerPort
-        )
+        ),
       },
-      plugins
+      plugins,
     })
-    .then(async build => {
+    .then(async (build) => {
       await writeServerBuildResult(config, build.outputFiles);
       return build;
     });

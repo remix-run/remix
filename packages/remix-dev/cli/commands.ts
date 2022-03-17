@@ -1,5 +1,6 @@
 import * as path from "path";
 import os from "os";
+import { execSync } from "child_process";
 import * as fse from "fs-extra";
 import exitHook from "exit-hook";
 import prettyMs from "pretty-ms";
@@ -14,8 +15,82 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
+import { createApp } from "../create";
+import { loadEnv } from "../env";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
 import { log } from "../log";
+
+export async function create({
+  appTemplate,
+  projectDir,
+  remixVersion,
+  installDeps,
+  useTypeScript,
+  githubToken,
+}: {
+  appTemplate: string;
+  projectDir: string;
+  remixVersion?: string;
+  installDeps: boolean;
+  useTypeScript: boolean;
+  githubToken?: string;
+}) {
+  await createApp({
+    appTemplate,
+    projectDir,
+    remixVersion,
+    installDeps,
+    useTypeScript,
+    githubToken,
+  });
+
+  let initScriptDir = path.join(projectDir, "remix.init");
+  let hasInitScript = await fse.pathExists(initScriptDir);
+  if (hasInitScript) {
+    if (installDeps) {
+      console.log("💿 Running remix.init script");
+      await init(projectDir);
+      await fse.remove(initScriptDir);
+    } else {
+      console.log(
+        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+      );
+    }
+  }
+
+  let relProjectDir = path.relative(process.cwd(), projectDir);
+  let projectDirIsCurrentDir = relProjectDir === "";
+
+  if (projectDirIsCurrentDir) {
+    console.log(
+      `💿 That's it! Check the README for development and deploy instructions!`
+    );
+  } else {
+    console.log(
+      `💿 That's it! \`cd\` into "${path.resolve(
+        process.cwd(),
+        projectDir
+      )}" and check the README for development and deploy instructions!`
+    );
+  }
+}
+
+export async function init(remixRoot: string) {
+  let initScriptDir = path.join(remixRoot, "remix.init");
+  let initScript = path.resolve(initScriptDir, "index.js");
+
+  if (await fse.pathExists(initScript)) {
+    // TODO: check for npm/yarn/pnpm
+    execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
+    let initFn = require(initScript);
+    try {
+      await initFn({ rootDirectory: remixRoot });
+    } catch (error) {
+      console.error(`🚨 Oops, remix.init failed`);
+      throw error;
+    }
+  }
+}
 
 export async function setup(platformArg?: string) {
   let platform = isSetupPlatform(platformArg)
@@ -89,7 +164,7 @@ export async function watch(
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
-      wss.clients.forEach(client => {
+      wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(event));
         }
@@ -123,7 +198,7 @@ export async function watch(
     },
     onFileDeleted(file) {
       log(`File deleted: ${path.relative(process.cwd(), file)}`);
-    }
+    },
   });
 
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
@@ -132,7 +207,7 @@ export async function watch(
   exitHook(() => {
     resolve();
   });
-  return new Promise<void>(r => {
+  return new Promise<void>((r) => {
     resolve = r;
   }).then(async () => {
     wss.close();
@@ -143,7 +218,6 @@ export async function watch(
 }
 
 export async function dev(remixRoot: string, modeArg?: string) {
-  // TODO: Warn about the need to install @remix-run/serve if it isn't there?
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -158,8 +232,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+
+  await loadEnv(config.rootDirectory);
+
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : 3000
+    port: process.env.PORT ? Number(process.env.PORT) : 3000,
   });
 
   if (config.serverEntryPoint) {
@@ -167,6 +244,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   }
 
   let app = express();
+  app.disable("x-powered-by");
   app.use((_, __, next) => {
     purgeAppRequireCache(config.serverBuildPath);
     next();
@@ -178,18 +256,20 @@ export async function dev(remixRoot: string, modeArg?: string) {
   try {
     await watch(config, mode, {
       onInitialBuild: () => {
-        let address = Object.values(os.networkInterfaces())
-          .flat()
-          .find(ip => ip?.family == "IPv4" && !ip.internal)?.address;
-
-        if (!address) {
-          address = "localhost";
-        }
-
         server = app.listen(port, () => {
-          console.log(`Remix App Server started at http://${address}:${port}`);
+          let address = Object.values(os.networkInterfaces())
+            .flat()
+            .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
+
+          if (!address) {
+            console.log(`Remix App Server started at http://localhost:${port}`);
+          } else {
+            console.log(
+              `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
+            );
+          }
         });
-      }
+      },
     });
   } finally {
     server!?.close();

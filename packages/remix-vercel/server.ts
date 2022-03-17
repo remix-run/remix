@@ -2,18 +2,18 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
   RequestInit as NodeRequestInit,
-  Response as NodeResponse
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
   AbortController,
   Headers as NodeHeaders,
-  Request as NodeRequest
+  Request as NodeRequest,
 } from "@remix-run/node";
 
 /**
@@ -36,7 +36,7 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
@@ -98,7 +98,7 @@ export function createRemixRequest(
     method: req.method,
     headers: createRemixHeaders(req.headers),
     abortController,
-    signal: abortController?.signal
+    signal: abortController?.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {

@@ -11,8 +11,8 @@ export const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: ["s3cr3t"], // This should be an env variable
-    secure: process.env.NODE_ENV === "production"
-  }
+    secure: process.env.NODE_ENV === "production",
+  },
 });
 
 export const supabaseStrategy = new SupabaseStrategy(
@@ -20,7 +20,7 @@ export const supabaseStrategy = new SupabaseStrategy(
     supabaseClient,
     sessionStorage,
     sessionKey: "sb:session", // if not set, default is sb:session
-    sessionErrorKey: "sb:error" // if not set, default is sb:error
+    sessionErrorKey: "sb:error", // if not set, default is sb:error
   },
   // simple verify example for email/password auth
   async ({ req, supabaseClient }) => {
@@ -51,7 +51,7 @@ export const supabaseStrategy = new SupabaseStrategy(
 
 export const authenticator = new Authenticator<Session>(sessionStorage, {
   sessionKey: supabaseStrategy.sessionKey, // keep in sync
-  sessionErrorKey: supabaseStrategy.sessionErrorKey // keep in sync
+  sessionErrorKey: supabaseStrategy.sessionErrorKey, // keep in sync
 });
 
 authenticator.use(supabaseStrategy);

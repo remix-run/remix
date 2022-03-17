@@ -9,27 +9,26 @@ import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
 
-import { createRequestHandler } from "../../packages/remix-server-runtime";
-import { createApp } from "../../packages/create-remix";
-import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import type {
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "../../packages/remix-server-runtime";
-import type { CreateAppArgs } from "../../packages/create-remix";
+import { createRequestHandler } from "../../packages/remix-server-runtime";
+import { createApp } from "../../packages/remix-dev";
+import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import { TMP_DIR } from "./global-setup";
 
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
   files: { [filename: string]: string };
-  server?: CreateAppArgs["server"];
+  template?: string;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
-export let js = String.raw;
+export const js = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -62,8 +61,8 @@ export async function createFixture(init: FixtureInit) {
         "Content-Type":
           data instanceof URLSearchParams
             ? "application/x-www-form-urlencoded"
-            : "multipart/form-data"
-      }
+            : "multipart/form-data",
+      },
     });
   };
 
@@ -80,7 +79,7 @@ export async function createFixture(init: FixtureInit) {
     requestDocument,
     requestData,
     postDocument,
-    getBrowserAsset
+    getBrowserAsset,
   };
 }
 
@@ -89,7 +88,7 @@ export async function createAppFixture(fixture: Fixture) {
     port: number;
     stop: () => Promise<void>;
   }> => {
-    return new Promise(async accept => {
+    return new Promise(async (accept) => {
       let port = await getPort();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
@@ -101,7 +100,7 @@ export async function createAppFixture(fixture: Fixture) {
       let server = app.listen(port);
 
       let stop = (): Promise<void> => {
-        return new Promise(res => {
+        return new Promise((res) => {
           server.close(() => res());
         });
       };
@@ -119,7 +118,7 @@ export async function createAppFixture(fixture: Fixture) {
   let start = async () => {
     let [{ stop, port }, { browser, page }] = await Promise.all([
       startAppServer(),
-      launchPuppeteer()
+      launchPuppeteer(),
     ]);
 
     let serverUrl = `http://localhost:${port}`;
@@ -166,13 +165,13 @@ export async function createAppFixture(fixture: Fixture) {
        */
       goto: async (href: string, waitForHydration?: true) => {
         return page.goto(`${serverUrl}${href}`, {
-          waitUntil: waitForHydration ? "networkidle0" : undefined
+          waitUntil: waitForHydration ? "networkidle0" : undefined,
         });
       },
 
       /**
        * Finds a link on the page with a matching href, clicks it, and waits for
-       * the network to be idle before contininuing.
+       * the network to be idle before continuing.
        *
        * @param href The href of the link you want to click
        * @param options `{ wait }` waits for the network to be idle before moving on
@@ -209,19 +208,29 @@ export async function createAppFixture(fixture: Fixture) {
       /**
        * Finds the first submit button with `formAction` that matches the
        * `action` supplied, clicks it, and optionally waits for the network to
-       * be idle before contininuing.
+       * be idle before continuing.
        *
        * @param action The formAction of the button you want to click
        * @param options `{ wait }` waits for the network to be idle before moving on
        */
       clickSubmitButton: async (
         action: string,
-        options: { wait: boolean } = { wait: true }
+        options: { wait: boolean; method?: string } = { wait: true }
       ) => {
-        let selector = `button[formaction="${action}"]`;
+        let selector: string;
+        if (options.method) {
+          selector = `button[formAction="${action}"][formMethod="${options.method}"]`;
+        } else {
+          selector = `button[formAction="${action}"]`;
+        }
+
         let el = await page.$(selector);
         if (!el) {
-          selector = `form[action="${action}"] button[type="submit"]`;
+          if (options.method) {
+            selector = `form[action="${action}"] button[type="submit"][formMethod="${options.method}"]`;
+          } else {
+            selector = `form[action="${action}"] button[type="submit"]`;
+          }
           el = await page.$(selector);
           if (!el) {
             throw new Error(`Can't find button for: ${action}`);
@@ -308,6 +317,15 @@ export async function createAppFixture(fixture: Fixture) {
       getHtml: (selector?: string) => getHtml(page, selector),
 
       /**
+       * Get a cheerio instance of an element from the page.
+       *
+       * @param selector CSS Selector for the element's HTML you want
+       */
+      getElement: async (selector: string) => {
+        return getElement(await getHtml(page), selector);
+      },
+
+      /**
        * Keeps the fixture running for as many seconds as you want so you can go
        * poke around in the browser to see what's up.
        *
@@ -318,8 +336,8 @@ export async function createAppFixture(fixture: Fixture) {
         jest.setTimeout(ms);
         console.log(`🙈 Poke around for ${seconds} seconds 👉 ${serverUrl}`);
         cp.exec(`open ${serverUrl}${href}`);
-        return new Promise(res => setTimeout(res, ms));
-      }
+        return new Promise((res) => setTimeout(res, ms));
+      },
     };
   };
 
@@ -328,18 +346,23 @@ export async function createAppFixture(fixture: Fixture) {
 
 ////////////////////////////////////////////////////////////////////////////////
 export async function createFixtureProject(init: FixtureInit): Promise<string> {
+  let appTemplate = path.join(
+    process.cwd(),
+    "templates",
+    init.template ? init.template : "remix"
+  );
   let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
 
   await createApp({
-    install: false,
-    lang: "js",
-    server: init.server || "remix",
+    appTemplate,
     projectDir,
-    quiet: true
+    installDeps: false,
+    useTypeScript: false,
   });
+  // TODO: init if necessary?
   await Promise.all([
     writeTestFiles(init, projectDir),
-    installRemix(projectDir)
+    installRemix(projectDir),
   ]);
   build(projectDir);
 
@@ -349,10 +372,10 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
 function build(projectDir: string) {
   // TODO: log errors (like syntax errors in the fixture file strings)
   cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
-    cwd: projectDir
+    cwd: projectDir,
   });
   cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
-    cwd: projectDir
+    cwd: projectDir,
   });
 }
 
@@ -367,7 +390,7 @@ async function installRemix(projectDir: string) {
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
   await Promise.all(
-    Object.keys(init.files).map(async filename => {
+    Object.keys(init.files).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
       await fs.writeFile(filePath, init.files[filename]);
@@ -384,7 +407,7 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
  *
  * I found some github issues that says that `modulePathIgnorePatterns` should
  * help, so I added it to our `jest.config.js`, but it doesn't seem to help, so
- * I bruteforced it here.
+ * I brute-forced it here.
  */
 async function renamePkgJsonApp(dir: string) {
   let pkgPath = path.join(dir, "package.json");
@@ -399,13 +422,25 @@ export async function getHtml(page: Page, selector?: string) {
   return selector ? selectHtml(html, selector) : prettyHtml(html);
 }
 
-export function selectHtml(source: string, selector: string) {
-  let el = cheerio(selector, source);
+export function getAttribute(
+  source: string,
+  selector: string,
+  attributeName: string
+) {
+  let el = getElement(source, selector);
+  return el.attr(attributeName);
+}
 
+export function getElement(source: string, selector: string) {
+  let el = cheerio(selector, source);
   if (!el.length) {
     throw new Error(`No element matches selector "${selector}"`);
   }
+  return el;
+}
 
+export function selectHtml(source: string, selector: string) {
+  let el = getElement(source, selector);
   return prettyHtml(cheerio.html(el)).trim();
 }
 
@@ -443,14 +478,14 @@ async function doAndWait(
     };
     timeoutEvent = setTimeout(() => {
       console.warn("Warning, wait for the address below to time out:");
-      console.warn(waiting.map(a => a.url()).join("\n"));
+      console.warn(waiting.map((a) => a.url()).join("\n"));
       return clear().then(() => res(null));
     }, timeout);
     pollEvent = setInterval(() => {
       if (waiting.length == 0) {
         return clear().then(() => res(null));
       }
-      waiting = waiting.filter(a => a.response() == null);
+      waiting = waiting.filter((a) => a.response() == null);
     }, pollTime);
   });
 }
@@ -463,7 +498,7 @@ export function collectResponses(
 ): HTTPResponse[] {
   let responses: HTTPResponse[] = [];
 
-  page.on("response", res => {
+  page.on("response", (res) => {
     if (!filter || filter(new URL(res.url()))) {
       responses.push(res);
     }
@@ -473,5 +508,5 @@ export function collectResponses(
 }
 
 export function collectDataResponses(page: Page) {
-  return collectResponses(page, url => url.searchParams.has("_data"));
+  return collectResponses(page, (url) => url.searchParams.has("_data"));
 }

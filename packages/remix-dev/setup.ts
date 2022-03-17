@@ -5,7 +5,6 @@ export enum SetupPlatform {
   CloudflarePages = "cloudflare-pages",
   CloudflareWorkers = "cloudflare-workers",
   Node = "node",
-  Deno = "deno"
 }
 
 export function isSetupPlatform(platform: any): platform is SetupPlatform {
@@ -13,7 +12,6 @@ export function isSetupPlatform(platform: any): platform is SetupPlatform {
     SetupPlatform.CloudflarePages,
     SetupPlatform.CloudflareWorkers,
     SetupPlatform.Node,
-    SetupPlatform.Deno
   ].includes(platform);
 }
 
@@ -33,14 +31,16 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
     }
   }
 
-  let platformPkgJsonFile = resolvePackageJsonFile(`@remix-run/${platform}`);
-  let serverPkgJsonFile = resolvePackageJsonFile(`@remix-run/server-runtime`);
-  let clientPkgJsonFile = resolvePackageJsonFile(`@remix-run/react`);
-
   // Update remix/package.json dependencies
   let remixDeps = {};
+
+  let platformPkgJsonFile = resolvePackageJsonFile(`@remix-run/${platform}`);
   await assignDependency(remixDeps, platformPkgJsonFile);
+
+  let serverPkgJsonFile = resolvePackageJsonFile(`@remix-run/server-runtime`);
   await assignDependency(remixDeps, serverPkgJsonFile);
+
+  let clientPkgJsonFile = resolvePackageJsonFile(`@remix-run/react`);
   await assignDependency(remixDeps, clientPkgJsonFile);
 
   let remixPkgJson = await fse.readJSON(remixPkgJsonFile);
@@ -74,13 +74,13 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
     [
       path.join(platformExportsDir, "esm"),
       path.join(serverExportsDir, "esm"),
-      path.join(clientExportsDir, "esm")
+      path.join(clientExportsDir, "esm"),
     ],
     ".js"
   );
 
-  await fse.writeFile(path.join(remixPkgDir, "index.js"), magicCJS);
   await fse.writeFile(path.join(remixPkgDir, "index.d.ts"), magicTypes);
+  await fse.writeFile(path.join(remixPkgDir, "index.js"), magicCJS);
   await fse.writeFile(path.join(remixPkgDir, "esm/index.js"), magicESM);
 }
 

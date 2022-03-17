@@ -11,25 +11,25 @@ export async function loader() {
   let data = {
     users: [
       { id: "ryanflorence", name: "Ryan Florence" },
-      { id: "mjackson", name: "Michael Jackson" }
-    ]
+      { id: "mjackson", name: "Michael Jackson" },
+    ],
   };
 
   return json(data, {
     headers: {
-      "Cache-Control": "public, max-age=60"
-    }
+      "Cache-Control": "public, max-age=60",
+    },
   });
 }
 
 export function headers({ loaderHeaders }) {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
+    "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
 }
 
 export let handle = {
-  breadcrumb: () => <Link to="/gists">Gists</Link>
+  breadcrumb: () => <Link to="/gists">Gists</Link>,
 };
 
 export default function Gists() {
@@ -41,7 +41,7 @@ export default function Gists() {
       <header>
         <h1>Gists</h1>
         <ul>
-          {users.map(user => (
+          {users.map((user) => (
             <li key={user.id}>
               <Link
                 // prefetch="intent"

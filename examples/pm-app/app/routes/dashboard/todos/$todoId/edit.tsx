@@ -7,7 +7,7 @@ import { Sanitizer } from "~/utils/sanitizer";
 
 export const action: ActionFunction = async ({ request, context, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   let actionData: ActionData;

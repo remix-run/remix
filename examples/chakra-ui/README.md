@@ -1,4 +1,4 @@
-# Chackra UI Example
+# Chakra UI Example
 
 In this setup we will setup Chakra UI with Remix.
 

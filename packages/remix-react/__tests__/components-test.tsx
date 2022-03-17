@@ -81,7 +81,7 @@ function itPrefetchesPageLinks<
     });
 
     function withContext(stuff: JSX.Element) {
-      const context = {
+      let context = {
         routeModules: { idk: { default: () => null } },
         manifest: {
           routes: {
@@ -91,20 +91,20 @@ function itPrefetchesPageLinks<
               hasCatchBoundary: false,
               hasErrorBoundary: false,
               id: "idk",
-              module: "idk"
-            }
+              module: "idk",
+            },
           },
           entry: { imports: [], module: "" },
           url: "",
-          version: ""
+          version: "",
         },
         matches: [],
         clientRoutes: [
-          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" }
+          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" },
         ],
         routeData: {},
         appState: {} as any,
-        transitionManager: {} as any
+        transitionManager: {} as any,
       };
       return (
         <RemixEntryContext.Provider value={context}>
@@ -113,9 +113,9 @@ function itPrefetchesPageLinks<
       );
     }
 
-    setIntentEvents.forEach(event => {
+    setIntentEvents.forEach((event) => {
       it(`prefetches page links on ${event}`, () => {
-        const { container, unmount } = render(
+        let { container, unmount } = render(
           withContext(
             <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
           )
@@ -132,8 +132,8 @@ function itPrefetchesPageLinks<
 
       it(`prefetches page links and calls explicit handler on ${event}`, () => {
         let ranHandler = false;
-        const eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
-        const { container, unmount } = render(
+        let eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
+        let { container, unmount } = render(
           withContext(
             <Component
               {...({
@@ -141,7 +141,7 @@ function itPrefetchesPageLinks<
                 prefetch: "intent",
                 [eventHandler]: () => {
                   ranHandler = true;
-                }
+                },
               } as any)}
             />
           )

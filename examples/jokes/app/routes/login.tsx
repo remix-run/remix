@@ -105,12 +105,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <Form
-          method="post"
-          aria-describedby={
-            actionData?.formError ? "form-error-message" : undefined
-          }
-        >
+        <Form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -148,7 +143,7 @@ export default function Login() {
               name="username"
               defaultValue={actionData?.fields?.username}
               aria-invalid={Boolean(actionData?.fieldErrors?.username)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username ? "username-error" : undefined
               }
             />
@@ -170,7 +165,7 @@ export default function Login() {
               defaultValue={actionData?.fields?.password}
               type="password"
               aria-invalid={Boolean(actionData?.fieldErrors?.password)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password ? "password-error" : undefined
               }
             />

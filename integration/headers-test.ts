@@ -2,10 +2,10 @@ import { createFixture, js } from "./helpers/create-fixture";
 import type { Fixture } from "./helpers/create-fixture";
 
 describe("headers export", () => {
-  const ROOT_HEADER_KEY = "X-Test";
-  const ROOT_HEADER_VALUE = "SUCCESS";
-  const ACTION_HKEY = "X-Test-Action";
-  const ACTION_HVALUE = "SUCCESS";
+  let ROOT_HEADER_KEY = "X-Test";
+  let ROOT_HEADER_VALUE = "SUCCESS";
+  let ACTION_HKEY = "X-Test-Action";
+  let ACTION_HVALUE = "SUCCESS";
 
   let fixture: Fixture;
 
@@ -64,8 +64,8 @@ describe("headers export", () => {
           }
 
           export default function Action() { return <div/> }
-        `
-      }
+        `,
+      },
     });
   });
 
@@ -80,8 +80,8 @@ describe("headers export", () => {
   });
 
   it("can use the loader headers when parents don't have loaders", async () => {
-    const HEADER_KEY = "X-Test";
-    const HEADER_VALUE = "SUCCESS";
+    let HEADER_KEY = "X-Test";
+    let HEADER_VALUE = "SUCCESS";
 
     let fixture = await createFixture({
       files: {
@@ -113,8 +113,8 @@ describe("headers export", () => {
           export default function Index() {
             return <div>Heyo!</div>
           }
-        `
-      }
+        `,
+      },
     });
     let response = await fixture.requestDocument("/");
     expect(response.headers.get(HEADER_KEY)).toBe(HEADER_VALUE);

@@ -7,7 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
   useActionData,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 
 import stylesUrl from "./index.css";
@@ -16,8 +16,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: stylesUrl
-    }
+      href: stylesUrl,
+    },
   ];
 };
 
@@ -56,7 +56,7 @@ export const loader: LoaderFunction = async () => {
     (date.getMonth() + 1)
   ).slice(-2)}-${("00" + (date.getDate() + 1)).slice(-2)}`;
 
-  return { todayString, tomorrowString };
+  return json({ todayString, tomorrowString });
 };
 
 export default function App() {
