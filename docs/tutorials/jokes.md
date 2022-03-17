@@ -4864,14 +4864,14 @@ But before you get started, remember that we're in charge of rendering everythin
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[1,7,33-45,58]
+```tsx filename=app/root.tsx lines=[1,5,30-43,55]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
+  Meta,
   Outlet,
   useCatch,
-  Meta,
 } from "remix";
 
 import globalStylesUrl from "./styles/global.css";
@@ -4880,10 +4880,7 @@ import globalLargeStylesUrl from "./styles/global-large.css";
 
 export const links: LinksFunction = () => {
   return [
-    {
-      rel: "stylesheet",
-      href: globalStylesUrl,
-    },
+    { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
@@ -4900,6 +4897,7 @@ export const links: LinksFunction = () => {
 export const meta: MetaFunction = () => {
   const description = `Learn Remix and laugh at the same time!`;
   return {
+    charset: "utf-8",
     description,
     keywords: "Remix,jokes",
     "twitter:image": "https://remix-jokes.lol/social.png",
@@ -4921,7 +4919,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <title>{title}</title>
         <Links />
@@ -5573,15 +5570,15 @@ Ok, so let's load JavaScript on this page now 😆
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[8,65,97]
+```tsx filename=app/root.tsx lines=[7,62,94]
 import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
-  Outlet,
-  useCatch,
   Meta,
+  Outlet,
   Scripts,
+  useCatch,
 } from "remix";
 
 import globalStylesUrl from "./styles/global.css";
@@ -5590,10 +5587,7 @@ import globalLargeStylesUrl from "./styles/global-large.css";
 
 export const links: LinksFunction = () => {
   return [
-    {
-      rel: "stylesheet",
-      href: globalStylesUrl,
-    },
+    { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
@@ -5610,6 +5604,7 @@ export const links: LinksFunction = () => {
 export const meta: MetaFunction = () => {
   const description = `Learn Remix and laugh at the same time!`;
   return {
+    charset: "utf-8",
     description,
     keywords: "Remix,jokes",
     "twitter:image": "https://remix-jokes.lol/social.png",
@@ -5631,7 +5626,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <title>{title}</title>
         <Links />
