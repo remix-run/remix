@@ -104,5 +104,9 @@
   },
   "engines": {
     "node": ">=14"
+  },
+  "devDependencies": {
+    "chromium": "^3.0.3",
+    "puppeteer-core": "^13.5.1"
   }
 }

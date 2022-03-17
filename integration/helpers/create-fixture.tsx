@@ -2,7 +2,8 @@ import path from "path";
 import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "chromium";
 import type { Page, HTTPResponse } from "puppeteer";
 import express from "express";
 import cheerio from "cheerio";
@@ -110,7 +111,7 @@ export async function createAppFixture(fixture: Fixture) {
   };
 
   let launchPuppeteer = async () => {
-    let browser = await puppeteer.launch();
+    let browser = await puppeteer.launch({ executablePath: chromium.path });
     let page = await browser.newPage();
     return { browser, page };
   };
