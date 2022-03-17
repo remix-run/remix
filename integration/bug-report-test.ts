@@ -36,27 +36,42 @@ beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+      "app/routes/item/$id.jsx": js`
+        import React from "react";
+        import { useParams } from "react-router-dom";
 
+        export default function Item() {
+          const { id } = useParams();
+          return <div>Item {id}</div>;
+        }
+      `,
+      "app/routes/item.jsx": js`
+        import { json, useLoaderData, Outlet, useFetcher, redirect } from "remix";
+
+        let counter = 1;
         export function loader() {
-          return json("pizza");
+          return json(counter);
+        }
+
+        export function action() {
+          counter += 1;
+          return redirect("/item");
+          // return null
         }
 
         export default function Index() {
           let data = useLoaderData();
+          const fetcher = useFetcher();
+          const count = "count: " + data;
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <span>{count}</span>
+              <button onClick={e => {
+                fetcher.submit({ value: 46 }, { method: 'post', replace: true })
+              }}>Do something and redirect</button>
+              <Outlet />
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -73,15 +88,15 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
+it("[description of w", async () => {
   // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  let response = await fixture.requestDocument("/item/test");
+  expect(await response.text()).toMatch("count: 1");
 
   // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.goto("/item/test");
+  await app.clickElement("button");
+  expect(await app.getHtml()).toMatch("count: 2");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
