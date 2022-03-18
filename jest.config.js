@@ -76,7 +76,7 @@ module.exports = {
     // Fixture Apps
     {
       displayName: "gists-app",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
       globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",
