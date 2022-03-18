@@ -1,20 +1,20 @@
 {
-    "private": true,
-    "sideEffects": false,
-    "scripts": {
-      "build": "cross-env NODE_ENV=production remix build",
-      "start": "cross-env NODE_ENV=production deno run --allow-net --allow-read --allow-env ./build/index.js",
-      "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
-      "dev:remix": "cross-env NODE_ENV=development remix watch",
-      "dev:deno": "cross-env NODE_ENV=development deno run --watch --allow-net --allow-read --allow-env ./build/index.js"
-    },
-    "devDependencies": {
-      "@remix-run/dev": "*",
-      "cross-env": "^7.0.3",
-      "npm-run-all": "^4.1.5"
-    },
-    "engines": {
-      "node": ">=14"
-    }
+  "name": "remix-template-deno-ts",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "build": "cross-env NODE_ENV=production remix build",
+    "start": "cross-env NODE_ENV=production deno run --allow-net --allow-read --allow-env ./build/index.js",
+    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "dev:deno": "cross-env NODE_ENV=development deno run --watch --allow-net --allow-read --allow-env ./build/index.js"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "*",
+    "cross-env": "^7.0.3",
+    "npm-run-all": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=14"
   }
-  
+}

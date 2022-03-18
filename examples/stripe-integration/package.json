@@ -1,8 +1,9 @@
 {
+  "name": "remix-example-stripe-integration",
   "private": true,
-  "name": "remix-example-template",
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "node -r dotenv/config node_modules/.bin/remix dev",
@@ -26,6 +27,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

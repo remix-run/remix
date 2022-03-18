@@ -15,9 +15,19 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          # TODO: Fix cross-env issues in Jest before enabling
+          # - windows-latest
     steps:
-      - uses: actions/checkout@v3
+      # https://github.com/actions/virtual-environments/issues/1187
+      - name: prep windows network
+        run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
+        if: ${{ matrix.settings.host == 'windows-latest' }}
+      - uses: actions/checkout@v2
 
       - run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
@@ -29,7 +39,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
+        run: yarn --frozen-lockfile --network-timeout 1000000
 
       - name: Build
         run: yarn build
