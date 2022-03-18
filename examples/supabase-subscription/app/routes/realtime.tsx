@@ -1,13 +1,13 @@
 import { useSubscription } from "react-supabase";
-import type { ActionFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
 import { Form, json, useFetcher, useLoaderData } from "remix";
 import { client } from "~/utils/supabaseClient.server";
 
-export const loader = async (): Promise<number> => {
+export const loader: LoaderFunction = async () => {
   const { count } = await client
     .from("clicks")
     .select("id", { count: "exact", head: true });
-  return count as number;
+  return json<number>(count);
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -25,10 +25,7 @@ const Buttons = () => {
     () => {
       fetcher.submit(null, { method: "post" });
     },
-    {
-      event: "INSERT",
-      table: "clicks",
-    }
+    { event: "INSERT", table: "clicks" }
   );
   return (
     <>
