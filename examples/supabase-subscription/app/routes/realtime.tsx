@@ -1,5 +1,5 @@
 import { useSubscription } from "react-supabase";
-import type { ActionFunction} from "remix";
+import type { ActionFunction } from "remix";
 import { Form, json, useFetcher, useLoaderData } from "remix";
 import { client } from "~/utils/supabaseClient.server";
 
