@@ -5,24 +5,24 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "postinstall": "remix setup node",
-    "build": "cross-env NODE_ENV=production remix build",
-    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "build": "remix build",
+    "dev:remix": "remix watch",
     "dev:arc": "cross-env NODE_ENV=development arc sandbox",
-    "dev": "cross-env NODE_ENV=development remix build && run-p dev:*",
+    "dev": "remix build && run-p dev:*",
+    "postinstall": "remix setup node",
     "start": "cross-env NODE_ENV=production arc sandbox"
   },
   "dependencies": {
-    "@remix-run/architect": "^1.2.3",
-    "@remix-run/react": "^1.2.3",
+    "@remix-run/architect": "*",
+    "@remix-run/react": "*",
     "cross-env": "^7.0.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "remix": "^1.2.3"
+    "remix": "*"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.2.3",
-    "@remix-run/eslint-config": "^1.2.3",
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
     "eslint": "^8.11.0",
