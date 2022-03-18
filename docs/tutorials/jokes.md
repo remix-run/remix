@@ -5707,7 +5707,7 @@ Now that we have JavaScript on the page, we can benefit from _progressive enhanc
 
 Even though our app is quite fast (especially locally 😅), some users may have a poor connection to our app. This means that they're going to submit their jokes, but then they'll have to wait for a while before they see anything. We could add a loading spinner somewhere, but it'd be a much better user experience to be optimistic about the success of the request and render what the user would see.
 
-We have a pretty in depth [guide on Optimistic UI](../guides/optimistic-ui), so go give that a read
+We have a pretty in depth [guide on Optimistic UI](../guides/optimistic-ui.md), so go give that a read
 
 💿 Add Optimistic UI to the `app/routes/jokes/new.tsx` route.
 
