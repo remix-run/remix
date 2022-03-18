@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
-import type { ActionFunction } from "remix";
+import type { ActionFunction, MetaFunction } from "remix";
 import { Form, json, useActionData, redirect } from "remix";
 
 import { hash } from "~/utils.server";
 
-export function meta() {
-  return { title: "Actions Demo" };
-}
+export const meta: MetaFunction = () => ({
+  title: "Actions Demo",
+});
 
 // When your form sends a POST, the action is called on the server.
 // - https://remix.run/api/conventions#action
