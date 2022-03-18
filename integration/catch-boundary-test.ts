@@ -8,12 +8,12 @@ describe("CatchBoundary", () => {
   let ROOT_BOUNDARY_TEXT = "ROOT_TEXT";
   let OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT";
 
-  const HAS_BOUNDARY_LOADER = "/yes/loader";
-  const HAS_BOUNDARY_ACTION = "/yes/action";
-  const HAS_BOUNDARY_NO_LOADER_OR_ACTION = "/yes/no-loader-or-action";
-  const NO_BOUNDARY_ACTION = "/no/action";
-  const NO_BOUNDARY_LOADER = "/no/loader";
-  const NO_BOUNDARY_NO_LOADER_OR_ACTION = "/no/no-loader-or-action";
+  let HAS_BOUNDARY_LOADER = "/yes/loader";
+  let HAS_BOUNDARY_ACTION = "/yes/action";
+  let HAS_BOUNDARY_NO_LOADER_OR_ACTION = "/yes/no-loader-or-action";
+  let NO_BOUNDARY_ACTION = "/no/action";
+  let NO_BOUNDARY_LOADER = "/no/loader";
+  let NO_BOUNDARY_NO_LOADER_OR_ACTION = "/no/no-loader-or-action";
 
   let NOT_FOUND_HREF = "/not/found";
 
@@ -47,8 +47,10 @@ describe("CatchBoundary", () => {
         `,
 
         "app/routes/index.jsx": js`
-          import { Link, Form } from "remix";
+          import { Link, Form, useFetcher } from "remix";
           export default function() {
+            let fetcher = useFetcher();
+
             return (
               <div>
                 <Link to="${NOT_FOUND_HREF}">${NOT_FOUND_HREF}</Link>
@@ -66,6 +68,24 @@ describe("CatchBoundary", () => {
                 <Link to="${NO_BOUNDARY_LOADER}">
                   ${NO_BOUNDARY_LOADER}
                 </Link>
+              </div>
+            )
+          }
+        `,
+
+        "app/routes/fetcher.jsx": js`
+          import { useFetcher } from "remix";
+          export function CatchBoundary() {
+            return <p>${OWN_BOUNDARY_TEXT}</p>
+          }
+          export default function() {
+            let fetcher = useFetcher();
+
+            return (
+              <div>
+                <fetcher.Form method="post">
+                  <button formAction="${NO_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
+                </fetcher.Form>
               </div>
             )
           }
@@ -258,6 +278,12 @@ describe("CatchBoundary", () => {
   it("renders own boundary in action script transitions without action from other routes", async () => {
     await app.goto("/");
     await app.clickSubmitButton(HAS_BOUNDARY_NO_LOADER_OR_ACTION);
+    expect(await app.getHtml()).toMatch(OWN_BOUNDARY_TEXT);
+  });
+
+  it("fetcher renders own boundary in action script transitions without action from other routes", async () => {
+    await app.goto("/fetcher");
+    await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
     expect(await app.getHtml()).toMatch(OWN_BOUNDARY_TEXT);
   });
 });
