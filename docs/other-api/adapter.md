@@ -7,11 +7,12 @@ order: 2
 
 Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). It does this through adapters. We maintain a few adapters:
 
-- `@remix-run/express`
 - `@remix-run/architect`
-- `@remix-run/vercel`
-- `@remix-run/netlify`
+- `@remix-run/cloudflare-pages`
 - `@remix-run/cloudflare-workers`
+- `@remix-run/express`
+- `@remix-run/netlify`
+- `@remix-run/vercel`
 
 These adapters are imported into your server's entry and is not used inside of your Remix app itself.
 
