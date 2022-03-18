@@ -135,6 +135,16 @@ describe("remix cli", () => {
 
   describe("the create command", () => {
     afterAll(() => {
+      /**
+       * This prevents the console for spitting out a bunch of junk like this for
+       * every fixture:
+       *
+       *    jest-haste-map: Haste module naming collision: remix-app-template-js
+       *
+       * I found some github issues that says that `modulePathIgnorePatterns` should
+       * help, so I added it to our `jest.config.js`, but it doesn't seem to help, so
+       * I brute-forced it here.
+       */
       async function renamePkgJsonApp(dir: string) {
         let pkgPath = path.join(dir, "package.json");
         let pkg = await fsp.readFile(pkgPath);
