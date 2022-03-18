@@ -1,4 +1,5 @@
 {
+  "name": "remix-template-deno-ts",
   "private": true,
   "sideEffects": false,
   "scripts": {

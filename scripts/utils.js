@@ -151,6 +151,25 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
 }
 
 /**
+ *
+ * @param {string} nextVersion
+ */
+async function updateDeploymentScriptVersion(nextVersion) {
+  let file = packageJson("deployment-test", "scripts");
+  let json = await jsonfile.readFile(file);
+  json.dependencies["@remix-run/dev"] = nextVersion;
+  await jsonfile.writeFile(file, json, { spaces: 2 });
+
+  console.log(
+    chalk.green(
+      `  Updated Remix to version ${chalk.bold(nextVersion)} in ${chalk.bold(
+        "scripts/deployment-test"
+      )}`
+    )
+  );
+}
+
+/**
  * @param {string} nextVersion
  */
 async function incrementRemixVersion(nextVersion) {
@@ -163,6 +182,9 @@ async function incrementRemixVersion(nextVersion) {
 
   // Update versions in the examples
   await updateExamplesRemixVersion(nextVersion);
+
+  // Update deployment script `@remix-run/dev` version
+  await updateDeploymentScriptVersion(nextVersion);
 
   // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);

@@ -5,7 +5,10 @@ import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
 
-const execFile = util.promisify(childProcess.execFile);
+const execFile =
+  process.platform === "win32"
+    ? util.promisify(childProcess.exec)
+    : util.promisify(childProcess.execFile);
 
 const remix = path.resolve(
   __dirname,
@@ -139,7 +142,7 @@ describe("remix cli", () => {
     }
 
     // this also tests sub directories
-    it.skip("works for examples in the remix repo", async () => {
+    it("works for examples in the remix repo", async () => {
       let projectDir = getProjectDir("example");
       let { stdout } = await execFile("node", [
         remix,
@@ -156,8 +159,7 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
-    // TODO: enable once this is live
-    it.skip("works for templates in the remix org", async () => {
+    it("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       let { stdout } = await execFile("node", [
         remix,
@@ -168,7 +170,8 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
+💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -191,7 +194,7 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     });
 
-    it.skip("works for remote tarballs", async () => {
+    it("works for remote tarballs", async () => {
       let projectDir = getProjectDir("remote-tarball");
       let { stdout } = await execFile("node", [
         remix,
@@ -206,6 +209,23 @@ describe("remix cli", () => {
       );
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+    });
+
+    it("works for different branches", async () => {
+      let projectDir = getProjectDir("diff-branch");
+      let { stdout } = await execFile("node", [
+        remix,
+        "create",
+        projectDir,
+        "--template",
+        "https://github.com/remix-run/remix/tree/dev/templates/arc",
+        "--no-install",
+      ]);
+      expect(stdout.trim()).toBe(
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      );
+      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+      expect(fs.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
     });
 
     it("works for a path to a tarball on disk", async () => {
