@@ -9,7 +9,7 @@ We're going to be short on words and quick on code in this quickstart. If you're
 
 <docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
 
-This uses TypeScript, but we always pepper the types on after we write the code. This isn't our normal workflow, but some of you aren't using TypeScript so we didn't want to clutter up the code for you. Normally we create the type as we write the code so that we get it right the first time (measure twice, cut once!).
+This tutorial uses TypeScript. Remix can definitely be used without TypeScript. We feel most productive when writing TypeScript, but if you'd prefer to skip the TypeScript syntax, feel free to write your code in JavaScript.
 
 ## Prerequisites
 
@@ -23,30 +23,37 @@ If you want to follow this tutorial locally on your own computer, it is importan
 
 💿 Initialize a new Remix project
 
-<docs-warning>
-Make sure you are running at least Node v14 or greater
-</docs-warning>
+<docs-warning>Make sure you are running at least Node v14 or greater</docs-warning>
 
 ```sh
 npx create-remix@latest
-# IMPORTANT: Choose "Just the basics", and then "Remix App Server" when prompted
-cd [whatever you named the project]
+```
+
+This is going to give you a few prompts. We're making a blog, so I'll create my app in `./onewheel-blog`. You can call yours whatever you like. Here are the other answers you need to give to follow-along:
+
+```
+? What type of app do you want to create? A pre-configured stack ready for production
+? Which Stack do you want? (Learn more about these stacks: https://remix.run/stacks) Indie
+? Do you want me to run `npm install`? Yes
+```
+
+You can read more about the stacks available in [the stacks docs](/pages/stacks).
+
+<docs-warning>If you're following along, make sure to provide the same answers I did in the prompts.</docs-warning>
+
+We chose [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
+
+💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
+
+💿 Let's start the dev server:
+
+```sh
 npm run dev
 ```
 
-<docs-warning>
-If you are following along with this tutorial, it's important to choose Remix App Server at this stage. If you plan to deploy your app, you may need to update your code before deploying depending on your deployment target. We're going to be reading/writing to the file system and not all setups are compatible with that (for example, Cloudflare Workers and AWS lambda don't have a writable filesystem). When you are ready to deploy, see the `README` in the adapter you choose for platform-specific instructions.
-</docs-warning>
+💿 Open up [http://localhost:3000](http://localhost:3000), the app should be running.
 
-Open up [http://localhost:3000](http://localhost:3000), the app should be running. If you want, take a minute and poke around the starter template, there's a lot of information in there.
-
-If your application is not running properly at [http://localhost:3000](http://localhost:3000) refer to the README.md in the generated project files to see if additional set up is required for your deployment target.
-
-<docs-warning>
-Make sure the `postinstall` script runs before you start the app - if it does not, run it manually (e.g. via `npm run postinstall`).
-</docs-warning>
-
-This might happen if you've added `ignore-scripts = true` to your `npm` configuration or you're using `pnpm` or other package manager that does not automatically run `postinstall` scripts, which Remix relies on.
+If you want, take a minute and poke around the UI a bit. Feel free to create an account and create/delete some notes to get an idea of what's available in the UI out of the box.
 
 ## Your First Route
 
@@ -54,17 +61,24 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 
 💿 Add a link to posts in `app/routes/index.tsx`
 
-First import `Link` from "remix":
+Go ahead and copy/paste this:
 
 ```tsx
-import { Link } from "remix";
+<div className="mx-auto mt-16 max-w-7xl text-center">
+  <Link
+    to="/posts"
+    className="text-xl text-blue-600 underline"
+  >
+    Blog Posts
+  </Link>
+</div>
 ```
 
-Next, put the link anywhere you like.
+You can put it anywhere you like. I stuck it right above the icons of all the technologies used in the stack:
 
-```tsx
-<Link to="/posts">Posts</Link>
-```
+![Screenshot of the app showing the blog post link](/blog-tutorial/blog-post-link.png)
+
+<docs-info>You may have noticed we're using <a href="https://tailwindcss.com">tailwind</a> classes. Remix stacks have tailwind support pre-configured. If you'd prefer to not use tailwind, you're welcome to remove it and use something else.</docs-info>
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
@@ -79,7 +93,7 @@ touch app/routes/posts/index.tsx
 
 We could have named it just `posts.tsx` but we'll have another route soon and it'll be nice to put them by each other. An index route will render at the folder's path (just like index.html on a web server).
 
-You'll probably see the screen just go blank with `null`. You've got a route but there's nothing there yet. Let's add a component and export it as the default:
+Now if you navigate to the `/posts` route, you'll get an error indicating there's no way to handle the request. That's because we haven't done anything in that route yet! Let's add a component and export it as the default:
 
 💿 Make the posts component
 
@@ -111,20 +125,22 @@ So let's get to it and provide some data to our component.
 import { json, useLoaderData } from "remix";
 
 export const loader = async () => {
-  return json([
-    {
-      slug: "my-first-post",
-      title: "My First Post",
-    },
-    {
-      slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You",
-    },
-  ]);
+  return json({
+    posts: [
+      {
+        slug: "my-first-post",
+        title: "My First Post",
+      },
+      {
+        slug: "pint-on-a-plane",
+        title: "How I fly with a Onewheel Pint",
+      },
+    ],
+  });
 };
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const { posts } = useLoaderData();
   console.log(posts);
   return (
     <main>
@@ -138,19 +154,24 @@ Loaders are the backend "API" for their component and it's already wired up for 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,9-15]
-import { json, Link, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[1,9-20]
+import { Link, json, useLoaderData } from "remix";
 
 // ...
 export default function Posts() {
-  const posts = useLoaderData();
+  const { posts } = useLoaderData();
   return (
     <main>
       <h1>Posts</h1>
       <ul>
-        {posts.map((post) => (
+        {posts.map((post: any) => (
           <li key={post.slug}>
-            <Link to={post.slug}>{post.title}</Link>
+            <Link
+              to={post.slug}
+              className="text-blue-600 underline"
+            >
+              {post.title}
+            </Link>
           </li>
         ))}
       </ul>
@@ -163,37 +184,47 @@ TypeScript is mad, so let's help it out:
 
 💿 Add the Post type and generic for `useLoaderData`
 
-```tsx filename=app/routes/posts/index.tsx lines=[3-6,9,19,23]
-import { json, Link, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[3-6,8-10,13,28]
+import { Link, json, useLoaderData } from "remix";
 
-export type Post = {
+type Post = {
   slug: string;
   title: string;
 };
 
+type LoaderData = {
+  posts: Array<Post>;
+};
+
 export const loader = async () => {
-  const posts: Post[] = [
-    {
-      slug: "my-first-post",
-      title: "My First Post",
-    },
-    {
-      slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You",
-    },
-  ];
-  return json(posts);
+  return json<LoaderData>({
+    posts: [
+      {
+        slug: "my-first-post",
+        title: "My First Post",
+      },
+      {
+        slug: "pint-on-a-plane",
+        title: "How I fly with a Onewheel Pint",
+      },
+    ],
+  });
 };
 
 export default function Posts() {
-  const posts = useLoaderData<Post[]>();
+  const posts = useLoaderData() as LoaderData;
   return (
     <main>
       <h1>Posts</h1>
       <ul>
         {posts.map((post) => (
           <li key={post.slug}>
-            <Link to={post.slug}>{post.title}</Link>
+            <Link
+              to={post.slug}
+              className="text-blue-600 underline"
+            >
+              {post.title}
+            </Link>
           </li>
         ))}
       </ul>
@@ -208,45 +239,51 @@ Hey, that's pretty cool. We get a pretty solid degree of type safety even over a
 
 A solid practice is to create a module that deals with a particular concern. In our case it's going to be reading and writing posts. Let's set that up now and add a `getPosts` export to our module.
 
-💿 Create `app/post.ts`
+💿 Create `app/models/post.server.ts`
 
 ```sh
-touch app/post.ts
+touch app/models/post.server.ts
 ```
 
-We're mostly gonna copy/paste it from our route:
+We're mostly gonna copy/paste stuff from our route:
 
-```tsx filename=app/post.ts
-export type Post = {
+```tsx filename=app/models/post.server.ts
+type Post = {
   slug: string;
   title: string;
 };
 
-export function getPosts() {
-  const posts: Post[] = [
+export async function getPosts(): Promise<Array<Post>> {
+  return [
     {
       slug: "my-first-post",
       title: "My First Post",
     },
     {
-      slug: "90s-mixtape",
-      title: "A Mixtape I Made Just For You",
+      slug: "pint-on-a-plane",
+      title: "How I fly with a Onewheel Pint",
     },
   ];
-  return posts;
 }
 ```
 
-💿 Update the posts route to use our new posts module
+Note that we're making the `getPosts` function `async` because even though it's not currently doing anything async it will soon!
+
+💿 Update the posts route to use our new posts module:
 
 ```tsx filename=app/routes/posts/index.tsx
-import { json, Link, useLoaderData } from "remix";
+import { Link, json, useLoaderData } from "remix";
+import { getPosts } from "~/models/post.server";
 
-import { getPosts } from "~/post";
-import type { Post } from "~/post";
+type LoaderData = {
+  // this is a handy way to say: "posts is whatever type getPosts resolves to"
+  posts: Awaited<ReturnType<typeof getPosts>>;
+};
 
 export const loader = async () => {
-  return json(await getPosts());
+  return json<LoaderData>({
+    posts: await getPosts(),
+  });
 };
 
 // ...
@@ -254,9 +291,17 @@ export const loader = async () => {
 
 ## Pulling from a data source
 
-If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, FaunaDB, Supabase, etc. This is a quickstart, so we're just going to use the file system.
+If we were building this for real, we'd want to store our posts in a database somewhere like Postgres, SQLite, Supabase, etc. Luckily for us, the Indie stack we're using is already set up with production-ready SQLite, so we just need to add a model for our posts and we'll be set!
 
-Instead of hard-coding our links, we'll read them from the file system.
+If you've never used prisma before, don't worry, we'll walk you through it.
+
+💿 First, we need to update our prisma schema:
+
+```prisma filename=prisma/schema.prisma
+
+```
+
+Instead of hard-coding our posts, we'll read them from the file system.
 
 💿 Create a "posts/" folder in the root of the project, not in the app directory, but next to it.
 
@@ -445,10 +490,10 @@ You can click one of your posts and should see the new page.
 💿 Add a loader to access the params
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[1,3-5,8,11]
-import { json, useLoaderData } from "remix";
+import { useLoaderData } from "remix";
 
 export const loader = async ({ params }) => {
-  return json(params.slug);
+  return params.slug;
 };
 
 export default function PostSlug() {
@@ -466,13 +511,13 @@ The part of the filename attached to the `$` becomes a named key on the `params`
 💿 Let's get some help from TypeScript for the loader function signature.
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[2,4]
-import { json, useLoaderData } from "remix";
+import { useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async ({
   params,
 }) => {
-  return json(params.slug);
+  return params.slug;
 };
 ```
 
@@ -498,7 +543,7 @@ export async function getPost(slug: string): Promise<Post> {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,5-6,11-12,16,19]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,10-11,15,18]
 import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
@@ -510,11 +555,11 @@ export const loader: LoaderFunction = async ({
   params,
 }) => {
   invariant(params.slug, "expected params.slug");
-  return json(await getPost(params.slug));
+  return json(getPost(params.slug));
 };
 
 export default function PostSlug() {
-  const post = useLoaderData<Post>();
+  const post = useLoaderData() as Post;
   return (
     <main>
       <h1>{post.title}</h1>
@@ -593,13 +638,13 @@ touch app/routes/admin.tsx
 ```
 
 ```tsx filename=app/routes/admin.tsx
-import { json, Link, useLoaderData } from "remix";
+import { Link, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
 export const loader = async () => {
-  return json(await getPosts());
+  return getPosts();
 };
 
 export default function Admin() {
@@ -798,7 +843,7 @@ export async function createPost(post) {
     path.join(postsPath, post.slug + ".md"),
     md
   );
-  return json(await getPost(post.slug));
+  return getPost(post.slug);
 }
 ```
 
@@ -848,7 +893,7 @@ export async function createPost(post: NewPost) {
     path.join(postsPath, post.slug + ".md"),
     md
   );
-  return json(await getPost(post.slug));
+  return getPost(post.slug);
 }
 
 //...
@@ -898,7 +943,7 @@ export const action: ActionFunction = async ({
   if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
-    return json(errors);
+    return errors;
   }
 
   await createPost({ title, slug, markdown });
@@ -977,7 +1022,7 @@ export const action: ActionFunction = async ({
   if (!markdown) errors.markdown = true;
 
   if (Object.keys(errors).length) {
-    return json(errors);
+    return errors;
   }
 
   invariant(typeof title === "string");
