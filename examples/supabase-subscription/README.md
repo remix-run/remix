@@ -6,12 +6,12 @@ The relevent files are:
 
 ```
 ├── app
-    ├── root.tsx // init the supabase on the client side and wrapper the outlet with Supabse provider
-    ├── routes
-    │   └── realtime.tsx  // client subscribe to supabase events and trigger refresh on insert events
-    └── utils
-        └── supabaseClient.server.tsx // create supabase client on the server side
-|── .env // holds supabase credentails and url
+|   ├── root.tsx // init the supabase on the client side and wrapper the outlet with Supabse provider
+|   ├── routes
+|   │   └── realtime.tsx  // client subscribe to supabase events and trigger refresh on insert events
+|   └── utils
+|       └── supabaseClient.server.tsx // create supabase client on the server side
+└── .env // holds supabase credentails and url
 ```
 
 ## Steps to set up supabase

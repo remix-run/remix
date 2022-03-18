@@ -1,4 +1,8 @@
+import { createClient } from "@supabase/supabase-js";
+import { Provider } from "react-supabase";
+import type { MetaFunction, LoaderFunction } from "remix";
 import {
+  json,
   Links,
   LiveReload,
   Meta,
@@ -7,34 +11,38 @@ import {
   ScrollRestoration,
   useLoaderData,
 } from "remix";
-import { createClient } from "@supabase/supabase-js";
-import { Provider } from "react-supabase";
-type loaderData = {
+
+type LoaderData = {
   ENV: {
     SUPABASE_URL: string;
     SUPABASE_ANON_KEY: string;
   };
 };
-export const loader = async (): Promise<loaderData> => {
-  return {
+export const loader: LoaderFunction = async () => {
+  return json<LoaderData>({
     ENV: {
       SUPABASE_URL: process.env.SUPABASE_URL as string,
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY as string,
     },
-  };
+  });
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
+
 export default function App() {
   const data = useLoaderData();
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>
       <body>
-        {data && (
+        {data ? (
           <Provider
             value={createClient(
               data.ENV.SUPABASE_URL,
@@ -43,7 +51,7 @@ export default function App() {
           >
             <Outlet />
           </Provider>
-        )}
+        ) : null}
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
