@@ -309,7 +309,7 @@ async function buildEverything(
   }
 }
 
-function createBrowserBuild(
+async function createBrowserBuild(
   config: RemixConfig,
   options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
