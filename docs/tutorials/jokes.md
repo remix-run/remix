@@ -94,7 +94,7 @@ This may ask you whether you want to install `create-remix` to run the command. 
 
 </docs-info>
 
-When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
 R E M I X
