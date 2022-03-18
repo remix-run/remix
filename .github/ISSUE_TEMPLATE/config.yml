@@ -10,3 +10,12 @@ contact_links:
     about:
       We appreciate you taking the time to improve Remix with your ideas, but we
       use the Discussions for this instead of the issues tab 🙂.
+  - name: 💬 Remix Discord Channel
+    url: https://rmx.as/discord
+    about: Interact with other people using Remix 📀
+  - name: 💬 New Updates (Twitter)
+    url: https://twitter.com/remix_run
+    about: Stay up to date with Remix news on twitter
+  - name: 🍿 Remix YouTube Channel
+    url: https://rmx.as/youtube
+    about: Are you a tech lead or wanting to learn more about Remix in depth? Checkout the Remix YouTube Channel
