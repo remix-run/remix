@@ -1,15 +1,10 @@
 import {
   // This has been added as a global in node 15+
   AbortController,
+  createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
 } from "@remix-run/node";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  ServerPlatform,
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
   Handler,
   HandlerEvent,
@@ -17,6 +12,9 @@ import type {
   HandlerResponse,
 } from "@netlify/functions";
 import type {
+  AppLoadContext,
+  ServerBuild,
+  ServerPlatform,
   Response as NodeResponse,
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
