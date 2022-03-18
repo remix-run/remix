@@ -1,16 +1,14 @@
-import os from "os";
-import path from "path";
-import puppeteer from "puppeteer";
-import NodeEnvironment from "jest-environment-node";
-import type { ProjectConfig } from "@jest/types/build/Config";
-
+const os = require("os");
+const path = require("path");
+const puppeteer = require("puppeteer");
+const NodeEnvironment = require("jest-environment-node");
 const { readFile } = require("fs").promises;
 
 const DIR = path.join(os.tmpdir(), "jest_puppeteer_global_setup");
 
-export class PuppeteerEnvironment extends NodeEnvironment {
-  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
-  constructor(config: ProjectConfig) {
+module.exports = class PuppeteerEnvironment extends NodeEnvironment {
+  // eslint-disable-next-line no-useless-constructor
+  constructor(config) {
     super(config);
   }
 
@@ -35,4 +33,4 @@ export class PuppeteerEnvironment extends NodeEnvironment {
   getVmContext() {
     return super.getVmContext();
   }
-}
+};

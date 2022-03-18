@@ -17,7 +17,7 @@ module.exports = {
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
       globalTeardown: "<rootDir>/integration/helpers/global-teardown.ts",
-      testEnvironment: "<rootDir>/integration/helpers/environment.ts",
+      testEnvironment: "<rootDir>/integration/helpers/environment.js",
       setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
     },
     {
