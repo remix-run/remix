@@ -1,8 +1,8 @@
 const os = require("os");
 const path = require("path");
+const fs = require("fs/promises");
 const puppeteer = require("puppeteer");
 const NodeEnvironment = require("jest-environment-node");
-const { readFile } = require("fs").promises;
 
 const DIR = path.join(os.tmpdir(), "jest_puppeteer_global_setup");
 
@@ -15,7 +15,7 @@ module.exports = class PuppeteerEnvironment extends NodeEnvironment {
   async setup() {
     await super.setup();
     // get the wsEndpoint
-    let wsEndpoint = await readFile(path.join(DIR, "wsEndpoint"), "utf8");
+    let wsEndpoint = await fs.readFile(path.join(DIR, "wsEndpoint"), "utf8");
     if (!wsEndpoint) {
       throw new Error("wsEndpoint not found");
     }
