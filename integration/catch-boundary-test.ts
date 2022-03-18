@@ -71,11 +71,26 @@ describe("CatchBoundary", () => {
           }
         `,
 
-        "app/routes/fetcher.jsx": js`
+        "app/routes/fetcher-boundary.jsx": js`
           import { useFetcher } from "remix";
           export function CatchBoundary() {
             return <p>${OWN_BOUNDARY_TEXT}</p>
           }
+          export default function() {
+            let fetcher = useFetcher();
+
+            return (
+              <div>
+                <fetcher.Form method="post">
+                  <button formAction="${NO_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
+                </fetcher.Form>
+              </div>
+            )
+          }
+        `,
+
+        "app/routes/fetcher-no-boundary.jsx": js`
+          import { useFetcher } from "remix";
           export default function() {
             let fetcher = useFetcher();
 
@@ -279,9 +294,14 @@ describe("CatchBoundary", () => {
     expect(await app.getHtml()).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  it("fetcher renders own boundary in action script transitions without action from other routes", async () => {
-    await app.goto("/fetcher");
+  it("renders own boundary in fetcher action submission without action from other routes", async () => {
+    await app.goto("/fetcher-boundary");
     await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
     expect(await app.getHtml()).toMatch(OWN_BOUNDARY_TEXT);
+  });
+  it("renders root boundary in fetcher action submission without action from other routes", async () => {
+    await app.goto("/fetcher-no-boundary");
+    await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
+    expect(await app.getHtml()).toMatch(ROOT_BOUNDARY_TEXT);
   });
 });
