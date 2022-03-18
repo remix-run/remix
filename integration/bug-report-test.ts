@@ -36,27 +36,50 @@ beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+      "app/routes/bug/$id.tsx": js`
+        import { LoaderFunction, ActionFunction, json, useLoaderData, Outlet, Form } from "remix"
 
-        export function loader() {
-          return json("pizza");
+        export const loader: LoaderFunction = async ({ params: { id }, request: { url } }: any) => {
+            return json({
+                id
+            })
         }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+        
+        export const action: ActionFunction = async () => {
+            return json({
+                success: true
+            })
+        }
+        
+        export default function Bug() {
+          const { id } = useLoaderData()
+          
+          return (<>
+                <p>{id}</p>
+                <Form method="post">
+                    <button type="submit">Click Me</button>
+                </Form>
+                <Outlet />
+            </>)
         }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/routes/bug/$id/index.tsx": js`
+        import { LoaderFunction, json, useLoaderData } from "remix"
+
+        export const loader: LoaderFunction = async ({ params: { id }, request: { url } }: any) => {
+        
+            return json({
+                outlet: "default"
+            })
+        }
+        
+        export default function Bug() {
+          const { outlet } = useLoaderData()
+          
+          return (<>
+              <p>{outlet}</p>
+          </>)
         }
       `,
     },
@@ -73,21 +96,12 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+it("should call all loaders after post", async () => {
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  await app.goto("/bug/123");
+  await app.clickElement('button')
+  let title = await app.getElement('title')
+  expect(await title.text()).not.toMatch("Application Error!");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
