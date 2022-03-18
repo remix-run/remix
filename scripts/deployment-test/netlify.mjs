@@ -1,5 +1,5 @@
 import path from "path";
-import { spawnSync } from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";
 import { createApp } from "@remix-run/dev";
