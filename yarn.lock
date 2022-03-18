@@ -2158,7 +2158,7 @@
   resolved "https://registry.npmjs.org/@types/estree/-/estree-0.0.48.tgz"
   integrity sha512-LfZwXoGUDo0C3me81HXgkBg5CTQYb6xzEl+fNmbO4JdRiSKQ8A0GD1OBBvKAIsbCUgoyAty7m99GqqMQe784ew==
 
-"@types/expect-puppeteer@4.4.7":
+"@types/expect-puppeteer@^4.4.7":
   version "4.4.7"
   resolved "https://registry.npmjs.org/@types/expect-puppeteer/-/expect-puppeteer-4.4.7.tgz#fc5651b3a982dad7ddf8db1c5ac3b7b15db2b79a"
   integrity sha512-C5UHvCNTmjiGAVU5XyzR7xmZPRF/+YfpSd746Gd4ytcSpLT+/ke1EzrpDhO0OqqtpExQvr8M4qb0md9tybq7XA==
@@ -2261,7 +2261,7 @@
   dependencies:
     "@types/istanbul-lib-report" "*"
 
-"@types/jest-environment-puppeteer@5.0.0":
+"@types/jest-environment-puppeteer@^5.0.0":
   version "5.0.0"
   resolved "https://registry.npmjs.org/@types/jest-environment-puppeteer/-/jest-environment-puppeteer-5.0.0.tgz#6ecdb5e96c3749ccdde0194a81a6dc99b0b714e9"
   integrity sha512-GiwGkJW6462DFfyAIB1LDSVo4CI0tt4ot3+AsXfrrlDhSMe4mxKYz8xaUSGDVKoLfN1mHEvYO8b1h4V/v1J9Tw==
@@ -2404,7 +2404,7 @@
   resolved "https://registry.npmjs.org/@types/prop-types/-/prop-types-15.7.4.tgz"
   integrity sha512-rZ5drC/jWjrArrS8BR6SIr4cWpW09RNTYt9AMZo3Jwwif+iacXAqgVjm0B0Bv/S1jhDXKHqRVNCbACkJ89RAnQ==
 
-"@types/puppeteer@*", "@types/puppeteer@5.4.5":
+"@types/puppeteer@*", "@types/puppeteer@^5.4.5":
   version "5.4.5"
   resolved "https://registry.npmjs.org/@types/puppeteer/-/puppeteer-5.4.5.tgz#154e3850a77bfd3967f036680de8ddc88eb3a12b"
   integrity sha512-lxCjpDEY+DZ66+W3x5Af4oHnEmUXt0HuaRzkBGE2UZiZEp/V1d3StpLPlmNVu/ea091bdNmVPl44lu8Wy/0ZCA==
@@ -6857,7 +6857,7 @@ jest-environment-node@^26.6.2:
     jest-mock "^26.6.2"
     jest-util "^26.6.2"
 
-jest-environment-puppeteer@6.0.3, jest-environment-puppeteer@^6.0.3:
+jest-environment-puppeteer@^6.0.3:
   version "6.0.3"
   resolved "https://registry.npmjs.org/jest-environment-puppeteer/-/jest-environment-puppeteer-6.0.3.tgz#45734fe8389c99b1a58d49cfd2a35f0fb4bf5a59"
   integrity sha512-oZE/W8swhDSZpZ+Vm1C2JyoKECsvqcFOlaf3/+G0AtizZfGNkRILdi1U7k9MHLOqGEB5sfFWXG0vpJ8bTNP1dQ==
@@ -7012,7 +7012,7 @@ jest-pnp-resolver@^1.2.2:
   resolved "https://registry.npmjs.org/jest-pnp-resolver/-/jest-pnp-resolver-1.2.2.tgz"
   integrity sha512-olV41bKSMm8BdnuMsewT4jqlZ8+3TCARAXjZGT9jcoSnrfUnRCqnMoF9XEeoWjbzObpqF9dRhHQj0Xb9QdF6/w==
 
-jest-puppeteer@6.1.0:
+jest-puppeteer@^6.1.0:
   version "6.1.0"
   resolved "https://registry.npmjs.org/jest-puppeteer/-/jest-puppeteer-6.1.0.tgz#74449a2930c06cc130ab55d2b71dad71cf8362e1"
   integrity sha512-mPNV3pKkGlwyq+7UyuDLjm8Ev4zJmkzH46jCwsOy+vsr0t+TvfPcwtVR4x+NIP2lPgYnjIlSPsnRjgkP9y95mQ==
