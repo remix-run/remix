@@ -47,10 +47,8 @@ describe("CatchBoundary", () => {
         `,
 
         "app/routes/index.jsx": js`
-          import { Link, Form, useFetcher } from "remix";
+          import { Link, Form } from "remix";
           export default function() {
-            let fetcher = useFetcher();
-
             return (
               <div>
                 <Link to="${NOT_FOUND_HREF}">${NOT_FOUND_HREF}</Link>
