@@ -5,7 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 import { createClient } from "@supabase/supabase-js";
 import { Provider } from "react-supabase";
@@ -19,8 +19,8 @@ export const loader = async (): Promise<loaderData> => {
   return {
     ENV: {
       SUPABASE_URL: process.env.SUPABASE_URL as string,
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY as string
-    }
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY as string,
+    },
   };
 };
 export default function App() {

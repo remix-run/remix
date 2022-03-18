@@ -1,5 +1,6 @@
 import { useSubscription } from "react-supabase";
-import { ActionFunction, Form, json, useFetcher, useLoaderData } from "remix";
+import type { ActionFunction} from "remix";
+import { Form, json, useFetcher, useLoaderData } from "remix";
 import { client } from "~/utils/supabaseClient.server";
 
 export const loader = async (): Promise<number> => {
@@ -26,7 +27,7 @@ const Buttons = () => {
     },
     {
       event: "INSERT",
-      table: "clicks"
+      table: "clicks",
     }
   );
   return (
