@@ -4,11 +4,7 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import copy from "rollup-plugin-copy";
 import fse from "fs-extra";
 
-function isBareModuleId(id) {
-  return !id.startsWith(".") && !path.isAbsolute(id);
-}
-
-let executableBanner = "#!/usr/bin/env node\n";
+const executableBanner = "#!/usr/bin/env node\n";
 
 function createBanner(packageName, version) {
   return `/**
@@ -25,6 +21,10 @@ function createBanner(packageName, version) {
 
 function getVersion(packageDir) {
   return require(`./${packageDir}/package.json`).version;
+}
+
+function isBareModuleId(id) {
+  return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
@@ -126,21 +126,15 @@ function remixDev() {
     {
       external(id, parent) {
         if (
-          id === "./package.json" &&
-          parent === path.resolve(__dirname, "packages/remix-dev/create.ts")
+          id === "../package.json" &&
+          parent === path.resolve(__dirname, "packages/remix-dev/cli/create.ts")
         ) {
           return true;
         }
 
         return isBareModuleId(id);
       },
-      input: [
-        `${sourceDir}/cli/commands.ts`,
-        `${sourceDir}/colors.ts`,
-        `${sourceDir}/compiler.ts`,
-        `${sourceDir}/config.ts`,
-        `${sourceDir}/index.ts`,
-      ],
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/dev", version),
         dir: outputDir,
