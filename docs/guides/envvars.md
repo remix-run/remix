@@ -4,9 +4,11 @@ title: Environment Variables
 
 # Environment Variables
 
-Remix does not do anything directly with environment variables, but there are some patterns we find useful that we'll share in this guide.
+Remix does not do anything directly with environment variables (except during local development), but there are some patterns we find useful that we'll share in this guide.
 
 Environment Variables are values that live on the server that your application can use. You may be familiar with the ubiquitous `NODE_ENV`. Your deployment server probably automatically sets that to "production".
+
+<docs-warning>When you run `remix build` we will compile `process.env.NODE_ENV` into whatever the current environment value is.</docs-warning>
 
 Here are some example environment variables you might find in the wild:
 
@@ -14,7 +16,7 @@ Here are some example environment variables you might find in the wild:
 - `STRIPE_PRIVATE_KEY`: The key a checkout workflow will use on the server
 - `STRIPE_PUBLIC_KEY`: The key a checkout workflow will use on the browser
 
-If you're experience with web development is primarily with the JS frameworks in the last few years, you might think of these as something for your build to use. While they can be useful for bundling code, traditionally those are "build arguments" not environment variables. Environment variables are most useful _at runtime on the server_. For example, you can change an environment variable to change the behavior of your app without rebuilding or even redeploying.
+If your experience with web development is primarily with the JS frameworks in the last few years, you might think of these as something for your build to use. While they can be useful for bundling code, traditionally those are "build arguments" not environment variables. Environment variables are most useful _at runtime on the server_. For example, you can change an environment variable to change the behavior of your app without rebuilding or even redeploying.
 
 ## Server Environment Variables
 
@@ -26,12 +28,11 @@ Environment variables on your server will be handled by your host, for example:
 - [Vercel](https://vercel.com/docs/environment-variables)
 - [Architect](https://arc.codes/docs/en/reference/cli/env)
 
-If your host doesn't have any conventions for environment variables during development, we recommend using [dotenv](https://www.npmjs.com/package/dotenv).
+If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
 
-If you're using the Remix App Server, you can do this very quickly:
+If you're using the `remix dev` server, you can do this very quickly:
 
 ```sh
-npm add dotenv
 touch .env
 ```
 
@@ -41,24 +42,15 @@ Edit your `.env` file.
 SOME_SECRET=super-secret
 ```
 
-Then update your package.json dev script to this:
-
-```json lines=[2] filename=package.json
-{
-  "dev": "node -r dotenv/config node_modules/.bin/remix dev",
-  "start": "remix-serve build"
-}
-```
-
-Now you can access those values in your loaders/actions:
+Then, when running `remix dev` you will be able to access those values in your loaders/actions:
 
 ```js
-export function loader() {
+export async function loader() {
   console.log(process.env.SOME_SECRET);
 }
 ```
 
-Note that dotenv is only for development, you should not use it in production, so don't do that with your start script, only dev. You'll need to follow your host's guides on adding secrets to your production server.
+Note that `dotenv` is only for development, you should not use it in production, so Remix doesn't load these when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server.
 
 <docs-error>Do not commit your <code>.env</code> file to git, the point is that it contains secrets!</docs-error>
 
@@ -75,13 +67,13 @@ Instead we recommend keeping all of your environment variables on the server (al
 1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
 
    ```tsx [3-6]
-   export function loader() {
-     return {
+   export async function loader() {
+     return json({
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-         FAUNA_DB_URL: process.env.FAUNA_DB_URL
-       }
-     };
+         FAUNA_DB_URL: process.env.FAUNA_DB_URL,
+       },
+     });
    }
 
    export function Root() {
@@ -103,12 +95,12 @@ Instead we recommend keeping all of your environment variables on the server (al
 2. **Put `ENV` on window** - This is how we hand off the values from the server to the client. Make sure to put this before `<Scripts/>`
 
    ```tsx [10, 19-25]
-   export function loader() {
-     return {
+   export async function loader() {
+     return json({
        ENV: {
-         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY
-       }
-     };
+         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+       },
+     });
    }
 
    export function Root() {
@@ -125,7 +117,7 @@ Instead we recommend keeping all of your environment variables on the server (al
              dangerouslySetInnerHTML={{
                __html: `window.ENV = ${JSON.stringify(
                  data.ENV
-               )}`
+               )}`,
              }}
            />
            <Scripts />
@@ -137,13 +129,15 @@ Instead we recommend keeping all of your environment variables on the server (al
 
 3. **Access the values**
 
-   ```tsx [6]
+   ```tsx [6-8]
    import { loadStripe } from "@stripe/stripe-js";
 
    export async function redirectToStripeCheckout(
      sessionId
    ) {
-     const stripe = await loadStripe(window.ENV.stripe);
+     const stripe = await loadStripe(
+       window.ENV.STRIPE_PUBLIC_KEY
+     );
      return stripe.redirectToCheckout({ sessionId });
    }
    ```

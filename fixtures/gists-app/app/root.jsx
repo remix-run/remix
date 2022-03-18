@@ -1,38 +1,40 @@
 import { useEffect } from "react";
 import {
-  Meta,
+  Link,
   Links,
+  Meta,
+  Outlet,
   Scripts,
+  ScrollRestoration,
   useCatch,
   useLoaderData,
   useMatches,
-  Link,
-  ScrollRestoration
 } from "remix";
-import { Outlet } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
 
+import favicon from "../public/favicon.ico";
 import stylesHref from "./styles/app.css";
 
 export function links() {
   return [
     {
       rel: "stylesheet",
-      href: normalizeHref
+      href: normalizeHref,
     },
     { rel: "stylesheet", href: stylesHref },
-    { rel: "stylesheet", href: "/resources/theme-css" }
+    { rel: "stylesheet", href: "/resources/theme-css" },
+    { rel: "shortcut icon", href: favicon },
   ];
 }
 
-export function loader({ request }) {
+export async function loader({ request }) {
   return {
-    enableScripts: new URL(request.url).searchParams.get("disableJs") == null
+    enableScripts: new URL(request.url).searchParams.get("disableJs") == null,
   };
 }
 
 export let handle = {
-  breadcrumb: () => <Link to="/">Home</Link>
+  breadcrumb: () => <Link to="/">Home</Link>,
 };
 
 export let unstable_shouldReload = () => false;
@@ -57,7 +59,7 @@ export default function Root() {
         <header>
           <ol className="breadcrumbs">
             {matches
-              .filter(match => match.handle && match.handle.breadcrumb)
+              .filter((match) => match.handle?.breadcrumb)
               .map((match, index) => (
                 <li key={index}>{match.handle.breadcrumb(match)}</li>
               ))}
@@ -66,12 +68,12 @@ export default function Root() {
         <div data-test-id="content" id="content">
           <Outlet />
         </div>
-        {data.enableScripts && (
+        {data.enableScripts ? (
           <>
             <ScrollRestoration />
             <Scripts />
           </>
-        )}
+        ) : null}
       </body>
     </html>
   );

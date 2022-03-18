@@ -22,12 +22,13 @@ Remix can help you build optimistic UI with [`useTransition`][use-transition] an
 
 Consider the workflow for viewing and creating a new project. The project route loads the project and renders it.
 
-```tsx filename=app/routes/project/$id.js
-import { useLoaderData } from "remix";
+```tsx filename=app/routes/project/$id.tsx
+import { json, useLoaderData } from "remix";
+
 import { ProjectView } from "~/components/project";
 
-export function loader({ params }) {
-  return findProject(params.id);
+export async function loader({ params }) {
+  return json(await findProject(params.id));
 }
 
 export default function ProjectRoute() {
@@ -45,7 +46,7 @@ export function ProjectView({ project }) {
       <h2>{project.title}</h2>
       <p>{project.description}</p>
       <ul>
-        {project.tasks.map(task => (
+        {project.tasks.map((task) => (
           <li key={task.id}>{task.name}</li>
         ))}
       </ul>
@@ -56,12 +57,13 @@ export function ProjectView({ project }) {
 
 Now we can get to the fun part. Here's what a "new project" route might look like:
 
-```js filename=app/routes/projects/new.js
+```tsx filename=app/routes/projects/new.tsx
 import { Form, redirect } from "remix";
+
 import { createProject } from "~/utils";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -88,12 +90,13 @@ export default function NewProject() {
 
 At this point, typically you'd render a busy spinner on the page while the user waits for the project to be sent to the server, added to the database, and sent back to the browser and then redirected to the project. Remix makes that pretty easy:
 
-```js filename=app/routes/projects/new.js lines=[1,12,24,26-28]
+```tsx filename=app/routes/projects/new.tsx lines=[1,15,27,29-31]
 import { Form, redirect, useTransition } from "remix";
+
 import { createProject } from "~/utils";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -128,13 +131,14 @@ export default function NewProject() {
 
 Since we know that almost every time this form is submitted it's going to succeed, we can just skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
 
-```js filename=app/routes/projects/new.js lines=[3,14-20]
+```tsx filename=app/routes/projects/new.tsx lines=[4,16-22]
 import { Form, redirect, useTransition } from "remix";
+
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -174,19 +178,20 @@ One of the hardest parts about implementing optimistic UI is how to handle failu
 
 If you want to have more control over the UI when an error occurs and put the user right back where they were without losing any state, you can catch your own error and send it down through action data.
 
-```js filename=app/routes/projects/new.js lines=[5,6,14-22,27,46]
+```tsx filename=app/routes/projects/new.tsx lines=[5,6,17-25,30,49]
 import {
   Form,
   redirect,
   useTransition,
   useActionData,
-  json
+  json,
 } from "remix";
+
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -196,7 +201,7 @@ export const action: ActionFunction = async ({
   } catch (e) {
     console.error(e);
     return json("Sorry, we couldn't create the project", {
-      status: 500
+      status: 500,
     });
   }
 };
@@ -222,7 +227,7 @@ export default function NewProject() {
         <textarea name="description" id="description" />
         <button type="submit">Create Project</button>
       </Form>
-      {error && <p>{error}</p>}
+      {error ? <p>{error}</p> : null}
     </>
   );
 }
@@ -234,7 +239,7 @@ Now in the rare case of an error on the server, the UI reverts back to the form,
 
 For this to work best, you'll want a bit of client-side validation so that form validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
 
-```js filename=app/routes/projects/new.js lines=[7-8]
+```jsx filename=app/routes/projects/new.js lines=[7-8]
 <Form method="post">
   <label>
     Title:{" "}

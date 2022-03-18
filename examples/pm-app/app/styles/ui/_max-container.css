@@ -1,0 +1,20 @@
+.ui--max-container {
+  --gutter: var(--spaces-04);
+  --width: 64rem;
+  max-width: var(--width);
+  width: calc(100% - var(--gutter) * 2);
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (--viewport-md) {
+    --gutter: var(--spaces-05);
+  }
+
+  @media (--viewport-lg) {
+    --gutter: var(--spaces-06);
+  }
+
+  @media (--viewport-xl) {
+    --width: 72rem;
+  }
+}

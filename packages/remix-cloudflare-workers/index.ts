@@ -6,7 +6,7 @@ export type { GetLoadContextFunction, RequestHandler } from "./worker";
 export {
   createEventHandler,
   createRequestHandler,
-  handleAsset
+  handleAsset,
 } from "./worker";
 
 installGlobals();

@@ -2,16 +2,18 @@ import express from "express";
 import supertest from "supertest";
 import { createRequest } from "node-mocks-http";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import { Response as NodeResponse } from "@remix-run/node";
+import { Readable } from "stream";
 
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the express adapter
-jest.mock("@remix-run/server-runtime/server");
+jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -25,7 +27,7 @@ function createApp() {
     createRequestHandler({
       // We don't have a real app to test, but it doesn't matter. We
       // won't ever call through to the real createRequestHandler
-      build: undefined
+      build: undefined,
     })
   );
 
@@ -43,7 +45,7 @@ describe("express createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
@@ -66,9 +68,24 @@ describe("express createRequestHandler", () => {
       expect(res.status).toBe(200);
     });
 
+    // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
+    it("handles body as stream", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        let stream = Readable.from("hello world");
+        return new NodeResponse(stream, { status: 200 }) as unknown as Response;
+      });
+
+      let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toBe("hello world");
+    });
+
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       let request = supertest(createApp());
@@ -79,7 +96,7 @@ describe("express createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
         headers.append(
           "Set-Cookie",
           "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
@@ -92,7 +109,7 @@ describe("express createRequestHandler", () => {
           "Set-Cookie",
           "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
-        return new Response("", { headers });
+        return new Response(null, { headers });
       });
 
       let request = supertest(createApp());
@@ -102,7 +119,7 @@ describe("express createRequestHandler", () => {
       expect(res.headers["set-cookie"]).toEqual([
         "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
         "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
       ]);
     });
   });
@@ -180,8 +197,8 @@ describe("express createRemixHeaders", () => {
         createRemixHeaders({
           "set-cookie": [
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
-          ]
+            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+          ],
         })
       ).toMatchInlineSnapshot(`
         Headers {
@@ -199,19 +216,20 @@ describe("express createRemixHeaders", () => {
 
 describe("express createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    const expressRequest = createRequest({
+    let expressRequest = createRequest({
       url: "/foo/bar",
       method: "GET",
       protocol: "http",
       hostname: "localhost",
       headers: {
         "Cache-Control": "max-age=300, s-maxage=3600",
-        Host: "localhost:3000"
-      }
+        Host: "localhost:3000",
+      },
     });
 
     expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -250,7 +268,7 @@ describe("express createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);

@@ -1,11 +1,19 @@
+import fsp from "fs/promises";
+import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import {
+  // This has been added as a global in node 15+
+  AbortController,
+  Response as NodeResponse,
+} from "@remix-run/node";
 
 import {
   createRequestHandler,
   createRemixHeaders,
-  createRemixRequest
+  createRemixRequest,
+  sendRemixResponse,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
@@ -27,7 +35,7 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
       "accept-language": "en-US,en;q=0.9",
       "accept-encoding": "gzip, deflate",
-      ...event.headers
+      ...event.headers,
     },
     isBase64Encoded: false,
     rawPath: "/",
@@ -40,7 +48,7 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
         userAgent:
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
         sourceIp: "127.0.0.1",
-        ...event.requestContext?.http
+        ...event.requestContext?.http,
       },
       routeKey: "ANY /{proxy+}",
       accountId: "accountId",
@@ -51,11 +59,11 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
       stage: "test",
       time: now.toISOString(),
       timeEpoch: now.getTime(),
-      ...event.requestContext
+      ...event.requestContext,
     },
     routeKey: "foo",
     version: "2.0",
-    ...event
+    ...event,
   };
 }
 
@@ -70,13 +78,13 @@ describe("architect createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
           expect(res.body).toBe("URL: /foo/bar");
         });
@@ -89,19 +97,19 @@ describe("architect createRequestHandler", () => {
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
         });
     });
 
     it("handles status codes", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        return new Response("", { status: 204 });
+        return new Response(null, { status: 204 });
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(204);
         });
     });
@@ -123,18 +131,18 @@ describe("architect createRequestHandler", () => {
           "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
         );
 
-        return new Response("", { headers });
+        return new Response(null, { headers });
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
           expect(res.headers["x-time-of-year"]).toBe("most wonderful");
           expect(res.cookies).toEqual([
             "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
             "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
           ]);
         });
     });
@@ -213,15 +221,14 @@ describe("architect createRemixHeaders", () => {
     it("handles cookies", () => {
       expect(
         createRemixHeaders({ "x-something-else": "true" }, [
-          "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-          "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
+          "__session=some_value",
+          "__other=some_other_value",
         ])
       ).toMatchInlineSnapshot(`
         Headers {
           Symbol(map): Object {
             "Cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+              "__session=some_value; __other=some_other_value",
             ],
             "x-something-else": Array [
               "true",
@@ -238,11 +245,12 @@ describe("architect createRemixRequest", () => {
     expect(
       createRemixRequest(
         createMockEvent({
-          cookies: ["__session=value"]
+          cookies: ["__session=value"],
         })
       )
     ).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -296,9 +304,51 @@ describe("architect createRemixRequest", () => {
             "slashes": true,
           },
           "redirect": "follow",
-          "signal": null,
+          "signal": undefined,
         },
       }
     `);
+  });
+});
+
+describe("sendRemixResponse", () => {
+  it("handles regular responses", async () => {
+    let response = new NodeResponse("anything");
+    let abortController = new AbortController();
+    let result = await sendRemixResponse(response, abortController);
+    expect(result.body).toBe("anything");
+  });
+
+  it("handles resource routes with regular data", async () => {
+    let json = JSON.stringify({ foo: "bar" });
+    let response = new NodeResponse(json, {
+      headers: {
+        "Content-Type": "application/json",
+        "content-length": json.length.toString(),
+      },
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(json);
+  });
+
+  it("handles resource routes with binary data", async () => {
+    let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
+
+    let response = new NodeResponse(image, {
+      headers: {
+        "content-type": "image/jpeg",
+        "content-length": image.length.toString(),
+      },
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(image.toString("base64"));
   });
 });

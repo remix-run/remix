@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, Form } from "remix";
+import { Link } from "remix";
 
 import Shared from "../components/Shared";
 // import Guitar from "../components/Guitar";
@@ -9,11 +9,11 @@ import { message as serverMessage } from "../scripts/message.server";
 export function meta() {
   return {
     title: "Gists Fixture App",
-    description: "We're just tryin' to make sure stuff works, ya know?!"
+    description: "We're just tryin' to make sure stuff works, ya know?!",
   };
 }
 
-export function loader() {
+export async function loader() {
   if (process.env.NODE_ENV !== "test") {
     console.log(serverMessage);
   }
@@ -23,7 +23,7 @@ export function loader() {
 
 export function headers() {
   return {
-    test: "value"
+    test: "value",
   };
 }
 
@@ -40,7 +40,9 @@ export default function Index() {
       <nav>
         <ul>
           <li>
-            <Link to="/links">Link preloads and stuff</Link>
+            <Link prefetch="intent" to="/links">
+              Link preloads and stuff
+            </Link>
           </li>
           <li>
             <Link to="/gists">View Some gists</Link>

@@ -2,17 +2,18 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
   RequestInit as NodeRequestInit,
-  Response as NodeResponse
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
+  // This has been added as a global in node 15+
+  AbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  formatServerError
 } from "@remix-run/node";
 
 /**
@@ -35,17 +36,18 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (req: VercelRequest, res: VercelResponse) => {
-    let request = createRemixRequest(req);
+    let abortController = new AbortController();
+    let request = createRemixRequest(req, abortController);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(req, res)
@@ -55,6 +57,10 @@ export function createRequestHandler({
       request as unknown as Request,
       loadContext
     )) as unknown as NodeResponse;
+
+    if (abortController.signal.aborted) {
+      response.headers.set("Connection", "close");
+    }
 
     sendRemixResponse(res, response);
   };
@@ -79,7 +85,10 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(req: VercelRequest): NodeRequest {
+export function createRemixRequest(
+  req: VercelRequest,
+  abortController?: AbortController
+): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
@@ -87,14 +96,16 @@ export function createRemixRequest(req: VercelRequest): NodeRequest {
 
   let init: NodeRequestInit = {
     method: req.method,
-    headers: createRemixHeaders(req.headers)
+    headers: createRemixHeaders(req.headers),
+    abortController,
+    signal: abortController?.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = req;
   }
 
-  return new NodeRequest(url.toString(), init);
+  return new NodeRequest(url.href, init);
 }
 
 function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
@@ -110,13 +121,14 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
     }
   }
 
+  res.statusMessage = response.statusText;
   res.writeHead(response.status, response.headers.raw());
 
   if (Buffer.isBuffer(response.body)) {
-    return res.end(response.body);
+    res.end(response.body);
   } else if (response.body?.pipe) {
-    return res.end(response.body.pipe(res));
+    response.body.pipe(res);
+  } else {
+    res.end();
   }
-
-  return res.end();
 }

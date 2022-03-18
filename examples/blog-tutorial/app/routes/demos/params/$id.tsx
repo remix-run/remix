@@ -1,4 +1,4 @@
-import { useCatch, Link, json, useLoaderData } from "remix";
+import { json, useCatch, useLoaderData } from "remix";
 import type { LoaderFunction, MetaFunction } from "remix";
 
 // The `$` in route filenames becomes a pattern that's parsed from the URL and
@@ -34,7 +34,7 @@ export const loader: LoaderFunction = async ({ params }) => {
   // but otherwise the record was found, user has access, so we can do whatever
   // else we needed to in the loader and return the data. (This is boring, we're
   // just gonna return the params.id).
-  return { param: params.id };
+  return json({ param: params.id });
 };
 
 export default function ParamDemo() {
@@ -61,10 +61,12 @@ export function CatchBoundary() {
           Maybe ask the webmaster ({caught.data.webmasterEmail}) for access.
         </p>
       );
+      break;
     case 404:
       message = (
         <p>Looks like you tried to visit a page that does not exist.</p>
       );
+      break;
     default:
       message = (
         <p>
@@ -105,6 +107,6 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export const meta: MetaFunction = ({ data }) => {
   return {
-    title: data ? `Param: ${data.param}` : "Oops..."
+    title: data ? `Param: ${data.param}` : "Oops...",
   };
 };

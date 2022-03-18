@@ -19,12 +19,13 @@ The Remix compiler will automatically remove server code from the browser bundle
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
-export function loader() {
-  return prisma.post.findMany();
+export async function loader() {
+  return json(await prisma.post.findMany());
 }
 
 export function meta() {
@@ -49,6 +50,7 @@ The compiler will now analyze the code in `routes/posts.tsx` and only keep code 
 
 ```tsx
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 
 export function meta() {
@@ -73,15 +75,16 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
-```tsx bad lines=5
-import { useLoaderData } from "remix";
+```tsx bad lines=[6]
+import { json, useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
 console.log(prisma);
 
-export function loader() {
-  return prisma.post.findMany();
+export async function loader() {
+  return json(await prisma.post.findMany());
 }
 
 export function meta() {
@@ -96,8 +99,9 @@ export default function Posts() {
 
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
-```tsx bad lines=3,5
+```tsx bad lines=[4,6]
 import { useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
 
@@ -117,14 +121,15 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
-```tsx [6]
-import { useLoaderData } from "remix";
+```tsx lines=[7]
+import { json, useLoaderData } from "remix";
+
 import PostsView from "../PostsView";
 import { prisma } from "../db";
 
-export function loader() {
+export async function loader() {
   console.log(prisma);
-  return prisma.post.findMany();
+  return json(await prisma.post.findMany());
 }
 
 export function meta() {
@@ -154,7 +159,7 @@ export function removeTrailingSlash(loader) {
     const url = new URL(request.url);
     if (url.pathname.endsWith("/")) {
       return redirect(request.url.slice(0, -1), {
-        status: 308
+        status: 308,
       });
     }
     return loader(arg);
@@ -182,7 +187,7 @@ import { redirect } from "remix";
 export function removeTrailingSlash(url) {
   if (url.pathname.endsWith("/")) {
     throw redirect(request.url.slice(0, -1), {
-      status: 308
+      status: 308,
     });
   }
 }
@@ -191,11 +196,13 @@ export function removeTrailingSlash(url) {
 And then use it like this:
 
 ```js bad filename=app/root.js
+import { json } from "remix";
+
 import { removeTrailingSlash } from "~/http";
 
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
-  return { some: "data" };
+  return json({ some: "data" });
 };
 ```
 
@@ -203,18 +210,20 @@ It reads much nicer as well when you've got a lot of these:
 
 ```ts
 // this
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   return removeTrailingSlash(request.url, () => {
-    return withSession(request, session => {
-      return requireUser(session, user => {
+    return withSession(request, (session) => {
+      return requireUser(session, (user) => {
         return json(user);
       });
     });
   });
 };
+```
 
+```ts
 // vs. this
-export const loader = ({ request }) => {
+export const loader = async ({ request }) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);
@@ -246,15 +255,15 @@ export async function redirectToStripeCheckout(sessionId) {
 
 The most common scenario is initializing a third party API when your module is imported. There are a couple ways to easily deal with this.
 
-#### Window Guard
+#### Document Guard
 
-This ensures the library is only initialized if there is a `window`, meaning you're in the browser.
+This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recomend `document` over `window` because server runtimes like Deno has a global `window` available.
 
 ```js [3]
 import firebase from "firebase/app";
 
-if (typeof window !== "undefined") {
-  firebase.initializeApp(window.ENV.firebase);
+if (typeof document !== "undefined") {
+  firebase.initializeApp(document.ENV.firebase);
 }
 
 export { firebase };
@@ -306,7 +315,7 @@ function useLocalStorage(key) {
     localStorage.getItem(key)
   );
 
-  const setWithLocalStorage = nextState => {
+  const setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 
@@ -322,9 +331,9 @@ function useLocalStorage(key) {
 
   useEffect(() => {
     setState(localStorage.getItem(key));
-  }, []);
+  }, [key]);
 
-  const setWithLocalStorage = nextState => {
+  const setWithLocalStorage = (nextState) => {
     setState(nextState);
   };
 

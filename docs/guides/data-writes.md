@@ -110,7 +110,7 @@ The data is made available to the server's request handler so you can create the
 export async function action({ request }) {
   const body = await request.formData();
   const project = await createProject(body);
-  redirect(`/projects/${project.id}`);
+  return redirect(`/projects/${project.id}`);
 }
 ```
 
@@ -120,7 +120,7 @@ If you're newer to web development, you may not have ever used a form this way. 
 
 ```js
 <form
-  onSubmit={event => {
+  onSubmit={(event) => {
     event.preventDefault();
     // good luck!
   }}
@@ -175,13 +175,13 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx [5-9]
+```tsx [5-11]
 import type { ActionFunction } from "remix";
 import { redirect } from "remix";
 
 // Note the "action" export name, this will handle our form POST
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
   const project = await createProject(formData);
@@ -199,28 +199,28 @@ Of course, we started complicating things to try to create better user experienc
 
 ### Form Validation
 
-It's common to validate forms both client-side and server-side. It's also (unfortunately) common to only validate client-side, which leads to various issues with your data that we don't have time to get into right now. Point is, if your validating in only one place, do it on the server. You find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
+It's common to validate forms both client-side and server-side. It's also (unfortunately) common to only validate client-side, which leads to various issues with your data that we don't have time to get into right now. Point is, if you're validating in only one place, do it on the server. You'll find with Remix that's the only place you care to anymore (the less you send to the browser the better!).
 
 We know, we know, you want to animate in nice validation errors and stuff. We'll get to that. But right now we're just building a basic HTML form and user flow. We'll keep it simple first, then make it fancy.
 
 Back in our action, maybe we have an API that returns validation errors like this.
 
 ```tsx
-const [errors, project] = await createProject(newProject);
+const [errors, project] = await createProject(formData);
 ```
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx [3,5-8]
+```tsx [5,7-10]
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
   if (errors) {
-    const values = Object.fromEntries(newProject);
-    return { errors, values };
+    const values = Object.fromEntries(formData);
+    return json({ errors, values });
   }
 
   return redirect(`/projects/${project.id}`);
@@ -229,11 +229,11 @@ export const action: ActionFunction = async ({
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx [1,8,18,23-27,35,40-44]
+```tsx [1,10,20,25-29,37,42-46]
 import { redirect, useActionData } from "remix";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
 };
@@ -254,11 +254,11 @@ export default function NewProject() {
         </label>
       </p>
 
-      {actionData?.errors.name && (
+      {actionData?.errors.name ? (
         <p style={{ color: "red" }}>
           {actionData.errors.name}
         </p>
-      )}
+      ) : null}
 
       <p>
         <label>
@@ -271,11 +271,11 @@ export default function NewProject() {
         </label>
       </p>
 
-      {actionData?.errors.description && (
+      {actionData?.errors.description ? (
         <p style={{ color: "red" }}>
           {actionData.errors.description}
         </p>
-      )}
+      ) : null}
 
       <p>
         <button type="submit">Create</button>
@@ -321,7 +321,7 @@ import {
   redirect,
   useActionData,
   Form,
-  useTransition
+  useTransition,
 } from "remix";
 
 // ...
@@ -352,11 +352,11 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData && actionData.errors.name && (
+        {actionData && actionData.errors.name ? (
           <p style={{ color: "red" }}>
             {actionData.errors.name}
           </p>
-        )}
+        ) : null}
 
         <p>
           <label>
@@ -373,11 +373,11 @@ export default function NewProject() {
           </label>
         </p>
 
-        {actionData && actionData.errors.description && (
+        {actionData && actionData.errors.description ? (
           <p style={{ color: "red" }}>
             {actionData.errors.description}
           </p>
-        )}
+        ) : null}
 
         <p>
           <button type="submit">
@@ -418,7 +418,7 @@ function ValidationMessage({ error, isSubmitting }) {
         opacity: show ? 1 : 0,
         height: show ? "1em" : 0,
         color: "red",
-        transition: "all 300ms ease-in-out"
+        transition: "all 300ms ease-in-out",
       }}
     >
       {error}
@@ -429,7 +429,7 @@ function ValidationMessage({ error, isSubmitting }) {
 
 Now we can wrap our old error messages in this new fancy component, and even turn the borders of our fields red that have errors:
 
-```tsx [21-24, 31-34, 48-51, 57-60]
+```tsx [21-24, 31-34, 44-48, 53-56]
 export default function NewProject() {
   const transition = useTransition();
   const actionData = useActionData();
@@ -453,18 +453,18 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.name
                   ? "red"
-                  : ""
+                  : "",
               }}
             />
           </label>
         </p>
 
-        {actionData?.errors.name && (
+        {actionData?.errors.name ? (
           <ValidationMessage
             isSubmitting={transition.state === "submitting"}
             error={actionData?.errors?.name}
           />
-        )}
+        ) : null}
 
         <p>
           <label>
@@ -476,7 +476,7 @@ export default function NewProject() {
               style={{
                 borderColor: actionData?.errors.description
                   ? "red"
-                  : ""
+                  : "",
               }}
             />
           </label>

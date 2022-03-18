@@ -5,6 +5,32 @@ const { createRequestHandler } = require("@remix-run/express");
 
 const port = process.env.PORT || 3000;
 
+if (process.env.NODE_ENV === "test") {
+  class MockConsole {
+    assert() {}
+    clear() {}
+    count() {}
+    countReset() {}
+    debug() {}
+    dir() {}
+    dirxml() {}
+    error() {}
+    group() {}
+    groupCollapsed() {}
+    groupEnd() {}
+    info() {}
+    log() {}
+    table() {}
+    time() {}
+    timeEnd() {}
+    timeLog() {}
+    timeStamp() {}
+    trace() {}
+    warn() {}
+  }
+  global.console = new MockConsole();
+}
+
 let app = express();
 
 app.use(compression());
@@ -12,7 +38,7 @@ app.use(compression());
 app.use(
   express.static("public", {
     // maxAge: process.env.NODE_ENV === "production" ? "1y" : undefined
-    maxAge: "1y"
+    maxAge: "1y",
   })
 );
 
@@ -32,10 +58,10 @@ if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
 app.all(
   "*",
   createRequestHandler({
-    build: require("./build"),
+    build: require("@remix-run/dev/server-build"),
     getLoadContext() {
       return { userId: 4 };
-    }
+    },
   })
 );
 

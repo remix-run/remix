@@ -76,7 +76,7 @@ When you `import` a `.mdx` file, the exports of the module are:
 ```tsx
 import Component, {
   attributes,
-  filename
+  filename,
 } from "./first-post.mdx";
 ```
 
@@ -87,8 +87,7 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { useLoaderData } from "remix";
-import { Link } from "react-router-dom";
+import { json, Link, useLoaderData } from "remix";
 
 // Import all your posts from the app/routes/posts directory. Since these are
 // regular route modules, they will all be available for individual viewing
@@ -100,20 +99,20 @@ import * as postC from "./posts/c.md";
 function postFromModule(mod) {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
-    ...mod.attributes.meta
+    ...mod.attributes.meta,
   };
 }
 
-export function loader() {
+export async function loader() {
   // Return metadata about each of the posts for display on the index page.
   // Referencing the posts here instead of in the Index component down below
   // lets us avoid bundling the actual posts themselves in the bundle for the
   // index page.
-  return [
+  return json([
     postFromModule(postA),
     postFromModule(postB),
-    postFromModule(postC)
-  ];
+    postFromModule(postC),
+  ]);
 }
 
 export default function Index() {
@@ -121,10 +120,12 @@ export default function Index() {
 
   return (
     <ul>
-      {posts.map(post => (
+      {posts.map((post) => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
-          {post.description && <p>{post.description}</p>}
+          {post.description ? (
+            <p>{post.description}</p>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -140,19 +141,19 @@ If you wish to configure your own remark plugins you can do so through the `remi
 
 ```js
 const {
-  remarkMdxFrontmatter
+  remarkMdxFrontmatter,
 } = require("remark-mdx-frontmatter");
 
 // can be an sync / async function or an object
-exports.mdx = async filename => {
+exports.mdx = async (filename) => {
   const [rehypeHighlight, remarkToc] = await Promise.all([
-    import("rehype-highlight").then(mod => mod.default),
-    import("remark-toc").then(mod => mod.default)
+    import("rehype-highlight").then((mod) => mod.default),
+    import("remark-toc").then((mod) => mod.default),
   ]);
 
   return {
     remarkPlugins: [remarkToc],
-    rehypePlugins: [rehypeHighlight]
+    rehypePlugins: [rehypeHighlight],
   };
 };
 ```

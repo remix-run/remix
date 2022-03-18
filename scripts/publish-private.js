@@ -29,6 +29,7 @@ async function run() {
   for (let name of [
     "dev",
     "server-runtime", // publish before platforms
+    "cloudflare-pages",
     "cloudflare-workers",
     "node", // publish node before node servers
     "architect",
@@ -36,10 +37,10 @@ async function run() {
     "vercel",
     "netlify",
     "react",
-    "serve"
+    "serve",
   ]) {
     // fix for https://github.com/remix-run/remix/actions/runs/1500713248
-    await updatePackageConfig(name, config => {
+    await updatePackageConfig(name, (config) => {
       config.repository = "https://github.com/remix-run/packages";
     });
     publish(path.join(buildDir, "@remix-run", name), tag);
@@ -50,7 +51,7 @@ run().then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(error);
     process.exit(1);
   }

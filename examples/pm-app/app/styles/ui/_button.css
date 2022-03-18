@@ -1,0 +1,128 @@
+.ui--button {
+  --border-color: transparent;
+  --border-color-hover: var(--border-color);
+  --background-color: transparent;
+  --background-color-hover: var(--background-color);
+  --background-stop: var(--background-color);
+  --background-stop-hover: var(--background-color-hover);
+  --text-color: inherit;
+  --text-color-hover: var(--text-color);
+  --focus-ring-alpha: 70%;
+  --focus-ring-base: var(--hsl-blue-09);
+  --focus-ring-color: hsl(var(--focus-ring-base) / var(--focus-ring-alpha));
+  --font-size: var(--font-sizes-md);
+  --text-shadow-hsl: var(--hsl-black);
+  position: relative;
+  display: inline-flex;
+  appearance: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--fonts-sans);
+  font-weight: bold;
+  font-size: var(--font-size);
+  line-height: 1;
+  text-decoration: none;
+  padding: var(--spaces-03) var(--spaces-04);
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--border-color);
+  background-color: var(--background-color);
+  background-image: linear-gradient(
+    to bottom,
+    var(--background-color),
+    var(--background-stop)
+  );
+  color: var(--text-color);
+  outline-offset: 1px;
+  border-radius: 4px;
+  text-shadow: 0 1px 1px hsl(var(--text-shadow-hsl) / 70%);
+  transition: background-color 90ms ease-out;
+}
+
+.ui--button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transition: opacity 90ms ease-out;
+  opacity: 0;
+  background-image: linear-gradient(
+    to bottom,
+    var(--background-color-hover),
+    var(--background-stop-hover)
+  );
+}
+
+.ui--button:hover::before {
+  opacity: 0.6;
+}
+
+.ui--button:focus {
+  outline: 2px solid var(--focus-ring-color);
+}
+
+.ui--button:hover {
+  background-color: var(--background-color-hover);
+  border-color: var(--border-color-hover);
+  color: var(--text-color-hover);
+}
+
+.ui--button--primary {
+  --border-color: var(--colors-blue-09);
+  --background-color: var(--colors-blue-09);
+  --background-stop: var(--colors-blue-11);
+  --border-color-hover: var(--colors-blue-10);
+  --background-color-hover: var(--colors-blue-08);
+  --background-stop-hover: var(--colors-blue-11);
+  --text-color: var(--colors-white);
+}
+
+.ui--button--secondary {
+  --border-color: var(--colors-green-09);
+  --background-color: var(--colors-green-09);
+  --background-stop: var(--colors-green-11);
+  --border-color-hover: var(--colors-green-10);
+  --background-color-hover: var(--colors-green-10);
+  --background-stop-hover: var(--colors-green-12);
+  --text-color: var(--colors-white);
+  --focus-ring-base: var(--hsl-green-09);
+}
+
+.ui--button--danger {
+  --border-color: var(--colors-red-09);
+  --background-color: var(--colors-red-09);
+  --background-stop: var(--colors-red-11);
+  --border-color-hover: var(--colors-red-10);
+  --background-color-hover: var(--colors-red-10);
+  --background-stop-hover: var(--colors-red-12);
+  --text-color: var(--colors-white);
+  --focus-ring-base: var(--hsl-red-09);
+}
+
+.ui--button--size-small {
+  --font-size: var(--font-sizes-sm);
+}
+
+.ui--button--size-base {
+  --font-size: var(--font-sizes-md);
+}
+
+.ui--button--size-large {
+  --font-size: var(--font-sizes-lg);
+}
+
+.ui--button--disabled {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.ui--button--rounded {
+  border-radius: 9999px;
+}
+
+.ui--button__inner {
+  position: relative;
+}

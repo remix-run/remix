@@ -7,13 +7,19 @@ let STORAGE_KEY = "positions";
 
 let positions: { [key: string]: number } = {};
 
-if (typeof window !== "undefined") {
+if (typeof document !== "undefined") {
   let sessionPositions = sessionStorage.getItem(STORAGE_KEY);
   if (sessionPositions) {
     positions = JSON.parse(sessionPositions);
   }
 }
 
+/**
+ * This component will emulate the browser's scroll restoration on location
+ * changes.
+ *
+ * @see https://remix.run/api/remix#scrollrestoration
+ */
 export function ScrollRestoration() {
   useScrollRestoration();
 
@@ -29,25 +35,28 @@ export function ScrollRestoration() {
     }, [])
   );
 
+  let restoreScroll = ((STORAGE_KEY: string) => {
+    if (!window.history.state || !window.history.state.key) {
+      let key = Math.random().toString(32).slice(2);
+      window.history.replaceState({ key }, "");
+    }
+    try {
+      let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}");
+      let storedY = positions[window.history.state.key];
+      if (typeof storedY === "number") {
+        window.scrollTo(0, storedY);
+      }
+    } catch (error) {
+      console.error(error);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }).toString();
+
   return (
     <script
+      suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `
-          let STORAGE_KEY = ${JSON.stringify(STORAGE_KEY)};
-          if (!window.history.state || !window.history.state.key) {
-            window.history.replaceState({ key: Math.random().toString(32).slice(2) }, null);
-          }
-          try {
-            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}')
-            let storedY = positions[window.history.state.key];
-            if (typeof storedY === 'number') {
-              window.scrollTo(0, storedY)
-            }
-          } catch(error) {
-            console.error(error)
-            sessionStorage.removeItem(STORAGE_KEY)
-          }
-        `
+        __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`,
       }}
     />
   );
@@ -79,7 +88,7 @@ function useScrollRestoration() {
     }, [])
   );
 
-  if (typeof window !== "undefined") {
+  if (typeof document !== "undefined") {
     // eslint-disable-next-line
     React.useLayoutEffect(() => {
       // don't do anything on hydration, the component already did this with an
@@ -92,14 +101,14 @@ function useScrollRestoration() {
       let y = positions[location.key];
 
       // been here before, scroll to it
-      if (y) {
+      if (y != undefined) {
         window.scrollTo(0, y);
         return;
       }
 
       // try to scroll to the hash
       if (location.hash) {
-        let el = document.querySelector(location.hash);
+        let el = document.getElementById(location.hash.slice(1));
         if (el) {
           el.scrollIntoView();
           return;

@@ -1,19 +1,27 @@
+import {
+  // This has been added as a global in node 15+
+  AbortController,
+  Headers as NodeHeaders,
+  Request as NodeRequest,
+} from "@remix-run/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
+  Handler,
+  HandlerEvent,
+  HandlerContext,
+  HandlerResponse,
+} from "@netlify/functions";
+import type {
   Response as NodeResponse,
-  RequestInit as NodeRequestInit
+  RequestInit as NodeRequestInit,
 } from "@remix-run/node";
-import {
-  formatServerError,
-  Headers as NodeHeaders,
-  Request as NodeRequest
-} from "@remix-run/node";
-import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+
+import { isBinaryType } from "./binary-types";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -31,17 +39,18 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: AppLoadContext;
   mode?: string;
 }): Handler {
-  let platform: ServerPlatform = { formatServerError };
+  let platform: ServerPlatform = {};
   let handleRequest = createRemixRequestHandler(build, platform, mode);
 
   return async (event, context) => {
-    let request = createRemixRequest(event);
+    let abortController = new AbortController();
+    let request = createRemixRequest(event, abortController);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(event, context)
@@ -52,15 +61,14 @@ export function createRequestHandler({
       loadContext
     )) as unknown as NodeResponse;
 
-    return {
-      statusCode: response.status,
-      multiValueHeaders: response.headers.raw(),
-      body: await response.text()
-    };
+    return sendRemixResponse(response, abortController);
   };
 }
 
-export function createRemixRequest(event: HandlerEvent): NodeRequest {
+export function createRemixRequest(
+  event: HandlerEvent,
+  abortController?: AbortController
+): NodeRequest {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -73,7 +81,9 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
 
   let init: NodeRequestInit = {
     method: event.httpMethod,
-    headers: createRemixHeaders(event.multiValueHeaders)
+    headers: createRemixHeaders(event.multiValueHeaders),
+    abortController,
+    signal: abortController?.signal,
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -82,7 +92,7 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
       : event.body;
   }
 
-  return new NodeRequest(url.toString(), init);
+  return new NodeRequest(url.href, init);
 }
 
 export function createRemixHeaders(
@@ -90,9 +100,9 @@ export function createRemixHeaders(
 ): NodeHeaders {
   let headers = new NodeHeaders();
 
-  for (const [key, values] of Object.entries(requestHeaders)) {
+  for (let [key, values] of Object.entries(requestHeaders)) {
     if (values) {
-      for (const value of values) {
+      for (let value of values) {
         headers.append(key, value);
       }
     }
@@ -124,4 +134,33 @@ function getRawPath(event: HandlerEvent): string {
   if (rawParams) rawPath += `?${rawParams}`;
 
   return rawPath;
+}
+
+export async function sendRemixResponse(
+  response: NodeResponse,
+  abortController: AbortController
+): Promise<HandlerResponse> {
+  if (abortController.signal.aborted) {
+    response.headers.set("Connection", "close");
+  }
+
+  let contentType = response.headers.get("content-type");
+  let isBinary = isBinaryType(contentType);
+  let body;
+  let isBase64Encoded = false;
+
+  if (isBinary) {
+    let blob = await response.arrayBuffer();
+    body = Buffer.from(blob).toString("base64");
+    isBase64Encoded = true;
+  } else {
+    body = await response.text();
+  }
+
+  return {
+    statusCode: response.status,
+    multiValueHeaders: response.headers.raw(),
+    body,
+    isBase64Encoded,
+  };
 }

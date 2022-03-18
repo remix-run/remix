@@ -1,0 +1,129 @@
+:root {
+  --reach-menu-button: 1;
+}
+
+.ui--dropdown-menu {
+  position: relative;
+}
+
+.ui--dropdown-menu__options-button {
+  --options-button-size: 1.5rem;
+  padding: var(--spaces-01);
+  border-radius: 9999px;
+  outline-offset: calc(var(--spaces-01) * -1 + 2px);
+  color: var(--colors-gray-12);
+}
+
+.ui--dropdown-menu__options-button--size-8 {
+  --options-button-size: 2rem;
+}
+
+.ui--dropdown-menu__options-button--size-10 {
+  --options-button-size: 2.5rem;
+}
+
+.ui--dropdown-menu__options-button__inner {
+  padding: 0;
+  width: var(--options-button-size);
+  height: var(--options-button-size);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+}
+
+.ui--dropdown-menu__options-button__inner svg {
+  fill: currentColor;
+}
+
+.ui--dropdown-menu__popover {
+  --popover-gutter: var(--spaces-04);
+  --popover-width: 200px;
+
+  display: block;
+  position: absolute;
+  border: 1px solid var(--colors-gray-09);
+  background: var(--colors-gray-02);
+  font-size: var(--font-sizes-md);
+  z-index: 10;
+  border-radius: 4px;
+  overflow: hidden;
+  overflow-y: auto;
+  max-width: var(--popover-width);
+  width: calc(100vw - var(--popover-gutter) * 2);
+
+  /* max-height: calc(((var(--spaces-01) * 2) + var(--spaces-06)) * 6); */
+}
+
+.ui--dropdown-menu__popover:focus-within {
+  outline: 2px solid var(--colors-blue-08);
+  outline-offset: 0;
+}
+
+.ui--dropdown-menu__popover[hidden] {
+  display: none;
+}
+
+.ui--dropdown-menu__list {
+  display: block;
+  white-space: nowrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  outline: none;
+}
+
+.ui--dropdown-menu__item {
+  display: flex;
+  font-family: var(--fonts-sans);
+  cursor: pointer;
+  align-items: center;
+  padding: 0 var(--spaces-03);
+  height: calc((var(--spaces-01) * 2) + var(--spaces-06));
+  background-color: var(--colors-gray-02);
+  user-select: none;
+
+  /* a */
+  color: var(--colors-black);
+  font: inherit;
+  text-decoration: initial;
+}
+
+.ui--dropdown-menu__item:where([data-selected]) {
+  background: var(--colors-blue-05);
+  outline: none;
+}
+
+.ui--dropdown-menu__item:hover {
+  background: var(--colors-blue-10);
+  color: var(--colors-white);
+}
+
+.ui--dropdown-menu__item--danger {
+  color: var(--colors-red-10);
+  font-weight: bold;
+}
+
+.ui--dropdown-menu__item--danger:hover {
+  background: var(--colors-red-11);
+  color: var(--colors-white);
+}
+
+.ui--dropdown-menu__item--danger:where([data-selected]) {
+  background: var(--colors-red-04);
+}
+
+.ui--dropdown-menu__item[aria-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/**
+ * Dropdown items with forms shouldn't affect the layout of its content, which
+ * is generally just a button that submits an action.
+ */
+.ui--dropdown-menu__item > form {
+  display: contents;
+}

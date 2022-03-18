@@ -1,6 +1,6 @@
 import { Form, json } from "remix";
 
-export function action() {
+export async function action() {
   throw json("action catch data!", { status: 401 });
 }
 
