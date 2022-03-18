@@ -5,13 +5,13 @@ describe("rendering", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  const PAGE = "page";
-  const PAGE_TEXT = "PAGE_TEXT";
-  const PAGE_INDEX_TEXT = "PAGE_INDEX_TEXT";
-  const CHILD = "child";
-  const CHILD_TEXT = "CHILD_TEXT";
-  const REDIRECT = "redirect";
-  const REDIRECT_TARGET = "page";
+  let PAGE = "page";
+  let PAGE_TEXT = "PAGE_TEXT";
+  let PAGE_INDEX_TEXT = "PAGE_INDEX_TEXT";
+  let CHILD = "child";
+  let CHILD_TEXT = "CHILD_TEXT";
+  let REDIRECT = "redirect";
+  let REDIRECT_TARGET = "page";
 
   beforeAll(async () => {
     fixture = await createFixture({
@@ -124,15 +124,15 @@ describe("rendering", () => {
                 <span>{fetcher.state}</span>
                 <fetcher.Form method="post">
                   <input type="hidden" name="source" value="fetcher" />
-                  <button type="submit" name="_action" value="add">
+                  <button type="submit" name="action" value="add">
                     Submit
                   </button>
                 </fetcher.Form>
               </div>
             );
           }
-        `
-      }
+        `,
+      },
     });
 
     app = await createAppFixture(fixture);
@@ -148,7 +148,7 @@ describe("rendering", () => {
     await app.clickLink(`/${PAGE}`);
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");
@@ -162,7 +162,7 @@ describe("rendering", () => {
     await app.clickLink(`/${PAGE}/${CHILD}`);
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/${CHILD}`]);
 
     let html = await app.getHtml("main");
@@ -178,7 +178,7 @@ describe("rendering", () => {
     expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");
@@ -194,7 +194,7 @@ describe("rendering", () => {
     await app.goBack();
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");

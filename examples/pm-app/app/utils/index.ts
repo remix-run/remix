@@ -10,19 +10,18 @@ export function getUserDisplayName(user: {
 export function getUserFromDisplayName<
   U extends { nameFirst: string; nameLast?: string | null }
 >(users: Array<U>, displayName: string) {
-  return users.find(u => getUserDisplayName(u) === displayName);
+  return users.find((u) => getUserDisplayName(u) === displayName);
 }
 
 export const canUseDOM: boolean = !!(
-  typeof window !== "undefined" &&
-  typeof window.document !== "undefined" &&
-  typeof window.document.createElement !== "undefined"
+  typeof document !== "undefined" &&
+  typeof document.createElement !== "undefined"
 );
 
 export function getClientSafeEnvVariable<
   K extends keyof RemoveIndex<Exclude<Window["ENV"], undefined>>
 >(key: K): Exclude<Window["ENV"], undefined>[K] {
-  if (typeof window !== "undefined") {
+  if (typeof document !== "undefined") {
     try {
       const ENV = window.ENV;
       if (!ENV) {
@@ -69,7 +68,7 @@ export function composeEventHandlers<
   theirHandler: ((event: EventType) => any) | undefined,
   ourHandler: (event: EventType) => any
 ): (event: EventType) => any {
-  return event => {
+  return (event) => {
     theirHandler && theirHandler(event);
     if (!event.defaultPrevented) {
       return ourHandler(event);

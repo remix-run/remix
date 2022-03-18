@@ -7,7 +7,7 @@ import {
   useActionData,
   useFetcher,
   useLoaderData,
-  useTransition
+  useTransition,
 } from "remix";
 import type { LoaderFunction, LinksFunction, MetaFunction } from "remix";
 import { Heading, Section } from "~/ui/section-heading";
@@ -23,7 +23,7 @@ import {
   DropdownMenuOptionsButton,
   DropdownMenuList,
   DropdownMenuItem,
-  DropdownMenuPopover
+  DropdownMenuPopover,
 } from "~/ui/dropdown-menu";
 import { Avatar } from "~/ui/avatar";
 import { Dialog, DialogCloseButton } from "~/ui/dialog";
@@ -32,7 +32,7 @@ import {
   MemberSearch,
   MemberSearchCombobox,
   MemberSearchHiddenField,
-  MemberSearchSelections
+  MemberSearchSelections,
 } from "~/ui/member-search";
 import { Button } from "~/ui/button";
 import { Note } from "~/ui/note";
@@ -47,19 +47,19 @@ export const meta: MetaFunction = ({ data }) => {
   return {
     title: `${
       data.project ? data.project.name?.trim() : "Project Overview"
-    } | PM Camp`
+    } | PM Camp`,
   };
 };
 
 export const loader: LoaderFunction = async ({ request, params }) => {
   const { passwordHash, ...user } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const projectId = params.projectId as string;
   const [project, allUsers] = await Promise.all([
     getProject(projectId),
-    getUsers()
+    getUsers(),
   ]);
 
   if (!project) {
@@ -79,7 +79,7 @@ export default function ProjectRoute() {
 
   // TODO: Move to loader
   const selectableUsers = React.useMemo(() => {
-    return allUsers.filter(u => u.id !== user.id);
+    return allUsers.filter((u) => u.id !== user.id);
   }, [allUsers, user.id]);
 
   // Ok, so there's a bit of data setup/manipulation here that is probably a bit
@@ -234,7 +234,7 @@ export default function ProjectRoute() {
             <Section as="div" className="project-index__todolists">
               {project.todoLists.length > 0 ? (
                 <React.Fragment>
-                  {project.todoLists.map(list => {
+                  {project.todoLists.map((list) => {
                     return (
                       <article
                         key={list.id}
@@ -450,7 +450,7 @@ function Layout({
   heading,
   description,
   memberList,
-  main
+  main,
 }: React.PropsWithChildren<{
   heading: React.ReactNode | string;
   optionsPanel?: React.ReactNode;

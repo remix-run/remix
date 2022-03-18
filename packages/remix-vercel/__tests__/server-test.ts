@@ -9,7 +9,7 @@ import { Readable } from "stream";
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
@@ -45,7 +45,7 @@ describe("vercel createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
@@ -74,7 +74,7 @@ describe("vercel createRequestHandler", () => {
     // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
     it("handles body as stream", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const stream = Readable.from("hello world");
+        let stream = Readable.from("hello world");
         return new NodeResponse(stream, { status: 200 }) as unknown as Response;
       });
 
@@ -100,7 +100,7 @@ describe("vercel createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
         headers.append(
           "Set-Cookie",
           "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
@@ -124,7 +124,7 @@ describe("vercel createRequestHandler", () => {
       expect(res.headers["set-cookie"]).toEqual([
         "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
         "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
       ]);
     });
   });
@@ -202,8 +202,8 @@ describe("vercel createRemixHeaders", () => {
         createRemixHeaders({
           "set-cookie": [
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
-          ]
+            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+          ],
         })
       ).toMatchInlineSnapshot(`
         Headers {
@@ -227,8 +227,8 @@ describe("vercel createRemixRequest", () => {
       headers: {
         "x-forwarded-host": "localhost:3000",
         "x-forwarded-proto": "http",
-        "Cache-Control": "max-age=300, s-maxage=3600"
-      }
+        "Cache-Control": "max-age=300, s-maxage=3600",
+      },
     }) as VercelRequest;
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`

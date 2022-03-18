@@ -28,8 +28,8 @@ Typically, you want to _do something_ with `name` and `age`, e.g. create a new u
 const user = await prisma.user.create({
   data: {
     name, // type error
-    age // type error
-  }
+    age, // type error
+  },
 });
 ```
 

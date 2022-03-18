@@ -11,8 +11,8 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
-    }
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css",
+    },
   ];
 }
 ```
@@ -189,7 +189,7 @@ Note that these are not routes, but they export `links` functions as if they wer
 import styles from "./styles.css";
 
 export const links = () => [
-  { rel: "stylesheet", href: styles }
+  { rel: "stylesheet", href: styles },
 ];
 
 export const Button = React.forwardRef(
@@ -197,6 +197,7 @@ export const Button = React.forwardRef(
     return <button {...props} ref={ref} data-button />;
   }
 );
+Button.displayName = "Button";
 ```
 
 And then a `<PrimaryButton>` that extends it:
@@ -214,7 +215,7 @@ import styles from "./styles.css";
 
 export const links = () => [
   ...buttonLinks(),
-  { rel: "stylesheet", href: styles }
+  { rel: "stylesheet", href: styles },
 ];
 
 export const PrimaryButton = React.forwardRef(
@@ -224,6 +225,7 @@ export const PrimaryButton = React.forwardRef(
     );
   }
 );
+PrimaryButton.displayName = "PrimaryButton";
 ```
 
 Note that the primary button's `links` include the base button's links. This way consumers of `<PrimaryButton>` don't need to know its dependencies (just like JavaScript imports).
@@ -236,13 +238,13 @@ Consider that `routes/index.js` uses the primary button component:
 import styles from "~/styles/index.css";
 import {
   PrimaryButton,
-  links as primaryButtonLinks
+  links as primaryButtonLinks,
 } from "~/components/primary-button";
 
 export function links() {
   return [
     ...primaryButtonLinks(),
-    { rel: "stylesheet", href: styles }
+    { rel: "stylesheet", href: styles },
   ];
 }
 ```
@@ -251,7 +253,9 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.js lines=[1-4,19-26]
+```tsx filename=app/routes/$category.js lines=[3-6,23-30]
+import { json, useLoaderData } from "remix";
+
 import { TileGrid } from "~/components/tile-grid";
 import { ProductTile } from "~/components/product-tile";
 import { ProductDetails } from "~/components/product-details";
@@ -263,14 +267,16 @@ export function links() {
 }
 
 export async function loader({ params }) {
-  return getProductsForCategory(params.category);
+  return json(
+    await getProductsForCategory(params.category)
+  );
 }
 
 export default function Category() {
   const products = useLoaderData();
   return (
     <TileGrid>
-      {products.map(product => (
+      {products.map((product) => (
         <ProductTile key={product.id}>
           <ProductDetails product={product} />
           <AddFavoriteButton id={product.id} />
@@ -286,19 +292,19 @@ The component imports are already there, we just need to surface the assets:
 ```js filename=app/routes/$category.js lines=[3,7,11,15,22-25]
 import {
   TileGrid,
-  links as tileGridLinks
+  links as tileGridLinks,
 } from "~/components/tile-grid";
 import {
   ProductTile,
-  links as productTileLinks
+  links as productTileLinks,
 } from "~/components/product-tile";
 import {
   ProductDetails,
-  links as productDetailsLinks
+  links as productDetailsLinks,
 } from "~/components/product-details";
 import {
   AddFavoriteButton,
-  links as addFavoriteLinks
+  links as addFavoriteLinks,
 } from "~/components/add-favorite-button";
 import styles from "~/styles/$category.css";
 
@@ -308,7 +314,7 @@ export function links() {
     ...productTileLinks(),
     ...productDetailsLinks(),
     ...addFavoriteLinks(),
-    { rel: "stylesheet", href: styles }
+    { rel: "stylesheet", href: styles },
   ];
 }
 
@@ -343,9 +349,9 @@ export const links = () => [
     rel: "preload",
     href: "/icons/clipboard.svg",
     as: "image",
-    type: "image/svg+xml"
+    type: "image/svg+xml",
   },
-  { rel: "stylesheet", href: styles }
+  { rel: "stylesheet", href: styles },
 ];
 
 export const CopyToClipboard = React.forwardRef(
@@ -355,6 +361,7 @@ export const CopyToClipboard = React.forwardRef(
     );
   }
 );
+CopyToClipboard.displayName = "CopyToClipboard";
 ```
 
 Not only will this make the asset high priority in the network tab, but Remix will turn that `preload` into a `prefetch` when you link to the page with [`<Link prefetch>`][link], so the SVG background is prefetched, in parallel, with the next route's data, modules, stylesheets, and any other preloads.
@@ -368,62 +375,70 @@ export function links() {
   return [
     {
       rel: "stylesheet",
-      href: mainStyles
+      href: mainStyles,
     },
     {
       rel: "stylesheet",
       href: largeStyles,
-      media: "(min-width: 1024px)"
+      media: "(min-width: 1024px)",
     },
     {
       rel: "stylesheet",
       href: xlStyles,
-      media: "(min-width: 1280px)"
+      media: "(min-width: 1280px)",
     },
     {
       rel: "stylesheet",
       href: darkStyles,
-      media: "(prefers-color-scheme: dark)"
-    }
+      media: "(prefers-color-scheme: dark)",
+    },
   ];
 }
 ```
 
-## Tailwind
+## Tailwind CSS
 
-Perhaps the most popular way to style a Remix application in the community is to use tailwind. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+Perhaps the most popular way to style a Remix application in the community is to use Tailwind CSS. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
 First install a couple dev dependencies:
 
 ```sh
-npm add -D concurrently tailwindcss
+npm install -D npm-run-all tailwindcss
 ```
 
-Initialize a tailwind config so we can tell it which files to generate classes from.
+Secondly, initialize a Tailwind config file:
 
-```js filename=tailwind.config.js lines=[2,3]
+```sh
+npx tailwindcss init
+```
+
+Now we can tell it which files to generate classes from:
+
+```js filename=tailwind.config.js lines=[2]
 module.exports = {
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
-    extend: {}
+    extend: {},
   },
-  variants: {},
-  plugins: []
+  plugins: [],
 };
 ```
 
-Update the package scripts to generate the tailwind file during dev and for the production build
+Update the package scripts to generate the Tailwind file during dev and for the production build
 
-```json filename="package.json lines=[4-7]
+```json filename=package.json lines=[4-10]
 {
   // ...
   "scripts": {
-    "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -o ./app/tailwind.css",
-    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
-    "dev:css": "tailwindcss -o ./app/tailwind.css --watch",
+    "build": "run-s build:*",
+    "build:css": "npm run generate:css -- --minify",
+    "build:remix": "cross-env NODE_ENV=production remix build",
+    "dev": "run-p dev:*",
+    "dev:css": "npm run generate:css -- --watch",
+    "dev:remix": "cross-env NODE_ENV=development remix dev",
+    "generate:css": "npx tailwindcss -o ./app/tailwind.css",
     "postinstall": "remix setup node",
-    "start": "remix-serve build"
+    "start": "cross-env NODE_ENV=production remix-serve build"
   }
   // ...
 }
@@ -435,9 +450,9 @@ Finally, import the generated CSS file into your app:
 // ...
 import styles from "./tailwind.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
@@ -454,34 +469,40 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 }
 ```
 
-Then alter how tailwind is generating css:
+Then alter how Tailwind is generating your css:
 
-```json filename=package.json lines=[4-7]
+```json filename=package.json lines=[10]
 {
   // ...
   "scripts": {
-    "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --minify",
-    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
-    "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
+    "build": "run-s build:*",
+    "build:css": "npm run generate:css -- --minify",
+    "build:remix": "cross-env NODE_ENV=production remix build",
+    "dev": "run-p dev:*",
+    "dev:css": "npm run generate:css -- --watch",
+    "dev:remix": "cross-env NODE_ENV=development remix dev",
+    "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
     "postinstall": "remix setup node",
-    "start": "remix-serve build"
+    "start": "cross-env NODE_ENV=production remix-serve build"
   }
   // ...
 }
 ```
 
-This isn't required, but it's recommended to add the generated file to your gitignore list:
+It isn't required, but it's recommended to add the generated file to your `.gitignore` list:
 
-```sh lines=[5] filename=.gitignore
+```sh filename=.gitignore lines=[8]
 node_modules
+
 /.cache
 /build
 /public/build
+.env
+
 /app/tailwind.css
 ```
 
-If you're using VSCode, it's recommended you install the [tailwind intellisense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
+If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
 
 ## Remote Stylesheets
 
@@ -494,8 +515,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css"
-    }
+      href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css",
+    },
   ];
 };
 ```
@@ -521,8 +542,8 @@ Here's how to set it up:
    ```js filename=postcss.config.js
    module.exports = {
      plugins: {
-       autoprefixer: {}
-     }
+       autoprefixer: {},
+     },
    };
    ```
 
@@ -615,7 +636,7 @@ An example using SASS.
 npm add -D sass
 ```
 
-2. Add an npm script to your `package.json`'s `script` section' that uses the installed too to generate CSS files.
+2. Add an npm script to your `package.json`'s `script` section' that uses the installed tool to generate CSS files.
 
 ```json filename="package.json"
 {
@@ -664,25 +685,26 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
-   ```tsx filename=app/root.tsx lines=[21-23]
+   ```tsx filename=app/root.tsx lines=[22-24]
+   import type { MetaFunction } from "remix";
    import {
      Links,
      LiveReload,
      Meta,
      Outlet,
      Scripts,
-     ScrollRestoration
+     ScrollRestoration,
    } from "remix";
+
+   export const meta: MetaFunction = () => ({
+     charset: "utf-8",
+     viewport: "width=device-width,initial-scale=1",
+   });
 
    export default function App() {
      return (
        <html lang="en">
          <head>
-           <meta charSet="utf-8" />
-           <meta
-             name="viewport"
-             content="width=device-width,initial-scale=1"
-           />
            <Meta />
            <Links />
            {typeof document === "undefined"
@@ -693,9 +715,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
            <Outlet />
            <ScrollRestoration />
            <Scripts />
-           {process.env.NODE_ENV === "development" ? (
-             <LiveReload />
-           ) : null}
+           <LiveReload />
          </body>
        </html>
      );
@@ -733,7 +753,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
      return new Response("<!DOCTYPE html>" + markup, {
        status: responseStatusCode,
-       headers: responseHeaders
+       headers: responseHeaders,
      });
    }
    ```

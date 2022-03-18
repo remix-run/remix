@@ -17,13 +17,13 @@ export const handle = { hydrate: true };
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx [6,10,13-15,28]
+```tsx [6,10,13-15,27]
 import {
   Meta,
   Links,
   Scripts,
   Outlet,
-  useMatches
+  useMatches,
 } from "remix";
 
 export default function App() {
@@ -31,14 +31,13 @@ export default function App() {
 
   // If at least one route wants to hydrate, this will return true
   const includeScripts = matches.some(
-    match => match.handle?.hydrate
+    (match) => match.handle?.hydrate
   );
 
   // then use the flag to render scripts or not
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <Links />
       </head>
@@ -79,7 +78,7 @@ return (
               }
             }
           });
-        `
+        `,
       }}
     />
   </>

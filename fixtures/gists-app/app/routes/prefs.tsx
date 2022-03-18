@@ -7,7 +7,7 @@ async function getUserPrefs(cookieHeader: string | null): Promise<any> {
   return (
     (await userPrefsCookie.parse(cookieHeader)) || {
       language: null,
-      showBanner: true
+      showBanner: true,
     }
   );
 }
@@ -36,13 +36,13 @@ export let action: ActionFunction = async ({ request }) => {
 
   return redirect("/prefs", {
     headers: {
-      "Set-Cookie": await setUserPrefs(userPrefs)
-    }
+      "Set-Cookie": await setUserPrefs(userPrefs),
+    },
   });
 };
 
 export let handle = {
-  breadcrumb: () => <Link to="/prefs">Preferences</Link>
+  breadcrumb: () => <Link to="/prefs">Preferences</Link>,
 };
 
 export default function UserPrefs() {

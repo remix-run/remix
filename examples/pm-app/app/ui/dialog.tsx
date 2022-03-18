@@ -1,12 +1,12 @@
 import * as React from "react";
 import {
   DialogOverlay as ReachDialogOverlay,
-  DialogContent as ReachDialogContent
+  DialogContent as ReachDialogContent,
 } from "@reach/dialog";
 import type {
   DialogProps as ReachDialogProps,
   DialogOverlayProps as ReachDialogOverlayProps,
-  DialogContentProps as ReachDialogContentProps
+  DialogContentProps as ReachDialogContentProps,
 } from "@reach/dialog";
 import { IconX } from "./icons";
 import cx from "clsx";

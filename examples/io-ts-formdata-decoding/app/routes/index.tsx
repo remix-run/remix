@@ -10,7 +10,7 @@ import { decodeFormData } from "../formData";
  */
 const User = t.type({
   name: t.string,
-  age: t.number
+  age: t.number,
 });
 
 type ActionData = {

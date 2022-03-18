@@ -5,7 +5,7 @@ import type { Plugin } from "esbuild";
 import type { RemixConfig } from "../../config";
 import {
   serverBuildVirtualModule,
-  assetsManifestVirtualModule
+  assetsManifestVirtualModule,
 } from "../virtualModules";
 
 /**
@@ -71,15 +71,6 @@ export function serverBareModulesPlugin(
           case "cloudflare-pages":
           case "cloudflare-workers":
             return undefined;
-          // Map node externals to deno std libs and bundle everything else.
-          case "deno":
-            if (isNodeBuiltIn(packageName)) {
-              return {
-                path: `https://deno.land/std/node/${packageName}/mod.ts`,
-                external: true
-              };
-            }
-            return undefined;
         }
 
         for (let pattern of remixConfig.serverDependenciesToBundle) {
@@ -94,10 +85,10 @@ export function serverBareModulesPlugin(
         // Externalize everything else if we've gotten here.
         return {
           path,
-          external: true
+          external: true,
         };
       });
-    }
+    },
   };
 }
 
@@ -113,5 +104,10 @@ function getNpmPackageName(id: string): string {
 }
 
 function isBareModuleId(id: string): boolean {
-  return !id.startsWith(".") && !id.startsWith("~") && !isAbsolute(id);
+  return (
+    !id.startsWith("node:") &&
+    !id.startsWith(".") &&
+    !id.startsWith("~") &&
+    !isAbsolute(id)
+  );
 }

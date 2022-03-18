@@ -19,6 +19,8 @@ Just looking at the boxes it's pretty easy to identify which pieces of the URL m
 
 It's a nested layout tree. In Remix, we call every one of these layouts a "route". You might be used to routes that have a 1:1 component-to-url mapping. In Remix, a single URL can match multiple, nested routes.
 
+An important part of all of this is [the `<Outlet />` component][outlet-component] in React Router v6 which enables the parent route to control where the child route will be rendered.
+
 ## Defining nested routes
 
 Nested folders create nested URLs. So if you put something in `app/routes/invoices/$id.js` that creates a URL like "/invoices/123". The URL maps identically to the file system. But there's more--nested routes in the file system create nested layouts in the UI. Let's check it out in our example app.
@@ -131,3 +133,5 @@ Let's look at a few URLs and what the component tree looks like.
 | /contact           | `App.js > routes/contact.js`                                |
 
 Nested files are nested layouts. Flat files are flat layouts.
+
+[outlet-component]: ../api/remix#outlet-context-

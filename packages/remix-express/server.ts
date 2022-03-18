@@ -3,18 +3,18 @@ import type * as express from "express";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
+  ServerPlatform,
 } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type {
   RequestInit as NodeRequestInit,
-  Response as NodeResponse
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
   AbortController,
   Headers as NodeHeaders,
-  Request as NodeRequest
+  Request as NodeRequest,
 } from "@remix-run/node";
 
 /**
@@ -37,7 +37,7 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
@@ -81,7 +81,7 @@ export function createRemixHeaders(
   for (let [key, values] of Object.entries(requestHeaders)) {
     if (values) {
       if (Array.isArray(values)) {
-        for (const value of values) {
+        for (let value of values) {
           headers.append(key, value);
         }
       } else {
@@ -104,7 +104,7 @@ export function createRemixRequest(
     method: req.method,
     headers: createRemixHeaders(req.headers),
     signal: abortController?.signal,
-    abortController
+    abortController,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
@@ -123,7 +123,7 @@ function sendRemixResponse(
   res.status(response.status);
 
   for (let [key, values] of Object.entries(response.headers.raw())) {
-    for (const value of values) {
+    for (let value of values) {
       res.append(key, value);
     }
   }

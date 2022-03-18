@@ -18,7 +18,7 @@ function devHandler() {
     purgeAppRequireCache();
     return createRequestHandler({
       // @ts-ignore
-      build: require("./build")
+      build: require("./build"),
     })(req, res, next);
   };
 }
@@ -29,7 +29,7 @@ function devHandler() {
 function prodHandler() {
   return createRequestHandler({
     // @ts-ignore
-    build: require("./build")
+    build: require("./build"),
   });
 }
 

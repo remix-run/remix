@@ -9,7 +9,7 @@ type LoaderData = {
 export const action: ActionFunction = async ({ request }) => {
   await auth.authenticate("form", request, {
     successRedirect: "/private",
-    failureRedirect: "/login"
+    failureRedirect: "/login",
   });
 };
 

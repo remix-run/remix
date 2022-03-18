@@ -1,4 +1,9 @@
-import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "remix";
 import {
   json,
   Links,
@@ -7,19 +12,20 @@ import {
   Scripts,
   ScrollRestoration,
   useActionData,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 
 import stylesUrl from "./index.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl
-    }
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.formData();
@@ -56,7 +62,7 @@ export const loader: LoaderFunction = async () => {
     (date.getMonth() + 1)
   ).slice(-2)}-${("00" + (date.getDate() + 1)).slice(-2)}`;
 
-  return { todayString, tomorrowString };
+  return json({ todayString, tomorrowString });
 };
 
 export default function App() {
@@ -66,8 +72,6 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>

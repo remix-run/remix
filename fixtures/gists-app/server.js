@@ -38,7 +38,7 @@ app.use(compression());
 app.use(
   express.static("public", {
     // maxAge: process.env.NODE_ENV === "production" ? "1y" : undefined
-    maxAge: "1y"
+    maxAge: "1y",
   })
 );
 
@@ -61,7 +61,7 @@ app.all(
     build: require("@remix-run/dev/server-build"),
     getLoadContext() {
       return { userId: 4 };
-    }
+    },
   })
 );
 
