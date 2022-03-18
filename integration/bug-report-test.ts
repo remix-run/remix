@@ -48,13 +48,12 @@ beforeAll(async () => {
       "app/routes/item.jsx": js`
         import { json, useLoaderData, Outlet, useFetcher, redirect } from "remix";
 
-        let counter = 1;
         export function loader() {
-          return json(counter);
+          return new Date().toISOString();
         }
 
         export function action() {
-          counter += 1;
+          // mutate state
           return redirect("/item");
           // return null
         }
@@ -62,10 +61,9 @@ beforeAll(async () => {
         export default function Index() {
           let data = useLoaderData();
           const fetcher = useFetcher();
-          const count = "count: " + data;
           return (
             <div>
-              <span>{count}</span>
+              <span id="date">{data}</span>
               <button onClick={e => {
                 fetcher.submit({ value: 46 }, { method: 'post', replace: true })
               }}>Do something and redirect</button>
@@ -89,20 +87,27 @@ afterAll(async () => app.close());
 ////////////////////////////////////////////////////////////////////////////////
 
 it("[description of w", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/item/test");
-  expect(await response.text()).toMatch("count: 1");
+  // collect data calls to validate that loader isn't being called after redirect
+  let data = app.collectDataResponses();
 
-  // If you need to test interactivity use the `app`
+  // goto child route
   await app.goto("/item/test");
+
+  // read the date of last loader call
+  let date = await app.page.evaluate(el => el.textContent, await app.page.$("#date"))
+
+  // click the button which will trigger redirect to parent route
   await app.clickElement("button");
-  expect(await app.getHtml()).toMatch("count: 2");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  // I would expect there to be a loader call in here to the parent route to refresh the data.
+  // console.log('data', data);
+  // expect(data.length).toBe(2);
 
-  // Go check out the other tests to see what else you can do.
+  // read the date of last loader call
+  let newDate = await app.page.evaluate(el => el.textContent, await app.page.$("#date"))
+
+  // check that the date has changed (this should not fail)
+  expect(date).not.toEqual(newDate)
 });
 
 ////////////////////////////////////////////////////////////////////////////////
