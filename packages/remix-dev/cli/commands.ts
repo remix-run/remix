@@ -47,13 +47,13 @@ export async function create({
   let initScriptDir = path.join(projectDir, "remix.init");
   let hasInitScript = await fse.pathExists(initScriptDir);
   if (hasInitScript) {
-    console.log("💿 Running remix.init script");
     if (installDeps) {
+      console.log("💿 Running remix.init script");
       await init(projectDir);
       await fse.remove(initScriptDir);
     } else {
       console.log(
-        "💿 You've opted out of running the remix.init script, you can run it manually with `npx remix init`"
+        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
       );
     }
   }

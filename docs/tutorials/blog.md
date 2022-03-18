@@ -29,7 +29,7 @@ Make sure you are running at least Node v14 or greater
 
 ```sh
 npx create-remix@latest
-# IMPORTANT: Choose "Remix App Server" when prompted
+# IMPORTANT: Choose "Just the basics", and then "Remix App Server" when prompted
 cd [whatever you named the project]
 npm run dev
 ```
@@ -139,7 +139,7 @@ Loaders are the backend "API" for their component and it's already wired up for 
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[1,9-15]
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 // ...
 export default function Posts() {

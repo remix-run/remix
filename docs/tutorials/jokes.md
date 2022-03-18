@@ -94,7 +94,7 @@ This may ask you whether you want to install `create-remix` to run the command. 
 
 </docs-info>
 
-When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
 R E M I X
@@ -183,10 +183,9 @@ Remix App Server started at http://localhost:3000
 
 Open up that URL and you should be presented with a minimal page pointing to some docs.
 
-💿 Now stop the server and delete all this stuff:
+💿 Now stop the server and delete this directory:
 
 - `app/routes`
-- `app/styles`
 
 We're going to trim this down the bare bones and introduce things incrementally.
 
@@ -1414,7 +1413,7 @@ Datasource "db": SQLite database "dev.db" at "file:./dev.db"
 @prisma/client in 26ms
 ```
 
-This command did a few things. For one, it created our database file in `prisma/dev.db`. Then it pushed all the necessary changes to our database to match the schema we provided. Finally it generated Prisma's TypeScript types so we'll get stellar autocomplete and type checking as we use it's API for interacting with our database.
+This command did a few things. For one, it created our database file in `prisma/dev.db`. Then it pushed all the necessary changes to our database to match the schema we provided. Finally it generated Prisma's TypeScript types so we'll get stellar autocomplete and type checking as we use its API for interacting with our database.
 
 💿 Let's add that `prisma/dev.db` to our `.gitignore` so we don't accidentally commit it to our repository. We'll also want to add the `.env` file to the `.gitignore` as mentioned in the prisma output so we don't commit our secrets!
 
@@ -1577,13 +1576,14 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
-import { json } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
+
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
@@ -1978,7 +1978,7 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
