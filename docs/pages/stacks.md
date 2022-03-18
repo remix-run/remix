@@ -8,6 +8,8 @@ order: 3
 
 Remix Stacks is a feature of the Remix CLI that allows you to generate a Remix project quickly and easily. There are several built-in and official stacks that are full blown applications. You can also make your own (read more below).
 
+[Read the feature announcement blog post](/blog/remix-stacks) and [watch Remix Stacks videos on YouTube](https://www.youtube.com/playlist?list=PLXoynULbYuEC8-gJCqyXo94RufAvSA6R3).
+
 The built-in official stacks come ready with common things you need for a production application including:
 
 - Database
@@ -19,7 +21,7 @@ The built-in official stacks come ready with common things you need for a produc
 What you're left with is everything completely set up for you to just get to work building whatever amazing web experience you want to build with Remix. Here are the built-in official stacks:
 
 - [The Blues Stack](https://github.com/remix-run/blues-stack): Deployed to the edge (distributed) with a long-running Node.js server and PostgreSQL database. Intended for large and fast production-grade applications serving millions of users.
-- [The Indie Stack](https://github.com/remix-run/indie-stack): Deployed to a long-running Node.js server with a persistent SQLite database. Intended to get you going quickly with little complexity for prototypes and proof of concepts that can be later updated to the Blues stack without much trouble.
+- [The Indie Stack](https://github.com/remix-run/indie-stack): Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
 - [The Grunge Stack](https://github.com/remix-run/grunge-stack): Deployed to a serverless function running Node.js with DynamoDB for persistance. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
 
 Yes, these are named after music genres. 🤘 Rock on.
@@ -36,7 +38,7 @@ npx create-remix@latest --template my-username/my-repo
 
 Custom stacks give an enormous amount of power and flexibility and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
 
-<docs-success>Yes, we do recommend that you name your own stack after a music genre. In the future, we will have a page where you can list your open source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
+<docs-success>Yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!). In the future, we will have a page where you can list your open source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
 
 ### `--template`
 
@@ -61,7 +63,7 @@ The [token just needs `repo` access][repo access token].
 
 #### Dependency versions
 
-If you set the any dependencies in package.json to `*`, the Remix CLI will change it to a semver carrot of the latest released version:
+If you set the any dependencies in package.json to `*`, the Remix CLI will change it to a semver caret of the latest released version:
 
 ```diff
 -   "remix": "*",

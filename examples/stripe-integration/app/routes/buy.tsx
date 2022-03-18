@@ -1,5 +1,6 @@
-import { Form, redirect } from "remix";
 import type { ActionFunction } from "remix";
+import { Form, redirect } from "remix";
+
 import { getStripeSession, getDomainUrl } from "~/utils/stripe.server";
 
 export const action: ActionFunction = async ({ request }) => {

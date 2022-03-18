@@ -1,5 +1,5 @@
 import path from "path";
-import { spawnSync } from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import aws from "aws-sdk";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
