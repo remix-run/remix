@@ -8,8 +8,8 @@ import type {
   AppLoadContext,
   ServerBuild,
   ServerPlatform,
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+} from "@remix-run/cloudflare";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
