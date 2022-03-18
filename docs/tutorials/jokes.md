@@ -1576,13 +1576,14 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
-import { json } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
+
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
