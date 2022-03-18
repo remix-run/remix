@@ -1,5 +1,9 @@
 import prettier from "prettier";
-import type { Page, Request, Response } from "puppeteer";
+import type {
+  Page,
+  HTTPRequest as Request,
+  HTTPResponse as Response,
+} from "puppeteer";
 import cheerio from "cheerio";
 
 export async function getHtml(page: Page, selector?: string): Promise<string> {
