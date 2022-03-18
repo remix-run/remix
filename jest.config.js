@@ -1,3 +1,4 @@
+/** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   modulePathIgnorePatterns: [
     "<rootDir>/.tmp",
@@ -13,9 +14,10 @@ module.exports = {
     },
     {
       displayName: "integration",
-      testEnvironment: "node",
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
+      globalTeardown: "<rootDir>/integration/helpers/global-teardown.ts",
+      testEnvironment: "<rootDir>/integration/helpers/environment.ts",
       setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
     },
     {
