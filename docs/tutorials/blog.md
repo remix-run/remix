@@ -29,7 +29,7 @@ Make sure you are running at least Node v14 or greater
 
 ```sh
 npx create-remix@latest
-# IMPORTANT: Choose "Remix App Server" when prompted
+# IMPORTANT: Choose "Just the basics", and then "Remix App Server" when prompted
 cd [whatever you named the project]
 npm run dev
 ```
