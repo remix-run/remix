@@ -1,5 +1,6 @@
 import childProcess from "child_process";
 import fs from "fs";
+import fsp from "fs/promises";
 import path from "path";
 import util from "util";
 import { pathToFileURL } from "url";
@@ -133,6 +134,21 @@ describe("remix cli", () => {
   });
 
   describe("the create command", () => {
+    afterAll(() => {
+      async function renamePkgJsonApp(dir: string) {
+        let pkgPath = path.join(dir, "package.json");
+        let pkg = await fsp.readFile(pkgPath);
+        let obj = JSON.parse(pkg.toString());
+        obj.name = path.basename(dir);
+        await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
+      }
+
+      let dirs = fs.readdirSync(path.join(process.cwd(), ".tmp"));
+      for (let dir of dirs) {
+        renamePkgJsonApp(path.join(process.cwd(), ".tmp", dir));
+      }
+    });
+
     function getProjectDir(name: string) {
       return path.join(
         process.cwd(),

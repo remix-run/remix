@@ -1,6 +1,5 @@
 import fs from "fs/promises";
 import path from "path";
-
 import sort from "sort-package-json";
 
 let examplePath = path.join(process.cwd(), "examples");
