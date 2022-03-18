@@ -9,7 +9,7 @@ const ShadowBox = React.forwardRef<HTMLDivElement, ShadowBoxProps>(
         ref={ref}
         {...domProps}
         className={cx(props.className, "ui--shadow-box", {
-          [`ui--shadow-box--pad-0${pad}`]: pad != null
+          [`ui--shadow-box--pad-0${pad}`]: pad != null,
         })}
       />
     );

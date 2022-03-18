@@ -6,7 +6,7 @@ import {
   useFetcher,
   Form,
   useTransition,
-  Link
+  Link,
 } from "remix";
 import { useSearchParams } from "remix";
 
@@ -24,20 +24,20 @@ let tasks: Task[] = [
     id: "taco",
     name: "Eat tacos",
     complete: false,
-    delay: 1000
+    delay: 1000,
   },
   {
     id: "puppy",
     name: "Adopt a puppy",
     complete: false,
-    delay: 2000
+    delay: 2000,
   },
   {
     id: "giveup",
     name: "Give up",
     complete: false,
-    delay: 1000
-  }
+    delay: 1000,
+  },
 ];
 
 export function links() {
@@ -49,7 +49,7 @@ export let loader: LoaderFunction = async ({ request }) => {
 
   if (searchParams.has("q")) {
     // await new Promise(res => setTimeout(res, 1000));
-    return tasks.filter(task =>
+    return tasks.filter((task) =>
       task.name.toLowerCase().includes(searchParams.get("q")!.toLowerCase())
     );
   }
@@ -67,10 +67,10 @@ export async function action({ request }: { request: Request }) {
   let body = new URLSearchParams(await request.text());
   let id = body.get("id");
   let complete = JSON.parse(body.get("complete")!);
-  let task = tasks.find(t => t.id === id)!;
+  let task = tasks.find((t) => t.id === id)!;
 
   // fake delay
-  await new Promise(res => setTimeout(res, task.delay));
+  await new Promise((res) => setTimeout(res, task.delay));
 
   if (id === "giveup") {
     return json({ error: "NEVER GIVE UP!" }, { status: 500 });
@@ -99,7 +99,7 @@ export default function Tasks() {
         </p>
       ) : null}
 
-      {tasks.map(task => (
+      {tasks.map((task) => (
         <TaskItem key={task.id} task={task} />
       ))}
       <p>
@@ -178,7 +178,7 @@ function ProgressBar({ total }: { total: number }) {
 
   useEffect(() => {
     if (progress >= 100) return;
-    let id = requestAnimationFrame(now => {
+    let id = requestAnimationFrame((now) => {
       setTimeStamp(now);
       if (!start) setStart(now);
     });

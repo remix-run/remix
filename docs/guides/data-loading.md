@@ -22,20 +22,23 @@ One of the primary features of Remix is simplifying interactions with the server
 Each [route module][route-module] can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
 
 ```tsx filename=app/routes/products.tsx lines=[1,2,4-6,9]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = () => {
-  return [{ name: "Pants" }, { name: "Jacket" }];
+export const loader: LoaderFunction = async () => {
+  return json([
+    { id: "1", name: "Pants" },
+    { id: "2", name: "Jacket" },
+  ]);
 };
 
 export default function Products() {
-  let products = useLoaderData();
+  const products = useLoaderData();
   return (
     <div>
       <h1>Products</h1>
-      {products.map(product => (
-        <div>{product.name}</div>
+      {products.map((product) => (
+        <div key={product.id}>{product.name}</div>
       ))}
     </div>
   );
@@ -53,7 +56,9 @@ When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   console.log(params.userId);
   console.log(params.projectId);
 };
@@ -68,16 +73,21 @@ Given the following URLs, the params would be parsed as follows:
 
 These params are most useful for looking up data:
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[6,7]
+```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[8,9]
+import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
-  return fakeDb.project.findMany({
-    where: {
-      userId: params.userId,
-      projectId: params.projectId
-    }
-  });
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
+  return json(
+    await fakeDb.project.findMany({
+      where: {
+        userId: params.userId,
+        projectId: params.projectId,
+      },
+    })
+  );
 };
 ```
 
@@ -89,7 +99,9 @@ Because these params come from the URL and not your source code, you can't know 
 import invariant from "tiny-invariant";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   invariant(params.userId, "Expected params.userId");
   invariant(params.projectId, "Expected params.projectId");
 
@@ -103,18 +115,20 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 
 Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
-```tsx filename=app/routes/gists.jsx lines=[2]
+```tsx filename=app/routes/gists.jsx lines=[4]
+import { json, useLoaderData } from "remix";
+
 export async function loader() {
-  let res = await fetch("https://api.github.com/gists");
-  return res.json();
+  const res = await fetch("https://api.github.com/gists");
+  return json(await res.json());
 }
 
 export default function GistsRoute() {
-  let gists = useLoaderData();
+  const gists = useLoaderData();
   return (
     <ul>
-      {gists.map(gist => (
-        <li>
+      {gists.map((gist) => (
+        <li key={gist.id}>
           <a href={gist.html_url}>{gist.id}</a>
         </li>
       ))}
@@ -131,27 +145,32 @@ Since Remix runs on your server, you can connect directly to a database in your 
 
 ```tsx filename=app/db.server.ts
 import { PrismaClient } from "@prisma/client";
-let db = new PrismaClient();
+const db = new PrismaClient();
 export { db };
 ```
 
 And then your routes can import it and make queries against it:
 
 ```tsx filename=app/routes/products/$categoryId.tsx
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
+
 import { db } from "~/db.server";
 
-export let loader: LoaderFunction = async ({ params }) => {
-  return db.product.findMany({
-    where: {
-      categoryId: params.categoryId
-    }
-  });
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
+  return json(
+    await db.product.findMany({
+      where: {
+        categoryId: params.categoryId,
+      },
+    })
+  );
 };
 
 export default function ProductCategory() {
-  let products = useLoaderData();
+  const products = useLoaderData();
   return (
     <div>
       <p>{products.length} Products</p>
@@ -161,22 +180,61 @@ export default function ProductCategory() {
 }
 ```
 
-## Cloudflare KV
+If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
 
-If you picked Cloudflare Workers as you environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
+```tsx filename=tsx filename=app/routes/products/$productId.tsx
+import { useLoaderData, json } from "remix";
 
-```tsx filename=app/routes/products/$productId.tsx
-import { useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import { db } from "~/db.server";
 
-export let loader: LoaderFunction = async ({ params }) => {
-  return PRODUCTS_KV.get(`product-${params.productId}`, {
-    type: "json"
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
+
+async function getLoaderData() {
+  const products = await db.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      imgSrc: true,
+    },
   });
+  return { products };
+}
+
+export const loader = async () => {
+  return json<LoaderData>(await getLoaderData());
 };
 
 export default function Product() {
-  let product = useLoaderData();
+  const product = useLoaderData<LoaderData>();
+  return (
+    <div>
+      <p>Product {product.id}</p>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+## Cloudflare KV
+
+If you picked Cloudflare Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
+
+```tsx filename=app/routes/products/$productId.tsx
+import { json, useLoaderData } from "remix";
+import type { LoaderFunction } from "remix";
+
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
+  return json(
+    await PRODUCTS_KV.get(`product-${params.productId}`, {
+      type: "json",
+    })
+  );
+};
+
+export default function Product() {
+  const product = useLoaderData();
   return (
     <div>
       <p>{} Products</p>
@@ -188,15 +246,15 @@ export default function Product() {
 
 ## Not Found
 
-While loading data its common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
+While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
-export let loader: LoaderFunction = async ({
+export const loader: LoaderFunction = async ({
   params,
-  request
+  request,
 }) => {
-  let product = await db.product.findOne({
-    where: { id: params.productId }
+  const product = await db.product.findOne({
+    where: { id: params.productId },
   });
 
   if (!product) {
@@ -206,8 +264,11 @@ export let loader: LoaderFunction = async ({
     throw new Response("Not Found", { status: 404 });
   }
 
-  let cart = await getCart(request);
-  return { product, inCart: cart.includes(product.id) };
+  const cart = await getCart(request);
+  return json({
+    product,
+    inCart: cart.includes(product.id),
+  });
 };
 ```
 
@@ -215,13 +276,16 @@ export let loader: LoaderFunction = async ({
 
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
-```tsx filename=routes/products.tsx lines=[1,4,5]
+```tsx filename=routes/products.tsx lines=[7,8]
+import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
-export let loader: LoaderFunction = ({ request }) => {
-  let url = new URL(request.url);
-  let term = url.searchParams.get("term");
-  return fakeProductSearch(term);
+export const loader: LoaderFunction = async ({
+  request,
+}) => {
+  const url = new URL(request.url);
+  const term = url.searchParams.get("term");
+  return json(await fakeProductSearch(term));
 };
 ```
 
@@ -293,11 +357,13 @@ Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 
 Note that `brand` is repeated in the URL search string since both checkboxes were named `"brand"`. In your loader you can get access to all of those values with [`searchParams.getAll`][search-params-getall]
 
-```tsx lines=[3]
-export function loader({ request }) {
-  let url = new URL(request.url);
-  let brands = url.searchParams.getAll("brand");
-  return getProducts({ brands });
+```tsx lines=[5]
+import { json } from "remix";
+
+export async function loader({ request }) {
+  const url = new URL(request.url);
+  const brands = url.searchParams.getAll("brand");
+  return json(await getProducts({ brands }));
 }
 ```
 
@@ -317,8 +383,8 @@ In addition to reading search params in loaders, you often need access to them i
 import { useSearchParams } from "remix";
 
 export default function ProductFilters() {
-  let [searchParams] = useSearchParams();
-  let brands = searchParams.getAll("brand");
+  const [searchParams] = useSearchParams();
+  const brands = searchParams.getAll("brand");
 
   return (
     <Form method="get">
@@ -337,7 +403,7 @@ export default function ProductFilters() {
         id="adidas"
         name="brand"
         value="adidas"
-        defaultChecked={brands.includes("nike")}
+        defaultChecked={brands.includes("adidas")}
       />
 
       <button type="submit">Update</button>
@@ -348,18 +414,18 @@ export default function ProductFilters() {
 
 You might want to auto submit the form on any field change, for that there is [`useSubmit`][use-submit]:
 
-```tsx lines=[1,4,9]
+```tsx lines=[1,4,11]
 import { useSubmit, useSearchParams } from "remix";
 
 export default function ProductFilters() {
-  let submit = useSubmit();
-  let [searchParams] = useSearchParams();
-  let brands = searchParams.getAll("brand");
+  const submit = useSubmit();
+  const [searchParams] = useSearchParams();
+  const brands = searchParams.getAll("brand");
 
   return (
     <Form
       method="get"
-      onChange={e => submit(e.currentTarget)}
+      onChange={(e) => submit(e.currentTarget)}
     >
       {/* ... */}
     </Form>
@@ -375,10 +441,10 @@ While uncommon, you can also set searchParams imperatively at any time for any r
 import { useSearchParams } from "remix";
 
 export default function ProductFilters() {
-  let [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    let id = setInterval(() => {
+    const id = setInterval(() => {
       setSearchParams({ now: Date.now() });
     }, 1000);
     return () => clearInterval(id);
@@ -398,8 +464,8 @@ This is only needed if the search params can be set in two ways and we want the 
 import { useSearchParams } from "remix";
 
 export default function ProductFilters() {
-  let [searchParams] = useSearchParams();
-  let brands = searchParams.getAll("brand");
+  const [searchParams] = useSearchParams();
+  const brands = searchParams.getAll("brand");
 
   return (
     <Form method="get">
@@ -445,9 +511,9 @@ You have two choices, and what you pick depends on the user experience you want.
 import { useSubmit, useSearchParams } from "remix";
 
 export default function ProductFilters() {
-  let submit = useSubmit();
-  let [searchParams] = useSearchParams();
-  let brands = searchParams.getAll("brand");
+  const submit = useSubmit();
+  const [searchParams] = useSearchParams();
+  const brands = searchParams.getAll("brand");
 
   return (
     <Form method="get">
@@ -458,7 +524,7 @@ export default function ProductFilters() {
           id="nike"
           name="brand"
           value="nike"
-          onChange={e => submit(e.currentTarget.form)}
+          onChange={(e) => submit(e.currentTarget.form)}
           checked={brands.includes("nike")}
         />
         <Link to="?brand=nike">(only)</Link>
@@ -482,11 +548,11 @@ export default function ProductFilters() {
 import { useSubmit, useSearchParams } from "remix";
 
 export default function ProductFilters() {
-  let submit = useSubmit();
-  let [searchParams] = useSearchParams();
-  let brands = searchParams.getAll("brand");
+  const submit = useSubmit();
+  const [searchParams] = useSearchParams();
+  const brands = searchParams.getAll("brand");
 
-  let [nikeChecked, setNikeChecked] = React.useState(
+  const [nikeChecked, setNikeChecked] = React.useState(
     // initialize from the URL
     brands.includes("nike")
   );
@@ -495,7 +561,7 @@ export default function ProductFilters() {
   // (form submission or link click)
   React.useEffect(() => {
     setNikeChecked(brands.includes("nike"));
-  }, [searchParams]);
+  }, [brands, searchParams]);
 
   return (
     <Form method="get">
@@ -506,7 +572,7 @@ export default function ProductFilters() {
           id="nike"
           name="brand"
           value="nike"
-          onChange={e => {
+          onChange={(e) => {
             // update checkbox state w/o submitting the form
             setNikeChecked(true);
           }}
@@ -531,15 +597,15 @@ You might want to make an abstraction for checkboxes like this:
 </div>;
 
 function SearchCheckbox({ name, value }) {
-  let [searchParams] = useSearchParams();
-  let all = searchParams.getAll(name);
-  let [checked, setChecked] = React.useState(
+  const [searchParams] = useSearchParams();
+  const all = searchParams.getAll(name);
+  const [checked, setChecked] = React.useState(
     all.includes(value)
   );
 
   React.useEffect(() => {
     setChecked(all.includes(value));
-  }, [searchParams]);
+  }, [all, searchParams, value]);
 
   return (
     <input
@@ -547,7 +613,7 @@ function SearchCheckbox({ name, value }) {
       name={name}
       value={value}
       checked={checked}
-      onChange={e => setChecked(e.target.checked)}
+      onChange={(e) => setChecked(e.target.checked)}
     />
   );
 }
@@ -615,17 +681,17 @@ Loaders are only called on the server, via `fetch` from the browser, so your dat
 <docs-error>This won't work!</docs-error>
 
 ```tsx bad nocopy lines=[3-6]
-export function loader() {
+export async function loader() {
   return {
     date: new Date(),
     someMethod() {
       return "hello!";
-    }
+    },
   };
 }
 
 export default function RouteComp() {
-  let data = useLoaderData();
+  const data = useLoaderData();
   console.log(data);
   // '{"date":"2021-11-27T23:54:26.384Z"}'
 }
@@ -640,12 +706,12 @@ Additionally, Remix will call your loaders for you, in no case should you ever t
 <docs-error>This will not work</docs-error>
 
 ```tsx bad nocopy
-export let loader = async () => {
-  return fakeDb.products.findMany();
+export const loader = async () => {
+  return json(await fakeDb.products.findMany());
 };
 
 export default function RouteComp() {
-  let data = loader();
+  const data = loader();
   // ...
 }
 ```
@@ -666,4 +732,4 @@ export default function RouteComp() {
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#userloaderdata
+[useloaderdata]: ../api/remix#useloaderdata

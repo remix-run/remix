@@ -6,15 +6,17 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from "remix";
 import type { Socket } from "socket.io-client";
 import io from "socket.io-client";
 import { SocketProvider } from "./context";
 
-export const meta: MetaFunction = () => {
-  return { title: "New Remix App" };
-};
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export default function App() {
   const [socket, setSocket] = useState<Socket>();
@@ -29,7 +31,7 @@ export default function App() {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("confirmation", data => {
+    socket.on("confirmation", (data) => {
       console.log(data);
     });
   }, [socket]);
@@ -37,8 +39,6 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>
@@ -48,7 +48,7 @@ export default function App() {
         </SocketProvider>
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );

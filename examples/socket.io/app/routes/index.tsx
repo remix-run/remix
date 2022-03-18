@@ -7,7 +7,7 @@ export default function Index() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("event", data => {
+    socket.on("event", (data) => {
       console.log(data);
     });
 

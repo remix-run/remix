@@ -1,4 +1,4 @@
-import { Outlet, Link, useLoaderData } from "remix";
+import { json, Link, Outlet, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
@@ -8,8 +8,8 @@ export const links = () => {
   return [{ rel: "stylesheet", href: adminStyles }];
 };
 
-export const loader = () => {
-  return getPosts();
+export const loader = async () => {
+  return json(await getPosts());
 };
 
 export default function Admin() {
@@ -19,7 +19,7 @@ export default function Admin() {
       <nav>
         <h1>Admin</h1>
         <ul>
-          {posts.map(post => (
+          {posts.map((post) => (
             <li key={post.slug}>
               <Link to={`/posts/${post.slug}`}>{post.title}</Link>
             </li>

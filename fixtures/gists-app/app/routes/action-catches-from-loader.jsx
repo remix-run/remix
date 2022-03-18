@@ -1,10 +1,10 @@
 import { Form, json, redirect } from "remix";
 
-export function action() {
+export async function action() {
   return redirect("/action-catches-from-loader?catch");
 }
 
-export function loader({ request }) {
+export async function loader({ request }) {
   if (new URL(request.url).searchParams.get("catch") != null) {
     throw json("loader catch data!", { status: 401 });
   }

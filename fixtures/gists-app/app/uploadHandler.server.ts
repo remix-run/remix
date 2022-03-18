@@ -6,5 +6,5 @@ export let uploadHandler = createFileUploadHandler({
   // You probably do *not* want to do this in prod.
   // We passthrough the name and allow conflicts for test fixutres.
   avoidFileConflicts: false,
-  file: ({ filename }) => filename
+  file: ({ filename }) => filename,
 });

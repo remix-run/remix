@@ -21,5 +21,5 @@ Check [app/routes/example.tsx](app/root.tsx) to see the client-side validation i
 - [The Input (Form Input) element in the MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input)
 - [The HTML5 input types in the MDN Web Docs](https://developer.mozilla.org/en-US/docs/Learn/Forms/HTML5_input_types)
 - [Client-side Validation in the MDN Web Docs](https://developer.mozilla.org/en-US/docs/Learn/Forms/Form_validation)
-- [Form Validation in the Remix Docs](https://remix.run/docs/en/v1/guides/data-writes#form-validation)
-- [Client-side Validation in the Remix Docs](https://remix.run/docs/en/v1/guides/data-writes#form-validation)
+- [Form Validation in the Remix Docs](https://remix.run/guides/data-writes#form-validation)
+- [Client-side Validation in the Remix Docs](https://remix.run/guides/data-writes#form-validation)

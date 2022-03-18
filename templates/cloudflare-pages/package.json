@@ -1,0 +1,34 @@
+{
+  "name": "remix-app-template-js",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build": "remix build",
+    "dev:remix": "remix watch",
+    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
+    "dev": "remix build && run-p dev:*",
+    "postinstall": "remix setup cloudflare-pages",
+    "start": "cross-env NODE_ENV=production npm run dev:wrangler"
+  },
+  "dependencies": {
+    "@remix-run/cloudflare-pages": "*",
+    "@remix-run/react": "*",
+    "cross-env": "^7.0.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.2.0",
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "eslint": "^8.11.0",
+    "npm-run-all": "^4.1.5",
+    "wrangler": "beta"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

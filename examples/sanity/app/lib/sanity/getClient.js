@@ -9,7 +9,7 @@ export const sanityClient = new PicoSanity(config);
 export const previewClient = new PicoSanity({
   ...config,
   useCdn: false,
-  token: process.env.SANITY_API_TOKEN ?? ``
+  token: process.env.SANITY_API_TOKEN ?? ``,
 });
 
 // Helper function to choose the correct client

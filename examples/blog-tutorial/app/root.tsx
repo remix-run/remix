@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -7,9 +8,8 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  Link
+  Link,
 } from "remix";
-import type { LinksFunction } from "remix";
 
 import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";
@@ -29,11 +29,16 @@ export const links: LinksFunction = () => {
     {
       rel: "stylesheet",
       href: darkStylesUrl,
-      media: "(prefers-color-scheme: dark)"
+      media: "(prefers-color-scheme: dark)",
     },
-    { rel: "stylesheet", href: deleteMeRemixStyles }
+    { rel: "stylesheet", href: deleteMeRemixStyles },
   ];
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 /**
  * The root module's default export is a component that renders the current
@@ -52,7 +57,7 @@ export default function App() {
 
 function Document({
   children,
-  title
+  title,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -60,7 +65,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -69,7 +73,7 @@ function Document({
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" ? <LiveReload /> : null}
+        <LiveReload />
       </body>
     </html>
   );
@@ -101,9 +105,9 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
           </nav>
         </div>
       </header>
-      <main className="remix-app__main">
+      <div className="remix-app__main">
         <div className="container remix-app__main-content">{children}</div>
-      </main>
+      </div>
       <footer className="remix-app__footer">
         <div className="container remix-app__footer-content">
           <p>&copy; You!</p>
