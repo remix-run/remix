@@ -13,7 +13,7 @@ function stopServer(serverProc: ChildProcess): Promise<void> {
 }
 
 module.exports = async (globalConfig: any) => {
-  await teardownPuppeteer(globalConfig);
   // @ts-ignore
   await stopServer(global.testServerProc);
+  await teardownPuppeteer(globalConfig);
 };
