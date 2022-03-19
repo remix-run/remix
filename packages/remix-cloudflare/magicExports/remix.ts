@@ -3,4 +3,8 @@
 
 export {
   createCloudflareKVSessionStorage,
+  createCookie,
+  createSessionStorage,
+  createCookieSessionStorage,
+  createMemorySessionStorage,
 } from "@remix-run/cloudflare";

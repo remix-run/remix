@@ -2,7 +2,8 @@ import type {
   SessionStorage,
   SessionIdStorageStrategy,
 } from "@remix-run/server-runtime";
-import { createSessionStorage } from "@remix-run/server-runtime";
+
+import { createSessionStorage } from "../implementations";
 
 interface CloudflareKVSessionStorageOptions {
   /**
