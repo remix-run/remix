@@ -1,10 +1,7 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 
-// TODO: Once node v16 is available on AWS we should use these instead of the
-// global `sign` and `unsign` functions.
-//import { sign, unsign } from "./cookieSigning";
-import "./cookieSigning";
+import type { SignFunction, UnsignFunction } from "./crypto";
 
 export type { CookieParseOptions, CookieSerializeOptions };
 
@@ -79,7 +76,13 @@ export type CreateCookieFunction = (
  *
  * @see https://remix.run/api/remix#createcookie
  */
-export const createCookie: CreateCookieFunction = (
+export const createCookieFactory = ({
+  sign,
+  unsign,
+}: {
+  sign: SignFunction
+  unsign: UnsignFunction
+}): CreateCookieFunction => (
   name,
   cookieOptions = {}
 ) => {
@@ -108,13 +111,13 @@ export const createCookie: CreateCookieFunction = (
       return name in cookies
         ? cookies[name] === ""
           ? ""
-          : await decodeCookieValue(cookies[name], secrets)
+          : await decodeCookieValue(unsign, cookies[name], secrets)
         : null;
     },
     async serialize(value, serializeOptions) {
       return serialize(
         name,
-        value === "" ? "" : await encodeCookieValue(value, secrets),
+        value === "" ? "" : await encodeCookieValue(sign, value, secrets),
         {
           ...options,
           ...serializeOptions,
@@ -142,6 +145,7 @@ export const isCookie: IsCookieFunction = (object): object is Cookie => {
 };
 
 async function encodeCookieValue(
+  sign: SignFunction,
   value: any,
   secrets: string[]
 ): Promise<string> {
@@ -155,6 +159,7 @@ async function encodeCookieValue(
 }
 
 async function decodeCookieValue(
+  unsign: UnsignFunction,
   value: string,
   secrets: string[]
 ): Promise<any> {

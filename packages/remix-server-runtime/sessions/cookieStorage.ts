@@ -1,4 +1,5 @@
-import { createCookie, isCookie } from "../cookies";
+import type { CreateCookieFunction} from "../cookies";
+import { isCookie } from "../cookies";
 import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
 import { warnOnceAboutSigningSessionCookie, createSession } from "../sessions";
 
@@ -25,7 +26,9 @@ export type CreateCookieSessionStorageFunction = (
  *
  * @see https://remix.run/api/remix#createcookiesessionstorage
  */
-export const createCookieSessionStorage: CreateCookieSessionStorageFunction = ({
+export const createCookieSessionStorageFactory = (
+  createCookie: CreateCookieFunction
+): CreateCookieSessionStorageFunction => ({
   cookie: cookieArg,
 } = {}) => {
   let cookie = isCookie(cookieArg)

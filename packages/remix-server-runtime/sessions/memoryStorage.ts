@@ -2,8 +2,8 @@ import type {
   SessionData,
   SessionStorage,
   SessionIdStorageStrategy,
+  CreateSessionStorageFunction,
 } from "../sessions";
-import { createSessionStorage } from "../sessions";
 
 interface MemorySessionStorageOptions {
   /**
@@ -26,7 +26,9 @@ export type CreateMemorySessionStorageFunction = (
  *
  * @see https://remix.run/api/remix#creatememorysessionstorage
  */
-export const createMemorySessionStorage: CreateMemorySessionStorageFunction = ({
+export const createMemorySessionStorageFactory = (
+  createSessionStorage: CreateSessionStorageFunction
+): CreateMemorySessionStorageFunction => ({
   cookie,
 } = {}) => {
   let uniqueId = 0;

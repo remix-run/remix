@@ -1,7 +1,7 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 
-import type { Cookie, CookieOptions } from "./cookies";
-import { createCookie, isCookie } from "./cookies";
+import type { Cookie, CookieOptions, CreateCookieFunction } from "./cookies";
+import { isCookie } from "./cookies";
 import { warnOnce } from "./warnings";
 
 /**
@@ -224,7 +224,9 @@ export type CreateSessionStorageFunction = (
  *
  * @see https://remix.run/api/remix#createsessionstorage
  */
-export const createSessionStorage: CreateSessionStorageFunction = ({
+export const createSessionStorageFactory = (
+  createCookie: CreateCookieFunction
+): CreateSessionStorageFunction => ({
   cookie: cookieArg,
   createData,
   readData,

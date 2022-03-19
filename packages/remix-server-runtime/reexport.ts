@@ -13,6 +13,8 @@ export type {
   CookieSignatureOptions,
 } from "./cookies";
 
+export type { SignFunction, UnsignFunction } from "./crypto";
+
 export type { AppLoadContext, AppData } from "./data";
 
 export type { EntryContext } from "./entry";
