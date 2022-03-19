@@ -148,9 +148,7 @@ describe("rendering", () => {
     await app.clickLink(`/${PAGE}`);
 
     expect(
-      responses
-        .map((res) => new URL(res.url()).searchParams.get("_data"))
-        .sort((a, b) => a.length - b.length)
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");
@@ -180,9 +178,7 @@ describe("rendering", () => {
     expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
 
     expect(
-      responses
-        .map((res) => new URL(res.url()).searchParams.get("_data"))
-        .sort((a, b) => a.length - b.length)
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");
