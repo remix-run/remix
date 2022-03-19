@@ -791,7 +791,6 @@ export async function createPost(post) {
     path.join(postsPath, post.slug + ".md"),
     md
   );
-  return json(await getPost(post.slug));
 }
 ```
 
