@@ -1,6 +1,9 @@
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
+let fixture: Fixture;
+let app: AppFixture;
+
 ////////////////////////////////////////////////////////////////////////////////
 // 💿 👋 Hola! It's me, Dora the Remix Disc, I'm here to help you write a great
 // bug report pull request. You don't need to fix the bug, this is just to
@@ -26,82 +29,65 @@ import type { Fixture, AppFixture } from "./helpers/create-fixture";
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
-describe('failing test', () => {
-  let fixture: Fixture;
-  let app: AppFixture;
+beforeAll(async () => {
+  fixture = await createFixture({
+    ////////////////////////////////////////////////////////////////////////////
+    // 💿 Next, add files to this object, just like files in a real app,
+    // `createFixture` will make an app and run your tests against it.
+    ////////////////////////////////////////////////////////////////////////////
+    files: {
+      "app/routes/index.jsx": js`
+        import { json, useLoaderData, Link } from "remix";
 
-  beforeAll(async () => {
-    fixture = await createFixture({
-      ////////////////////////////////////////////////////////////////////////////
-      // 💿 Next, add files to this object, just like files in a real app,
-      // `createFixture` will make an app and run your tests against it.
-      ////////////////////////////////////////////////////////////////////////////
-      files: {
-        "app/routes/form-method.jsx": js`
-            import { useActionData, Form, json } from "remix";
-  
-            export function action({ request }) {
-              return json(request.method)
-            }
-  
-            export default function() {
-              let actionData = useActionData();
-              return (
-                <>
-                  <Form action="." method="post">
-                    <button type="submit">Post</button>
-                  </Form>
-  
-                  <pre>{actionData}</pre>
-                </>
-              )
-            }
-          `,
+        export function loader() {
+          return json("pizza");
+        }
 
-      "app/routes/button-form-method.jsx": js`
-          import { useActionData, Form, json } from "remix";
+        export default function Index() {
+          let data = useLoaderData();
+          return (
+            <div>
+              {data}
+              <Link to="/burgers">Other Route</Link>
+            </div>
+          )
+        }
+      `,
 
-          export function action({ request }) {
-            return json(request.method)
-          }
-
-          export default function() {
-            let actionData = useActionData();
-            return (
-              <>
-                <Form action=".">
-                  <button type="submit" formMethod="post">Post</button>
-                </Form>
-
-                <pre>{actionData}</pre>
-              </>
-            )
-          }
-        `,
-      },
-    });
-  
-    // This creates an interactive app using puppeteer.
-    app = await createAppFixture(fixture);
-    
+      "app/routes/burgers.jsx": js`
+        export default function Index() {
+          return <div>cheeseburger</div>;
+        }
+      `,
+    },
   });
 
-  afterAll(async () => {
-    await app.close();
-  });
+  // This creates an interactive app using puppeteer.
+  app = await createAppFixture(fixture);
+});
 
-  test('should use "post" method when clicking a submit button inside a form with attribute method="post"', async () => {
-    await app.goto("/form-method");
-    await app.clickElement("button");
-    expect(await app.getHtml("pre")).toMatch("POST");
-  });
+afterAll(async () => app.close());
 
-  test('should make a "post" request when clicking a submit button with formMethod="post" inside a form with attribute method not set', async () => {
-    await app.goto("/button-form-method");
-    await app.clickElement("button");
-    expect(await app.getHtml("pre")).toMatch("POST");
-  });
+////////////////////////////////////////////////////////////////////////////////
+// 💿 Almost done, now write your failing test case(s) down here Make sure to
+// add a good description for what you expect Remix to do 👇🏽
+////////////////////////////////////////////////////////////////////////////////
 
+it("[description of what you expect it to do]", async () => {
+  // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("pizza");
+
+  // If you need to test interactivity use the `app`
+  await app.goto("/");
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
+
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+  // await app.poke(20);
+
+  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////

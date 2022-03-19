@@ -947,7 +947,6 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 event.preventDefault();
 
                 submit(clickedButtonRef.current || event.currentTarget, {
-                  method,
                   replace,
                 });
                 clickedButtonRef.current = null;
