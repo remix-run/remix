@@ -3952,7 +3952,7 @@ Remember that the `app/root.tsx` module is responsible for rendering our `<html>
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[27-47,59-65,57-67]
+```tsx filename=app/root.tsx lines=[27-47,49-55,57-67]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet } from "remix";
 
