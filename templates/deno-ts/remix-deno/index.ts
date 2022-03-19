@@ -1,4 +1,3 @@
-export { installGlobals } from './globals.ts'
 export { createFileSessionStorage } from './sessions/fileStorage.ts'
 export { createRequestHandler, createRequestHandlerWithStaticFiles, serveStaticFiles } from './server.ts'
 
@@ -6,8 +5,11 @@ export {
   createCookie,
   createCookieSessionStorage,
   createMemorySessionStorage,
-  createSession,
   createSessionStorage,
+} from './implementations.ts';
+
+export {
+  createSession,
   isCookie,
   isSession,
   json,

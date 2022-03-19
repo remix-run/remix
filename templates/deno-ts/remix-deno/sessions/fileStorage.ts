@@ -3,7 +3,7 @@ import type {
   SessionStorage,
   SessionIdStorageStrategy,
 } from "../deps/@remix-run/server-runtime.ts";
-import { createSessionStorage } from "../deps/@remix-run/server-runtime.ts";
+import { createSessionStorage } from "../implementations.ts";
 
 interface FileSessionStorageOptions {
   /**
