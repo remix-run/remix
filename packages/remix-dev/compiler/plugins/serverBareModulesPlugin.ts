@@ -1,5 +1,6 @@
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
+import tsConfigPaths from 'tsconfig-paths';
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
@@ -18,12 +19,21 @@ export function serverBareModulesPlugin(
   dependencies: Record<string, string>,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
+  const matchPath = createMatchPath();
+  // Resolve paths according to tsconfig paths property
+  function resolvePath(id: string) {
+    if (!matchPath) {
+      return id;
+    }
+    return matchPath(id, undefined, undefined, [".ts", ".tsx"]) || id;
+  }
+
   return {
     name: "server-bare-modules",
     setup(build) {
       build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
         // If it's not a bare module ID, bundle it.
-        if (!isBareModuleId(path)) {
+        if (!isBareModuleId(resolvePath(path))) {
           return undefined;
         }
 
@@ -103,11 +113,25 @@ function getNpmPackageName(id: string): string {
   return packageName;
 }
 
+function createMatchPath() {
+  let configLoaderResult = tsConfigPaths.loadConfig();
+  if (configLoaderResult.resultType === 'failed') {
+    return undefined;
+  }
+
+  let matchPath = tsConfigPaths.createMatchPath(
+    configLoaderResult.absoluteBaseUrl,
+    configLoaderResult.paths,
+    configLoaderResult.mainFields,
+    configLoaderResult.addMatchAll
+  );
+  return matchPath;
+}
+
 function isBareModuleId(id: string): boolean {
   return (
     !id.startsWith("node:") &&
     !id.startsWith(".") &&
-    !id.startsWith("~") &&
     !isAbsolute(id)
   );
 }
