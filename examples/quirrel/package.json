@@ -6,7 +6,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p 'dev:*'",
     "dev:quirrel": "quirrel",
     "dev:remix": "remix dev",
     "postinstall": "remix setup node",

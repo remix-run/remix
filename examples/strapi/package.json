@@ -6,7 +6,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p 'dev:*'",
     "dev:remix": "remix dev",
     "postinstall": "remix setup node",
     "dev:strapi": "cd strapi && npm run develop",
