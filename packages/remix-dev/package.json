@@ -42,7 +42,7 @@
     "sort-package-json": "^1.54.0",
     "tar-fs": "^2.1.1",
     "ws": "^7.4.5",
-    "xdm": "3.4"
+    "xdm": "^3.4.0"
   },
   "devDependencies": {
     "@types/cacache": "^15.0.0",
