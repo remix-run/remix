@@ -15,8 +15,8 @@ if (!buildPathArg) {
 
 let buildPath = path.resolve(process.cwd(), buildPathArg);
 
-createApp(buildPath).listen(port, () => {
-  let address = Object.values(os.networkInterfaces())
+createApp(buildPath).listen(port, process.env.HOST, () => {
+  let address = process.env.HOST || Object.values(os.networkInterfaces())
     .flat()
     .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
 
