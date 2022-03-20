@@ -218,7 +218,7 @@ async function checkRedirect(
     } else {
       return new TransitionRedirect(
         url.pathname + url.search,
-        response.headers.get("X-Remix-Set-Cookie") !== null
+        response.headers.get("X-Remix-Revalidate") !== null
       );
     }
   }
