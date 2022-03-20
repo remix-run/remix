@@ -1,7 +1,7 @@
 name: 🐛 Bug Report
 description: Something is wrong with Remix.
 labels:
-  - "bug:unverified"
+  - bug
 body:
   - type: markdown
     attributes:
