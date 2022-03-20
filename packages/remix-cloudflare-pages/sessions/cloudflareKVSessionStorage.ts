@@ -1,6 +1,6 @@
 import type {
   SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
 } from "@remix-run/server-runtime";
 import { createSessionStorage } from "@remix-run/server-runtime";
 
@@ -22,10 +22,12 @@ interface KVSessionStorageOptions {
  *
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
+ *
+ * @see https://remix.run/api/remix#createcloudflarekvsessionstorage-cloudflare-workers
  */
 export function createCloudflareKVSessionStorage({
   cookie,
-  kv
+  kv,
 }: KVSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
@@ -38,7 +40,7 @@ export function createCloudflareKVSessionStorage({
         // (2^32). However, the larger id space should help to avoid collisions
         // with existing ids when creating new sessions, which speeds things up.
         let id = [...randomBytes]
-          .map(x => x.toString(16).padStart(2, "0"))
+          .map((x) => x.toString(16).padStart(2, "0"))
           .join("");
 
         if (await kv.get(id, "json")) {
@@ -46,7 +48,9 @@ export function createCloudflareKVSessionStorage({
         }
 
         await kv.put(id, JSON.stringify(data), {
-          expiration: expires ? Math.round(expires.getTime() / 1000) : undefined
+          expiration: expires
+            ? Math.round(expires.getTime() / 1000)
+            : undefined,
         });
 
         return id;
@@ -63,11 +67,11 @@ export function createCloudflareKVSessionStorage({
     },
     async updateData(id, data, expires) {
       await kv.put(id, JSON.stringify(data), {
-        expiration: expires ? Math.round(expires.getTime() / 1000) : undefined
+        expiration: expires ? Math.round(expires.getTime() / 1000) : undefined,
       });
     },
     async deleteData(id) {
       await kv.delete(id);
-    }
+    },
   });
 }

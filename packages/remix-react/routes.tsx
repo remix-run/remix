@@ -8,7 +8,7 @@ import {
   extractData,
   fetchData,
   isCatchResponse,
-  isRedirectResponse
+  isRedirectResponse,
 } from "./data";
 import type { Submission } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
@@ -94,7 +94,7 @@ export function createClientRoute(
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary,
     CatchBoundary: entryRoute.hasCatchBoundary,
-    hasLoader: entryRoute.hasLoader
+    hasLoader: entryRoute.hasLoader,
   };
 }
 
@@ -105,8 +105,8 @@ export function createClientRoutes(
   parentId?: string
 ): ClientRoute[] {
   return Object.keys(routeManifest)
-    .filter(key => routeManifest[key].parentId === parentId)
-    .map(key => {
+    .filter((key) => routeManifest[key].parentId === parentId)
+    .map((key) => {
       let route = createClientRoute(
         routeManifest[key],
         routeModulesCache,
@@ -124,7 +124,7 @@ export function createClientRoutes(
 }
 
 function createShouldReload(route: EntryRoute, routeModules: RouteModules) {
-  let shouldReload: ShouldReloadFunction = arg => {
+  let shouldReload: ShouldReloadFunction = (arg) => {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
     if (module.unstable_shouldReload) {
@@ -150,7 +150,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
     if (route.hasLoader) {
       let [result] = await Promise.all([
         fetchData(url, route.id, signal, submission),
-        loadRouteModuleWithBlockingLinks(route, routeModules)
+        loadRouteModuleWithBlockingLinks(route, routeModules),
       ]);
 
       if (result instanceof Error) throw result;

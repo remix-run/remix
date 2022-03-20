@@ -14,8 +14,14 @@ describe("FormData", () => {
     expect(results).toEqual([
       ["single", "heyo"],
       ["multi", "one"],
-      ["multi", "two"]
+      ["multi", "two"],
     ]);
+  });
+
+  it("restores correctly empty string values with get method", () => {
+    let formData = new NodeFormData();
+    formData.set("single", "");
+    expect(formData.get("single")).toBe("");
   });
 
   it("allows for mix of set and append with blobs and files", () => {

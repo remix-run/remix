@@ -1,20 +1,6 @@
-import {
-  redirect,
-  createCookieSessionStorage,
-  json,
-  Form,
-  useLoaderData
-} from "remix";
+import { redirect, json, Form, useLoaderData } from "remix";
 
-let sessionStorage = createCookieSessionStorage({
-  cookie: {
-    name: "redirectslogin",
-    path: "/",
-    httpOnly: true,
-    sameSite: true,
-    secure: process.env.NODE_ENV !== "development"
-  }
-});
+import { sessionStorage } from "~/redirects.server";
 
 export let action = async ({ request }) => {
   let session = await sessionStorage.getSession(request.headers.get("Cookie"));
@@ -22,8 +8,8 @@ export let action = async ({ request }) => {
 
   throw redirect("/redirects/login", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 };
 
@@ -31,8 +17,8 @@ export let loader = async ({ request }) => {
   let session = await sessionStorage.getSession(request.headers.get("Cookie"));
   return json(!!session.get("done"), {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session)
-    }
+      "Set-Cookie": await sessionStorage.commitSession(session),
+    },
   });
 };
 

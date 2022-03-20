@@ -1,14 +1,14 @@
 import * as React from "react";
 import { getAllTodos, getTodo, updateTodo } from "~/db.server";
-import type { ActionFunction } from "remix";
-import { useLoaderData, useActionData, Form, useTransition } from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
+import { Form, json, useActionData, useLoaderData, useTransition } from "remix";
 import type { Todo } from "~/models";
 
-export const loader = async () => {
+export const loader: LoaderFunction = async () => {
   const todos = await getAllTodos();
-  return {
-    todos
-  };
+  return json({
+    todos,
+  });
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -22,7 +22,7 @@ export const action: ActionFunction = async ({ request }) => {
       todo = await updateTodo(todoId, { order });
     }
   }
-  return { todo };
+  return json({ todo });
 };
 
 export default function Llllll() {
@@ -44,7 +44,7 @@ export default function Llllll() {
 
   return (
     <div>
-      {todos.map(todo => {
+      {todos.map((todo) => {
         let inputKey = keyMap.get(todo.id);
         if (inputKey == null) {
           inputKey = Math.random().toString().slice(2);

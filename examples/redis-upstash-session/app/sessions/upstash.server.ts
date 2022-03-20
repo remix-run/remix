@@ -7,10 +7,10 @@ const upstashRedisRestUrl = process.env.UPSTASH_REDIS_REST_URL;
 const headers = {
   Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
   Accept: "application/json",
-  "Content-Type": "application/json"
+  "Content-Type": "application/json",
 };
 
-const expiresToSeconds = expires => {
+const expiresToSeconds = (expires) => {
   const now = new Date();
   const expiresDate = new Date(expires);
   const secondsDelta = Math.ceil(
@@ -19,32 +19,30 @@ const expiresToSeconds = expires => {
   return secondsDelta < 0 ? 0 : secondsDelta;
 };
 
-// For more info check https://remix.run/docs/en/v1/api/remix#createsessionstorage
+// For more info check https://remix.run/api/remix#createsessionstorage
 export function createUpstashSessionStorage({ cookie }: any) {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
-      while (true) {
-        // Create a random id - taken from the core `createFileSessionStorage` Remix function.
-        const randomBytes = crypto.randomBytes(8);
-        const id = Buffer.from(randomBytes).toString("hex");
-        // Call Upstash Redis HTTP API. Set expiration according to the cookie `expired property.
-        // Note the use of the `expiresToSeconds` that converts date to seconds.
-        await fetch(
-          `${upstashRedisRestUrl}/set/${id}?EX=${expiresToSeconds(expires)}`,
-          {
-            method: "post",
-            body: JSON.stringify({ data }),
-            headers
-          }
-        );
-        return id;
-      }
+      // Create a random id - taken from the core `createFileSessionStorage` Remix function.
+      const randomBytes = crypto.randomBytes(8);
+      const id = Buffer.from(randomBytes).toString("hex");
+      // Call Upstash Redis HTTP API. Set expiration according to the cookie `expired property.
+      // Note the use of the `expiresToSeconds` that converts date to seconds.
+      await fetch(
+        `${upstashRedisRestUrl}/set/${id}?EX=${expiresToSeconds(expires)}`,
+        {
+          method: "post",
+          body: JSON.stringify({ data }),
+          headers,
+        }
+      );
+      return id;
     },
     async readData(id) {
       console.log(id);
       const response = await fetch(`${upstashRedisRestUrl}/get/${id}`, {
-        headers
+        headers,
       });
       try {
         const { result } = await response.json();
@@ -59,15 +57,15 @@ export function createUpstashSessionStorage({ cookie }: any) {
         {
           method: "post",
           body: JSON.stringify({ data }),
-          headers
+          headers,
         }
       );
     },
     async deleteData(id) {
       await fetch(`${upstashRedisRestUrl}/del/${id}`, {
         method: "post",
-        headers
+        headers,
       });
-    }
+    },
   });
 }

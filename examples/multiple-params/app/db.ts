@@ -22,15 +22,15 @@ export async function getClients(): Promise<Array<Client>> {
           id: "e8obdnsoim8",
           title: "Teddy Bear",
           amount: 100,
-          currency: "EUR"
+          currency: "EUR",
         },
         {
           id: "j8u90tr3iro",
           title: "Tacos",
           amount: 123,
-          currency: "USD"
-        }
-      ]
+          currency: "USD",
+        },
+      ],
     },
     {
       id: "gfi5m4umrv8",
@@ -41,20 +41,20 @@ export async function getClients(): Promise<Array<Client>> {
           id: "94u1l8e9n88",
           title: "Water Bottle",
           amount: 100,
-          currency: "EUR"
+          currency: "EUR",
         },
         {
           id: "e12uehka1",
           title: "Camera",
           amount: 123,
-          currency: "USD"
-        }
-      ]
-    }
+          currency: "USD",
+        },
+      ],
+    },
   ];
 }
 
 export async function getClient(id: string) {
   const clients = await getClients();
-  return clients.find(client => client.id === id);
+  return clients.find((client) => client.id === id);
 }

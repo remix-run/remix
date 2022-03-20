@@ -44,6 +44,6 @@ You'll find one pre-written article in the [content manager](https://docs.strapi
 
 The Remix app is at http://localhost:3000.
 
-It has exactly one route `app/routes/index.tsx` which utilises a loader function to fetch all `Posts` [from an external API (Remix docs)](https://remix.run/docs/en/v1/guides/data-loading#external-apis), which in this case is Strapi's API.
+It has exactly one route `app/routes/index.tsx` which utilises a loader function to fetch all `Posts` [from an external API (Remix docs)](https://remix.run/guides/data-loading#external-apis), which in this case is Strapi's API.
 
 Remix will then continue to render all the posts. To show a somewhat real-world example, the loader parses the `Article (Rich text)` (aka Markdown) into HTML with the help of [marked](https://github.com/markedjs/marked).

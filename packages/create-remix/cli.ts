@@ -1,110 +1,30 @@
-import * as path from "path";
-import chalkAnimation from "chalk-animation";
-import inquirer from "inquirer";
-import meow from "meow";
+import { execSync } from "child_process";
+import shellEscape from "shell-escape";
 
-import type { Server } from ".";
-import { createApp } from ".";
+import packageJson from "./package.json";
 
-const help = `
-  Usage:
-    $ npx create-remix [flags...] [<dir>]
+async function run() {
+  console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
+  console.log();
 
-  If <dir> is not provided up front you will be prompted for it.
+  let args = process.argv.slice(2);
+  let escapedArgs = shellEscape(args);
 
-  Flags:
-    --help, -h          Show this help message
-    --version, -v       Show the version of this script
-`;
+  let npxVersion = execSync(`npx --version`).toString().trim();
+  let flag = Number(npxVersion[0]) > 6 ? "--yes" : "";
+
+  execSync(
+    `npx ${flag} @remix-run/dev@${packageJson.version} create ${escapedArgs}`,
+    { stdio: "inherit" }
+  );
+}
 
 run().then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error: unknown) => {
     console.error(error);
     process.exit(1);
   }
 );
-
-async function run() {
-  let { input, flags, showHelp, showVersion } = meow(help, {
-    flags: {
-      help: { type: "boolean", default: false, alias: "h" },
-      version: { type: "boolean", default: false, alias: "v" }
-    }
-  });
-
-  if (flags.help) showHelp();
-  if (flags.version) showVersion();
-
-  let anim = chalkAnimation.rainbow(`\nR E M I X\n`);
-  await new Promise(res => setTimeout(res, 1500));
-  anim.stop();
-
-  console.log("💿 Welcome to Remix! Let's get you set up with a new project.");
-  console.log();
-
-  // Figure out the app directory
-  let projectDir = path.resolve(
-    process.cwd(),
-    input.length > 0
-      ? input[0]
-      : (
-          await inquirer.prompt<{ dir: string }>([
-            {
-              type: "input",
-              name: "dir",
-              message: "Where would you like to create your app?",
-              default: "./my-remix-app"
-            }
-          ])
-        ).dir
-  );
-
-  let answers = await inquirer.prompt<{
-    server: Server;
-    lang: "ts" | "js";
-    install: boolean;
-  }>([
-    {
-      name: "server",
-      type: "list",
-      message:
-        "Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.",
-      loop: false,
-      choices: [
-        { name: "Remix App Server", value: "remix" },
-        { name: "Express Server", value: "express" },
-        { name: "Architect (AWS Lambda)", value: "arc" },
-        { name: "Fly.io", value: "fly" },
-        { name: "Netlify", value: "netlify" },
-        { name: "Vercel", value: "vercel" },
-        { name: "Cloudflare Pages", value: "cloudflare-pages" },
-        { name: "Cloudflare Workers", value: "cloudflare-workers" }
-      ]
-    },
-    {
-      name: "lang",
-      type: "list",
-      message: "TypeScript or JavaScript?",
-      choices: [
-        { name: "TypeScript", value: "ts" },
-        { name: "JavaScript", value: "js" }
-      ]
-    },
-    {
-      name: "install",
-      type: "confirm",
-      message: "Do you want me to run `npm install`?",
-      default: true
-    }
-  ]);
-
-  await createApp({
-    projectDir,
-    lang: answers.lang,
-    server: answers.server,
-    install: answers.install
-  });
-}

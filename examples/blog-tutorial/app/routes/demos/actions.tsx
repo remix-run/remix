@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
-import type { ActionFunction } from "remix";
+import type { ActionFunction, MetaFunction } from "remix";
 import { Form, json, useActionData, redirect } from "remix";
 
 import { hash } from "~/utils.server";
 
-export function meta() {
-  return { title: "Actions Demo" };
-}
+export const meta: MetaFunction = () => ({
+  title: "Actions Demo",
+});
 
 // When your form sends a POST, the action is called on the server.
 // - https://remix.run/api/conventions#action
@@ -26,7 +26,7 @@ export const action: ActionFunction = async ({ request }) => {
   const rightAnswers = [
     "4fa6024f12494d3a99d8bda9b7a55f7d140f328a",
     "ce3659ad235ca6d1e12dec21465aff3f9a62bb8c",
-    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4"
+    "bd111dcb4b343de4ec0a79d2d5ec55a3919c79c4",
   ];
 
   const encrypted = hash(answer);
@@ -71,7 +71,7 @@ export default function ActionsDemo() {
             <i>What is more useful when it is broken?</i>
           </p>
           <label>
-            <div>Answer:</div>
+            Answer:
             <input ref={answerRef} name="answer" type="text" />
           </label>
           <div>

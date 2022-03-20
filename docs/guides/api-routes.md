@@ -12,13 +12,13 @@ In general, you don't need the concept of "API Routes" at all. But we knew you'd
 
 Consider this route:
 
-```tsx filename=routes/teams.js
+```tsx filename=routes/teams.tsx
 export async function loader() {
-  return getTeams();
+  return json(await getTeams());
 }
 
 export default function Teams() {
-  return <TeamsView teams={useLoaderData()}>
+  return <TeamsView teams={useLoaderData()} />;
 }
 ```
 
@@ -35,7 +35,9 @@ For example, you could have a route to handle the search:
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return searchCities(url.searchParams.get("q"));
+  return json(
+    await searchCities(url.searchParams.get("q"))
+  );
 }
 ```
 
@@ -51,7 +53,7 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="q"
-            onChange={event =>
+            onChange={(event) =>
               cities.submit(event.target.form)
             }
           />
@@ -66,7 +68,7 @@ function CitySearchCombobox() {
               <p>Failed to load cities :(</p>
             ) : cities.data.length ? (
               <ComboboxList>
-                {cities.data.map(city => (
+                {cities.data.map((city) => (
                   <ComboboxOption
                     key={city.id}
                     value={city.name}
@@ -95,8 +97,8 @@ export async function loader({ params }) {
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```

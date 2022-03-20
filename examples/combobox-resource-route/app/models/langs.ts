@@ -12,7 +12,7 @@ export async function searchLangs(query: string) {
   // land later, this is a condition many apps don't consider but Remix handles
   // for you automatically. Open the network tab and watch as Remix
   // automatically cancels the requests as they're interrupted.
-  await new Promise(res => setTimeout(res, Math.random() * 1000));
+  await new Promise((res) => setTimeout(res, Math.random() * 1000));
   return matchSorter(langs, query, { keys: ["alpha2", "name"] });
 }
 
@@ -47,7 +47,7 @@ const langs = [
   { name: "Czech", alpha2: "cs" },
   {
     name: "Church Slavic; Old Slavonic; Church Slavonic; Old Bulgarian; Old Church Slavonic",
-    alpha2: "cu"
+    alpha2: "cu",
   },
   { name: "Chuvash", alpha2: "cv" },
   { name: "Welsh", alpha2: "cy" },
@@ -86,7 +86,7 @@ const langs = [
   { name: "Herero", alpha2: "hz" },
   {
     name: "Interlingua (International Auxiliary Language Association)",
-    alpha2: "ia"
+    alpha2: "ia",
   },
   { name: "Indonesian", alpha2: "id" },
   { name: "Interlingue; Occidental", alpha2: "ie" },
@@ -206,7 +206,7 @@ const langs = [
   { name: "Yoruba", alpha2: "yo" },
   { name: "Zhuang; Chuang", alpha2: "za" },
   { name: "Chinese", alpha2: "zh" },
-  { name: "Zulu", alpha2: "zu" }
+  { name: "Zulu", alpha2: "zu" },
 ];
 
 export type Lang = { name: string; alpha2: string };
