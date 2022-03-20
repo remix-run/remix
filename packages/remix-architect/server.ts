@@ -132,7 +132,7 @@ export async function sendRemixResponse(
   let isBase64Encoded = false;
 
   if (isBinary) {
-    const blob = await response.arrayBuffer();
+    let blob = await response.arrayBuffer();
     body = Buffer.from(blob).toString("base64");
     isBase64Encoded = true;
   } else {

@@ -31,13 +31,13 @@ export function createPagesFunctionHandler<Env = any>({
   getLoadContext,
   mode,
 }: createPagesFunctionHandlerParams<Env>) {
-  const handleRequest = createRequestHandler<Env>({
+  let handleRequest = createRequestHandler<Env>({
     build,
     getLoadContext,
     mode,
   });
 
-  const handleFetch = async (context: EventContext<Env, any, any>) => {
+  let handleFetch = async (context: EventContext<Env, any, any>) => {
     let response: Response | undefined;
 
     // https://github.com/cloudflare/wrangler2/issues/117

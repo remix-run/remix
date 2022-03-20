@@ -1,0 +1,30 @@
+{
+  "name": "remix-template-netlify",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build": "remix build",
+    "dev": "cross-env NODE_ENV=development netlify dev",
+    "postinstall": "remix setup node",
+    "start": "cross-env NODE_ENV=production netlify dev"
+  },
+  "dependencies": {
+    "@netlify/functions": "^0.10.0",
+    "@remix-run/netlify": "*",
+    "@remix-run/react": "*",
+    "cross-env": "^7.0.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "*"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "eslint": "^8.11.0"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

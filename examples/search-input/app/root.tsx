@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -8,7 +9,6 @@ import {
   ScrollRestoration,
   useCatch,
 } from "remix";
-import type { LinksFunction } from "remix";
 
 import globalStylesUrl from "~/styles/global.css";
 
@@ -23,6 +23,12 @@ import globalStylesUrl from "~/styles/global.css";
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: globalStylesUrl }];
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 /**
  * The root module's default export is a component that renders the current
@@ -49,8 +55,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />

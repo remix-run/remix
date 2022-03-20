@@ -198,7 +198,6 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
  */
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
-  await gitMerge("main", git.initialBranch, { pullFirst: true });
   await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message

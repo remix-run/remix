@@ -338,7 +338,7 @@ export async function readConfig(
       serverBuildPath = "functions/[[path]].js";
       break;
     case "netlify":
-      serverBuildPath = "netlify/functions/server/index.js";
+      serverBuildPath = ".netlify/functions-internal/server.js";
       break;
     case "vercel":
       serverBuildPath = "api/index.js";

@@ -1,6 +1,6 @@
+import * as React from "react";
 import { hydrate } from "react-dom";
 import { RemixBrowser } from "remix";
-import React, { useState } from "react";
 import { getCssText } from "./styles/stitches.config";
 import ClientStyleContext from "./styles/client.context";
 
@@ -9,11 +9,11 @@ interface ClientCacheProviderProps {
 }
 
 function ClientCacheProvider({ children }: ClientCacheProviderProps) {
-  const [sheet, setSheet] = useState(getCssText());
+  const [sheet, setSheet] = React.useState(getCssText());
 
-  function reset() {
+  const reset = React.useCallback(() => {
     setSheet(getCssText());
-  }
+  }, []);
 
   return (
     <ClientStyleContext.Provider value={{ reset, sheet }}>
