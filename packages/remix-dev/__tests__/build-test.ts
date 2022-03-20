@@ -1,7 +1,8 @@
 import path from "path";
 import type * as esbuild from "esbuild";
 
-import { BuildMode, BuildOptions, BuildTarget } from "../build";
+import { BuildMode, BuildTarget } from "../build";
+import type { BuildOptions } from "../build";
 import { build } from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
@@ -79,6 +80,7 @@ function runBuildOutput(
     exports: { [key: string]: unknown };
   };
 
+  // eslint-disable-next-line no-new-func
   new Function("require", "module", ...Object.keys(additionalArguments), text)(
     (moduleName: string) => modules[moduleName] ?? {},
     module,
@@ -109,12 +111,12 @@ describe("building", () => {
     });
 
     it('calls the JSX custom factory with a custom "jsxImportSource"', async () => {
-      let [_, buildOutput] = await generateBuild(
+      let buildOutput = await generateBuild(
         await readConfig(customJSXAppRoot),
         {
           mode: BuildMode.Development,
         }
-      );
+      )[1];
 
       let jsxFn = jest.fn();
       let { module } = runBuildOutput(
@@ -127,7 +129,7 @@ describe("building", () => {
         "routes.routes/index.module.default"
       );
 
-      const indexRouteModule =
+      let indexRouteModule =
         module.exports.routes["routes/index"].module.default;
       expect(typeof indexRouteModule).toBe("function");
 
@@ -137,9 +139,9 @@ describe("building", () => {
     });
 
     it('calls the default React factory without a "jsxImportSource"', async () => {
-      let [_, buildOutput] = await generateBuild(config, {
+      let buildOutput = await generateBuild(config, {
         mode: BuildMode.Development,
-      });
+      })[1];
 
       let jsxFn = jest.fn();
       let { module } = runBuildOutput(buildOutput.outputFiles[0].text, {
@@ -152,7 +154,7 @@ describe("building", () => {
         "routes.routes/index.module.default"
       );
 
-      const indexRouteModule =
+      let indexRouteModule =
         module.exports.routes["routes/index"].module.default;
       expect(typeof indexRouteModule).toBe("function");
 
