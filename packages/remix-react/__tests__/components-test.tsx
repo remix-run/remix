@@ -81,7 +81,7 @@ function itPrefetchesPageLinks<
     });
 
     function withContext(stuff: JSX.Element) {
-      const context = {
+      let context = {
         routeModules: { idk: { default: () => null } },
         manifest: {
           routes: {
@@ -115,7 +115,7 @@ function itPrefetchesPageLinks<
 
     setIntentEvents.forEach((event) => {
       it(`prefetches page links on ${event}`, () => {
-        const { container, unmount } = render(
+        let { container, unmount } = render(
           withContext(
             <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
           )
@@ -132,8 +132,8 @@ function itPrefetchesPageLinks<
 
       it(`prefetches page links and calls explicit handler on ${event}`, () => {
         let ranHandler = false;
-        const eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
-        const { container, unmount } = render(
+        let eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
+        let { container, unmount } = render(
           withContext(
             <Component
               {...({

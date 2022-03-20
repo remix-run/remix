@@ -6,7 +6,7 @@ title: Performance
 
 <docs-warning>This document is in draft, we will be adding more practical information soon, but we wanted to communicate our approach early.</docs-warning>
 
-Instead of prescribing a precise architecture with all of it's constraints like SSG, Remix is designed to encourage you to leverage the performance characteristics of distributed computing.
+Instead of prescribing a precise architecture with all of its constraints like SSG, Remix is designed to encourage you to leverage the performance characteristics of distributed computing.
 
 The fastest thing to send to a user is, of course, a static document on a CDN that's close to the user. Until recently, servers pretty much only ran in one region of the world, which made for slow responses everywhere else. This is perhaps one reason SSG gained so much popularity, it allowed developers to essentially "cache" their data into HTML documents and then distribute them across the world. It comes with a lot of tradeoffs too: build times, build complexity, duplicate websites for translations, can't use it for authenticated user experiences, can't use it for very large and dynamic data sources (like our project [unpkg.com](https://unpkg.com)!) to name a few.
 

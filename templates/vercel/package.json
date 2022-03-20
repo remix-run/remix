@@ -1,0 +1,28 @@
+{
+  "name": "remix-template-vercel",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix dev",
+    "postinstall": "remix setup node"
+  },
+  "dependencies": {
+    "@remix-run/react": "*",
+    "@remix-run/vercel": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "remix": "*"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "@remix-run/serve": "*",
+    "eslint": "^8.11.0"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

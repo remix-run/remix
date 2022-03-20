@@ -1,23 +1,23 @@
+/** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
-  modulePathIgnorePatterns: ["<rootDir>/examples", "<rootDir>/.tmp"],
+  modulePathIgnorePatterns: [
+    "<rootDir>/.tmp",
+    "<rootDir>/examples",
+    "<rootDir>/templates",
+  ],
   projects: [
     {
       displayName: "create-remix",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/create-remix/**/*-test.[jt]s?(x)"],
-      globalSetup: "<rootDir>/jest/buildRemix.ts",
-      setupFilesAfterEnv: [
-        "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts",
-      ],
+      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
       displayName: "integration",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
-      setupFilesAfterEnv: [
-        "<rootDir>/packages/create-remix/__tests__/setupAfterEnv.ts",
-      ],
+      setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
     },
     {
       displayName: "remix-architect",
@@ -26,19 +26,12 @@ module.exports = {
       setupFiles: ["<rootDir>/packages/remix-architect/__tests__/setup.ts"],
     },
     {
-      displayName: "remix-deno",
-      testEnvironment: "jsdom",
-      testMatch: ["<rootDir>/packages/remix-deno/**/*-test.[jt]s?(x)"],
-      moduleNameMapper: {
-        "https://deno.land/std/path/mod.ts":
-          "<rootDir>/packages/remix-deno/__tests__/pathMock.ts",
-      },
-      setupFiles: ["<rootDir>/packages/remix-deno/__tests__/setup.ts"],
-    },
-    {
       displayName: "remix-dev",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-dev/**/*-test.[jt]s?(x)"],
+      setupFilesAfterEnv: [
+        "<rootDir>/packages/remix-dev/__tests__/setupAfterEnv.ts",
+      ],
     },
     {
       displayName: "remix-express",
@@ -83,7 +76,7 @@ module.exports = {
     // Fixture Apps
     {
       displayName: "gists-app",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
       globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",

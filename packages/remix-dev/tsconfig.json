@@ -7,11 +7,13 @@
     "module": "CommonJS",
 
     "moduleResolution": "node",
+    "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
 
     "declaration": true,
     "emitDeclarationOnly": true,
+    "skipLibCheck": true,
 
     "outDir": "../../build/node_modules/@remix-run/dev",
     "rootDir": "."

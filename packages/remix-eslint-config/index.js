@@ -14,6 +14,10 @@ const reactSettings = require("./settings/react");
  */
 require("@rushstack/eslint-patch/modern-module-resolution");
 
+const OFF = 0;
+// const WARN = 1;
+// const ERROR = 2;
+
 /**
  * @type {import("eslint").Linter.Config}
  */
@@ -31,7 +35,6 @@ const config = {
     browser: true,
     commonjs: true,
     es6: true,
-    node: true,
   },
   plugins: ["import", "react", "react-hooks", "jsx-a11y"],
   settings: {
@@ -69,6 +72,15 @@ const config = {
       plugins: ["@typescript-eslint"],
       rules: {
         ...typescriptRules,
+      },
+    },
+    {
+      files: ["**/routes/**/*.js?(x)", "**/routes/**/*.tsx"],
+      rules: {
+        // Routes may use default exports without a name. At the route level
+        // identifying components for debugging purposes is less of an issue, as
+        // the route boundary is more easily identifiable.
+        "react/display-name": OFF,
       },
     },
   ],

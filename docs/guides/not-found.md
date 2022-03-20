@@ -29,7 +29,7 @@ export async function loader({ params }) {
     });
   }
 
-  return page;
+  return json(page);
 }
 ```
 
@@ -82,7 +82,7 @@ export async function loader({ params }) {
     });
   }
 
-  return page;
+  return json(page);
 }
 
 export function CatchBoundary() {
