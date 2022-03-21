@@ -74,7 +74,7 @@ To fix this and remove the warning, you can return the same value passed into ou
       return json(someData);
     }
 
-    // You can also return an \`Response\` directly:
+    // You can also return a \`Response\` directly:
     export async function action() {
       return new Response(someData, {
         headers: {
