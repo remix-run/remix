@@ -20,6 +20,7 @@ import {
   useResolvedPath,
   useRoutes,
 } from "react-router-dom";
+
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { AssetsManifest, EntryContext } from "./entry";
 import {

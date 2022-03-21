@@ -6,9 +6,7 @@ export let loader: LoaderFunction = async () => {
 };
 
 export default function ParentRouteData() {
-  let indexData = useRouteData<{ title: string }>(
-    "routes/route-data/index"
-  );
+  let indexData = useRouteData<{ title: string }>("routes/route-data/index");
   let newData = useRouteData<{ title: string }>("routes/route-data/new");
   return (
     <div>

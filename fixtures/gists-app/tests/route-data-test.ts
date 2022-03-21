@@ -1,5 +1,6 @@
 import type { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer";
+
 import { disableJavaScript, getHtml, reactIsHydrated } from "./utils";
 
 const testPort = 3000;

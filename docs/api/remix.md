@@ -483,7 +483,9 @@ export function loader() {
 import { useRouteData } from "remix";
 
 export default function Invoices() {
-  const invoices = useRouteData<Invoice[]>("routes/invoices");
+  const invoices = useRouteData<Invoice[]>(
+    "routes/invoices"
+  );
   // ...
 }
 ```
