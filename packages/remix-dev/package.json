@@ -47,6 +47,7 @@
     "semver": "^7.3.5",
     "sort-package-json": "^1.54.0",
     "tar-fs": "^2.1.1",
+    "tsconfig-paths": "^3.14.0",
     "ws": "^7.4.5",
     "xdm": "^2.0.0"
   },
