@@ -1,4 +1,4 @@
-import "./globals"
+import "./globals";
 
 export { createCloudflareKVSessionStorage } from "./sessions/cloudflareKVSessionStorage";
 
@@ -7,7 +7,7 @@ export {
   createCookieSessionStorage,
   createMemorySessionStorage,
   createSessionStorage,
-} from './implementations';
+} from "./implementations";
 
 export {
   createRequestHandler,

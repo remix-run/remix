@@ -19,7 +19,7 @@ export const sign: SignFunction = async (value, secret) => {
   );
 
   return value + "." + hash;
-}
+};
 
 export const unsign: UnsignFunction = async (cookie, secret) => {
   let key = await crypto.subtle.importKey(
@@ -38,7 +38,7 @@ export const unsign: UnsignFunction = async (cookie, secret) => {
   let valid = await crypto.subtle.verify("HMAC", key, signature, data);
 
   return valid ? value : false;
-}
+};
 
 function byteStringToUint8Array(byteString: string): Uint8Array {
   let array = new Uint8Array(byteString.length);
