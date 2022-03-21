@@ -457,13 +457,14 @@ async function detectTemplateType(
   return "remoteTarball";
 }
 
-function untype(filename: string, ts: string): string {
-  let result = babel.transformSync(ts, {
+function untype(filename: string, source: string, projectDir: string): string {
+  let result = babel.transformSync(source, {
     filename,
     presets: [[babelPresetTypeScript, { jsx: "preserve" }]],
     plugins: [babelPluginSyntaxJSX],
     compact: false,
     retainLines: true,
+    cwd: projectDir,
   });
 
   if (!result || !result.code) {
@@ -490,8 +491,8 @@ async function deTypeScriptify(projectDir: string) {
     }
 
     let contents = fse.readFileSync(entry, "utf8");
-    let untyped = untype(entry, contents);
-    console.log({ [entry]: untyped });
+    let filename = path.basename(entry);
+    let untyped = untype(filename, contents, projectDir);
 
     fse.writeFileSync(entry, untyped, "utf8");
     if (entry.endsWith(".tsx")) {
