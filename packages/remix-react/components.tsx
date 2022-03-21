@@ -663,6 +663,8 @@ export function Meta() {
   return (
     <>
       {Object.entries(meta).map(([name, value]) => {
+        if (!value) return null;
+
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
         let isOpenGraphTag = name.startsWith("og:");
