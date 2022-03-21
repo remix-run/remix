@@ -39,6 +39,7 @@ export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
 export const js = String.raw;
+export const json = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);

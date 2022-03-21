@@ -19,7 +19,7 @@ export function serverBareModulesPlugin(
   dependencies: Record<string, string>,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
-  const matchPath = createMatchPath();
+  let matchPath = createMatchPath();
   // Resolve paths according to tsconfig paths property
   function resolvePath(id: string) {
     if (!matchPath) {
