@@ -145,11 +145,7 @@ export async function createApp({
   });
 
   if (!useTypeScript) {
-    // TODO:
-    // 1. Convert all .ts files in the template to .js
-    // 2. Rename the tsconfig.json to jsconfig.json
-    // 3. Remove @types/* and typescript from package.json
-    // 4. Remove typecheck npm script from package.json
+    await deTypeScriptify(projectDir);
   }
 
   if (installDeps) {
