@@ -10,7 +10,8 @@ import {
 import type { LoaderFunction } from "remix";
 
 import {
-  NonFlashOfWrongThemeEls,
+  ThemeBody,
+  ThemeHead,
   ThemeProvider,
   useTheme
 } from "~/utils/theme-provider";
@@ -43,10 +44,11 @@ function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
-        <NonFlashOfWrongThemeEls ssrTheme={Boolean(data.theme)} />
+        <ThemeHead ssrTheme={Boolean(data.theme)} />
       </head>
       <body>
         <Outlet />
+        <ThemeBody ssrTheme={Boolean(data.theme)} />
         <ScrollRestoration />
         <Scripts />
         <LiveReload />

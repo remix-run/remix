@@ -19,9 +19,9 @@ type ThemeContextType = [Theme | null, Dispatch<SetStateAction<Theme | null>>];
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const prefersLightMQ = "(prefers-color-scheme: light)";
+const prefersDarkMQ = "(prefers-color-scheme: dark)";
 const getPreferredTheme = () =>
-  window.matchMedia(prefersLightMQ).matches ? Theme.LIGHT : Theme.DARK;
+  window.matchMedia(prefersDarkMQ).matches ? Theme.DARK : Theme.LIGHT;
 
 function ThemeProvider({
   children,
@@ -77,9 +77,9 @@ function ThemeProvider({
   }, [theme]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(prefersLightMQ);
+    const mediaQuery = window.matchMedia(prefersDarkMQ);
     const handleChange = () => {
-      setTheme(mediaQuery.matches ? Theme.LIGHT : Theme.DARK);
+      setTheme(mediaQuery.matches ? Theme.DARK : Theme.LIGHT);
     };
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
@@ -98,9 +98,9 @@ const clientThemeCode = `
 // a theme, then I'll know what you want in the future and you'll not see this
 // script anymore.
 ;(() => {
-  const theme = window.matchMedia(${JSON.stringify(prefersLightMQ)}).matches
-    ? 'light'
-    : 'dark';
+  const theme = window.matchMedia(${JSON.stringify(prefersDarkMQ)}).matches
+    ? 'dark'
+    : 'light';
   const cl = document.documentElement.classList;
   const themeAlreadyApplied = cl.contains('light') || cl.contains('dark');
   if (themeAlreadyApplied) {
@@ -126,29 +126,7 @@ const clientThemeCode = `
 })();
 `;
 
-function handleDarkAndLightModeEls() {
-  const theme = getPreferredTheme();
-  const darkEls = document.querySelectorAll("dark-mode");
-  const lightEls = document.querySelectorAll("light-mode");
-  for (const darkEl of darkEls) {
-    if (theme === "dark") {
-      for (const child of darkEl.childNodes) {
-        darkEl.parentElement?.append(child);
-      }
-    }
-    darkEl.remove();
-  }
-  for (const lightEl of lightEls) {
-    if (theme === "light") {
-      for (const child of lightEl.childNodes) {
-        lightEl.parentElement?.append(child);
-      }
-    }
-    lightEl.remove();
-  }
-}
-
-function NonFlashOfWrongThemeEls({ ssrTheme }: { ssrTheme: boolean }) {
+function ThemeHead({ ssrTheme }: { ssrTheme: boolean }) {
   const [theme] = useTheme();
 
   return (
@@ -175,6 +153,38 @@ function NonFlashOfWrongThemeEls({ ssrTheme }: { ssrTheme: boolean }) {
         />
       )}
     </>
+  );
+}
+
+const clientDarkAndLightModeElsCode = `;(() => {
+  const theme = window.matchMedia(${JSON.stringify(prefersDarkMQ)}).matches
+    ? 'dark'
+    : 'light';
+  const darkEls = document.querySelectorAll("dark-mode");
+  const lightEls = document.querySelectorAll("light-mode");
+  for (const darkEl of darkEls) {
+    if (theme === "dark") {
+      for (const child of darkEl.childNodes) {
+        darkEl.parentElement?.append(child);
+      }
+    }
+    darkEl.remove();
+  }
+  for (const lightEl of lightEls) {
+    if (theme === "light") {
+      for (const child of lightEl.childNodes) {
+        lightEl.parentElement?.append(child);
+      }
+    }
+    lightEl.remove();
+  }
+})();`;
+
+function ThemeBody({ ssrTheme }: { ssrTheme: boolean }) {
+  return ssrTheme ? null : (
+    <script
+      dangerouslySetInnerHTML={{ __html: clientDarkAndLightModeElsCode }}
+    />
   );
 }
 
@@ -224,11 +234,11 @@ function isTheme(value: unknown): value is Theme {
 }
 
 export {
-  handleDarkAndLightModeEls,
   isTheme,
-  NonFlashOfWrongThemeEls,
   Theme,
   Themed,
+  ThemeBody,
+  ThemeHead,
   ThemeProvider,
   useTheme
 };
