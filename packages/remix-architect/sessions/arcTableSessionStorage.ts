@@ -1,9 +1,6 @@
 import * as crypto from "crypto";
-import type {
-  SessionStorage,
-  SessionIdStorageStrategy,
-} from "@remix-run/server-runtime";
-import { createSessionStorage } from "@remix-run/server-runtime";
+import type { SessionStorage, SessionIdStorageStrategy } from "@remix-run/node";
+import { createSessionStorage } from "@remix-run/node";
 import arc from "@architect/functions";
 import type { ArcTable } from "@architect/functions/tables";
 

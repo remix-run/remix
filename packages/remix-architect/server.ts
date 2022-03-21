@@ -3,6 +3,7 @@ import {
   AbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  createRequestHandler as createRemixRequestHandler,
 } from "@remix-run/node";
 import type {
   APIGatewayProxyEventHeaders,
@@ -13,10 +14,8 @@ import type {
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform,
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { Response as NodeResponse } from "@remix-run/node";
+  Response as NodeResponse,
+} from "@remix-run/node";
 
 import { isBinaryType } from "./binary-types";
 
@@ -46,8 +45,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): APIGatewayProxyHandlerV2 {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, _context) => {
     let abortController = new AbortController();
