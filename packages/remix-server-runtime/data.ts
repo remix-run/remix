@@ -57,7 +57,7 @@ export async function callRouteAction({
 
   if (!isResponse(result)) {
     console.warn(
-      `You returned a values other than a \`Response\` object from the action for route "${match.route.id}". This is deprecated and will result in a server error in a future version of Remix.
+      `You returned a value other than a \`Response\` object from the action for route "${match.route.id}". This is deprecated and will result in a server error in a future version of Remix.
 
 To fix this and remove the warning, you can return the same value passed into our \`json\` helper function which will construct a \`Response\` instance:
 
