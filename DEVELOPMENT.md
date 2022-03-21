@@ -126,7 +126,7 @@ npm run dev
 REMIX_LOCAL_DEV_OUTPUT_DIRECTORY=../my-remix-app yarn watch
 ```
 
-Now - any time you make changes in the Remix repository, the they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.
+Now - any time you make changes in the Remix repository, they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.
 
 ### Transition Manager Flows
 
