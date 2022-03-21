@@ -19,15 +19,6 @@ const remix = path.resolve(
 const TEMP_DIR = path.join(process.cwd(), ".tmp", "create-remix");
 
 describe("remix cli", () => {
-  beforeAll(async () => {
-    if (!fs.existsSync(remix)) {
-      throw new Error(`Cannot run Remix CLI tests w/out building Remix`);
-    }
-
-    await fsp.rm(TEMP_DIR, { force: true, recursive: true });
-    await fsp.mkdir(TEMP_DIR, { recursive: true });
-  });
-
   describe("the --help flag", () => {
     it("prints help info", async () => {
       let { stdout } = await execFile("node", [remix, "--help"], {
@@ -139,6 +130,15 @@ describe("remix cli", () => {
   });
 
   describe("the create command", () => {
+    beforeAll(async () => {
+      if (!fs.existsSync(remix)) {
+        throw new Error(`Cannot run Remix CLI tests w/out building Remix`);
+      }
+
+      await fsp.rm(TEMP_DIR, { force: true, recursive: true });
+      await fsp.mkdir(TEMP_DIR, { recursive: true });
+    });
+
     afterAll(() => {
       /**
        * This prevents the console for spitting out a bunch of junk like this for
@@ -158,9 +158,9 @@ describe("remix cli", () => {
         await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
       }
 
-      let dirs = fs.readdirSync(path.join(process.cwd(), ".tmp"));
+      let dirs = fs.readdirSync(TEMP_DIR);
       for (let dir of dirs) {
-        renamePkgJsonApp(path.join(process.cwd(), ".tmp", dir));
+        renamePkgJsonApp(path.join(TEMP_DIR, dir));
       }
     });
 
