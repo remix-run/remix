@@ -2,10 +2,10 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
   // This has been added as a global in node 15+
   AbortController,
+  createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
 
@@ -18,7 +18,13 @@ import {
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
-jest.mock("@remix-run/server-runtime");
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+      ...original,
+      createRequestHandler: jest.fn()
+  };
+});
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler

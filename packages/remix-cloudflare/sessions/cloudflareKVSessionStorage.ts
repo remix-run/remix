@@ -2,9 +2,10 @@ import type {
   SessionStorage,
   SessionIdStorageStrategy,
 } from "@remix-run/server-runtime";
-import { createSessionStorage } from "@remix-run/server-runtime";
 
-interface KVSessionStorageOptions {
+import { createSessionStorage } from "../implementations";
+
+interface CloudflareKVSessionStorageOptions {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
@@ -22,13 +23,11 @@ interface KVSessionStorageOptions {
  *
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
- *
- * @see https://remix.run/api/remix#createcloudflarekvsessionstorage-cloudflare-workers
  */
 export function createCloudflareKVSessionStorage({
   cookie,
   kv,
-}: KVSessionStorageOptions): SessionStorage {
+}: CloudflareKVSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {

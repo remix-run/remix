@@ -1,6 +1,8 @@
+import type { SignFunction, UnsignFunction } from "@remix-run/server-runtime";
+
 const encoder = new TextEncoder();
 
-export async function sign(value: string, secret: string): Promise<string> {
+export const sign: SignFunction = async (value, secret) => {
   let key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
@@ -19,10 +21,7 @@ export async function sign(value: string, secret: string): Promise<string> {
   return value + "." + hash;
 }
 
-export async function unsign(
-  cookie: string,
-  secret: string
-): Promise<string | false> {
+export const unsign: UnsignFunction = async (cookie, secret) => {
   let key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),

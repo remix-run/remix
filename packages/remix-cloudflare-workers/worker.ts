@@ -7,9 +7,8 @@ import {
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform,
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+} from "@remix-run/cloudflare";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -37,8 +36,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return (event: FetchEvent) => {
     let loadContext =
