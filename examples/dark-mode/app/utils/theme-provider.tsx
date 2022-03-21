@@ -126,6 +126,40 @@ const clientThemeCode = `
 })();
 `;
 
+const themeStylesCode = `
+  /* default light, but app-preference is "dark" */
+  html.dark {
+    light-mode {
+      display: none;
+    }
+  }
+
+  /* default light, and no app-preference */
+  html:not(.dark) {
+    dark-mode {
+      display: none;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    /* prefers dark, but app-preference is "light" */
+    html.light {
+      dark-mode {
+        display: none;
+      }
+    }
+
+    /* prefers dark, and app-preference is "dark" */
+    html.dark,
+    /* prefers dark and no app-preference */
+    html:not(.light) {
+      light-mode {
+        display: none;
+      }
+    }
+  }
+`;
+
 function ThemeHead({ ssrTheme }: { ssrTheme: boolean }) {
   const [theme] = useTheme();
 
@@ -144,13 +178,16 @@ function ThemeHead({ ssrTheme }: { ssrTheme: boolean }) {
         to do fancy tricks prior to hydration to make things match.
       */}
       {ssrTheme ? null : (
-        <script
-          // NOTE: we cannot use type="module" because that automatically makes
-          // the script "defer". That doesn't work for us because we need
-          // this script to run synchronously before the rest of the document
-          // is finished loading.
-          dangerouslySetInnerHTML={{ __html: clientThemeCode }}
-        />
+        <>
+          <script
+            // NOTE: we cannot use type="module" because that automatically makes
+            // the script "defer". That doesn't work for us because we need
+            // this script to run synchronously before the rest of the document
+            // is finished loading.
+            dangerouslySetInnerHTML={{ __html: clientThemeCode }}
+          />
+          <style dangerouslySetInnerHTML={{ __html: themeStylesCode }} />
+        </>
       )}
     </>
   );
