@@ -42,6 +42,18 @@ let client = new aws.ApiGatewayV2({
   },
 });
 
+async function deleteOldestDeployment() {
+  let deployments = await client.getApis().promise();
+
+  // Sort by creation date, oldest first
+  let [deployment] = deployments.Items.sort((a, b) => {
+    return a.CreatedDate > b.CreatedDate ? 1 : -1;
+  });
+
+  console.log(`Deleting deployment ${deployment.Id}`);
+  await client.deleteApi({ ApiId: deployment.Id }).promise();
+}
+
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
   return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
@@ -76,6 +88,8 @@ try {
   let parsed = arcParser(fileContents);
   parsed.app = [APP_NAME];
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
+
+  await deleteOldestDeployment();
 
   // deploy to the staging environment
   let arcDeployCommand = spawnSync(
