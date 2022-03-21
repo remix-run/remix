@@ -7,7 +7,6 @@ import {
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform,
 } from "@remix-run/cloudflare";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
 
@@ -37,8 +36,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return (event: FetchEvent) => {
     let loadContext =

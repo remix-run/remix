@@ -14,7 +14,6 @@ import type {
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform,
   Response as NodeResponse,
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
@@ -43,8 +42,7 @@ export function createRequestHandler({
   getLoadContext?: AppLoadContext;
   mode?: string;
 }): Handler {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
     let abortController = new AbortController();

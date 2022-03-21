@@ -3,7 +3,6 @@ import type * as express from "express";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform,
   RequestInit as NodeRequestInit,
   Response as NodeResponse,
 } from "@remix-run/node";
@@ -41,8 +40,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (
     req: express.Request,

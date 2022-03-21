@@ -25,8 +25,6 @@ export type {
   PageLinkDescriptor,
 } from "./links";
 
-export type { ServerPlatform } from "./platform";
-
 export type {
   ActionFunction,
   DataFunctionArgs,

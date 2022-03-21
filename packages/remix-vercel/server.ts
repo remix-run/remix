@@ -2,7 +2,6 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform,
   RequestInit as NodeRequestInit,
   Response as NodeResponse,
 } from "@remix-run/node";
@@ -40,8 +39,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }) {
-  let platform: ServerPlatform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (req: VercelRequest, res: VercelResponse) => {
     let abortController = new AbortController();

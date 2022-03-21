@@ -6,7 +6,6 @@ import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
-import type { ServerPlatform } from "./platform";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import { ServerMode, isServerMode } from "./mode";
@@ -26,7 +25,6 @@ export interface RequestHandler {
 
 export type CreateRequestHandlerFunction = (
   build: ServerBuild,
-  platform: ServerPlatform,
   mode?: string
 ) => RequestHandler;
 
@@ -35,7 +33,6 @@ export type CreateRequestHandlerFunction = (
  */
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
-  platform,
   mode
 ) => {
   let routes = createRoutes(build.routes);

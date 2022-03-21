@@ -47,7 +47,6 @@ export type {
   RouteHandle,
   ServerBuild,
   ServerEntryModule,
-  ServerPlatform,
   Session,
   SessionData,
   SessionIdStorageStrategy,
