@@ -1,4 +1,4 @@
-import { LoaderFunction, MetaFunction } from "remix";
+import type { LoaderFunction, MetaFunction } from "remix";
 import { json, useLoaderData } from "remix";
 
 export let loader: LoaderFunction = async () => {
