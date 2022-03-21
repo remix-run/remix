@@ -65,7 +65,7 @@ export type RouteDataFunction = {
 
 export interface ClientRoute extends Route {
   loader?: RouteDataFunction;
-  action?: RouteDataFunction;
+  action: RouteDataFunction;
   shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
   CatchBoundary?: any;
@@ -90,7 +90,7 @@ export function createClientRoute(
     index: entryRoute.index,
     module: entryRoute.module,
     loader: createLoader(entryRoute, routeModulesCache),
-    action: createAction(entryRoute),
+    action: createAction(entryRoute, routeModulesCache),
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary,
     CatchBoundary: entryRoute.hasCatchBoundary,
@@ -175,10 +175,15 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
   return loader;
 }
 
-function createAction(route: EntryRoute) {
-  if (!route.hasAction) return undefined;
-
+function createAction(route: EntryRoute, routeModules: RouteModules) {
   let action: ClientRoute["action"] = async ({ url, signal, submission }) => {
+    if (!route.hasAction) {
+      console.error(
+        `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`
+      );
+    }
+
     let result = await fetchData(url, route.id, signal, submission);
 
     if (result instanceof Error) {
@@ -187,6 +192,8 @@ function createAction(route: EntryRoute) {
 
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
+
+    await loadRouteModuleWithBlockingLinks(route, routeModules);
 
     if (isCatchResponse(result)) {
       throw new CatchValue(

@@ -736,11 +736,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
-      results,
-      state.matches,
-      maybeActionCatchResult
-    );
+    let [catchVal, catchBoundaryId] =
+      (await findCatchAndBoundaryId(
+        results,
+        state.matches,
+        maybeActionCatchResult
+      )) || [];
 
     let doneFetcher: FetcherStates["Done"] = {
       state: "idle",
@@ -951,6 +952,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     result: DataResult
   ) {
+    // TODO: revisit this if submission is correct after review
     if (isCatchResult(result)) {
       let catchBoundaryId = findNearestCatchBoundary(match, state.matches);
       state.fetchers.delete(key);
@@ -1062,18 +1064,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
       return;
     }
 
+    let catchVal, catchBoundaryId;
     if (isCatchResult(result)) {
-      let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
-        [result],
-        matches,
-        result
-      );
-      update({
-        transition: IDLE_TRANSITION,
-        catch: catchVal,
-        catchBoundaryId,
-      });
-      return;
+      [catchVal, catchBoundaryId] =
+        (await findCatchAndBoundaryId([result], matches, result)) || [];
     }
 
     let loadTransition: TransitionStates["LoadingAction"] = {
@@ -1093,7 +1087,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches,
       submission,
       leafMatch.route.id,
-      result
+      result,
+      catchVal,
+      catchBoundaryId
     );
   }
 
@@ -1230,7 +1226,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[],
     submission?: Submission,
     submissionRouteId?: string,
-    actionResult?: DataResult
+    actionResult?: DataResult,
+    catchVal?: CatchData<any>,
+    catchBoundaryId?: string | null
   ) {
     let maybeActionErrorResult =
       actionResult && isErrorResult(actionResult) ? actionResult : undefined;
@@ -1251,7 +1249,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
-      submissionRouteId
+      submissionRouteId,
+      undefined,
+      catchBoundaryId
     );
 
     if (controller.signal.aborted) {
@@ -1295,11 +1295,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+    [catchVal, catchBoundaryId] = (await findCatchAndBoundaryId(
       results,
       matches,
       maybeActionErrorResult
-    );
+    )) || [catchVal, catchBoundaryId];
 
     markFetchRedirectsDone();
 
@@ -1392,7 +1392,8 @@ async function callLoaders(
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
   submissionRouteId?: string,
-  fetcher?: Fetcher
+  fetcher?: Fetcher,
+  catchBoundaryId?: string | null
 ): Promise<DataResult[]> {
   let matchesToLoad = filterMatchesToLoad(
     state,
@@ -1402,7 +1403,8 @@ async function callLoaders(
     actionCatchResult,
     submission,
     submissionRouteId,
-    fetcher
+    fetcher,
+    catchBoundaryId
   );
 
   return Promise.all(
@@ -1426,13 +1428,6 @@ async function callAction(
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<DataResult> {
-  if (!match.route.action) {
-    throw new Error(
-      `Route "${match.route.id}" does not have an action, but you are trying ` +
-        `to submit to it. To fix this, please add an \`action\` function to the route`
-    );
-  }
-
   try {
     let value = await match.route.action({
       url: createUrl(submission.action),
@@ -1454,17 +1449,24 @@ function filterMatchesToLoad(
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
   submissionRouteId?: string,
-  fetcher?: Fetcher
+  fetcher?: Fetcher,
+  catchBoundaryId?: string | null
 ): ClientMatch[] {
   // Filter out all routes below the problematic route as they aren't going
   // to render so we don't need to load them.
-  if (submissionRouteId && (actionCatchResult || actionErrorResult)) {
+  if (
+    catchBoundaryId ||
+    (submissionRouteId && (actionCatchResult || actionErrorResult))
+  ) {
     let foundProblematicRoute = false;
     matches = matches.filter((match) => {
       if (foundProblematicRoute) {
         return false;
       }
-      if (match.route.id === submissionRouteId) {
+      if (
+        match.route.id === submissionRouteId ||
+        match.route.id === catchBoundaryId
+      ) {
         foundProblematicRoute = true;
         return false;
       }
@@ -1566,7 +1568,7 @@ async function findCatchAndBoundaryId(
   results: DataResult[],
   matches: ClientMatch[],
   actionCatchResult?: DataCatchResult
-): Promise<[CatchData, string | null] | [undefined, undefined]> {
+): Promise<[CatchData, string | null] | null> {
   let loaderCatchResult: DataCatchResult | undefined;
 
   for (let result of results) {
@@ -1595,7 +1597,7 @@ async function findCatchAndBoundaryId(
     return [await extractCatchData(loaderCatchResult.value), boundaryId];
   }
 
-  return [undefined, undefined];
+  return null;
 }
 
 function findErrorAndBoundaryId(
