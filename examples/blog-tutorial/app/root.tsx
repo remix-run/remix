@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { LinksFunction, MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -9,7 +10,6 @@ import {
   useCatch,
   Link,
 } from "remix";
-import type { LinksFunction } from "remix";
 
 import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";
@@ -34,6 +34,11 @@ export const links: LinksFunction = () => {
     { rel: "stylesheet", href: deleteMeRemixStyles },
   ];
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 /**
  * The root module's default export is a component that renders the current
@@ -60,7 +65,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />

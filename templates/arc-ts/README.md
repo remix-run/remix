@@ -12,7 +12,7 @@ When deploying to AWS Lambda with Architect, you'll need:
 Architect recommends installing these globally:
 
 ```sh
-$ npm i -g @architect/architect aws-sdk
+npm i -g @architect/architect aws-sdk
 ```
 
 ## Development
@@ -24,10 +24,10 @@ You will be running two processes during development when using Architect as you
 
 ```sh
 # in one tab
-$ arc sandbox
+arc sandbox
 
 # in another
-$ npm run dev
+npm run dev
 ```
 
 Open up [http://localhost:3333](http://localhost:3333) and you should be ready to go!
@@ -46,13 +46,13 @@ If you make it through all of that, you're ready to deploy!
 1. build the app for production:
 
    ```sh
-   $ npm run build
+   npm run build
    ```
 
 2. Deploy with `arc`
 
    ```sh
-   $ arc deploy production
+   arc deploy production
    ```
 
 You're in business!

@@ -139,7 +139,7 @@ Loaders are the backend "API" for their component and it's already wired up for 
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[1,9-15]
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 // ...
 export default function Posts() {
@@ -695,7 +695,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 💿 Add an outlet to the admin page
 
 ```tsx filename=app/routes/admin.tsx lines=[1,21]
-import { Outlet, Link, useLoaderData } from "remix";
+import { json, Outlet, Link, useLoaderData } from "remix";
 
 //...
 export default function Admin() {

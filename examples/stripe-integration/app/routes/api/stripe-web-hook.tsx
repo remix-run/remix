@@ -15,16 +15,7 @@ export const action: ActionFunction = async ({ request }) => {
     );
   } catch (err: any) {
     console.log(err);
-    throw json(
-      {
-        errors: [
-          {
-            message: err.message,
-          },
-        ],
-      },
-      400
-    );
+    throw json({ errors: [{ message: err.message }] }, 400);
   }
   console.log("event", event);
   return new Response(null, { status: 200 });

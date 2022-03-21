@@ -1,3 +1,4 @@
+/** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   modulePathIgnorePatterns: [
     "<rootDir>/.tmp",
@@ -13,7 +14,7 @@ module.exports = {
     },
     {
       displayName: "integration",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
       setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
@@ -75,7 +76,7 @@ module.exports = {
     // Fixture Apps
     {
       displayName: "gists-app",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
       globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",
