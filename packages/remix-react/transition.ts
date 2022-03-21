@@ -180,18 +180,22 @@ export type Redirects = {
   Loader: {
     isRedirect: true;
     type: "loader";
+    setCookie: boolean;
   };
   Action: {
     isRedirect: true;
     type: "action";
+    setCookie: boolean;
   };
   LoaderSubmission: {
     isRedirect: true;
     type: "loaderSubmission";
+    setCookie: boolean;
   };
   FetchAction: {
     isRedirect: true;
     type: "fetchAction";
+    setCookie: boolean;
   };
 };
 
@@ -313,6 +317,7 @@ interface RedirectLocation extends _Location {
   state: {
     isRedirect: true;
     type: string;
+    setCookie: boolean;
   };
 }
 
@@ -326,6 +331,7 @@ interface LoaderRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "loader";
+    setCookie: boolean;
   };
 }
 
@@ -339,6 +345,7 @@ interface ActionRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "action";
+    setCookie: boolean;
   };
 }
 
@@ -352,6 +359,7 @@ interface FetchActionRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "fetchAction";
+    setCookie: boolean;
   };
 }
 
@@ -365,6 +373,7 @@ interface LoaderSubmissionRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "loaderSubmission";
+    setCookie: boolean;
   };
 }
 
@@ -378,7 +387,7 @@ function isLoaderSubmissionRedirectLocation(
 
 export class TransitionRedirect {
   location: string;
-  constructor(location: Location | string) {
+  constructor(location: Location | string, public setCookie: boolean) {
     this.location =
       typeof location === "string"
         ? location
@@ -658,6 +667,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["FetchAction"] = {
         isRedirect: true,
         type: "fetchAction",
+        setCookie: result.value.setCookie,
       };
       fetchRedirectIds.add(key);
       init.onRedirect(result.value.location, locationState);
@@ -697,12 +707,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchReloadIds.set(key, loadId);
 
     let matchesToLoad = state.nextMatches || state.matches;
-    let hrefToLoad = createHref(state.transition.location || state.location);
 
     console.debug(`[transition] fetcher calling loaders (key: ${key})`);
     let results = await callLoaders(
       state,
-      createUrl(hrefToLoad),
+      state.transition.location || state.location,
       matchesToLoad,
       controller.signal,
       maybeActionErrorResult,
@@ -725,6 +734,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader",
+        setCookie: redirect.setCookie,
       };
       init.onRedirect(redirect.location, locationState);
       return;
@@ -864,6 +874,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -923,6 +934,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -1059,6 +1071,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Action"] = {
         isRedirect: true,
         type: "action",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -1243,7 +1256,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     console.debug("[transition] calling loaders for loadPageData");
     let results = await callLoaders(
       state,
-      createUrl(createHref(location)),
+      location,
       matches,
       controller.signal,
       maybeActionErrorResult,
@@ -1271,18 +1284,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
         let locationState: Redirects["Action"] = {
           isRedirect: true,
           type: "action",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       } else if (state.transition.type === "loaderSubmission") {
         let locationState: Redirects["LoaderSubmission"] = {
           isRedirect: true,
           type: "loaderSubmission",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       } else {
         let locationState: Redirects["Loader"] = {
           isRedirect: true,
           type: "loader",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       }
@@ -1385,7 +1401,7 @@ function isIndexRequestAction(action: string) {
 
 async function callLoaders(
   state: TransitionManagerState,
-  url: URL,
+  location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
   actionErrorResult?: DataErrorResult,
@@ -1395,9 +1411,10 @@ async function callLoaders(
   fetcher?: Fetcher,
   catchBoundaryId?: string | null
 ): Promise<DataResult[]> {
+  let url = createUrl(createHref(location));
   let matchesToLoad = filterMatchesToLoad(
     state,
-    url,
+    location,
     matches,
     actionErrorResult,
     actionCatchResult,
@@ -1443,7 +1460,7 @@ async function callAction(
 
 function filterMatchesToLoad(
   state: TransitionManagerState,
-  url: URL,
+  location: Location,
   matches: ClientMatch[],
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
@@ -1493,6 +1510,8 @@ function filterMatchesToLoad(
     );
   };
 
+  let url = createUrl(createHref(location));
+
   let filterByRouteProps = (match: ClientMatch, index: number) => {
     if (!match.route.loader) {
       return false;
@@ -1529,7 +1548,9 @@ function filterMatchesToLoad(
     // clicked the same link, resubmitted a GET form
     createHref(url) === createHref(state.location) ||
     // search affects all loaders
-    url.searchParams.toString() !== state.location.search.substring(1)
+    url.searchParams.toString() !== state.location.search.substring(1) ||
+    // a cookie was set
+    (location.state as any)?.setCookie
   ) {
     return matches.filter(filterByRouteProps);
   }
@@ -1542,7 +1563,9 @@ function filterMatchesToLoad(
 
     return (
       match.route.loader &&
-      (isNew(match, index) || matchPathChanged(match, index))
+      (isNew(match, index) ||
+        matchPathChanged(match, index) ||
+        (location.state as any)?.setCookie)
     );
   });
 }

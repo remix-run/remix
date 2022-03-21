@@ -223,7 +223,10 @@ async function checkRedirect(
         window.location.replace(url.href);
       });
     } else {
-      return new TransitionRedirect(url.pathname + url.search);
+      return new TransitionRedirect(
+        url.pathname + url.search,
+        response.headers.get("X-Remix-Revalidate") !== null
+      );
     }
   }
 
