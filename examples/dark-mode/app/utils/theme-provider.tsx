@@ -4,14 +4,14 @@ import {
   useContext,
   useEffect,
   useRef,
-  useState
+  useState,
 } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useFetcher } from "remix";
 
 enum Theme {
   DARK = "dark",
-  LIGHT = "light"
+  LIGHT = "light",
 }
 const themes: Array<Theme> = Object.values(Theme);
 
@@ -25,7 +25,7 @@ const getPreferredTheme = () =>
 
 function ThemeProvider({
   children,
-  specifiedTheme
+  specifiedTheme,
 }: {
   children: ReactNode;
   specifiedTheme: Theme | null;
@@ -241,7 +241,7 @@ function useTheme() {
 function Themed({
   dark,
   light,
-  initialOnly = false
+  initialOnly = false,
 }: {
   dark: ReactNode | string;
   light: ReactNode | string;
@@ -277,5 +277,5 @@ export {
   ThemeBody,
   ThemeHead,
   ThemeProvider,
-  useTheme
+  useTheme,
 };

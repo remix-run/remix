@@ -5,7 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData
+  useLoaderData,
 } from "remix";
 import type { LoaderFunction } from "remix";
 
@@ -13,7 +13,7 @@ import {
   ThemeBody,
   ThemeHead,
   ThemeProvider,
-  useTheme
+  useTheme,
 } from "~/utils/theme-provider";
 import type { Theme } from "~/utils/theme-provider";
 import { getThemeSession } from "./utils/theme.server";
@@ -26,7 +26,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   const themeSession = await getThemeSession(request);
 
   const data: LoaderData = {
-    theme: themeSession.getTheme()
+    theme: themeSession.getTheme(),
   };
 
   return data;

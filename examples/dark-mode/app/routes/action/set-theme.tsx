@@ -13,7 +13,7 @@ export const action: ActionFunction = async ({ request }) => {
   if (!isTheme(theme)) {
     return json({
       success: false,
-      message: `theme value of ${theme} is not a valid theme`
+      message: `theme value of ${theme} is not a valid theme`,
     });
   }
 

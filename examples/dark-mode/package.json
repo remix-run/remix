@@ -1,8 +1,9 @@
 {
+  "name": "remix-example-dark-mode",
   "private": true,
-  "name": "remix-app",
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
@@ -24,6 +25,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }

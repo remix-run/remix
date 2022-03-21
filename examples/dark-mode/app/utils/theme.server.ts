@@ -13,8 +13,8 @@ const themeStorage = createCookieSessionStorage({
     secrets: [sessionSecret],
     sameSite: "lax",
     path: "/",
-    httpOnly: true
-  }
+    httpOnly: true,
+  },
 });
 
 async function getThemeSession(request: Request) {
@@ -25,7 +25,7 @@ async function getThemeSession(request: Request) {
       return isTheme(themeValue) ? themeValue : null;
     },
     setTheme: (theme: Theme) => session.set("theme", theme),
-    commit: () => themeStorage.commitSession(session)
+    commit: () => themeStorage.commitSession(session),
   };
 }
 
