@@ -2,6 +2,7 @@ import * as path from "path";
 import meow from "meow";
 import inspector from "inspector";
 import inquirer from "inquirer";
+import fse from "fs-extra";
 // import chalkAnimation from "chalk-animation";
 
 import * as colors from "./colors";
@@ -136,27 +137,49 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "create":
     // `remix new` is an alias for `remix create`
     case "new": {
-      let projectPath =
-        input.length > 1
-          ? input[1]
-          : (
-              await inquirer
-                .prompt<{ dir: string }>([
-                  {
-                    type: "input",
-                    name: "dir",
-                    message: "Where would you like to create your app?",
-                    default: "./my-remix-app",
-                  },
-                ])
-                .catch((error) => {
-                  if (error.isTtyError) {
-                    showHelp();
-                    return;
+      let projectPath: string | undefined;
+
+      if (input.length > 1) {
+        projectPath = input[1];
+
+        let relativeProjectDir = path.relative(process.cwd(), projectPath);
+
+        if (fse.existsSync(projectPath)) {
+          throw new Error(
+            `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
+          );
+        }
+      } else {
+        projectPath = (
+          await inquirer
+            .prompt<{ dir: string }>([
+              {
+                type: "input",
+                name: "dir",
+                message: "Where would you like to create your app?",
+                default: "./my-remix-app",
+                validate: async (projectDir) => {
+                  let relativeProjectDir = path.relative(
+                    process.cwd(),
+                    projectDir
+                  );
+
+                  if (!fse.existsSync(projectDir)) {
+                    return true;
                   }
-                  throw error;
-                })
-            )?.dir;
+                  return `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`;
+                },
+              },
+            ])
+            .catch((error) => {
+              if (error.isTtyError) {
+                showHelp();
+                return;
+              }
+              throw error;
+            })
+        )?.dir;
+      }
 
       if (!projectPath) {
         showHelp();

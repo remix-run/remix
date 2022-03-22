@@ -39,17 +39,6 @@ export async function createApp({
     );
   }
 
-  // Create the app directory
-  let relativeProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relativeProjectDir === "";
-  if (!projectDirIsCurrentDir) {
-    if (fse.existsSync(projectDir)) {
-      throw new Error(
-        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
-      );
-    }
-  }
-
   /**
    * Grab the template
    * First we'll need to determine if the template we got is
