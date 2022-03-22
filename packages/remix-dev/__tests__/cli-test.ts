@@ -311,7 +311,20 @@ describe("remix cli", () => {
 💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(fs.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
+      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
+      expect(fs.existsSync(path.join(projectDir, "tsconfig.json"))).toBeFalsy();
+      expect(
+        fs.existsSync(path.join(projectDir, "jsconfig.json"))
+      ).toBeTruthy();
+      expect(
+        fs.existsSync(path.join(projectDir, "app/session.server.js"))
+      ).toBeTruthy();
+      let pkgJSON = JSON.parse(
+        fs.readFileSync(path.join(projectDir, "package.json"), "utf-8")
+      );
+      expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
+      expect(Object.keys(pkgJSON.scripts)).not.toContain("typecheck");
     });
 
     it("works for a file path to a directory on disk", async () => {
