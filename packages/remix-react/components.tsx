@@ -1380,7 +1380,7 @@ export const LiveReload =
       }: {
         port?: number;
       }) {
-        let setupLiveReload = ((port: number) => {
+        let setupLiveReload = (() => {
           let protocol = location.protocol === "https:" ? "wss:" : "ws:";
           let host = location.hostname;
           let socketPath = `${protocol}//${host}:${port}/socket`;
