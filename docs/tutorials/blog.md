@@ -798,7 +798,7 @@ export async function createPost(post) {
 💿 Call `createPost` from the new post route's action
 
 ```tsx filename=app/routes/admin/new.tsx lines=[1,3,5-15]
-import { redirect, Form } from "remix";
+import { redirect, Form, json } from "remix";
 
 import { createPost } from "~/post";
 
@@ -848,7 +848,7 @@ export async function createPost(post: NewPost) {
 ```
 
 ```tsx filename=app/routes/admin/new.tsx lines=[2,6]
-import { Form, redirect } from "remix";
+import { Form, redirect, json } from "remix";
 import type { ActionFunction } from "remix";
 
 import { createPost } from "~/post";
