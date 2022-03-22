@@ -3,7 +3,6 @@ import { RemixServer } from "remix";
 import type { EntryContext } from "remix";
 
 import { getCssText } from "./styles/stitches.config";
-import ServerStyleContext from "./styles/server.context";
 
 export default function handleRequest(
   request: Request,
@@ -11,15 +10,12 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  const sheet = getCssText();
 
   let markup = renderToString(
-    <ServerStyleContext.Provider value={sheet}>
-      <RemixServer context={remixContext} url={request.url} />
-    </ServerStyleContext.Provider>
+    <RemixServer context={remixContext} url={request.url} />
   );
 
-  markup = markup.replace("__STYLES__", sheet);
+  markup = markup.replace(/<style id=\"stitches\">.*\<\/style>/g, `<style id="stitches">${getCssText()}</style>`);
 
   responseHeaders.set("Content-Type", "text/html");
 
