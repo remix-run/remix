@@ -75,11 +75,11 @@ beforeAll(async () => {
         }
         
         export default function Bug() {
-          const { outlet } = useLoaderData()
+          const loaderData = useLoaderData()
           
-          return (<>
-              <p>{outlet}</p>
-          </>)
+          return (
+              <p id="outlet-info">{loaderData ? loaderData.outlet : 'null'}</p>
+          )
         }
       `,
     },
@@ -99,9 +99,12 @@ afterAll(async () => app.close());
 it("should call all loaders after post", async () => {
 
   await app.goto("/bug/123");
+  let outletData = await app.getElement('#outlet-info')
+  expect(outletData.text()).toMatch("default");
+
   await app.clickElement('button')
-  let title = await app.getElement('title')
-  expect(await title.text()).not.toMatch("Application Error!");
+  outletData = await app.getElement('#outlet-info')
+  expect(outletData.text()).toMatch("default");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
