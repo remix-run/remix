@@ -43,7 +43,6 @@ function getPackageDependenciesRecursive(
   }
 
   let dependencies = getPackageDependencies(pkgJson);
-  console.log(dependencies);
 
   Object.keys(dependencies).forEach((dep) => {
     aggregatedDeps.add(dep);
