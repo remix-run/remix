@@ -242,7 +242,7 @@ describe("remix cli", () => {
     });
 
     // TODO: update template url to "https://github.com/remix-run/remix/tree/dev/templates/arc"
-    it.skip("works for different branches", async () => {
+    it("works for different branches", async () => {
       let projectDir = getProjectDir("diff-branch");
       let { stdout } = await execFile("node", [
         remix,
