@@ -50,8 +50,28 @@ async function deleteOldestDeployment() {
     return a.CreatedDate > b.CreatedDate ? 1 : -1;
   });
 
-  console.log(`Deleting deployment ${deployment.Id}`);
-  await client.deleteApi({ ApiId: deployment.Id }).promise();
+  let arcName = deployment.Name.toLowerCase();
+  let FAKE_PROJECT_DIR = getAppDirectory(arcName);
+  let spawnOpts = getSpawnOpts(FAKE_PROJECT_DIR);
+
+  console.log(`Deleting deployment ${arcName}`);
+  // create a fake app.arc with the deployment name
+  await fse.ensureDir(FAKE_PROJECT_DIR);
+  await fse.writeFile(
+    path.join(FAKE_PROJECT_DIR, "app.arc"),
+    arcParser.stringify({ app: [arcName] })
+  );
+  let arcDestroyCommand = spawnSync(
+    "npx",
+    ["@architect/architect", "destroy", "--app", arcName, "--force"],
+    spawnOpts
+  );
+  if (arcDestroyCommand.status !== 0) {
+    console.log(arcDestroyCommand.error);
+    throw new Error("🚨 Failed to destroy deployment");
+  }
+
+  await fse.rmdir(FAKE_PROJECT_DIR);
 }
 
 async function getArcDeployment() {
