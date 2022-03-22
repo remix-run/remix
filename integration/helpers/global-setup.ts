@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fse from "fs-extra";
 import path from "path";
 import setupPuppeteer from "jest-environment-puppeteer/setup";
 
@@ -9,9 +9,5 @@ console.warn = () => {};
 
 export default async function setup(globalConfig: any) {
   await setupPuppeteer(globalConfig);
-  await fs.rm(TMP_DIR, {
-    force: true,
-    recursive: true,
-  });
-  await fs.mkdir(TMP_DIR, { recursive: true });
+  await fse.emptyDir(TMP_DIR);
 }
