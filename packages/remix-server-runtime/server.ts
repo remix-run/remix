@@ -544,21 +544,16 @@ async function handleResourceRequest({
   }
 }
 
+const actionMethods = ["POST", "PUT", "PATCH", "DELETE"];
+
 function isActionRequest({ method }: Request): boolean {
-  return (
-    method === "POST" ||
-    method === "PUT" ||
-    method === "DELETE" ||
-    method.toUpperCase() === "PATCH"
-  );
+  return actionMethods.includes(method.toUpperCase());
 }
 
-function isValidRequestMethod(request: Request): boolean {
-  return (
-    request.method === "GET" ||
-    request.method === "HEAD" ||
-    isActionRequest(request)
-  );
+const validRequestMethods = ["GET", "HEAD", ...actionMethods];
+
+function isValidRequestMethod({ method }: Request): boolean {
+  return validRequestMethods.includes(method.toUpperCase());
 }
 
 async function errorBoundaryError(error: Error, status: number) {
