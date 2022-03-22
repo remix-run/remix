@@ -10,12 +10,14 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-
   let markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
-  markup = markup.replace(/<style id=\"stitches\">.*\<\/style>/g, `<style id="stitches">${getCssText()}</style>`);
+  markup = markup.replace(
+    /<style id=\"stitches\">.*\<\/style>/g,
+    `<style id="stitches">${getCssText()}</style>`
+  );
 
   responseHeaders.set("Content-Type", "text/html");
 
