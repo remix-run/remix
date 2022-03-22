@@ -153,10 +153,9 @@ export async function createApp({
       encoding: "utf8",
     });
     if (npmConfig?.startsWith("https://npm.remix.run")) {
-      console.log(
+      throw new Error(
         "🚨 Oops! You still have the private Remix registry configured. Please run `npm config delete @remix-run:registry` or edit your .npmrc file to remove it."
       );
-      process.exit(1);
     }
 
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
