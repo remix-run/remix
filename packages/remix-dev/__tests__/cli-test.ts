@@ -19,6 +19,11 @@ const remix = path.resolve(
 const TEMP_DIR = path.join(process.cwd(), ".tmp", "create-remix");
 
 describe("remix cli", () => {
+  beforeAll(() => {
+    if (!fs.existsSync(remix)) {
+      throw new Error(`Cannot run Remix CLI tests w/out building Remix`);
+    }
+  });
   describe("the --help flag", () => {
     it("prints help info", async () => {
       let { stdout } = await execFile("node", [remix, "--help"], {
@@ -131,10 +136,6 @@ describe("remix cli", () => {
 
   describe("the create command", () => {
     beforeAll(async () => {
-      if (!fs.existsSync(remix)) {
-        throw new Error(`Cannot run Remix CLI tests w/out building Remix`);
-      }
-
       await fsp.rm(TEMP_DIR, { force: true, recursive: true });
       await fsp.mkdir(TEMP_DIR, { recursive: true });
     });
