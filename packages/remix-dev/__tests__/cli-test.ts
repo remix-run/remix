@@ -16,6 +16,8 @@ const remix = path.resolve(
   "../../../build/node_modules/@remix-run/dev/cli.js"
 );
 
+const TEMP_DIR = path.join(process.cwd(), ".tmp");
+
 describe("remix cli", () => {
   beforeAll(() => {
     if (!fs.existsSync(remix)) {
@@ -153,16 +155,15 @@ describe("remix cli", () => {
         await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
       }
 
-      let dirs = fs.readdirSync(path.join(process.cwd(), ".tmp"));
+      let dirs = fs.readdirSync(TEMP_DIR);
       for (let dir of dirs) {
-        renamePkgJsonApp(path.join(process.cwd(), ".tmp", dir));
+        renamePkgJsonApp(path.join(TEMP_DIR, dir));
       }
     });
 
     function getProjectDir(name: string) {
       return path.join(
-        process.cwd(),
-        ".tmp",
+        TEMP_DIR,
         `${name}-${Math.random().toString(32).slice(2)}`
       );
     }
@@ -408,9 +409,7 @@ describe("remix cli", () => {
       );
 
       await expect(
-        execFile("node", [remix, "init"], {
-          cwd: projectDir,
-        })
+        execFile("node", [remix, "init"], { cwd: projectDir })
       ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
       expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
       expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -418,5 +417,19 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
+
+    it.only("bails when you provide a bad GITHUB_TOKEN", async () => {
+      let projectDir = getProjectDir("invalid-github-token");
+      await expect(
+        execFile(
+          "node",
+          [remix, "create", projectDir, "--template", "basic", "--no-install"],
+          { env: { GITHUB_TOKEN: "bad-token" } }
+        )
+      ).rejects.toThrowError(
+        `🚨 Oops! Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+      expect(fs.existsSync(projectDir)).toBeFalsy();
+    });
   });
 });
