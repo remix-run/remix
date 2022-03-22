@@ -9,6 +9,7 @@ import * as semver from "semver";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import sortPackageJSON from "sort-package-json";
+import type { Response as NodeResponse } from "node-fetch";
 
 import packageJson from "../package.json";
 
@@ -176,6 +177,26 @@ async function extractLocalTarball(
   );
 }
 
+async function checkStatus(response: NodeResponse, token?: string) {
+  if (!response.ok) {
+    if (response.status === 401 && token) {
+      throw new Error(
+        `🚨 Oops! Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+    }
+    if (response.status === 403 && token) {
+      throw new Error(
+        `🚨 Oops! Found a \`GITHUB_TOKEN\` environment variable, but it appears to be invalid.`
+      );
+    }
+    throw new Error(
+      `🚨 Oops! Error fetching repo: ${response.status} ${response.statusText}`
+    );
+  }
+
+  return response;
+}
+
 async function downloadAndExtractTemplateOrExample(
   projectDir: string,
   name: string,
@@ -192,16 +213,7 @@ async function downloadAndExtractTemplateOrExample(
       : {}
   );
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
-      );
-    }
-    throw new Error(
-      `Error fetching repo: ${response.status} ${response.statusText}`
-    );
-  }
+  await checkStatus(response, options.token);
 
   let cwd = path.dirname(projectDir);
   let desiredDir = path.basename(projectDir);
@@ -253,16 +265,7 @@ async function downloadAndExtractTarball(
       : {}
   );
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
-      );
-    }
-    throw new Error(
-      `Error fetching repo: ${response.status} ${response.statusText}`
-    );
-  }
+  await checkStatus(response);
 
   await pipeline(
     response.body.pipe(gunzip()),
@@ -375,16 +378,7 @@ async function getDefaultBranch(
     },
   });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
-      );
-    }
-    throw new Error(
-      `Error fetching repo: ${response.status} ${response.statusText}`
-    );
-  }
+  await checkStatus(response);
 
   let info = await response.json();
   return info.default_branch;
@@ -405,16 +399,7 @@ async function isRemixTemplate(
     }
   );
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
-      );
-    }
-    throw new Error(
-      `Error fetching repo: ${response.status} ${response.statusText}`
-    );
-  }
+  await checkStatus(response);
 
   let results = await response.json();
   let possibleTemplateName = useTypeScript ? `${name}-ts` : name;
@@ -436,16 +421,7 @@ async function isRemixExample(name: string, token?: string) {
     }
   );
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
-      );
-    }
-    throw new Error(
-      `Error fetching repo: ${response.status} ${response.statusText}`
-    );
-  }
+  await checkStatus(response);
 
   let results = await response.json();
   let example = results.find((result: any) => result.name === name);
