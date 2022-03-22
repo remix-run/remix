@@ -28,7 +28,7 @@ getPort({ port: process.env.PORT || 3000 }).then((port) => {
       trace() {}
       warn() {}
     }
-    // global.console = new MockConsole();
+    global.console = new MockConsole();
   }
 
   let app = express();
