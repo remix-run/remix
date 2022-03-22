@@ -147,10 +147,13 @@ describe("remix cli", () => {
        */
       async function renamePkgJsonApp(dir: string) {
         let pkgPath = path.join(dir, "package.json");
-        let pkg = await fsp.readFile(pkgPath);
-        let obj = JSON.parse(pkg.toString());
-        obj.name = path.basename(dir);
-        await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
+        // one of our tests is a failing case so we won't have a package.json
+        if (fs.existsSync(pkgPath)) {
+          let pkg = await fsp.readFile(pkgPath);
+          let obj = JSON.parse(pkg.toString());
+          obj.name = path.basename(dir);
+          await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
+        }
       }
 
       let dirs = fs.readdirSync(path.join(process.cwd(), ".tmp"));
@@ -418,5 +421,23 @@ describe("remix cli", () => {
       expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
+
+    it("throws an error when the desired dir already exists", async () => {
+      let projectDir = getProjectDir("existing-dir");
+      let relativeProjectDir = path.relative(process.cwd(), projectDir);
+      await fsp.mkdir(projectDir);
+      await expect(
+        execFile("node", [
+          remix,
+          "create",
+          projectDir,
+          "--template",
+          path.join(process.cwd(), "examples/basic"),
+          "--install",
+        ])
+      ).rejects.toThrowError(
+        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
+      );
+    });
   });
 });
