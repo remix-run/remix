@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {},
   "dependencies": {
+    "@architect/architect": "latest",
     "@architect/parser": "^5.0.2",
     "@architect/utils": "^3.0.4",
     "@cloudflare/wrangler": "latest",
