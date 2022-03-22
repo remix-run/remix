@@ -1,10 +1,9 @@
-import { Theme, Themed, useTheme } from "~/utils/theme-provider";
+import type { LinksFunction } from "remix";
 
 import styles from "~/styles/styles.css";
+import { Theme, Themed, useTheme } from "~/utils/theme-provider";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
 export default function IndexRoute() {
   const [, setTheme] = useTheme();

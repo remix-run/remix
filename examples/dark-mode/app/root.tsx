@@ -1,3 +1,4 @@
+import type { LoaderFunction, MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -7,7 +8,6 @@ import {
   ScrollRestoration,
   useLoaderData,
 } from "remix";
-import type { LoaderFunction } from "remix";
 
 import {
   ThemeBody,
@@ -16,7 +16,7 @@ import {
   useTheme,
 } from "~/utils/theme-provider";
 import type { Theme } from "~/utils/theme-provider";
-import { getThemeSession } from "./utils/theme.server";
+import { getThemeSession } from "~/utils/theme.server";
 
 export type LoaderData = {
   theme: Theme | null;
@@ -32,16 +32,19 @@ export const loader: LoaderFunction = async ({ request }) => {
   return data;
 };
 
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
+
 function App() {
   const data = useLoaderData<LoaderData>();
-
   const [theme] = useTheme();
 
   return (
     <html lang="en" className={theme ?? ""}>
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
         <ThemeHead ssrTheme={Boolean(data.theme)} />
