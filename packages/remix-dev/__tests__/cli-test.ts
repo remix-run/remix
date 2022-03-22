@@ -135,7 +135,6 @@ describe("remix cli", () => {
 
   describe("the create command", () => {
     beforeAll(async () => {
-      await fse.ensureDir(TEMP_DIR);
       await fse.emptyDir(TEMP_DIR);
     });
 
