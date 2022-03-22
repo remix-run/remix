@@ -1,9 +1,9 @@
-import { Link, useLoaderData } from "remix";
 import type { ApolloError } from "apollo-server-errors";
 import type { LoaderFunction } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 import { Code } from "~/components/Code";
-import { fetchFromGraphQL } from "~/utils/index";
+import { fetchFromGraphQL, gql } from "~/utils/index";
 import type { Character } from "~/generated/types";
 
 type LoaderData = {
@@ -15,7 +15,7 @@ type LoaderData = {
  * @description Here we query an external GraphQL API directly via "fetch".
  */
 export const loader: LoaderFunction = async (_args) => {
-  const getCharacterQuery = `
+  const getCharacterQuery = gql`
     fragment CharacterFields on Character {
       gender
       id
@@ -42,14 +42,14 @@ export const loader: LoaderFunction = async (_args) => {
   const invalidId = 8675309;
 
   const res = await fetchFromGraphQL(getCharacterQuery, { id: invalidId });
-  return res.json();
+  return json(await res.json());
 };
 
 /**
  * @description This route triggers an error of type "ApolloError" which is
  * an array of errors coming back from the GraphQL API.
  */
-export default function () {
+export default function CharacterError() {
   const loader = useLoaderData<LoaderData>();
 
   return (

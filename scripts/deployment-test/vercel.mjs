@@ -1,8 +1,8 @@
 import path from "path";
-import { spawnSync } from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import fetch from "node-fetch";
-import { createApp } from "create-remix";
+import { createApp } from "@remix-run/dev";
 
 import {
   addCypress,
@@ -21,11 +21,10 @@ let CYPRESS_DEV_URL = "http://localhost:3000";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "vercel",
+    appTemplate: "vercel",
+    installDeps: false,
+    useTypeScript: true,
     projectDir: PROJECT_DIR,
-    quiet: true,
   });
 }
 

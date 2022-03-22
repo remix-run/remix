@@ -18,11 +18,12 @@ TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
-```js lines=[1] filename=app/routes/index.jsx bad
+```js lines=[2] filename=app/routes/index.jsx bad
+import { json } from "remix";
 import fs from "fs-extra";
 
-export function loader() {
-  return fs.pathExists("../some/path");
+export async function loader() {
+  return json(await fs.pathExists("../some/path"));
 }
 
 export default function SomeRoute() {
@@ -38,11 +39,13 @@ export * from "fs-extra";
 
 And then change our import in the route to the new "wrapper" module:
 
-```js lines=[1] filename=app/routes/index.jsx
+```js lines=[3] filename=app/routes/index.jsx
+import { json } from "remix";
+
 import fs from "../utils/fs-extra.server";
 
-export function loader() {
-  return fs.pathExists("../some/path");
+export async function loader() {
+  return json(await fs.pathExists("../some/path"));
 }
 
 export default function SomeRoute() {

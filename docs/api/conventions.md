@@ -18,7 +18,6 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
-  devServerPort: 8002,
   ignoredRouteFiles: [".*"],
   publicPath: "/build/",
   routes(defineRoutes) {
@@ -144,7 +143,7 @@ A list of regex patterns that determined if a module is transpiled and included 
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
 
-```ts filename=remix.config.js lines=[11-16]
+```ts filename=remix.config.js lines=[10-15]
 /**
  * @type {import('@remix-run/dev').AppConfig}
  */
@@ -153,7 +152,6 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "build",
-  devServerPort: 8002,
   ignoredRouteFiles: [".*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
@@ -545,17 +543,22 @@ export default function SomeRouteComponent() {
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
 ```js
+import { json } from "remix";
+
 export const loader = async () => {
-  return { ok: true };
+  // The `json` function converts a serializable object into a JSON response
+  // All loaders must return a `Response` object.
+  return json({ ok: true });
 };
 ```
 
 ```ts
 // Typescript
+import { json } from "remix";
 import type { LoaderFunction } from "remix";
 
 export const loader: LoaderFunction = async () => {
-  return { ok: true };
+  return json({ ok: true });
 };
 ```
 
@@ -564,12 +567,12 @@ This function is only ever run on the server. On the initial server render it wi
 Using the database ORM Prisma as an example:
 
 ```tsx lines=[1,5-7,10]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 import { prisma } from "../db";
 
 export const loader = async () => {
-  return prisma.user.findMany();
+  return json(await prisma.user.findMany());
 };
 
 export default function Users() {
@@ -660,8 +663,10 @@ export const loader: LoaderFunction = async ({
 You can return plain JavaScript objects from your loaders that will be made available to your component by the [`useLoaderData`](./remix#useloaderdata) hook.
 
 ```ts
+import { json } from "remix";
+
 export const loader = async () => {
-  return { whatever: "you want" };
+  return json({ whatever: "you want" });
 };
 ```
 
@@ -681,7 +686,7 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
-Remix provides helpers, like `json`, so you don't have to construct them yourself:
+Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
 
 ```tsx
 import { json } from "remix";
@@ -692,7 +697,7 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
-Between these two examples you can see how `json` just does a little of the work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
+You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
 import { json } from "remix";
@@ -789,7 +794,7 @@ export const loader = async ({ request, params }) => {
     throw json(data, { status: 401 });
   }
 
-  return invoice;
+  return json(invoice);
 };
 
 export default function InvoiceRoute() {
@@ -838,13 +843,13 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import { redirect, Form } from "remix";
+import { json, redirect, Form } from "remix";
 
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
 
 export async function loader() {
-  return fakeGetTodos();
+  return json(await fakeGetTodos());
 }
 
 export async function action({ request }) {
@@ -1009,9 +1014,7 @@ export const meta: MetaFunction = () => {
 };
 ```
 
-There are a few special cases like `title` renders a `<title>` tag, `og:style` tags will render `<meta property content>`, the rest render `<meta name={key} content={value}/>`.
-
-In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
+There are a few special cases (read about those below). In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
 
 #### `HtmlMetaDescriptor`
 
@@ -1021,7 +1024,9 @@ The `meta` export from a route should return a single `HtmlMetaDescriptor` objec
 
 Almost every `meta` element takes a `name` and `content` attribute, with the exception of [OpenGraph tags](https://ogp.me/) which use `property` instead of `name`. In either case, the attributes represent a key/value pair for each tag. Each pair in the `HtmlMetaDescriptor` object represents a separate `meta` element, and Remix maps each to the correct attributes for that tag.
 
-The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title)
+The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title).
+
+As a convenience, `charSet: "utf-8"` will render a `<meta charSet="utf-8" />`.
 
 Examples:
 
@@ -1031,8 +1036,10 @@ import type { MetaFunction } from "remix";
 export const meta: MetaFunction = () => {
   return {
     title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
+    charSet: "utf-8", // <meta charSet="utf-8" />
     description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
     "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
+    viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1"/>
   };
 };
 ```
@@ -1045,6 +1052,23 @@ export const meta: MetaFunction = () => {
 - `location` is a `window.location`-like object that has some data about the current route
 - `params` is an object containing route params
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
+
+```tsx
+export const meta: MetaFunction = ({ data, params }) => {
+  if (data) {
+    const { shake } = data as LoaderData;
+    return {
+      title: `${shake.name} milkshake`,
+      description: shake.summary,
+    };
+  } else {
+    return {
+      title: "Missing Shake",
+      description: `There is no shake with the ID of ${params.shakeId}. 😢`,
+    };
+  }
+};
+```
 
 ### `links`
 
@@ -1254,12 +1278,12 @@ It's common for root loaders to return data that never changes, like environment
 
 ```js [10]
 export const loader = async () => {
-  return {
+  return json({
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
       STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
     },
-  };
+  });
 };
 
 export const unstable_shouldReload = () => false;
@@ -1297,17 +1321,19 @@ And lets say the UI looks something like this:
 
 The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
-```js [2,7]
+```js [2,8]
 export async function loader({ request, params }) {
   const url = new URL(request.url);
-  return exampleDb.activity.findAll({
-    where: {
-      projectId: params.projectId,
-      name: {
-        contains: url.searchParams.get("search"),
+  return json(
+    await exampleDb.activity.findAll({
+      where: {
+        projectId: params.projectId,
+        name: {
+          contains: url.searchParams.get("search"),
+        },
       },
-    },
-  });
+    })
+  );
 }
 ```
 
@@ -1317,7 +1343,7 @@ In this UI, that's wasted bandwidth for the user, your server, and your database
 
 ```tsx
 export async function loader({ params }) {
-  return fakedb.findProject(params.projectId);
+  return json(await fakedb.findProject(params.projectId));
 }
 ```
 
@@ -1325,7 +1351,7 @@ We want this loader to be called only if the project has had an update, so we ca
 
 ```tsx
 export function unstable_shouldReload({ submission }) {
-  return submission && submission.method !== "GET";
+  return !!submission && submission.method !== "GET";
 }
 ```
 
@@ -1340,7 +1366,7 @@ export function unstable_shouldReload({
   params,
   submission,
 }) {
-  return (
+  return !!(
     submission &&
     submission.action === `/projects/${params.projectId}`
   );

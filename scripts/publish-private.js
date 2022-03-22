@@ -31,7 +31,6 @@ async function run() {
     "server-runtime", // publish before platforms
     "cloudflare-pages",
     "cloudflare-workers",
-    "deno",
     "node", // publish node before node servers
     "architect",
     "express", // publish express before serve

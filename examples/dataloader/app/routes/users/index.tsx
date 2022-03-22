@@ -1,6 +1,6 @@
 import type { LoaderFunction } from "remix";
+import { json, useLoaderData } from "remix";
 import type { User } from "~/data.server";
-import { useLoaderData } from "remix";
 
 interface LoaderData {
   users: User[];
@@ -26,7 +26,7 @@ export const loader: LoaderFunction = async ({ context }) => {
   );
   const users = await Promise.all([user1, user2, user3]);
 
-  return { users };
+  return json({ users });
 };
 
 export default function UserEmails() {

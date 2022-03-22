@@ -1,12 +1,4 @@
-import {
-  Meta,
-  Links,
-  Scripts,
-  useLoaderData,
-  LiveReload,
-  useCatch,
-} from "remix";
-import { Outlet } from "react-router-dom";
+import { Links, LiveReload, Meta, Outlet, Scripts, useCatch } from "remix";
 
 import stylesUrl from "./styles/global.css";
 
@@ -14,16 +6,17 @@ export function links() {
   return [{ rel: "stylesheet", href: stylesUrl }];
 }
 
-export async function loader() {
-  return { date: new Date() };
+export function meta() {
+  return {
+    charset: "utf-8",
+    viewport: "width=device-width,initial-scale=1",
+  };
 }
 
 function Document({ children, title }) {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -38,8 +31,6 @@ function Document({ children, title }) {
 }
 
 export default function App() {
-  const data = useLoaderData();
-
   return (
     <Document>
       <Outlet />

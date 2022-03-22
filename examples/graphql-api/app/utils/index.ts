@@ -22,3 +22,5 @@ export const fetchFromGraphQL = async (
     method: "POST",
   });
 };
+
+export const gql = String.raw;

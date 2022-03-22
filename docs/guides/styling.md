@@ -253,7 +253,9 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.js lines=[1-4,19-26]
+```tsx filename=app/routes/$category.js lines=[3-6,23-30]
+import { json, useLoaderData } from "remix";
+
 import { TileGrid } from "~/components/tile-grid";
 import { ProductTile } from "~/components/product-tile";
 import { ProductDetails } from "~/components/product-details";
@@ -265,7 +267,9 @@ export function links() {
 }
 
 export async function loader({ params }) {
-  return getProductsForCategory(params.category);
+  return json(
+    await getProductsForCategory(params.category)
+  );
 }
 
 export default function Category() {
@@ -392,39 +396,47 @@ export function links() {
 }
 ```
 
-## Tailwind
+## Tailwind CSS
 
-Perhaps the most popular way to style a Remix application in the community is to use tailwind. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+Perhaps the most popular way to style a Remix application in the community is to use Tailwind CSS. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
 First install a couple dev dependencies:
 
 ```sh
-npm add -D concurrently tailwindcss
+npm install -D npm-run-all tailwindcss
 ```
 
-Initialize a tailwind config so we can tell it which files to generate classes from.
+Secondly, initialize a Tailwind config file:
 
-```js filename=tailwind.config.js lines=[2,3]
+```sh
+npx tailwindcss init
+```
+
+Now we can tell it which files to generate classes from:
+
+```js filename=tailwind.config.js lines=[2]
 module.exports = {
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
     extend: {},
   },
-  variants: {},
   plugins: [],
 };
 ```
 
-Update the package scripts to generate the tailwind file during dev and for the production build
+Update the package scripts to generate the Tailwind file during dev and for the production build
 
-```json filename="package.json lines=[4-7]
+```json filename=package.json lines=[4-10]
 {
   // ...
   "scripts": {
-    "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -o ./app/tailwind.css",
-    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
-    "dev:css": "tailwindcss -o ./app/tailwind.css --watch",
+    "build": "run-s build:*",
+    "build:css": "npm run generate:css -- --minify",
+    "build:remix": "remix build",
+    "dev": "run-p dev:*",
+    "dev:css": "npm run generate:css -- --watch",
+    "dev:remix": "remix dev",
+    "generate:css": "npx tailwindcss -o ./app/tailwind.css",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
@@ -438,9 +450,9 @@ Finally, import the generated CSS file into your app:
 // ...
 import styles from "./tailwind.css";
 
-export function links() {
-  return [{ rel: "stylesheet", href: styles }];
-}
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
@@ -457,16 +469,19 @@ If you want to use Tailwind's `@apply` method to extract custom classes, create 
 }
 ```
 
-Then alter how tailwind is generating css:
+Then alter how Tailwind is generating your css:
 
-```json filename=package.json lines=[4-7]
+```json filename=package.json lines=[10]
 {
   // ...
   "scripts": {
-    "build": "npm run build:css && remix build",
-    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --minify",
-    "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
-    "dev:css": "tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css --watch",
+    "build": "run-s build:*",
+    "build:css": "npm run generate:css -- --minify",
+    "build:remix": "remix build",
+    "dev": "run-p dev:*",
+    "dev:css": "npm run generate:css -- --watch",
+    "dev:remix": "remix dev",
+    "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
     "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
@@ -474,17 +489,20 @@ Then alter how tailwind is generating css:
 }
 ```
 
-This isn't required, but it's recommended to add the generated file to your gitignore list:
+It isn't required, but it's recommended to add the generated file to your `.gitignore` list:
 
-```sh lines=[5] filename=.gitignore
+```sh filename=.gitignore lines=[8]
 node_modules
+
 /.cache
 /build
 /public/build
+.env
+
 /app/tailwind.css
 ```
 
-If you're using VSCode, it's recommended you install the [tailwind intellisense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
+If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
 
 ## Remote Stylesheets
 
@@ -606,7 +624,7 @@ npm add -D concurrently
 
 You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
-Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export]([route-module-links]) function, just like any other CSS file in Remix.
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, just like any other CSS file in Remix.
 
 To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
@@ -667,7 +685,8 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
-   ```tsx filename=app/root.tsx lines=[21-23]
+   ```tsx filename=app/root.tsx lines=[22-24]
+   import type { MetaFunction } from "remix";
    import {
      Links,
      LiveReload,
@@ -677,15 +696,15 @@ Here's some sample code to show how you might use Styled Components with Remix (
      ScrollRestoration,
    } from "remix";
 
+   export const meta: MetaFunction = () => ({
+     charset: "utf-8",
+     viewport: "width=device-width,initial-scale=1",
+   });
+
    export default function App() {
      return (
        <html lang="en">
          <head>
-           <meta charSet="utf-8" />
-           <meta
-             name="viewport"
-             content="width=device-width,initial-scale=1"
-           />
            <Meta />
            <Links />
            {typeof document === "undefined"

@@ -1,7 +1,8 @@
 node_modules
 
 /.cache
-/.env
-/app/generated/*
 /build
 /public/build
+.env
+
+/app/generated/*

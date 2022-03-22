@@ -1,3 +1,5 @@
+import { ChakraProvider, Box, Heading } from "@chakra-ui/react";
+import type { MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -8,7 +10,10 @@ import {
   useCatch,
 } from "remix";
 
-import { ChakraProvider, Box, Heading } from "@chakra-ui/react";
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 function Document({
   children,
@@ -20,8 +25,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <title>{title}</title>
         <Links />
