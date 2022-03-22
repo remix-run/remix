@@ -14,9 +14,10 @@ export const sign: SignFunction = async (value, secret) => {
   return value + "." + hash;
 };
 
-export const unsign: UnsignFunction = async (cookie, secret) => {
-  let value = cookie.slice(0, cookie.lastIndexOf("."));
-  let hash = cookie.slice(cookie.lastIndexOf(".") + 1);
+export const unsign: UnsignFunction = async (signed, secret) => {
+  let index = signed.lastIndexOf(".");
+  let value = signed.slice(0, index);
+  let hash = signed.slice(index + 1);
 
   let key = await createKey(secret, ["verify"]);
   let data = encoder.encode(value);
