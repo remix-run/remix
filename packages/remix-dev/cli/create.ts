@@ -177,7 +177,7 @@ async function extractLocalTarball(
   );
 }
 
-async function checkStatus(response: NodeResponse, token?: string) {
+async function checkStatus(response: NodeResponse, token: string | undefined) {
   if (!response.ok) {
     if (response.status === 401 && token) {
       throw new Error(
@@ -193,8 +193,6 @@ async function checkStatus(response: NodeResponse, token?: string) {
       `🚨 Oops! Error fetching repo: ${response.status} ${response.statusText}`
     );
   }
-
-  return response;
 }
 
 async function downloadAndExtractTemplateOrExample(
@@ -265,7 +263,7 @@ async function downloadAndExtractTarball(
       : {}
   );
 
-  await checkStatus(response);
+  await checkStatus(response, options.token);
 
   await pipeline(
     response.body.pipe(gunzip()),
@@ -378,7 +376,7 @@ async function getDefaultBranch(
     },
   });
 
-  await checkStatus(response);
+  await checkStatus(response, token);
 
   let info = await response.json();
   return info.default_branch;
@@ -399,7 +397,7 @@ async function isRemixTemplate(
     }
   );
 
-  await checkStatus(response);
+  await checkStatus(response, token);
 
   let results = await response.json();
   let possibleTemplateName = useTypeScript ? `${name}-ts` : name;
@@ -421,7 +419,7 @@ async function isRemixExample(name: string, token?: string) {
     }
   );
 
-  await checkStatus(response);
+  await checkStatus(response, token);
 
   let results = await response.json();
   let example = results.find((result: any) => result.name === name);
