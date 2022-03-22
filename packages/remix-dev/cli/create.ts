@@ -145,7 +145,7 @@ export async function createApp({
   });
 
   if (!useTypeScript) {
-    await deTypeScriptify(projectDir);
+    await convertTemplateToJavaScript(projectDir);
   }
 
   if (installDeps) {
@@ -453,7 +453,11 @@ async function detectTemplateType(
   return "remoteTarball";
 }
 
-function untype(filename: string, source: string, projectDir: string): string {
+function convertToJavaScript(
+  filename: string,
+  source: string,
+  projectDir: string
+): string {
   let result = babel.transformSync(source, {
     filename,
     presets: [[babelPresetTypeScript, { jsx: "preserve" }]],
@@ -471,10 +475,10 @@ function untype(filename: string, source: string, projectDir: string): string {
     Babel's `compact` and `retainLines` options are both bad at formatting code.
     Use Prettier for nicer formatting.
   */
-  return prettier.format(result.code, { parser: "babel-ts" });
+  return prettier.format(result.code, { parser: "babel" });
 }
 
-async function deTypeScriptify(projectDir: string) {
+async function convertTemplateToJavaScript(projectDir: string) {
   // 1. Convert all .ts files in the template to .js
   let entries = glob.sync("**/*.+(ts|tsx)", {
     cwd: projectDir,
@@ -488,9 +492,9 @@ async function deTypeScriptify(projectDir: string) {
 
     let contents = fse.readFileSync(entry, "utf8");
     let filename = path.basename(entry);
-    let untyped = untype(filename, contents, projectDir);
+    let javascript = convertToJavaScript(filename, contents, projectDir);
 
-    fse.writeFileSync(entry, untyped, "utf8");
+    fse.writeFileSync(entry, javascript, "utf8");
     if (entry.endsWith(".tsx")) {
       fse.renameSync(entry, entry.replace(/\.tsx?$/, ".jsx"));
     } else {
