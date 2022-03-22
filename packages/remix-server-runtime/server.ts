@@ -556,6 +556,15 @@ function isValidRequestMethod({ method }: Request): boolean {
   return validRequestMethods.has(method.toUpperCase());
 }
 
+async function errorBoundaryError(error: Error, status: number) {
+  return json(await serializeError(error), {
+    status,
+    headers: {
+      "X-Remix-Error": "yes",
+    },
+  });
+}
+
 function isIndexRequestUrl(url: URL) {
   for (let param of url.searchParams.getAll("index")) {
     // only use bare `?index` params without a value
