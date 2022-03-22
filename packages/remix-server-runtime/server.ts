@@ -544,25 +544,16 @@ async function handleResourceRequest({
   }
 }
 
-const actionMethods = ["POST", "PUT", "PATCH", "DELETE"];
+const validActionMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 function isActionRequest({ method }: Request): boolean {
-  return actionMethods.includes(method.toUpperCase());
+  return validActionMethods.has(method.toUpperCase());
 }
 
-const validRequestMethods = ["GET", "HEAD", ...actionMethods];
+const validRequestMethods = new Set(["GET", "HEAD", ...validActionMethods]);
 
 function isValidRequestMethod({ method }: Request): boolean {
-  return validRequestMethods.includes(method.toUpperCase());
-}
-
-async function errorBoundaryError(error: Error, status: number) {
-  return json(await serializeError(error), {
-    status,
-    headers: {
-      "X-Remix-Error": "yes",
-    },
-  });
+  return validRequestMethods.has(method.toUpperCase());
 }
 
 function isIndexRequestUrl(url: URL) {
