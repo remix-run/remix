@@ -1,6 +1,7 @@
 import childProcess from "child_process";
 import fs from "fs";
 import fsp from "fs/promises";
+import fse from "fs-extra";
 import path from "path";
 import util from "util";
 import { pathToFileURL } from "url";
@@ -136,6 +137,9 @@ describe("remix cli", () => {
   });
 
   describe("the create command", () => {
+    beforeAll(async () => {
+      await fse.ensureDir(TEMP_DIR);
+    });
     afterAll(() => {
       /**
        * This prevents the console for spitting out a bunch of junk like this for
