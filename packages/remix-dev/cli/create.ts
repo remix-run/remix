@@ -192,8 +192,15 @@ async function downloadAndExtractTemplateOrExample(
       : {}
   );
 
-  if (response.status !== 200) {
-    throw new Error(`Error fetching repo: ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+    }
+    throw new Error(
+      `Error fetching repo: ${response.status} ${response.statusText}`
+    );
   }
 
   let cwd = path.dirname(projectDir);
@@ -246,8 +253,15 @@ async function downloadAndExtractTarball(
       : {}
   );
 
-  if (response.status !== 200) {
-    throw new Error(`Error fetching repo: ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+    }
+    throw new Error(
+      `Error fetching repo: ${response.status} ${response.statusText}`
+    );
   }
 
   await pipeline(
@@ -361,7 +375,12 @@ async function getDefaultBranch(
     },
   });
 
-  if (response.status !== 200) {
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+    }
     throw new Error(
       `Error fetching repo: ${response.status} ${response.statusText}`
     );
@@ -376,7 +395,7 @@ async function isRemixTemplate(
   useTypeScript: boolean,
   token?: string
 ): Promise<string | undefined> {
-  let promise = await fetch(
+  let response = await fetch(
     `https://api.github.com/repos/remix-run/remix/contents/templates`,
     {
       headers: {
@@ -385,12 +404,19 @@ async function isRemixTemplate(
       },
     }
   );
-  if (!promise.ok) {
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+    }
     throw new Error(
-      `Error fetching repo: ${promise.status} ${promise.statusText}`
+      `Error fetching repo: ${response.status} ${response.statusText}`
     );
   }
-  let results = await promise.json();
+
+  let results = await response.json();
   let possibleTemplateName = useTypeScript ? `${name}-ts` : name;
   let template = results.find((result: any) => {
     return result.name === possibleTemplateName;
@@ -400,7 +426,7 @@ async function isRemixTemplate(
 }
 
 async function isRemixExample(name: string, token?: string) {
-  let promise = await fetch(
+  let response = await fetch(
     `https://api.github.com/repos/remix-run/remix/contents/examples`,
     {
       headers: {
@@ -409,12 +435,19 @@ async function isRemixExample(name: string, token?: string) {
       },
     }
   );
-  if (!promise.ok) {
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        `Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
+      );
+    }
     throw new Error(
-      `Error fetching repo: ${promise.status} ${promise.statusText}`
+      `Error fetching repo: ${response.status} ${response.statusText}`
     );
   }
-  let results = await promise.json();
+
+  let results = await response.json();
   let example = results.find((result: any) => result.name === name);
   if (!example) return undefined;
   return example.name;
