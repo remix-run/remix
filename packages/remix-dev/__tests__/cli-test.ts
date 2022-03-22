@@ -422,7 +422,7 @@ describe("remix cli", () => {
       // deps can take a bit to install
     }, 60_000);
 
-    it.only("bails when you provide a bad GITHUB_TOKEN", async () => {
+    it("bails when you provide a bad GITHUB_TOKEN", async () => {
       let projectDir = getProjectDir("invalid-github-token");
       await expect(
         execFile(
@@ -430,8 +430,8 @@ describe("remix cli", () => {
           [remix, "create", projectDir, "--template", "basic", "--no-install"],
           {
             env: {
+              ...process.env,
               GITHUB_TOKEN: "bad-token",
-              PATH: process.env.PATH,
             },
           }
         )
