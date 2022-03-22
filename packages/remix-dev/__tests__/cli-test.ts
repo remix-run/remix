@@ -428,7 +428,12 @@ describe("remix cli", () => {
         execFile(
           "node",
           [remix, "create", projectDir, "--template", "basic", "--no-install"],
-          { env: { GITHUB_TOKEN: "bad-token" } }
+          {
+            env: {
+              GITHUB_TOKEN: "bad-token",
+              PATH: process.env.PATH,
+            },
+          }
         )
       ).rejects.toThrowError(
         `🚨 Oops! Found a \`GITHUB_TOKEN\` environment variable, but it appears to be expired.`
