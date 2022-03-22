@@ -263,4 +263,49 @@ describe("ErrorBoundary", () => {
     await app.clickLink(HAS_BOUNDARY_RENDER);
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
+
+  it("renders default error boundary if no root boundary exists", async () => {
+    fixture = await createFixture({
+      files: {
+        "app/root.jsx": js`
+            import { Outlet, Scripts } from "remix";
+
+            export default function () {
+              return (
+                <html>
+                  <head />
+                  <body>
+                    <main>
+                      <Outlet />
+                    </main>
+                    <Scripts />
+                  </body>
+                </html>
+              )
+            }
+          `,
+
+        "app/routes/index.jsx": js`
+            import { Link, Form } from "remix";
+
+            export async function loader() {
+              throw Error("BLARGH");
+            }
+
+            export default function () {
+              return (
+                <div>
+                  <h1>Hello</h1>
+                </div>
+              )
+            }
+          `,
+      },
+    });
+
+    app = await createAppFixture(fixture);
+
+    await app.goto("/");
+    expect(await app.getHtml("h1")).toMatch("Application Error");
+  });
 });
