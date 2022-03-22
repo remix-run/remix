@@ -274,11 +274,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         });
 
       await commands.create({
-        appTemplate: flags.template ?? answers.appTemplate,
+        appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install ?? answers.install,
-        useTypeScript: flags.typescript ?? answers.useTypeScript,
+        installDeps: flags.install || answers.install,
+        useTypeScript: flags.typescript || answers.useTypeScript,
         githubToken: process.env.GITHUB_TOKEN,
       });
       break;
