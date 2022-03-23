@@ -6,7 +6,7 @@ This example shows how to utilize [io-ts](https://gcanti.github.io/io-ts/) to de
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/io-ts-formdata-encoding)
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/io-ts-formdata-decoding)
 
 ## Example
 

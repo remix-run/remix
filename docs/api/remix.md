@@ -474,7 +474,7 @@ function SomeComponent() {
   return (
     <button
       formAction={useFormAction("destroy")}
-      formMethod="DELETE"
+      formMethod="post"
     >
       Delete
     </button>
