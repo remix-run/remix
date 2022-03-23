@@ -15,10 +15,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -44,10 +44,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -74,10 +74,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -102,10 +102,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -133,10 +133,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -160,10 +160,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
