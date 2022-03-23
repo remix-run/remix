@@ -1406,7 +1406,7 @@ export const LiveReload =
           <script
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${JSON.stringify(port)})`,
+              __html: `(${setupLiveReload})()`,
             }}
           />
         );
