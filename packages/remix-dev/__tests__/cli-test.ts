@@ -515,7 +515,7 @@ describe("remix cli", () => {
     it("throws an error when the desired dir already exists", async () => {
       let projectDir = getProjectDir("existing-dir");
       let relativeProjectDir = path.relative(process.cwd(), projectDir);
-      await fsp.mkdir(projectDir);
+      await fse.mkdir(projectDir);
       await expect(
         execFile("node", [
           remix,
@@ -528,7 +528,7 @@ describe("remix cli", () => {
       ).rejects.toThrowError(
         `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
-      await fsp.rmdir(projectDir);
+      await fse.rmdir(projectDir);
     });
   });
 });
