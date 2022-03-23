@@ -217,7 +217,7 @@ describe("remix cli", () => {
       ).toBeTruthy();
     });
 
-    it("works for GitHub username/repo combo", async () => {
+    it.skip("works for GitHub username/repo combo", async () => {
       let projectDir = getProjectDir("repo");
       let { stdout } = await execFile("node", [
         remix,
