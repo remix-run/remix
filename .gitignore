@@ -14,5 +14,7 @@ yarn-error.log
 .tmp
 
 /scripts/deployment-test/apps
+/scripts/deployment-test/package-lock.json
+/scripts/deployment-test/yarn.lock
 
 /.idea/
