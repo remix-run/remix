@@ -19,9 +19,9 @@ export const meta: MetaFunction = () => {
 
 /**
  * @description
- * This loader is used for determining what enviornment we are in "development" or "production"
- * The environment variable is passed down to the browser
- * See: https://remix.run/docs/en/v1/guides/envvars#server-environment-variables
+ * If you would like to include the development env values in your browser bundle AKA 
+ * set some global values on the window object, take a look at these docs here:
+ * https://remix.run/docs/en/v1/guides/envvars#server-environment-variables
  */
 // export async function loader() {
 //   return json({
