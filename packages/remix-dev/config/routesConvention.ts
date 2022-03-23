@@ -67,8 +67,11 @@ export function defineConventionalRoutes(
       );
 
       let isIndexRoute = routeId.endsWith("/index");
+      let routeIdBySegment = routeId.split("/");
+      let lastSegment = routeIdBySegment[routeIdBySegment.length - 1];
+      let isLayoutRoute = lastSegment.startsWith("__");
       let fullPath = createRoutePath(routeId.slice("routes".length + 1));
-      let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "");
+      let uniqueRouteId = (fullPath || "") + (isIndexRoute ? "?index" : "") + (isLayoutRoute ? routeId : "");
 
       if (uniqueRouteId) {
         if (uniqueRoutes.has(uniqueRouteId)) {
