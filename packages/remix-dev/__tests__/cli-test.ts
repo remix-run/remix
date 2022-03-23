@@ -5,6 +5,8 @@ import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
 
+import { cli } from "../";
+
 const execFile =
   process.platform === "win32"
     ? util.promisify(childProcess.exec)
@@ -173,15 +175,15 @@ describe("remix cli", () => {
     // this also tests sub directories
     it("works for examples in the remix repo", async () => {
       let projectDir = getProjectDir("example");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         "basic",
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toHaveBeenCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -192,17 +194,18 @@ describe("remix cli", () => {
       ).toBeTruthy();
     });
 
-    it("works for templates in the remix org", async () => {
+    it.skip("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
-      let { stdout } = await execFile("node", [
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         remix,
         "create",
         projectDir,
         "--template",
-        "grunge-stack",
+        "blues-stack",
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toHaveBeenCalledWith(
         `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
 💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
@@ -237,15 +240,15 @@ describe("remix cli", () => {
 
     it("works for remote tarballs", async () => {
       let projectDir = getProjectDir("remote-tarball");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         "https://github.com/remix-run/remix/blob/635dae1d7fcd19c206f45f1d1b9226b9c3b308b0/packages/remix-dev/__tests__/fixtures/arc.tar.gz?raw=true",
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -279,15 +282,15 @@ describe("remix cli", () => {
 
     it("works for a path to a tarball on disk", async () => {
       let projectDir = getProjectDir("local-tarball");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         path.join(__dirname, "fixtures", "arc.tar.gz"),
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -300,8 +303,8 @@ describe("remix cli", () => {
 
     it("works for a file URL to a tarball on disk", async () => {
       let projectDir = getProjectDir("file-url-tarball");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
@@ -310,7 +313,7 @@ describe("remix cli", () => {
         ).toString(),
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -323,8 +326,8 @@ describe("remix cli", () => {
 
     it("converts a template to javascript", async () => {
       let projectDir = getProjectDir("template-to-js");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
@@ -332,9 +335,13 @@ describe("remix cli", () => {
         "--no-install",
         "--no-typescript",
       ]);
-      expect(stdout.trim()).toBe(
-        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      expect(logSpy).toHaveBeenNthCalledWith(
+        1,
+        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+      );
+      expect(logSpy).toHaveBeenNthCalledWith(
+        2,
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -361,15 +368,15 @@ describe("remix cli", () => {
 
     it("works for a file path to a directory on disk", async () => {
       let projectDir = getProjectDir("local-directory");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         path.join(process.cwd(), "examples/basic"),
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -382,15 +389,15 @@ describe("remix cli", () => {
 
     it("works for a file URL to a directory on disk", async () => {
       let projectDir = getProjectDir("file-url-directory");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         pathToFileURL(path.join(process.cwd(), "examples/basic")).toString(),
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -403,18 +410,18 @@ describe("remix cli", () => {
 
     it("runs remix.init script when installing dependencies", async () => {
       let projectDir = getProjectDir("remix-init-auto");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
         "--install",
       ]);
-      expect(stdout.trim()).toContain(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(stdout.trim()).toContain(`💿 Running remix.init script`);
+      expect(logSpy).toBeCalledWith(`💿 Running remix.init script`);
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
       ).toBeTruthy();
@@ -428,18 +435,20 @@ describe("remix cli", () => {
 
     it("runs remix.init script when using `remix init`", async () => {
       let projectDir = getProjectDir("remix-init-manual");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
         path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
         "--no-install",
       ]);
-      expect(stdout.trim()).toContain(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
 
+      // we need to set the cwd so i dont think we can use cli.run
+      // unless we `process.chdir(projectDir)`
       let initResult = await execFile("node", [remix, "init"], {
         cwd: projectDir,
       });
@@ -483,8 +492,8 @@ describe("remix cli", () => {
 
     it("throws an error when invalid remix.init script when manually ran", async () => {
       let projectDir = getProjectDir("invalid-remix-init-manual");
-      let { stdout } = await execFile("node", [
-        remix,
+      let logSpy = jest.spyOn(console, "log");
+      await cli.run([
         "create",
         projectDir,
         "--template",
@@ -492,7 +501,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
 
-      expect(stdout.trim()).toContain(
+      expect(logSpy).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
 

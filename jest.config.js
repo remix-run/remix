@@ -1,3 +1,5 @@
+const SKIP_BUILD = process.env.SKIP_BUILD || process.env.CI;
+
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   modulePathIgnorePatterns: [
@@ -10,7 +12,7 @@ module.exports = {
       displayName: "create-remix",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/create-remix/**/*-test.[jt]s?(x)"],
-      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
+      globalSetup: SKIP_BUILD ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
       displayName: "integration",
@@ -32,7 +34,7 @@ module.exports = {
       setupFilesAfterEnv: [
         "<rootDir>/packages/remix-dev/__tests__/setupAfterEnv.ts",
       ],
-      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
+      globalSetup: SKIP_BUILD ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
       displayName: "remix-express",

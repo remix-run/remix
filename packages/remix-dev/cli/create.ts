@@ -377,7 +377,7 @@ async function isRemixTemplate(
   token?: string
 ): Promise<string | undefined> {
   let promise = await fetch(
-    `https://api.github.com/repos/remix-run/remix/contents/templates`,
+    "https://api.github.com/repos/remix-run/remix/contents/templates",
     {
       headers: {
         Accept: "application/vnd.github.v3+json",
@@ -400,7 +400,7 @@ async function isRemixTemplate(
 
 async function isRemixExample(name: string, token?: string) {
   let promise = await fetch(
-    `https://api.github.com/repos/remix-run/remix/contents/examples`,
+    "https://api.github.com/repos/remix-run/remix/contents/examples",
     {
       headers: {
         Accept: "application/vnd.github.v3+json",
