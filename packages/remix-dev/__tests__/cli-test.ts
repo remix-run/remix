@@ -270,7 +270,7 @@ describe("remix cli", () => {
       ).toBeTruthy();
     });
 
-    it.skip("works for different branches", async () => {
+    it("works for different branches", async () => {
       let projectDir = getProjectDir("diff-branch");
       await cli.run([
         "create",

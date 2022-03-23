@@ -29,11 +29,15 @@ let handlers = [
   ),
 
   rest.get(
-    "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    "https://codeload.github.com/:owner/:repo/tar.gz/:branch",
     (req, res, ctx) => {
-      let buffer = fse.readFileSync(
-        path.join(FIXTURES_DIR, "remix-2022-03-23.tar.gz")
-      );
+      if (req.params.owner === "remix-run" && req.params.repo === "remix") {
+        let buffer = fse.readFileSync(
+          path.join(FIXTURES_DIR, "remix-2022-03-23.tar.gz")
+        );
+        return res(ctx.status(200), ctx.body(buffer));
+      }
+      let buffer = fse.readFileSync(path.join(FIXTURES_DIR, "arc.tar.gz"));
       return res(ctx.status(200), ctx.body(buffer));
     }
   ),
@@ -44,14 +48,6 @@ let handlers = [
       let buffer = fse.readFileSync(
         path.join(FIXTURES_DIR, "blues-stack-2022-03-23.tar.gz")
       );
-      return res(ctx.status(200), ctx.body(buffer));
-    }
-  ),
-
-  rest.get(
-    "https://codeload.github.com/:owner/:repo/tar.gz/:branch",
-    (req, res, ctx) => {
-      let buffer = fse.readFileSync(path.join(FIXTURES_DIR, "arc.tar.gz"));
       return res(ctx.status(200), ctx.body(buffer));
     }
   ),
