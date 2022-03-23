@@ -147,13 +147,10 @@ describe("remix cli", () => {
        */
       async function renamePkgJsonApp(dir: string) {
         let pkgPath = path.join(dir, "package.json");
-        // one of our tests is a failing case so we won't have a package.json
-        if (fs.existsSync(pkgPath)) {
-          let pkg = await fsp.readFile(pkgPath);
-          let obj = JSON.parse(pkg.toString());
-          obj.name = path.basename(dir);
-          await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
-        }
+        let pkg = await fsp.readFile(pkgPath);
+        let obj = JSON.parse(pkg.toString());
+        obj.name = path.basename(dir);
+        await fsp.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
       }
 
       let dirs = fs.readdirSync(path.join(process.cwd(), ".tmp"));
@@ -438,6 +435,7 @@ describe("remix cli", () => {
       ).rejects.toThrowError(
         `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
       );
+      await fsp.rmdir(projectDir);
     });
   });
 });
