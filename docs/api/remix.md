@@ -9,18 +9,18 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 ## Components and Hooks
 
-### `<Meta>`, `<Links>`, `<Scripts>`, `<LiveReload>`, `<ScrollRestoration>`
+### `<Links>`, `<LiveReload>`, `<Meta>`, `<Scripts>`, `<ScrollRestoration>`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
-import type { MetaFunction, LinksFunction } from "remix";
+import type { LinksFunction, MetaFunction } from "remix";
 import {
-  Meta,
   Links,
-  Scripts,
-  Outlet,
   LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
   ScrollRestoration,
 } from "remix";
 
@@ -30,13 +30,11 @@ export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: globalStylesheetUrl }];
 };
 
-export const meta: MetaFunction = () => {
-  return {
-    title: "My Amazing App",
-    viewport: "width=device-width,initial-scale=1",
-    charSet: "utf-8",
-  };
-};
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "My Amazing App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export default function App() {
   return (
@@ -95,7 +93,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 ```tsx
 <>
-  <Link /> // defaults to "none"
+  <Link /> {/* defaults to "none" */}
   <Link prefetch="none" />
   <Link prefetch="intent" />
   <Link prefetch="render" />
@@ -194,7 +192,7 @@ If the `end` prop is used, it will ensure this component isn't matched as "activ
 
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
-```js
+```tsx
 import { Form } from "remix";
 
 function NewEvent() {
@@ -218,7 +216,7 @@ Most of the time you can omit this prop. Forms without an action prop (`<Form me
 
 If you need to post to a different route, then add an action prop:
 
-```jsx
+```tsx
 <Form action="/projects/new" method="post" />
 ```
 
@@ -235,7 +233,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
-```jsx
+```tsx
 <Form method="post" />
 ```
 
@@ -286,7 +284,7 @@ This component will emulate the browser's scroll restoration on location changes
 
 It must be the last element on the page, right before the `<Scripts/>` tag:
 
-```tsx [4,5]
+```tsx lines=[4,5]
 <html>
   <body>
     {/* ... */}
@@ -348,7 +346,7 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [21, 30, 38-40, 44-46]
+```tsx lines=[21, 30, 38-40, 44-46]
 import { redirect, json, Form, useActionData } from "remix";
 
 export async function action({ request }) {
@@ -476,7 +474,7 @@ function SomeComponent() {
   return (
     <button
       formAction={useFormAction("destroy")}
-      formMethod="DELETE"
+      formMethod="post"
     >
       Delete
     </button>

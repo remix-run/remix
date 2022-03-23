@@ -1,0 +1,17 @@
+html {
+  --background-colour: white;
+
+  background-color: var(--background-colour);
+}
+
+html.dark {
+  --background-colour: black;
+}
+
+.dark-component {
+  color: white;
+}
+
+.light-component {
+  color: black;
+}

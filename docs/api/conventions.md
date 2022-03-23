@@ -1018,7 +1018,7 @@ There are a few special cases (read about those below). In the case of nested ro
 
 #### `HtmlMetaDescriptor`
 
-This is an object representation and abstraction of a `<meta {...props} />` element and its attributes. [View the MDN docs for the meta API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta).
+This is an object representation and abstraction of a `<meta {...props}>` element and its attributes. [View the MDN docs for the meta API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta).
 
 The `meta` export from a route should return a single `HtmlMetaDescriptor` object.
 
@@ -1026,22 +1026,31 @@ Almost every `meta` element takes a `name` and `content` attribute, with the exc
 
 The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title).
 
-As a convenience, `charSet: "utf-8"` will render a `<meta charSet="utf-8" />`.
+As a convenience, `charset: "utf-8"` will render a `<meta charset="utf-8">`.
+
+As a last option, you can also pass an object of attribute/value pairs as the value. This can be used as an escape-hetch for meta tags like the [`http-equiv` tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv) which uses `http-equiv` instead of `name`.
 
 Examples:
 
 ```tsx
 import type { MetaFunction } from "remix";
 
-export const meta: MetaFunction = () => {
-  return {
-    title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
-    charSet: "utf-8", // <meta charSet="utf-8" />
-    description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
-    "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
-    viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  };
-};
+export const meta: MetaFunction = () => ({
+  // Special cases
+  charset: "utf-8", // <meta charset="utf-8">
+  "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
+  title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
+
+  // content => name
+  description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
+  viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  // <meta {...value}>
+  refresh: {
+    httpEquiv: "refresh",
+    content: "3;url=https://www.mozilla.org",
+  }, // <meta http-equiv="refresh" content="3;url=https://www.mozilla.org">
+});
 ```
 
 #### Page context in `meta` function
@@ -1055,18 +1064,18 @@ export const meta: MetaFunction = () => {
 
 ```tsx
 export const meta: MetaFunction = ({ data, params }) => {
-  if (data) {
-    const { shake } = data as LoaderData;
-    return {
-      title: `${shake.name} milkshake`,
-      description: shake.summary,
-    };
-  } else {
+  if (!data) {
     return {
       title: "Missing Shake",
       description: `There is no shake with the ID of ${params.shakeId}. 😢`,
     };
   }
+
+  const { shake } = data as LoaderData;
+  return {
+    title: `${shake.name} milkshake`,
+    description: shake.summary,
+  };
 };
 ```
 

@@ -629,7 +629,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   ) {
     let match = matches.slice(-1)[0];
 
-    if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
+    if (!isIndexRequestUrl(url) && match.route.index) {
       return matches.slice(-2)[0];
     }
 
@@ -1053,14 +1053,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     pendingNavigationController = controller;
 
+    // Create a local copy we can mutate for proper determination of the acton
+    // to run on layout/index routes.  We do not want to mutate the eventual
+    // matches used for revalidation
+    let actionMatches = matches;
     if (
-      !isIndexRequestAction(submission.action) &&
-      matches[matches.length - 1].route.id.endsWith("/index")
+      !isIndexRequestUrl(createUrl(submission.action)) &&
+      actionMatches[matches.length - 1].route.index
     ) {
-      matches = matches.slice(0, -1);
+      actionMatches = actionMatches.slice(0, -1);
     }
 
-    let leafMatch = matches.slice(-1)[0];
+    let leafMatch = actionMatches.slice(-1)[0];
     let result = await callAction(submission, leafMatch, controller.signal);
 
     if (controller.signal.aborted) {
@@ -1080,7 +1084,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let catchVal, catchBoundaryId;
     if (isCatchResult(result)) {
       [catchVal, catchBoundaryId] =
-        (await findCatchAndBoundaryId([result], matches, result)) || [];
+        (await findCatchAndBoundaryId([result], actionMatches, result)) || [];
     }
 
     let loadTransition: TransitionStates["LoadingAction"] = {
@@ -1386,19 +1390,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
 ////////////////////////////////////////////////////////////////////////////////
 //#region createTransitionManager sub-functions
 ////////////////////////////////////////////////////////////////////////////////
-function isIndexRequestAction(action: string) {
-  let indexRequest = false;
-
-  let searchParams = new URLSearchParams(action.split("?", 2)[1] || "");
-  for (let param of searchParams.getAll("index")) {
-    if (!param) {
-      indexRequest = true;
-    }
-  }
-
-  return indexRequest;
-}
-
 async function callLoaders(
   state: TransitionManagerState,
   location: Location,
