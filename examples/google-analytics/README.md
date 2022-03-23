@@ -1,4 +1,4 @@
-d# Google Analytics Example
+# Google Analytics Example
 
 In this setup we will setup Google Analytics with Remix.
 
