@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Form, type ActionFunction } from "remix";
+import { Form } from "remix";
+import type { ActionFunction } from "remix";
 
 import * as gtag from "~/utils/gtags.client";
 
@@ -19,7 +20,7 @@ export default function Contact() {
     gtag.event({
       action: "submit_form",
       category: "Contact",
-      label: target.message.value
+      label: target.message.value,
     });
   };
 
@@ -33,7 +34,7 @@ export default function Contact() {
         </label>
         <button type="submit">submit</button>
       </Form>
-      
+
       {/* Fun fact: if you want to use your button outside the form element you can as long as you associate the button with a form attribute targeting the id of the form */}
       {/* <button type="submit" form="contact-form">submit</button> */}
     </main>
