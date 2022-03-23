@@ -204,7 +204,7 @@ describe("remix cli", () => {
       ).toBeTruthy();
     });
 
-    it.skip("works for templates in the remix org", async () => {
+    it("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       await cli.run([
         "create",
