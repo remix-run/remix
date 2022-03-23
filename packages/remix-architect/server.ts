@@ -17,7 +17,7 @@ import type {
   Response as NodeResponse,
 } from "@remix-run/node";
 
-import { isBinaryType } from "./binary-types";
+import { isBinaryType } from "./binaryTypes";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -26,11 +26,11 @@ import { isBinaryType } from "./binary-types";
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (event: APIGatewayProxyEventV2): AppLoadContext;
-}
+export type GetLoadContextFunction = (
+  event: APIGatewayProxyEventV2
+) => AppLoadContext;
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = APIGatewayProxyHandlerV2;
 
 /**
  * Returns a request handler for Architect that serves the response using
@@ -44,10 +44,10 @@ export function createRequestHandler({
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
-}): APIGatewayProxyHandlerV2 {
+}): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (event, _context) => {
+  return async (event /*, context*/) => {
     let abortController = new AbortController();
     let request = createRemixRequest(event, abortController);
     let loadContext =
@@ -102,13 +102,13 @@ export function createRemixHeaders(
 }
 
 export async function sendRemixResponse(
-  response: NodeResponse,
+  nodeResponse: NodeResponse,
   abortController: AbortController
 ): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
   // Arc/AWS API Gateway will send back set-cookies outside of response headers.
-  for (let [key, values] of Object.entries(response.headers.raw())) {
+  for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
     if (key.toLowerCase() === "set-cookie") {
       for (let value of values) {
         cookies.push(value);
@@ -117,29 +117,29 @@ export async function sendRemixResponse(
   }
 
   if (cookies.length) {
-    response.headers.delete("set-cookie");
+    nodeResponse.headers.delete("Set-Cookie");
   }
 
   if (abortController.signal.aborted) {
-    response.headers.set("Connection", "close");
+    nodeResponse.headers.set("Connection", "close");
   }
 
-  let contentType = response.headers.get("content-type");
+  let contentType = nodeResponse.headers.get("Content-Type");
   let isBinary = isBinaryType(contentType);
   let body;
   let isBase64Encoded = false;
 
   if (isBinary) {
-    let blob = await response.arrayBuffer();
+    let blob = await nodeResponse.arrayBuffer();
     body = Buffer.from(blob).toString("base64");
     isBase64Encoded = true;
   } else {
-    body = await response.text();
+    body = await nodeResponse.text();
   }
 
   return {
-    statusCode: response.status,
-    headers: Object.fromEntries(response.headers),
+    statusCode: nodeResponse.status,
+    headers: Object.fromEntries(nodeResponse.headers),
     cookies,
     body,
     isBase64Encoded,

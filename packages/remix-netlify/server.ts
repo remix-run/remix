@@ -18,7 +18,7 @@ import type {
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
 
-import { isBinaryType } from "./binary-types";
+import { isBinaryType } from "./binaryTypes";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -27,11 +27,12 @@ import { isBinaryType } from "./binary-types";
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (event: HandlerEvent, context: HandlerContext): AppLoadContext;
-}
+export type GetLoadContextFunction = (
+  event: HandlerEvent,
+  context: HandlerContext
+) => AppLoadContext;
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = Handler;
 
 export function createRequestHandler({
   build,
@@ -41,7 +42,7 @@ export function createRequestHandler({
   build: ServerBuild;
   getLoadContext?: AppLoadContext;
   mode?: string;
-}): Handler {
+}): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
@@ -133,29 +134,29 @@ function getRawPath(event: HandlerEvent): string {
 }
 
 export async function sendRemixResponse(
-  response: NodeResponse,
+  nodeResponse: NodeResponse,
   abortController: AbortController
 ): Promise<HandlerResponse> {
   if (abortController.signal.aborted) {
-    response.headers.set("Connection", "close");
+    nodeResponse.headers.set("Connection", "close");
   }
 
-  let contentType = response.headers.get("content-type");
+  let contentType = nodeResponse.headers.get("Content-Type");
   let isBinary = isBinaryType(contentType);
   let body;
   let isBase64Encoded = false;
 
   if (isBinary) {
-    let blob = await response.arrayBuffer();
+    let blob = await nodeResponse.arrayBuffer();
     body = Buffer.from(blob).toString("base64");
     isBase64Encoded = true;
   } else {
-    body = await response.text();
+    body = await nodeResponse.text();
   }
 
   return {
-    statusCode: response.status,
-    multiValueHeaders: response.headers.raw(),
+    statusCode: nodeResponse.status,
+    multiValueHeaders: nodeResponse.headers.raw(),
     body,
     isBase64Encoded,
   };
