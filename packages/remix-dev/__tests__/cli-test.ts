@@ -207,16 +207,19 @@ describe("remix cli", () => {
     it.skip("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       await cli.run([
-        remix,
         "create",
         projectDir,
         "--template",
         "blues-stack",
         "--no-install",
       ]);
-      expect(console.log).toHaveBeenCalledWith(
-        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      expect(console.log).toHaveBeenNthCalledWith(
+        1,
+        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+      );
+      expect(console.log).toHaveBeenNthCalledWith(
+        2,
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
