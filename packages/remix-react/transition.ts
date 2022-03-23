@@ -180,18 +180,22 @@ export type Redirects = {
   Loader: {
     isRedirect: true;
     type: "loader";
+    setCookie: boolean;
   };
   Action: {
     isRedirect: true;
     type: "action";
+    setCookie: boolean;
   };
   LoaderSubmission: {
     isRedirect: true;
     type: "loaderSubmission";
+    setCookie: boolean;
   };
   FetchAction: {
     isRedirect: true;
     type: "fetchAction";
+    setCookie: boolean;
   };
 };
 
@@ -313,6 +317,7 @@ interface RedirectLocation extends _Location {
   state: {
     isRedirect: true;
     type: string;
+    setCookie: boolean;
   };
 }
 
@@ -326,6 +331,7 @@ interface LoaderRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "loader";
+    setCookie: boolean;
   };
 }
 
@@ -339,6 +345,7 @@ interface ActionRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "action";
+    setCookie: boolean;
   };
 }
 
@@ -352,6 +359,7 @@ interface FetchActionRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "fetchAction";
+    setCookie: boolean;
   };
 }
 
@@ -365,6 +373,7 @@ interface LoaderSubmissionRedirectLocation extends RedirectLocation {
   state: {
     isRedirect: true;
     type: "loaderSubmission";
+    setCookie: boolean;
   };
 }
 
@@ -378,7 +387,7 @@ function isLoaderSubmissionRedirectLocation(
 
 export class TransitionRedirect {
   location: string;
-  constructor(location: Location | string) {
+  constructor(location: Location | string, public setCookie: boolean) {
     this.location =
       typeof location === "string"
         ? location
@@ -658,6 +667,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["FetchAction"] = {
         isRedirect: true,
         type: "fetchAction",
+        setCookie: result.value.setCookie,
       };
       fetchRedirectIds.add(key);
       init.onRedirect(result.value.location, locationState);
@@ -697,12 +707,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchReloadIds.set(key, loadId);
 
     let matchesToLoad = state.nextMatches || state.matches;
-    let hrefToLoad = createHref(state.transition.location || state.location);
 
     console.debug(`[transition] fetcher calling loaders (key: ${key})`);
     let results = await callLoaders(
       state,
-      createUrl(hrefToLoad),
+      state.transition.location || state.location,
       matchesToLoad,
       controller.signal,
       maybeActionErrorResult,
@@ -725,6 +734,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader",
+        setCookie: redirect.setCookie,
       };
       init.onRedirect(redirect.location, locationState);
       return;
@@ -736,11 +746,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
-      results,
-      state.matches,
-      maybeActionCatchResult
-    );
+    let [catchVal, catchBoundaryId] =
+      (await findCatchAndBoundaryId(
+        results,
+        state.matches,
+        maybeActionCatchResult
+      )) || [];
 
     let doneFetcher: FetcherStates["Done"] = {
       state: "idle",
@@ -863,6 +874,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -922,6 +934,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
         type: "loader",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -951,6 +964,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     result: DataResult
   ) {
+    // TODO: revisit this if submission is correct after review
     if (isCatchResult(result)) {
       let catchBoundaryId = findNearestCatchBoundary(match, state.matches);
       state.fetchers.delete(key);
@@ -1057,23 +1071,16 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let locationState: Redirects["Action"] = {
         isRedirect: true,
         type: "action",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
     }
 
+    let catchVal, catchBoundaryId;
     if (isCatchResult(result)) {
-      let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
-        [result],
-        matches,
-        result
-      );
-      update({
-        transition: IDLE_TRANSITION,
-        catch: catchVal,
-        catchBoundaryId,
-      });
-      return;
+      [catchVal, catchBoundaryId] =
+        (await findCatchAndBoundaryId([result], matches, result)) || [];
     }
 
     let loadTransition: TransitionStates["LoadingAction"] = {
@@ -1093,7 +1100,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       matches,
       submission,
       leafMatch.route.id,
-      result
+      result,
+      catchVal,
+      catchBoundaryId
     );
   }
 
@@ -1230,7 +1239,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[],
     submission?: Submission,
     submissionRouteId?: string,
-    actionResult?: DataResult
+    actionResult?: DataResult,
+    catchVal?: CatchData<any>,
+    catchBoundaryId?: string | null
   ) {
     let maybeActionErrorResult =
       actionResult && isErrorResult(actionResult) ? actionResult : undefined;
@@ -1245,13 +1256,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     console.debug("[transition] calling loaders for loadPageData");
     let results = await callLoaders(
       state,
-      createUrl(createHref(location)),
+      location,
       matches,
       controller.signal,
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
-      submissionRouteId
+      submissionRouteId,
+      undefined,
+      catchBoundaryId
     );
 
     if (controller.signal.aborted) {
@@ -1271,18 +1284,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
         let locationState: Redirects["Action"] = {
           isRedirect: true,
           type: "action",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       } else if (state.transition.type === "loaderSubmission") {
         let locationState: Redirects["LoaderSubmission"] = {
           isRedirect: true,
           type: "loaderSubmission",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       } else {
         let locationState: Redirects["Loader"] = {
           isRedirect: true,
           type: "loader",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       }
@@ -1295,11 +1311,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+    [catchVal, catchBoundaryId] = (await findCatchAndBoundaryId(
       results,
       matches,
       maybeActionErrorResult
-    );
+    )) || [catchVal, catchBoundaryId];
 
     markFetchRedirectsDone();
 
@@ -1385,24 +1401,27 @@ function isIndexRequestAction(action: string) {
 
 async function callLoaders(
   state: TransitionManagerState,
-  url: URL,
+  location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
   submissionRouteId?: string,
-  fetcher?: Fetcher
+  fetcher?: Fetcher,
+  catchBoundaryId?: string | null
 ): Promise<DataResult[]> {
+  let url = createUrl(createHref(location));
   let matchesToLoad = filterMatchesToLoad(
     state,
-    url,
+    location,
     matches,
     actionErrorResult,
     actionCatchResult,
     submission,
     submissionRouteId,
-    fetcher
+    fetcher,
+    catchBoundaryId
   );
 
   return Promise.all(
@@ -1426,13 +1445,6 @@ async function callAction(
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<DataResult> {
-  if (!match.route.action) {
-    throw new Error(
-      `Route "${match.route.id}" does not have an action, but you are trying ` +
-        `to submit to it. To fix this, please add an \`action\` function to the route`
-    );
-  }
-
   try {
     let value = await match.route.action({
       url: createUrl(submission.action),
@@ -1448,23 +1460,30 @@ async function callAction(
 
 function filterMatchesToLoad(
   state: TransitionManagerState,
-  url: URL,
+  location: Location,
   matches: ClientMatch[],
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
   submissionRouteId?: string,
-  fetcher?: Fetcher
+  fetcher?: Fetcher,
+  catchBoundaryId?: string | null
 ): ClientMatch[] {
   // Filter out all routes below the problematic route as they aren't going
   // to render so we don't need to load them.
-  if (submissionRouteId && (actionCatchResult || actionErrorResult)) {
+  if (
+    catchBoundaryId ||
+    (submissionRouteId && (actionCatchResult || actionErrorResult))
+  ) {
     let foundProblematicRoute = false;
     matches = matches.filter((match) => {
       if (foundProblematicRoute) {
         return false;
       }
-      if (match.route.id === submissionRouteId) {
+      if (
+        match.route.id === submissionRouteId ||
+        match.route.id === catchBoundaryId
+      ) {
         foundProblematicRoute = true;
         return false;
       }
@@ -1490,6 +1509,8 @@ function filterMatchesToLoad(
         state.matches[index].params["*"] !== match.params["*"])
     );
   };
+
+  let url = createUrl(createHref(location));
 
   let filterByRouteProps = (match: ClientMatch, index: number) => {
     if (!match.route.loader) {
@@ -1527,7 +1548,9 @@ function filterMatchesToLoad(
     // clicked the same link, resubmitted a GET form
     createHref(url) === createHref(state.location) ||
     // search affects all loaders
-    url.searchParams.toString() !== state.location.search.substring(1)
+    url.searchParams.toString() !== state.location.search.substring(1) ||
+    // a cookie was set
+    (location.state as any)?.setCookie
   ) {
     return matches.filter(filterByRouteProps);
   }
@@ -1540,7 +1563,9 @@ function filterMatchesToLoad(
 
     return (
       match.route.loader &&
-      (isNew(match, index) || matchPathChanged(match, index))
+      (isNew(match, index) ||
+        matchPathChanged(match, index) ||
+        (location.state as any)?.setCookie)
     );
   });
 }
@@ -1566,7 +1591,7 @@ async function findCatchAndBoundaryId(
   results: DataResult[],
   matches: ClientMatch[],
   actionCatchResult?: DataCatchResult
-): Promise<[CatchData, string | null] | [undefined, undefined]> {
+): Promise<[CatchData, string | null] | null> {
   let loaderCatchResult: DataCatchResult | undefined;
 
   for (let result of results) {
@@ -1595,7 +1620,7 @@ async function findCatchAndBoundaryId(
     return [await extractCatchData(loaderCatchResult.value), boundaryId];
   }
 
-  return [undefined, undefined];
+  return null;
 }
 
 function findErrorAndBoundaryId(

@@ -4,11 +4,7 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import copy from "rollup-plugin-copy";
 import fse from "fs-extra";
 
-function isBareModuleId(id) {
-  return !id.startsWith(".") && !path.isAbsolute(id);
-}
-
-let executableBanner = "#!/usr/bin/env node\n";
+const executableBanner = "#!/usr/bin/env node\n";
 
 function createBanner(packageName, version) {
   return `/**
@@ -25,6 +21,10 @@ function createBanner(packageName, version) {
 
 function getVersion(packageDir) {
   return require(`./${packageDir}/package.json`).version;
+}
+
+function isBareModuleId(id) {
+  return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
@@ -126,21 +126,15 @@ function remixDev() {
     {
       external(id, parent) {
         if (
-          id === "./package.json" &&
-          parent === path.resolve(__dirname, "packages/remix-dev/create.ts")
+          id === "../package.json" &&
+          parent === path.resolve(__dirname, "packages/remix-dev/cli/create.ts")
         ) {
           return true;
         }
 
         return isBareModuleId(id);
       },
-      input: [
-        `${sourceDir}/cli/commands.ts`,
-        `${sourceDir}/colors.ts`,
-        `${sourceDir}/compiler.ts`,
-        `${sourceDir}/config.ts`,
-        `${sourceDir}/index.ts`,
-      ],
+      input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("@remix-run/dev", version),
         dir: outputDir,
@@ -389,40 +383,23 @@ function remixNode() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
-function remixCloudflareWorkers() {
-  let sourceDir = "packages/remix-cloudflare-workers";
-  let outputDir = "build/node_modules/@remix-run/cloudflare-workers";
+function remixCloudflare() {
+  let sourceDir = "packages/remix-cloudflare";
+  let outputDir = "build/node_modules/@remix-run/cloudflare";
   let version = getVersion(sourceDir);
 
   return [
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/cloudflare-workers", version),
-        dir: `${outputDir}/magicExports`,
-        format: "cjs",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-      ],
-    },
     {
       external(id) {
         return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
       output: {
-        banner: createBanner("@remix-run/cloudflare-workers", version),
-        dir: `${outputDir}/esm`,
-        format: "esm",
+        banner: createBanner("@remix-run/cloudflare", version),
+        dir: outputDir,
+        format: "cjs",
         preserveModules: true,
+        exports: "named",
       },
       plugins: [
         babel({
@@ -431,6 +408,13 @@ function remixCloudflareWorkers() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
+          ],
+        }),
       ],
     },
     {
@@ -439,9 +423,27 @@ function remixCloudflareWorkers() {
       },
       input: `${sourceDir}/magicExports/remix.ts`,
       output: {
-        banner: createBanner("@remix-run/cloudflare-workers", version),
+        banner: createBanner("@remix-run/cloudflare", version),
         dir: `${outputDir}/magicExports/esm`,
         format: "esm",
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"],
+        }),
+      ],
+    },
+    {
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/magicExports/remix.ts`,
+      output: {
+        banner: createBanner("@remix-run/cloudflare", version),
+        dir: `${outputDir}/magicExports`,
+        format: "cjs",
       },
       plugins: [
         babel({
@@ -455,21 +457,22 @@ function remixCloudflareWorkers() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
-function remixCloudflarePages() {
-  let sourceDir = "packages/remix-cloudflare-pages";
-  let outputDir = "build/node_modules/@remix-run/cloudflare-pages";
+function remixCloudflareWorkers() {
+  let sourceDir = "packages/remix-cloudflare-workers";
+  let outputDir = "build/node_modules/@remix-run/cloudflare-workers";
   let version = getVersion(sourceDir);
 
   return [
     {
-      external() {
-        return true;
+      external(id) {
+        return isBareModuleId(id);
       },
-      input: `${sourceDir}/magicExports/remix.ts`,
+      input: `${sourceDir}/index.ts`,
       output: {
-        banner: createBanner("@remix-run/cloudflare-pages", version),
-        dir: `${outputDir}/magicExports`,
-        format: "cjs",
+        banner: createBanner("@remix-run/cloudflare-workers", version),
+        dir: `${outputDir}/esm`,
+        format: "esm",
+        preserveModules: true,
       },
       plugins: [
         babel({
@@ -477,8 +480,19 @@ function remixCloudflarePages() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
       ],
     },
+  ];
+}
+
+/** @returns {import("rollup").RollupOptions[]} */
+function remixCloudflarePages() {
+  let sourceDir = "packages/remix-cloudflare-pages";
+  let outputDir = "build/node_modules/@remix-run/cloudflare-pages";
+  let version = getVersion(sourceDir);
+
+  return [
     {
       external(id) {
         return isBareModuleId(id);
@@ -497,24 +511,6 @@ function remixCloudflarePages() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/cloudflare-pages", version),
-        dir: `${outputDir}/magicExports/esm`,
-        format: "esm",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
       ],
     },
   ];
@@ -786,6 +782,7 @@ export default function rollup(options) {
     ...remixDev(options),
     ...remixServerRuntime(options),
     ...remixNode(options),
+    ...remixCloudflare(options),
     ...remixCloudflarePages(options),
     ...remixCloudflareWorkers(options),
     ...remixServerAdapters(options),

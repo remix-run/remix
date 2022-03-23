@@ -636,7 +636,7 @@ An example using SASS.
 npm add -D sass
 ```
 
-2. Add an npm script to your `package.json`'s `script` section' that uses the installed too to generate CSS files.
+2. Add an npm script to your `package.json`'s `script` section' that uses the installed tool to generate CSS files.
 
 ```json filename="package.json"
 {
