@@ -1,3 +1,5 @@
+/* eslint-disable import/no-nodejs-modules */
+import { Buffer } from "buffer";
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 
@@ -177,13 +179,13 @@ async function decodeCookieValue(
 }
 
 function encodeData(value: any): string {
-  return btoa(JSON.stringify(value));
+  return Buffer.from(JSON.stringify(value)).toString("base64");
 }
 
 function decodeData(value: string): any {
   try {
-    return JSON.parse(atob(value));
-  } catch (error) {
+    return JSON.parse(Buffer.from(value, "base64").toString("ascii"));
+  } catch {
     return {};
   }
 }
