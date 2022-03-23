@@ -11,13 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
@@ -43,13 +40,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
@@ -76,13 +70,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
@@ -107,13 +98,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
@@ -141,13 +129,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
@@ -171,13 +156,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies

@@ -27,15 +27,13 @@ jobs:
       - name: prep windows network
         run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
         if: ${{ matrix.settings.host == 'windows-latest' }}
-      - uses: actions/checkout@v2
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      
+      - uses: actions/checkout@v3
 
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "yarn"
 
       - name: Install dependencies
