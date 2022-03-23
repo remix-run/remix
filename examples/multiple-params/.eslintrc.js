@@ -1,5 +1,5 @@
 module.exports = {
-  extends: ["@remix-run/eslint-config"],
+  extends: ["@remix-run/eslint-config", "@remix-run/eslint-config/node"],
   overrides: [
     {
       // all ```jsx & ```tsx code blocks in .md files
