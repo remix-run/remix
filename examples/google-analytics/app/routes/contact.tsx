@@ -12,17 +12,7 @@ export default function Contact() {
   const submit = useSubmit();
 
   const handleSubmit = (
-    e: React.SyntheticEvent<
-      | HTMLFormElement
-      | HTMLButtonElement
-      | HTMLInputElement
-      | FormData
-      | URLSearchParams
-      | {
-          [name: string]: string;
-        }
-      | null
-    >
+    e: React.SyntheticEvent<HTMLFormElement>
   ) => {
 
     const target = e.target as typeof e.target & {
