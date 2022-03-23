@@ -1,5 +1,6 @@
-import { useTransition, useActionData, Form, redirect } from "remix";
-import type { ActionFunction } from "remix";
+import { Form, useActionData, useTransition } from "@remix-run/react";
+import { redirect } from "@remix-run/node";
+import type { ActionFunction } from "@remix-run/node";
 import invariant from "tiny-invariant";
 
 import { createPost } from "~/post";

@@ -1,6 +1,7 @@
 import * as React from "react";
-import type { LoaderFunction, LinksFunction, MetaFunction } from "remix";
-import { json, Outlet, useCatch } from "remix";
+import { Outlet, useCatch } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LinksFunction, LoaderFunction, MetaFunction } from "@remix-run/node";
 
 import stylesUrl from "~/dist/styles/routes/dashboard.css";
 import { NavLink } from "~/ui/link";

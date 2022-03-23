@@ -1,4 +1,5 @@
-import { json, Link, useLoaderData } from "remix";
+import { Link, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";

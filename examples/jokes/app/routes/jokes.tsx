@@ -1,6 +1,6 @@
-import type { LoaderFunction, LinksFunction } from "remix";
-import { json, Form } from "remix";
-import { Outlet, useLoaderData, Link } from "remix";
+import { Form, Link, Outlet, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";

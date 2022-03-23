@@ -1,5 +1,6 @@
-import { Link, Outlet, json, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import type { Workshop } from "~/data.server";
 import { getWorkshops } from "~/data.server";
 

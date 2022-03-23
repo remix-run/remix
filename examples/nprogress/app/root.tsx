@@ -1,16 +1,8 @@
 import NProgress from "nprogress";
 import nProgressStyles from "nprogress/nprogress.css";
 import { useEffect } from "react";
-import type { LinksFunction, MetaFunction } from "remix";
-import {
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useTransition,
-} from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration, useTransition } from "@remix-run/react";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 
 export const links: LinksFunction = () => {
   // if you already have one only add this stylesheet to your list of links

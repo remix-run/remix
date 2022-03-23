@@ -1,4 +1,4 @@
-import { useMatches, Link } from "remix";
+import { Link, useMatches } from "@remix-run/react";
 import type { User } from "~/data.server";
 
 export default function Index() {

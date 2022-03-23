@@ -1,6 +1,7 @@
 import * as React from "react";
-import type { LoaderFunction, LinksFunction } from "remix";
-import { json, useCatch, useFetcher, useLoaderData } from "remix";
+import { useCatch, useFetcher, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
 import type { UserSecure, Project } from "~/models";
 import { Heading, Section } from "~/ui/section-heading";
 import { MaxContainer } from "~/ui/max-container";

@@ -1,18 +1,4 @@
-/**
- * An on the fly image resizer
- *
- * Since most of our images are served via a CDN, we don't have to save the resized images.
- * Instead we set cache headers for them and let the cdn cache them for us.
- *
- * sharp uses a highly performant native package called libvips.
- * it's written in C and is extremely fast.
- *
- * The implementation of the demo uses a stream based approach where the image is never stored in memory.
- * This means it's very good at handling images of any size, and is extremely performant.
- * Further improvements could be done by implementing ETags, but that is out of scope for this demo.
- */
-
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
 import type { Params } from "react-router";
 
 import path from "path";

@@ -1,10 +1,6 @@
-import {
-  Form,
-  unstable_parseMultipartFormData,
-  useActionData,
-  json,
-} from "remix";
-import type { ActionFunction, UploadHandler } from "remix";
+import { Form, useActionData } from "@remix-run/react";
+import { json, unstable_parseMultipartFormData } from "@remix-run/node";
+import type { ActionFunction, UploadHandler } from "@remix-run/node";
 
 import { uploadImage } from "~/utils/utils.server";
 

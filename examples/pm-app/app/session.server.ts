@@ -1,4 +1,4 @@
-import { createCookieSessionStorage, redirect } from "remix";
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import { createUser, verifyLogin, getUser as getDbUser } from "./db.server";
 import { getServerSafeEnvVariable } from "~/utils";
 import type { User } from "~/models";

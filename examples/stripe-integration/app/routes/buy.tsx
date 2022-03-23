@@ -1,5 +1,6 @@
-import type { ActionFunction } from "remix";
-import { Form, redirect } from "remix";
+import { Form } from "@remix-run/react";
+import { redirect } from "@remix-run/node";
+import type { ActionFunction } from "@remix-run/node";
 
 import { getStripeSession, getDomainUrl } from "~/utils/stripe.server";
 

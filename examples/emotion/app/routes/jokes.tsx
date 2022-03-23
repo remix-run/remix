@@ -1,4 +1,4 @@
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
 import styled from "@emotion/styled";
 
 const Container = styled("div")`

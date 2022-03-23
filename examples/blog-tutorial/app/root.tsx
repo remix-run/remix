@@ -1,6 +1,6 @@
 import * as React from "react";
-import type { LinksFunction, MetaFunction } from "remix";
 import {
+  Link,
   Links,
   LiveReload,
   Meta,
@@ -8,8 +8,8 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  Link,
-} from "remix";
+} from "@remix-run/react";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 
 import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";

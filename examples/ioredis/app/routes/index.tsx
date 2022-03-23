@@ -1,7 +1,6 @@
-import type { ActionFunction, LoaderFunction } from "remix";
-import { redirect } from "remix";
-import { useActionData } from "remix";
-import { Form, json, useLoaderData } from "remix";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
+import { json, redirect } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { redis } from "~/utils/redis.server";
 
 export const loader: LoaderFunction = async ({ request }) => {

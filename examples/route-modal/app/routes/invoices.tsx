@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json, Link, Outlet, useLoaderData } from "remix";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({ params }) => {
   const invoices = [

@@ -1,5 +1,6 @@
-import { Form, json, useLoaderData, redirect } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import { Form, useLoaderData } from "@remix-run/react";
+import { json, redirect } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import type { Invitation } from "~/data.server";
 import { sendInvitation } from "~/data.server";
 import {

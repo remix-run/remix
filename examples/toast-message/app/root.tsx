@@ -1,16 +1,8 @@
 import * as React from "react";
 import { Toaster, toast } from "react-hot-toast";
-import type { LoaderFunction, MetaFunction } from "remix";
-import {
-  json,
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useLoaderData,
-} from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 
 import type { ToastMessage } from "./message.server";
 import { commitSession, getSession } from "./message.server";

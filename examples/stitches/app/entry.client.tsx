@@ -1,6 +1,6 @@
 import * as React from "react";
 import { hydrate } from "react-dom";
-import { RemixBrowser } from "remix";
+import { RemixBrowser } from "@remix-run/react";
 import { getCssText } from "./styles/stitches.config";
 import ClientStyleContext from "./styles/client.context";
 

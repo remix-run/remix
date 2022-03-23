@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { Form, json, useLoaderData } from "remix";
+import { Form, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import type { Auth0Profile } from "remix-auth-auth0";
 import { auth } from "~/utils/auth.server";
 

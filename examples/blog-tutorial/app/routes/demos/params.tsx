@@ -1,5 +1,5 @@
-import type { MetaFunction } from "remix";
-import { Link, Outlet } from "remix";
+import { Link, Outlet } from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/node";
 
 export const meta: MetaFunction = () => ({
   title: "Boundaries Demo",

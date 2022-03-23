@@ -1,6 +1,6 @@
 import * as crypto from "crypto";
 
-import { createSessionStorage } from "remix";
+import { createSessionStorage } from "@remix-run/node";
 
 const upstashRedisRestUrl = process.env.UPSTASH_REDIS_REST_URL;
 

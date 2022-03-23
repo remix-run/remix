@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import type { ActionFunction } from "remix";
-import { Form, json, Link, useActionData, useTransition } from "remix";
+import { Form, Link, useActionData, useTransition } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { ActionFunction } from "@remix-run/node";
 
 export const action: ActionFunction = async ({ request }) => {
   await new Promise((res) => setTimeout(res, 1000));

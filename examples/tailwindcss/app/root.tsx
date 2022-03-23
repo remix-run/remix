@@ -1,12 +1,5 @@
-import type { LinksFunction, MetaFunction } from "remix";
-import {
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 
 import tailwind from "./tailwind.css";
 

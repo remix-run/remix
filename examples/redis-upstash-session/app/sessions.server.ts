@@ -1,4 +1,4 @@
-import { createCookie } from "remix";
+import { createCookie } from "@remix-run/node";
 import { createUpstashSessionStorage } from "~/sessions/upstash.server";
 
 // This will set the length of the session.

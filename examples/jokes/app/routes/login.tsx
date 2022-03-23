@@ -1,5 +1,6 @@
-import type { ActionFunction, LinksFunction, MetaFunction } from "remix";
-import { useActionData, Form, Link, useSearchParams, json } from "remix";
+import { Form, Link, useActionData, useSearchParams } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { ActionFunction, LinksFunction, MetaFunction } from "@remix-run/node";
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";

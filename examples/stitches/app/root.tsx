@@ -1,14 +1,6 @@
 import { useContext, useEffect } from "react";
-import type { MetaFunction } from "remix";
-import {
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useCatch,
-} from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration, useCatch } from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/node";
 
 import ClientStyleContext from "./styles/client.context";
 import ServerStyleContext from "./styles/server.context";

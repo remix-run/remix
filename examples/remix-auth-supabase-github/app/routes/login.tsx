@@ -1,5 +1,6 @@
-import type { ActionFunction, LoaderFunction } from "remix";
-import { Form, json, useLoaderData } from "remix";
+import { Form, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { authenticator, sessionStorage, supabaseStrategy } from "~/auth.server";
 import { signInWithGithub } from "~/supabase.client";
 

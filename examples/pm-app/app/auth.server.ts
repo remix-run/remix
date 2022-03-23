@@ -1,5 +1,5 @@
-import { json, redirect } from "remix";
-import type { Session } from "remix";
+import { json, redirect } from "@remix-run/node";
+import type { Session } from "@remix-run/node";
 import { sessionStorage, sessionKey, getUserSession } from "~/session.server";
 import type { User } from "~/models";
 

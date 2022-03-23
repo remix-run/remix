@@ -1,6 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { Link, useLoaderData } from "remix";
-import { json, Outlet } from "remix";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import type { Client } from "~/db";
 import { getClients } from "~/db";
 

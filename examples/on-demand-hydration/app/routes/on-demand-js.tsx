@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+import { useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 type LoaderData = { withJS: boolean };
 

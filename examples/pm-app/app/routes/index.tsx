@@ -1,5 +1,5 @@
-import type { LoaderFunction } from "remix";
-import { redirect } from "remix";
+import { redirect } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import { getUser } from "~/session.server";
 
 export const loader: LoaderFunction = async ({ request }) => {

@@ -1,11 +1,7 @@
 import * as React from "react";
-import type {
-  ActionFunction,
-  MetaFunction,
-  LinksFunction,
-  LoaderFunction,
-} from "remix";
-import { Form, json, useActionData, useSearchParams } from "remix";
+import { Form, useActionData, useSearchParams } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { ActionFunction, LinksFunction, LoaderFunction, MetaFunction } from "@remix-run/node";
 import { Button } from "~/ui/button";
 import { Link } from "~/ui/link";
 import { ShadowBox } from "~/ui/shadow-box";

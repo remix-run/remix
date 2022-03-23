@@ -1,6 +1,6 @@
 import type { ApolloError } from "apollo-server-errors";
-import type { LoaderFunction } from "remix";
-import { json } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 import { fetchFromGraphQL, gql } from "~/utils";
 import type { Characters } from "~/generated/types";

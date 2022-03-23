@@ -1,5 +1,5 @@
-import type { LoaderFunction } from "remix";
-import { json } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import { searchLangs } from "~/models/langs";
 
 /**

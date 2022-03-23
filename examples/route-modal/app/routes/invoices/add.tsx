@@ -1,9 +1,7 @@
 import Dialog from "@reach/dialog";
-import type { ActionFunction, LinksFunction } from "remix";
-import { useTransition } from "remix";
-import { redirect, useActionData } from "remix";
-import { Form } from "remix";
-import { useNavigate } from "remix";
+import { Form, useActionData, useNavigate, useTransition } from "@remix-run/react";
+import { redirect } from "@remix-run/node";
+import type { ActionFunction, LinksFunction } from "@remix-run/node";
 
 import styles from "@reach/dialog/styles.css";
 

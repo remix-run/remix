@@ -1,4 +1,4 @@
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
 import { db } from "~/utils/db.server";
 
 export const loader: LoaderFunction = async ({ request }) => {

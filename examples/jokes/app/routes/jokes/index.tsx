@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData, Link, useCatch } from "remix";
+import { Link, useCatch, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";

@@ -1,5 +1,5 @@
-import { Link, Outlet } from "remix";
-import type { MetaFunction } from "remix";
+import { Link, Outlet } from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/node";
 import { attributes } from "./articles/__layout/hello.md";
 
 export const meta: MetaFunction = () => {

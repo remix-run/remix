@@ -1,5 +1,5 @@
-import { json, redirect } from "remix";
-import type { ActionFunction, LoaderFunction } from "remix";
+import { json, redirect } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 
 import { getThemeSession } from "~/utils/theme.server";
 import { isTheme } from "~/utils/theme-provider";

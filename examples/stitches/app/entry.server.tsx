@@ -1,6 +1,6 @@
 import { renderToString } from "react-dom/server";
-import { RemixServer } from "remix";
-import type { EntryContext } from "remix";
+import { RemixServer } from "@remix-run/react";
+import type { EntryContext } from "@remix-run/node";
 
 import { getCssText } from "./styles/stitches.config";
 import ServerStyleContext from "./styles/server.context";
