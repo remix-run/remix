@@ -4,10 +4,12 @@ import path from "path";
 import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
+import type { RestoreConsole } from "jest-mock-console";
+import mockConsole from "jest-mock-console";
 
 import { cli } from "../";
 
-let originalLog: typeof console.log;
+let restoreConsole: RestoreConsole;
 
 const execFile =
   process.platform === "win32"
@@ -143,12 +145,11 @@ describe("remix cli", () => {
     });
 
     beforeEach(() => {
-      originalLog = console.log;
-      console.log = jest.fn();
+      restoreConsole = mockConsole();
     });
 
     afterEach(() => {
-      console.log = originalLog;
+      restoreConsole();
     });
 
     afterAll(() => {
@@ -229,17 +230,16 @@ describe("remix cli", () => {
       ).toBeTruthy();
     });
 
-    it.skip("works for GitHub username/repo combo", async () => {
+    it("works for GitHub username/repo combo", async () => {
       let projectDir = getProjectDir("repo");
-      let { stdout } = await execFile("node", [
-        remix,
+      await cli.run([
         "create",
         projectDir,
         "--template",
         "mcansh/snkrs",
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(console.log).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -272,15 +272,14 @@ describe("remix cli", () => {
 
     it.skip("works for different branches", async () => {
       let projectDir = getProjectDir("diff-branch");
-      let { stdout } = await execFile("node", [
-        remix,
+      await cli.run([
         "create",
         projectDir,
         "--template",
         "https://github.com/remix-run/remix/tree/dev/templates/arc",
         "--no-install",
       ]);
-      expect(stdout.trim()).toBe(
+      expect(console.log).toBeCalledWith(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(
@@ -451,13 +450,19 @@ describe("remix cli", () => {
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
 
-      // we need to set the cwd so i dont think we can use cli.run
-      // unless we `process.chdir(projectDir)`
-      let initResult = await execFile("node", [remix, "init"], {
-        cwd: projectDir,
-      });
+      let current = process.cwd();
+      process.chdir(projectDir);
+      await cli.run(["init"]);
+      process.chdir(current);
 
-      expect(initResult.stdout.trim()).toBe("");
+      expect(console.log).toHaveBeenNthCalledWith(
+        1,
+        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+      );
+      expect(console.log).toHaveBeenNthCalledWith(
+        2,
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
       ).toBeTruthy();
@@ -473,15 +478,16 @@ describe("remix cli", () => {
     it("throws an error when invalid remix.init script when automatically ran", async () => {
       let projectDir = getProjectDir("invalid-remix-init-manual");
       await expect(
-        execFile("node", [
-          remix,
+        cli.run([
           "create",
           projectDir,
           "--template",
           path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
           "--install",
         ])
-      ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
+      ).rejects.toThrowError("💣");
+
+      expect(console.error).toBeCalledWith(`🚨 Oops, remix.init failed`);
 
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -508,11 +514,12 @@ describe("remix cli", () => {
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
 
-      await expect(
-        execFile("node", [remix, "init"], {
-          cwd: projectDir,
-        })
-      ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
+      let current = process.cwd();
+      process.chdir(projectDir);
+      await expect(cli.run(["init"])).rejects.toThrowError("💣");
+      process.chdir(current);
+      expect(console.error).toHaveBeenCalledWith("🚨 Oops, remix.init failed");
+
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
       ).toBeTruthy();

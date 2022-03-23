@@ -6790,6 +6790,11 @@ jest-message-util@^27.5.1:
     slash "^3.0.0"
     stack-utils "^2.0.3"
 
+jest-mock-console@^1.2.3:
+  version "1.2.3"
+  resolved "https://registry.npmjs.org/jest-mock-console/-/jest-mock-console-1.2.3.tgz#4e725cd2c26d17051c35ce2c378129d52c2b4f61"
+  integrity sha512-q4jfuHW3V3tYzwtKTF6nxjRNriUC2/D2SVfxW88lNeG1qO1mVarBUqgOAvZjTEmxuTsjzGlHQsDIgvlOZaLccg==
+
 jest-mock@^27.5.1:
   version "27.5.1"
   resolved "https://registry.npmjs.org/jest-mock/-/jest-mock-27.5.1.tgz#19948336d49ef4d9c52021d34ac7b5f36ff967d6"

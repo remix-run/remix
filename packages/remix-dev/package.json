@@ -51,6 +51,7 @@
     "@types/gunzip-maybe": "^1.4.0",
     "@types/tar-fs": "^2.0.1",
     "@types/ws": "^7.4.1",
+    "jest-mock-console": "^1.2.3",
     "msw": "^0.39.2"
   }
 }

@@ -9,7 +9,15 @@ let handlers = [
   rest.get(
     "https://api.github.com/repos/remix-run/remix/contents/templates",
     (req, res, ctx) => {
-      return res(ctx.status(200), ctx.json([{ name: "barf" }]));
+      return res(
+        ctx.status(200),
+        ctx.json([
+          { name: "remix" },
+          { name: "netlify" },
+          { name: "arc" },
+          { name: "fly" },
+        ])
+      );
     }
   ),
 
@@ -41,6 +49,14 @@ let handlers = [
   ),
 
   rest.get(
+    "https://codeload.github.com/:owner/:repo/tar.gz/:branch",
+    (req, res, ctx) => {
+      let buffer = fse.readFileSync(path.join(FIXTURES_DIR, "arc.tar.gz"));
+      return res(ctx.status(200), ctx.body(buffer));
+    }
+  ),
+
+  rest.get(
     "https://github.com/remix-run/remix/blob/635dae1d7fcd19c206f45f1d1b9226b9c3b308b0/packages/remix-dev/__tests__/fixtures/arc.tar.gz",
     (req, res, ctx) => {
       if (req.url.searchParams.get("raw") === "true") {
@@ -52,17 +68,14 @@ let handlers = [
     }
   ),
 
-  rest.get(
-    "https://api.github.com/repos/remix-run/blues-stack",
-    (req, res, ctx) => {
-      return res(
-        ctx.status(200),
-        ctx.json({
-          default_branch: "main",
-        })
-      );
-    }
-  ),
+  rest.get("https://api.github.com/repos/:owner/:repo", (req, res, ctx) => {
+    return res(
+      ctx.status(200),
+      ctx.json({
+        default_branch: "main",
+      })
+    );
+  }),
 ];
 
 export const server = setupServer(...handlers);
