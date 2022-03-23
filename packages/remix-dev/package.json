@@ -30,6 +30,7 @@
     "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.2.1",
+    "jscodeshift": "^0.13.1",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "minimatch": "^3.0.4",
@@ -46,9 +47,10 @@
   "devDependencies": {
     "@types/cacache": "^15.0.0",
     "@types/chalk-animation": "^1.6.1",
-    "@types/inquirer": "^8.2.0",
-    "@types/lodash.debounce": "^4.0.6",
     "@types/gunzip-maybe": "^1.4.0",
+    "@types/inquirer": "^8.2.0",
+    "@types/jscodeshift": "^0.11.3",
+    "@types/lodash.debounce": "^4.0.6",
     "@types/tar-fs": "^2.0.1",
     "@types/ws": "^7.4.1"
   }
