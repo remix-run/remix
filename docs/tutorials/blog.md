@@ -330,7 +330,7 @@ export type Post = {
 // relative to the server output not the source!
 const postsPath = path.join(__dirname, "..", "posts");
 
-export async function getPosts() {
+export async function getPosts(): Promise<Post[]> {
   const dir = await fs.readdir(postsPath);
   return Promise.all(
     dir.map(async (filename) => {
@@ -386,7 +386,7 @@ function isValidPostAttributes(
   return attributes?.title;
 }
 
-export async function getPosts() {
+export async function getPosts(): Promise<Post[]> {
   const dir = await fs.readdir(postsPath);
   return Promise.all(
     dir.map(async (filename) => {
@@ -484,7 +484,7 @@ Put this function anywhere in the `app/post.ts` module:
 
 ```tsx filename=app/post.ts
 // ...
-export async function getPost(slug: string) {
+export async function getPost(slug: string): Promise<Post> {
   const filepath = path.join(postsPath, slug + ".md");
   const file = await fs.readFile(filepath);
   const { attributes } = parseFrontMatter(file.toString());
@@ -498,12 +498,13 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,10-11,15,18]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,5-6,11-12,16,19]
 import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
 
 import { getPost } from "~/post";
+import type { Post } from "~/post";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -513,7 +514,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function PostSlug() {
-  const post = useLoaderData();
+  const post = useLoaderData<Post>();
   return (
     <main>
       <h1>{post.title}</h1>
@@ -536,7 +537,7 @@ npm add marked
 npm add @types/marked -D
 ```
 
-```tsx filename=app/post.ts lines=[5,11,18,19]
+```tsx filename=app/post.ts lines=[5,11,17,24-25]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";
@@ -544,7 +545,13 @@ import invariant from "tiny-invariant";
 import { marked } from "marked";
 
 //...
-export async function getPost(slug: string) {
+export type Post = {
+  slug: string;
+  title: string;
+  html: string;
+};
+
+export async function getPost(slug: string): Promise<Post> {
   const filepath = path.join(postsPath, slug + ".md");
   const file = await fs.readFile(filepath);
   const { attributes, body } = parseFrontMatter(
@@ -564,7 +571,7 @@ export async function getPost(slug: string) {
 ```tsx filename=app/routes/posts/$slug.tsx lines=[5]
 // ...
 export default function PostSlug() {
-  const post = useLoaderData();
+  const post = useLoaderData<Post>();
   return (
     <main dangerouslySetInnerHTML={{ __html: post.html }} />
   );
