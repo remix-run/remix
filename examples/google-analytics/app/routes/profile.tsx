@@ -1,8 +1,8 @@
 import type { MetaFunction } from "remix";
 
-export const meta: MetaFunction = () => {
-  return { title: "Profile" };
-};
+export const meta: MetaFunction = () => ({
+  title: "Profile",
+});
 
 export default function Profile() {
   return (

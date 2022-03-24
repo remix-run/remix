@@ -1,8 +1,8 @@
 import type { MetaFunction } from "remix";
 
-export const meta: MetaFunction = () => {
-  return { title: "Home" };
-};
+export const meta: MetaFunction = () => ({
+  title: "Home",
+});
 
 export default function Index() {
   return (

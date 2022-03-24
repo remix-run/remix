@@ -1,15 +1,15 @@
-import * as React from "react";
-import { Form } from "remix";
+import type { SyntheticEvent } from "react";
 import type { ActionFunction } from "remix";
+import { Form, json } from "remix";
 
 import * as gtag from "~/utils/gtags.client";
 
 export const action: ActionFunction = () => {
-  return "";
+  return json({});
 };
 
 export default function Contact() {
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     const target = e.target as typeof e.target & {
       message: { value: string };
     };
