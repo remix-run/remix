@@ -30,10 +30,11 @@ function validatePassword(password: unknown) {
 function validateUrl(url: unknown) {
   let urls = ['/jokes','/']
 
-  if (typeof url !== "string" || urls.indexOf(url) == -1) {
-    return '/jokes'
+  if (urls.indexOf(url) === 1) {
+    return url
+  } else {
+    return "/jokes"
   }
-  return url
 }
 
 type ActionData = {
