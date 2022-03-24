@@ -6,7 +6,7 @@ export default function IndexRoute() {
       <h1>Infinite Scroll Demo</h1>
 
       <p>
-        Each way of hanlding pagination (offset or page based) has two demos.
+        Each way of handling pagination (offset or page based) has two demos.
       </p>
 
       <p>
