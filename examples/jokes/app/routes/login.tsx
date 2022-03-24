@@ -27,6 +27,15 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: unknown) {
+  let urls = ['/jokes','/']
+
+  if (typeof url !== "string" || urls.indexOf(url) == -1) {
+    return '/jokes'
+  }
+  return url
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: { username: string | undefined; password: string | undefined };
@@ -45,7 +54,7 @@ export const action: ActionFunction = async ({ request }) => {
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(form.get("redirectTo")) || "/jokes";
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
