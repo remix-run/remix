@@ -68,11 +68,11 @@ function useScrollRestoration() {
   let location = useLocation();
   let transition = useTransition();
 
-  let wasSubmissionRef = React.useRef(false);
+  let wasPostSubmissionRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (transition.submission) {
-      wasSubmissionRef.current = true;
+    if (transition.submission?.method === "POST") {
+      wasPostSubmissionRef.current = true;
     }
   }, [transition]);
 
@@ -115,9 +115,9 @@ function useScrollRestoration() {
         }
       }
 
-      // don't do anything on submissions
-      if (wasSubmissionRef.current === true) {
-        wasSubmissionRef.current = false;
+      // don't do anything on POST submissions
+      if (wasPostSubmissionRef.current === true) {
+        wasPostSubmissionRef.current = false;
         return;
       }
 
@@ -127,8 +127,8 @@ function useScrollRestoration() {
   }
 
   React.useEffect(() => {
-    if (transition.submission) {
-      wasSubmissionRef.current = true;
+    if (transition.submission?.method === "POST") {
+      wasPostSubmissionRef.current = true;
     }
   }, [transition]);
 }

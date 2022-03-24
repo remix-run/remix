@@ -294,6 +294,8 @@ It must be the last element on the page, right before the `<Scripts/>` tag:
 </html>
 ```
 
+Form submissions utilising the "post" method will _not_ trigger scroll restoration. This allows you to render actionData form validation errors without the scroll changing. 
+
 In order to avoid (usually) the client-side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
 
 ### `useLoaderData`
