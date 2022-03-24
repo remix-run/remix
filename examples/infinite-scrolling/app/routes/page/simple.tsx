@@ -1,7 +1,7 @@
-import * as React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useVirtual } from "react-virtual";
 import type { LoaderFunction, LinksFunction } from "remix";
 import { json, useLoaderData, useTransition, useFetcher } from "remix";
-import { useVirtual } from "react-virtual";
 
 import { countItems, getItemsPaginated } from "~/utils/backend.server";
 
@@ -38,19 +38,19 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export default function Index() {
   const data = useLoaderData<LoaderData>();
-  const [items, setItems] = React.useState(data.items);
+  const [items, setItems] = useState(data.items);
 
   const transition = useTransition();
   const fetcher = useFetcher();
-  const startRef = React.useRef(0);
-  const page = React.useRef(0);
+  const startRef = useRef(0);
+  const page = useRef(0);
 
-  const parentRef = React.useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtual({
     size: data.totalItems,
     parentRef,
-    estimateSize: React.useCallback(() => 35, []),
+    estimateSize: useCallback(() => 35, []),
     initialRect: { width: 0, height: 800 },
   });
 
@@ -67,7 +67,7 @@ export default function Index() {
     newStart = startRef.current + LIMIT;
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (newStart === startRef.current) return;
 
     startRef.current = newStart;
@@ -76,7 +76,7 @@ export default function Index() {
     fetcher.load(`/page/simple?page=${page.current}`);
   }, [page, newStart, fetcher]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (fetcher.data) {
       setItems((prevItems) => [...prevItems, ...fetcher.data.items]);
     }

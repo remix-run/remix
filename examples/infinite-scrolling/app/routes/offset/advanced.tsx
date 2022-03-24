@@ -1,4 +1,12 @@
-import * as React from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+
+import { useVirtual } from "react-virtual";
 import type { LoaderFunction, LinksFunction } from "remix";
 import {
   json,
@@ -7,7 +15,6 @@ import {
   useTransition,
   useBeforeUnload,
 } from "remix";
-import { useVirtual } from "react-virtual";
 
 import { countItems, getItems } from "~/utils/backend.server";
 
@@ -44,10 +51,10 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 const isServerRender = typeof document === "undefined";
-const useSSRLayoutEffect = isServerRender ? () => {} : React.useLayoutEffect;
+const useSSRLayoutEffect = isServerRender ? () => {} : useLayoutEffect;
 
 function useIsHydrating(queryString: string) {
-  const [isHydrating] = React.useState(
+  const [isHydrating] = useState(
     () => !isServerRender && Boolean(document.querySelector(queryString))
   );
   return isHydrating;
@@ -60,20 +67,20 @@ export default function Index() {
   const hydrating = useIsHydrating("[data-hydrating-signal]");
   const [searchParams, setSearchParams] = useSearchParams();
   const { start, limit } = getStartLimit(searchParams);
-  const [initialStart] = React.useState(() => start);
+  const [initialStart] = useState(() => start);
 
-  const isMountedRef = React.useRef(false);
-  const parentRef = React.useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(false);
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtual({
     size: data.totalItems,
     parentRef,
-    estimateSize: React.useCallback(() => 35, []),
+    estimateSize: useCallback(() => 35, []),
     initialRect: { width: 0, height: 800 },
   });
 
   useBeforeUnload(
-    React.useCallback(() => {
+    useCallback(() => {
       if (!parentRef.current) return;
       sessionStorage.setItem(
         "infiniteScrollTop",
@@ -130,7 +137,7 @@ export default function Index() {
     neededStart = data.totalItems - limit;
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isMountedRef.current) {
       return;
     }
@@ -142,7 +149,7 @@ export default function Index() {
     }
   }, [start, neededStart, setSearchParams]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     isMountedRef.current = true;
   }, []);
 
