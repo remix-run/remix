@@ -1,8 +1,9 @@
 {
+  "name": "remix-example-infinite-scrolling",
   "private": true,
-  "name": "remix-example-template",
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
@@ -26,6 +27,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }
