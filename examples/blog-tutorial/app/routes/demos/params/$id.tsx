@@ -34,7 +34,7 @@ export const loader: LoaderFunction = async ({ params }) => {
   // but otherwise the record was found, user has access, so we can do whatever
   // else we needed to in the loader and return the data. (This is boring, we're
   // just gonna return the params.id).
-  return { param: params.id };
+  return json({ param: params.id });
 };
 
 export default function ParamDemo() {

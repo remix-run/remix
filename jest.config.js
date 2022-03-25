@@ -1,5 +1,10 @@
+/** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
-  modulePathIgnorePatterns: ["<rootDir>/examples", "<rootDir>/.tmp"],
+  modulePathIgnorePatterns: [
+    "<rootDir>/.tmp",
+    "<rootDir>/examples",
+    "<rootDir>/templates",
+  ],
   projects: [
     {
       displayName: "create-remix",
@@ -9,7 +14,7 @@ module.exports = {
     },
     {
       displayName: "integration",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
       setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
@@ -27,6 +32,7 @@ module.exports = {
       setupFilesAfterEnv: [
         "<rootDir>/packages/remix-dev/__tests__/setupAfterEnv.ts",
       ],
+      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
       displayName: "remix-express",
@@ -71,7 +77,7 @@ module.exports = {
     // Fixture Apps
     {
       displayName: "gists-app",
-      testEnvironment: "node",
+      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
       globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",

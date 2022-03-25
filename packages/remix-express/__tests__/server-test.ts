@@ -1,8 +1,10 @@
 import express from "express";
 import supertest from "supertest";
 import { createRequest } from "node-mocks-http";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import { Response as NodeResponse } from "@remix-run/node";
+import {
+  createRequestHandler as createRemixRequestHandler,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import { Readable } from "stream";
 
 import {
@@ -13,7 +15,13 @@ import {
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the express adapter
-jest.mock("@remix-run/server-runtime");
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+    ...original,
+    createRequestHandler: jest.fn(),
+  };
+});
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -71,7 +79,7 @@ describe("express createRequestHandler", () => {
     // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
     it("handles body as stream", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const stream = Readable.from("hello world");
+        let stream = Readable.from("hello world");
         return new NodeResponse(stream, { status: 200 }) as unknown as Response;
       });
 
@@ -96,7 +104,7 @@ describe("express createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
         headers.append(
           "Set-Cookie",
           "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
@@ -216,7 +224,7 @@ describe("express createRemixHeaders", () => {
 
 describe("express createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    const expressRequest = createRequest({
+    let expressRequest = createRequest({
       url: "/foo/bar",
       method: "GET",
       protocol: "http",

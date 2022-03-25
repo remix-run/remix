@@ -1,24 +1,28 @@
 import childProcess from "child_process";
-import fs from "fs";
+import fse from "fs-extra";
 import path from "path";
 import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
 
-const execFile = util.promisify(childProcess.execFile);
+const execFile =
+  process.platform === "win32"
+    ? util.promisify(childProcess.exec)
+    : util.promisify(childProcess.execFile);
 
 const remix = path.resolve(
   __dirname,
   "../../../build/node_modules/@remix-run/dev/cli.js"
 );
 
+const TEMP_DIR = path.join(process.cwd(), ".tmp", "create-remix");
+
 describe("remix cli", () => {
   beforeAll(() => {
-    if (!fs.existsSync(remix)) {
+    if (!fse.existsSync(remix)) {
       throw new Error(`Cannot run Remix CLI tests w/out building Remix`);
     }
   });
-
   describe("the --help flag", () => {
     it("prints help info", async () => {
       let { stdout } = await execFile("node", [remix, "--help"], {
@@ -44,7 +48,7 @@ describe("remix cli", () => {
             --version, -v       Print the CLI version and exit
             --no-color          Disable ANSI colors in console output
           \`create\` Options:
-            --template          The template to use (required)
+            --template          The template to use
             --no-install        Skip installing dependencies after creation
             --no-typescript     Convert the template to JavaScript
             --remix-version     The version of Remix to use
@@ -58,7 +62,7 @@ describe("remix cli", () => {
           Values:
             - projectDir        The Remix project directory
             - template          The project template to use
-            - remixPlatform     node, cloudflare-pages, or cloudflare-workers
+            - remixPlatform     node or cloudflare
 
           Creating a new project:
 
@@ -130,10 +134,38 @@ describe("remix cli", () => {
   });
 
   describe("the create command", () => {
+    beforeAll(async () => {
+      await fse.emptyDir(TEMP_DIR);
+    });
+
+    afterAll(() => {
+      /**
+       * This prevents the console for spitting out a bunch of junk like this for
+       * every fixture:
+       *
+       *    jest-haste-map: Haste module naming collision: remix-app-template-js
+       *
+       * I found some github issues that says that `modulePathIgnorePatterns` should
+       * help, so I added it to our `jest.config.js`, but it doesn't seem to help, so
+       * I brute-forced it here.
+       */
+      async function renamePkgJsonApp(dir: string) {
+        let pkgPath = path.join(dir, "package.json");
+        let pkg = await fse.readFile(pkgPath);
+        let obj = JSON.parse(pkg.toString());
+        obj.name = path.basename(dir);
+        await fse.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
+      }
+
+      let dirs = fse.readdirSync(TEMP_DIR);
+      for (let dir of dirs) {
+        renamePkgJsonApp(path.join(TEMP_DIR, dir));
+      }
+    });
+
     function getProjectDir(name: string) {
       return path.join(
-        process.cwd(),
-        ".tmp",
+        TEMP_DIR,
         `${name}-${Math.random().toString(32).slice(2)}`
       );
     }
@@ -152,12 +184,15 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
-    // TODO: enable once this is live
-    it.skip("works for templates in the remix org", async () => {
+    it("works for templates in the remix org", async () => {
       let projectDir = getProjectDir("template");
       let { stdout } = await execFile("node", [
         remix,
@@ -168,10 +203,15 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
+💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for GitHub username/repo combo", async () => {
@@ -187,8 +227,12 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for remote tarballs", async () => {
@@ -204,8 +248,33 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
+    });
+
+    it.skip("works for different branches", async () => {
+      let projectDir = getProjectDir("diff-branch");
+      let { stdout } = await execFile("node", [
+        remix,
+        "create",
+        projectDir,
+        "--template",
+        "https://github.com/remix-run/remix/tree/dev/templates/arc",
+        "--no-install",
+      ]);
+      expect(stdout.trim()).toBe(
+        `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      );
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for a path to a tarball on disk", async () => {
@@ -221,8 +290,12 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for a file URL to a tarball on disk", async () => {
@@ -240,8 +313,50 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
+    });
+
+    it("converts a template to javascript", async () => {
+      let projectDir = getProjectDir("template-to-js");
+      let { stdout } = await execFile("node", [
+        remix,
+        "create",
+        projectDir,
+        "--template",
+        "blues-stack",
+        "--no-install",
+        "--no-typescript",
+      ]);
+      expect(stdout.trim()).toBe(
+        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
+💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
+      );
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.jsx"))
+      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "tsconfig.json"))
+      ).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "jsconfig.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/session.server.js"))
+      ).toBeTruthy();
+      let pkgJSON = JSON.parse(
+        fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
+      );
+      expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
+      expect(Object.keys(pkgJSON.scripts)).not.toContain("typecheck");
     });
 
     it("works for a file path to a directory on disk", async () => {
@@ -257,8 +372,12 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("works for a file URL to a directory on disk", async () => {
@@ -274,8 +393,12 @@ describe("remix cli", () => {
       expect(stdout.trim()).toBe(
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
     });
 
     it("runs remix.init script when installing dependencies", async () => {
@@ -292,10 +415,14 @@ describe("remix cli", () => {
         `💿 That's it! \`cd\` into "${projectDir}" and check the README for development and deploy instructions!`
       );
       expect(stdout.trim()).toContain(`💿 Running remix.init script`);
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
       // deps can take a bit to install
     }, 60_000);
 
@@ -318,12 +445,15 @@ describe("remix cli", () => {
       });
 
       expect(initResult.stdout.trim()).toBe("");
-      expect(initResult.stderr.trim()).toBe("");
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
       // if you run `remix init` keep around the remix.init directory for future use
-      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
 
@@ -340,10 +470,14 @@ describe("remix cli", () => {
         ])
       ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
 
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
       // we should keep remix.init around if the init script fails
-      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
 
@@ -367,10 +501,14 @@ describe("remix cli", () => {
           cwd: projectDir,
         })
       ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
-      expect(fs.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-      expect(fs.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.tsx"))
+      ).toBeTruthy();
       // we should keep remix.init around if the init script fails
-      expect(fs.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
       // deps can take a bit to install
     }, 60_000);
   });

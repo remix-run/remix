@@ -14,7 +14,7 @@ Consider this route:
 
 ```tsx filename=routes/teams.tsx
 export async function loader() {
-  return getTeams();
+  return json(await getTeams());
 }
 
 export default function Teams() {
@@ -35,7 +35,9 @@ For example, you could have a route to handle the search:
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return searchCities(url.searchParams.get("q"));
+  return json(
+    await searchCities(url.searchParams.get("q"))
+  );
 }
 ```
 

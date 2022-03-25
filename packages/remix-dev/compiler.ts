@@ -9,7 +9,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
-import { warnOnce } from "./warnings";
+import { warnOnce } from "./compiler/warnings";
 import type { AssetsManifest } from "./compiler/assets";
 import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
@@ -321,8 +321,8 @@ async function buildEverything(
 
     let serverBuildPromise = createServerBuild(
       config,
-      assetsManifestPromiseRef,
-      options
+      options,
+      assetsManifestPromiseRef
     );
 
     return await Promise.all([
@@ -364,7 +364,7 @@ async function createBrowserBuild(
   // *actually* be external in the browser build (we want to bundle all deps) so
   // this is really just making sure we don't accidentally have any dependencies
   // on node built-ins in browser bundles.
-  let dependencies = Object.keys(await getAppDependencies(config));
+  let dependencies = Object.keys(getAppDependencies(config));
   let externals = nodeBuiltins.filter((mod) => !dependencies.includes(mod));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
 
@@ -406,36 +406,37 @@ async function createBrowserBuild(
     );
   }
 
-  return esbuild.build({
-    entryPoints,
-    outdir: config.assetsBuildDirectory,
-    platform: "browser",
-    format: "esm",
-    external: externals,
-    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
-    loader: loaders,
-    bundle: true,
-    logLevel: "silent",
-    splitting: true,
-    sourcemap: options.sourcemap,
-    metafile: true,
-    incremental: options.incremental,
-    mainFields: ["browser", "module", "main"],
-    treeShaking: true,
-    minify: options.mode === BuildMode.Production,
-    entryNames: "[dir]/[name]-[hash]",
-    chunkNames: "_shared/[name]-[hash]",
-    assetNames: "_assets/[name]-[hash]",
-    publicPath: config.publicPath,
-    define: {
-
-      "process.env.NODE_ENV": JSON.stringify(options.mode),
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        config.devServerPort
-      ),
-    },
-    plugins,
-  }).then(async (build) => {
+  return esbuild
+    .build({
+      entryPoints,
+      outdir: config.assetsBuildDirectory,
+      platform: "browser",
+      format: "esm",
+      external: externals,
+      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
+      loader: loaders,
+      bundle: true,
+      logLevel: "silent",
+      splitting: true,
+      sourcemap: options.sourcemap,
+      metafile: true,
+      incremental: options.incremental,
+      mainFields: ["browser", "module", "main"],
+      treeShaking: true,
+      minify: options.mode === BuildMode.Production,
+      entryNames: "[dir]/[name]-[hash]",
+      chunkNames: "_shared/[name]-[hash]",
+      assetNames: "_assets/[name]-[hash]",
+      publicPath: config.publicPath,
+      define: {
+        "process.env.NODE_ENV": JSON.stringify(options.mode),
+        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+          config.devServerPort
+        ),
+      },
+      plugins,
+    })
+    .then(async (build) => {
       let [globalStylesheetFilePath, globalStylesheetFileUrl] =
         getCssModulesFileReferences(config, cssModulesContent);
 
@@ -485,10 +486,10 @@ async function createBrowserBuild(
 
 async function createServerBuild(
   config: RemixConfig,
-  assetsManifestPromiseRef: AssetsManifestPromiseRef,
-  options: Required<BuildOptions> & { incremental?: boolean }
+  options: Required<BuildOptions> & { incremental?: boolean },
+  assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): Promise<ServerBuild> {
-  let dependencies = await getAppDependencies(config);
+  let dependencies = getAppDependencies(config);
 
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
@@ -517,49 +518,46 @@ async function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
-  return esbuild
-    .build({
-      absWorkingDir: config.rootDirectory,
-      stdin,
-      entryPoints,
-      outfile: config.serverBuildPath,
-      write: false,
-      platform: config.serverPlatform,
-      format: config.serverModuleFormat,
-      treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production &&
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        ),
-      mainFields:
-        config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
-      target: options.target,
-      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
-      loader: loaders,
-      bundle: true,
-      logLevel: "silent",
-      incremental: options.incremental,
-      sourcemap: options.sourcemap ? "inline" : false,
-      // The server build needs to know how to generate asset URLs for imports
-      // of CSS and other files.
-      assetNames: "_assets/[name]-[hash]",
-      publicPath: config.publicPath,
-      define: {
-        "process.env.NODE_ENV": JSON.stringify(options.mode),
-        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-          config.devServerPort
-        ),
-      },
-      plugins,
-    })
-    .then(async (build) => {
-      await writeServerBuildResult(config, build.outputFiles);
-      return build;
-    });
+  let build = await esbuild.build({
+    absWorkingDir: config.rootDirectory,
+    stdin,
+    entryPoints,
+    outfile: config.serverBuildPath,
+    write: false,
+    platform: config.serverPlatform,
+    format: config.serverModuleFormat,
+    treeShaking: true,
+    minify:
+      options.mode === BuildMode.Production &&
+      !!config.serverBuildTarget &&
+      ["cloudflare-workers", "cloudflare-pages"].includes(
+        config.serverBuildTarget
+      ),
+    mainFields:
+      config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
+    target: options.target,
+    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
+    loader: loaders,
+    bundle: true,
+    logLevel: "silent",
+    incremental: options.incremental,
+    sourcemap: options.sourcemap ? "inline" : false,
+    // The server build needs to know how to generate asset URLs for imports
+    // of CSS and other files.
+    assetNames: "_assets/[name]-[hash]",
+    publicPath: config.publicPath,
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(options.mode),
+      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+        config.devServerPort
+      ),
+    },
+    plugins,
+  });
+  await writeServerBuildResult(config, build.outputFiles);
+  return await build;
 }
 
 async function generateAssetsManifest(

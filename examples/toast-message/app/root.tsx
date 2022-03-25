@@ -1,4 +1,6 @@
 import * as React from "react";
+import { Toaster, toast } from "react-hot-toast";
+import type { LoaderFunction, MetaFunction } from "remix";
 import {
   json,
   Links,
@@ -9,9 +11,7 @@ import {
   ScrollRestoration,
   useLoaderData,
 } from "remix";
-import type { LoaderFunction, MetaFunction } from "remix";
 
-import { Toaster, toast } from "react-hot-toast";
 import type { ToastMessage } from "./message.server";
 import { commitSession, getSession } from "./message.server";
 
@@ -19,11 +19,11 @@ type LoaderData = {
   toastMessage: ToastMessage | null;
 };
 
-export const meta: MetaFunction = () => {
-  return {
-    title: "Remix + Toast notifications",
-  };
-};
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "Remix + Toast notifications",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request.headers.get("cookie"));
@@ -68,8 +68,6 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>

@@ -39,7 +39,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     allUsers: allUsers,
   };
 
-  return loaderData;
+  return json(loaderData);
 };
 
 export const action: ActionFunction = async ({ request }) => {

@@ -8,7 +8,7 @@ Remix does not do anything directly with environment variables (except during lo
 
 Environment Variables are values that live on the server that your application can use. You may be familiar with the ubiquitous `NODE_ENV`. Your deployment server probably automatically sets that to "production".
 
-<docs-warning>When you run `remix build` we will compile `process.env.NODE_ENV` into whatever the current environment value is.</docs-warning>
+<docs-warning>Running `remix build` compiles using the value of `process.env.NODE_ENV` if it corresponds with a valid mode: "production", "development" or "test". If the value of `process.env.NODE_ENV` is invalid, "production" is used as a default.</docs-warning>
 
 Here are some example environment variables you might find in the wild:
 
@@ -68,12 +68,12 @@ Instead we recommend keeping all of your environment variables on the server (al
 
    ```tsx [3-6]
    export async function loader() {
-     return {
+     return json({
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
          FAUNA_DB_URL: process.env.FAUNA_DB_URL,
        },
-     };
+     });
    }
 
    export function Root() {
@@ -96,11 +96,11 @@ Instead we recommend keeping all of your environment variables on the server (al
 
    ```tsx [10, 19-25]
    export async function loader() {
-     return {
+     return json({
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
        },
-     };
+     });
    }
 
    export function Root() {

@@ -1,3 +1,4 @@
+import type { MetaFunction } from "remix";
 import {
   Links,
   LiveReload,
@@ -11,7 +12,6 @@ import { useContext, useEffect } from "react";
 import { withEmotionCache } from "@emotion/react";
 import ServerStyleContext from "./styles/server.context";
 import ClientStyleContext from "./styles/client.context";
-import type { MetaFunction } from "remix";
 
 import styled from "@emotion/styled";
 
@@ -20,9 +20,11 @@ const Container = styled("div")`
   padding: 1em;
 `;
 
-export const meta: MetaFunction = () => {
-  return { title: "Remix with Emotion" };
-};
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "Remix with Emotion",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 interface DocumentProps {
   children: React.ReactNode;
@@ -48,14 +50,11 @@ const Document = withEmotionCache(
 
       // reset cache to re-apply global styles
       clientStyleData.reset();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [clientStyleData, emotionCache.sheet]);
 
     return (
       <html lang="en">
         <head>
-          <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width,initial-scale=1" />
           {title ? <title>{title}</title> : null}
           <Meta />
           <Links />

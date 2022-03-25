@@ -1,10 +1,10 @@
-import { Link, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
 
 import { getPosts } from "~/post";
 import type { Post } from "~/post";
 
 export const loader = async () => {
-  return getPosts();
+  return json(await getPosts());
 };
 
 export default function Posts() {

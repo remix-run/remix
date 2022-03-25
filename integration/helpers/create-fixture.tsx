@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import puppeteer from "puppeteer";
 import type { Page, HTTPResponse } from "puppeteer";
 import express from "express";
@@ -22,7 +23,16 @@ const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
   files: { [filename: string]: string };
-  template?: string;
+  template?:
+    | "arc"
+    | "cloudflare-pages"
+    | "cloudflare-workers"
+    | "deno"
+    | "express"
+    | "fly"
+    | "netlify"
+    | "remix"
+    | "vercel";
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -372,10 +382,10 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
 
 function build(projectDir: string) {
   // TODO: log errors (like syntax errors in the fixture file strings)
-  cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
+  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
     cwd: projectDir,
   });
-  cp.spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
+  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
     cwd: projectDir,
   });
 }

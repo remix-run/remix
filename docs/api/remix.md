@@ -9,18 +9,18 @@ This package provides all the components, hooks, and [Web Fetch API](https://dev
 
 ## Components and Hooks
 
-### `<Meta>`, `<Links>`, `<Scripts>`, `<LiveReload>`, `<ScrollRestoration>`
+### `<Links>`, `<LiveReload>`, `<Meta>`, `<Scripts>`, `<ScrollRestoration>`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
-import type { MetaFunction, LinksFunction } from "remix";
+import type { LinksFunction, MetaFunction } from "remix";
 import {
-  Meta,
   Links,
-  Scripts,
-  Outlet,
   LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
   ScrollRestoration,
 } from "remix";
 
@@ -30,13 +30,11 @@ export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: globalStylesheetUrl }];
 };
 
-export const meta: MetaFunction = () => {
-  return {
-    title: "My Amazing App",
-    viewport: "width=device-width,initial-scale=1",
-    charSet: "utf-8",
-  };
-};
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "My Amazing App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export default function App() {
   return (
@@ -95,7 +93,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 ```tsx
 <>
-  <Link /> // defaults to "none"
+  <Link /> {/* defaults to "none" */}
   <Link prefetch="none" />
   <Link prefetch="intent" />
   <Link prefetch="render" />
@@ -134,10 +132,10 @@ import { NavLink } from "remix";
 function NavList() {
   // This styling will be applied to a <NavLink> when the
   // route that it links to is currently selected.
-  let activeStyle = {
+  const activeStyle = {
     textDecoration: "underline",
   };
-  let activeClassName = "underline";
+  const activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -194,7 +192,7 @@ If the `end` prop is used, it will ensure this component isn't matched as "activ
 
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
-```js
+```tsx
 import { Form } from "remix";
 
 function NewEvent() {
@@ -218,7 +216,7 @@ Most of the time you can omit this prop. Forms without an action prop (`<Form me
 
 If you need to post to a different route, then add an action prop:
 
-```jsx
+```tsx
 <Form action="/projects/new" method="post" />
 ```
 
@@ -235,7 +233,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
-```jsx
+```tsx
 <Form method="post" />
 ```
 
@@ -286,7 +284,7 @@ This component will emulate the browser's scroll restoration on location changes
 
 It must be the last element on the page, right before the `<Scripts/>` tag:
 
-```tsx [4,5]
+```tsx lines=[4,5]
 <html>
   <body>
     {/* ... */}
@@ -305,10 +303,10 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 This hook returns the JSON parsed data from your route loader function.
 
 ```tsx lines=[1,8]
-import { useLoaderData } from "remix";
+import { json, useLoaderData } from "remix";
 
 export async function loader() {
-  return fakeDb.invoices.findAll();
+  return json(await fakeDb.invoices.findAll());
 }
 
 export default function Invoices() {
@@ -322,12 +320,12 @@ export default function Invoices() {
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
 ```tsx lines=[1,10,19]
-import { useActionData, Form } from "remix";
+import { json, useActionData, Form } from "remix";
 
 export async function action({ request }) {
   const body = await request.formData();
   const name = body.get("visitorsName");
-  return { message: `Hello, ${name}` };
+  return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
@@ -348,7 +346,7 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [21, 30, 38-40, 44-46]
+```tsx lines=[21, 30, 38-40, 44-46]
 import { redirect, json, Form, useActionData } from "remix";
 
 export async function action({ request }) {
@@ -476,7 +474,7 @@ function SomeComponent() {
   return (
     <button
       formAction={useFormAction("destroy")}
-      formMethod="DELETE"
+      formMethod="post"
     >
       Delete
     </button>
@@ -493,10 +491,10 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
 ```tsx filename=app/routes/prefs.tsx lines=[1,13,17]
-import { useSubmit, useTransition } from "remix";
+import { json, useSubmit, useTransition } from "remix";
 
 export async function loader() {
-  await getUserPreferences();
+  return json(await getUserPreferences());
 }
 
 export async function action({ request }) {
@@ -1015,7 +1013,9 @@ Anytime you show the user avatar, you could put a hover effect that fetches data
 
 ```tsx filename=routes/user/$id/details.tsx
 export async function loader({ params }) {
-  return fakeDb.user.find({ where: { id: params.id } });
+  return json(
+    await fakeDb.user.find({ where: { id: params.id } })
+  );
 }
 
 function UserAvatar({ partialUser }) {
@@ -1053,7 +1053,9 @@ If the user needs to select a city, you could have a loader that returns a list 
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return searchCities(url.searchParams.get("city-query"));
+  return json(
+    await searchCities(url.searchParams.get("city-query"))
+  );
 }
 
 function CitySearchCombobox() {
@@ -1471,15 +1473,17 @@ Would be useful to understand [the Browser File API](https://developer.mozilla.o
 It's to be used in place of `request.formData()`.
 
 ```diff
-- let formData = await request.formData();
-+ let formData = await unstable_parseMultipartFormData(request, uploadHandler);
+- const formData = await request.formData();
++ const formData = await unstable_parseMultipartFormData(request, uploadHandler);
 ```
 
 For example:
 
-```tsx lines=[2-5,7,23]
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+```tsx lines=[4-7,9,25]
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1487,7 +1491,7 @@ export let action: ActionFunction = async ({ request }) => {
   // the returned value for the file field is whatever our uploadHandler returns.
   // Let's imagine we're uploading the avatar to s3,
   // so our uploadHandler returns the URL.
-  let avatarUrl = formData.get("avatar");
+  const avatarUrl = formData.get("avatar");
 
   // update the currently logged in user's avatar in our database
   await updateUserAvatar(request, avatarUrl);
@@ -1523,18 +1527,20 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createFileUploadHandler({
+const uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "NodeFile" which has a similar API to "File"
   // ... etc
@@ -1560,17 +1566,19 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createMemoryUploadHandler({
+const uploadHandler = unstable_createMemoryUploadHandler({
   maxFileSize: 500_000,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "File" (https://mdn.io/File) polyfilled for node
   // ... etc
@@ -1595,7 +1603,9 @@ import type {
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const userId = getUserId(request);
 
   function uploadStreamToCloudinary(
@@ -1618,7 +1628,7 @@ export let action: ActionFunction = async ({ request }) => {
     });
   }
 
-  let uploadHandler: UploadHandler = async ({
+  const uploadHandler: UploadHandler = async ({
     name,
     stream,
   }) => {
@@ -1643,12 +1653,12 @@ export let action: ActionFunction = async ({ request }) => {
     return uploadedImage.secure_url;
   };
 
-  let formData = await unstable_parseMultipartFormData(
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let imageUrl = formData.get("avatar");
+  const imageUrl = formData.get("avatar");
 
   // because our uploadHandler returns a string, that's what the imageUrl will be.
   // ... etc
@@ -1676,17 +1686,17 @@ import type { UploadHandler } from "remix";
 import { unstable_createFileUploadHandler } from "remix";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export let fileUploadHandler =
+export const fileUploadHandler =
   unstable_createFileUploadHandler({
     directory: "public/calendar-events",
   });
 
-export let cloudinaryUploadHandler =
+export const cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
     folder: "/my-site/avatars",
   });
 
-export let multHandler: UploadHandler = (args) => {
+export const multHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
     return fileUploadHandler(args);
   } else if (args.name === "eventBanner") {
@@ -1734,7 +1744,7 @@ export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: cookie.showBanner };
+  return json({ showBanner: cookie.showBanner });
 }
 
 export async function action({ request }) {
@@ -1931,7 +1941,7 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-let cookie = createCookie("user-prefs", {
+const cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01"),
 });
 
@@ -2119,8 +2129,8 @@ Returns `true` if an object is a Remix session.
 ```js
 import { isSession } from "remix";
 
-let sessionData = { foo: "bar" };
-let session = createSession(sessionData, "remix-session");
+const sessionData = { foo: "bar" };
+const session = createSession(sessionData, "remix-session");
 console.log(isSession(session));
 // true
 ```

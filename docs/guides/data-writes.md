@@ -74,7 +74,7 @@ If you have more fields, the browser will add them:
     </label>
     <label>
       <input name="color" value="black" type="checkbox" />
-      White
+      Black
     </label>
     <button type="submit">Search</button>
   </fieldset>
@@ -220,7 +220,7 @@ export const action: ActionFunction = async ({
 
   if (errors) {
     const values = Object.fromEntries(formData);
-    return { errors, values };
+    return json({ errors, values });
   }
 
   return redirect(`/projects/${project.id}`);
