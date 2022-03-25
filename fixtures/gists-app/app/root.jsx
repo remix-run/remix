@@ -9,7 +9,6 @@ import {
   useCatch,
   useLoaderData,
   useMatches,
-  LiveReload,
 } from "remix";
 import normalizeHref from "@exampledev/new.css/new.css";
 import cssModuleStylesheetUrl from "@remix-run/css-modules";
@@ -78,7 +77,6 @@ export default function Root() {
           <>
             <ScrollRestoration />
             <Scripts />
-            <LiveReload />
           </>
         ) : null}
       </body>
@@ -133,7 +131,6 @@ export function CatchBoundary() {
               ) : null}
             </div>
             <Scripts />
-            <LiveReload />
           </body>
         </html>
       );
@@ -161,7 +158,6 @@ export function ErrorBoundary({ error }) {
           <pre>{error.message}</pre>
         </div>
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );
