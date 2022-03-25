@@ -1,6 +1,8 @@
 import * as path from "path";
 import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
+// @ts-expect-error
+import setupPuppeteer from "jest-environment-puppeteer/setup";
 
 function installDeps(dir: string): Promise<void> {
   return new Promise((accept, reject) => {
@@ -42,7 +44,8 @@ async function startServer(dir: string): Promise<ChildProcess> {
   });
 }
 
-export default async function () {
+export default async function setup(globalConfig: any) {
+  await setupPuppeteer(globalConfig);
   let rootDir = path.dirname(__dirname);
   await installDeps(rootDir);
   await runBuild(rootDir);

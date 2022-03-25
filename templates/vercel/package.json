@@ -20,7 +20,10 @@
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
     "@remix-run/serve": "*",
-    "eslint": "^8.11.0"
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "eslint": "^8.11.0",
+    "typescript": "^4.5.5"
   },
   "engines": {
     "node": ">=14"
