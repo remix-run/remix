@@ -1,9 +1,11 @@
 import {
   createAppFixture,
   createFixture,
+  collectResponses,
   css,
   js,
-  // selectHtml,
+  selectHtml,
+  getElement,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
@@ -17,10 +19,16 @@ describe("rendering", () => {
         "app/root.jsx": js`
             import { Links, Outlet, Scripts } from "remix";
             import stylesHref from "~/styles.css";
+            import cssModuleStylesheetUrl from "@remix-run/css-modules";
 
             export function links() {
               return [
                 { rel: "stylesheet", href: stylesHref },
+                {
+                  rel: "stylesheet",
+                  href: cssModuleStylesheetUrl,
+                  "data-css-modules-link": "",
+                },
               ];
             }
 
@@ -83,14 +91,29 @@ describe("rendering", () => {
             }
           `,
 
+        "app/routes/b.jsx": js`
+            import { Button } from "~/lib/button";
+            import { Heading } from "~/lib/heading";
+            import { Text } from "~/lib/text";
+            export default function() {
+              return (
+                <div>
+                  <Heading level={1}>Route B</Heading>
+                  <Text>Here's a red button</Text>
+                  <Button variant="red">Click Me</Button>
+                </div>
+              );
+            }
+          `,
+
         "app/lib/button.jsx": js`
             import styles from "./button.module.css";
-            export function Button(props) {
+            export function Button({ variant, ...props }) {
               return (
                 <Button
                   {...props}
                   data-ui-button=""
-                  className={styles.button}
+                  className={variant === "red" ? styles.buttonRed : styles.button}
                 />
               );
             }
@@ -202,24 +225,77 @@ describe("rendering", () => {
     await app.close();
   });
 
-  //   it.todo("loads the CSS Modules stylesheet", () => {});
+  it("loads the CSS Modules stylesheet", async () => {
+    await app.disableJavaScript();
+    let cssResponses = collectResponses(page, (url) =>
+      url.pathname.endsWith(".css")
+    );
+    await page.goto("/");
+    await page.waitForSelector("[data-css-modules-link]");
+    expect(cssResponses.length).toEqual(2);
+  });
 
-  //   it.todo("server renders with hashed classnames", async () => {
-  //     let res = await fixture.requestDocument("/");
-  //     expect(res.status).toBe(200);
-  //     expect(selectHtml(await res.text(), "[data-ui-badge]"))
-  //       .toMatchInlineSnapshot(`
-  //         "<div data-ui-badge=\\"\\" className=\\"badge__TODO_SOME_HASH bold\\"">
-  //           Hello
-  //         </div>"
-  //       `);
-  //   });
+  it("server renders with hashed classnames", async () => {
+    let res = await page.goto("/");
+    let badge = getElement(await res.text(), "[data-ui-badge]");
 
-  //   it.todo("composes from locally scoped classname", () => {});
+    let badgeClasses = badge.attr("class").split(" ");
+    let found: string[] = [];
+    for (let className of badgeClasses) {
+      if (/^badge__[\w-]+$/.test(className)) {
+        found.push(className);
+      }
+    }
 
-  //   it.todo("composes from globally scoped classname", () => {});
+    expect(found.length).toBe(1);
+  });
 
-  //   it.todo("composes from imported module classname", () => {});
+  it("composes from global classname", async () => {
+    let res = await page.goto("/a");
+    let button = getElement(await res.text(), "[data-ui-button]");
+    expect(
+      button
+        .attr("class")
+        // .button composes the global .reset--button class
+        .includes("reset--button")
+    ).toBe(true);
+  });
 
-  //   it.todo("composes :global selector with :local selector", () => {});
+  it.todo("composes from locally scoped classname", async () => {
+    let res = await page.goto("/b");
+    let button = getElement(await res.text(), "[data-ui-button]");
+    let buttonClasses = button.attr("class").split(" ");
+    let found: string[] = [];
+    for (let className of buttonClasses) {
+      if (
+        /^button__[\w-]+$/.test(className) ||
+        /^buttonRed__[\w-]+$/.test(className)
+      ) {
+        found.push(className);
+      }
+    }
+
+    expect(found.length).toBe(2);
+  });
+
+  // TODO: Feature not implemented yet
+  // it.todo("composes from imported module classname", () => {});
+
+  it.todo("composes :global selector with :local selector", async () => {
+    let res = await page.goto("/");
+    let badge = getElement(await res.text(), "[data-ui-badge]");
+    let buttonClasses = badge.attr("class").split(" ");
+    let found: string[] = [];
+    for (let className of buttonClasses) {
+      if (
+        /^badge__[\w-]+$/.test(className) ||
+        // .badge composes the global .bold class
+        className === "bold"
+      ) {
+        found.push(className);
+      }
+    }
+
+    expect(found.length).toBe(2);
+  });
 });
