@@ -49,14 +49,13 @@ ${colors.heading("Creating a new project")}:
 
   - a file path to a directory of files
   - a file path to a tarball
-  - the name of a repo in the remix-run GitHub org
-  - the name of a username/repo on GitHub
+  - the name of a :username/:repo on GitHub
   - the URL of a tarball
 
   $ remix create my-app --template /path/to/remix-template
   $ remix create my-app --template /path/to/remix-template.tar.gz
-  $ remix create my-app --template [remix-run/]grunge-stack
-  $ remix create my-app --template github-username/repo-name
+  $ remix create my-app --template remix-run/grunge-stack
+  $ remix create my-app --template :username/:repo
   $ remix create my-app --template https://github.com/:username/:repo
   $ remix create my-app --template https://github.com/:username/:repo/tree/:branch
   $ remix create my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
