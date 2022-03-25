@@ -48,15 +48,27 @@ beforeAll(async () => {
           return (
             <div>
               {data}
-              <Link to="/burgers">Other Route</Link>
+              <Link to="/ريمكس">Other Route</Link>
+              <Link to="/route-remixée">Other Route</Link>
+              <Link to="/autre-route-remixée">Other Route</Link>
             </div>
           )
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/ريمكس.jsx": js`
         export default function Index() {
-          return <div>cheeseburger</div>;
+          return <div>remix in arabic is written ريمكس</div>;
+        }
+      `,
+      "app/routes/route-remixée.jsx": js`
+        export default function Index() {
+          return <div>Bonjour</div>;
+        }
+      `,
+      "app/routes/autre-route-remix%C3%A9e.jsx": js`
+        export default function Index() {
+          return <div>Bonsoir</div>;
         }
       `,
     },
@@ -73,21 +85,20 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+it("it should render my ريمكس route", async () => {
+  await app.goto("/ريمكس");
+  expect(await app.getHtml()).toMatch("remix in arabic is written ريمكس");
+});
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+it("it should render my route-remixée", async () => {
+  await app.goto("/route-remixée");
+  expect(await app.getHtml()).toMatch("Bonjour");
+});
 
-  // Go check out the other tests to see what else you can do.
+it("it should render my autre-route-remixée", async () => {
+  await app.goto("/autre-route-remixée");
+  expect(await app.getHtml()).toMatch("Bonsoir");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
