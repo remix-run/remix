@@ -88,7 +88,6 @@ afterAll(async () => app.close());
 it("it should render my ريمكس route", async () => {
   await app.goto("/ريمكس");
   expect(await app.getHtml()).toMatch("remix in arabic is written ريمكس");
-
 });
 
 
