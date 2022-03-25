@@ -137,13 +137,14 @@ ${HELP_TEXT}
       break;
     }
     default:
-      throw new Error(
+      console.error(
         `🚨 Unable to determine template type for "${appTemplate}"
 
 Valid template flags may look like one of the following:${VALID_TEMPLATE_EXAMPLES}
 ${HELP_TEXT}
 `
       );
+      process.exit(1);
   }
 
   // Update remix deps
@@ -585,7 +586,7 @@ function detectTemplateType(template: string): TemplateType {
     return "template";
   }
 
-  // 4. Handle GitHub repos (URLs or :org/:repo shorthand)
+  // 3. Handle GitHub repos (URLs or :org/:repo shorthand)
   if (isValidGithubUrl(template) || isGithubRepoShorthand(template)) {
     return "repo";
   }
