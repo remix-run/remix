@@ -74,7 +74,10 @@ Go ahead and copy/paste this:
 
 You can put it anywhere you like. I stuck it right above the icons of all the technologies used in the stack:
 
-![Screenshot of the app showing the blog post link](/blog-tutorial/blog-post-link.png)
+<!-- TODO: once the website can deploy properly, update this to use our self-hosted version of this image -->
+<!-- ![Screenshot of the app showing the blog post link](/blog-tutorial/blog-post-link.png) -->
+
+![Screenshot of the app showing the blog post link](https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png)
 
 <docs-info>You may have noticed we're using <a href="https://tailwindcss.com">tailwind</a> classes.</docs-info>
 
