@@ -1,0 +1,1 @@
+export { loadTsConfig } from './configLoader';

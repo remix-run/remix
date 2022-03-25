@@ -8,6 +8,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
+import { loadTsConfig } from "../utils/tsconfig";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -25,7 +26,7 @@ export function serverBareModulesPlugin(
     if (!matchPath) {
       return id;
     }
-    return matchPath(id, undefined, undefined, [".ts", ".tsx"]) || id;
+    return matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id;
   }
 
   return {
@@ -114,7 +115,7 @@ function getNpmPackageName(id: string): string {
 }
 
 function createMatchPath() {
-  let configLoaderResult = tsConfigPaths.loadConfig();
+  let configLoaderResult = loadTsConfig();
   if (configLoaderResult.resultType === 'failed') {
     return undefined;
   }
