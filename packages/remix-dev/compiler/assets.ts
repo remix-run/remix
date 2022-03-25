@@ -5,7 +5,7 @@ import type { RemixConfig } from "../config";
 import invariant from "../invariant";
 import { getRouteModuleExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
-import { resolveUrl } from "./utils/url";
+import { createUrl } from "./utils/url";
 import type { CssModulesResults } from "./plugins/cssModules";
 
 type Route = RemixConfig["routes"][string];
@@ -40,12 +40,19 @@ export async function createAssetsManifest(
   metafile: esbuild.Metafile,
   cssModules: CssModulesResults | undefined
 ): Promise<AssetsManifest> {
+  function resolveUrl(outputPath: string): string {
+    return createUrl(
+      config.publicPath,
+      path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
+    );
+  }
+
   function resolveImports(
     imports: esbuild.Metafile["outputs"][string]["imports"]
   ): string[] {
     return imports
       .filter((im) => im.kind === "import-statement")
-      .map((im) => resolveUrl(config, im.path));
+      .map((im) => resolveUrl(im.path));
   }
 
   let entryClientFile = path.resolve(
@@ -73,7 +80,7 @@ export async function createAssetsManifest(
     );
     if (entryPointFile === entryClientFile) {
       entry = {
-        module: resolveUrl(config, key),
+        module: resolveUrl(key),
         imports: resolveImports(output.imports),
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
@@ -87,7 +94,7 @@ export async function createAssetsManifest(
         path: route.path,
         index: route.index,
         caseSensitive: route.caseSensitive,
-        module: resolveUrl(config, key),
+        module: resolveUrl(key),
         imports: resolveImports(output.imports),
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),

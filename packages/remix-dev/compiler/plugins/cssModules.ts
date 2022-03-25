@@ -45,7 +45,7 @@ https://github.com/remix-run/remix/issues/new?labels=bug&template=bug_report.yml
 `)
             );
           }
-        } catch (_) {
+        } catch (err) {
           console.error(`
 --------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ Install the dependency by running the following command, then restart your app.
 
 --------------------------------------------------------------------------------
 `);
-          throw _;
+          throw err;
         }
 
         let path = getResolvedFilePath(config, args);

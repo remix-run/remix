@@ -11,7 +11,6 @@ module.exports = {
   serverBuildDirectory: "./build",
   ignoredRouteFiles: [".*", "blargh.ts"],
   server: "./server.js",
-  devServerBroadcastDelay: 500,
 
   mdx: async (filename) => {
     let [rehypeHighlight, remarkToc] = await Promise.all([
