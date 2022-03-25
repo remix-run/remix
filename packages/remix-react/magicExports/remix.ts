@@ -1,3 +1,5 @@
+/* eslint-disable import/no-extraneous-dependencies */
+
 // Re-export everything from this package that is available in `remix`.
 // Note: We need to name all exports individually so the compiler is able
 // to remove the ones we don't need in the browser builds.
