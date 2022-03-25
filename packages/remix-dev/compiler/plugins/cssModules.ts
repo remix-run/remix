@@ -36,7 +36,7 @@ export function cssModulesPlugin(
               chalk.yellow(`
 --------------------------------------------------------------------------------
 
-CSS Modules support in Remix is experimental. It's implementation may change.
+CSS Modules support in Remix is experimental. Its implementation may change.
 If you find a bug, please report it by opening an issue on GitHub:
 
 https://github.com/remix-run/remix/issues/new?labels=bug&template=bug_report.yml
