@@ -233,16 +233,55 @@ async function downloadAndExtractTemplateOrExample(
   if (type === "example") {
     name = name.split("/")[1];
   }
+  let typeDir = type + "s";
+  let templateUrl = `https://github.com/remix-run/remix/tree/main/${typeDir}/${name}`;
 
   let response: null | Awaited<ReturnType<typeof fetch>> = null;
+
+  // We need to ping the URL directly to make sure it exists as we fetch from
+  // codeload. attempting to extract the tarball from `main`. We can make these
+  // requests in parallel and reject if HEAD fetch returns a 404
   try {
-    response = await fetch(
-      "https://codeload.github.com/remix-run/remix/tar.gz/main",
-      options.token
-        ? { headers: { Authorization: `token ${options.token}` } }
-        : {}
-    );
-  } catch (_) {}
+    [, response] = await Promise.all([
+      fetch(templateUrl, { method: "HEAD" }).then((response) => {
+        if (response?.status !== 200) {
+          let message: string;
+          switch (response.status) {
+            case 408:
+              message = `🚨 There was a problem fetching the template from GitHub, and the request timed out. Please ensure you are connected to the internet and try again later.`;
+              break;
+            case 404:
+              message = `🚨 The requested template was not found. Valid templates must match the name of a directory inside of the \`templates\` directory in the \`remix-run/remix\` repo on the \`main\` branch.
+
+See https://github.com/remix-run/remix/tree/main/templates for available templates.`;
+              break;
+            default:
+              message = `🚨 Something went wrong when attempting to download the template. The request responded with a ${response.status} status.
+
+${HELP_TEXT}`;
+              break;
+          }
+
+          // throw the message to reject and log the message in `catch`
+          throw message;
+        }
+        return response;
+      }),
+      fetch(
+        "https://codeload.github.com/remix-run/remix/tar.gz/main",
+        options.token
+          ? { headers: { Authorization: `token ${options.token}` } }
+          : {}
+      ),
+    ]);
+  } catch (err) {
+    if (typeof err === "string") {
+      console.error(err);
+      process.exit(1);
+    }
+    // unknown error
+    throw err;
+  }
 
   if (!response || response.status !== 200) {
     console.error(
@@ -259,7 +298,7 @@ async function downloadAndExtractTemplateOrExample(
 
   let cwd = path.dirname(projectDir);
   let desiredDir = path.basename(projectDir);
-  let templateDir = path.join(desiredDir, type + "s", name);
+  let templateDir = path.join(desiredDir, typeDir, name);
 
   try {
     await pipeline(
