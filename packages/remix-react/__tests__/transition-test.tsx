@@ -665,6 +665,66 @@ describe("submission navigations", () => {
     await B.loader.resolve("B LOADER");
     expect(t.getState().actionData).toBeUndefined();
   });
+
+  it("retains the index match when submitting to a layout route", async () => {
+    let tm = createTestTransitionManager("/", {
+      routes: [
+        {
+          path: "/",
+          id: "parent",
+          element: {},
+          module: "",
+          hasLoader: true,
+          loader: () => "PARENT LOADER",
+          action: () => "PARENT ACTION",
+          children: [
+            {
+              path: "/child",
+              id: "child",
+              element: {},
+              module: "",
+              ErrorBoundary: FakeComponent,
+              hasLoader: true,
+              loader: () => "CHILD LOADER",
+              action: () => "CHILD ACTION",
+              children: [
+                {
+                  index: true,
+                  id: "childIndex",
+                  element: {},
+                  module: "",
+                  ErrorBoundary: FakeComponent,
+                  hasLoader: true,
+                  loader: () => "CHILD INDEX LOADER",
+                  action: () => "CHILD INDEX ACTION",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child"),
+      submission: createActionSubmission("/child"),
+      action: Action.Push,
+    });
+    expect(tm.getState().transition.state).toBe("idle");
+    expect(tm.getState().loaderData).toEqual({
+      parent: "PARENT LOADER",
+      child: "CHILD LOADER",
+      childIndex: "CHILD INDEX LOADER",
+    });
+    expect(tm.getState().actionData).toEqual({
+      child: "CHILD ACTION",
+    });
+    expect(tm.getState().matches.map((m) => m.route.id)).toEqual([
+      "parent",
+      "child",
+      "childIndex",
+    ]);
+  });
 });
 
 describe("action errors", () => {

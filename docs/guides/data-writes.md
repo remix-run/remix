@@ -74,7 +74,7 @@ If you have more fields, the browser will add them:
     </label>
     <label>
       <input name="color" value="black" type="checkbox" />
-      White
+      Black
     </label>
     <button type="submit">Search</button>
   </fieldset>
