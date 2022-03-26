@@ -726,7 +726,7 @@ export default function PostAdmin() {
         <nav className="col-span-4 md:col-span-1">
           <ul>
             {posts.map((post) => (
-              <li key={post.slug}>
+              <li key={`/posts/${post.slug}`}>
                 <Link
                   to={post.slug}
                   className="text-blue-600 underline"
