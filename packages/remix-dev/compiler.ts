@@ -317,7 +317,7 @@ async function buildEverything(
 
 async function createBrowserBuild(
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
+  options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
