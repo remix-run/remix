@@ -2554,12 +2554,12 @@ function validatePassword(password: unknown) {
 }
 
 function validateUrl(url: any) {
-  console.log(url)
-  let urls = ['/jokes','/','https://remix.run']
+  console.log(url);
+  let urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
-    return url
+    return url;
   }
-  return '/jokes'
+  return "/jokes";
 }
 
 type ActionData = {
@@ -2585,7 +2585,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = validateUrl(form.get("redirectTo") || '/jokes');
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -3730,11 +3732,11 @@ function validatePassword(password: unknown) {
 }
 
 function validateUrl(url: any) {
-  let urls = ['/jokes','/','https://remix.run']
+  let urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
-    return url
+    return url;
   }
-  return '/jokes'
+  return "/jokes";
 }
 
 type ActionData = {
@@ -3760,7 +3762,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = validateUrl(form.get("redirectTo") || '/jokes');
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -5078,11 +5082,11 @@ function validatePassword(password: unknown) {
 }
 
 function validateUrl(url: any) {
-  let urls = ['/jokes','/','https://remix.run']
+  let urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
-    return url
+    return url;
   }
-  return '/jokes'
+  return "/jokes";
 }
 
 type ActionData = {
@@ -5108,7 +5112,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = validateUrl(form.get("redirectTo") || '/jokes');
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
