@@ -15,7 +15,7 @@ export default function handleRequest(
   );
 
   markup = markup.replace(
-    /<style id=\"stitches\">.*\<\/style>/g,
+    /<style id="stitches">.*<\/style>/g,
     `<style id="stitches">${getCssText()}</style>`
   );
 
