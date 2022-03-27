@@ -275,7 +275,8 @@ Note that we're making the `getPosts` function `async` because even though it's 
 💿 Update the posts route to use our new posts module:
 
 ```tsx filename=app/routes/posts/index.tsx nocopy
-import { Link, json, useLoaderData } from "remix";
+import { json, Link, useLoaderData } from "remix";
+
 import { getPosts } from "~/models/post.server";
 
 type LoaderData = {
@@ -487,9 +488,10 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,8-9,13,17]
+```tsx filename=app/routes/posts/$slug.tsx lines=[4,9-10,14,18]
 import type { LoaderFunction } from "remix";
-import { useLoaderData, json } from "remix";
+import { json, useLoaderData } from "remix";
+
 import { getPost } from "~/models/post.server";
 
 export const loader: LoaderFunction = async ({
@@ -515,12 +517,13 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[4-5,7,12,15,17,21]
+```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,8,13,16,18,22]
 import type { LoaderFunction } from "remix";
-import { useLoaderData, json } from "remix";
-import { getPost } from "~/models/post.server";
-import type { Post } from "~/models/post.server";
+import { json, useLoaderData } from "remix";
 import invariant from "tiny-invariant";
+
+import type { Post } from "~/models/post.server";
+import { getPost } from "~/models/post.server";
 
 type LoaderData = { post: Post };
 
@@ -561,13 +564,14 @@ npm add marked
 npm add @types/marked -D
 ```
 
-```tsx filename=app/routes/post/$slug.ts lines=[6,8,18-19,23,29]
-import type { LoaderFunction } from "remix";
-import { useLoaderData, json } from "remix";
-import { getPost } from "~/models/post.server";
-import type { Post } from "~/models/post.server";
-import invariant from "tiny-invariant";
+```tsx filename=app/routes/post/$slug.ts lines=[1,9,19-20,24,30]
 import { marked } from "marked";
+import type { LoaderFunction } from "remix";
+import { json, useLoaderData } from "remix";
+import invariant from "tiny-invariant";
+
+import type { Post } from "~/models/post.server";
+import { getPost } from "~/models/post.server";
 
 type LoaderData = { post: Post; html: string };
 
@@ -840,6 +844,7 @@ export async function createPost(post) {
 
 ```tsx filename=app/routes/posts/admin/new.tsx
 import { Form, redirect } from "remix";
+
 import { createPost } from "~/models/post.server";
 
 export const action = async ({ request }) => {
@@ -879,9 +884,10 @@ export async function createPost(
 }
 ```
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[1,5]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[1,6]
 import type { ActionFunction } from "remix";
 import { Form, redirect } from "remix";
+
 import { createPost } from "~/models/post.server";
 
 export const action: ActionFunction = async ({

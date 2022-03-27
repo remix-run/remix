@@ -149,7 +149,7 @@ export default function Index() {
         limit: LIMIT.toString(),
       });
     }
-  }, [start, neededStart, setSearchParams]);
+  }, [limit, neededStart, page, setSearchParams]);
 
   useEffect(() => {
     isMountedRef.current = true;

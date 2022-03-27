@@ -4,7 +4,7 @@
 
 Learn more about [Remix Stacks](https://remix.run/stacks).
 
-```
+```sh
 npx create-remix --template remix-run/indie-stack
 ```
 
