@@ -40,14 +40,6 @@ For now, we are inlining Remix's `@remix-run/deno` package into `remix-deno` to 
 In the future, this template would not include the `remix-deno` directory at all.
 Instead, users could import from `@remix-run/deno` (exact URL TBD).
 
-### Required `installGlobals` call
-
-Remix depends on specific globals (`sign`/`unsign`) for internal functionality (cookie signing).
-Right now, the values for those globals are defined in the local `remix-deno` package.
-The globals are _actually_ assigned these values in the `installGlobals` function that must be called in user code (i.e. `server.ts`).
-
-In the future, we plan to obviate these globals (`sign`/`unsign`), removing the `installGlobals` call (and even the import) from user code in `server.ts`.
-
 ## 🐞 Known issues 🐞
 
 ### `dev` does not live reload
