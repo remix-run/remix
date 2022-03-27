@@ -202,15 +202,15 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             choices: [
               {
                 name: "Blues",
-                value: "blues-stack",
+                value: "remix-run/blues-stack",
               },
               {
                 name: "Indie",
-                value: "indie-stack",
+                value: "remix-run/indie-stack",
               },
               {
                 name: "Grunge",
-                value: "grunge-stack",
+                value: "remix-run/grunge-stack",
               },
             ],
           },
