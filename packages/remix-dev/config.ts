@@ -377,7 +377,7 @@ export async function readConfig(
   let routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile },
   };
-  function addRoutes(data) {
+  function addRoutes(data: RouteManifest) {
     for (let key of Object.keys(data)) {
       let route = data[key];
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
