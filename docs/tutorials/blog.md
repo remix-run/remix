@@ -465,7 +465,7 @@ export const loader: LoaderFunction = async ({
 };
 ```
 
-Now, let's actually get the post contents from the database by it's slug.
+Now, let's actually get the post contents from the database by its slug.
 
 💿 Add a `getPost` function to our post module
 
