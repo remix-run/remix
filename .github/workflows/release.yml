@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   schedule:
-    - cron: "0 21 * * *" # every day at 7PM EST
+    - cron: "0 7 * * *" # every day at 12AM PST
 
 jobs:
   nightly:
