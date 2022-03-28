@@ -12,6 +12,7 @@ import type { createApp as createAppType } from "@remix-run/serve";
 import getPort from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
+import * as colors from "./colors";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
@@ -47,7 +48,6 @@ export async function create({
     installDeps,
     useTypeScript,
     githubToken,
-    templateType,
   });
 
   let initScriptDir = path.join(projectDir, "remix.init");
@@ -60,14 +60,21 @@ export async function create({
       spinner.stop();
     } else {
       spinner.stop();
+      console.log();
       console.log(
-        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+        "💿 You've opted out of installing dependencies so we won't run the " +
+          "remix.init/index.js script for you just yet. Once you've installed " +
+          "dependencies, you can run it manually with `npx remix init`"
       );
+      console.log();
     }
   }
 
   let relProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relProjectDir === "";
+
+  spinner.stop();
+  spinner.clear();
 
   if (projectDirIsCurrentDir) {
     console.log(
@@ -75,10 +82,10 @@ export async function create({
     );
   } else {
     console.log(
-      `💿 That's it! \`cd\` into "${path.resolve(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
+      "💿 That's it! `cd` into " +
+        colors.logoGreen(path.resolve(process.cwd(), projectDir)) +
+        " and check the\n" +
+        "   README for development and deploy instructions!"
     );
   }
 }

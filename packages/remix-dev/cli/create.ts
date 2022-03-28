@@ -3,6 +3,7 @@ import { promisify } from "util";
 import path from "path";
 import fse from "fs-extra";
 import fetch from "node-fetch";
+import ora from "ora";
 import gunzip from "gunzip-maybe";
 import tar from "tar-fs";
 import * as semver from "semver";
@@ -28,7 +29,6 @@ interface CreateAppArgs {
   installDeps: boolean;
   useTypeScript: boolean;
   githubToken?: string;
-  templateType: TemplateType;
 }
 
 export async function createApp({
@@ -38,7 +38,6 @@ export async function createApp({
   installDeps,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
-  templateType,
 }: CreateAppArgs) {
   // Check the node version
   let versions = process.versions;
@@ -58,6 +57,8 @@ export async function createApp({
    * - example in remix-run org
    * - template in remix-run org
    */
+
+  let templateType = detectTemplateType(appTemplate);
   let options = { useTypeScript, token: githubToken };
   switch (templateType) {
     case "local": {
@@ -416,6 +417,165 @@ function getRepoInfo(validatedGithubUrl: string): RepoInfo {
   };
 }
 
+export async function validateNewProjectPath(input: string): Promise<void> {
+  let cwd = process.cwd();
+  let projectDir = path.resolve(cwd, input);
+  if (
+    (await fse.pathExists(projectDir)) &&
+    (await fse.stat(projectDir)).isDirectory()
+  ) {
+    let contents = await fse.readdir(projectDir);
+    if (contents.length > 0) {
+      throw Error(
+        `🚨 The current directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.`
+      );
+    }
+    return;
+  }
+
+  if (
+    (await fse.pathExists(projectDir)) &&
+    (await fse.stat(projectDir)).isDirectory()
+  ) {
+    throw Error(
+      `🚨 The directory provided already exists. Please try again with a different directory.`
+    );
+  }
+}
+
+export async function validateTemplate(input: string): Promise<TemplateType> {
+  // If a template string matches one of the choices in our interactive prompt,
+  // we can skip all fetching and manual validation.
+  if (
+    [
+      "remix-run/blues-stack",
+      "remix-run/indie-stack",
+      "remix-run/grunge-stack",
+    ].includes(input)
+  ) {
+    return "repo";
+  }
+  if (
+    [
+      "remix",
+      "express",
+      "arc",
+      "fly",
+      "netlify",
+      "vercel",
+      "cloudflare-pages",
+      "cloudflare-workers",
+    ].includes(input)
+  ) {
+    return "template";
+  }
+
+  let templateType = detectTemplateType(input);
+  switch (templateType) {
+    case "validatedLocal":
+      return "local";
+    case "local": {
+      if (input.startsWith("file://")) {
+        input = fileURLToPath(input);
+      }
+      if (!(await fse.pathExists(input))) {
+        throw Error(`🚨 Oops, the file \`${input}\` does not exist.`);
+      }
+      return "local";
+    }
+    case "remoteTarball": {
+      let spinner = ora("Validating the template file…").start();
+      try {
+        let response = await fetch(input, { method: "HEAD" });
+        spinner.stop();
+        switch (response.status) {
+          case 200:
+            return "remoteTarball";
+          case 404:
+            throw Error(
+              `🚨 The template file could not be verified. Please double check the URL and try again.`
+            );
+          default:
+            throw Error(
+              `🚨 The template file could not be verified. The server returned a response with a ${response.status} status. Please double check the URL and try again.`
+            );
+        }
+      } catch (err) {
+        spinner.stop();
+        throw Error(
+          `🚨 There was a problem verifying the template file. Please ensure you are connected to the internet and try again later.`
+        );
+      }
+    }
+    case "repo": {
+      let spinner = ora("Validating the template repo…").start();
+      let { url, filePath } = getRepoInfo(input);
+      try {
+        let response = await fetch(url, { method: "HEAD" });
+        spinner.stop();
+        switch (response.status) {
+          case 200:
+            return "repo";
+          case 403:
+            throw Error(
+              `🚨 The template could not be verified because you do not have access to the repository. Please double check the access rights of this repo and try again.`
+            );
+          case 404:
+            throw Error(
+              `🚨 The template could not be verified. Please double check that the template is a valid GitHub repository${
+                filePath && filePath !== "/"
+                  ? " and that the filepath points to a directory in the repo"
+                  : ""
+              } and try again.`
+            );
+          default:
+            throw Error(
+              `🚨 The template could not be verified. The server returned a response with a ${response.status} status. Please double check that the template is a valid GitHub repository  and try again.`
+            );
+        }
+      } catch (_) {
+        spinner.stop();
+        throw Error(
+          `🚨 There was a problem verifying the template. Please ensure you are connected to the internet and try again later.`
+        );
+      }
+    }
+    case "example":
+    case "template": {
+      let spinner = ora("Validating the template…").start();
+      let name = input;
+      if (templateType === "example") {
+        name = name.split("/")[1];
+      }
+      let typeDir = templateType + "s";
+      let templateUrl = `https://github.com/remix-run/remix/tree/main/${typeDir}/${name}`;
+      try {
+        let response = await fetch(templateUrl, { method: "HEAD" });
+        spinner.stop();
+        switch (response.status) {
+          case 200:
+            return templateType;
+          case 404:
+            throw Error(
+              `🚨 The template could not be verified. Please double check that the template is a valid project directory in https://github.com/remix-run/remix/tree/main/${typeDir} and try again.`
+            );
+          default:
+            throw Error(
+              `🚨 The template could not be verified. The server returned a response with a ${response.status} status. Please double check that the template is a valid project directory in https://github.com/remix-run/remix/tree/main/${typeDir} and try again.`
+            );
+        }
+      } catch (_) {
+        spinner.stop();
+        throw Error(
+          `🚨 There was a problem verifying the template. Please ensure you are connected to the internet and try again later.`
+        );
+      }
+    }
+  }
+
+  throw Error("🚨 Invalid template selected. Please try again.");
+}
+
 export type TemplateType =
   // in the remix repo
   | "template"
@@ -427,6 +587,90 @@ export type TemplateType =
   | "remoteTarball"
   // local directory
   | "local";
+
+export function detectTemplateType(
+  template: string
+): TemplateType | "validatedLocal" | null {
+  // 1. Check if the user passed a local file. If they hand us an explicit file
+  //    URL, we'll validate it first. Otherwise we just ping the filesystem to
+  //    see if the string references a filepath and, if not, move on.
+  if (template.startsWith("file://")) {
+    return "local";
+  }
+
+  try {
+    if (
+      fse.existsSync(
+        path.isAbsolute(template)
+          ? template
+          : path.resolve(process.cwd(), template)
+      )
+    ) {
+      // We know this exists, so no need to validate again
+      return "validatedLocal";
+    }
+  } catch (_) {
+    // ignore FS errors and move on
+  }
+
+  // 3. examples/<template> will use an example folder in the Remix repo
+  if (/^examples?\/[\w-]+$/.test(template)) {
+    return "example";
+  }
+
+  // 2. If the string contains no slashes, spaces, or special chars, we assume
+  //    it is one of our templates.
+  if (/^[\w-]+$/.test(template)) {
+    return "template";
+  }
+
+  // 3. Handle GitHub repos (URLs or :org/:repo shorthand)
+  if (isValidGithubUrl(template) || isGithubRepoShorthand(template)) {
+    return "repo";
+  }
+
+  // 4. Any other valid URL should be treated as a tarball.
+  if (isUrl(template)) {
+    return "remoteTarball";
+  }
+
+  return null;
+}
+
+function isUrl(value: string) {
+  try {
+    new URL(value);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+type GithubUrlString =
+  | `https://github.com/${string}/${string}`
+  | `https://www.github.com/${string}/${string}`;
+
+function isValidGithubUrl(value: string | URL): value is URL | GithubUrlString {
+  try {
+    let url = typeof value === "string" ? new URL(value) : value;
+    let pathSegments = url.pathname.slice(1).split("/");
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "github.com" &&
+      // The pathname must have at least 2 segments. If it has more than 2, the
+      // third must be "tree" and it must have at least 4 segments.
+      // https://github.com/remix-run/remix
+      // https://github.com/remix-run/remix/tree/dev
+      pathSegments.length >= 2 &&
+      (pathSegments.length > 2
+        ? pathSegments[2] === "tree" && pathSegments.length >= 4
+        : true)
+    );
+  } catch (_) {
+    return false;
+  }
+}
 
 function convertToJavaScript(
   filename: string,
