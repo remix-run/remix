@@ -3,10 +3,82 @@ name: release
 on:
   release:
     types: [published]
+  schedule:
+    - cron: "0 21 * * *" # every day at 7PM EST
 
 jobs:
+  nightly:
+    name: Nightly Release
+    if: github.repository == 'remix-run/remix' && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          ref: dev
+          token: ${{ secrets.NIGHTLY_PAT }}
+
+      - name: Get Node Version
+        run: echo "::set-output name=version::$(cat .nvmrc)"
+        id: nvmrc
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "${{ steps.nvmrc.outputs.version }}"
+
+      - run: echo "::set-output name=dir::$(yarn cache dir)"
+        id: yarn-cache
+
+      - name: Restore dependency cache
+        uses: actions/cache@v2
+        with:
+          path: "${{ steps.yarn-cache.outputs.dir }}"
+          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-cache-
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Update Version
+        id: version
+        run: |
+          SHA=$(git rev-parse HEAD)
+          SHORT_SHA=${SHA::7}
+          NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}
+          echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
+
+          git checkout -b nightly/${NEXT_VERSION}
+          npm version ${NEXT_VERSION}
+
+          git push origin --tags
+
+      - name: Setup npm auth
+        run: |
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish
+        run: npm run publish
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        with:
+          draft: false
+          prerelease: true
+          release_name: v${{ steps.version.outputs.NEXT_VERSION }}
+          tag_name: v${{ steps.version.outputs.NEXT_VERSION }}
+        env:
+          # need this token in order to have it trigger the comment workflow
+          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
+
   build:
-    if: github.repository == 'remix-run/remix'
+    if: github.repository == 'remix-run/remix' && github.event.action == 'published'
     runs-on: ubuntu-latest
 
     steps:
