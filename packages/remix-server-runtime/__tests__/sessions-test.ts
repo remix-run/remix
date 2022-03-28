@@ -134,7 +134,7 @@ describe("Cookie session storage", () => {
       cookie: { secrets: ["secret1"] },
     });
     let session = await getSession();
-    const longString = new Array(4097).fill("a").join("");
+    let longString = new Array(4097).fill("a").join("");
     session.set("over4096bytes", longString);
     await expect(() => commitSession(session)).rejects.toThrow();
   });
