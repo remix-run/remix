@@ -363,7 +363,9 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     init.template ? init.template : "remix"
   );
   let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(init.template);
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    init.template
+  );
 
   await createApp({
     appTemplate,
@@ -376,7 +378,10 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     writeTestFiles(init, projectDir),
     installRemix(projectDir),
   ]);
-  build(projectDir, isCloudflareRuntime ? SetupPlatform.Cloudflare : SetupPlatform.Node);
+  build(
+    projectDir,
+    isCloudflareRuntime ? SetupPlatform.Cloudflare : SetupPlatform.Node
+  );
 
   return projectDir;
 }

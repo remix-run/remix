@@ -437,8 +437,7 @@ function createServerBuild(
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production && isCloudflareRuntime,
+      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
       mainFields:
         config.serverModuleFormat === "esm"
           ? ["module", "main"]

@@ -1,17 +1,14 @@
 import fs from "fs/promises";
 import path from "path";
 
-import {
-  createFixtureProject,
-  js
-} from "./helpers/create-fixture";
+import { createFixtureProject, js } from "./helpers/create-fixture";
 
 describe("cloudflare compiler", () => {
   let projectDir: string;
 
   beforeAll(async () => {
     projectDir = await createFixtureProject({
-      template: 'cloudflare-workers',
+      template: "cloudflare-workers",
       files: {
         "app/routes/index.jsx": js`
           import fake from "worker-pkg";
@@ -35,8 +32,8 @@ describe("cloudflare compiler", () => {
         `,
         "node_modules/worker-pkg/default.js": js`
           export default "__DEFAULT_EXPORTS_SHOULD_NOT_BE_IN_BUNDLE__";
-        `
-      }
+        `,
+      },
     });
   });
 
