@@ -472,8 +472,6 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
 
   let templateType = detectTemplateType(input);
   switch (templateType) {
-    case "validatedLocal":
-      return "local";
     case "local": {
       if (input.startsWith("file://")) {
         input = fileURLToPath(input);
@@ -588,9 +586,7 @@ export type TemplateType =
   // local directory
   | "local";
 
-export function detectTemplateType(
-  template: string
-): TemplateType | "validatedLocal" | null {
+export function detectTemplateType(template: string): TemplateType | null {
   // 1. Check if the user passed a local file. If they hand us an explicit file
   //    URL, we'll validate it first. Otherwise we just ping the filesystem to
   //    see if the string references a filepath and, if not, move on.
@@ -606,8 +602,7 @@ export function detectTemplateType(
           : path.resolve(process.cwd(), template)
       )
     ) {
-      // We know this exists, so no need to validate again
-      return "validatedLocal";
+      return "local";
     }
   } catch (_) {
     // ignore FS errors and move on
