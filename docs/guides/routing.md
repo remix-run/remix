@@ -55,7 +55,7 @@ An Index Route is the route that renders when the layout's path is matched exact
 
 So what renders at `https://example.com/invoices`? At the moment, nothing, it would look like this:
 
-## TODO: `<ExampleApp hideInvoice step={0} />`
+TODO: `<ExampleApp hideInvoice step={0} />`
 
 If we add the file `invoices/index.js`, then that new index route will render at the path `/invoices` inside of the `invoices.js` component.
 

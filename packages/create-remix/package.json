@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "license": "MIT",
@@ -16,6 +16,6 @@
     "create-remix": "cli.js"
   },
   "dependencies": {
-    "@remix-run/dev": "1.3.2"
+    "@remix-run/dev": "1.3.3"
   }
 }

@@ -29,7 +29,7 @@ Make sure you are running at least Node v14 or greater
 
 ```sh
 npx create-remix@latest
-# IMPORTANT: Choose "Remix App Server" when prompted
+# IMPORTANT: Choose "Just the basics", and then "Remix App Server" when prompted
 cd [whatever you named the project]
 npm run dev
 ```
@@ -317,7 +317,7 @@ We'll need a node module for this:
 npm add front-matter
 ```
 
-```tsx filename=app/post.ts lines=[1-3,11,13-28]
+```tsx filename=app/post.ts lines=[1-3,11,13-29]
 import path from "path";
 import fs from "fs/promises";
 import parseFrontMatter from "front-matter";

@@ -94,7 +94,7 @@ This may ask you whether you want to install `create-remix` to run the command. 
 
 </docs-info>
 
-When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
 R E M I X
@@ -183,10 +183,9 @@ Remix App Server started at http://localhost:3000
 
 Open up that URL and you should be presented with a minimal page pointing to some docs.
 
-💿 Now stop the server and delete all this stuff:
+💿 Now stop the server and delete this directory:
 
 - `app/routes`
-- `app/styles`
 
 We're going to trim this down the bare bones and introduce things incrementally.
 
@@ -1577,13 +1576,14 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
-import { json } from "remix";
+import { json, useLoaderData } from "remix";
 import type { LoaderFunction } from "remix";
 import type { User } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
+
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     users: await db.user.findMany(),
@@ -1978,7 +1978,7 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
@@ -2891,7 +2891,7 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[3,30-33,35-48,50-61]
+```ts filename=app/utils/session.server.ts lines=[2-5,30-33,35-48,50-61]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
@@ -3407,7 +3407,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[6,14,30,52-63]
+```tsx filename=app/routes/jokes.tsx lines=[6,14,18-20,26,30,52-63]
 import type { User } from "@prisma/client";
 import type { LinksFunction, LoaderFunction } from "remix";
 import { json, Link, Outlet, useLoaderData } from "remix";
@@ -3952,7 +3952,7 @@ Remember that the `app/root.tsx` module is responsible for rendering our `<html>
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[57-67]
+```tsx filename=app/root.tsx lines=[27-47,49-55,57-67]
 import type { LinksFunction } from "remix";
 import { Links, LiveReload, Outlet } from "remix";
 
@@ -4352,7 +4352,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[6,16-24,156-167]
+```tsx filename=app/routes/jokes/new.tsx lines=[6,16-24,164-175]
 import type { ActionFunction, LoaderFunction } from "remix";
 import {
   useActionData,
