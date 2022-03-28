@@ -363,7 +363,7 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     init.template ? init.template : "remix"
   );
   let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
-  let isCloudflareRuntime = init.template === 'cloudflare-pages' || init.template === 'cloudflare-workers';
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(init.template);
 
   await createApp({
     appTemplate,
