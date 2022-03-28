@@ -19,19 +19,34 @@ jobs:
           ref: dev
           token: ${{ secrets.NIGHTLY_PAT }}
 
+      - name: Check for commits
+        id: nightly
+        run: |
+          count=$(git rev-list $GITHUB_SHA..HEAD --count)
+          echo "commit count $count"
+          if [ "$count" -gt "0" ]; then
+            echo "::set-output name=RELEASE::true"
+          else
+            echo "::set-output name=release::false"
+          fi
+
       - name: Get Node Version
+        if: steps.nightly.ouputs.RELEASE == true
         run: echo "::set-output name=version::$(cat .nvmrc)"
         id: nvmrc
 
       - name: Setup node
+        if: steps.nightly.ouputs.RELEASE == true
         uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
 
       - run: echo "::set-output name=dir::$(yarn cache dir)"
+        if: steps.nightly.ouputs.RELEASE == true
         id: yarn-cache
 
       - name: Restore dependency cache
+        if: steps.nightly.ouputs.RELEASE == true
         uses: actions/cache@v2
         with:
           path: "${{ steps.yarn-cache.outputs.dir }}"
@@ -40,12 +55,15 @@ jobs:
             ${{ runner.os }}-yarn-cache-
 
       - name: Install dependencies
+        if: steps.nightly.ouputs.RELEASE == true
         run: yarn --frozen-lockfile
 
       - name: Build
+        if: steps.nightly.ouputs.RELEASE == true
         run: yarn build
 
       - name: Update Version
+        if: steps.nightly.ouputs.RELEASE == true
         id: version
         run: |
           SHA=$(git rev-parse HEAD)
@@ -59,14 +77,17 @@ jobs:
           git push origin --tags
 
       - name: Setup npm auth
+        if: steps.nightly.ouputs.RELEASE == true
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: Publish
+        if: steps.nightly.ouputs.RELEASE == true
         run: npm run publish
 
       - name: Create GitHub release
+        if: steps.nightly.ouputs.RELEASE == true
         uses: actions/create-release@v1
         with:
           draft: false
@@ -77,7 +98,7 @@ jobs:
           # need this token in order to have it trigger the comment workflow
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
 
-  build:
+  stable:
     if: github.repository == 'remix-run/remix' && github.event.action == 'published'
     runs-on: ubuntu-latest
 
