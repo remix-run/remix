@@ -19,19 +19,6 @@ import prettier from "prettier";
 
 import packageJson from "../package.json";
 
-const VALID_TEMPLATE_EXAMPLES = `
-  $ remix create my-app --template /path/to/remix-template
-  $ remix create my-app --template /path/to/remix-template.tar.gz
-  $ remix create my-app --template remix-run/grunge-stack
-  $ remix create my-app --template :username/:repo
-  $ remix create my-app --template https://github.com/:username/:repo
-  $ remix create my-app --template https://github.com/:username/:repo/tree/:branch
-  $ remix create my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
-  $ remix create my-app --template https://example.com/remix-template.tar.gz
-`;
-
-const HELP_TEXT = "Use `npx create-remix --help` for more info.";
-
 const remixDevPackageVersion = packageJson.version;
 
 interface CreateAppArgs {
@@ -41,6 +28,7 @@ interface CreateAppArgs {
   installDeps: boolean;
   useTypeScript: boolean;
   githubToken?: string;
+  templateType: TemplateType;
 }
 
 export async function createApp({
@@ -50,6 +38,7 @@ export async function createApp({
   installDeps,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
+  templateType,
 }: CreateAppArgs) {
   // Check the node version
   let versions = process.versions;
@@ -57,18 +46,6 @@ export async function createApp({
     throw new Error(
       `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
     );
-  }
-
-  // Create the app directory
-  let relativeProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relativeProjectDir === "";
-  if (!projectDirIsCurrentDir) {
-    if (fse.existsSync(projectDir)) {
-      console.error(
-        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
-      );
-      process.exit(1);
-    }
   }
 
   /**
@@ -81,19 +58,12 @@ export async function createApp({
    * - example in remix-run org
    * - template in remix-run org
    */
-  let templateType = detectTemplateType(appTemplate);
   let options = { useTypeScript, token: githubToken };
   switch (templateType) {
     case "local": {
       let filepath = appTemplate.startsWith("file://")
         ? fileURLToPath(appTemplate)
         : appTemplate;
-
-      // We shouldn't hit this since we've should have already validated at
-      // this point, but just in case...
-      if (!fse.existsSync(filepath)) {
-        throw new Error(`️🚨 Oops, "${filepath}" does not exist.`);
-      }
 
       if (fse.statSync(filepath).isDirectory()) {
         await fse.copy(filepath, projectDir);
@@ -103,16 +73,6 @@ export async function createApp({
         await extractLocalTarball(projectDir, filepath);
         break;
       }
-
-      console.error(
-        `🚨 Invalid file template: ${appTemplate}
-
-File templates must either be a directory containing a Git repository or a local tarball file (*.tar.gz).
-
-${HELP_TEXT}
-`
-      );
-      process.exit(1);
     }
     case "remoteTarball": {
       await downloadAndExtractTarball(projectDir, appTemplate, options);
@@ -136,15 +96,6 @@ ${HELP_TEXT}
       );
       break;
     }
-    default:
-      console.error(
-        `🚨 Unable to determine template type for "${appTemplate}"
-
-Valid template flags may look like one of the following:${VALID_TEMPLATE_EXAMPLES}
-${HELP_TEXT}
-`
-      );
-      process.exit(1);
   }
 
   // Update remix deps
@@ -153,12 +104,10 @@ ${HELP_TEXT}
   try {
     appPkg = require(pkgJsonPath);
   } catch (err) {
-    console.error(
-      `🚨 The provided template must be a Remix project with a \`package.json\` file, but that file does not exist in ${pkgJsonPath}.
-
-${HELP_TEXT}`
+    throw Error(
+      "🚨 The provided template must be a Remix project with a `package.json` " +
+        `file, but that file does not exist in ${pkgJsonPath}.`
     );
-    process.exit(1);
   }
 
   ["dependencies", "devDependencies"].forEach((pkgKey) => {
@@ -185,12 +134,10 @@ ${HELP_TEXT}`
       encoding: "utf8",
     });
     if (npmConfig?.startsWith("https://npm.remix.run")) {
-      console.error(
+      throw Error(
         "🚨 Oops! You still have the private Remix registry configured. Please run `npm config delete @remix-run:registry` or edit your .npmrc file to remove it."
       );
-      process.exit(1);
     }
-
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
   }
 }
@@ -209,14 +156,11 @@ async function extractLocalTarball(
       tar.extract(projectDir, { strip: 1 })
     );
   } catch (err) {
-    console.error(
-      `🚨 There was a problem extracting the file from the provided template.
-
-  Template filepath: \`${filePath}\`
-  Destination directory: \`${projectDir}\`
-`
+    throw Error(
+      `🚨 There was a problem extracting the file from the provided template.\n\n` +
+        `  Template filepath: \`${filePath}\`\n` +
+        `  Destination directory: \`${projectDir}\``
     );
-    process.exit(1);
   }
 }
 
@@ -233,72 +177,24 @@ async function downloadAndExtractTemplateOrExample(
   if (type === "example") {
     name = name.split("/")[1];
   }
-  let typeDir = type + "s";
-  let templateUrl = `https://github.com/remix-run/remix/tree/main/${typeDir}/${name}`;
 
-  let response: null | Awaited<ReturnType<typeof fetch>> = null;
+  let response = await fetch(
+    "https://codeload.github.com/remix-run/remix/tar.gz/main",
+    options.token
+      ? { headers: { Authorization: `token ${options.token}` } }
+      : {}
+  );
 
-  // We need to ping the URL directly to make sure it exists as we fetch from
-  // codeload. attempting to extract the tarball from `main`. We can make these
-  // requests in parallel and reject if HEAD fetch returns a 404
-  try {
-    [, response] = await Promise.all([
-      fetch(templateUrl, { method: "HEAD" }).then((response) => {
-        if (response?.status !== 200) {
-          let message: string;
-          switch (response.status) {
-            case 408:
-              message = `🚨 There was a problem fetching the template from GitHub, and the request timed out. Please ensure you are connected to the internet and try again later.`;
-              break;
-            case 404:
-              message = `🚨 The requested template was not found. Valid templates must match the name of a directory inside of the \`templates\` directory in the \`remix-run/remix\` repo on the \`main\` branch.
-
-See https://github.com/remix-run/remix/tree/main/templates for available templates.`;
-              break;
-            default:
-              message = `🚨 Something went wrong when attempting to download the template. The request responded with a ${response.status} status.
-
-${HELP_TEXT}`;
-              break;
-          }
-
-          // throw the message to reject and log the message in `catch`
-          throw message;
-        }
-        return response;
-      }),
-      fetch(
-        "https://codeload.github.com/remix-run/remix/tar.gz/main",
-        options.token
-          ? { headers: { Authorization: `token ${options.token}` } }
-          : {}
-      ),
-    ]);
-  } catch (err) {
-    if (typeof err === "string") {
-      console.error(err);
-      process.exit(1);
-    }
-    // unknown error
-    throw err;
-  }
-
-  if (!response || response.status !== 200) {
-    console.error(
-      `🚨 There was a problem fetching the file from GitHub. ${
-        response?.status
-          ? `The request responded with a ${response.status} status.`
-          : ""
-      }
-
-  Please ensure you are connected to the internet and try again later.`
+  if (response.status !== 200) {
+    throw Error(
+      "🚨 There was a problem fetching the file from GitHub. The request responded " +
+        `with a ${response.status} status. Please try again later.`
     );
-    process.exit(1);
   }
 
   let cwd = path.dirname(projectDir);
   let desiredDir = path.basename(projectDir);
-  let templateDir = path.join(desiredDir, typeDir, name);
+  let templateDir = path.join(desiredDir, type + "s", name);
 
   try {
     await pipeline(
@@ -328,14 +224,11 @@ ${HELP_TEXT}`;
       })
     );
   } catch (_) {
-    console.error(
-      `🚨 There was a problem extracting the file from the provided template.
-
-  Template: \`${name}\`
-  Destination directory: \`${cwd}\`
-`
+    throw Error(
+      "🚨 There was a problem extracting the file from the provided template.\n\n" +
+        `  Template: \`${name}\`\n` +
+        `  Destination directory: \`${cwd}\``
     );
-    process.exit(1);
   }
 }
 
@@ -380,28 +273,18 @@ async function downloadAndExtractTarball(
   }
 ): Promise<void> {
   let desiredDir = path.basename(projectDir);
-  let response: null | Awaited<ReturnType<typeof fetch>> = null;
+  let response = await fetch(
+    url,
+    options.token
+      ? { headers: { Authorization: `token ${options.token}` } }
+      : {}
+  );
 
-  try {
-    response = await fetch(
-      url,
-      options.token
-        ? { headers: { Authorization: `token ${options.token}` } }
-        : {}
+  if (response.status !== 200) {
+    throw Error(
+      "🚨 There was a problem fetching the file from GitHub. The request responded " +
+        `with a ${response.status} status. Please try again later.`
     );
-  } catch (_) {}
-
-  if (!response || response.status !== 200) {
-    console.error(
-      `🚨 There was a problem fetching the file from GitHub. ${
-        response?.status
-          ? `The request responded with a ${response.status} status.`
-          : ""
-      }
-
-Please ensure you are connected to the internet and try again later.`
-    );
-    process.exit(1);
   }
 
   try {
@@ -439,14 +322,11 @@ Please ensure you are connected to the internet and try again later.`
       })
     );
   } catch (_) {
-    console.error(
-      `🚨 There was a problem extracting the file from the provided template.
-
-  Template URL: \`${url}\`
-  Destination directory: \`${projectDir}\`
-`
+    throw Error(
+      "🚨 There was a problem extracting the file from the provided template.\n\n" +
+        `  Template URL: \`${url}\`\n` +
+        `  Destination directory: \`${projectDir}\``
     );
-    process.exit(1);
   }
 }
 
@@ -477,41 +357,6 @@ interface RepoInfoWithoutBranch {
 }
 
 type RepoInfo = RepoInfoWithBranch | RepoInfoWithoutBranch;
-
-function isUrl(value: string) {
-  try {
-    new URL(value);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-type GithubUrlString =
-  | `https://github.com/${string}/${string}`
-  | `https://www.github.com/${string}/${string}`;
-
-function isValidGithubUrl(value: string | URL): value is URL | GithubUrlString {
-  try {
-    let url = typeof value === "string" ? new URL(value) : value;
-    let pathSegments = url.pathname.slice(1).split("/");
-
-    return (
-      url.protocol === "https:" &&
-      url.hostname === "github.com" &&
-      // The pathname must have at least 2 segments. If it has more than 2, the
-      // third must be "tree" and it must have at least 4 segments.
-      // https://github.com/remix-run/remix
-      // https://github.com/remix-run/remix/tree/dev
-      pathSegments.length >= 2 &&
-      (pathSegments.length > 2
-        ? pathSegments[2] === "tree" && pathSegments.length >= 4
-        : true)
-    );
-  } catch (_) {
-    return false;
-  }
-}
 
 function isGithubRepoShorthand(value: string) {
   return /^[\w-]+\/[\w-]+$/.test(value);
@@ -571,7 +416,7 @@ function getRepoInfo(validatedGithubUrl: string): RepoInfo {
   };
 }
 
-type TemplateType =
+export type TemplateType =
   // in the remix repo
   | "template"
   // in the remix repo
@@ -582,68 +427,6 @@ type TemplateType =
   | "remoteTarball"
   // local directory
   | "local";
-
-function detectTemplateType(template: string): TemplateType {
-  // 1. Check if the user passed a local file. If they hand us an explicit file
-  //    URL, we'll validate it first. Otherwise we just ping the filesystem to
-  //    see if the string references a filepath and, if not, move on.
-  if (template.startsWith("file://")) {
-    try {
-      template = fileURLToPath(template);
-      if (!fse.existsSync(template)) {
-        throw Error();
-      }
-      return "local";
-    } catch (_) {
-      console.error(`️🚨 Oops, the file "${template}" does not exist.`);
-      process.exit(1);
-    }
-  }
-
-  try {
-    if (
-      fse.existsSync(
-        path.isAbsolute(template)
-          ? template
-          : path.resolve(process.cwd(), template)
-      )
-    ) {
-      return "local";
-    }
-  } catch (_) {
-    // ignore FS errors and move on
-  }
-
-  // 3. examples/<template> will use an example folder in the Remix repo
-  if (/^examples?\/[\w-]+$/.test(template)) {
-    return "example";
-  }
-
-  // 2. If the string contains no slashes, spaces, or special chars, we assume
-  //    it is one of our templates.
-  if (/^[\w-]+$/.test(template)) {
-    return "template";
-  }
-
-  // 3. Handle GitHub repos (URLs or :org/:repo shorthand)
-  if (isValidGithubUrl(template) || isGithubRepoShorthand(template)) {
-    return "repo";
-  }
-
-  // 4. Any other valid URL should be treated as a tarball.
-  if (isUrl(template)) {
-    return "remoteTarball";
-  }
-
-  console.error(
-    `🚨 Invalid template: \`${template}\`
-
-Valid template flags may look like:${VALID_TEMPLATE_EXAMPLES}
-${HELP_TEXT}
-`
-  );
-  process.exit(1);
-}
 
 function convertToJavaScript(
   filename: string,

@@ -40,6 +40,7 @@
     "meow": "^7.1.1",
     "minimatch": "^3.0.4",
     "node-fetch": "^2.6.7",
+    "ora": "^5.4.1",
     "prettier": "2.6.1",
     "pretty-ms": "^7.0.1",
     "remark-frontmatter": "^4.0.0",

@@ -3,6 +3,7 @@ import os from "os";
 import { execSync } from "child_process";
 import * as fse from "fs-extra";
 import exitHook from "exit-hook";
+import ora from "ora";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 import type { Server } from "http";
@@ -16,6 +17,7 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
+import type { TemplateType } from "./create";
 import { loadEnv } from "../env";
 import { log } from "./logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
@@ -27,6 +29,7 @@ export async function create({
   installDeps,
   useTypeScript,
   githubToken,
+  templateType,
 }: {
   appTemplate: string;
   projectDir: string;
@@ -34,7 +37,9 @@ export async function create({
   installDeps: boolean;
   useTypeScript: boolean;
   githubToken?: string;
+  templateType: TemplateType;
 }) {
+  let spinner = ora("Creating your app…").start();
   await createApp({
     appTemplate,
     projectDir,
@@ -42,16 +47,19 @@ export async function create({
     installDeps,
     useTypeScript,
     githubToken,
+    templateType,
   });
 
   let initScriptDir = path.join(projectDir, "remix.init");
   let hasInitScript = await fse.pathExists(initScriptDir);
   if (hasInitScript) {
     if (installDeps) {
-      console.log("💿 Running remix.init script");
+      spinner.text = "Running remix.init script…";
       await init(projectDir);
       await fse.remove(initScriptDir);
+      spinner.stop();
     } else {
+      spinner.stop();
       console.log(
         "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
       );
@@ -113,7 +121,7 @@ export async function setup(platformArg?: string) {
 }
 
 export async function routes(
-  remixRoot: string,
+  remixRoot?: string,
   formatArg?: string
 ): Promise<void> {
   let config = await readConfig(remixRoot);
