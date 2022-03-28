@@ -1,6 +1,6 @@
 import { cli } from "@remix-run/dev";
 
-cli.run().then(
+cli.run(["create", ...process.argv.slice(2)]).then(
   () => {
     process.exit(0);
   },

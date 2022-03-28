@@ -1,3 +1,5 @@
+/* eslint-disable import/no-extraneous-dependencies */
+
 // Re-export everything from this package that is available in `remix`.
 
 export type {
@@ -34,13 +36,9 @@ export type {
 } from "@remix-run/server-runtime";
 
 export {
-  createCookie,
   isCookie,
   createSession,
   isSession,
-  createSessionStorage,
-  createCookieSessionStorage,
-  createMemorySessionStorage,
   json,
   redirect,
 } from "@remix-run/server-runtime";
