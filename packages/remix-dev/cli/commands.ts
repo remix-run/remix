@@ -52,19 +52,23 @@ export async function create({
 
   let initScriptDir = path.join(projectDir, "remix.init");
   let hasInitScript = await fse.pathExists(initScriptDir);
+
+  spinner.stop();
+  spinner.clear();
+
   if (hasInitScript) {
     if (installDeps) {
-      spinner.text = "Running remix.init script…";
+      console.log("💿 Running remix.init script");
       await init(projectDir);
       await fse.remove(initScriptDir);
-      spinner.stop();
     } else {
-      spinner.stop();
       console.log();
       console.log(
-        "💿 You've opted out of installing dependencies so we won't run the " +
-          "remix.init/index.js script for you just yet. Once you've installed " +
-          "dependencies, you can run it manually with `npx remix init`"
+        colors.warning(
+          "💿 You've opted out of installing dependencies so we won't run the\n" +
+            "   remix.init/index.js script for you just yet. Once you've installed\n" +
+            "   dependencies, you can run it manually with `npx remix init`"
+        )
       );
       console.log();
     }
@@ -72,9 +76,6 @@ export async function create({
 
   let relProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relProjectDir === "";
-
-  spinner.stop();
-  spinner.clear();
 
   if (projectDirIsCurrentDir) {
     console.log(
@@ -101,7 +102,9 @@ export async function init(projectDir: string) {
     try {
       await initFn({ rootDirectory: projectDir });
     } catch (error) {
-      console.error(`🚨 Oops, remix.init failed`);
+      if (error instanceof Error) {
+        error.message = colors.error(`🚨 Oops, remix.init failed`);
+      }
       throw error;
     }
   }
