@@ -410,10 +410,9 @@ function createServerBuild(
     };
   }
 
-  let isCloudflareWorkersOrPages = !!config.serverBuildTarget &&
-    ["cloudflare-workers", "cloudflare-pages"].includes(
-      config.serverBuildTarget
-    );
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    config.serverBuildTarget ?? ""
+  );
   let plugins: esbuild.Plugin[] = [
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
@@ -434,11 +433,12 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
-      conditions: isCloudflareWorkersOrPages ? ['worker'] : undefined,
+      conditions: isCloudflareRuntime ? ["worker"] : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify: options.mode === BuildMode.Production && isCloudflareWorkersOrPages,
+      minify:
+        options.mode === BuildMode.Production && isCloudflareRuntime,
       mainFields:
         config.serverModuleFormat === "esm"
           ? ["module", "main"]

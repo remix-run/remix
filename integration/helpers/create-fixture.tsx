@@ -16,6 +16,7 @@ import type {
 } from "../../packages/remix-server-runtime";
 import { createRequestHandler } from "../../packages/remix-server-runtime";
 import { createApp } from "../../packages/remix-dev";
+import { SetupPlatform } from "../../packages/remix-dev/cli/setup";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import { TMP_DIR } from "./global-setup";
 
@@ -362,6 +363,7 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     init.template ? init.template : "remix"
   );
   let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
+  let isCloudflareRuntime = init.template === 'cloudflare-pages' || init.template === 'cloudflare-workers';
 
   await createApp({
     appTemplate,
@@ -374,14 +376,14 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     writeTestFiles(init, projectDir),
     installRemix(projectDir),
   ]);
-  build(projectDir);
+  build(projectDir, isCloudflareRuntime ? SetupPlatform.Cloudflare : SetupPlatform.Node);
 
   return projectDir;
 }
 
-function build(projectDir: string) {
+function build(projectDir: string, platform: SetupPlatform) {
   // TODO: log errors (like syntax errors in the fixture file strings)
-  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
+  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup", platform], {
     cwd: projectDir,
   });
   spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
