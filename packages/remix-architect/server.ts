@@ -75,9 +75,9 @@ export function createRemixRequest(
     headers: createRemixHeaders(event.headers, event.cookies),
     body:
       event.body && event.isBase64Encoded
-        ? !isFormData
-          ? Buffer.from(event.body, "base64").toString()
-          : Buffer.from(event.body, "base64")
+        ? isFormData
+          ? Buffer.from(event.body, "base64")
+          : Buffer.from(event.body, "base64").toString()
         : event.body,
     abortController,
     signal: abortController?.signal,
