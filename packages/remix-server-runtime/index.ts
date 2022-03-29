@@ -37,6 +37,7 @@ export type {
   DataFunctionArgs,
   EntryContext,
   ErrorBoundaryComponent,
+  ErrorBoundaryProps,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersFunction,

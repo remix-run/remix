@@ -36,9 +36,14 @@ export interface ActionFunction {
 export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
+ * Props for the ErrorBoundary component
+ */
+export type ErrorBoundaryProps = { error: Error }
+
+/**
  * A React component that is rendered when there is an error on a route.
  */
-export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+export type ErrorBoundaryComponent = ComponentType<ErrorBoundaryProps>;
 
 /**
  * The arguments passed to HeadersFunction.
@@ -92,7 +97,7 @@ export interface LoaderFunction {
  * precedence over) tags from parent routes.
  */
 export interface MetaFunction {
-  (args: DataFunctionArgs): HtmlMetaDescriptor;
+  (args: MetaFunctionArgs): HtmlMetaDescriptor;
 }
 
 /**

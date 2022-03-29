@@ -19,6 +19,7 @@ export type {
   HtmlLinkDescriptor,
   PageLinkDescriptor,
   ErrorBoundaryComponent,
+  ErrorBoundaryProps,
   DataFunctionArgs,
   ActionFunction,
   HeadersFunction,
