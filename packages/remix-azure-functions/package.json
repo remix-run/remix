@@ -1,6 +1,6 @@
 {
-  "name": "@remix-run/azure",
-  "description": "Azure server request handler for Remix",
+  "name": "@remix-run/azure-functions",
+  "description": "Azure Functions server request handler for Remix",
   "version": "0.17.5",
   "repository": "https://github.com/remix-run/packages",
   "dependencies": {

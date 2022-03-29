@@ -4,4 +4,4 @@ export {
   RequestHandler,
   createRequestHandler,
   GetLoadContextFunction,
-} from "@remix-run/azure";
+} from "@remix-run/azure-functions";
