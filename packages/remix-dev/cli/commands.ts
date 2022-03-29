@@ -65,8 +65,8 @@ export async function create({
       console.log();
       console.log(
         colors.warning(
-          "💿 You've opted out of installing dependencies so we won't run the" +
-            "remix.init/index.js script for you just yet. Once you've installed" +
+          "💿 You've opted out of installing dependencies so we won't run the " +
+            "remix.init/index.js script for you just yet. Once you've installed " +
             "dependencies, you can run it manually with `npx remix init`"
         )
       );
