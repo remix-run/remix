@@ -69,13 +69,7 @@ export function createRemixRequest(
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let url = new URL(event.rawPath + search, `https://${host}`);
-  let isFormData = false;
-  if (
-    event.headers["content-type"] &&
-    event.headers["content-type"].includes("multipart/form-data")
-  ) {
-    isFormData = true;
-  }
+  let isFormData = event.headers["content-type"]?.includes("multipart/form-data");
   return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
