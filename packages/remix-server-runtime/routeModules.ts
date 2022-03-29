@@ -41,15 +41,20 @@ export type CatchBoundaryComponent = ComponentType<{}>;
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
 
 /**
+ * The arguments passed to HeadersFunction.
+ */
+ export interface HeadersFunctionArgs {
+  loaderHeaders: Headers;
+  parentHeaders: Headers;
+  actionHeaders: Headers;
+}
+
+/**
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
 export interface HeadersFunction {
-  (args: {
-    loaderHeaders: Headers;
-    parentHeaders: Headers;
-    actionHeaders: Headers;
-  }): Headers | HeadersInit;
+  (args: HeadersFunctionArgs): Headers | HeadersInit;
 }
 
 /**
@@ -72,17 +77,22 @@ export interface LoaderFunction {
 }
 
 /**
+ * The arguments passed to MetaFunction.
+ */
+ export interface MetaFunctionArgs {
+    data: AppData;
+    parentsData: RouteData;
+    params: Params;
+    location: Location;
+}
+
+/**
  * A function that returns an object of name + content pairs to use for
  * `<meta>` tags for a route. These tags will be merged with (and take
  * precedence over) tags from parent routes.
  */
 export interface MetaFunction {
-  (args: {
-    data: AppData;
-    parentsData: RouteData;
-    params: Params;
-    location: Location;
-  }): HtmlMetaDescriptor;
+  (args: DataFunctionArgs): HtmlMetaDescriptor;
 }
 
 /**

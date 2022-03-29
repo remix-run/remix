@@ -30,11 +30,13 @@ export type {
   DataFunctionArgs,
   ErrorBoundaryComponent,
   HeadersFunction,
+  HeadersFunctionArgs,
   HtmlMetaDescriptor,
   LinksFunction,
   LoaderFunction,
   MetaDescriptor,
   MetaFunction,
+  MetaFunctionArgs,
   RouteComponent,
   RouteHandle,
 } from "./routeModules";
