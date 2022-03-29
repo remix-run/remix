@@ -1,0 +1,13 @@
+version: "3.3"
+
+services:
+  remix:
+    #command: sh -c "npm rebuild esbuild" if ther any problem with esbuild try this
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production #production or development
+    ports:
+      - 3000:3000
+    build:
+      context: ./
+      dockerfile: Dockerfile
