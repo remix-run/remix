@@ -460,15 +460,15 @@ Because some characters have special meaning, you must use our escaping syntax i
 
 Remix uses `app/entry.client.tsx` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
 
-Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module](#entryservertsx).
+Typically this module uses `ReactDOM.hydrateRoot` to re-hydrate the markup that was already generated on the server in your [server entry module](#entryservertsx).
 
 Here's a basic example:
 
 ```tsx
-import { hydrate } from "react-dom";
 import { RemixBrowser } from "@remix-run/react";
+import { hydrateRoot } from "react-dom/client";
 
-hydrate(<RemixBrowser />, document);
+hydrateRoot(document, <RemixBrowser />);
 ```
 
 This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.
@@ -484,12 +484,12 @@ You can also export an optional `handleDataRequest` function that will allow you
 Here's a basic example:
 
 ```tsx
-import { renderToString } from "react-dom/server";
 import type {
   EntryContext,
   HandleDataRequestFunction,
 } from "@remix-run/{runtime}";
 import { RemixServer } from "@remix-run/react";
+import { renderToString } from "react-dom/server";
 
 export default function handleRequest(
   request: Request,

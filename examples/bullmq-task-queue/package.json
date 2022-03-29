@@ -15,8 +15,8 @@
     "@remix-run/serve": "1.4.3",
     "bullmq": "^1.76.0",
     "ioredis": "^4.28.5",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "devDependencies": {
     "@remix-run/dev": "1.4.3",
