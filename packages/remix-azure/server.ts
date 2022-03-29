@@ -2,20 +2,18 @@ import type {
   AzureFunction,
   Context,
   HttpRequest,
-  HttpRequestHeaders
+  HttpRequestHeaders,
 } from "@azure/functions";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  ServerPlatform
-} from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
   formatServerError,
   Headers as NodeHeaders,
   Request as NodeRequest,
+} from "@remix-run/node";
+import type {
   Response as NodeResponse,
-  RequestInit as NodeRequestInit
+  RequestInit as NodeRequestInit,
 } from "@remix-run/node";
 
 /**
@@ -35,7 +33,7 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
@@ -48,15 +46,15 @@ export function createRequestHandler({
     let request = createRemixRequest(req);
     let loadContext = getLoadContext ? getLoadContext(req) : undefined;
 
-    let response = ((await handleRequest(
-      (request as unknown) as Request,
+    let response = (await handleRequest(
+      request as unknown as Request,
       loadContext
-    )) as unknown) as NodeResponse;
+    )) as unknown as NodeResponse;
 
     return {
       status: response.status,
       headers: response.headers.raw(),
-      body: await response.text()
+      body: await response.text(),
     };
   };
 }
@@ -79,7 +77,7 @@ export function createRemixRequest(req: HttpRequest): NodeRequest {
 
   let init: NodeRequestInit = {
     method: req.method || "GET",
-    headers: createRemixHeaders(req.headers)
+    headers: createRemixHeaders(req.headers),
   };
 
   if (req.body && req.method !== "GET" && req.method !== "HEAD") {

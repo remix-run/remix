@@ -5,21 +5,22 @@ import { Response } from "@remix-run/node";
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the azure adapter
 jest.mock("@remix-run/server-runtime");
-let mockedCreateRequestHandler = createRemixRequestHandler as jest.MockedFunction<
-  typeof createRemixRequestHandler
->;
+let mockedCreateRequestHandler =
+  createRemixRequestHandler as jest.MockedFunction<
+    typeof createRemixRequestHandler
+  >;
 
 describe("azure createRequestHandler", () => {
   let context: Context;
 
   beforeEach(() => {
-    context = ({ log: jest.fn() } as unknown) as Context;
+    context = { log: jest.fn() } as unknown as Context;
   });
 
   describe("basic requests", () => {
@@ -32,7 +33,7 @@ describe("azure createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
@@ -41,11 +42,11 @@ describe("azure createRequestHandler", () => {
         url: "/foo/bar",
         rawBody: "",
         headers: {
-          "x-ms-original-url": "http://localhost:3000/foo/bar"
+          "x-ms-original-url": "http://localhost:3000/foo/bar",
         },
         params: {},
         query: {},
-        body: ""
+        body: "",
       };
 
       const res = await createRequestHandler({ build: undefined })(
@@ -139,11 +140,11 @@ describe("azure createRemixRequest", () => {
       url: "/foo/bar",
       rawBody: "",
       headers: {
-        "x-ms-original-url": "http://localhost:3000/foo/bar"
+        "x-ms-original-url": "http://localhost:3000/foo/bar",
       },
       params: {},
       query: {},
-      body: ""
+      body: "",
     };
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`
