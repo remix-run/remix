@@ -305,7 +305,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           templateType! || (answers.appType === "stack" ? "repo" : "template"),
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install ?? answers.install,
+        installDeps: flags.install || answers.install,
+        useTypeScript: flags.typescript || answers.useTypeScript,
         useTypeScript: flags.typescript ?? answers.useTypeScript,
         githubToken: process.env.GITHUB_TOKEN,
       });
