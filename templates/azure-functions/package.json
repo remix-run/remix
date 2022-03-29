@@ -1,0 +1,22 @@
+{
+  "scripts": {
+    "build": "remix build",
+    "dev": "swa start ./public --run \"remix dev\" --api ."
+  },
+  "dependencies": {
+    "@remix-run/azure-functions": "*",
+    "@remix-run/node": "*",
+    "@remix-run/react": "*",
+    "remix": "*"
+  },
+  "devDependencies": {
+    "@azure/functions": "^3.0.0",
+    "@azure/static-web-apps-cli": "^0.8.3",
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "eslint": "^8.11.0",
+    "npm-run-all": "^4.1.5"
+  }
+}
