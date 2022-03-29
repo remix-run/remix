@@ -65,9 +65,9 @@ export async function create({
       console.log();
       console.log(
         colors.warning(
-          "💿 You've opted out of installing dependencies so we won't run the\n" +
-            "   remix.init/index.js script for you just yet. Once you've installed\n" +
-            "   dependencies, you can run it manually with `npx remix init`"
+          "💿 You've opted out of installing dependencies so we won't run the" +
+            "remix.init/index.js script for you just yet. Once you've installed" +
+            "dependencies, you can run it manually with `npx remix init`"
         )
       );
       console.log();
@@ -85,8 +85,7 @@ export async function create({
     console.log(
       "💿 That's it! `cd` into " +
         colors.logoGreen(path.resolve(process.cwd(), projectDir)) +
-        " and check the\n" +
-        "   README for development and deploy instructions!"
+        " and check the README for development and deploy instructions!"
     );
   }
 }
@@ -103,7 +102,7 @@ export async function init(projectDir: string) {
       await initFn({ rootDirectory: projectDir });
     } catch (error) {
       if (error instanceof Error) {
-        error.message = colors.error(`🚨 Oops, remix.init failed`);
+        error.message = colors.error("🚨 Oops, remix.init failed");
       }
       throw error;
     }
@@ -117,7 +116,8 @@ export async function setup(platformArg?: string) {
     platformArg === "cloudflare-pages"
   ) {
     console.warn(
-      `Using '${platformArg}' as a platform value is deprecated. Use 'cloudflare' instead.`
+      `Using '${platformArg}' as a platform value is deprecated. Use ` +
+        "'cloudflare' instead."
     );
     console.log("HINT: check the `postinstall` script in `package.json`");
     platform = SetupPlatform.Cloudflare;
@@ -155,7 +155,10 @@ export async function build(
       "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
     );
     console.warn(
-      "You have enabled source maps in production. This will make your server side code visible to the public and is highly discouraged! If you insist, please ensure you are using environment variables for secrets and not hard-coding them into your source!"
+      "You have enabled source maps in production. This will make your " +
+        "server-side code visible to the public and is highly discouraged! If " +
+        "you insist, please ensure you are using environment variables for " +
+        "secrets and not hard-coding them into your source!"
     );
     console.warn(
       "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
@@ -255,7 +258,8 @@ export async function dev(remixRoot: string, modeArg?: string) {
     express = require("express");
   } catch (err) {
     throw new Error(
-      "Could not locate @remix-run/serve. Please verify you have it installed to use the dev command."
+      "Could not locate @remix-run/serve. Please verify you have it installed " +
+        "to use the dev command."
     );
   }
 

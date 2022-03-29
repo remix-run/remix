@@ -43,7 +43,8 @@ export async function createApp({
   let versions = process.versions;
   if (versions?.node && semver.major(versions.node) < 14) {
     throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version ` +
+        `greater than 14.`
     );
   }
 
@@ -136,7 +137,9 @@ export async function createApp({
     });
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       throw Error(
-        "🚨 Oops! You still have the private Remix registry configured. Please run `npm config delete @remix-run:registry` or edit your .npmrc file to remove it."
+        "🚨 Oops! You still have the private Remix registry configured. Please " +
+          "run `npm config delete @remix-run:registry` or edit your .npmrc file " +
+          "to remove it."
       );
     }
     execSync("npm install", { stdio: "inherit", cwd: projectDir });
@@ -158,7 +161,7 @@ async function extractLocalTarball(
     );
   } catch (err) {
     throw Error(
-      `🚨 There was a problem extracting the file from the provided template.\n\n` +
+      "🚨 There was a problem extracting the file from the provided template.\n\n" +
         `  Template filepath: \`${filePath}\`\n` +
         `  Destination directory: \`${projectDir}\``
     );
@@ -188,8 +191,8 @@ async function downloadAndExtractTemplateOrExample(
 
   if (response.status !== 200) {
     throw Error(
-      "🚨 There was a problem fetching the file from GitHub. The request responded " +
-        `with a ${response.status} status. Please try again later.`
+      "🚨 There was a problem fetching the file from GitHub. The request " +
+        `responded with a ${response.status} status. Please try again later.`
     );
   }
 
@@ -283,8 +286,8 @@ async function downloadAndExtractTarball(
 
   if (response.status !== 200) {
     throw Error(
-      "🚨 There was a problem fetching the file from GitHub. The request responded " +
-        `with a ${response.status} status. Please try again later.`
+      "🚨 There was a problem fetching the file from GitHub. The request " +
+        `responded with a ${response.status} status. Please try again later.`
     );
   }
 
@@ -411,7 +414,8 @@ function getRepoInfo(validatedGithubUrl: string): RepoInfo {
     url: validatedGithubUrl,
     owner,
     name,
-    // If we've validated the GitHub URL and there is a tree, there will also be a branch
+    // If we've validated the GitHub URL and there is a tree, there will also be
+    // a branch
     branch: branch!,
     filePath: filePath === "" || filePath === "/" ? null : filePath,
   };
@@ -427,7 +431,8 @@ export async function validateNewProjectPath(input: string): Promise<void> {
     let contents = await fse.readdir(projectDir);
     if (contents.length > 0) {
       throw Error(
-        `🚨 The current directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.`
+        "🚨 The current directory must be empty to create a new project. Please " +
+          "clear the contents of the directory or choose a different path."
       );
     }
     return;
@@ -438,7 +443,8 @@ export async function validateNewProjectPath(input: string): Promise<void> {
     (await fse.stat(projectDir)).isDirectory()
   ) {
     throw Error(
-      `🚨 The directory provided already exists. Please try again with a different directory.`
+      "🚨 The directory provided already exists. Please try again with a " +
+        "different directory."
     );
   }
 }
@@ -491,17 +497,21 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
             return "remoteTarball";
           case 404:
             throw Error(
-              `🚨 The template file could not be verified. Please double check the URL and try again.`
+              "🚨 The template file could not be verified. Please double check " +
+                "the URL and try again."
             );
           default:
             throw Error(
-              `🚨 The template file could not be verified. The server returned a response with a ${response.status} status. Please double check the URL and try again.`
+              "🚨 The template file could not be verified. The server returned " +
+                `a response with a ${response.status} status. Please double ` +
+                "check the URL and try again."
             );
         }
       } catch (err) {
         spinner.stop();
         throw Error(
-          `🚨 There was a problem verifying the template file. Please ensure you are connected to the internet and try again later.`
+          "🚨 There was a problem verifying the template file. Please ensure " +
+            "you are connected to the internet and try again later."
         );
       }
     }
@@ -516,25 +526,31 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
             return "repo";
           case 403:
             throw Error(
-              `🚨 The template could not be verified because you do not have access to the repository. Please double check the access rights of this repo and try again.`
+              "🚨 The template could not be verified because you do not have " +
+                "access to the repository. Please double check the access " +
+                "rights of this repo and try again."
             );
           case 404:
             throw Error(
-              `🚨 The template could not be verified. Please double check that the template is a valid GitHub repository${
-                filePath && filePath !== "/"
+              "🚨 The template could not be verified. Please double check that " +
+                "the template is a valid GitHub repository" +
+                (filePath && filePath !== "/"
                   ? " and that the filepath points to a directory in the repo"
-                  : ""
-              } and try again.`
+                  : "") +
+                " and try again."
             );
           default:
             throw Error(
-              `🚨 The template could not be verified. The server returned a response with a ${response.status} status. Please double check that the template is a valid GitHub repository  and try again.`
+              "🚨 The template could not be verified. The server returned a " +
+                `response with a ${response.status} status. Please double check ` +
+                "that the template is a valid GitHub repository  and try again."
             );
         }
       } catch (_) {
         spinner.stop();
         throw Error(
-          `🚨 There was a problem verifying the template. Please ensure you are connected to the internet and try again later.`
+          "🚨 There was a problem verifying the template. Please ensure you " +
+            "are connected to the internet and try again later."
         );
       }
     }
@@ -555,17 +571,25 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
             return templateType;
           case 404:
             throw Error(
-              `🚨 The template could not be verified. Please double check that the template is a valid project directory in https://github.com/remix-run/remix/tree/main/${typeDir} and try again.`
+              "🚨 The template could not be verified. Please double check that " +
+                "the template is a valid project directory in " +
+                `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
+                "try again."
             );
           default:
             throw Error(
-              `🚨 The template could not be verified. The server returned a response with a ${response.status} status. Please double check that the template is a valid project directory in https://github.com/remix-run/remix/tree/main/${typeDir} and try again.`
+              "🚨 The template could not be verified. The server returned a " +
+                `response with a ${response.status} status. Please double ` +
+                "check that the template is a valid project directory in " +
+                `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
+                "try again."
             );
         }
       } catch (_) {
         spinner.stop();
         throw Error(
-          `🚨 There was a problem verifying the template. Please ensure you are connected to the internet and try again later.`
+          "🚨 There was a problem verifying the template. Please ensure you are " +
+            "connected to the internet and try again later."
         );
       }
     }

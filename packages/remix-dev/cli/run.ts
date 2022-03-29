@@ -144,9 +144,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       let templateType: TemplateType;
 
       // Flags will validate early and stop the process if invalid flags are
-      // provided. Input provided in the interactive CLI is validated by inquirer
-      // step-by-step. This not only allows us to catch issues as early as possible,
-      // but inquirer will allow users to retry input rather than stop the process.
+      // provided. Input provided in the interactive CLI is validated by
+      // inquirer step-by-step. This not only allows us to catch issues as early
+      // as possible, but inquirer will allow users to retry input rather than
+      // stop the process.
       if (flags.template) {
         templateType = await validateTemplate(flags.template);
       }
@@ -247,7 +248,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             when(answers) {
               return answers.appType === "template";
             },
-            message: `Where do you want to deploy? Choose Remix if you're unsure; it's easy to change deployment targets.`,
+            message:
+              "Where do you want to deploy? Choose Remix if you're unsure; " +
+              "it's easy to change deployment targets.",
             loop: false,
             choices: templateChoices,
           },
@@ -279,9 +282,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           if (error.isTtyError) {
             console.warn(
               colors.warning(
-                "🚨 Your terminal doesn't support interactivity; using default configuration.\n\n" +
-                  "If you'd like to use different settings, try passing them as arguments. Run " +
-                  "`npx create-remix@latest --help` to see available options."
+                "🚨 Your terminal doesn't support interactivity; using default " +
+                  "configuration.\n\n" +
+                  "If you'd like to use different settings, try passing them " +
+                  "as arguments. Run `npx create-remix@latest --help` to see " +
+                  "available options."
               )
             );
             return {

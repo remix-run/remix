@@ -181,8 +181,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -203,12 +202,9 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 You've opted out of installing dependencies so we won't run the
-   remix.init/index.js script for you just yet. Once you've installed
-   dependencies, you can run it manually with \`npx remix init\`
+        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
 
-💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -229,8 +225,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -251,8 +246,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -273,8 +267,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -295,8 +288,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -319,8 +311,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -342,12 +333,9 @@ describe("remix cli", () => {
         "--no-typescript",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 You've opted out of installing dependencies so we won't run the
-   remix.init/index.js script for you just yet. Once you've installed
-   dependencies, you can run it manually with \`npx remix init\`
+        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
 
-💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -383,8 +371,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -405,8 +392,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toBe(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -427,8 +413,7 @@ describe("remix cli", () => {
         "--install",
       ]);
       expect(stdout.trim()).toContain(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
       expect(stdout.trim()).toContain(`💿 Running remix.init script`);
       expect(
@@ -453,8 +438,7 @@ describe("remix cli", () => {
         "--no-install",
       ]);
       expect(stdout.trim()).toContain(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
 
       let initResult = await execFile("node", [remix, "init"], {
@@ -510,8 +494,7 @@ describe("remix cli", () => {
       ]);
 
       expect(stdout.trim()).toContain(
-        `💿 That's it! \`cd\` into ${projectDir} and check the
-   README for development and deploy instructions!`
+        `💿 That's it! \`cd\` into ${projectDir} and check the README for development and deploy instructions!`
       );
 
       await expect(
