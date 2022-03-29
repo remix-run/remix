@@ -20,7 +20,7 @@ or
 
 ```sh
 # Execute Docker image without detaching the terminal
-docker-compose up -d
+docker-compose up
 ```
 ## Related Links
 
