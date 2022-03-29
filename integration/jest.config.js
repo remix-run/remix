@@ -4,6 +4,7 @@ module.exports = {
   displayName: "integration",
   preset: "jest-puppeteer",
   globalSetup: "<rootDir>/helpers/global-setup.ts",
+  globalTeardown: "<rootDir>/helpers/global-teardown.ts",
   setupFilesAfterEnv: ["<rootDir>/helpers/setupAfterEnv.ts"],
   setupFiles: [],
 };

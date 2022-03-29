@@ -1,5 +1,4 @@
 import type { ChildProcess } from "child_process";
-// @ts-expect-error
 import teardownPuppeteer from "jest-environment-puppeteer/teardown";
 
 function stopServer(serverProc: ChildProcess): Promise<void> {

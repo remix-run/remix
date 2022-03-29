@@ -6,7 +6,6 @@ module.exports = {
     "<rootDir>/templates",
   ],
   projects: [
-    "integration",
     "packages/remix-dev",
     "packages/remix-architect",
     "packages/remix-express",
@@ -15,8 +14,6 @@ module.exports = {
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-server-runtime",
-    // Fixture Apps
-    "fixtures/gists-app",
   ],
   watchPlugins: [
     require.resolve("jest-watch-select-projects"),
