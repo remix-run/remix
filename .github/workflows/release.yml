@@ -99,7 +99,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
 
   stable:
-    if: github.repository == 'remix-run/remix' && github.event.action == 'published'
+    if: github.repository == 'remix-run/remix' && github.event.action == 'published' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
