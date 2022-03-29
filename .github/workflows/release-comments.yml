@@ -16,11 +16,11 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn --frozen-lockfile
 
       - name: Comment on issues
         run: node ./scripts/release/comment.mjs
