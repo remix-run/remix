@@ -348,7 +348,10 @@ async function createBrowserBuild(
     NodeModulesPolyfillPlugin(),
   ];
 
-  if (config.serverBuildTarget === "deno") {
+  if (
+    config.serverBuildTarget === "deno" ||
+    config.serverBuildTarget === "netlify-edge"
+  ) {
     // @ts-expect-error
     let { cache } = await import("esbuild-plugin-cache");
     plugins.unshift(
@@ -424,6 +427,16 @@ function createServerBuild(
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
+  }
+
+  if (config.serverBuildTarget === "netlify-edge") {
+    let edgeManifest = {
+      functions: [{ function: "server", path: "/*" }],
+      version: 1,
+    };
+    let edgeDir = path.dirname(config.serverBuildPath);
+    fse.ensureDirSync(edgeDir);
+    fse.writeJSONSync(path.join(edgeDir, "manifest.json"), edgeManifest);
   }
 
   return esbuild

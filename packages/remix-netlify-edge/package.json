@@ -1,0 +1,17 @@
+{
+  "name": "@remix-run/netlify-edge",
+  "description": "Netlify Edge platform abstractions for Remix",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-netlify-edge"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/server-runtime": "1.3.4"
+  }
+}

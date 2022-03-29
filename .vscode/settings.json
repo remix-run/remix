@@ -1,3 +1,12 @@
 {
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "deno.enablePaths": [
+    "./examples/netlify-edge/edge-server.ts",
+    "./templates/deno/",
+    "./templates/netlify/edge-server.ts",
+    "./packages/remix-netlify-edge/server.ts",
+    "./packages/remix-netlify-edge/globals.ts"
+  ],
+  "deno.unstable": true,
+  "deno.importMap": "deno-import-map.json"
 }
