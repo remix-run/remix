@@ -2905,7 +2905,7 @@ import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect,
-} from "remix";
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -3031,7 +3031,7 @@ import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect,
-} from "remix";
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -3297,7 +3297,7 @@ import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect,
-} from "remix";
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -3568,7 +3568,7 @@ import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect,
-} from "remix";
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
