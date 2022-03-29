@@ -1693,8 +1693,10 @@ function makeLoaderData(
   matches: ClientMatch[]
 ) {
   let newData: RouteData = {};
-  for (let { match, value } of results) {
-    newData[match.route.id] = value;
+  for (let result of results) {
+    if (!isCatchResult(result) && !isErrorResult(result)) {
+      newData[result.match.route.id] = result.value;
+    }
   }
 
   let loaderData: RouteData = {};
