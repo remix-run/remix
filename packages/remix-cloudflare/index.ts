@@ -1,6 +1,10 @@
 import "./globals";
 
-export { createCloudflareKVSessionStorage } from "./sessions/cloudflareKVSessionStorage";
+export {
+  createWorkersKVSessionStorage,
+  // TODO: Deprecate createCloudflareKVSessionStorage
+  createWorkersKVSessionStorage as createCloudflareKVSessionStorage,
+} from "./sessions/workersKVStorage";
 
 export {
   createCookie,

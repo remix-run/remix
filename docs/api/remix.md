@@ -354,7 +354,7 @@ title: Remix Packages
 [moved-57]: ../utils/sessions#createcookiesessionstorage
 [moved-58]: ../utils/sessions#creatememorysessionstorage
 [moved-59]: ../utils/sessions#createfilesessionstorage-node
-[moved-60]: ../utils/sessions#createcloudflarekvsessionstorage-cloudflare-workers
+[moved-60]: ../utils/sessions#createworkerskvsessionstorage-cloudflare-workers
 [moved-61]: ../utils/sessions#createarctablesessionstorage-architect-amazon-dynamodb
 [moved-62]: ../utils/sessions#session-api
 [moved-63]: ../utils/sessions#sessionhaskey
