@@ -5,9 +5,8 @@ import type {
   HttpRequestHeaders,
 } from "@azure/functions";
 import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
-  formatServerError,
+  createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
 } from "@remix-run/node";
@@ -37,8 +36,7 @@ export function createRequestHandler({
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
-  let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (_context: Context, req: HttpRequest) => {
     let request = createRemixRequest(req);
