@@ -4,13 +4,13 @@ import type {
   HttpRequest,
   HttpRequestHeaders,
 } from "@azure/functions";
-import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
 } from "@remix-run/node";
 import type {
+  AppLoadContext, ServerBuild,
   Response as NodeResponse,
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
