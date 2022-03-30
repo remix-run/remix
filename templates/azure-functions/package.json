@@ -2,7 +2,7 @@
   "scripts": {
     "build": "remix build",
     "dev": "swa start ./public --run \"remix dev\" --api .",
-    "postinstall": "func init"
+    "postinstall": "func init --worker-runtime node --language typescript"
   },
   "dependencies": {
     "@remix-run/azure-functions": "*",
