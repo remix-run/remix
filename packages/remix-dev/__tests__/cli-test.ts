@@ -5,8 +5,6 @@ import path from "path";
 import util from "util";
 import { pathToFileURL } from "url";
 import semver from "semver";
-import { rest } from "msw";
-import { setupServer } from "msw/node";
 
 let execFile =
   process.platform === "win32"
@@ -24,19 +22,26 @@ function execRemix({
   args: Array<string>;
   options?: Parameters<typeof execFile>[2];
 }) {
-  return execFile("node", ["--require", "esbuild-register", remix, ...args], {
-    ...options,
-    env: {
-      ...process.env,
-      NO_COLOR: "1",
-      ...options.env,
-    },
-  });
+  return execFile(
+    "node",
+    [
+      "--require",
+      "esbuild-register",
+      "--require",
+      path.join(__dirname, "./msw.ts"),
+      remix,
+      ...args,
+    ],
+    {
+      ...options,
+      env: {
+        ...process.env,
+        NO_COLOR: "1",
+        ...options.env,
+      },
+    }
+  );
 }
-
-let server = setupServer();
-beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
-afterAll(() => server.close());
 
 describe("remix cli", () => {
   describe("the --help flag", () => {
