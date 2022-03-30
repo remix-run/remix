@@ -3,6 +3,7 @@ import os from "os";
 import { execSync } from "child_process";
 import * as fse from "fs-extra";
 import exitHook from "exit-hook";
+import ora from "ora";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 import type { Server } from "http";
@@ -11,11 +12,13 @@ import type { createApp as createAppType } from "@remix-run/serve";
 import getPort from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
+import * as colors from "./colors";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
+import type { TemplateType } from "./create";
 import { loadEnv } from "../env";
 import { log } from "../logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
@@ -29,6 +32,7 @@ export async function create({
   installDeps,
   useTypeScript,
   githubToken,
+  templateType,
 }: {
   appTemplate: string;
   projectDir: string;
@@ -36,7 +40,9 @@ export async function create({
   installDeps: boolean;
   useTypeScript: boolean;
   githubToken?: string;
+  templateType: TemplateType;
 }) {
+  let spinner = ora("Creating your app…").start();
   await createApp({
     appTemplate,
     projectDir,
@@ -48,15 +54,25 @@ export async function create({
 
   let initScriptDir = path.join(projectDir, "remix.init");
   let hasInitScript = await fse.pathExists(initScriptDir);
+
+  spinner.stop();
+  spinner.clear();
+
   if (hasInitScript) {
     if (installDeps) {
       console.log("💿 Running remix.init script");
       await init(projectDir);
       await fse.remove(initScriptDir);
     } else {
+      console.log();
       console.log(
-        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+        colors.warning(
+          "💿 You've opted out of installing dependencies so we won't run the " +
+            "remix.init/index.js script for you just yet. Once you've installed " +
+            "dependencies, you can run it manually with `npx remix init`"
+        )
       );
+      console.log();
     }
   }
 
@@ -69,10 +85,9 @@ export async function create({
     );
   } else {
     console.log(
-      `💿 That's it! \`cd\` into "${path.resolve(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
+      "💿 That's it! `cd` into " +
+        colors.logoGreen(path.resolve(process.cwd(), projectDir)) +
+        " and check the README for development and deploy instructions!"
     );
   }
 }
@@ -88,7 +103,9 @@ export async function init(projectDir: string) {
     try {
       await initFn({ rootDirectory: projectDir });
     } catch (error) {
-      console.error(`🚨 Oops, remix.init failed`);
+      if (error instanceof Error) {
+        error.message = colors.error("🚨 Oops, remix.init failed");
+      }
       throw error;
     }
   }
@@ -101,7 +118,8 @@ export async function setup(platformArg?: string) {
     platformArg === "cloudflare-pages"
   ) {
     console.warn(
-      `Using '${platformArg}' as a platform value is deprecated. Use 'cloudflare' instead.`
+      `Using '${platformArg}' as a platform value is deprecated. Use ` +
+        "'cloudflare' instead."
     );
     console.log("HINT: check the `postinstall` script in `package.json`");
     platform = SetupPlatform.Cloudflare;
@@ -115,7 +133,7 @@ export async function setup(platformArg?: string) {
 }
 
 export async function routes(
-  remixRoot: string,
+  remixRoot?: string,
   formatArg?: string
 ): Promise<void> {
   let config = await readConfig(remixRoot);
@@ -139,7 +157,10 @@ export async function build(
       "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
     );
     console.warn(
-      "You have enabled source maps in production. This will make your server side code visible to the public and is highly discouraged! If you insist, please ensure you are using environment variables for secrets and not hard-coding them into your source!"
+      "You have enabled source maps in production. This will make your " +
+        "server-side code visible to the public and is highly discouraged! If " +
+        "you insist, please ensure you are using environment variables for " +
+        "secrets and not hard-coding them into your source!"
     );
     console.warn(
       "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
@@ -239,7 +260,8 @@ export async function dev(remixRoot: string, modeArg?: string) {
     express = require("express");
   } catch (err) {
     throw new Error(
-      "Could not locate @remix-run/serve. Please verify you have it installed to use the dev command."
+      "Could not locate @remix-run/serve. Please verify you have it installed " +
+        "to use the dev command."
     );
   }
 
