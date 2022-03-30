@@ -6,7 +6,6 @@ import inquirer from "inquirer";
 import * as colors from "./colors";
 import * as commands from "./commands";
 import { validateNewProjectPath, validateTemplate } from "./create";
-import type { TemplateType } from "./create";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(

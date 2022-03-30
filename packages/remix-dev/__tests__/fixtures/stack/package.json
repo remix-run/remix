@@ -1,17 +1,17 @@
 {
+  "name": "remix-template-remix-ts",
   "private": true,
-  "name": "remix-example-basic",
   "description": "",
   "license": "",
+  "sideEffects": false,
   "scripts": {
-    "dev": "remix dev",
     "build": "remix build",
+    "dev": "remix dev",
     "start": "remix-serve build"
   },
   "dependencies": {},
   "devDependencies": {},
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }
