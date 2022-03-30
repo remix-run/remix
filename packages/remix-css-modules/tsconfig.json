@@ -11,6 +11,8 @@
 
     "declaration": true,
     "emitDeclarationOnly": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
 
     "outDir": "../../build/node_modules/@remix-run/css-modules",
     "rootDir": "."

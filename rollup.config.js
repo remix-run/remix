@@ -6,6 +6,31 @@ import fse from "fs-extra";
 
 const executableBanner = "#!/usr/bin/env node\n";
 
+let activeOutputDir = "build";
+
+if (process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY) {
+  let appDir = path.join(
+    process.cwd(),
+    process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY
+  );
+  try {
+    fse.readdirSync(path.join(appDir, "node_modules"));
+  } catch (e) {
+    console.error(
+      "Oops! You pointed REMIX_LOCAL_DEV_OUTPUT_DIRECTORY to a directory that " +
+        "does not have a node_modules/ folder. Please `npm install` in that " +
+        "directory and try again."
+    );
+    process.exit(1);
+  }
+  console.log("Writing rollup output to", appDir);
+  activeOutputDir = appDir;
+}
+
+function getOutputDir(pkg) {
+  return path.join(activeOutputDir, "node_modules", pkg);
+}
+
 function createBanner(packageName, version) {
   return `/**
  * ${packageName} v${version}
@@ -30,7 +55,7 @@ function isBareModuleId(id) {
 /** @returns {import("rollup").RollupOptions[]} */
 function createRemix() {
   let sourceDir = "packages/create-remix";
-  let outputDir = "build/node_modules/create-remix";
+  let outputDir = getOutputDir("create-remix");
   let version = getVersion(sourceDir);
 
   return [
@@ -66,7 +91,7 @@ function createRemix() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remix() {
   let sourceDir = "packages/remix";
-  let outputDir = "build/node_modules/remix";
+  let outputDir = getOutputDir("remix");
   let version = getVersion(sourceDir);
 
   return [
@@ -177,7 +202,7 @@ function remixCssModules() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixDev() {
   let sourceDir = "packages/remix-dev";
-  let outputDir = "build/node_modules/@remix-run/dev";
+  let outputDir = getOutputDir("@remix-run/dev");
   let version = getVersion(sourceDir);
 
   return [
@@ -276,7 +301,7 @@ function remixDev() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServerRuntime() {
   let sourceDir = "packages/remix-server-runtime";
-  let outputDir = "build/node_modules/@remix-run/server-runtime";
+  let outputDir = getOutputDir("@remix-run/server-runtime");
   let version = getVersion(sourceDir);
 
   return [
@@ -370,7 +395,7 @@ function remixServerRuntime() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixNode() {
   let sourceDir = "packages/remix-node";
-  let outputDir = "build/node_modules/@remix-run/node";
+  let outputDir = getOutputDir("@remix-run/node");
   let version = getVersion(sourceDir);
 
   return [
@@ -444,7 +469,7 @@ function remixNode() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflare() {
   let sourceDir = "packages/remix-cloudflare";
-  let outputDir = "build/node_modules/@remix-run/cloudflare";
+  let outputDir = getOutputDir("@remix-run/cloudflare");
   let version = getVersion(sourceDir);
 
   return [
@@ -518,7 +543,7 @@ function remixCloudflare() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflareWorkers() {
   let sourceDir = "packages/remix-cloudflare-workers";
-  let outputDir = "build/node_modules/@remix-run/cloudflare-workers";
+  let outputDir = getOutputDir("@remix-run/cloudflare-workers");
   let version = getVersion(sourceDir);
 
   return [
@@ -548,7 +573,7 @@ function remixCloudflareWorkers() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflarePages() {
   let sourceDir = "packages/remix-cloudflare-pages";
-  let outputDir = "build/node_modules/@remix-run/cloudflare-pages";
+  let outputDir = getOutputDir("@remix-run/cloudflare-pages");
   let version = getVersion(sourceDir);
 
   return [
@@ -579,7 +604,7 @@ function remixCloudflarePages() {
 function getAdapterConfig(adapterName) {
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
-  let outputDir = `build/node_modules/${packageName}`;
+  let outputDir = getOutputDir(packageName);
   let version = getVersion(sourceDir);
 
   let hasMagicExports = fse.existsSync(`${sourceDir}/magicExports/remix.ts`);
@@ -671,7 +696,7 @@ function remixServerAdapters() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixReact() {
   let sourceDir = "packages/remix-react";
-  let outputDir = "build/node_modules/@remix-run/react";
+  let outputDir = getOutputDir("@remix-run/react");
   let version = getVersion(sourceDir);
 
   // This CommonJS build of remix-react is for node; both for use in running our
@@ -780,7 +805,7 @@ function remixReact() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServe() {
   let sourceDir = "packages/remix-serve";
-  let outputDir = "build/node_modules/@remix-run/serve";
+  let outputDir = getOutputDir("@remix-run/serve");
   let version = getVersion(sourceDir);
 
   return [
@@ -837,7 +862,9 @@ function remixServe() {
 export default function rollup(options) {
   let builds = [
     ...createRemix(options),
-    ...remix(options),
+    // Do not blow away destination app node_modules/remix directory which is
+    // correct for that deploy target setup
+    ...(activeOutputDir === "build" ? remix(options) : []),
     ...remixCssModules(options),
     ...remixDev(options),
     ...remixServerRuntime(options),
