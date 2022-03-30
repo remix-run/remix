@@ -35,6 +35,12 @@ module.exports = {
       globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
+      displayName: "remix-css-modules",
+      testEnvironment: "node",
+      testMatch: ["<rootDir>/packages/remix-css-modules/**/*-test.[jt]s?(x)"],
+      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
+    },
+    {
       displayName: "remix-express",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-express/**/*-test.[jt]s?(x)"],

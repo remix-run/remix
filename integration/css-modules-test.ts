@@ -227,16 +227,16 @@ describe("rendering", () => {
 
   it("loads the CSS Modules stylesheet", async () => {
     await app.disableJavaScript();
-    let cssResponses = collectResponses(page, (url) =>
+    let cssResponses = collectResponses(app.page, (url) =>
       url.pathname.endsWith(".css")
     );
-    await page.goto("/");
-    await page.waitForSelector("[data-css-modules-link]");
+    await app.page.goto("/");
+    await app.page.waitForSelector("[data-css-modules-link]");
     expect(cssResponses.length).toEqual(2);
   });
 
   it("server renders with hashed classnames", async () => {
-    let res = await page.goto("/");
+    let res = await app.page.goto("/");
     let badge = getElement(await res.text(), "[data-ui-badge]");
 
     let badgeClasses = badge.attr("class").split(" ");
@@ -251,7 +251,7 @@ describe("rendering", () => {
   });
 
   it("composes from global classname", async () => {
-    let res = await page.goto("/a");
+    let res = await app.page.goto("/a");
     let button = getElement(await res.text(), "[data-ui-button]");
     expect(
       button
@@ -262,7 +262,7 @@ describe("rendering", () => {
   });
 
   it.todo("composes from locally scoped classname", async () => {
-    let res = await page.goto("/b");
+    let res = await app.page.goto("/b");
     let button = getElement(await res.text(), "[data-ui-button]");
     let buttonClasses = button.attr("class").split(" ");
     let found: string[] = [];
@@ -282,7 +282,7 @@ describe("rendering", () => {
   // it.todo("composes from imported module classname", () => {});
 
   it.todo("composes :global selector with :local selector", async () => {
-    let res = await page.goto("/");
+    let res = await app.page.goto("/");
     let badge = getElement(await res.text(), "[data-ui-badge]");
     let buttonClasses = badge.attr("class").split(" ");
     let found: string[] = [];
