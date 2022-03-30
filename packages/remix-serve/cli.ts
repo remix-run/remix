@@ -44,6 +44,6 @@ if (process.env.HOST) {
   server = app.listen(port, onListen);
 }
 
-for (let signal of ["SIGTERM", "SIGINT"]) {
+["SIGTERM", "SIGINT"].forEach((signal) => {
   process.once(signal, () => server?.close(console.error));
-}
+});
