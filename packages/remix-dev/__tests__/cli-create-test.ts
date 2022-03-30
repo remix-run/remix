@@ -96,7 +96,7 @@ describe("the create command", () => {
       "create",
       projectDir,
       "--template",
-      "https://github.com/fake-remix-tester/nested-dir/tree/dev/nested",
+      "https://github.com/fake-remix-tester/nested-dir/tree/dev/stack",
       "--no-install",
     ]);
     expect(stdout).toMatchInlineSnapshot(`
