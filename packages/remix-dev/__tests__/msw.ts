@@ -3,11 +3,14 @@ import fsp from "fs/promises";
 import { setupServer } from "msw/node";
 import { rest } from "msw";
 
-import { githubHandlers } from "./github";
+import { githubHandlers } from "./github-mocks";
 
 type RequestHandler = Parameters<typeof setupServer>[0];
 
 let miscHandlers: Array<RequestHandler> = [
+  rest.head("https://example.com/remix-stack.tar.gz", async (req, res, ctx) => {
+    return res(ctx.status(200));
+  }),
   rest.get("https://example.com/remix-stack.tar.gz", async (req, res, ctx) => {
     let fileBuffer = await fsp.readFile(
       path.join(__dirname, "./fixtures/stack.tar.gz")

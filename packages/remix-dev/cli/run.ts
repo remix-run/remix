@@ -141,7 +141,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     // `remix new` is an alias for `remix create`
     case "new": {
       let projectPath = input[1];
-      let templateType: TemplateType;
 
       // Flags will validate early and stop the process if invalid flags are
       // provided. Input provided in the interactive CLI is validated by
@@ -149,7 +148,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       // as possible, but inquirer will allow users to retry input rather than
       // stop the process.
       if (flags.template) {
-        templateType = await validateTemplate(flags.template);
+        await validateTemplate(flags.template);
       }
       if (projectPath) {
         await validateNewProjectPath(projectPath);
@@ -300,14 +299,12 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         });
 
       await commands.create({
-        appTemplate: flags.template ?? answers.appTemplate,
-        templateType:
-          templateType! || (answers.appType === "stack" ? "repo" : "template"),
+        appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install || answers.install,
-        useTypeScript: flags.typescript || answers.useTypeScript,
-        useTypeScript: flags.typescript ?? answers.useTypeScript,
+        installDeps: flags.install !== false && answers.install !== false,
+        useTypeScript:
+          flags.typescript !== false && answers.useTypeScript !== false,
         githubToken: process.env.GITHUB_TOKEN,
       });
       break;

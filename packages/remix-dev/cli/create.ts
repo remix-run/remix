@@ -80,14 +80,24 @@ export async function createApp({
       await downloadAndExtractTarball(projectDir, appTemplate, options);
       break;
     }
+    case "repoTemplate": {
+      let owner = "remix-run";
+      let name = appTemplate.split("/").slice(-1)[0];
+      await downloadAndExtractRepoTarball(
+        projectDir,
+        getRepoInfo(`${owner}/${name}`),
+        options
+      );
+      break;
+    }
     case "example":
     case "template": {
-      await downloadAndExtractTemplateOrExample(
+      await downloadAndExtractTemplateOrExample({
         projectDir,
         appTemplate,
         templateType,
-        options
-      );
+        options,
+      });
       break;
     }
     case "repo": {
@@ -168,17 +178,23 @@ async function extractLocalTarball(
   }
 }
 
-async function downloadAndExtractTemplateOrExample(
-  projectDir: string,
-  name: string,
-  type: "template" | "example",
+async function downloadAndExtractTemplateOrExample({
+  projectDir,
+  appTemplate,
+  templateType,
+  options,
+}: {
+  projectDir: string;
+  appTemplate: string;
+  templateType: "template" | "example";
   options: {
     token?: string;
     useTypeScript: boolean;
-  }
-) {
+  };
+}) {
+  let name = appTemplate;
   // appTemplate === "examples/whatever"
-  if (type === "example") {
+  if (templateType === "example") {
     name = name.split("/")[1];
   }
 
@@ -196,25 +212,24 @@ async function downloadAndExtractTemplateOrExample(
     );
   }
 
-  let cwd = path.dirname(projectDir);
-  let desiredDir = path.basename(projectDir);
-  let templateDir = path.join(desiredDir, type + "s", name);
+  let desiredDir = path.basename(appTemplate);
+  let templateDir = path.join(desiredDir, `${templateType}s`, name);
+  // https://github.com/remix-run/remix/issues/2356#issuecomment-1071458832
+  if (path.sep === "\\") {
+    templateDir = templateDir.replace("\\", "/");
+  }
 
   try {
     await pipeline(
       response.body.pipe(gunzip()),
-      tar.extract(cwd, {
+      tar.extract(projectDir, {
         map(header) {
           let originalDirName = header.name.split("/")[0];
           header.name = header.name.replace(originalDirName, desiredDir);
-          // https://github.com/remix-run/remix/issues/2356#issuecomment-1071458832
-          if (path.sep === "\\") {
-            templateDir = templateDir.replace("\\", "/");
-          }
-          if (!header.name.startsWith(templateDir + "/")) {
-            header.name = "__IGNORE__";
+          if (header.name.startsWith(`${templateDir}/`)) {
+            header.name = header.name.replace(templateDir, ".");
           } else {
-            header.name = header.name.replace(templateDir, desiredDir);
+            header.name = "__IGNORE__";
           }
           return header;
         },
@@ -231,7 +246,7 @@ async function downloadAndExtractTemplateOrExample(
     throw Error(
       "🚨 There was a problem extracting the file from the provided template.\n\n" +
         `  Template: \`${name}\`\n` +
-        `  Destination directory: \`${cwd}\``
+        `  Destination directory: \`${projectDir}\``
     );
   }
 }
@@ -449,31 +464,38 @@ export async function validateNewProjectPath(input: string): Promise<void> {
   }
 }
 
-export async function validateTemplate(input: string): Promise<TemplateType> {
+function isRemixStack(input: string) {
+  return [
+    "remix-run/blues-stack",
+    "remix-run/indie-stack",
+    "remix-run/grunge-stack",
+    "blues-stack",
+    "indie-stack",
+    "grunge-stack",
+  ].includes(input);
+}
+
+function isRemixTemplate(input: string) {
+  return [
+    "remix",
+    "express",
+    "arc",
+    "fly",
+    "netlify",
+    "vercel",
+    "cloudflare-pages",
+    "cloudflare-workers",
+  ].includes(input);
+}
+
+export async function validateTemplate(input: string) {
   // If a template string matches one of the choices in our interactive prompt,
   // we can skip all fetching and manual validation.
-  if (
-    [
-      "remix-run/blues-stack",
-      "remix-run/indie-stack",
-      "remix-run/grunge-stack",
-    ].includes(input)
-  ) {
-    return "repo";
+  if (isRemixStack(input)) {
+    return;
   }
-  if (
-    [
-      "remix",
-      "express",
-      "arc",
-      "fly",
-      "netlify",
-      "vercel",
-      "cloudflare-pages",
-      "cloudflare-workers",
-    ].includes(input)
-  ) {
-    return "template";
+  if (isRemixTemplate(input)) {
+    return;
   }
 
   let templateType = detectTemplateType(input);
@@ -485,7 +507,7 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
       if (!(await fse.pathExists(input))) {
         throw Error(`🚨 Oops, the file \`${input}\` does not exist.`);
       }
-      return "local";
+      return;
     }
     case "remoteTarball": {
       let spinner = ora("Validating the template file…").start();
@@ -494,7 +516,7 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
         spinner.stop();
         switch (response.status) {
           case 200:
-            return "remoteTarball";
+            return;
           case 404:
             throw Error(
               "🚨 The template file could not be verified. Please double check " +
@@ -523,7 +545,7 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
         spinner.stop();
         switch (response.status) {
           case 200:
-            return "repo";
+            return;
           case 403:
             throw Error(
               "🚨 The template could not be verified because you do not have " +
@@ -568,7 +590,7 @@ export async function validateTemplate(input: string): Promise<TemplateType> {
         spinner.stop();
         switch (response.status) {
           case 200:
-            return templateType;
+            return;
           case 404:
             throw Error(
               "🚨 The template could not be verified. Please double check that " +
@@ -605,6 +627,8 @@ export type TemplateType =
   | "example"
   // a github repo
   | "repo"
+  // a remix repo template (like "remix-run/blues-stack" or "indie-stack")
+  | "repoTemplate"
   // remote tarball url
   | "remoteTarball"
   // local directory
@@ -632,7 +656,11 @@ export function detectTemplateType(template: string): TemplateType | null {
     // ignore FS errors and move on
   }
 
-  // 3. examples/<template> will use an example folder in the Remix repo
+  if (isRemixStack(template)) {
+    return "repoTemplate";
+  }
+
+  // 2. examples/<template> will use an example folder in the Remix repo
   if (/^examples?\/[\w-]+$/.test(template)) {
     return "example";
   }
