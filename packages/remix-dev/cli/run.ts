@@ -246,6 +246,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             name: "useTypeScript",
             type: "list",
             message: "TypeScript or JavaScript?",
+            suffix:
+              "note, if the template uses JavaScript, you won't get TypeScript by selecting this option.",
             choices: [
               { name: "TypeScript", value: true },
               { name: "JavaScript", value: false },
