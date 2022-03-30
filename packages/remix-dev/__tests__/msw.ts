@@ -1,5 +1,24 @@
-import { rest } from "msw";
+import path from "path";
+import fsp from "fs/promises";
 import { setupServer } from "msw/node";
+import { rest } from "msw";
 
-let server = setupServer();
-server.listen({ onUnhandledRequest: "warn" });
+import { githubHandlers } from "./github";
+
+type RequestHandler = Parameters<typeof setupServer>[0];
+
+let miscHandlers: Array<RequestHandler> = [
+  rest.get("https://example.com/remix-stack.tar.gz", async (req, res, ctx) => {
+    let fileBuffer = await fsp.readFile(
+      path.join(__dirname, "./fixtures/stack.tar.gz")
+    );
+
+    return res(
+      ctx.body(fileBuffer),
+      ctx.set("Content-Type", "application/x-gzip")
+    );
+  }),
+];
+
+let server = setupServer(...githubHandlers, ...miscHandlers);
+server.listen({ onUnhandledRequest: "error" });

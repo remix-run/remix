@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "remix-example-basic",
+  "description": "",
+  "license": "",
+  "scripts": {
+    "dev": "remix dev",
+    "build": "remix build",
+    "start": "remix-serve build"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14"
+  },
+  "sideEffects": false
+}
