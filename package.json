@@ -79,7 +79,6 @@
     "cheerio": "^1.0.0-rc.3",
     "concurrently": "^7.0.0",
     "cross-spawn": "^7.0.3",
-    "esbuild-register": "^3.3.2",
     "eslint": "^8.1.0",
     "eslint-import-resolver-node": "0.3.6",
     "eslint-import-resolver-typescript": "^2.5.0",

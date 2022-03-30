@@ -6,4 +6,9 @@ module.exports = {
   transform: {
     "\\.[jt]sx?$": require.resolve("./transform"),
   },
+  watchPlugins: [
+    require.resolve("jest-watch-select-projects"),
+    require.resolve("jest-watch-typeahead/filename"),
+    require.resolve("jest-watch-typeahead/testname"),
+  ],
 };

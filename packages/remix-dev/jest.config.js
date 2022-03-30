@@ -4,7 +4,4 @@ module.exports = {
   displayName: "remix-dev",
   setupFilesAfterEnv: ["<rootDir>/__tests__/setupAfterEnv.ts"],
   setupFiles: [],
-  globalSetup: process.env.CI
-    ? undefined
-    : require.resolve("../../jest/buildRemix"),
 };
