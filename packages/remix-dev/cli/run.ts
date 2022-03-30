@@ -129,6 +129,7 @@ const templateChoices = [
   { name: "Cloudflare Pages", value: "cloudflare-pages" },
   { name: "Cloudflare Workers", value: "cloudflare-workers" },
   { name: "Deno", value: "deno" },
+  { name: "Azure Static Web Apps", value: "azure-functions" },
 ];
 
 const npxInterop = {
