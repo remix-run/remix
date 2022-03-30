@@ -658,9 +658,9 @@ export const loader: LoaderFunction = async ({
 };
 ```
 
-#### Returning objects
+#### Returning JSON
 
-You can return plain JavaScript objects from your loaders that will be made available to your component by the [`useLoaderData`](./remix#useloaderdata) hook.
+You can return JSON from your loaders that will be made available to your component as a deserialized JavaScript object by the [`useLoaderData`](./remix#useloaderdata) hook.
 
 ```ts
 import { json } from "remix";
@@ -672,7 +672,7 @@ export const loader = async () => {
 
 #### Returning Response Instances
 
-When you return a plain object, Remix turns it into a [Fetch Response][response]. This means you can return them yourself, too.
+The `json` helper turns a plain JavaScript object into a [Fetch Response][response]. This means you can return them yourself, too.
 
 ```ts
 export const loader: LoaderFunction = async () => {
@@ -686,18 +686,9 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
-Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
+Using the `json` helper simplifies this so you don't have to construct them yourself, but the above two examples are effectively the same!
 
-```tsx
-import { json } from "remix";
-
-export const loader: LoaderFunction = async () => {
-  const users = await fakeDb.users.findMany();
-  return json(users);
-};
-```
-
-You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
+You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
 import { json } from "remix";
