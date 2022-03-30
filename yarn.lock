@@ -1503,11 +1503,6 @@
   dependencies:
     mime "^2.5.2"
 
-"@cloudflare/workers-types@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-3.2.0.tgz"
-  integrity sha512-y0+f7QeB5/fMMdU0wSwvBB18yE9kAD2s7Wben8a4uI4f/EJyE+eJrai5QO52Pq8EmWP0vRpKqZh0qU857WhY2A==
-
 "@cloudflare/workers-types@^3.4.0":
   version "3.4.0"
   resolved "https://registry.yarnpkg.com/@cloudflare/workers-types/-/workers-types-3.4.0.tgz#80311e14df2f7f8c2cfcdce945b4f4ad8f9b03b1"

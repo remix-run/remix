@@ -21,7 +21,7 @@
     "remix": "*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.2.0",
+    "@cloudflare/workers-types": "^3.4.0",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
     "@types/react": "^17.0.24",
