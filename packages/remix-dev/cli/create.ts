@@ -38,14 +38,6 @@ export async function createApp({
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
 }: CreateAppArgs) {
-  // Check the node version
-  let versions = process.versions;
-  if (versions?.node && semver.major(versions.node) < 14) {
-    throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
-    );
-  }
-
   // Create the app directory
   let relativeProjectDir = path.relative(process.cwd(), projectDir);
   let projectDirIsCurrentDir = relativeProjectDir === "";

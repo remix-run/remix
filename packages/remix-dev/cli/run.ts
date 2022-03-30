@@ -2,7 +2,7 @@ import * as path from "path";
 import meow from "meow";
 import inspector from "inspector";
 import inquirer from "inquirer";
-// import chalkAnimation from "chalk-animation";
+import semver from "semver";
 
 import * as colors from "./colors";
 import * as commands from "./commands";
@@ -99,6 +99,14 @@ ${colors.heading("Show all routes in your app")}:
  * arguments.
  */
 export async function run(argv: string[] = process.argv.slice(2)) {
+  // Check the node version
+  let versions = process.versions;
+  if (versions?.node && semver.major(versions.node) < 14) {
+    throw new Error(
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+    );
+  }
+
   let { flags, input, showHelp, showVersion } = meow(helpText, {
     argv: argv,
     description: false,
