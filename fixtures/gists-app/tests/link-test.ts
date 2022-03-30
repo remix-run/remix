@@ -47,7 +47,7 @@ describe("route module link export", () => {
         url.pathname.endsWith(".css")
       );
       await page.goto(`${testServer}/links`);
-      expect(cssResponses.length).toEqual(5);
+      expect(cssResponses.length).toEqual(6);
     });
 
     it("preloads assets for other pages and serves from browser cache on navigation", async () => {
