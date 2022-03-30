@@ -1,7 +1,8 @@
 {
   "scripts": {
     "build": "remix build",
-    "dev": "swa start ./public --run \"remix dev\" --api ."
+    "dev": "swa start ./public --run \"remix dev\" --api .",
+    "postinstall": "func init"
   },
   "dependencies": {
     "@remix-run/azure-functions": "*",
@@ -18,6 +19,7 @@
     "@remix-run/eslint-config": "*",
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
+    "azure-functions-core-tools": "4.0.3971",
     "eslint": "^8.11.0",
     "npm-run-all": "^4.1.5",
     "typescript": "4.6.3"
