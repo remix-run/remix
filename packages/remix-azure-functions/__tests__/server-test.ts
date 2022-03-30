@@ -1,4 +1,4 @@
-import { Context, HttpRequest } from "@azure/functions";
+import type { Context, HttpRequest } from "@azure/functions";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import { Response } from "@remix-run/node";
 
@@ -49,7 +49,7 @@ describe("azure createRequestHandler", () => {
         body: "",
       };
 
-      const res = await createRequestHandler({ build: undefined })(
+      let res = await createRequestHandler({ build: undefined })(
         context,
         mockedRequest
       );
