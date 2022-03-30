@@ -1,13 +1,14 @@
 {
   "scripts": {
     "build": "remix build",
-    "dev": "swa start ./public --run \"remix dev\" --api .",
-    "postinstall": "func init --worker-runtime node --language typescript"
+    "dev": "swa start ./public --run \"remix dev\" --api-location .",
+    "postinstall": "func init --worker-runtime node --language typescript && remix setup azure-functions"
   },
   "dependencies": {
     "@remix-run/azure-functions": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
+    "@remix-run/serve": "*",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "*"
