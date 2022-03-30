@@ -1,4 +1,8 @@
 .button {
+  /*
+   * TODO: support composition from external module file
+  composes: button from "./Button.module.css";
+  */
   color: yellow;
 }
 

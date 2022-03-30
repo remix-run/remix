@@ -5,6 +5,7 @@
   "scripts": {
     "postinstall": "node scripts/install_remix.js && node node_modules/@remix-run/dev/cli.js setup",
     "build": "node node_modules/@remix-run/dev/cli.js build",
+    "predev": "npm run build",
     "dev": "pm2-dev pm2.config.js",
     "start": "node ./build",
     "routes": "node node_modules/@remix-run/dev/cli.js routes"

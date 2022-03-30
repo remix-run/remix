@@ -4,7 +4,6 @@ import {
   collectResponses,
   css,
   js,
-  selectHtml,
   getElement,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -261,7 +260,7 @@ describe("rendering", () => {
     ).toBe(true);
   });
 
-  it.todo("composes from locally scoped classname", async () => {
+  it("composes from locally scoped classname", async () => {
     let res = await app.page.goto("/b");
     let button = getElement(await res.text(), "[data-ui-button]");
     let buttonClasses = button.attr("class").split(" ");
@@ -281,7 +280,7 @@ describe("rendering", () => {
   // TODO: Feature not implemented yet
   // it.todo("composes from imported module classname", () => {});
 
-  it.todo("composes :global selector with :local selector", async () => {
+  it("composes :global selector with :local selector", async () => {
     let res = await app.page.goto("/");
     let badge = getElement(await res.text(), "[data-ui-badge]");
     let buttonClasses = badge.attr("class").split(" ");
