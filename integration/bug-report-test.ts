@@ -37,26 +37,19 @@ beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+        import { json, Form } from "remix";
 
-        export function loader() {
-          return json("pizza");
+        export async function action() {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return json({});
         }
 
         export default function Index() {
-          let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <Form action="/" method="post"><button type="submit">Submit</button></Form>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -73,21 +66,17 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
+it("should not modify the browser URL while submitting a Form", async () => {
   // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.goto("/?query=test");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  let urlBeforeSubmit = new URL(app.page.url());
+  expect(urlBeforeSubmit.searchParams.get("query")).toBe("test");
 
-  // Go check out the other tests to see what else you can do.
+  await app.clickSubmitButton("/");
+
+  let urlImmediatelyAfterSubmit = new URL(app.page.url());
+  expect(urlImmediatelyAfterSubmit.searchParams.get("query")).toBe("test");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
