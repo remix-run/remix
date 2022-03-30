@@ -1,16 +1,16 @@
 # Run Remix With docker-compose
 
-very simple example to run remix app with docker and docker-compose
+Very simple example to run remix app with docker and docker-compose. 
+
+**With this example Remix can be run in any server have docker.**
 
 ## Preview
 
-Open this example on [CodeSandbox](https://codesandbox.com):
-
-[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/docker)
+This example don't have Preview
 
 ## How to use
 
-all what you need to do is to run the following command:
+Once you have docker installed and running, run the following command:
 
 ```sh
 # Execute Docker image detaching the terminal
