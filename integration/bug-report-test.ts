@@ -19,13 +19,13 @@ let app: AppFixture;
 // Now try running this test:
 //
 //    ```
-//    jest integration/bug-report-test.ts
+//    yarn bug-report-test
 //    ```
 //
 // You can add `--watch` to the end to have it re-run on file changes:
 //
 //    ```
-//    jest integration/bug-report-test.ts --watch
+//    yarn bug-report-test --watch
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 

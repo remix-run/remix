@@ -14,6 +14,7 @@
     "test:primary": "jest",
     "test:integration": "jest --runInBand --forceExit --config ./integration/jest.config.js",
     "pretest:integration": "yarn build",
+    "bug-report-test": "yarn jest --config ./integration/jest.config.js integration/bug-report-test.ts",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",
