@@ -1,5 +1,8 @@
 import type { Context, HttpRequest } from "@azure/functions";
-import { createRequestHandler as createRemixRequestHandler, Response } from "@remix-run/node";
+import {
+  createRequestHandler as createRemixRequestHandler,
+  Response,
+} from "@remix-run/node";
 
 import {
   createRemixHeaders,
