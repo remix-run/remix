@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
 import { sync as spawnSync } from "cross-spawn";
+import type { Writable } from "stream";
 import puppeteer from "puppeteer";
 import type { Page, HTTPResponse } from "puppeteer";
 import express from "express";
@@ -22,6 +23,7 @@ import { TMP_DIR } from "./global-setup";
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
+  buildStdio?: Writable;
   files: { [filename: string]: string };
   template?:
     | "arc"
@@ -374,19 +376,30 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     writeTestFiles(init, projectDir),
     installRemix(projectDir),
   ]);
-  build(projectDir);
+  build(projectDir, init.buildStdio);
 
   return projectDir;
 }
 
-function build(projectDir: string) {
+function build(projectDir: string, buildStdio: Writable | undefined) {
   // TODO: log errors (like syntax errors in the fixture file strings)
   spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
     cwd: projectDir,
   });
-  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
-    cwd: projectDir,
-  });
+
+  let buildSpawn = spawnSync(
+    "node",
+    ["node_modules/@remix-run/dev/cli.js", "build"],
+    {
+      cwd: projectDir
+    }
+  );
+
+  if (buildStdio) {
+    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
+    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+    buildStdio.end();
+  }
 }
 
 async function installRemix(projectDir: string) {
