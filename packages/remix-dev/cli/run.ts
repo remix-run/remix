@@ -246,11 +246,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             name: "useTypeScript",
             type: "list",
             message: "TypeScript or JavaScript?",
-            when(answers) {
-              return (
-                flags.template === undefined && answers.appType !== "stack"
-              );
-            },
             choices: [
               { name: "TypeScript", value: true },
               { name: "JavaScript", value: false },
