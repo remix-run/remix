@@ -19,7 +19,6 @@ export default async function setup(globalConfig: any) {
 // when the gists app is removed, remove this as well:
 async function setupGistsApp() {
   function installDeps(dir: string): Promise<void> {
-    console.log({ dir });
     return new Promise((accept, reject) => {
       spawn("yarn", ["install"], {
         cwd: dir,
