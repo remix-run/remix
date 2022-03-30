@@ -36,6 +36,7 @@
     "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.2.1",
     "jsesc": "3.0.2",
+    "lodash.camelcase": "^4.3.0",
     "lodash.debounce": "^4.0.8",
     "meow": "^7.1.1",
     "minimatch": "^3.0.4",
@@ -51,10 +52,12 @@
     "xdm": "^2.0.0"
   },
   "devDependencies": {
+    "@parcel/css": "^1.7.3",
     "@types/cacache": "^15.0.0",
     "@types/chalk-animation": "^1.6.1",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/inquirer": "^8.2.0",
+    "@types/lodash.camelcase": "^4.3.6",
     "@types/lodash.debounce": "^4.0.6",
     "@types/tar-fs": "^2.0.1",
     "@types/ws": "^7.4.1"
