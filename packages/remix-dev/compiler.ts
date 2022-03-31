@@ -341,7 +341,7 @@ async function createBrowserBuild(
   let cssModulesMap: Record<string, CssModuleFileContents> = {};
   function handleProcessedCss(
     filePath: string,
-    { css, dependencies, moduleExports, json }: CssModuleFileContents
+    { css, dependencies, moduleExports, json, source }: CssModuleFileContents
   ) {
     // For now we are simply keeping processed CSS content and the DIY asset app
     // in local mutable state. We may want to reconsider this as it will pose
@@ -354,12 +354,11 @@ async function createBrowserBuild(
     cssModulesMap = {
       ...cssModulesMap,
       [filePath]: {
+        source,
         css,
         json,
         moduleExports,
         dependencies,
-        // TODO: Implement sourcemaps
-        sourceMap: null,
       },
     };
   }

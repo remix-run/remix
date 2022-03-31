@@ -1,15 +1,17 @@
 import path from "path";
-import chalk from "chalk";
 import * as fse from "fs-extra";
+import chalk from "chalk";
 import type * as esbuild from "esbuild";
 
-import { getFileHash, getHash } from "../utils/crypto";
-import * as cache from "../../cache";
+import { /* getFileHash, */ getHash } from "../utils/crypto";
+// import * as cache from "../../cache";
 import type { RemixConfig } from "../../config";
 import { resolveUrl } from "../utils/url";
 import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
-const suffixMatcher = /\.module\.css?$/;
+const pluginName = "css-modules";
+const pluginNamespace = `${pluginName}-namespace`;
+const suffixMatcher = /\.modules?\.css?$/;
 
 let parcelTransform: (opts: ParcelTransformOptions) => ParcelTransformResult;
 const decoder = new TextDecoder();
@@ -22,11 +24,11 @@ export function cssModulesPlugin(
   config: RemixConfig,
   handleProcessedCss: (
     filePath: string,
-    { css, sourceMap, json }: CssModuleFileContents
+    { css, json }: CssModuleFileContents
   ) => void
 ): esbuild.Plugin {
   return {
-    name: "css-modules",
+    name: pluginName,
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, async (args) => {
         try {
@@ -63,26 +65,33 @@ Install the dependency by running the following command, then restart your app.
 
         let path = getResolvedFilePath(config, args);
         return {
+          pluginName,
+          namespace: pluginNamespace,
           path,
-          namespace: "css-modules",
           sideEffects: false,
         };
       });
 
-      build.onLoad({ filter: suffixMatcher }, async (args) => {
-        try {
-          let processed = await processCssCached(config, args.path);
-          handleProcessedCss(args.path, processed);
-          return {
-            contents: JSON.stringify(processed.json),
-            loader: "json",
-          };
-        } catch (err: any) {
-          return {
-            errors: [{ text: err.message }],
-          };
+      build.onLoad(
+        { filter: suffixMatcher, namespace: pluginNamespace },
+        async (args) => {
+          try {
+            let processed = await processCssCached({
+              config,
+              filePath: args.path,
+            });
+            handleProcessedCss(args.path, processed);
+            return {
+              contents: JSON.stringify(processed.json),
+              loader: "json",
+            };
+          } catch (err: any) {
+            return {
+              errors: [{ text: err.message }],
+            };
+          }
         }
-      });
+      );
     },
   };
 }
@@ -101,91 +110,118 @@ export function cssModulesFakerPlugin(
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, (args) => {
         return {
+          pluginName: pluginName + "-faker",
+          namespace: pluginNamespace + "-faker",
           path: getResolvedFilePath(config, args),
-          namespace: "css-modules-faker",
           sideEffects: false,
         };
       });
 
-      build.onLoad({ filter: suffixMatcher }, async (args) => {
-        let res = await assetsManifestPromiseRef.current;
-        let json = res?.cssModules?.moduleMap[args.path].json || {};
-        return {
-          contents: JSON.stringify(json),
-          loader: "json",
-        };
-      });
+      build.onLoad(
+        { filter: suffixMatcher, namespace: pluginNamespace + "-faker" },
+        async (args) => {
+          let res = await assetsManifestPromiseRef.current;
+          let json = res?.cssModules?.moduleMap[args.path].json || {};
+          return {
+            contents: JSON.stringify(json),
+            loader: "json",
+          };
+        }
+      );
     },
   };
 }
 
-async function processCssCached(
-  config: RemixConfig,
-  filePath: string
-): Promise<CssModuleFileContents> {
-  let file = path.resolve(config.appDirectory, filePath);
-  let hash = await getFileHash(file);
+async function processCssCached({
+  config,
+  filePath,
+}: {
+  config: RemixConfig;
+  filePath: string;
+}): Promise<CssModuleFileContents> {
+  // TODO: Caching as implemented not working as expected in dev mode. Bypass for now.
+  return await processCss({ config, filePath });
 
-  // Use an on-disk cache to speed up dev server boot.
-  let processedCssPromise = (async function () {
-    let key = file + ".cssmodule";
-    let cached: (CssModuleFileContents & { hash: string }) | null = null;
-    try {
-      cached = await cache.getJson(config.cacheDirectory, key);
-    } catch (error) {
-      // Ignore cache read errors.
-    }
-
-    if (!cached || cached.hash !== hash) {
-      let processed = await processCss(config, filePath);
-      cached = { hash, ...processed };
-      try {
-        await cache.putJson(config.cacheDirectory, key, cached);
-      } catch (error) {
-        // Ignore cache put errors.
-      }
-    }
-    return cached;
-  })();
-
-  return processedCssPromise;
+  //   let file = path.resolve(config.appDirectory, filePath);
+  //   let hash = await getFileHash(file);
+  //   // Use an on-disk cache to speed up dev server boot.
+  //   let processedCssPromise = (async function () {
+  //     let key = file + ".cssmodule";
+  //     let cached: (CssModuleFileContents & { hash: string }) | null = null;
+  //     try {
+  //       cached = await cache.getJson(config.cacheDirectory, key);
+  //     } catch (error) {
+  //       // Ignore cache read errors.
+  //     }
+  //     if (!cached || cached.hash !== hash) {
+  //       let processed = await processCss({ config, filePath });
+  //       cached = { hash, ...processed };
+  //       try {
+  //         await cache.putJson(config.cacheDirectory, key, cached);
+  //       } catch (error) {
+  //         // Ignore cache put errors.
+  //       }
+  //     }
+  //     return cached;
+  //   })();
+  //   return processedCssPromise;
 }
 
-async function processCss(
-  config: RemixConfig,
-  file: string
-): Promise<CssModuleFileContents> {
-  let json: CssModuleClassMap = {};
-  let source = await fse.readFile(file);
+async function processCss({
+  config,
+  filePath,
+}: {
+  config: RemixConfig;
+  filePath: string;
+}): Promise<CssModuleFileContents> {
+  let classPrefix =
+    path.basename(filePath, path.extname(filePath)).replace(/\./g, "-") + "__";
+  let source = await fse.readFile(filePath);
 
   let res = parcelTransform({
-    filename: path.relative(config.appDirectory, file),
+    filename: path.relative(config.appDirectory, filePath),
     code: source,
     cssModules: true,
     minify: process.env.NODE_ENV === "production",
-    analyzeDependencies: true,
+    analyzeDependencies: true, // TODO: Maybe?
     sourceMap: true,
     drafts: { nesting: true },
   });
 
+  let json: CssModuleClassMap = {};
+  let cssModulesContent = decoder.decode(res.code);
   let parcelExports = res.exports || {};
-  for (let key in parcelExports) {
-    let props = parcelExports[key];
-    json = {
-      ...json,
-      [key]: props.composes.length
-        ? getComposedClassNames(props.name, props.composes)
-        : props.name,
-    };
+
+  // sort() to keep order consistent in different builds
+  for (let originClass of Object.keys(parcelExports).sort()) {
+    let props = parcelExports[originClass];
+    let patchedClass = props.name;
+    let prefixedClassName = getPrefixedClassName(classPrefix, patchedClass);
+    json[originClass] = props.composes.length
+      ? getComposedClassNames(classPrefix, prefixedClassName, props.composes)
+      : prefixedClassName;
+    cssModulesContent = cssModulesContent.replace(
+      new RegExp(`\\.${patchedClass}`, "g"),
+      "." + prefixedClassName
+    );
   }
-  let css = decoder.decode(res.code);
-  let sourceMap = res.map ? decoder.decode(res.map) : null;
+
+  let cssWithSourceMap = cssModulesContent;
+  if (res.map) {
+    // TODO: Sourcemaps aren't working as expected because we are inlining the
+    // map at the end of each module. We need to merge them into a single
+    // inline sourcemap at the end of the build. We can probably use something
+    // like https://www.npmjs.com/package/merge-source-maps
+    // cssWithSourceMap += `\n/*# sourceMappingURL=data:application/json;base64,${res.map.toString(
+    //   "base64"
+    // )} */`;
+  }
 
   return {
-    css,
+    css: cssWithSourceMap,
+    source: source.toString(),
     json,
-    sourceMap,
-    moduleExports: res.exports || {},
+    moduleExports: parcelExports,
     dependencies: res.dependencies || [],
   };
 }
@@ -224,17 +260,28 @@ export function getCssModulesFileReferences(
  * the current build since we don't know for sure if that dependency has been
  * processed yet. Coming back to this.
  */
-function getComposedClassNames(name: string, composes: CssModuleReference[]) {
-  return composes.reduce((prev, cur) => {
+function getComposedClassNames(
+  prefix: string,
+  name: string,
+  composes: CssModuleReference[]
+) {
+  return composes.reduce((className, composed) => {
     // skip dependencies for now
-    if (cur.type === "dependency") return prev;
-    return prev + " " + cur.name;
+    if (composed.type === "dependency") {
+      console.log({ composed });
+      return className;
+    }
+    return className + " " + getPrefixedClassName(prefix, composed.name);
   }, name);
+}
+
+function getPrefixedClassName(prefix: string, name: string) {
+  return prefix + name;
 }
 
 export interface CssModuleFileContents {
   css: string;
-  sourceMap: string | null;
+  source: string;
   json: CssModuleClassMap;
   moduleExports: CssModuleExports;
   dependencies: CssModuleDependency[];
