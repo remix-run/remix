@@ -6,7 +6,10 @@
   color: yellow;
 }
 
-.inner {
-  composes: button;
+.bold {
   font-weight: bold;
+}
+
+.inner {
+  composes: bold;
 }
