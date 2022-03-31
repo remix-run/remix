@@ -20,11 +20,18 @@ import { loadEnv } from "../env";
 import { log } from "./logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
+const npxInterop = {
+  'npm': 'npx',
+  'yarn': 'yarn',
+  'pnpm': 'pnpm exec',
+}
+
 export async function create({
   appTemplate,
   projectDir,
   remixVersion,
   installDeps,
+  packageManager,
   useTypeScript,
   githubToken,
 }: {
@@ -32,6 +39,7 @@ export async function create({
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
+  packageManager: 'npm' | 'yarn' | 'pnpm',
   useTypeScript: boolean;
   githubToken?: string;
 }) {
@@ -40,6 +48,7 @@ export async function create({
     projectDir,
     remixVersion,
     installDeps,
+    packageManager,
     useTypeScript,
     githubToken,
   });
@@ -49,11 +58,11 @@ export async function create({
   if (hasInitScript) {
     if (installDeps) {
       console.log("💿 Running remix.init script");
-      await init(projectDir);
+      await init(projectDir, packageManager);
       await fse.remove(initScriptDir);
     } else {
       console.log(
-        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `npx remix init`"
+        `💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
       );
     }
   }
@@ -75,13 +84,12 @@ export async function create({
   }
 }
 
-export async function init(projectDir: string) {
+export async function init(projectDir: string, packageManager: 'npm' | 'yarn' | 'pnpm') {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
   if (await fse.pathExists(initScript)) {
-    // TODO: check for npm/yarn/pnpm
-    execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
+    execSync(`${packageManager} install`, { stdio: "ignore", cwd: initScriptDir });
     let initFn = require(initScript);
     try {
       await initFn({ rootDirectory: projectDir });

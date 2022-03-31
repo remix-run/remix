@@ -7,6 +7,20 @@ import inquirer from "inquirer";
 import * as colors from "./colors";
 import * as commands from "./commands";
 
+/**
+ * Determine which package manager the user prefers.
+ *
+ * npm, Yarn and pNPM set the user agent environment variable
+ * that can be used to determine which package manager ran
+ * the command.
+ */
+function getPreferredPackageManager() {
+  return ((process.env.npm_user_agent ?? "").split("/")[0] ?? "npm") as
+    | "npm"
+    | "yarn"
+    | "pnpm";
+}
+
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   "M"
@@ -165,6 +179,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       }
 
       let projectDir = path.resolve(process.cwd(), projectPath);
+      let pm = getPreferredPackageManager();
 
       let answers = await inquirer
         .prompt<{
@@ -251,7 +266,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           {
             name: "install",
             type: "confirm",
-            message: "Do you want me to run `npm install`?",
+            message: `Do you want me to run \`${pm} install\`?`,
             when() {
               return flags.install === undefined;
             },
@@ -281,13 +296,14 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps: flags.install ?? answers.install,
+        packageManager: pm,
         useTypeScript: flags.typescript ?? answers.useTypeScript,
         githubToken: process.env.GITHUB_TOKEN,
       });
       break;
     }
     case "init":
-      await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd());
+      await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd(), getPreferredPackageManager());
       break;
     case "routes":
       await commands.routes(input[1], flags.json ? "json" : "jsx");
