@@ -3,7 +3,7 @@ export type Exports = {
   value: string[];
 };
 
-const adapters = [
+export const adapters = [
   "architect",
   "cloudflare-pages",
   "cloudflare-workers",

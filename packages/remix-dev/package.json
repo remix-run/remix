@@ -64,6 +64,7 @@
     "@types/jscodeshift": "^0.11.3",
     "@types/lodash.debounce": "^4.0.6",
     "@types/tar-fs": "^2.0.1",
-    "@types/ws": "^7.4.1"
+    "@types/ws": "^7.4.1",
+    "type-fest": "^2.12.2"
   }
 }

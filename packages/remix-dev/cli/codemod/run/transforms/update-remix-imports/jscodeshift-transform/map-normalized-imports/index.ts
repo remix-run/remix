@@ -31,7 +31,7 @@ const getRemainingNormalizedImports = (
 //   [runtime: Runtime]: NormalizedImport[];
 // };
 export type MappedNormalizedImports = ReturnType<typeof mapNormalizedImports>;
-type MapNormalizedImportsArgs = {
+export type MapNormalizedImportsArgs = {
   adapter?: Adapter;
   client: Client;
   normalizedImports: NormalizedImport[];
