@@ -99,7 +99,9 @@ export async function init(projectDir: string) {
       await initFn({ rootDirectory: projectDir });
     } catch (error) {
       if (error instanceof Error) {
-        error.message = colors.error("🚨 Oops, remix.init failed");
+        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+          error.message
+        }`;
       }
       throw error;
     }

@@ -6,7 +6,7 @@ describe("remix flags", () => {
   describe("the --help flag", () => {
     it("prints help info", async () => {
       let { stdout } = await execRemix(["--help"]);
-      expect(stdout).toMatchInlineSnapshot(`
+      expect(stdout.trim()).toMatchInlineSnapshot(`
         "R E M I X
 
           Usage:
@@ -93,14 +93,7 @@ describe("remix flags", () => {
   describe("the --version flag", () => {
     it("prints the current version", async () => {
       let { stdout } = await execRemix(["--version"]);
-      expect(!!semver.valid(stdout)).toBe(true);
-    });
-  });
-
-  describe("the -v flag", () => {
-    it("prints the current version", async () => {
-      let { stdout } = await execRemix(["-v"]);
-      expect(!!semver.valid(stdout)).toBe(true);
+      expect(!!semver.valid(stdout.trim())).toBe(true);
     });
   });
 });
