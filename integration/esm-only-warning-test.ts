@@ -102,7 +102,7 @@ beforeAll(async () => {
     },
   });
 
-  const chunks = [];
+  let chunks = [];
   buildOutput = await new Promise<string>((resolve, reject) => {
     buildStdio.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
     buildStdio.on("error", (err) => reject(err));
