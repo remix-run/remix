@@ -3,10 +3,103 @@ name: release
 on:
   release:
     types: [published]
+  schedule:
+    - cron: "0 7 * * *" # every day at 12AM PST
 
 jobs:
-  build:
-    if: github.repository == 'remix-run/remix'
+  nightly:
+    name: Nightly Release
+    if: github.repository == 'remix-run/remix' && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          ref: dev
+          token: ${{ secrets.NIGHTLY_PAT }}
+
+      - name: Check for commits
+        id: nightly
+        run: |
+          count=$(git rev-list $GITHUB_SHA..HEAD --count)
+          echo "commit count $count"
+          if [ "$count" -gt "0" ]; then
+            echo "::set-output name=RELEASE::true"
+          else
+            echo "::set-output name=release::false"
+          fi
+
+      - name: Get Node Version
+        if: steps.nightly.ouputs.RELEASE == true
+        run: echo "::set-output name=version::$(cat .nvmrc)"
+        id: nvmrc
+
+      - name: Setup node
+        if: steps.nightly.ouputs.RELEASE == true
+        uses: actions/setup-node@v3
+        with:
+          node-version: "${{ steps.nvmrc.outputs.version }}"
+
+      - run: echo "::set-output name=dir::$(yarn cache dir)"
+        if: steps.nightly.ouputs.RELEASE == true
+        id: yarn-cache
+
+      - name: Restore dependency cache
+        if: steps.nightly.ouputs.RELEASE == true
+        uses: actions/cache@v2
+        with:
+          path: "${{ steps.yarn-cache.outputs.dir }}"
+          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-cache-
+
+      - name: Install dependencies
+        if: steps.nightly.ouputs.RELEASE == true
+        run: yarn --frozen-lockfile
+
+      - name: Build
+        if: steps.nightly.ouputs.RELEASE == true
+        run: yarn build
+
+      - name: Update Version
+        if: steps.nightly.ouputs.RELEASE == true
+        id: version
+        run: |
+          SHA=$(git rev-parse HEAD)
+          SHORT_SHA=${SHA::7}
+          NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}
+          echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
+
+          git checkout -b nightly/${NEXT_VERSION}
+          npm version ${NEXT_VERSION}
+
+          git push origin --tags
+
+      - name: Setup npm auth
+        if: steps.nightly.ouputs.RELEASE == true
+        run: |
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish
+        if: steps.nightly.ouputs.RELEASE == true
+        run: npm run publish
+
+      - name: Create GitHub release
+        if: steps.nightly.ouputs.RELEASE == true
+        uses: actions/create-release@v1
+        with:
+          draft: false
+          prerelease: true
+          release_name: v${{ steps.version.outputs.NEXT_VERSION }}
+          tag_name: v${{ steps.version.outputs.NEXT_VERSION }}
+        env:
+          # need this token in order to have it trigger the comment workflow
+          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
+
+  stable:
+    if: github.repository == 'remix-run/remix' && github.event.action == 'published' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
