@@ -1,7 +1,6 @@
 import type { Context, HttpRequest } from "@azure/functions";
 import {
   createRequestHandler as createRemixRequestHandler,
-  Response,
 } from "@remix-run/node";
 
 import {
@@ -67,9 +66,77 @@ describe("azure createRequestHandler", () => {
       expect(res.body).toBe("URL: /foo/bar");
     });
 
-    it.todo("handles status codes");
+    it("handles status codes", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async () => {
+        return new Response (null, { status: 204 });
+      });
 
-    it.todo("sets headers");
+      let mockedRequest: HttpRequest = {
+        method: "GET",
+        url: "/foo/bar",
+        rawBody: "",
+        headers: {
+          "x-ms-original-url": "http://localhost:3000/foo/bar",
+        },
+        params: {},
+        query: {},
+        body: "",
+      };
+
+      let res = await createRequestHandler({ build: undefined })(
+        context,
+        mockedRequest
+      );
+
+      expect(res.status).toBe(204);
+    });
+
+    it("sets headers", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        headers.append(
+          "Set-Cookie",
+          "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        headers.append(
+          "Set-Cookie",
+          "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        );
+        for(let [key, value] of req.headers.entries()) {
+          headers.set(key, value);
+        }
+        return new Response (null, { headers });
+      });
+
+      let mockedRequest: HttpRequest = {
+        method: "GET",
+        url: "/foo/bar",
+        rawBody: "",
+        headers: {
+          "x-ms-original-url": "http://localhost:3000/foo/bar",
+        },
+        params: {},
+        query: {},
+        body: "",
+      };
+
+      let res = await createRequestHandler({ build: undefined })(
+        context,
+        mockedRequest
+      );
+
+      expect(res.headers["x-ms-original-url"]).toEqual(["http://localhost:3000/foo/bar"]);
+      expect(res.headers["X-Time-Of-Year"]).toEqual(["most wonderful"]);
+      expect(res.headers["Set-Cookie"]).toEqual([
+        "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+        "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
+        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
+      ]);
+    });
   });
 });
 
