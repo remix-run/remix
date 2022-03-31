@@ -28,15 +28,15 @@ app.all(
   "*",
   process.env.NODE_ENV === "development"
     ? (req, res, next) => {
-        purgeRequireCache(buildPath);
+        purgeRequireCache();
 
         return createRequestHandler({
-          build: require(buildPath),
+          build: require(BUILD_DIR),
           mode: process.env.NODE_ENV,
         })(req, res, next);
       }
     : createRequestHandler({
-        build: require(buildPath),
+        build: require(BUILD_DIR),
         mode: process.env.NODE_ENV,
       })
 );
