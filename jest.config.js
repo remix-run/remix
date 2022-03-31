@@ -14,6 +14,7 @@ module.exports = {
     "packages/remix-node",
     "packages/remix-react",
     "packages/remix-server-runtime",
+    "packages/remix-azure-functions",
   ],
   watchPlugins: [
     require.resolve("jest-watch-select-projects"),
