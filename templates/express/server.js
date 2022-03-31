@@ -26,12 +26,8 @@ app.use(morgan("tiny"));
 
 app.all(
   "*",
-  process.env.NODE_ENV === "production"
-    ? createRequestHandler({
-        build: require(buildPath),
-        mode: process.env.NODE_ENV,
-      })
-    : (req, res, next) => {
+  process.env.NODE_ENV === "development"
+    ? (req, res, next) => {
         purgeRequireCache(buildPath);
 
         return createRequestHandler({
@@ -39,6 +35,10 @@ app.all(
           mode: process.env.NODE_ENV,
         })(req, res, next);
       }
+    : createRequestHandler({
+        build: require(buildPath),
+        mode: process.env.NODE_ENV,
+      })
 );
 const port = process.env.PORT || 3000;
 
