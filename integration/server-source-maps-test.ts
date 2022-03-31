@@ -1,7 +1,8 @@
 import path from "path";
 import fsp from "fs/promises";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+
+import { createFixture, js } from "./helpers/create-fixture";
+import type { Fixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
 
