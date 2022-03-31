@@ -2,12 +2,19 @@ import { execFileSync } from "child_process";
 
 import * as colors from "./colors";
 
-export const checkGitStatus = (force: boolean = false) => {
+type CheckGitStatusArgs = {
+  force?: boolean;
+  projectDir?: string;
+};
+export const checkGitStatus = ({
+  force = false,
+  projectDir = process.env.REMIX_ROOT || process.cwd(),
+}: CheckGitStatusArgs) => {
   let clean = false;
   let errorMessage = "Unable to determine if git directory is clean";
 
   try {
-    clean = isGitClean(process.env.REMIX_ROOT || process.cwd());
+    clean = isGitClean(projectDir);
     errorMessage = "Git directory is not clean";
   } catch (err: any) {
     if (err?.stderr.indexOf("Not a git repository") >= 0) {

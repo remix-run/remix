@@ -4,7 +4,6 @@ import inspector from "inspector";
 import inquirer from "inquirer";
 // import chalkAnimation from "chalk-animation";
 
-import { checkGitStatus } from "./check-git-status";
 import * as colors from "./colors";
 import * as commands from "./commands";
 
@@ -314,10 +313,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.setup(input[1]);
       break;
     case "codemod": {
-      if (!flags.dry) {
-        checkGitStatus(flags.force);
-      }
-
       let answers = await commands.codemod.questions({
         input: {
           projectDir: input[2],
