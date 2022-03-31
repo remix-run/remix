@@ -1,4 +1,10 @@
-import { createAppFixture, createFixture, js, json } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+  json,
+  mdx,
+} from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
@@ -28,7 +34,7 @@ beforeAll(async () => {
           )
         }
       `,
-      
+
       "app/routes/tilde-alias.tsx": js`
         import { pizza } from "~/components/my-lib";
         import { json, useLoaderData, Link } from "remix";
@@ -47,6 +53,30 @@ beforeAll(async () => {
         }
       `,
 
+      "app/components/component.jsx": js`
+        export function PizzaComponent() {
+          return <span>this is a pizza</span>
+        }
+      `,
+
+      "app/routes/mdx.mdx": mdx`
+        ---
+        meta:
+          title: My First Post
+          description: Isn't this awesome?
+        headers:
+          Cache-Control: no-cache
+        ---
+
+        import { PizzaComponent } from "../components/component";
+
+        # Hello MDX!
+
+        This is my first post.
+
+        <PizzaComponent />
+      `,
+
       "tsconfig.json": json`
         {
           "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
@@ -62,14 +92,15 @@ beforeAll(async () => {
             "baseUrl": ".",
             "paths": {
               "~/*": ["./app/*"],
-              "@mylib": ["./app/components/my-lib/index"]
+              "@mylib": ["./app/components/my-lib/index"],
+              "@component": ["./app/components/component.jsx"],
             },
 
             // Remix takes care of building everything in \`remix build\`.
             "noEmit": true
           }
         }
-      `
+      `,
     },
   });
 
@@ -79,12 +110,18 @@ beforeAll(async () => {
 afterAll(async () => app.close());
 
 it("import internal library via alias other than ~", async () => {
-// test for https://github.com/remix-run/remix/issues/2298
+  // test for https://github.com/remix-run/remix/issues/2298
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
 it("import internal library via ~ alias", async () => {
   let response = await fixture.requestDocument("/tilde-alias");
+  expect(await response.text()).toMatch("this is a pizza");
+});
+
+it("works for mdx files", async () => {
+  await app.goto("/mdx");
+  let response = await fixture.requestDocument("/mdx");
   expect(await response.text()).toMatch("this is a pizza");
 });

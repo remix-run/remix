@@ -9,6 +9,7 @@ import express from "express";
 import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
+import stripIndent from "strip-indent";
 
 import type {
   ServerBuild,
@@ -41,6 +42,7 @@ export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
 export const js = String.raw;
 export const json = String.raw;
+export const mdx = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -410,7 +412,7 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
     Object.keys(init.files).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fs.writeFile(filePath, init.files[filename]);
+      await fs.writeFile(filePath, stripIndent(init.files[filename]));
     })
   );
   await renamePkgJsonApp(dir);

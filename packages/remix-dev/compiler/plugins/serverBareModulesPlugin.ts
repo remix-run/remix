@@ -1,6 +1,6 @@
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
-import tsConfigPaths from 'tsconfig-paths';
+import tsConfigPaths from "tsconfig-paths";
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
@@ -26,7 +26,9 @@ export function serverBareModulesPlugin(
     if (!matchPath) {
       return id;
     }
-    return matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id;
+    return (
+      matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id
+    );
   }
 
   return {
@@ -114,9 +116,9 @@ function getNpmPackageName(id: string): string {
   return packageName;
 }
 
-function createMatchPath() {
+export function createMatchPath() {
   let configLoaderResult = loadTsConfig();
-  if (configLoaderResult.resultType === 'failed') {
+  if (configLoaderResult.resultType === "failed") {
     return undefined;
   }
 
@@ -126,13 +128,10 @@ function createMatchPath() {
     configLoaderResult.mainFields,
     configLoaderResult.addMatchAll
   );
+
   return matchPath;
 }
 
 function isBareModuleId(id: string): boolean {
-  return (
-    !id.startsWith("node:") &&
-    !id.startsWith(".") &&
-    !isAbsolute(id)
-  );
+  return !id.startsWith("node:") && !id.startsWith(".") && !isAbsolute(id);
 }
