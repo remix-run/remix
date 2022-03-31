@@ -42,6 +42,8 @@
     "node-fetch": "^2.6.7",
     "prettier": "2.6.1",
     "pretty-ms": "^7.0.1",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
     "remark-frontmatter": "^4.0.0",
     "remark-mdx-frontmatter": "^1.0.1",
     "semver": "^7.3.5",
