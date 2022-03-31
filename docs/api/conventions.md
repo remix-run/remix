@@ -478,7 +478,7 @@ You can also export an optional `handleDataRequest` function that will allow you
 Here's a basic example:
 
 ```tsx
-import ReactDOMServer from "react-dom/server";
+import { renderToString } from "react-dom/server";
 import type {
   EntryContext,
   HandleDataRequestFunction,
@@ -491,7 +491,7 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  const markup = ReactDOMServer.renderToString(
+  const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
