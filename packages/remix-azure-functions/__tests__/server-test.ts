@@ -10,9 +10,6 @@ import {
   createRequestHandler,
 } from "../server";
 
-// We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the azure adapter
-jest.mock("@remix-run/server-runtime");
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
