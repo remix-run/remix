@@ -101,7 +101,7 @@ ${colors.heading("Show all routes in your app")}:
 export async function run(argv: string[] = process.argv.slice(2)) {
   // Check the node version
   let versions = process.versions;
-  if (versions?.node && semver.major(versions.node) < 14) {
+  if (versions && versions.node && semver.major(versions.node) < 14) {
     throw new Error(
       `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
     );
