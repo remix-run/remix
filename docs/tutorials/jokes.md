@@ -1550,11 +1550,9 @@ declare global {
 // create a new connection to the DB with every change either.
 if (process.env.NODE_ENV === "production") {
   db = new PrismaClient();
-  db.$connect();
 } else {
   if (!global.__db) {
     global.__db = new PrismaClient();
-    global.__db.$connect();
   }
   db = global.__db;
 }
@@ -2553,6 +2551,15 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  console.log(url);
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: {
@@ -2576,7 +2583,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -3687,7 +3696,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[13,97-103]
+```tsx filename=app/routes/login.tsx lines=[13,105-112]
 import type { ActionFunction, LinksFunction } from "remix";
 import {
   useActionData,
@@ -3720,6 +3729,14 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: {
@@ -3743,7 +3760,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -5060,6 +5079,14 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: {
@@ -5083,7 +5110,9 @@ export const action: ActionFunction = async ({
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
