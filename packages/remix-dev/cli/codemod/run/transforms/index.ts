@@ -1,1 +1,2 @@
-export * as updateRemixImports from "./update-remix-imports";
+export * from "./types";
+export * from "./update-remix-imports";

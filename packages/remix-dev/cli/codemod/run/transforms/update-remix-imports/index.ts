@@ -1,51 +1,13 @@
-import type { Transform } from "jscodeshift";
+import { join } from "path";
 
-import { getNewImportDeclarations } from "./get-new-import-declarations";
-import { getRemixImports } from "./get-remix-imports";
-import { mapNormalizedImports } from "./map-normalized-imports";
-import { normalizeImports } from "./normalize-imports";
+import { JSCodeshiftTransform } from "../jscodeshift-transform";
+import type { Transform } from "../types";
 
-const transform: Transform = (file, api, options) => {
-  let j = api.jscodeshift;
-  let root = j(file.source);
+const transformPath = join(__dirname, "jscodeshift-transform");
 
-  let remixImports = getRemixImports(j, root);
-  if (remixImports.length === 0) {
-    // This transform doesn't need to run if there are no `remix` imports
-    return null;
-  }
-
-  // https://github.com/facebook/jscodeshift/blob/main/recipes/retain-first-comment.md
-  let getFirstNode = () => root.find(j.Program).get("body", 0).node;
-  let oldFirstNode = getFirstNode();
-
-  let normalizedImports = normalizeImports(remixImports);
-  let mappedNormalizedImports = mapNormalizedImports({
-    // adapter: "express",
-    client: "react",
-    normalizedImports,
-    runtime: "node",
-  });
-  let newImportDeclarations = getNewImportDeclarations(
-    j,
-    mappedNormalizedImports
-  );
-
-  let firstRemixImport = remixImports.at(0);
-  newImportDeclarations.forEach((newImportDeclaration) => {
-    firstRemixImport.insertBefore(newImportDeclaration);
-  });
-
-  remixImports.forEach((oldRemixImport) => {
-    j(oldRemixImport).remove();
-  });
-
-  // If the first node has been modified or deleted, reattach the comments
-  let newFirstNode = getFirstNode();
-  if (newFirstNode !== oldFirstNode) {
-    newFirstNode.comments = oldFirstNode.comments;
-  }
-
-  return root.toSource(options);
+export const updateRemixImports: Transform = async ({ files, flags }) => {
+  return JSCodeshiftTransform({ files, flags, transformPath });
 };
-export default transform;
+
+// escape-hatch to include these files in the build
+export * as JSCodeshiftTransform from "./jscodeshift-transform";
