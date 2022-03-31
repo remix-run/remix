@@ -7,7 +7,6 @@
   "dependencies": {
     "@remix-run/azure-functions": "*",
     "@remix-run/react": "*",
-    "@remix-run/serve": "*",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "*"
@@ -17,6 +16,7 @@
     "@azure/static-web-apps-cli": "^0.8.3",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
+    "@remix-run/serve": "*",
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
     "azure-functions-core-tools": "4.0.3971",
