@@ -3,7 +3,7 @@ const compression = require("compression");
 const morgan = require("morgan");
 const { createRequestHandler } = require("@remix-run/express");
 
-const buildPath = "./build";
+const BUILD_DIR = path.join(process.cwd(), "build");
 
 const app = express();
 
