@@ -658,21 +658,9 @@ export const loader: LoaderFunction = async ({
 };
 ```
 
-#### Returning objects
-
-You can return plain JavaScript objects from your loaders that will be made available to your component by the [`useLoaderData`](./remix#useloaderdata) hook.
-
-```ts
-import { json } from "remix";
-
-export const loader = async () => {
-  return json({ whatever: "you want" });
-};
-```
-
 #### Returning Response Instances
 
-When you return a plain object, Remix turns it into a [Fetch Response][response]. This means you can return them yourself, too.
+You need to return a [Fetch Response][response] from your loader.
 
 ```ts
 export const loader: LoaderFunction = async () => {
