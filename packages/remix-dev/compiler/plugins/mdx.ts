@@ -5,7 +5,7 @@ import { remarkMdxFrontmatter } from "remark-mdx-frontmatter";
 
 import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
-import { createMatchPath } from "./serverBareModulesPlugin";
+import { createMatchPath } from "../utils/tsconfig";
 
 export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
   return {

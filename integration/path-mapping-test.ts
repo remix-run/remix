@@ -121,7 +121,6 @@ it("import internal library via ~ alias", async () => {
 });
 
 it("works for mdx files", async () => {
-  await app.goto("/mdx");
   let response = await fixture.requestDocument("/mdx");
   expect(await response.text()).toMatch("this is a pizza");
 });

@@ -1,6 +1,5 @@
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
-import tsConfigPaths from "tsconfig-paths";
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
@@ -8,7 +7,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
-import { loadTsConfig } from "../utils/tsconfig";
+import { createMatchPath } from "../utils/tsconfig";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -114,22 +113,6 @@ function getNpmPackageName(id: string): string {
   let packageName = split[0];
   if (packageName.startsWith("@")) packageName += `/${split[1]}`;
   return packageName;
-}
-
-export function createMatchPath() {
-  let configLoaderResult = loadTsConfig();
-  if (configLoaderResult.resultType === "failed") {
-    return undefined;
-  }
-
-  let matchPath = tsConfigPaths.createMatchPath(
-    configLoaderResult.absoluteBaseUrl,
-    configLoaderResult.paths,
-    configLoaderResult.mainFields,
-    configLoaderResult.addMatchAll
-  );
-
-  return matchPath;
 }
 
 function isBareModuleId(id: string): boolean {
