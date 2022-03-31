@@ -1,8 +1,9 @@
-import express from "express";
-import compression from "compression";
-import morgan from "morgan";
-import { createRequestHandler } from "@remix-run/express";
-import * as serverBuild from "@remix-run/dev/server-build";
+const express = require("express");
+const compression = require("compression");
+const morgan = require("morgan");
+const { createRequestHandler } = require("@remix-run/express");
+
+const buildPath = "./build";
 
 const app = express();
 
@@ -25,14 +26,26 @@ app.use(morgan("tiny"));
 
 app.all(
   "*",
-  createRequestHandler({
-    build: serverBuild,
-    mode: process.env.NODE_ENV,
-  })
-);
+  process.env.NODE_ENV === "production"
+    ? createRequestHandler({
+        build: require(buildPath),
+        mode: process.env.NODE_ENV,
+      })
+    : (req, res, next) => {
+        purgeRequireCache(buildPath);
 
+        return createRequestHandler({
+          build: require(buildPath),
+          mode: process.env.NODE_ENV,
+        })(req, res, next);
+      }
+);
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
   console.log(`Express server listening on port ${port}`);
 });
+
+function purgeRequireCache(path) {
+  delete require.cache[require.resolve(path)];
+}
