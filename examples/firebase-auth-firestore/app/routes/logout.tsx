@@ -1,4 +1,4 @@
-import type { LoaderFunction} from "remix";
+import type { LoaderFunction } from "remix";
 import { Form, redirect } from "remix";
 import { destroySession, getSession } from "~/sessions";
 

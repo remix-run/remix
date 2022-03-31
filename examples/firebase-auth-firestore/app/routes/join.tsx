@@ -1,13 +1,5 @@
-import type {
-  ActionFunction,
-  LoaderFunction} from "remix";
-import {
-  Form,
-  json,
-  Link,
-  redirect,
-  useActionData,
-} from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
+import { Form, json, Link, redirect, useActionData } from "remix";
 import { checkSessionCookie, signUp } from "~/server/auth.server";
 import { commitSession, getSession } from "~/sessions";
 

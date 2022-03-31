@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
-import type {
-  ActionFunction,
-  LoaderFunction} from "remix";
+import type { ActionFunction, LoaderFunction } from "remix";
 import {
   Form,
   json,
