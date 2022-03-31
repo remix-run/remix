@@ -39,4 +39,9 @@ it("re-writes stack traces to point to the correct file", async () => {
     "utf-8"
   );
   expect(buildIndex).toMatch("//# sourceMappingURL=index.js.map");
+  let buildIndexSourcemap = await fsp.readFile(
+    path.join(fixture.projectDir, "build/index.js.map"),
+    "utf-8"
+  );
+  expect(buildIndexSourcemap).not.toMatch("route:");
 });
