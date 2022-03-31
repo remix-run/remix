@@ -32,6 +32,7 @@ module.exports = {
       setupFilesAfterEnv: [
         "<rootDir>/packages/remix-dev/__tests__/setupAfterEnv.ts",
       ],
+      globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
       displayName: "remix-express",

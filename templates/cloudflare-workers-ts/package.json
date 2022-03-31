@@ -11,7 +11,7 @@
     "dev:remix": "remix watch",
     "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
     "dev": "remix build && run-p dev:*",
-    "postinstall": "remix setup cloudflare-workers",
+    "postinstall": "remix setup cloudflare",
     "start": "cross-env NODE_ENV=production miniflare ./build/index.js"
   },
   "dependencies": {

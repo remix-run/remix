@@ -82,5 +82,13 @@ module.exports = {
         "prefer-let/prefer-let": OFF,
       },
     },
+    {
+      files: ["packages/**/*.*"],
+      excludedFiles: "**/__tests__/**/*.*",
+      rules: {
+        // Validate dependencies are listed in workspace package.json files
+        "import/no-extraneous-dependencies": ERROR,
+      },
+    },
   ],
 };
