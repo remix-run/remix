@@ -410,13 +410,16 @@ function createServerBuild(
     };
   }
 
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    config.serverBuildTarget ?? ""
+  );
   let plugins: esbuild.Plugin[] = [
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, dependencies),
+    serverBareModulesPlugin(config, dependencies, options.onWarning),
   ];
 
   if (config.serverPlatform !== "node") {
@@ -430,19 +433,16 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
+      conditions: isCloudflareRuntime ? ["worker"] : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production &&
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        ),
-      mainFields:
-        config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
+      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
+      mainFields: isCloudflareRuntime
+        ? ["browser", "module", "main"]
+        : config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
       target: options.target,
       inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
