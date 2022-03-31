@@ -1,4 +1,5 @@
 import * as path from "path";
+import os from "os";
 import inspector from "inspector";
 import meow from "meow";
 import inquirer from "inquirer";
@@ -176,7 +177,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
               },
             ])
             .then(async (input) => {
-              return path.resolve(process.cwd(), input.dir);
+              let inputDir = input.dir.startsWith("~")
+                ? input.dir.replace("~", os.homedir())
+                : input.dir;
+              if (path.isAbsolute(inputDir)) {
+                return inputDir;
+              }
+              return path.resolve(process.cwd(), inputDir);
             })
             .catch((error) => {
               if (error.isTtyError) {

@@ -37,6 +37,14 @@ export async function create({
   useTypeScript: boolean;
   githubToken?: string;
 }) {
+  console.log({
+    appTemplate,
+    projectDir,
+    remixVersion,
+    installDeps,
+    useTypeScript,
+    githubToken,
+  });
   let spinner = ora("Creating your app…").start();
   await createApp({
     appTemplate,
