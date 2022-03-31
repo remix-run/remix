@@ -218,6 +218,25 @@ function remixDev() {
       ],
     },
     {
+      external: (id) => isBareModuleId(id),
+      input: [`${sourceDir}/cli/codemod/run/transforms/index.ts`],
+      output: {
+        banner: createBanner("@remix-run/codemod", version),
+        dir: `${outputDir}/cli/codemod/run/transforms`,
+        exports: "auto",
+        format: "cjs",
+        preserveModules: true,
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+      ],
+    },
+    {
       external() {
         return true;
       },
