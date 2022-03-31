@@ -13,6 +13,7 @@ Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's th
 - `@remix-run/express`
 - `@remix-run/netlify`
 - `@remix-run/vercel`
+- `@remix-run/azure-functions`
 
 These adapters are imported into your server's entry and is not used inside of your Remix app itself.
 

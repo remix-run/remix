@@ -11,5 +11,8 @@
   ],
   "navigationFallback": {
     "rewrite": "/api/azure"
+  },
+  "platform": {
+    "apiRuntime": "node:16"
   }
 }
