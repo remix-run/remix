@@ -6,5 +6,3 @@ node_modules
 .env
 
 prisma/dev.db
-/package-lock.json
-/yarn.lock
