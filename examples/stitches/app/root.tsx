@@ -11,7 +11,6 @@ import {
 } from "remix";
 
 import ClientStyleContext from "./styles/client.context";
-import ServerStyleContext from "./styles/server.context";
 import { styled } from "./styles/stitches.config";
 
 const Container = styled("div", {
@@ -31,14 +30,13 @@ interface DocumentProps {
 }
 
 const Document = ({ children, title }: DocumentProps) => {
-  const serverStyleData = useContext(ServerStyleContext);
   const clientStyleData = useContext(ClientStyleContext);
 
   // Only executed on client
   useEffect(() => {
     // reset cache to re-apply global styles
     clientStyleData.reset();
-  }, [clientStyleData, serverStyleData]);
+  }, [clientStyleData]);
 
   return (
     <html lang="en">
