@@ -22,7 +22,7 @@ ${colors.heading("Usage")}:
   $ remix dev [${colors.arg("projectDir")}]
   $ remix routes [${colors.arg("projectDir")}]
   $ remix setup [${colors.arg("remixPlatform")}]
-  $ remix codemod <${colors.arg("transform")}> <${colors.arg("path")}>
+  $ remix codemod <${colors.arg("transform")}> [${colors.arg("projectDir")}]
 
 ${colors.heading("Options")}:
   --help, -h          Print this help message and exit
@@ -50,9 +50,6 @@ ${colors.heading("Values")}:
   - ${colors.arg(
     "transform"
   )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/codemod/transform-options
-  - ${colors.arg(
-    "path"
-  )}              Files or directory to transform. Can be a glob like app/**.ts(x)
 
 ${colors.heading("Creating a new project")}:
 
@@ -323,7 +320,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       let answers = await commands.codemod.questions({
         input: {
-          files: input[2],
+          projectDir: input[2],
           transform: input[1],
         },
         showHelp,

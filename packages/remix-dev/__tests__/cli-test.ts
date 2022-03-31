@@ -42,7 +42,7 @@ describe("remix cli", () => {
             $ remix dev [projectDir]
             $ remix routes [projectDir]
             $ remix setup [remixPlatform]
-            $ remix codemod <transform> <path>
+            $ remix codemod <transform> [projectDir]
 
           Options:
             --help, -h          Print this help message and exit
@@ -68,7 +68,6 @@ describe("remix cli", () => {
             - template          The project template to use
             - remixPlatform     \`node\` or \`cloudflare\`
             - transform         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/codemod/transform-options
-            - path              Files or directory to transform. Can be a glob like app/**.ts(x)
 
           Creating a new project:
 

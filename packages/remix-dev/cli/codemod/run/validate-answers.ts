@@ -12,16 +12,16 @@ const expandFilePathsIfNeeded = (filesBeforeExpansion: string) => {
     : [filesBeforeExpansion];
 };
 
-export const validateAnswers = ({ files, transform }: Answers) => ({
-  files: validateFiles(files),
+export const validateAnswers = ({ projectDir, transform }: Answers) => ({
+  files: validateProjectDir(projectDir),
   transform: validateTransform(transform),
 });
 
-const validateFiles = (files: Answers["files"]) => {
-  let expandedFiles = expandFilePathsIfNeeded(files);
+const validateProjectDir = (projectDir: Answers["projectDir"]) => {
+  let expandedFiles = expandFilePathsIfNeeded(projectDir);
 
   if (expandedFiles.length === 0) {
-    throw Error(`No files found matching ${files}`);
+    throw Error(`No files found matching ${projectDir}`);
   }
 
   return expandedFiles;

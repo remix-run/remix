@@ -3,28 +3,20 @@ import inquirer from "inquirer";
 import { transformOptions } from "./transform-options";
 
 export type Answers = {
-  files: string;
+  projectDir: string;
   transform: string;
 };
 
 type QuestionsArgs = {
-  input: { files: string; transform: string };
+  input: { projectDir: string; transform: string };
   showHelp: () => void;
 };
 export const questions = async ({
   input,
   showHelp,
 }: QuestionsArgs): Promise<Answers> => {
-  let { files, transform } = await inquirer
-    .prompt<Answers>([
-      {
-        type: "input",
-        name: "files",
-        message: "On which files or directory should the codemod be applied?",
-        when: !input.files,
-        default: ".",
-        filter: (files) => files.trim(),
-      },
+  let { transform } = await inquirer
+    .prompt<Pick<Answers, "transform">>([
       {
         type: "list",
         name: "transform",
@@ -48,7 +40,7 @@ export const questions = async ({
     });
 
   return {
-    files: input.files || files,
+    projectDir: input.projectDir || process.env.REMIX_ROOT || process.cwd(),
     transform: input.transform || transform,
   };
 };
