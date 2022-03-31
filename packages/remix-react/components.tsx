@@ -257,12 +257,12 @@ export function RemixRoute({ id }: { id: string }) {
   invariant(
     routeData,
     "Cannot initialize 'routeData'. This normally occurs when you have server code in your client modules.\n" +
-    "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
   invariant(
     routeModules,
     "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
-    "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
   let data = routeData[id];
