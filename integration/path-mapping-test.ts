@@ -68,7 +68,7 @@ beforeAll(async () => {
           Cache-Control: no-cache
         ---
 
-        import { PizzaComponent } from "../components/component";
+        import { PizzaComponent } from "@component";
 
         # Hello MDX!
 
