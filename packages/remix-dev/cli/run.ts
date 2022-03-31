@@ -303,7 +303,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "init":
-      await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd(), getPreferredPackageManager());
+      await commands.init(
+        input[1] || process.env.REMIX_ROOT || process.cwd(),
+        getPreferredPackageManager()
+      );
       break;
     case "routes":
       await commands.routes(input[1], flags.json ? "json" : "jsx");

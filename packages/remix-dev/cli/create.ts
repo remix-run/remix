@@ -151,9 +151,12 @@ export async function createApp({
   }
 
   if (installDeps) {
-    let npmConfig = execSync(`${packageManager} config get @remix-run:registry`, {
-      encoding: "utf8",
-    });
+    let npmConfig = execSync(
+      `${packageManager} config get @remix-run:registry`,
+      {
+        encoding: "utf8",
+      }
+    );
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       console.log(
         `🚨 Oops! You still have the private Remix registry configured. Please run \`${packageManager} config delete @remix-run:registry\` or edit your .npmrc file to remove it.`
@@ -161,7 +164,10 @@ export async function createApp({
       process.exit(1);
     }
 
-    execSync(`${packageManager} install`, { stdio: "inherit", cwd: projectDir });
+    execSync(`${packageManager} install`, {
+      stdio: "inherit",
+      cwd: projectDir,
+    });
   }
 }
 

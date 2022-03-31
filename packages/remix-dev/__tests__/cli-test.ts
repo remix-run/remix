@@ -524,12 +524,15 @@ describe("remix cli", () => {
           projectDir,
           "--template",
           "grunge-stack",
-          "--install"
+          "--install",
         ],
         { env: { ...process.env, npm_user_agent: yarnUserAgent } }
       );
 
-      expect(childProcess.execSync).toBeCalledWith('yarn install', expect.anything());
+      expect(childProcess.execSync).toBeCalledWith(
+        "yarn install",
+        expect.anything()
+      );
     });
 
     it.skip("recognizes when pNPM was used to run the command", async () => {
@@ -542,25 +545,22 @@ describe("remix cli", () => {
           projectDir,
           "--template",
           "grunge-stack",
-          "--install"
+          "--install",
         ],
         { env: { ...process.env, npm_user_agent: pnpmUserAgent } }
       );
 
-      expect(childProcess.execSync).toBeCalledWith('pnpm install', expect.anything());
+      expect(childProcess.execSync).toBeCalledWith(
+        "pnpm install",
+        expect.anything()
+      );
     });
 
     it.skip("prompts to run the install command for the preferred package manager", async () => {
       let projectDir = getProjectDir("pnpm-create");
       let { stdout } = await execFile(
         "node",
-        [
-          remix,
-          "create",
-          projectDir,
-          "--template",
-          "grunge-stack"
-        ],
+        [remix, "create", projectDir, "--template", "grunge-stack"],
         { env: { ...process.env, npm_user_agent: pnpmUserAgent } }
       );
 
@@ -577,7 +577,7 @@ describe("remix cli", () => {
           projectDir,
           "--template",
           "grunge-stack",
-          "--no-install"
+          "--no-install",
         ],
         { env: { ...process.env, npm_user_agent: pnpmUserAgent } }
       );

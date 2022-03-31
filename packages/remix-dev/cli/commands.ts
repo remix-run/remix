@@ -21,10 +21,10 @@ import { log } from "./logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
 const npxInterop = {
-  'npm': 'npx',
-  'yarn': 'yarn',
-  'pnpm': 'pnpm exec',
-}
+  npm: "npx",
+  yarn: "yarn",
+  pnpm: "pnpm exec",
+};
 
 export async function create({
   appTemplate,
@@ -39,7 +39,7 @@ export async function create({
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
-  packageManager: 'npm' | 'yarn' | 'pnpm',
+  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
 }) {
@@ -84,12 +84,18 @@ export async function create({
   }
 }
 
-export async function init(projectDir: string, packageManager: 'npm' | 'yarn' | 'pnpm') {
+export async function init(
+  projectDir: string,
+  packageManager: "npm" | "yarn" | "pnpm"
+) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
   if (await fse.pathExists(initScript)) {
-    execSync(`${packageManager} install`, { stdio: "ignore", cwd: initScriptDir });
+    execSync(`${packageManager} install`, {
+      stdio: "ignore",
+      cwd: initScriptDir,
+    });
     let initFn = require(initScript);
     try {
       await initFn({ rootDirectory: projectDir });
