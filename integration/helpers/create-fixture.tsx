@@ -24,6 +24,7 @@ const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
   buildStdio?: Writable;
+  sourcemap?: boolean;
   files: { [filename: string]: string };
   template?:
     | "arc"
@@ -376,20 +377,25 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     writeTestFiles(init, projectDir),
     installRemix(projectDir),
   ]);
-  build(projectDir, init.buildStdio);
+  build(projectDir, init.buildStdio, init.sourcemap);
 
   return projectDir;
 }
 
-function build(projectDir: string, buildStdio: Writable | undefined) {
+
+function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
   // TODO: log errors (like syntax errors in the fixture file strings)
   spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
     cwd: projectDir,
   });
 
+  let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
+  if (sourcemap) {
+    buildArgs.push("--sourcemap");
+  }
   let buildSpawn = spawnSync(
     "node",
-    ["node_modules/@remix-run/dev/cli.js", "build"],
+    buildArgs,
     {
       cwd: projectDir
     }
