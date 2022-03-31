@@ -438,10 +438,11 @@ function createServerBuild(
       format: config.serverModuleFormat,
       treeShaking: true,
       minify: options.mode === BuildMode.Production && isCloudflareRuntime,
-      mainFields:
-        config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
+      mainFields: isCloudflareRuntime
+        ? ["browser", "module", "main"]
+        : config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
       target: options.target,
       inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
