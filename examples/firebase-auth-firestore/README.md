@@ -4,7 +4,6 @@ This project demonstrates how to use Firebase (Auth and Firestore) with Remix.
 
 ## Preview
 
-
 See the screen recording at `./screen_recording.gif` or Open this example on [CodeSandbox](https://codesandbox.com):
 
 <!-- TODO: update this link to the path for your example: -->
@@ -33,7 +32,7 @@ To run it, you need to:
 
 Requests to the Firestore are made using the `firebase-admin`-SDK. You need to check validity of your requests manually, since `firestore.rules` don't apply to admin requests.
 
-`converter` and `datapoint` are utilities to allow typed Firestore data reads and writes. 
+`converter` and `datapoint` are utilities to allow typed Firestore data reads and writes.
 
 ## Links
 

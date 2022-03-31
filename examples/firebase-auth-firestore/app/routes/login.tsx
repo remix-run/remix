@@ -1,8 +1,9 @@
-import {
+import type {
   ActionFunction,
+  LoaderFunction} from "remix";
+import {
   json,
   Link,
-  LoaderFunction,
   redirect,
   useActionData,
 } from "remix";

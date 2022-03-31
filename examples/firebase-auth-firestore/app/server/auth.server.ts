@@ -1,7 +1,8 @@
-import { UserRecord } from "firebase-admin/auth";
+import type { UserRecord } from "firebase-admin/auth";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { destroySession, getSession } from "~/sessions";
-import { redirect, Session } from "remix";
+import type { Session } from "remix";
+import { redirect } from "remix";
 import { auth } from "./firebase.server";
 
 export const checkSessionCookie = async (session: Session) => {
@@ -42,7 +43,9 @@ export const signIn = async (email: string, password: string) => {
 
 export const signUp = async (name: string, email: string, password: string) => {
   await auth.server.createUser({
-    email, password, displayName: name,
-  })
+    email,
+    password,
+    displayName: name,
+  });
   return await signIn(email, password);
 };

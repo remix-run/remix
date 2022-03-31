@@ -1,9 +1,10 @@
-import {
+import type {
   ActionFunction,
+  LoaderFunction} from "remix";
+import {
   Form,
   json,
   Link,
-  LoaderFunction,
   redirect,
   useActionData,
 } from "remix";

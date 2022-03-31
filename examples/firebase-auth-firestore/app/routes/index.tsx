@@ -1,17 +1,19 @@
 import { useEffect, useRef } from "react";
-import {
+import type {
   ActionFunction,
+  LoaderFunction} from "remix";
+import {
   Form,
   json,
   Link,
-  LoaderFunction,
   redirect,
   useActionData,
   useFetcher,
   useLoaderData,
 } from "remix";
 import { requireAuth } from "~/server/auth.server";
-import { addTodo, getUserTodos, removeTodo, Todo } from "~/server/db.server";
+import type { Todo } from "~/server/db.server";
+import { addTodo, getUserTodos, removeTodo } from "~/server/db.server";
 
 type LoaderData = {
   message: string;
