@@ -4,6 +4,7 @@ import type { PackageJson } from "type-fest";
 
 import { JSCodeshiftTransform } from "../jscodeshift-transform";
 import type { Transform } from "../types";
+import { cleanupPackageJson } from "./cleanup-package-json";
 import { getJSCodeshiftExtraOptions } from "./get-jscodeshift-extra-options";
 import type { ExtraOptions } from "./jscodeshift-transform";
 
@@ -18,6 +19,8 @@ export const updateRemixImports: Transform = async ({
   let packageJson: PackageJson = JSON.parse(
     await readFile(pkgJsonPath, "utf-8")
   );
+
+  await cleanupPackageJson({ content: packageJson, path: pkgJsonPath });
 
   return JSCodeshiftTransform<ExtraOptions>({
     extraOptions: getJSCodeshiftExtraOptions(packageJson),

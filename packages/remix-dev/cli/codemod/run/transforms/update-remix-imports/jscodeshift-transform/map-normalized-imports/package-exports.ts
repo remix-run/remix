@@ -14,7 +14,7 @@ export const adapters = [
 export type Adapter = typeof adapters[number];
 const clients = ["react"] as const;
 export type Client = typeof clients[number];
-const runtimes = ["cloudflare", "node"] as const;
+export const runtimes = ["cloudflare", "node"] as const;
 export type Runtime = typeof runtimes[number];
 
 const packages = [...adapters, ...clients, ...runtimes] as const;

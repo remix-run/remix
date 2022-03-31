@@ -9225,10 +9225,10 @@ sort-object-keys@^1.1.3:
   resolved "https://registry.npmjs.org/sort-object-keys/-/sort-object-keys-1.1.3.tgz"
   integrity sha512-855pvK+VkU7PaKYPc+Jjnmt4EzejQHyhhF33q31qG8x7maDzkeFhAAThdCYay11CISO+qAMwjOBP+fPZe0IPyg==
 
-sort-package-json@^1.54.0:
-  version "1.54.0"
-  resolved "https://registry.npmjs.org/sort-package-json/-/sort-package-json-1.54.0.tgz"
-  integrity sha512-MA0nRiSfZ4/CNM/9rz70Hwq4PpvtBc3v532tzQSmoaLSdeBB3cCd488xmNruLL0fb/ZdbKlcaDDudwnrObbjBw==
+sort-package-json@^1.54.0, sort-package-json@^1.55.0:
+  version "1.55.0"
+  resolved "https://registry.npmjs.org/sort-package-json/-/sort-package-json-1.55.0.tgz"
+  integrity sha512-xhKvRD8WGbALjXQkVuk4/93Z/2NIO+5IzKamdMjN5kn3L+N+M9YWQssmM6GXlQr9v1F7PGWsOJEo1gvXOhM7Mg==
   dependencies:
     detect-indent "^6.0.0"
     detect-newline "3.1.0"

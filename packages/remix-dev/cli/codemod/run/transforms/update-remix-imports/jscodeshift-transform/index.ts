@@ -6,7 +6,7 @@ import type { MapNormalizedImportsArgs } from "./map-normalized-imports";
 import { mapNormalizedImports } from "./map-normalized-imports";
 import { normalizeImports } from "./normalize-imports";
 
-export { adapters } from "./map-normalized-imports/package-exports";
+export { adapters, runtimes } from "./map-normalized-imports/package-exports";
 
 export type ExtraOptions = Pick<
   MapNormalizedImportsArgs,
