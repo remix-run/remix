@@ -10,6 +10,16 @@ import {
   createRequestHandler,
 } from "../server";
 
+// We don't want to test that the remix server works here (that's what the
+// puppetteer tests do), we just want to test the express adapter
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+    ...original,
+    createRequestHandler: jest.fn(),
+  };
+});
+
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -147,7 +157,8 @@ describe("azure createRemixRequest", () => {
     };
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
+        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
