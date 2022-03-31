@@ -1399,7 +1399,7 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
-        nonce = undefined
+        nonce = undefined,
       }: {
         port?: number;
         nonce?: string;

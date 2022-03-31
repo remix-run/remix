@@ -20,11 +20,7 @@ if (typeof document !== "undefined") {
  *
  * @see https://remix.run/api/remix#scrollrestoration
  */
-export function ScrollRestoration({
-  nonce = undefined
-}: {
-  nonce?: string;
-}) {
+export function ScrollRestoration({ nonce = undefined }: { nonce?: string }) {
   useScrollRestoration();
 
   // wait for the browser to restore it on its own
