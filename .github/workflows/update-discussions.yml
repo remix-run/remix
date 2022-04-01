@@ -10,14 +10,14 @@ on:
 jobs:
   discussions:
     name: Update Doc Discussions
-    if: github.repository == 'mcansh/discussions-test'
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.GH_BOT_TOKEN }}
 
       - name: Use Node.js
         uses: actions/setup-node@v3
