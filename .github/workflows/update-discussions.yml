@@ -1,0 +1,50 @@
+name: Discussions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+
+jobs:
+  discussions:
+    name: Update Doc Discussions
+    if: github.repository == 'mcansh/discussions-test'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Update Discussions
+        run: node ./scripts/discussions.mjs
+        env:
+          GITHUB_TOKEN: ${{github.token}}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_ID: ${{ secrets.REPOSITORY_ID }}
+          GITHUB_CATEGORY_ID: ${{ secrets.CATEGORY_ID }}
+
+      - name: Commit
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
+          git add .
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "💿 no changes"
+            exit 0
+          fi
+          git commit -m "chore: update docs discussion urls"
+          git push
