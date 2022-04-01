@@ -180,7 +180,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
     if (!route.hasAction) {
       console.error(
         `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`
+        `to submit to it. To fix this, please add an \`action\` function to the route`
       );
     }
 
@@ -224,7 +224,7 @@ async function checkRedirect(
       });
     } else {
       return new TransitionRedirect(
-        url.pathname + url.search,
+        url.pathname + url.search + url.hash,
         response.headers.get("X-Remix-Revalidate") !== null
       );
     }
