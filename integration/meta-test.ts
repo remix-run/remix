@@ -256,9 +256,9 @@ describe("meta array-syntax", () => {
 
           export const meta = ({ data }) => [
             { charset: "utf-8" },
-            { description: data.description },
-            { "og:image": "https://picsum.photos/200/200" },
-            { "og:type": data.contentType }, // undefined
+            { name: "description", content: "data.description" },
+            { property: "og:image", content: "https://picsum.photos/200/200" },
+            { property: "og:type", content: data.contentType }, // undefined
             { httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
             { title: data.title },
           ];
