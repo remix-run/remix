@@ -266,7 +266,9 @@ describe("meta array-syntax", () => {
           export default function Root() {
             return (
               <html lang="en">
+              <head>
               <Meta />
+              </head>
               </html>
             );
           }
@@ -289,8 +291,8 @@ describe("meta array-syntax", () => {
     let enableJavaScript = await app.disableJavaScript();
 
     await app.goto("/");
-    let html = await app.getHtml("html");
-    console.log(html);
+    let head = await app.getHtml("head");
+    console.log(head);
     await expect(app.getHtml('meta[property="og:type"]')).rejects.toThrowError(
       'No element matches selector "meta[property="og:type"]"'
     );
