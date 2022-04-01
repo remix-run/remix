@@ -1,4 +1,4 @@
-import ReactDOMServer from "react-dom/server";
+import { renderToString } from "react-dom/server";
 import { RemixServer } from "remix";
 import type { EntryContext } from "remix";
 import { ServerStyleSheet } from "styled-components";
@@ -11,7 +11,7 @@ export default function handleRequest(
 ) {
   const sheet = new ServerStyleSheet();
 
-  let markup = ReactDOMServer.renderToString(
+  let markup = renderToString(
     sheet.collectStyles(
       <RemixServer context={remixContext} url={request.url} />
     )

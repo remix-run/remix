@@ -167,7 +167,7 @@ export default function Posts() {
     <main>
       <h1>Posts</h1>
       <ul>
-        {posts.map((post: any) => (
+        {posts.map((post) => (
           <li key={post.slug}>
             <Link
               to={post.slug}

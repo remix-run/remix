@@ -663,28 +663,38 @@ export function Meta() {
   return (
     <>
       {Object.entries(meta).map(([name, value]) => {
-        if (!value) return null;
+        if (!value) {
+          return null;
+        }
+
+        if (["charset", "charSet"].includes(name)) {
+          return <meta key="charset" charSet={value as string} />;
+        }
+
+        if (name === "title") {
+          return <title key="title">{value}</title>;
+        }
 
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
         let isOpenGraphTag = name.startsWith("og:");
-        return name === "title" ? (
-          <title key="title">{value}</title>
-        ) : ["charset", "charSet"].includes(name) ? (
-          <meta key="charset" charSet={value as string} />
-        ) : Array.isArray(value) ? (
-          value.map((content) =>
-            isOpenGraphTag ? (
-              <meta key={name + content} property={name} content={content} />
-            ) : (
-              <meta key={name + content} name={name} content={content} />
-            )
-          )
-        ) : isOpenGraphTag ? (
-          <meta key={name} property={name} content={value} />
-        ) : (
-          <meta key={name} name={name} content={value} />
-        );
+        return [value].flat().map((content) => {
+          if (isOpenGraphTag) {
+            return (
+              <meta
+                content={content as string}
+                key={name + content}
+                property={name}
+              />
+            );
+          }
+
+          if (typeof content === "string") {
+            return <meta content={content} name={name} key={name + content} />;
+          }
+
+          return <meta key={name + JSON.stringify(content)} {...content} />;
+        });
       })}
     </>
   );

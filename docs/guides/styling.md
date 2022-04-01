@@ -725,7 +725,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 2. Your `entry.server.tsx` will look something like this:
 
    ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
-   import ReactDOMServer from "react-dom/server";
+   import { renderToString } from "react-dom/server";
    import { RemixServer } from "remix";
    import type { EntryContext } from "remix";
    import { ServerStyleSheet } from "styled-components";
@@ -738,7 +738,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
    ) {
      const sheet = new ServerStyleSheet();
 
-     let markup = ReactDOMServer.renderToString(
+     let markup = renderToString(
        sheet.collectStyles(
          <RemixServer
            context={remixContext}

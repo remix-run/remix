@@ -12,12 +12,6 @@ Start the Remix development asset server
 npm run dev
 ```
 
-In a new tab start your express app:
-
-```sh
-npm run start:dev
-```
-
 This starts your app in development mode, which will purge the server require cache when Remix rebuilds assets so you don't need a process manager restarting the express server.
 
 ## Deployment
