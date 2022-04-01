@@ -672,6 +672,10 @@ export function Meta() {
     parentsData[routeId] = data;
   }
 
+  let [ogVertical] = (
+    typeof meta["og:type"] === "string" ? meta["og:type"] : ""
+  ).split(".");
+
   return (
     <>
       {Object.entries(meta).map(([name, value]) => {
@@ -689,7 +693,9 @@ export function Meta() {
 
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
-        let isOpenGraphTag = name.startsWith("og:");
+        let isOpenGraphTag =
+          name.startsWith("og:") ||
+          (ogVertical && name.startsWith(`${ogVertical}:`));
         return [value].flat().map((content) => {
           if (isOpenGraphTag) {
             return (
