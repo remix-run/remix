@@ -8,7 +8,7 @@ const transformFunctionByName: Record<
   typeof migrationOptions[number]["value"],
   Transform
 > = {
-  "update-remix-imports": updateRemixImports,
+  "replace-remix-imports": updateRemixImports,
 };
 
 type RunArgs = Pick<TransformArgs, "answers" | "flags">;
