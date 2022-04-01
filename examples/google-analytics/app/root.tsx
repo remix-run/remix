@@ -1,7 +1,6 @@
-import { useEffect } from "remix";
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node";
+// import { json } from "@remix-run/node";
 import {
-  // json,
   Link,
   Links,
   LiveReload,
@@ -10,7 +9,9 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
-} from "remix";
+} from "@remix-run/react";
+import { useEffect } from "react";
+
 import * as gtag from "~/utils/gtags.client";
 
 /**
