@@ -77,10 +77,7 @@ async function updateDiscussions() {
 
       let file = parseAttributes(entry.content);
       let { data } = file;
-      let docUrl = new URL(
-        "docs/en/v1" + entry.path.replace(/.md$/),
-        "https://remix.run"
-      ).toString();
+      let docUrl = getDocUrl(entry.path);
 
       let title = data.title || entry.path.replace(/^\/docs/, "");
 
@@ -88,7 +85,7 @@ async function updateDiscussions() {
         (discussion) => discussion.node.url === data.discussionUrl
       );
       if (exists) {
-        if (exists.node.title === data.title) {
+        if (exists.node.title === data.title && exists.node.url === docUrl) {
           console.log(
             `A discussion for ${title} already exists; ${exists.node.url}`
           );
@@ -115,9 +112,16 @@ async function updateDiscussions() {
     });
   } catch (error) {
     throw new Error(
-      "🚨 There was a problem fetching the file from GitHub. Please try again later.`
+      "🚨 There was a problem fetching the file from GitHub. Please try again later."
     );
   }
+}
+
+function getDocUrl(path) {
+  return new URL(
+    "docs/en/v1" + path.replace(/.md$/),
+    "https://remix.run"
+  ).toString();
 }
 
 async function fetchDiscussions(results = [], cursor) {
