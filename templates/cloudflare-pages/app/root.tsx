@@ -1,12 +1,5 @@
-import {
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "remix";
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/cloudflare";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
