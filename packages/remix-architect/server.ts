@@ -70,7 +70,9 @@ export function createRemixRequest(
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
   let url = new URL(event.rawPath + search, `${scheme}://${host}`);
-  let isFormData = event.headers["content-type"]?.includes("multipart/form-data");
+  let isFormData = event.headers["content-type"]?.includes(
+    "multipart/form-data"
+  );
 
   return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
