@@ -31,7 +31,7 @@ Here's some vocabulary this document will be using regularly. They may not all m
 
 **Splat** - A trailing wildcard on a route path that will match anything (including subsequent `/`) and provided to the app.
 
-**Outlet** - A component rendered inside of a parent route that is shows where to render the matching child route
+**Outlet** - A component rendered inside of a parent route that shows where to render the matching child route
 
 </docs-info>
 
