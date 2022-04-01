@@ -205,7 +205,6 @@ describe("rendering", () => {
   test("loader redirect with hash", async () => {
     await app.goto("/");
 
-    let responses = app.collectDataResponses();
     await app.clickLink(`/${REDIRECT_HASH}`);
 
     let url = new URL(app.page.url());
