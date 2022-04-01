@@ -61,62 +61,63 @@ let octokit = new Octokit({
 });
 
 async function updateDiscussions() {
-  let stream = await getPackage(
-    process.env.GITHUB_REPOSITORY,
-    "refs/heads/main"
-  );
+  try {
+    let stream = await getPackage(
+      process.env.GITHUB_REPOSITORY,
+      "refs/heads/main"
+    );
 
-  if (!stream) {
+    let existingDiscussions = await getExistingDiscussions();
+
+    await findMatchingEntries(stream, "/docs", async (entry) => {
+      if (!entry.path.endsWith(".md")) {
+        console.log(`Skipping ${entry.path}`);
+        return;
+      }
+
+      let file = parseAttributes(entry.content);
+      let { data } = file;
+      let docUrl = new URL(
+        "docs/en/v1" + entry.path.replace(/.md$/),
+        "https://remix.run"
+      ).toString();
+
+      let title = data.title || entry.path.replace(/^\/docs/, "");
+
+      let exists = existingDiscussions.find(
+        (discussion) => discussion.node.url === data.discussionUrl
+      );
+      if (exists) {
+        if (exists.node.title === data.title) {
+          console.log(
+            `A discussion for ${title} already exists; ${exists.node.url}`
+          );
+        } else {
+          console.log(
+            `A discussion for ${title} already exists, but with a different title; ${exists.node.url}`
+          );
+          await updateDiscussion(exists.node.id, title);
+        }
+        return;
+      }
+
+      let discussionUrl = await createDiscussion(title, docUrl);
+
+      let filepath = path.join(process.cwd(), entry.path);
+
+      fse.writeFileSync(
+        filepath,
+        file.stringify({
+          ...data,
+          discussionUrl,
+        })
+      );
+    });
+  } catch (error) {
     throw new Error(
-      "🚨 There was a problem fetching the file from GitHub. The request " +
-        `responded with a ${response.status} status. Please try again later.`
+      "🚨 There was a problem fetching the file from GitHub. Please try again later.`
     );
   }
-
-  let existingDiscussions = await getExistingDiscussions();
-
-  await findMatchingEntries(stream, "/docs", async (entry) => {
-    if (!entry.path.endsWith(".md")) {
-      console.log(`Skipping ${entry.path}`);
-      return;
-    }
-
-    let file = parseAttributes(entry.content);
-    let { data } = file;
-    let docUrl = new URL(entry.path, "https://remix.run").toString();
-
-    let title = data.title || entry.path.replace(/^\/docs/, "");
-
-    let exists = existingDiscussions.find(
-      (discussion) => discussion.node.url === data.discussionUrl
-    );
-
-    if (exists) {
-      if (exists.node.title === data.title) {
-        console.log(
-          `A discussion for ${title} already exists; ${exists.node.url}`
-        );
-      } else {
-        console.log(
-          `A discussion for ${title} already exists, but with a different title; ${exists.node.url}`
-        );
-        await updateDiscussion(exists.node.id, title);
-      }
-      return;
-    }
-
-    let discussionUrl = await createDiscussion(title, docUrl);
-
-    let filepath = path.join(process.cwd(), entry.path);
-
-    fse.writeFileSync(
-      filepath,
-      file.stringify({
-        ...data,
-        discussionUrl,
-      })
-    );
-  });
 }
 
 async function fetchDiscussions(results = [], cursor) {
@@ -183,7 +184,7 @@ async function updateDiscussion(discussionId, title) {
 
   let result = await octokit.graphql(
     gql`
-      mutation CREATE_DISCUSSION(
+      mutation UPDATE_DISCUSSION(
         $title: String!
         $categoryId: ID!
         $discussionId: ID!
