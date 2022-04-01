@@ -68,16 +68,16 @@ module.exports = {
       setupFiles: ["<rootDir>/packages/remix-vercel/__tests__/setup.ts"],
     },
     // Fixture Apps
-    {
-      displayName: "gists-app",
-      testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
-      globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
-      globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",
-      setupFiles: ["<rootDir>/fixtures/gists-app/jest/setup.ts"],
-      setupFilesAfterEnv: [
-        "<rootDir>/fixtures/gists-app/jest/setupAfterEnv.ts",
-      ],
-    },
+    // {
+    //   displayName: "gists-app",
+    //   testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
+    //   globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
+    //   globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",
+    //   setupFiles: ["<rootDir>/fixtures/gists-app/jest/setup.ts"],
+    //   setupFilesAfterEnv: [
+    //     "<rootDir>/fixtures/gists-app/jest/setupAfterEnv.ts",
+    //   ],
+    // },
   ],
   watchPlugins: [
     require.resolve("jest-watch-select-projects"),
