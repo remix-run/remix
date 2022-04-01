@@ -67,6 +67,10 @@ beforeAll(async () => {
           referrer.searchParams.set("redirects", Number(redirects) + 1)
           return redirect(referrer.href)
         }
+        
+        export default function Render() {
+            return <span />;
+        }
       `,
     },
   });
