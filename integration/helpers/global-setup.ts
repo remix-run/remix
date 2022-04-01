@@ -12,28 +12,29 @@ console.warn = () => {};
 export default async function setup(globalConfig: any) {
   await setupPuppeteer(globalConfig);
   await fse.emptyDir(TMP_DIR);
+  await installDeps(path.join(__dirname, "integration-template"));
 
   await setupGistsApp();
 }
 
+function installDeps(dir: string): Promise<void> {
+  return new Promise((accept, reject) => {
+    spawn("npm", ["install"], {
+      cwd: dir,
+      stdio: "inherit",
+    })
+      .on("error", reject)
+      .on("close", () => {
+        accept();
+      });
+  });
+}
+
 // when the gists app is removed, remove this as well:
 async function setupGistsApp() {
-  function installDeps(dir: string): Promise<void> {
-    return new Promise((accept, reject) => {
-      spawn("yarn", ["install"], {
-        cwd: dir,
-        stdio: "inherit",
-      })
-        .on("error", reject)
-        .on("close", () => {
-          accept();
-        });
-    });
-  }
-
   function runBuild(dir: string): Promise<void> {
     return new Promise((accept, reject) => {
-      spawn("yarn", ["build"], {
+      spawn("npm", ["run", "build"], {
         cwd: dir,
         stdio: "inherit",
       })
@@ -46,7 +47,7 @@ async function setupGistsApp() {
 
   async function startServer(dir: string): Promise<ChildProcess> {
     return new Promise((accept) => {
-      let proc = spawn("yarn", ["start"], {
+      let proc = spawn("npm", ["start"], {
         cwd: dir,
         stdio: "inherit",
       });
