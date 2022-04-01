@@ -142,7 +142,7 @@ export interface MetaFunction<
     } & RouteData;
     params: Params;
     location: Location;
-  }): HtmlMetaDescriptor;
+  }): HtmlMetaDescriptor | HtmlMetaDescriptor[];
 }
 
 /**

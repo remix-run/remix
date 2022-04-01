@@ -697,7 +697,7 @@ export function Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: HtmlMetaDescriptor = {};
+  let meta: HtmlMetaDescriptor[] = [];
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
@@ -712,7 +712,9 @@ export function Meta() {
         typeof routeModule.meta === "function"
           ? routeModule.meta({ data, parentsData, params, location })
           : routeModule.meta;
-      Object.assign(meta, routeMeta);
+      if (routeMeta) {
+        processMeta(meta, routeMeta);
+      }
     }
 
     parentsData[routeId] = data;
@@ -720,13 +722,13 @@ export function Meta() {
 
   return (
     <>
-      {Object.entries(meta).map(([name, value]) => {
-        if (!value) {
+      {meta.map((metaDescriptor) => {
+        if (!metaDescriptor) {
           return null;
         }
 
-        if (["charset", "charSet"].includes(name)) {
-          return <meta key="charset" charSet={value as string} />;
+        if (metaDescriptor.hasOwnProperty("charset")) {
+          return <meta key="charSet" charSet={metaDescriptor.charset} />;
         }
 
         if (name === "title") {
@@ -756,6 +758,76 @@ export function Meta() {
       })}
     </>
   );
+}
+
+/*
+ * This function processes a meta descriptor and adds it to the meta array.
+ * This converts the original object syntax to new array syntax.
+ */
+export function processMeta(
+  meta: HtmlMetaDescriptor[],
+  routeMeta: HtmlMetaDescriptor | HtmlMetaDescriptor[]
+) {
+  if (!Array.isArray(routeMeta)) {
+    // normalize to explicit objects
+    let metaArray = Object.entries(routeMeta).map(([key, value]) => {
+      if (!value) return null;
+      if (["charSet", "charset"].includes(key)) {
+        return { charSet: value };
+      }
+      if (key === "title") {
+        return { title: value };
+      }
+      if (key.startsWith("og:")) {
+        // set key here to help with merging so don't have to set explicit key
+        return { key, property: key, content: value };
+      }
+      if (typeof value === "string") {
+        return { name: key, content: value };
+      }
+      // this is the object version so just return it
+      return value;
+    });
+    // routeMeta has been converted to an array of objects
+    // ts-ignore
+    routeMeta = metaArray as HtmlMetaDescriptor[];
+  }
+  // remove nulls | undefined
+  routeMeta = routeMeta.filter(Boolean);
+  // first time through so no need to merge
+  if (!meta.length) {
+    return routeMeta;
+  }
+  // merge routeMeta into meta array
+  // child meta takes precedence over parent meta
+  routeMeta.forEach((metaDescriptor) => {
+    // find the index of the metaDescriptor in the meta array with same key
+    for (let key of ["key", "title", "name", "property", "httpEquiv"]) {
+      if (metaDescriptor.hasOwnProperty(key)) {
+        let index = -1;
+        if (key === "title") {
+          index = meta.findIndex((m) => m.hasOwnProperty("title"));
+        } else {
+          if (key === "key") {
+            // key value refers to name of key in metaDescriptor
+            key = metaDescriptor["key"] as string;
+          }
+          index = meta.findIndex((m) => m[key] === metaDescriptor[key]);
+        }
+        if (index >= 0) {
+          // found a match so replace the metaDescriptor with the one from routeMeta
+          meta[index] = metaDescriptor;
+        } else {
+          meta.push(metaDescriptor);
+        }
+        return;
+      }
+    }
+    // no keys found, warn user and add to meta array
+    console.warn(`No key found for meta ${JSON.stringify(metaDescriptor)}`);
+    meta.push(metaDescriptor);
+  });
+  return meta;
 }
 
 /**
