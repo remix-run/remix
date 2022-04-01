@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/extend-expect";
 import { processMeta } from "../components";
-import { HtmlMetaDescriptor, MetaFunction } from "../routeModules";
+import type { HtmlMetaDescriptor, MetaFunction } from "../routeModules";
 
 describe("meta", () => {
   it(`renders proper <meta> tags`, () => {
@@ -31,7 +31,7 @@ describe("meta", () => {
       ];
     }
 
-    const result = getMeta(
+    let result = getMeta(
       {
         title: "test title",
         description: "test description",
@@ -65,6 +65,7 @@ function getMeta(data: any, metaFunctions: MetaFunction[]) {
   return meta;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function renderMeta(meta: HtmlMetaDescriptor[]) {
   return meta.map((metaDescriptor) => {
     return `<meta ${Object.keys(metaDescriptor)
