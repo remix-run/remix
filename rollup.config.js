@@ -219,10 +219,10 @@ function remixDev() {
     },
     {
       external: (id) => isBareModuleId(id),
-      input: [`${sourceDir}/cli/codemod/run/transforms/index.ts`],
+      input: [`${sourceDir}/cli/migrate/run/transforms/index.ts`],
       output: {
-        banner: createBanner("@remix-run/codemod", version),
-        dir: `${outputDir}/cli/codemod/run/transforms`,
+        banner: createBanner("@remix-run/dev", version),
+        dir: `${outputDir}/cli/migrate/run/transforms`,
         exports: "auto",
         format: "cjs",
         preserveModules: true,
