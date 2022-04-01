@@ -713,7 +713,7 @@ export function Meta() {
           ? routeModule.meta({ data, parentsData, params, location })
           : routeModule.meta;
       if (routeMeta) {
-        processMeta(meta, routeMeta);
+        meta = processMeta(meta, routeMeta);
       }
     }
 
