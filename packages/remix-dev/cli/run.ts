@@ -21,7 +21,7 @@ ${colors.heading("Usage")}:
   $ remix dev [${colors.arg("projectDir")}]
   $ remix routes [${colors.arg("projectDir")}]
   $ remix setup [${colors.arg("remixPlatform")}]
-  $ remix migrate <${colors.arg("transform")}> [${colors.arg("projectDir")}]
+  $ remix migrate <${colors.arg("migration")}> [${colors.arg("projectDir")}]
 
 ${colors.heading("Options")}:
   --help, -h          Print this help message and exit
@@ -47,8 +47,8 @@ ${colors.heading("Values")}:
   - ${colors.arg("template")}          The project template to use
   - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
   - ${colors.arg(
-    "transform"
-  )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/transform-options
+    "migration"
+  )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
 
 ${colors.heading("Creating a new project")}:
 
@@ -316,7 +316,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       let answers = await commands.migrate.questions({
         input: {
           projectDir: input[2],
-          transform: input[1],
+          migration: input[1],
         },
         showHelp,
       });

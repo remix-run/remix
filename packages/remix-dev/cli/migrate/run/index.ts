@@ -1,11 +1,11 @@
 import { checkGitStatus } from "../../check-git-status";
-import type { transformOptions } from "../transform-options";
+import type { migrationOptions } from "../migration-options";
 import type { Transform, TransformArgs } from "./transforms";
 import { updateRemixImports } from "./transforms";
 import { validateAnswers } from "./validate-answers";
 
 const transformFunctionByName: Record<
-  typeof transformOptions[number]["value"],
+  typeof migrationOptions[number]["value"],
   Transform
 > = {
   "update-remix-imports": updateRemixImports,
@@ -13,12 +13,12 @@ const transformFunctionByName: Record<
 
 type RunArgs = Pick<TransformArgs, "answers" | "flags">;
 export const run = async ({ answers, flags }: RunArgs) => {
-  let { files, transform } = validateAnswers(answers);
+  let { files, migration } = validateAnswers(answers);
 
   if (!flags.dry) {
     checkGitStatus({ force: flags.force, projectDir: answers.projectDir });
   }
 
-  let transformFunction = transformFunctionByName[transform];
+  let transformFunction = transformFunctionByName[migration];
   return transformFunction({ answers, files, flags });
 };
