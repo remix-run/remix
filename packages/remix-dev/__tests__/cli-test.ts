@@ -13,24 +13,6 @@ let execFile =
     ? util.promisify(childProcess.exec)
     : util.promisify(childProcess.execFile);
 
-function defer() {
-  let resolve: (value: unknown) => void, reject: (reason?: any) => void;
-  let state: { current: "pending" | "resolved" | "rejected" } = {
-    current: "pending",
-  };
-  let promise = new Promise((res, rej) => {
-    resolve = (value: unknown) => {
-      state.current = "resolved";
-      return res(value);
-    };
-    reject = (reason?: any) => {
-      state.current = "rejected";
-      return rej(reason);
-    };
-  });
-  return { promise, resolve, reject, state };
-}
-
 const TEMP_DIR = path.join(
   fse.realpathSync(os.tmpdir()),
   `remix-tests-${Math.random().toString(32).slice(2)}`
@@ -204,6 +186,24 @@ describe("remix CLI", () => {
     }, 7_000);
   });
 });
+
+function defer() {
+  let resolve: (value: unknown) => void, reject: (reason?: any) => void;
+  let state: { current: "pending" | "resolved" | "rejected" } = {
+    current: "pending",
+  };
+  let promise = new Promise((res, rej) => {
+    resolve = (value: unknown) => {
+      state.current = "resolved";
+      return res(value);
+    };
+    reject = (reason?: any) => {
+      state.current = "rejected";
+      return rej(reason);
+    };
+  });
+  return { promise, resolve, reject, state };
+}
 
 async function interactWithShell(
   proc: childProcess.ChildProcessWithoutNullStreams,
