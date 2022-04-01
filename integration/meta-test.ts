@@ -266,14 +266,7 @@ describe("meta array-syntax", () => {
           export default function Root() {
             return (
               <html lang="en">
-                <head>
-                  <Meta />
-                  <Links />
-                </head>
-                <body>
-                  <Outlet />
-                  <Scripts />
-                </body>
+              <Meta />
               </html>
             );
           }
@@ -296,59 +289,60 @@ describe("meta array-syntax", () => {
     let enableJavaScript = await app.disableJavaScript();
 
     await app.goto("/");
-
+    let html = await app.getHtml("html");
+    console.log(html);
     await expect(app.getHtml('meta[property="og:type"]')).rejects.toThrowError(
       'No element matches selector "meta[property="og:type"]"'
     );
     await enableJavaScript();
   });
 
-  test("meta { charset } adds a <meta charset='utf-8' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  // test("meta { charset } adds a <meta charset='utf-8' />", async () => {
+  //   let enableJavaScript = await app.disableJavaScript();
 
-    await app.goto("/");
+  //   await app.goto("/");
 
-    expect(await app.getHtml('meta[charset="utf-8"]')).toBeTruthy();
-    await enableJavaScript();
-  });
+  //   expect(await app.getHtml('meta[charset="utf-8"]')).toBeTruthy();
+  //   await enableJavaScript();
+  // });
 
-  test("meta { title } adds a <title />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  // test("meta { title } adds a <title />", async () => {
+  //   let enableJavaScript = await app.disableJavaScript();
 
-    await app.goto("/");
+  //   await app.goto("/");
 
-    expect(await app.getHtml("title")).toBeTruthy();
-    await enableJavaScript();
-  });
+  //   expect(await app.getHtml("title")).toBeTruthy();
+  //   await enableJavaScript();
+  // });
 
-  test("meta { 'og:*' } adds a <meta property='og:*' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  // test("meta { 'og:*' } adds a <meta property='og:*' />", async () => {
+  //   let enableJavaScript = await app.disableJavaScript();
 
-    await app.goto("/");
+  //   await app.goto("/");
 
-    expect(await app.getHtml('meta[property="og:image"]')).toBeTruthy();
-    await enableJavaScript();
-  });
+  //   expect(await app.getHtml('meta[property="og:image"]')).toBeTruthy();
+  //   await enableJavaScript();
+  // });
 
-  test("meta { description } adds a <meta name='description' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  // test("meta { description } adds a <meta name='description' />", async () => {
+  //   let enableJavaScript = await app.disableJavaScript();
 
-    await app.goto("/");
+  //   await app.goto("/");
 
-    expect(await app.getHtml('meta[name="description"]')).toBeTruthy();
-    await enableJavaScript();
-  });
+  //   expect(await app.getHtml('meta[name="description"]')).toBeTruthy();
+  //   await enableJavaScript();
+  // });
 
-  test("meta { refresh } adds a <meta http-equiv='refresh' content='3;url=https://www.mozilla.org' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  // test("meta { refresh } adds a <meta http-equiv='refresh' content='3;url=https://www.mozilla.org' />", async () => {
+  //   let enableJavaScript = await app.disableJavaScript();
 
-    await app.goto("/");
+  //   await app.goto("/");
 
-    expect(
-      await app.getHtml(
-        'meta[http-equiv="refresh"][content="3;url=https://www.mozilla.org"]'
-      )
-    ).toBeTruthy();
-    await enableJavaScript();
-  });
+  //   expect(
+  //     await app.getHtml(
+  //       'meta[http-equiv="refresh"][content="3;url=https://www.mozilla.org"]'
+  //     )
+  //   ).toBeTruthy();
+  //   await enableJavaScript();
+  // });
 });
