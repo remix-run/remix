@@ -31,6 +31,10 @@ if (!process.env.GITHUB_CATEGORY_ID) {
   throw new Error("GITHUB_CATEGORY_ID not set");
 }
 
+if (!process.env.GITHUB_SHA) {
+  throw new Error("GITHUB_SHA not set");
+}
+
 let [OWNER, REPO] = process.env.GITHUB_REPOSITORY.split("/");
 
 let gql = String.raw;
@@ -40,7 +44,7 @@ let Octokit = createOctokit.plugin(throttling);
 let octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
   throttle: {
-    onRateLimit: (retryAfter, options, octokit) => {
+    onRateLimit(retryAfter, options, octokit) {
       octokit.log.warn(
         `Request quota exhausted for request ${options.method} ${options.url}`
       );
@@ -51,7 +55,7 @@ let octokit = new Octokit({
         return true;
       }
     },
-    onSecondaryRateLimit: (retryAfter, options, octokit) => {
+    onSecondaryRateLimit(retryAfter, options, octokit) {
       // does not retry, only logs a warning
       octokit.log.warn(
         `SecondaryRateLimit detected for request ${options.method} ${options.url}`
@@ -62,6 +66,8 @@ let octokit = new Octokit({
 
 async function updateDiscussions() {
   try {
+    let renamedFiles = await getFilesRenamed(process.env.GITHUB_SHA);
+
     let stream = await getPackage(
       process.env.GITHUB_REPOSITORY,
       "refs/heads/main"
@@ -79,22 +85,26 @@ async function updateDiscussions() {
       let { data } = file;
       let docUrl = getDocUrl(entry.path);
 
+      let fileRenamed = renamedFiles.find((doc) => {
+        return doc.to === entry.path;
+      });
+
       let title = data.title || entry.path.replace(/^\/docs/, "");
 
       let exists = existingDiscussions.find(
         (discussion) => discussion.node.url === data.discussionUrl
       );
       if (exists) {
-        if (exists.node.title === data.title && exists.node.url === docUrl) {
-          console.log(
-            `A discussion for ${title} already exists; ${exists.node.url}`
-          );
-        } else {
-          console.log(
-            `A discussion for ${title} already exists, but with a different title; ${exists.node.url}`
-          );
-          await updateDiscussion(exists.node.id, title);
+        if (exists.node.title === data.title && !fileRenamed) {
+          return;
         }
+
+        console.log(exists.node.title + "is different");
+        let newBody = exists.node.body.replace(
+          `Doc URL: ${getDocUrl(fileRenamed.from)}`,
+          `Doc URL: ${getDocUrl(fileRenamed.to)}`
+        );
+        await updateDiscussion(exists.node.id, title, newBody);
         return;
       }
 
@@ -117,11 +127,28 @@ async function updateDiscussions() {
   }
 }
 
-function getDocUrl(path) {
+function getDocUrl(filePath) {
   return new URL(
-    "docs/en/v1" + path.replace(/.md$/),
+    "docs/en/v1" + filePath.replace("/docs", "").replace(/.md$/, ""),
     "https://remix.run"
   ).toString();
+}
+
+async function getFilesRenamed(commitSha) {
+  let res = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}", {
+    owner: OWNER,
+    repo: REPO,
+    ref: commitSha,
+  });
+
+  return res.data.files.map((file) => {
+    return {
+      from: file.previous_filename.startsWith("/")
+        ? file.previous_filename
+        : `/${file.previous_filename}`,
+      to: file.filename.startsWith("/") ? file.filename : `/${file.filename}`,
+    };
+  });
 }
 
 async function fetchDiscussions(results = [], cursor) {
@@ -144,6 +171,7 @@ async function fetchDiscussions(results = [], cursor) {
                 title
                 url
                 id
+                body
               }
             }
           }
@@ -183,7 +211,7 @@ async function getExistingDiscussions() {
 // for now we only update the discussion title,
 // but we should be able to take in the current
 // discussion body and just replace the doc url
-async function updateDiscussion(discussionId, title) {
+async function updateDiscussion(discussionId, title, newBody) {
   console.log(`Updating discussion ${discussionId}`);
 
   let result = await octokit.graphql(
@@ -192,12 +220,14 @@ async function updateDiscussion(discussionId, title) {
         $title: String!
         $categoryId: ID!
         $discussionId: ID!
+        $body: String!
       ) {
         updateDiscussion(
           input: {
             title: $title
             categoryId: $categoryId
             discussionId: $discussionId
+            body: $body
           }
         ) {
           discussion {
@@ -210,6 +240,7 @@ async function updateDiscussion(discussionId, title) {
       categoryId: process.env.GITHUB_CATEGORY_ID,
       title,
       discussionId,
+      body: newBody,
     }
   );
 
@@ -244,7 +275,7 @@ async function createDiscussion(title, url) {
       repositoryId: process.env.GITHUB_REPOSITORY_ID,
       categoryId: process.env.GITHUB_CATEGORY_ID,
       title,
-      body: url,
+      body: `Doc URL: ${url}`,
     }
   );
 
