@@ -39,10 +39,19 @@ it("invalid urlencoded body does not crash server", async () => {
   expect(await response.text()).toMatch("pizza");
 });
 
-it("invalid multipart body does not crash server", async () => {
+it("invalid multipart content-type does not crash server", async () => {
   let response = await fixture.requestDocument("/", {
     method: "post",
     headers: { "content-type": "multipart/form-data" },
+    body: "$rofl this is totally invalid$",
+  });
+  expect(await response.text()).toMatch("pizza");
+});
+
+it("invalid multipart body does not crash server", async () => {
+  let response = await fixture.requestDocument("/", {
+    method: "post",
+    headers: { "content-type": "multipart/form-data; boundary=abc" },
     body: "$rofl this is totally invalid$",
   });
   expect(await response.text()).toMatch("pizza");
