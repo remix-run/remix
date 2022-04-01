@@ -8,7 +8,7 @@ export type Answers = {
 };
 
 type QuestionsArgs = {
-  input: { projectDir: string; migration?: string };
+  input: { projectDir?: string; migration?: string };
   showHelp: () => void;
 };
 export const questions = async ({
