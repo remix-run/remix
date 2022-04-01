@@ -21,7 +21,7 @@ ${colors.heading("Usage")}:
   $ remix dev [${colors.arg("projectDir")}]
   $ remix routes [${colors.arg("projectDir")}]
   $ remix setup [${colors.arg("remixPlatform")}]
-  $ remix migrate <${colors.arg("migration")}> [${colors.arg("projectDir")}]
+  $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg("projectDir")}]
 
 ${colors.heading("Options")}:
   --help, -h          Print this help message and exit
@@ -41,6 +41,7 @@ ${colors.heading("Options")}:
 \`migrate\` Options:
   --dry               Dry run (no changes are made to files)
   --force             Bypass Git safety checks and forcibly run migration
+  --migration, -m     Name of the migration to run
 
 ${colors.heading("Values")}:
   - ${colors.arg("projectDir")}        The Remix project directory
@@ -117,6 +118,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       help: { type: "boolean", alias: "h" },
       install: { type: "boolean" },
       json: { type: "boolean" },
+      migration: { type: "string", alias: "m" },
       remixVersion: { type: "string" },
       sourcemap: { type: "boolean" },
       template: { type: "string" },
@@ -315,8 +317,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "migrate": {
       let answers = await commands.migrate.questions({
         input: {
-          projectDir: input[2],
-          migration: input[1],
+          projectDir: input[1],
+          migration: flags.migration,
         },
         showHelp,
       });
