@@ -5,28 +5,13 @@ import path from "path";
 import util from "util";
 import semver from "semver";
 
+let DOWN = "\x1B\x5B\x42";
+let ENTER = "\x0D";
+
 let execFile =
   process.platform === "win32"
     ? util.promisify(childProcess.exec)
     : util.promisify(childProcess.execFile);
-
-function defer() {
-  let resolve: (value: unknown) => void, reject: (reason?: any) => void;
-  let state: { current: "pending" | "resolved" | "rejected" } = {
-    current: "pending",
-  };
-  let promise = new Promise((res, rej) => {
-    resolve = (value: unknown) => {
-      state.current = "resolved";
-      return res(value);
-    };
-    reject = (reason?: any) => {
-      state.current = "rejected";
-      return rej(reason);
-    };
-  });
-  return { promise, resolve, reject, state };
-}
 
 const TEMP_DIR = path.join(
   fse.realpathSync(os.tmpdir()),
@@ -168,18 +153,8 @@ describe("remix CLI", () => {
   });
 
   describe("create prompts", () => {
-    it.skip("allows you to go through the prompts", async () => {
+    it("allows you to go through the prompts", async () => {
       let projectDir = path.join(TEMP_DIR, "my-app");
-      let DOWN = "\x1B\x5B\x42";
-      let ENTER = "\x0D";
-
-      let qAndA = [
-        { q: /Where.*create.*app/i, a: [projectDir, ENTER] },
-        { q: /What type of app/i, a: [DOWN, ENTER] },
-        { q: /Where.*deploy/i, a: [DOWN, ENTER] },
-        { q: /JavaScript/i, a: [DOWN, ENTER] },
-        { q: /install/i, a: ["n", ENTER] },
-      ];
 
       let proc = childProcess.spawn(
         "node",
@@ -193,62 +168,14 @@ describe("remix CLI", () => {
         ],
         { stdio: [null, null, null] }
       );
-      proc.stdin.setDefaultEncoding("utf-8");
 
-      let deferred = defer();
-
-      let stepNumber = 0;
-
-      let stdout = "";
-      let stderr = "";
-      proc.stdout.on("data", (chunk: unknown) => {
-        if (chunk instanceof Buffer) {
-          chunk = String(chunk);
-        }
-        if (typeof chunk !== "string") {
-          console.error({ stdoutChunk: chunk });
-          throw new Error("stdout chunk is not a string");
-        }
-        stdout += chunk;
-        let step = qAndA[stepNumber];
-        if (!step) return;
-        let { q, a } = step;
-        if (q.test(chunk)) {
-          stepNumber += 1;
-          for (let command of a) {
-            proc.stdin.write(command);
-          }
-        }
-        if (stepNumber === qAndA.length) {
-          proc.stdin.end();
-        }
-      });
-
-      proc.stderr.on("data", (chunk: unknown) => {
-        if (chunk instanceof Buffer) {
-          chunk = String(chunk);
-        }
-        if (typeof chunk !== "string") {
-          console.error({ stderrChunk: chunk });
-          throw new Error("stderr chunk is not a string");
-        }
-        stderr += chunk;
-      });
-
-      proc.on("close", (status) => {
-        if (status === 0) return deferred.resolve(status);
-        else return deferred.reject({ stdout, stderr });
-      });
-
-      // this ensures that if we do timeout we at least get as much useful
-      // output as possible.
-      setTimeout(() => {
-        if (deferred.state.current === "pending") {
-          deferred.reject({ status: "timeout", stdout, stderr });
-        }
-      }, 9_000);
-
-      await deferred.promise;
+      await interactWithShell(proc, [
+        { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
+        { question: /What type of app/i, answer: /basics/i },
+        { question: /Where.*deploy/i, answer: /express/i },
+        { question: /JavaScript/i, answer: /javascript/i },
+        { question: /install/i, type: ["n", ENTER] },
+      ]);
 
       expect(
         fse.existsSync(path.join(projectDir, "package.json"))
@@ -256,10 +183,105 @@ describe("remix CLI", () => {
       expect(
         fse.existsSync(path.join(projectDir, "app/root.jsx"))
       ).toBeTruthy();
-      expect(
-        fse.existsSync(path.join(projectDir, "app/utils.js"))
-      ).toBeTruthy();
-      expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    }, 10_000);
+    }, 7_000);
   });
 });
+
+function defer() {
+  let resolve: (value: unknown) => void, reject: (reason?: any) => void;
+  let state: { current: "pending" | "resolved" | "rejected" } = {
+    current: "pending",
+  };
+  let promise = new Promise((res, rej) => {
+    resolve = (value: unknown) => {
+      state.current = "resolved";
+      return res(value);
+    };
+    reject = (reason?: any) => {
+      state.current = "rejected";
+      return rej(reason);
+    };
+  });
+  return { promise, resolve, reject, state };
+}
+
+async function interactWithShell(
+  proc: childProcess.ChildProcessWithoutNullStreams,
+  qAndA: Array<
+    | { question: RegExp; type: Array<String>; answer?: undefined }
+    | { question: RegExp; answer: RegExp; type?: undefined }
+  >
+) {
+  proc.stdin.setDefaultEncoding("utf-8");
+
+  let deferred = defer();
+
+  let stepNumber = 0;
+
+  let stdout = "";
+  let stderr = "";
+  proc.stdout.on("data", (chunk: unknown) => {
+    if (chunk instanceof Buffer) {
+      chunk = String(chunk);
+    }
+    if (typeof chunk !== "string") {
+      console.error({ stdoutChunk: chunk });
+      throw new Error("stdout chunk is not a string");
+    }
+    stdout += chunk;
+    let step = qAndA[stepNumber];
+    if (!step) return;
+    let { question, answer, type } = step;
+    if (question.test(chunk)) {
+      if (answer) {
+        let currentSelection = chunk
+          .split("\n")
+          .slice(1)
+          .find((l) => l.includes("❯"));
+
+        if (currentSelection && answer.test(currentSelection)) {
+          proc.stdin.write(ENTER);
+          stepNumber += 1;
+        } else {
+          proc.stdin.write(DOWN);
+        }
+      } else if (type) {
+        for (let command of type) {
+          proc.stdin.write(command);
+        }
+        stepNumber += 1;
+      }
+    }
+
+    if (stepNumber === qAndA.length) {
+      proc.stdin.end();
+    }
+  });
+
+  proc.stderr.on("data", (chunk: unknown) => {
+    if (chunk instanceof Buffer) {
+      chunk = String(chunk);
+    }
+    if (typeof chunk !== "string") {
+      console.error({ stderrChunk: chunk });
+      throw new Error("stderr chunk is not a string");
+    }
+    stderr += chunk;
+  });
+
+  proc.on("close", (status) => {
+    if (status === 0) return deferred.resolve(status);
+    else return deferred.reject({ stdout, stderr });
+  });
+
+  // this ensures that if we do timeout we at least get as much useful
+  // output as possible.
+  let timeout = setTimeout(() => {
+    if (deferred.state.current === "pending") {
+      deferred.reject({ status: "timeout", stdout, stderr });
+    }
+  }, 6_000);
+
+  await deferred.promise;
+  clearTimeout(timeout);
+}
