@@ -129,7 +129,7 @@ async function updateDiscussions() {
 
 function getDocUrl(filePath) {
   return new URL(
-    "docs/en/v1" + filePath.replace("/docs", "").replace(/.md$/, ""),
+    "docs/en/v1" + filePath.replace(/^\/docs/, "");.replace(/.md$/, ""),
     "https://remix.run"
   ).toString();
 }
