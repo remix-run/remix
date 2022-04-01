@@ -3,7 +3,7 @@ import { processMeta } from "../components";
 import { HtmlMetaDescriptor, MetaFunction } from "../routeModules";
 
 describe("meta", () => {
-  it.only(`renders proper <meta> tags`, () => {
+  it(`renders proper <meta> tags`, () => {
     function meta({ data }): HtmlMetaDescriptor {
       return {
         charset: "utf-8",
