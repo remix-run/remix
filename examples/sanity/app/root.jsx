@@ -1,4 +1,11 @@
-import { Links, LiveReload, Meta, Outlet, Scripts, useCatch } from "@remix-run/react";
+import {
+  Links,
+  LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
+  useCatch,
+} from "@remix-run/react";
 
 import stylesUrl from "./styles/global.css";
 
