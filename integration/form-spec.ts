@@ -269,7 +269,7 @@ test.describe("Forms", () => {
     await app.close();
   });
 
-  test.only("posts to a loader without JavaScript", async ({ page }) => {
+  test("posts to a loader without JavaScript", async ({ page }) => {
     let enableJavaScript = await app.disableJavaScript(page);
     await app.goto(page, "/get-submission");
     await Promise.all([
