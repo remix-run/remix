@@ -39,6 +39,7 @@ export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
 export const js = String.raw;
+export const css = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -173,10 +174,23 @@ export async function createAppFixture(fixture: Fixture) {
        * @param waitForHydration Will wait for the network to be idle, so
        * everything should be loaded and ready to go
        */
-      goto: async (href: string, waitForHydration?: true) => {
-        return page.goto(`${serverUrl}${href}`, {
-          waitUntil: waitForHydration ? "networkidle0" : undefined,
-        });
+      goto: (async (href: string, opts?: any) => {
+        opts =
+          typeof opts === "object"
+            ? opts
+            : { waitUntil: opts ? "networkidle0" : undefined };
+        return page.goto(`${serverUrl}${href}`, opts);
+      }) as {
+        (
+          href: string,
+          waitForHydration?: true
+        ): Promise<puppeteer.HTTPResponse>;
+        (
+          href: string,
+          options?: puppeteer.WaitForOptions & {
+            referer?: string;
+          }
+        ): Promise<puppeteer.HTTPResponse>;
       },
 
       /**
