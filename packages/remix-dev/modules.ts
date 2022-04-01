@@ -33,7 +33,9 @@ declare module "*.md" {
   let Component: ComponentType<
     Readonly<Record<string, unknown>> & {
       components?: Readonly<
-        Record<keyof ReactHTML | "wrapper", keyof ReactHTML | ComponentType>
+        Partial<
+          Record<keyof ReactHTML | "wrapper", keyof ReactHTML | ComponentType>
+        >
       >;
     }
   >;
@@ -46,7 +48,9 @@ declare module "*.mdx" {
   let Component: ComponentType<
     Readonly<Record<string, unknown>> & {
       components?: Readonly<
-        Record<keyof ReactHTML | "wrapper", keyof ReactHTML | ComponentType>
+        Partial<
+          Record<keyof ReactHTML | "wrapper", keyof ReactHTML | ComponentType>
+        >
       >;
     }
   >;
