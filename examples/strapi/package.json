@@ -8,17 +8,16 @@
     "build": "remix build",
     "dev": "run-p dev:*",
     "dev:remix": "remix dev",
-    "postinstall": "remix setup node",
     "dev:strapi": "cd strapi && npm run develop",
     "start": "remix-serve build"
   },
   "dependencies": {
+    "@remix-run/node": "1.3.4",
     "@remix-run/react": "1.3.4",
     "@remix-run/serve": "1.3.4",
     "marked": "^4.0.12",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "1.3.4"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@remix-run/dev": "1.3.4",

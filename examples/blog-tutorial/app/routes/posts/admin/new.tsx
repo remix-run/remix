@@ -1,6 +1,8 @@
-import type { ActionFunction } from "remix";
-import { Form, redirect, json, useActionData, useTransition } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form, useActionData, useTransition } from "@remix-run/react";
 import invariant from "tiny-invariant";
+
 import { createPost } from "~/models/post.server";
 
 type ActionData =

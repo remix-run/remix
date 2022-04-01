@@ -1,6 +1,6 @@
+import type { EntryContext } from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
 import { renderToString } from "react-dom/server";
-import { RemixServer } from "remix";
-import type { EntryContext } from "remix";
 import { injectStylesIntoStaticMarkup } from "@mantine/ssr";
 
 export default function handleRequest(

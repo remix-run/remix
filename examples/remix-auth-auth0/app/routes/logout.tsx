@@ -1,5 +1,6 @@
-import type { ActionFunction } from "remix";
-import { redirect } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+
 import { destroySession, getSession } from "~/utils/auth.server";
 import {
   AUTH0_CLIENT_ID,
