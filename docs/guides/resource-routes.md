@@ -86,8 +86,8 @@ app/routes/reports/$id[.]pdf.ts
 To handle `GET` requests export a loader function:
 
 ```ts
-import { json } from "remix";
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   request,
@@ -101,7 +101,7 @@ export const loader: LoaderFunction = async ({
 To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 
 ```ts
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
 
 export const action: ActionFunction = async ({
   request,
@@ -128,8 +128,8 @@ export const action: ActionFunction = async ({
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```ts
-import type { ActionFunction } from "remix";
-import { json } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import crypto from "crypto";
 
 export const action: ActionFunction = async ({
