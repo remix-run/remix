@@ -3,9 +3,9 @@ import type {
   LinksFunction,
   LoaderFunction,
   MetaFunction,
-} from "remix";
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
@@ -13,7 +13,7 @@ import {
   ScrollRestoration,
   useActionData,
   useLoaderData,
-} from "remix";
+} from "@remix-run/react";
 
 import stylesUrl from "./index.css";
 

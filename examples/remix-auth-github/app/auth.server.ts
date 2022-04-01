@@ -1,4 +1,4 @@
-import { createCookieSessionStorage } from "remix";
+import { createCookieSessionStorage } from "@remix-run/node";
 import { Authenticator } from "remix-auth";
 import type { GitHubExtraParams, GitHubProfile } from "remix-auth-github";
 import { GitHubStrategy } from "remix-auth-github";

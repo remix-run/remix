@@ -12,7 +12,8 @@
  * Further improvements could be done by implementing ETags, but that is out of scope for this demo.
  */
 
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+
 import type { Params } from "react-router";
 
 import path from "path";

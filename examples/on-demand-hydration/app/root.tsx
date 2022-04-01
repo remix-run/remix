@@ -1,12 +1,5 @@
-import type { MetaFunction } from "remix";
-import {
-  Links,
-  LiveReload,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "remix";
+import type { MetaFunction } from "@remix-run/node";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 import { useShouldHydrate } from "remix-utils";
 
 export const meta: MetaFunction = () => ({

@@ -1,13 +1,6 @@
-import type { LoaderFunction, MetaFunction } from "remix";
-import {
-  json,
-  Links,
-  LiveReload,
-  Meta,
-  Scripts,
-  ScrollRestoration,
-  useLoaderData,
-} from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Links, LiveReload, Meta, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
 
 type LoaderData = { message: string };
 

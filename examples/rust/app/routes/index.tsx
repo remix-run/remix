@@ -1,5 +1,7 @@
-import type { ActionFunction } from "remix";
-import { Form, json, useActionData } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData } from "@remix-run/react";
+
 import { add } from "~/rust.server";
 import indexStylesUrl from "~/styles/index.css";
 

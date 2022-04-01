@@ -1,13 +1,5 @@
-import type { MetaFunction } from "remix";
-import {
-  Links,
-  LiveReload,
-  Meta,
-  NavLink,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "remix";
+import type { MetaFunction } from "@remix-run/node";
+import { Links, LiveReload, Meta, NavLink, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
