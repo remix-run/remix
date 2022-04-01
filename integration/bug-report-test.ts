@@ -70,6 +70,10 @@ test.beforeAll(async () => {
         export default function Index() {
           return <div>cheeseburger</div>;
         }
+        
+        export default function Render() {
+            return <span />;
+        }
       `,
     },
   });
