@@ -218,6 +218,25 @@ function remixDev() {
       ],
     },
     {
+      external: (id) => isBareModuleId(id),
+      input: [`${sourceDir}/cli/migrate/run/transforms/index.ts`],
+      output: {
+        banner: createBanner("@remix-run/dev", version),
+        dir: `${outputDir}/cli/migrate/run/transforms`,
+        exports: "auto",
+        format: "cjs",
+        preserveModules: true,
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+      ],
+    },
+    {
       external() {
         return true;
       },

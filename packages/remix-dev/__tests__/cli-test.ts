@@ -42,6 +42,7 @@ describe("remix cli", () => {
             $ remix dev [projectDir]
             $ remix routes [projectDir]
             $ remix setup [remixPlatform]
+            $ remix migrate [-m migration] [projectDir]
 
           Options:
             --help, -h          Print this help message and exit
@@ -58,11 +59,16 @@ describe("remix cli", () => {
             --debug             Attach Node.js inspector
           \`routes\` Options:
             --json              Print the routes as JSON
+          \`migrate\` Options:
+            --dry               Dry run (no changes are made to files)
+            --force             Bypass Git safety checks and forcibly run migration
+            --migration, -m     Name of the migration to run
 
           Values:
             - projectDir        The Remix project directory
             - template          The project template to use
-            - remixPlatform     node or cloudflare
+            - remixPlatform     \`node\` or \`cloudflare\`
+            - migration         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
 
           Creating a new project:
 

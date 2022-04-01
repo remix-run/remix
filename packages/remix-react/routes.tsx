@@ -224,7 +224,7 @@ async function checkRedirect(
       });
     } else {
       return new TransitionRedirect(
-        url.pathname + url.search,
+        url.pathname + url.search + url.hash,
         response.headers.get("X-Remix-Revalidate") !== null
       );
     }

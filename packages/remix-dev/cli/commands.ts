@@ -20,6 +20,8 @@ import { loadEnv } from "../env";
 import { log } from "./logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
+export * as migrate from "./migrate";
+
 export async function create({
   appTemplate,
   projectDir,
