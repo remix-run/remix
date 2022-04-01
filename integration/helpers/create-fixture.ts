@@ -4,23 +4,24 @@ import fse from "fs-extra";
 import cp from "child_process";
 import { sync as spawnSync } from "cross-spawn";
 import type { Writable } from "stream";
-import puppeteer from "puppeteer";
-import type { Page, HTTPResponse } from "puppeteer";
+import type {
+  Page,
+  Response as HTTPResponse,
+  Request as HTTPRequest,
+} from "@playwright/test";
 import express from "express";
 import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
 
-import type {
-  ServerBuild,
-  ServerPlatform,
-} from "../../packages/remix-server-runtime";
-import { createRequestHandler } from "../../packages/remix-server-runtime";
-import { createApp } from "../../packages/remix-dev";
-import { SetupPlatform } from "../../packages/remix-dev/cli/setup";
-import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
+import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
+import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
+import { createApp } from "../../build/node_modules/@remix-run/dev";
+import { SetupPlatform } from "../../build/node_modules/@remix-run/dev/cli/setup";
+import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
 import { TMP_DIR } from "./global-setup";
+import type { ServerPlatform } from "../../build/node_modules/@remix-run/dev/config";
 
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
@@ -50,7 +51,13 @@ export const mdx = String.raw;
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform: ServerPlatform = {};
+  let platform: ServerPlatform = [
+    "cloudflare-pages",
+    "cloudflare-workers",
+    "deno",
+  ].includes(init.template)
+    ? "neutral"
+    : "node";
   let handler = createRequestHandler(app, platform);
 
   let requestDocument = async (href: string, init?: RequestInit) => {
@@ -126,23 +133,14 @@ export async function createAppFixture(fixture: Fixture) {
     });
   };
 
-  let launchPuppeteer = async () => {
-    let browser = await puppeteer.launch();
-    let page = await browser.newPage();
-    return { browser, page };
-  };
-
   let start = async () => {
-    let [{ stop, port }, { browser, page }] = await Promise.all([
-      startAppServer(),
-      launchPuppeteer(),
-    ]);
+    let { stop, port } = await startAppServer();
 
     let serverUrl = `http://localhost:${port}`;
 
     return {
       /**
-       * The puppeteer "page" instance. You will probably need to interact with
+       * The playwright "page" instance. You will probably need to interact with
        * this quite a bit in your tests, but our hope is that we can identify
        * the most common things we do in our tests and make them helpers on the
        * FixtureApp interface instead. Maybe one day we'll want to use cypress,
@@ -155,34 +153,35 @@ export async function createAppFixture(fixture: Fixture) {
        *
        * @see https://pptr.dev/#?product=Puppeteer&version=v13.1.3&show=api-class-page
        */
-      page,
+      page: undefined,
 
       /**
        * The puppeteer browser instance, seems unlikely we'll need it in tests,
        * but maybe we will, so here it is.
        */
-      browser,
+      browser: undefined,
 
       /**
-       * Closes the puppeteer browser and fixture app, **you need to call this
+       * Shuts down the fixture app, **you need to call this
        * at the end of a test** or `afterAll` if the fixture is initialized in a
        * `beforeAll` block. Also make sure to `await app.close()` or else you'll
        * have memory leaks.
        */
       close: async () => {
-        return Promise.all([browser.close(), stop()]);
+        return stop();
       },
 
       /**
        * Visits the href with a document request.
        *
+       * @param page The page from the Playwright context
        * @param href The href you want to visit
        * @param waitForHydration Will wait for the network to be idle, so
        * everything should be loaded and ready to go
        */
-      goto: async (href: string, waitForHydration?: true) => {
+      goto: async (page: Page, href: string, waitForHydration?: true) => {
         return page.goto(`${serverUrl}${href}`, {
-          waitUntil: waitForHydration ? "networkidle0" : undefined,
+          // waitUntil: waitForHydration ? "networkidle" : undefined,
         });
       },
 
@@ -190,10 +189,12 @@ export async function createAppFixture(fixture: Fixture) {
        * Finds a link on the page with a matching href, clicks it, and waits for
        * the network to be idle before continuing.
        *
+       * @param page The page from the Playwright context
        * @param href The href of the link you want to click
        * @param options `{ wait }` waits for the network to be idle before moving on
        */
       clickLink: async (
+        page: Page,
         href: string,
         options: { wait: boolean } = { wait: true }
       ) => {
@@ -211,15 +212,21 @@ export async function createAppFixture(fixture: Fixture) {
 
       /**
        * Find the input element and fill for file uploads.
+       *
+       * @param page The page from the Playwright context
        * @param inputSelector The selector of the input you want to fill
        * @param filePaths The paths to the files you want to upload
        */
-      uploadFile: async (inputSelector: string, ...filePaths: string[]) => {
+      uploadFile: async (
+        page: Page,
+        inputSelector: string,
+        ...filePaths: string[]
+      ) => {
         let el = await page.$(inputSelector);
         if (!el) {
           throw new Error(`Could not find input for: ${inputSelector}`);
         }
-        await el.uploadFile(...filePaths);
+        await el.setInputFiles(filePaths);
       },
 
       /**
@@ -227,10 +234,12 @@ export async function createAppFixture(fixture: Fixture) {
        * `action` supplied, clicks it, and optionally waits for the network to
        * be idle before continuing.
        *
+       * @param page The page from the Playwright context
        * @param action The formAction of the button you want to click
        * @param options `{ wait }` waits for the network to be idle before moving on
        */
       clickSubmitButton: async (
+        page: Page,
         action: string,
         options: { wait: boolean; method?: string } = { wait: true }
       ) => {
@@ -263,7 +272,7 @@ export async function createAppFixture(fixture: Fixture) {
       /**
        * Clicks any element and waits for the network to be idle.
        */
-      clickElement: async (selector: string) => {
+      clickElement: async (page: Page, selector: string) => {
         let el = await page.$(selector);
         if (!el) {
           throw new Error(`Can't find element for: ${selector}`);
@@ -275,10 +284,10 @@ export async function createAppFixture(fixture: Fixture) {
        * Perform any interaction and wait for the network to be idle:
        *
        * ```js
-       * await app.waitForNetworkAfter(() => app.page.focus("#el"))
+       * await app.waitForNetworkAfter(page, () => app.page.focus("#el"))
        * ```
        */
-      waitForNetworkAfter: async (fn: () => Promise<unknown>) => {
+      waitForNetworkAfter: async (page: Page, fn: () => Promise<unknown>) => {
         await doAndWait(page, fn);
       },
 
@@ -286,7 +295,10 @@ export async function createAppFixture(fixture: Fixture) {
        * "Clicks" the back button and optionally waits for the network to be
        * idle (defaults to waiting).
        */
-      goBack: async (options: { wait: boolean } = { wait: true }) => {
+      goBack: async (
+        page: Page,
+        options: { wait: boolean } = { wait: true }
+      ) => {
         if (options.wait) {
           await doAndWait(page, () => page.goBack());
         } else {
@@ -299,7 +311,7 @@ export async function createAppFixture(fixture: Fixture) {
        * form submission. This is useful for asserting that specific loaders
        * were called (or not).
        */
-      collectDataResponses: () => collectDataResponses(page),
+      collectDataResponses: (page: Page) => collectDataResponses(page),
 
       /**
        * Disables JavaScript for the page, make sure to enable it again by
@@ -311,34 +323,35 @@ export async function createAppFixture(fixture: Fixture) {
        * await enable();
        * ```
        */
-      disableJavaScript: async () => {
-        await page.setRequestInterception(true);
-        let handler = (request: puppeteer.HTTPRequest) => {
-          if (request.resourceType() === "script") request.abort();
-          else request.continue();
-        };
+      disableJavaScript: async (page: Page) => {
+        let handler = () =>
+          page.route("**/*", (route) => {
+            return route.request().resourceType() === "script"
+              ? route.abort()
+              : route.continue();
+          });
+
         page.on("request", handler);
 
-        return async () => {
-          await page.setRequestInterception(false);
-          page.off("request", handler);
-        };
+        return async () => page.off("request", handler);
       },
 
       /**
        * Get HTML from the page. Useful for asserting something rendered that
        * you expected.
        *
+       * @param page The page from the Playwright context
        * @param selector CSS Selector for the element's HTML you want
        */
-      getHtml: (selector?: string) => getHtml(page, selector),
+      getHtml: (page: Page, selector?: string) => getHtml(page, selector),
 
       /**
        * Get a cheerio instance of an element from the page.
        *
+       * @param page The page from the Playwright context
        * @param selector CSS Selector for the element's HTML you want
        */
-      getElement: async (selector: string) => {
+      getElement: async (page: Page, selector: string) => {
         return getElement(await getHtml(page), selector);
       },
 
@@ -490,46 +503,70 @@ export function prettyHtml(source: string): string {
   return prettier.format(source, { parser: "html" });
 }
 
-// Taken from https://github.com/puppeteer/puppeteer/issues/5328#issuecomment-986175620
-// Seems to work?
 async function doAndWait(
-  page: puppeteer.Page,
-  fun: () => Promise<unknown>,
-  pollTime: number = 20,
-  timeout: number = 2000
+  page: Page,
+  action: () => Promise<unknown>,
+  longPolls = 0
 ) {
-  let waiting: puppeteer.HTTPRequest[] = [];
+  let networkSettledCallback;
+  let networkSettledPromise = new Promise((f) => (networkSettledCallback = f));
 
-  await page.setRequestInterception(true);
-  let onRequest = (interceptedRequest: puppeteer.HTTPRequest) => {
-    interceptedRequest.continue();
-    waiting.push(interceptedRequest);
+  let requestCounter = 0;
+  let actionDone = false;
+  let pending = new Set<HTTPRequest>();
+
+  let maybeSettle = () => {
+    if (actionDone && requestCounter <= longPolls) networkSettledCallback();
   };
+
+  let onRequest = (request: HTTPRequest) => {
+    ++requestCounter;
+    process.env.DEBUG && pending.add(request);
+    process.env.DEBUG && console.log(`+[${requestCounter}]: ${request.url()}`);
+  };
+  let onRequestDone = (request: HTTPRequest) => {
+    // Let the page handle responses asynchronously (via setTimeout(0)).
+    //
+    // Note: this might be changed to use delay, e.g. setTimeout(f, 100),
+    // when the page uses delay itself.
+    let evaluate = page.evaluate(() => new Promise((f) => setTimeout(f, 0)));
+    evaluate
+      .catch((e) => null)
+      .then(() => {
+        --requestCounter;
+        maybeSettle();
+        process.env.DEBUG && pending.delete(request);
+        process.env.DEBUG &&
+          console.log(`-[${requestCounter}]: ${request.url()}`);
+      });
+  };
+
   page.on("request", onRequest);
+  page.on("requestfinished", onRequestDone);
+  page.on("requestfailed", onRequestDone);
 
-  await fun();
+  let timeoutId;
+  process.env.DEBUG &&
+    (timeoutId = setInterval(() => {
+      console.log(`${requestCounter} requests pending:`);
+      for (let request of pending) console.log(`  ${request.url()}`);
+    }, 5000));
 
-  let pollEvent: NodeJS.Timer;
-  let timeoutEvent: NodeJS.Timer;
-  return new Promise((res, rej) => {
-    let clear = () => {
-      clearInterval(pollEvent);
-      clearTimeout(timeoutEvent);
-      page.off("request", onRequest);
-      return page.setRequestInterception(false);
-    };
-    timeoutEvent = setTimeout(() => {
-      console.warn("Warning, wait for the address below to time out:");
-      console.warn(waiting.map((a) => a.url()).join("\n"));
-      return clear().then(() => res(null));
-    }, timeout);
-    pollEvent = setInterval(() => {
-      if (waiting.length == 0) {
-        return clear().then(() => res(null));
-      }
-      waiting = waiting.filter((a) => a.response() == null);
-    }, pollTime);
-  });
+  let result = await action();
+  actionDone = true;
+  maybeSettle();
+  process.env.DEBUG &&
+    console.log(`action done, ${requestCounter} requests pending`);
+  await networkSettledPromise;
+  process.env.DEBUG && console.log(`action done, network settled`);
+
+  page.removeListener("request", onRequest);
+  page.removeListener("requestfinished", onRequestDone);
+  page.removeListener("requestfailed", onRequestDone);
+
+  process.env.DEBUG && clearTimeout(timeoutId);
+
+  return result;
 }
 
 type UrlFilter = (url: URL) => boolean;

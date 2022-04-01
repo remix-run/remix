@@ -1,3 +1,5 @@
+import { test, expect } from "@playwright/test";
+
 import {
   createAppFixture,
   createFixture,
@@ -6,7 +8,7 @@ import {
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("Forms", () => {
+test.describe("Forms", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
@@ -43,7 +45,7 @@ describe("Forms", () => {
   let SPLAT_ROUTE_PARENT_ACTION = "splat-route-parent";
   let SPLAT_ROUTE_TOO_MANY_DOTS_ACTION = "splat-route-too-many-dots";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/routes/get-submission.jsx": js`
@@ -263,207 +265,251 @@ describe("Forms", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("posts to a loader without JavaScript", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-    await app.goto("/get-submission");
-    await app.clickSubmitButton("/get-submission", { wait: false });
-    await app.page.waitForNavigation();
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+  test.only("posts to a loader without JavaScript", async ({ page }) => {
+    let enableJavaScript = await app.disableJavaScript(page);
+    await app.goto(page, "/get-submission");
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: "networkidle" }),
+      app.clickSubmitButton(page, "/get-submission", { wait: false }),
+    ]);
+    expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
     await enableJavaScript();
   });
 
-  it("posts to a loader", async () => {
+  test("posts to a loader", async ({ page }) => {
     // this indirectly tests that clicking SVG children in buttons works
-    await app.goto("/get-submission");
-    await app.clickSubmitButton("/get-submission");
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+    await app.goto(page, "/get-submission");
+    await app.clickSubmitButton(page, "/get-submission");
+    expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
   });
 
-  it("posts to a loader with an <input name='action' />", async () => {
-    await app.goto("/get-submission");
-    await app.clickElement(`#${FORM_WITH_ACTION_INPUT} button`);
-    expect(await app.getHtml("pre")).toMatch(EAT);
+  test("posts to a loader with an <input name='action' />", async ({
+    page,
+  }) => {
+    await app.goto(page, "/get-submission");
+    await app.clickElement(page, `#${FORM_WITH_ACTION_INPUT} button`);
+    expect(await app.getHtml(page, "pre")).toMatch(EAT);
   });
 
-  it("posts to a loader with button data with click", async () => {
-    await app.goto("/get-submission");
-    await app.clickElement("#buttonWithValue");
-    expect(await app.getHtml("pre")).toMatch(LAKSA);
+  test("posts to a loader with button data with click", async ({ page }) => {
+    await app.goto(page, "/get-submission");
+    await app.clickElement(page, "#buttonWithValue");
+    expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
   });
 
-  it("posts to a loader with button data with keyboard", async () => {
-    await app.goto("/get-submission");
-    await app.waitForNetworkAfter(async () => {
+  test("posts to a loader with button data with keyboard", async ({ page }) => {
+    await app.goto(page, "/get-submission");
+    await app.waitForNetworkAfter(page, async () => {
       await app.page.focus(`#${KEYBOARD_INPUT}`);
       await app.page.keyboard.press("Enter");
     });
-    expect(await app.getHtml("pre")).toMatch(LAKSA);
+    expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
   });
 
-  it("posts with the correct checkbox data", async () => {
-    await app.goto("/get-submission");
-    await app.clickElement(`#${CHECKBOX_BUTTON}`);
-    expect(await app.getHtml("pre")).toMatchInlineSnapshot(
-      `"<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>"`
+  test("posts with the correct checkbox data", async ({ page }) => {
+    await app.goto(page, "/get-submission");
+    await app.clickElement(page, `#${CHECKBOX_BUTTON}`);
+    expect(await app.getHtml(page, "pre")).toBe(
+      `<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>`
     );
   });
 
-  it("posts button data from outside the form", async () => {
-    await app.goto("/get-submission");
-    await app.clickElement(`#${ORPHAN_BUTTON}`);
-    expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
+  test("posts button data from outside the form", async ({ page }) => {
+    await app.goto(page, "/get-submission");
+    await app.clickElement(page, `#${ORPHAN_BUTTON}`);
+    expect(await app.getHtml(page, "pre")).toMatch(SQUID_INK_HOTDOG);
   });
 
-  describe("<Form> action", () => {
-    describe("in a static route", () => {
-      test("absolute action resolves relative to the root route", async () => {
-        await app.goto("/inbox");
-        let html = await app.getHtml();
+  test.describe("<Form> action", () => {
+    test.describe("in a static route", () => {
+      test("absolute action resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/inbox");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${STATIC_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async () => {
-        await app.goto("/inbox");
-        let html = await app.getHtml();
+      test("'.' action resolves relative to the current route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/inbox");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/inbox");
       });
 
-      test("'..' action resolves relative to the parent route", async () => {
-        await app.goto("/inbox");
-        let html = await app.getHtml();
+      test("'..' action resolves relative to the parent route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/inbox");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${STATIC_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
 
-      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
-        await app.goto("/inbox");
-        let html = await app.getHtml();
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/inbox");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
     });
 
-    describe("in a dynamic route", () => {
-      test("absolute action resolves relative to the root route", async () => {
-        await app.goto("/blog/abc");
-        let html = await app.getHtml();
+    test.describe("in a dynamic route", () => {
+      test("absolute action resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog/abc");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async () => {
-        await app.goto("/blog/abc");
-        let html = await app.getHtml();
+      test("'.' action resolves relative to the current route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog/abc");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog/abc");
       });
 
-      test("'..' action resolves relative to the parent route", async () => {
-        await app.goto("/blog/abc");
-        let html = await app.getHtml();
+      test("'..' action resolves relative to the parent route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog/abc");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${DYNAMIC_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
-        await app.goto("/blog/abc");
-        let html = await app.getHtml();
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog/abc");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
     });
 
-    describe("in an index route", () => {
-      test("absolute action resolves relative to the root route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+    test.describe("in an index route", () => {
+      test("absolute action resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${INDEX_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+      test("'.' action resolves relative to the current route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("'..' action resolves relative to the parent route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+      test("'..' action resolves relative to the parent route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${INDEX_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
 
-      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
     });
 
-    describe("in a layout route", () => {
-      test("absolute action resolves relative to the root route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+    test.describe("in a layout route", () => {
+      test("absolute action resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+      test("'.' action resolves relative to the current route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("'..' action resolves relative to the parent route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+      test("'..' action resolves relative to the parent route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${LAYOUT_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
 
-      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
-        await app.goto("/blog");
-        let html = await app.getHtml();
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/blog");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
     });
 
-    describe("in a splat route", () => {
-      test("absolute action resolves relative to the root route", async () => {
-        await app.goto("/projects/blarg");
-        let html = await app.getHtml();
+    test.describe("in a splat route", () => {
+      test("absolute action resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/projects/blarg");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${SPLAT_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async () => {
-        await app.goto("/projects/blarg");
-        let html = await app.getHtml();
+      test("'.' action resolves relative to the current route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/projects/blarg");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/projects");
       });
 
-      test("'..' action resolves relative to the parent route", async () => {
-        await app.goto("/projects/blarg");
-        let html = await app.getHtml();
+      test("'..' action resolves relative to the parent route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/projects/blarg");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${SPLAT_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/projects");
       });
 
-      test("'..' action with more .. segments than parent routes resolves relative to the root route", async () => {
-        await app.goto("/projects/blarg");
-        let html = await app.getHtml();
+      test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
+        page,
+      }) => {
+        await app.goto(page, "/projects/blarg");
+        let html = await app.getHtml(page);
         let el = getElement(html, `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });

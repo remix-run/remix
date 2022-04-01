@@ -13,13 +13,6 @@ module.exports = {
       globalSetup: process.env.CI ? undefined : "<rootDir>/jest/buildRemix.ts",
     },
     {
-      displayName: "integration",
-      preset: "jest-puppeteer",
-      testMatch: ["<rootDir>/integration/**/*-test.[jt]s?(x)"],
-      globalSetup: "<rootDir>/integration/helpers/global-setup.ts",
-      setupFilesAfterEnv: ["<rootDir>/integration/helpers/setupAfterEnv.ts"],
-    },
-    {
       displayName: "remix-architect",
       testEnvironment: "node",
       testMatch: ["<rootDir>/packages/remix-architect/**/*-test.[jt]s?(x)"],
@@ -77,7 +70,6 @@ module.exports = {
     // Fixture Apps
     {
       displayName: "gists-app",
-      preset: "jest-puppeteer",
       testMatch: ["<rootDir>/fixtures/gists-app/**/*-test.[jt]s?(x)"],
       globalSetup: "<rootDir>/fixtures/gists-app/jest/globalSetup.ts",
       globalTeardown: "<rootDir>/fixtures/gists-app/jest/globalTeardown.ts",
