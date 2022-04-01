@@ -136,14 +136,17 @@ describe("meta array syntax", () => {
               title: "Meta Page",
             });
 
-          export const meta = ({ data }) => [
-            { charset: "utf-8" },
-            { description: data.description },
-            { "og:image": "https://picsum.photos/200/200" },
-            { "og:type": data.contentType }, // undefined
-            { httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
-            { title: data.title },
-          ];
+          export const meta = ({ data }) => ({
+            charset: "utf-8",
+            description: data.description,
+            "og:image": "https://picsum.photos/200/200",
+            "og:type": data.contentType, // undefined
+            refresh: {
+              httpEquiv: "refresh",
+              content: "3;url=https://www.mozilla.org",
+            },
+            title: data.title,
+          });
 
           export default function Root() {
             return (
