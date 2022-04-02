@@ -1,8 +1,10 @@
 import React from "react";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { renderToString } from "react-dom/server";
 import "@testing-library/jest-dom/extend-expect";
+
 import { processMeta } from "../components";
 import type { HtmlMetaDescriptor, MetaFunction } from "../routeModules";
-import { renderToString } from "react-dom/server";
 
 describe("meta", () => {
   it(`renders proper <meta> tags`, () => {
