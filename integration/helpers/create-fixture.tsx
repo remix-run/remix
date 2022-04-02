@@ -12,10 +12,7 @@ import prettier from "prettier";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
 
-import type {
-  ServerBuild,
-  ServerPlatform,
-} from "../../packages/remix-server-runtime";
+import type { ServerBuild } from "../../packages/remix-server-runtime";
 import { createRequestHandler } from "../../packages/remix-server-runtime";
 import { createApp } from "../../packages/remix-dev";
 import { SetupPlatform } from "../../packages/remix-dev/cli/setup";
@@ -25,6 +22,7 @@ import { TMP_DIR } from "./global-setup";
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
+  mode?: string;
   buildStdio?: Writable;
   sourcemap?: boolean;
   files: { [filename: string]: string };
@@ -50,8 +48,8 @@ export const mdx = String.raw;
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform: ServerPlatform = {};
-  let handler = createRequestHandler(app, platform);
+  let mode = init.mode || "production";
+  let handler = createRequestHandler(app, mode);
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
