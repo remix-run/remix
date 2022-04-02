@@ -1,6 +1,8 @@
+import React from "react";
 import "@testing-library/jest-dom/extend-expect";
 import { processMeta } from "../components";
 import type { HtmlMetaDescriptor, MetaFunction } from "../routeModules";
+import { renderToString } from "react-dom/server";
 
 describe("meta", () => {
   it(`renders proper <meta> tags`, () => {
@@ -10,10 +12,6 @@ describe("meta", () => {
         description: data.description,
         "og:image": "https://picsum.photos/200/200",
         "og:type": data.contentType, // undefined
-        refresh: {
-          httpEquiv: "refresh",
-          content: "3;url=https://www.mozilla.org",
-        },
         title: data.title,
       };
     }
@@ -23,15 +21,17 @@ describe("meta", () => {
         { property: "og:image", content: "https://remix.run/logo.png" },
         { property: "og:type", content: "image/png" },
         {
+          key: "http-equiv:refresh",
           httpEquiv: "refresh",
           content: "5;url=https://google.com",
         },
-        { title: "Updated title" },
+        { key: "title", content: "Updated title" },
+        { key: "charset", content: "utf-16" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
       ];
     }
 
-    let result = getMeta(
+    let map = getMeta(
       {
         title: "test title",
         description: "test description",
@@ -39,17 +39,23 @@ describe("meta", () => {
       [meta, meta2]
     );
 
+    // let rendered = renderMeta(map);
+    // let html = renderToString(rendered);
+    // console.log(html);
+
     // title should override the title from the first meta function
-    let titleMeta = result.find((meta) => meta.hasOwnProperty("title"));
-    expect(titleMeta["title"]).toBe("Updated title");
+    expect(map.get("title").content).toBe("Updated title");
     // viewport should be added
-    let viewportMeta = result.find((meta) => meta["name"] === "viewport");
-    expect(viewportMeta["content"]).toBe("width=device-width, initial-scale=1");
+    expect(map.get("viewport").content).toBe(
+      "width=device-width, initial-scale=1"
+    );
   });
 });
 
+type MetaMap = Map<string, HtmlMetaDescriptor>;
+
 function getMeta(data: any, metaFunctions: MetaFunction[]) {
-  let meta: HtmlMetaDescriptor[] = [];
+  let meta: MetaMap = new Map();
   metaFunctions.forEach((metaFunction) => {
     let routeMeta = metaFunction({
       data,
@@ -58,18 +64,27 @@ function getMeta(data: any, metaFunctions: MetaFunction[]) {
       location: null,
     });
     if (routeMeta) {
-      meta = processMeta(meta, routeMeta);
+      processMeta(meta, routeMeta);
+      //console.log(meta, routeMeta);
     }
   });
 
   return meta;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function renderMeta(meta: HtmlMetaDescriptor[]) {
-  return meta.map((metaDescriptor) => {
-    return `<meta ${Object.keys(metaDescriptor)
-      .map((key) => `${key}="${metaDescriptor[key]}"`)
-      .join(" ")} />`;
-  });
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+function renderMeta(meta: MetaMap) {
+  return (
+    <>
+      {[...meta.entries()].map(([key, value]) => {
+        if (key === "title" && typeof value.content === "string") {
+          return <title key={key}>{value.content}</title>;
+        }
+        if (key === "charset" && typeof value.content === "string") {
+          return <meta key={key} charSet={value.content} />;
+        }
+        return <meta key={key} {...value} />;
+      })}
+    </>
+  );
 }

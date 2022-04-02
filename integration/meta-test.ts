@@ -255,12 +255,12 @@ describe("meta array-syntax", () => {
             });
 
           export const meta = ({ data }) => [
-            { charset: "utf-8" },
-            { name: "description", content: "data.description" },
+            { key: "charset", content: "utf-8" },
+            { name: "description", content: data.description },
             { property: "og:image", content: "https://picsum.photos/200/200" },
             { property: "og:type", content: data.contentType }, // undefined
-            { httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
-            { title: data.title },
+            { key: "http-equiv:refresh", httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
+            { key: "title", content: data.title },
           ];
 
           export default function Root() {

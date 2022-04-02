@@ -70,17 +70,13 @@ export interface MetaFunction {
  * tag, or an array of strings that will render multiple tags with the same
  * `name` attribute.
  */
-export interface HtmlMetaDescriptor {
-  charset?: "utf-8";
-  charSet?: "utf-8";
+export type HtmlMetaDescriptor = {
+  key?: string;
+  name?: string;
+  property?: string;
   title?: string;
-  [name: string]:
-    | null
-    | string
-    | undefined
-    | Record<string, string>
-    | Array<Record<string, string> | string>;
-}
+  content?: string;
+} & Record<string, string | string[] | null | undefined>;
 
 /**
  * During client side transitions Remix will optimize reloading of routes that
