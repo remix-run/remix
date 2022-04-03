@@ -16,7 +16,7 @@ export const run = async ({ answers, flags }: RunArgs) => {
   let { files, migration } = validateAnswers(answers);
 
   if (!flags.dry) {
-    checkGitStatus({ force: flags.force, projectDir: answers.projectDir });
+    checkGitStatus(answers.projectDir, { force: flags.force });
   }
 
   let transformFunction = transformFunctionByName[migration];
