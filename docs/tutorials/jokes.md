@@ -192,7 +192,7 @@ We're going to trim this down the bare bones and introduce things incrementally.
 💿 Replace the contents of `app/root.tsx` with this:
 
 ```tsx filename=app/root.tsx
-import { LiveReload } from "remix";
+import { LiveReload } from "@remix-run/react";
 
 export default function App() {
   return (
