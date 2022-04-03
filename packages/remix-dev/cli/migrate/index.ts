@@ -1,2 +1,2 @@
-export * from "./input-resolve";
+export * from "./resolveInput";
 export * from "./run";
