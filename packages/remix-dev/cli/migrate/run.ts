@@ -1,7 +1,7 @@
 import { checkGitStatus } from "../check-git-status";
 import type { migrationOptions } from "./migration-options";
-import type { Transform, TransformArgs } from "./transforms";
-import { updateRemixImports } from "./transforms";
+import type { Transform, TransformArgs } from "./migrations";
+import { updateRemixImports } from "./migrations";
 import { checkProjectDir, checkMigration } from "./input-check";
 
 const transformFunctionByName: Record<
