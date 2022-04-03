@@ -5,3 +5,8 @@ export const migrationOptions = [
   },
 ] as const;
 export type Migration = typeof migrationOptions[number]["value"];
+export const isMigration = (migration: string): migration is Migration => {
+  return (migrationOptions.map((m) => m.value) as readonly string[]).includes(
+    migration
+  );
+};
