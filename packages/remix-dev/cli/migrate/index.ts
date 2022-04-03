@@ -1,2 +1,2 @@
-export * from "./questions";
+export * from "./input-resolve";
 export * from "./run";
