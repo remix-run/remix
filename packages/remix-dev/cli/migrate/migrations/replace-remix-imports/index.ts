@@ -36,6 +36,3 @@ export const updateRemixImports: Transform = async ({ projectDir, flags }) => {
     transformPath,
   });
 };
-
-// escape-hatch to include these files in the build
-export * as JSCodeshiftTransform from "./jscodeshift-transform";
