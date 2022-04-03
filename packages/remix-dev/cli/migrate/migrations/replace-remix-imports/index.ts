@@ -6,10 +6,10 @@ import type { PackageJson } from "type-fest";
 import * as jscodeshift from "../../jscodeshift";
 import { cleanupPackageJson } from "./cleanup-package-json";
 import { getTransformOptions } from "./getTransformOptions";
-import type { ExtraOptions } from "./jscodeshift-transform";
+import type { ExtraOptions } from "./transform";
 import type { MigrationFunction } from "../../types";
 
-const transformPath = join(__dirname, "jscodeshift-transform");
+const transformPath = join(__dirname, "transform");
 
 export const updateRemixImports: MigrationFunction = async ({
   projectDir,
