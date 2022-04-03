@@ -3,9 +3,9 @@ import glob from "fast-glob";
 import { join } from "path";
 import type { PackageJson } from "type-fest";
 
-import { JSCodeshiftTransform } from "../../jscodeshift";
+import * as jscodeshift from "../../jscodeshift";
 import { cleanupPackageJson } from "./cleanup-package-json";
-import { getJSCodeshiftExtraOptions } from "./get-jscodeshift-extra-options";
+import { getTransformOptions } from "./getTransformOptions";
 import type { ExtraOptions } from "./jscodeshift-transform";
 import type { MigrationFunction } from "../../types";
 
@@ -19,12 +19,12 @@ export const updateRemixImports: MigrationFunction = async ({
   let packageJson: PackageJson = JSON.parse(
     await readFile(pkgJsonPath, "utf-8")
   );
-  let extraOptions = getJSCodeshiftExtraOptions(packageJson);
+  let transformOptions = getTransformOptions(packageJson);
 
   await cleanupPackageJson({
     content: packageJson,
     path: pkgJsonPath,
-    runtime: extraOptions.runtime,
+    runtime: transformOptions.runtime,
   });
 
   let files = glob.sync("**/*.+(js|jsx|ts|tsx)", {
@@ -32,10 +32,10 @@ export const updateRemixImports: MigrationFunction = async ({
     absolute: true,
   });
 
-  return JSCodeshiftTransform<ExtraOptions>({
-    extraOptions,
+  return jscodeshift.run<ExtraOptions>({
+    transformPath,
     files,
     flags,
-    transformPath,
+    transformOptions,
   });
 };

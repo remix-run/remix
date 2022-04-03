@@ -26,7 +26,7 @@ const getRuntime = ({ scripts }: PackageJson): ExtraOptions["runtime"] =>
     ""
   ) as ExtraOptions["runtime"]) || "node";
 
-export const getJSCodeshiftExtraOptions = (
+export const getTransformOptions = (
   packageJson: PackageJson
 ): ExtraOptions => ({
   adapter: getAdapter(packageJson),
