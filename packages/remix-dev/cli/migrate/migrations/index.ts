@@ -1,5 +1,5 @@
 import type { Migration } from "../types";
-import { updateRemixImports } from "./replace-remix-imports";
+import { replaceRemixImports } from "./replace-remix-imports";
 import * as colors from "../../colors";
 
 export const migrations: readonly Migration[] = [
@@ -7,7 +7,7 @@ export const migrations: readonly Migration[] = [
     id: "replace-remix-imports",
     description:
       "Replaces `remix` package import statements with specific `@remix-run/*` package import statements.",
-    function: updateRemixImports,
+    function: replaceRemixImports,
   },
 ] as const;
 

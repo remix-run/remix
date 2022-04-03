@@ -11,7 +11,7 @@ import type { MigrationFunction } from "../../types";
 
 const transformPath = join(__dirname, "transform");
 
-export const updateRemixImports: MigrationFunction = async ({
+export const replaceRemixImports: MigrationFunction = async ({
   projectDir,
   flags,
 }) => {
