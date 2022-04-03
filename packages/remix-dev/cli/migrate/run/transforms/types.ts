@@ -1,8 +1,5 @@
-import type { Answers } from "../../questions";
-
 export type TransformArgs = {
-  answers: Answers;
-  files: string[];
+  projectDir: string;
   flags: {
     dry?: boolean;
     force?: boolean;

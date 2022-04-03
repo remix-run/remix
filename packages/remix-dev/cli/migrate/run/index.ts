@@ -1,5 +1,3 @@
-import glob from "fast-glob";
-
 import { checkGitStatus } from "../../check-git-status";
 import type { migrationOptions } from "../migration-options";
 import type { Transform, TransformArgs } from "./transforms";
@@ -13,19 +11,18 @@ const transformFunctionByName: Record<
   "replace-remix-imports": updateRemixImports,
 };
 
-type RunArgs = Pick<TransformArgs, "answers" | "flags">;
-export const run = async ({ answers, flags }: RunArgs) => {
-  let projectDir = checkProjectDir(answers.projectDir);
-  let migration = checkMigration(answers.migration);
-  let files = glob.sync("**/*.+(js|jsx|ts|tsx)", {
-    cwd: projectDir,
-    absolute: true,
-  });
+export const run = async (input: {
+  migration: string;
+  projectDir: string;
+  flags: TransformArgs["flags"];
+}) => {
+  let projectDir = checkProjectDir(input.projectDir);
+  let migration = checkMigration(input.migration);
 
-  if (!flags.dry) {
-    checkGitStatus(answers.projectDir, { force: flags.force });
+  if (!input.flags.dry) {
+    checkGitStatus(projectDir, { force: input.flags.force });
   }
 
   let transformFunction = transformFunctionByName[migration];
-  return transformFunction({ answers, files, flags });
+  return transformFunction({ projectDir, flags: input.flags });
 };

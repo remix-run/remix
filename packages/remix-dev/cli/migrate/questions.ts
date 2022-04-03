@@ -21,8 +21,3 @@ export const resolveMigration = async (input?: string): Promise<string> => {
   // TODO need to catch inquirer prompt?
   return input || migration;
 };
-
-export type Answers = {
-  projectDir: string;
-  migration: string;
-};
