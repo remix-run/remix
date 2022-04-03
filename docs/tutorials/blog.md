@@ -125,7 +125,8 @@ So let's get to it and provide some data to our component.
 💿 Make the posts route "loader"
 
 ```tsx filename=app/routes/posts/index.tsx lines=[1,3-16,19-20]
-import { json, useLoaderData } from "remix";
+import { json } from "@remix-run/server-runtime";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader = async () => {
   return json({
@@ -158,7 +159,8 @@ Loaders are the backend "API" for their component and it's already wired up for 
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[1,9-20] nocopy
-import { Link, json, useLoaderData } from "remix";
+import { json } from "@remix-run/server-runtime";
+import { useLoaderData, Link } from "@remix-run/react";
 
 // ...
 export default function Posts() {
@@ -188,7 +190,8 @@ TypeScript is mad, so let's help it out:
 💿 Add the Post type and generic for `useLoaderData`
 
 ```tsx filename=app/routes/posts/index.tsx lines=[3-6,8-10,13,28]
-import { Link, json, useLoaderData } from "remix";
+import { json } from "@remix-run/server-runtime";
+import { useLoaderData, Link } from "@remix-run/react";
 
 type Post = {
   slug: string;
@@ -275,7 +278,8 @@ Note that we're making the `getPosts` function `async` because even though it's 
 💿 Update the posts route to use our new posts module:
 
 ```tsx filename=app/routes/posts/index.tsx nocopy
-import { json, Link, useLoaderData } from "remix";
+import { json } from "@remix-run/server-runtime";
+import { useLoaderData, Link } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
