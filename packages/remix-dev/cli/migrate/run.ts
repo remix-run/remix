@@ -1,6 +1,6 @@
 import fse from "fs-extra";
 
-import { checkGitStatus } from "../check-git-status";
+import { checkGitStatus } from "../checkGitStatus";
 import type { Flags } from "./flags";
 import { migrations } from "./migrations";
 import type { Migration } from "./types";

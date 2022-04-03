@@ -4,7 +4,7 @@ import { join } from "path";
 import type { PackageJson } from "type-fest";
 
 import * as jscodeshift from "../../jscodeshift";
-import { cleanupPackageJson } from "./cleanup-package-json";
+import { cleanupPackageJson } from "./cleanupPackageJson";
 import { getTransformOptions } from "./getTransformOptions";
 import type { ExtraOptions } from "./transform";
 import type { MigrationFunction } from "../../types";
