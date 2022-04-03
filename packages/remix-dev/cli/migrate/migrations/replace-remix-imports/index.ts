@@ -4,14 +4,17 @@ import { join } from "path";
 import type { PackageJson } from "type-fest";
 
 import { JSCodeshiftTransform } from "../../jscodeshift";
-import type { Transform } from "../types";
 import { cleanupPackageJson } from "./cleanup-package-json";
 import { getJSCodeshiftExtraOptions } from "./get-jscodeshift-extra-options";
 import type { ExtraOptions } from "./jscodeshift-transform";
+import type { MigrationFunction } from "../../types";
 
 const transformPath = join(__dirname, "jscodeshift-transform");
 
-export const updateRemixImports: Transform = async ({ projectDir, flags }) => {
+export const updateRemixImports: MigrationFunction = async ({
+  projectDir,
+  flags,
+}) => {
   let pkgJsonPath = join(projectDir, "package.json");
   let packageJson: PackageJson = JSON.parse(
     await readFile(pkgJsonPath, "utf-8")

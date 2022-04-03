@@ -1,23 +1,26 @@
 import inquirer from "inquirer";
 
-import type { Migration } from "./migration-options";
-import { migrationOptions } from "./migration-options";
+import { migrations } from "./migrations";
 
 export const resolveProjectDir = (input?: string): string => {
   return input || process.env.REMIX_ROOT || process.cwd();
 };
 
-export const resolveMigration = async (input?: string): Promise<string> => {
-  let { migration } = await inquirer.prompt<{ migration: Migration }>([
+export const resolveMigrationId = async (input?: string): Promise<string> => {
+  let { migrationId } = await inquirer.prompt<{ migrationId: string }>([
     {
-      name: "migration",
+      name: "migrationId",
       message: "Which migration would you like to apply?",
       type: "list",
       when: !input,
-      pageSize: migrationOptions.length,
-      choices: migrationOptions,
+      pageSize: migrations.length,
+      choices: migrations.map((m) => ({
+        name: `${m.id}: ${m.description}`,
+        value: m.id,
+      })),
     },
   ]);
   // TODO need to catch inquirer prompt?
-  return input || migration;
+  console.log({ input, migrationId });
+  return input || migrationId;
 };

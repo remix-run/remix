@@ -315,9 +315,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.setup(input[1]);
       break;
     case "migrate": {
-      let migration = await commands.migrate.resolveMigration(flags.migration);
+      let migrationId = await commands.migrate.resolveMigrationId(
+        flags.migration
+      );
       let projectDir = commands.migrate.resolveProjectDir(input[1]);
-      await commands.migrate.run({ migration, projectDir, flags });
+      await commands.migrate.run({ migrationId, projectDir, flags });
       break;
     }
     case "dev":

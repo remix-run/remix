@@ -1,28 +1,30 @@
-import { checkGitStatus } from "../check-git-status";
-import type { migrationOptions } from "./migration-options";
-import type { Transform, TransformArgs } from "./migrations";
-import { updateRemixImports } from "./migrations";
-import { checkProjectDir, checkMigration } from "./input-check";
+import fse from "fs-extra";
 
-const transformFunctionByName: Record<
-  typeof migrationOptions[number]["value"],
-  Transform
-> = {
-  "replace-remix-imports": updateRemixImports,
+import { checkGitStatus } from "../check-git-status";
+import type { Flags } from "./flags";
+import { parseMigration } from "./migrations";
+
+const checkProjectDir = (projectDir: string): string => {
+  if (!fse.existsSync(projectDir)) {
+    throw Error(`Project path does not exist: ${projectDir}`);
+  }
+  if (!fse.lstatSync(projectDir).isDirectory()) {
+    throw Error(`Project path is not a directory: ${projectDir}`);
+  }
+  return projectDir;
 };
 
 export const run = async (input: {
-  migration: string;
+  migrationId: string;
   projectDir: string;
-  flags: TransformArgs["flags"];
+  flags: Flags;
 }) => {
+  console.log(input);
   let projectDir = checkProjectDir(input.projectDir);
-  let migration = checkMigration(input.migration);
-
   if (!input.flags.dry) {
     checkGitStatus(projectDir, { force: input.flags.force });
   }
 
-  let transformFunction = transformFunctionByName[migration];
-  return transformFunction({ projectDir, flags: input.flags });
+  let migration = parseMigration(input.migrationId);
+  return migration.function({ projectDir, flags: input.flags });
 };
