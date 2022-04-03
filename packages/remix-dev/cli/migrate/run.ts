@@ -1,8 +1,8 @@
-import { checkGitStatus } from "../../check-git-status";
-import type { migrationOptions } from "../migration-options";
+import { checkGitStatus } from "../check-git-status";
+import type { migrationOptions } from "./migration-options";
 import type { Transform, TransformArgs } from "./transforms";
 import { updateRemixImports } from "./transforms";
-import { checkProjectDir, checkMigration } from "../check";
+import { checkProjectDir, checkMigration } from "./check";
 
 const transformFunctionByName: Record<
   typeof migrationOptions[number]["value"],
