@@ -3,7 +3,7 @@ import glob from "fast-glob";
 import { join } from "path";
 import type { PackageJson } from "type-fest";
 
-import { JSCodeshiftTransform } from "../jscodeshift-transform";
+import { JSCodeshiftTransform } from "../../jscodeshift";
 import type { Transform } from "../types";
 import { cleanupPackageJson } from "./cleanup-package-json";
 import { getJSCodeshiftExtraOptions } from "./get-jscodeshift-extra-options";
