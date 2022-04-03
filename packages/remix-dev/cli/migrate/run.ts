@@ -2,7 +2,20 @@ import fse from "fs-extra";
 
 import { checkGitStatus } from "../check-git-status";
 import type { Flags } from "./flags";
-import { parseMigration } from "./migrations";
+import { migrations } from "./migrations";
+import type { Migration } from "./types";
+import * as colors from "../colors";
+
+const parseMigration = (migrationId: string): Migration => {
+  let migration = migrations.find((m) => m.id === migrationId);
+  if (migration === undefined) {
+    throw Error(`
+${colors.error("Invalid migration. Pick one of:")}
+${migrations.map((m) => colors.error(`- ${m.id}`)).join("\n")}
+    `);
+  }
+  return migration;
+};
 
 const checkProjectDir = (projectDir: string): string => {
   if (!fse.existsSync(projectDir)) {
