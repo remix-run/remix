@@ -1,6 +1,8 @@
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import type { FormProps } from "@remix-run/react";
+import { Form, useLoaderData, useTransition } from "@remix-run/react";
 import * as React from "react";
-import type { LoaderFunction, ActionFunction, FormProps } from "remix";
-import { useLoaderData, useTransition, Form, json, redirect } from "remix";
 
 import stylesHref from "../styles/methods.css";
 import { getSession, commitSession } from "../sessionStorage";

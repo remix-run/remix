@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "remix";
+import { Outlet, useLocation } from "@remix-run/react";
 
 export default function RenderErrors() {
   let location = useLocation();

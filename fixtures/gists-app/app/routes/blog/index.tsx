@@ -1,5 +1,10 @@
-import type { HeadersFunction, LinksFunction, LoaderFunction } from "remix";
-import { Link, useLoaderData, useTransition, json } from "remix";
+import type {
+  HeadersFunction,
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData, useTransition } from "@remix-run/react";
 
 import * as helloPost from "./hello-world.mdx";
 import * as thirdPost from "./third.md";

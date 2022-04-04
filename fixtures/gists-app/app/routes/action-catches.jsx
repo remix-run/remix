@@ -1,4 +1,5 @@
-import { Form, json } from "remix";
+import { json } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 export async function action() {
   throw json("action catch data!", { status: 401 });

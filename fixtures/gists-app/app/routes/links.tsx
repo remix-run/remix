@@ -1,5 +1,5 @@
-import type { LinksFunction, LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import redTextHref from "~/styles/redText.css";
 import blueTextHref from "~/styles/blueText.css";

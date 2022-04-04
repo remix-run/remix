@@ -1,4 +1,5 @@
-import { json, Link, Outlet, useLoaderData, useTransition } from "remix";
+import { json } from "@remix-run/node";
+import { Link, Outlet, useLoaderData, useTransition } from "@remix-run/react";
 
 import Shared from "~/components/Shared";
 import stylesHref from "~/styles/gists.css";

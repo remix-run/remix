@@ -1,14 +1,18 @@
 {
-  "private": true,
   "name": "gists-app",
   "version": "1.0.0",
+  "private": true,
+  "sideEffects": false,
   "scripts": {
-    "postinstall": "node scripts/install_remix.js && node node_modules/@remix-run/dev/cli.js setup",
     "build": "node node_modules/@remix-run/dev/cli.js build",
     "dev": "pm2-dev pm2.config.js",
-    "start": "node ./build",
-    "routes": "node node_modules/@remix-run/dev/cli.js routes"
+    "postinstall": "node scripts/install_remix.js",
+    "routes": "node node_modules/@remix-run/dev/cli.js routes",
+    "start": "node ./build"
   },
+  "browserslist": [
+    "last 4 version"
+  ],
   "dependencies": {
     "@exampledev/new.css": "^1.1.3",
     "@mdx-js/react": "^1.6.22",
@@ -20,8 +24,7 @@
     "morgan": "^1.10.0",
     "postcss-nested": "^5.0.3",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-router-dom": "^6.2.2"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@types/react": "^17.0.24",
@@ -36,9 +39,5 @@
     "rehype-highlight": "^5.0.0",
     "remark-toc": "^8.0.0",
     "tailwindcss": "^2.0.3"
-  },
-  "browserslist": [
-    "last 4 version"
-  ],
-  "sideEffects": false
+  }
 }

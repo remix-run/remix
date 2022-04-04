@@ -1,4 +1,4 @@
-import { Form, useLoaderData } from "remix";
+import { Form, useLoaderData } from "@remix-run/react";
 
 export async function action() {
   throw new Error("I am an action error!");

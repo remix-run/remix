@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
-  useLoaderData,
-  useFetcher,
   Form,
-  useTransition,
   Link,
-} from "remix";
-import { useSearchParams } from "remix";
+  useFetcher,
+  useLoaderData,
+  useSearchParams,
+  useTransition,
+} from "@remix-run/react";
+import { useEffect, useState } from "react";
 
 import styles from "../styles/pending-forms.css";
 

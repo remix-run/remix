@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import normalizeHref from "@exampledev/new.css/new.css";
 import {
   Link,
   Links,
@@ -9,8 +9,8 @@ import {
   useCatch,
   useLoaderData,
   useMatches,
-} from "remix";
-import normalizeHref from "@exampledev/new.css/new.css";
+} from "@remix-run/react";
+import { useEffect } from "react";
 
 import favicon from "../public/favicon.ico";
 import stylesHref from "./styles/app.css";

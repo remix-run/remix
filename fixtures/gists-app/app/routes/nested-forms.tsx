@@ -1,5 +1,6 @@
-import type { ActionFunction } from "remix";
-import { Form, json, Outlet, useActionData } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Outlet, useActionData } from "@remix-run/react";
 
 export let action: ActionFunction = async ({ request }) => {
   return json("layout action data");

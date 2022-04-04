@@ -1,4 +1,5 @@
-import { Link, json, useCatch, useLocation } from "remix";
+import { json } from "@remix-run/node";
+import { Link, useCatch, useLocation } from "@remix-run/react";
 
 export async function loader({ request }) {
   let url = new URL(request.url);

@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { Form, json, Outlet, useActionData, useLoaderData } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Outlet, useActionData, useLoaderData } from "@remix-run/react";
 
 export let loader: LoaderFunction = async ({ request }) => {
   let value = new URL(request.url).searchParams.get("value");

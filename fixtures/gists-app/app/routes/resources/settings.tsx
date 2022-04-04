@@ -1,6 +1,7 @@
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, useLoaderData, useTransition } from "@remix-run/react";
 import { Fragment, useEffect } from "react";
-import { Form, Link, json, useLoaderData, useTransition } from "remix";
-import type { LoaderFunction } from "remix";
 
 import { defaultStyles, sessionStorage } from "~/themes.server";
 

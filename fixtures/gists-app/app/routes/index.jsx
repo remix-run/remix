@@ -1,5 +1,5 @@
+import { Link } from "@remix-run/react";
 import { useEffect } from "react";
-import { Link } from "remix";
 
 import Shared from "../components/Shared";
 // import Guitar from "../components/Guitar";

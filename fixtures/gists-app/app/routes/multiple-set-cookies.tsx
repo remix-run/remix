@@ -3,8 +3,9 @@ import type {
   LoaderFunction,
   MetaFunction,
   RouteComponent,
-} from "remix";
-import { redirect, json, Form } from "remix";
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 let loader: LoaderFunction = async () => {
   let headers = new Headers();

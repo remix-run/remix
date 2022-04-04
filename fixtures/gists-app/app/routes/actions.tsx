@@ -1,11 +1,9 @@
+import type { ActionFunction, HeadersFunction } from "@remix-run/node";
 import {
-  Form,
   json,
   unstable_parseMultipartFormData as parseMultipartFormData,
-  useActionData,
-  useLoaderData,
-} from "remix";
-import type { HeadersFunction, ActionFunction } from "remix";
+} from "@remix-run/node";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
 
 import { uploadHandler } from "../uploadHandler.server";
 

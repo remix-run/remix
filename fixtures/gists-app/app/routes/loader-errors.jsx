@@ -1,4 +1,5 @@
-import { json, Outlet } from "remix";
+import { json } from "@remix-run/node";
+import { Outlet } from "@remix-run/react";
 
 export async function loader({ request }) {
   let params = new URL(request.url).searchParams;

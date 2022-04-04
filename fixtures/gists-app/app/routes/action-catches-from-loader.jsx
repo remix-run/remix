@@ -1,4 +1,5 @@
-import { Form, json, redirect } from "remix";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 export async function action() {
   return redirect("/action-catches-from-loader?catch");
