@@ -1,3 +1,5 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
@@ -6,7 +8,7 @@ let app: AppFixture;
 
 let BANNER_MESSAGE = "you do not have permission to view /protected";
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/session.server.js": js`
@@ -105,10 +107,12 @@ beforeAll(async () => {
   app = await createAppFixture(fixture);
 });
 
-afterAll(async () => app.close());
+test.afterAll(() => app.close());
 
-it("should revalidate when cookie is set on redirect from loader", async () => {
-  await app.goto("/");
-  await app.clickLink("/protected");
-  expect(await app.getHtml()).toMatch(BANNER_MESSAGE);
+test("should revalidate when cookie is set on redirect from loader", async ({
+  page,
+}) => {
+  await app.goto(page, "/");
+  await app.clickLink(page, "/protected");
+  expect(await app.getHtml(page)).toMatch(BANNER_MESSAGE);
 });

@@ -1,3 +1,5 @@
+import { test, expect } from "@playwright/test";
+
 import {
   createAppFixture,
   createFixture,
@@ -10,7 +12,7 @@ import type { Fixture, AppFixture } from "./helpers/create-fixture";
 let fixture: Fixture;
 let app: AppFixture;
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/components/my-lib/index.ts": js`
@@ -107,20 +109,20 @@ beforeAll(async () => {
   app = await createAppFixture(fixture);
 });
 
-afterAll(async () => app.close());
+test.afterAll(() => app.close());
 
-it("import internal library via alias other than ~", async () => {
+test("import internal library via alias other than ~", async () => {
   // test for https://github.com/remix-run/remix/issues/2298
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
-it("import internal library via ~ alias", async () => {
+test("import internal library via ~ alias", async () => {
   let response = await fixture.requestDocument("/tilde-alias");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
-it("works for mdx files", async () => {
+test("works for mdx files", async () => {
   let response = await fixture.requestDocument("/mdx");
   expect(await response.text()).toMatch("this is a pizza");
 });

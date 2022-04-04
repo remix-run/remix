@@ -1,8 +1,11 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import type { RemixLinkProps } from "../build/node_modules/@remix-run/react/components";
 
 // Generate the test app using the given prefetch mode
-function fixtureFactory(mode) {
+function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
   return {
     files: {
       "app/root.jsx": js`
@@ -63,154 +66,152 @@ function fixtureFactory(mode) {
   };
 }
 
-describe("prefetch=none", () => {
+test.describe("prefetch=none", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("none"));
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
-    await app.close();
-  });
+  test.afterAll(() => app.close());
 
-  it("does not render prefetch tags during SSR", async () => {
+  test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 
-  it("does not add prefetch tags on hydration", async () => {
-    await app.goto("/");
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+  test("does not add prefetch tags on hydration", async ({ page }) => {
+    await app.goto(page, "/");
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 });
 
-describe("prefetch=render", () => {
+test.describe("prefetch=render", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("render"));
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("does not render prefetch tags during SSR", async () => {
+  test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 
-  it("adds prefetch tags on hydration", async () => {
-    await app.goto("/");
+  test("adds prefetch tags on hydration", async ({ page }) => {
+    await app.goto(page, "/");
     // Both data and asset fetch for /with-loader
-    await app.page.waitForSelector(
+    await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
     );
-    await app.page.waitForSelector(
+    await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
     );
     // Only asset fetch for /without-loader
-    await app.page.waitForSelector(
+    await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
     );
 
     // Ensure no other links in the #nav element
-    expect((await app.page.$$("#nav link")).length).toBe(3);
+    expect((await page.$$("#nav link")).length).toBe(3);
   });
 });
 
-describe("prefetch=intent (hover)", () => {
+test.describe("prefetch=intent (hover)", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("intent"));
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("does not render prefetch tags during SSR", async () => {
+  test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 
-  it("does not add prefetch tags on hydration", async () => {
-    await app.goto("/");
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+  test("does not add prefetch tags on hydration", async ({ page }) => {
+    await app.goto(page, "/");
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 
-  it("adds prefetch tags on hover", async () => {
-    await app.page.hover("a[href='/with-loader']");
-    await app.page.waitForSelector(
+  test("adds prefetch tags on hover", async ({ page }) => {
+    await page.hover("a[href='/with-loader']");
+    await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
     );
     // Check href prefix due to hashed filenames
-    await app.page.waitForSelector(
+    await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
     );
-    expect((await app.page.$$("#nav link")).length).toBe(2);
+    expect((await page.$$("#nav link")).length).toBe(2);
 
-    await app.page.hover("a[href='/without-loader']");
-    await app.page.waitForSelector(
+    await page.hover("a[href='/without-loader']");
+    await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
     );
-    expect((await app.page.$$("#nav link")).length).toBe(3);
+    expect((await page.$$("#nav link")).length).toBe(3);
   });
 });
 
-describe("prefetch=intent (focus)", () => {
+test.describe("prefetch=intent (focus)", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("intent"));
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("does not render prefetch tags during SSR", async () => {
+  test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 
-  it("does not add prefetch tags on hydration", async () => {
-    await app.goto("/");
-    expect((await app.page.$$("#nav link")).length).toBe(0);
+  test("does not add prefetch tags on hydration", async ({ page }) => {
+    await app.goto(page, "/");
+    expect((await page.$$("#nav link")).length).toBe(0);
   });
 
-  it("adds prefetch tags on focus", async () => {
+  test("adds prefetch tags on focus", async ({ page }) => {
     // This click is needed to transfer focus to the main window, allowing
     // subsequent focus events to fire
-    await app.page.click("body");
-    await app.page.focus("a[href='/with-loader']");
-    await app.page.waitForSelector(
+    await page.click("body");
+    await page.focus("a[href='/with-loader']");
+    await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
     );
     // Check href prefix due to hashed filenames
-    await app.page.waitForSelector(
+    await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
     );
-    expect((await app.page.$$("#nav link")).length).toBe(2);
+    expect((await page.$$("#nav link")).length).toBe(2);
 
-    await app.page.focus("a[href='/without-loader']");
-    await app.page.waitForSelector(
+    await page.focus("a[href='/without-loader']");
+    await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
     );
-    expect((await app.page.$$("#nav link")).length).toBe(3);
+    expect((await page.$$("#nav link")).length).toBe(3);
   });
 });

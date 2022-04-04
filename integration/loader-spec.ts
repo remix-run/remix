@@ -1,13 +1,15 @@
+import { test, expect } from "@playwright/test";
+
 import { createFixture, js } from "./helpers/create-fixture";
 import type { Fixture } from "./helpers/create-fixture";
 
-describe("loader", () => {
+test.describe("loader", () => {
   let fixture: Fixture;
 
   let ROOT_DATA = "ROOT_DATA";
   let INDEX_DATA = "INDEX_DATA";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
@@ -46,7 +48,7 @@ describe("loader", () => {
     });
   });
 
-  it("returns responses for a specific route", async () => {
+  test("returns responses for a specific route", async () => {
     let [root, index] = await Promise.all([
       fixture.requestData("/", "root"),
       fixture.requestData("/", "routes/index"),

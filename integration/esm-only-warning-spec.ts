@@ -1,10 +1,11 @@
+import { test, expect } from "@playwright/test";
 import { PassThrough } from "stream";
 
-import { createFixtureProject, js } from "./helpers/create-fixture";
+import { createFixtureProject, js, json } from "./helpers/create-fixture";
 
 let buildOutput: string;
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   let buildStdio = new PassThrough();
 
   await createFixtureProject({
@@ -53,40 +54,44 @@ beforeAll(async () => {
       "node_modules/esm-only-exports/index.js": js`
         export default () => "esm-only-no-exports";
       `,
-      "node_modules/esm-only-sub-exports/package.json": `{
-  "name": "esm-only",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
-  "exports": {
-    ".": "./index.js",
-    "./sub": "./sub.js",
-    "./package.json": "./package.json"
-  }
-}`,
+      "node_modules/esm-only-sub-exports/package.json": json`
+        {
+          "name": "esm-only",
+          "version": "1.0.0",
+          "type": "module",
+          "main": "index.js",
+          "exports": {
+            ".": "./index.js",
+            "./sub": "./sub.js",
+            "./package.json": "./package.json"
+          }
+        }
+      `,
       "node_modules/esm-only-sub-exports/index.js": js`
         export default () => "esm-only-no-exports";
       `,
       "node_modules/esm-only-sub-exports/sub.js": js`
         export default () => "esm-only-no-exports/sub";
       `,
-      "node_modules/esm-cjs-exports/package.json": `{
-  "name": "esm-only",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
-  "exports": {
-    ".": {
-      "require": "./index.cjs",
-      "default": "./index.js"
-    },
-    "./sub": {
-      "require": "./sub.cjs",
-      "default": "./sub.js"
-    },
-    "./package.json": "./package.json"
-  }
-}`,
+      "node_modules/esm-cjs-exports/package.json": json`
+        {
+          "name": "esm-only",
+          "version": "1.0.0",
+          "type": "module",
+          "main": "index.js",
+          "exports": {
+            ".": {
+              "require": "./index.cjs",
+              "default": "./index.js"
+            },
+            "./sub": {
+              "require": "./sub.cjs",
+              "default": "./sub.js"
+            },
+            "./package.json": "./package.json"
+          }
+        }
+      `,
       "node_modules/esm-cjs-exports/index.js": js`
         export default () => "esm-only-no-exports";
       `,
@@ -110,7 +115,7 @@ beforeAll(async () => {
   });
 });
 
-it("logs warnings for ESM only packages", async () => {
+test("logs warnings for ESM only packages", async () => {
   expect(buildOutput).toContain(
     "esm-only-no-exports is possibly an ESM only package"
   );

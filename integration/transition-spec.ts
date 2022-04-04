@@ -1,7 +1,9 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("rendering", () => {
+test.describe("rendering", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
@@ -13,7 +15,7 @@ describe("rendering", () => {
   let REDIRECT = "redirect";
   let REDIRECT_TARGET = "page";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
@@ -142,75 +144,78 @@ describe("rendering", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("calls all loaders for new routes", async () => {
-    await app.goto("/");
-    let responses = app.collectDataResponses();
-    await app.clickLink(`/${PAGE}`);
+  test("calls all loaders for new routes", async ({ page }) => {
+    await app.goto(page, "/");
+    let responses = app.collectDataResponses(page);
+    await app.clickLink(page, `/${PAGE}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
 
-    let html = await app.getHtml("main");
+    let html = await app.getHtml(page, "main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
-  it("calls only loaders for changing routes", async () => {
-    await app.goto(`/${PAGE}`);
-    let responses = app.collectDataResponses();
-    await app.clickLink(`/${PAGE}/${CHILD}`);
+  test("calls only loaders for changing routes", async ({ page }) => {
+    await app.goto(page, `/${PAGE}`);
+    let responses = app.collectDataResponses(page);
+    await app.clickLink(page, `/${PAGE}/${CHILD}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/${CHILD}`]);
 
-    let html = await app.getHtml("main");
+    let html = await app.getHtml(page, "main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(CHILD_TEXT);
   });
 
-  test("loader redirect", async () => {
-    await app.goto("/");
+  test("loader redirect", async ({ page }) => {
+    await app.goto(page, "/");
 
-    let responses = app.collectDataResponses();
-    await app.clickLink(`/${REDIRECT}`);
-    expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
+    let responses = app.collectDataResponses(page);
+    await app.clickLink(page, `/${REDIRECT}`);
+    expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`]);
 
-    let html = await app.getHtml("main");
+    let html = await app.getHtml(page, "main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
-  it("calls changing routes on POP", async () => {
-    await app.goto(`/${PAGE}`);
-    await app.clickLink(`/${PAGE}/${CHILD}`);
+  test("calls changing routes on POP", async ({ page }) => {
+    await app.goto(page, `/${PAGE}`);
+    await app.clickLink(page, `/${PAGE}/${CHILD}`);
 
-    let responses = app.collectDataResponses();
-    await app.goBack();
+    let responses = app.collectDataResponses(page);
+    await app.goBack(page);
+    await page.waitForLoadState("networkidle");
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/index`]);
 
-    let html = await app.getHtml("main");
+    let html = await app.getHtml(page, "main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
-  it("useFetcher state should return to the idle when redirect from an action", async () => {
-    await app.goto("/gh-1691");
-    expect(await app.getHtml("span")).toMatch("idle");
+  test("useFetcher state should return to the idle when redirect from an action", async ({
+    page,
+  }) => {
+    await app.goto(page, "/gh-1691");
+    expect(await app.getHtml(page, "span")).toMatch("idle");
 
-    await app.clickSubmitButton("/gh-1691");
-    expect(await app.getHtml("span")).toMatch("idle");
+    await app.clickSubmitButton(page, "/gh-1691");
+    expect(await app.getHtml(page, "span")).toMatch("idle");
   });
 });

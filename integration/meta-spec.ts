@@ -1,11 +1,18 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("meta", () => {
+test.describe("meta", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  // disable JS for all tests in this file
+  // to only disable them for some, add another test.describe()
+  // and move the following line there
+  test.use({ javaScriptEnabled: false });
+
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
@@ -56,65 +63,54 @@ describe("meta", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => await app.close());
+  test.afterAll(() => app.close());
 
-  test("empty meta does not render a tag", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  test("empty meta does not render a tag", async ({ page }) => {
+    await app.goto(page, "/");
 
-    await app.goto("/");
-
-    await expect(app.getHtml('meta[property="og:type"]')).rejects.toThrowError(
+    await expect(
+      app.getHtml(page, 'meta[property="og:type"]')
+    ).rejects.toThrowError(
       'No element matches selector "meta[property="og:type"]"'
     );
-    await enableJavaScript();
   });
 
-  test("meta { charset } adds a <meta charset='utf-8' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  test("meta { charset } adds a <meta charset='utf-8' />", async ({ page }) => {
+    await app.goto(page, "/");
 
-    await app.goto("/");
-
-    expect(await app.getHtml('meta[charset="utf-8"]')).toBeTruthy();
-    await enableJavaScript();
+    expect(await app.getHtml(page, 'meta[charset="utf-8"]')).toBeTruthy();
   });
 
-  test("meta { title } adds a <title />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  test("meta { title } adds a <title />", async ({ page }) => {
+    await app.goto(page, "/");
 
-    await app.goto("/");
-
-    expect(await app.getHtml("title")).toBeTruthy();
-    await enableJavaScript();
+    expect(await app.getHtml(page, "title")).toBeTruthy();
   });
 
-  test("meta { 'og:*' } adds a <meta property='og:*' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  test("meta { 'og:*' } adds a <meta property='og:*' />", async ({ page }) => {
+    await app.goto(page, "/");
 
-    await app.goto("/");
-
-    expect(await app.getHtml('meta[property="og:image"]')).toBeTruthy();
-    await enableJavaScript();
+    expect(await app.getHtml(page, 'meta[property="og:image"]')).toBeTruthy();
   });
 
-  test("meta { description } adds a <meta name='description' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
+  test("meta { description } adds a <meta name='description' />", async ({
+    page,
+  }) => {
+    await app.goto(page, "/");
 
-    await app.goto("/");
-
-    expect(await app.getHtml('meta[name="description"]')).toBeTruthy();
-    await enableJavaScript();
+    expect(await app.getHtml(page, 'meta[name="description"]')).toBeTruthy();
   });
 
-  test("meta { refresh } adds a <meta http-equiv='refresh' content='3;url=https://www.mozilla.org' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
-    await app.goto("/");
+  test("meta { refresh } adds a <meta http-equiv='refresh' content='3;url=https://www.mozilla.org' />", async ({
+    page,
+  }) => {
+    await app.goto(page, "/");
 
     expect(
       await app.getHtml(
+        page,
         'meta[http-equiv="refresh"][content="3;url=https://www.mozilla.org"]'
       )
     ).toBeTruthy();
-    await enableJavaScript();
   });
 });
