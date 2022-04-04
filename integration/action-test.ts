@@ -252,7 +252,8 @@ describe("actions", () => {
   });
 
   // TODO: figure out what the heck is wrong with this test...
-  // For some reason the
+  // For some reason the error message is "Unexpect Server Error" in the test
+  // but if you try the app in the browser it works as expected.
   it.skip("rejects too big of an upload with JavaScript", async () => {
     await app.goto(`/${HAS_FILE_ACTIONS}`);
 
