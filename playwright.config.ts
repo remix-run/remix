@@ -12,7 +12,7 @@ import { devices } from "@playwright/test";
  */
 const config: PlaywrightTestConfig = {
   testDir: "./integration",
-  testMatch: ["**/*-spec.ts"],
+  testMatch: ["**/*-test.ts"],
   /* Maximum time one test can run for. */
   timeout: 30_000,
   expect: {
