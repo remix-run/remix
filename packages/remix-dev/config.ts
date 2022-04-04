@@ -352,6 +352,8 @@ export async function readConfig(
   );
 
   let devServerPort = await getPort({ port: appConfig.devServerPort || 8002 });
+  // TODO: find better way for passing remix config to react, temporary assign to process directly.
+  process.env.REMIX_DEV_SERVER_WS_PORT = JSON.stringify(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let defaultPublicPath = "/build/";
