@@ -438,7 +438,6 @@ Update the package scripts to generate the Tailwind file during dev and for the 
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -o ./app/tailwind.css",
-    "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
   // ...
@@ -483,7 +482,6 @@ Then alter how Tailwind is generating your css:
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
-    "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
   // ...
