@@ -1,6 +1,6 @@
 ---
 title: Cloudflare
-order: 1
+order: 2
 ---
 
 # @remix-run/cloudflare
