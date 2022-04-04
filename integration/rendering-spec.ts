@@ -1,3 +1,5 @@
+import { test, expect } from "@playwright/test";
+
 import {
   createAppFixture,
   createFixture,
@@ -6,11 +8,11 @@ import {
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("rendering", () => {
+test.describe("rendering", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
@@ -46,28 +48,16 @@ describe("rendering", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
-    await app.close();
-  });
+  test.afterAll(async () => app.close());
 
-  it("server renders matching routes", async () => {
+  test("server renders matching routes", async () => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect(selectHtml(await res.text(), "#content")).toMatchInlineSnapshot(`
-      "<div id=\\"content\\">
-        <h1>Root</h1>
-        <h2>Index</h2>
-      </div>"
-    `);
+    expect(selectHtml(await res.text(), "#content")).toMatchSnapshot();
   });
 
-  it("hydrates", async () => {
-    await app.goto("/");
-    expect(await app.getHtml("#content")).toMatchInlineSnapshot(`
-      "<div id=\\"content\\">
-        <h1>Root</h1>
-        <h2>Index</h2>
-      </div>"
-    `);
+  test("hydrates", async ({ page }) => {
+    await app.goto(page, "/");
+    expect(await app.getHtml(page, "#content")).toMatchSnapshot();
   });
 });

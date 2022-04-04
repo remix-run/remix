@@ -1,11 +1,13 @@
+import { test, expect } from "@playwright/test";
+
 import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("compiler", () => {
+test.describe("compiler", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/fake.server.js": js`
@@ -75,38 +77,32 @@ describe("compiler", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
-    await app.close();
-  });
+  test.afterAll(async () => app.close());
 
-  it("removes server code with `*.server` files", async () => {
-    let res = await app.goto("/", true);
+  test("removes server code with `*.server` files", async ({ page }) => {
+    let res = await app.goto(page, "/", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#index")).toMatchInlineSnapshot(
-      `"<div id=\\"index\\">true</div>"`
-    );
+    expect(await app.getHtml(page, "#index")).toMatchSnapshot();
   });
-  it("removes server code with `*.client` files", async () => {
-    await app.disableJavaScript();
-    let res = await app.goto("/", true);
+
+  test("removes server code with `*.client` files", async ({ page }) => {
+    let res = await app.goto(page, "/", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#index")).toMatchInlineSnapshot(
-      `"<div id=\\"index\\">true</div>"`
-    );
+    expect(await app.getHtml(page, "#index")).toMatchSnapshot();
   });
 
-  it("removes node built-ins from client bundle when used in just loader", async () => {
-    let res = await app.goto("/built-ins", true);
+  test("removes node built-ins from client bundle when used in just loader", async ({
+    page,
+  }) => {
+    let res = await app.goto(page, "/built-ins", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#built-ins")).toMatchInlineSnapshot(
-      `"<div id=\\"built-ins\\">test/file.txt</div>"`
-    );
+    expect(await app.getHtml(page, "#built-ins")).toMatchSnapshot();
 
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module
@@ -115,14 +111,14 @@ describe("compiler", () => {
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
-  it("bundles node built-ins polyfill for client bundle when used in client code", async () => {
-    let res = await app.goto("/built-ins-polyfill", true);
+  test("bundles node built-ins polyfill for client bundle when used in client code", async ({
+    page,
+  }) => {
+    let res = await app.goto(page, "/built-ins-polyfill", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#built-ins-polyfill")).toMatchInlineSnapshot(
-      `"<div id=\\"built-ins-polyfill\\">test/file.txt</div>"`
-    );
+    expect(await app.getHtml(page, "#built-ins-polyfill")).toMatchSnapshot();
 
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins-polyfill"].module
@@ -131,12 +127,12 @@ describe("compiler", () => {
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
-  it("allows consumption of ESM modules in CJS builds with `serverDependenciesToBundle`", async () => {
-    let res = await app.goto("/esm-only-pkg", true);
+  test("allows consumption of ESM modules in CJS builds with `serverDependenciesToBundle`", async ({
+    page,
+  }) => {
+    let res = await app.goto(page, "/esm-only-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#esm-only-pkg")).toMatchInlineSnapshot(
-      `"<div id=\\"esm-only-pkg\\">esm-only-pkg</div>"`
-    );
+    expect(await app.getHtml(page, "#esm-only-pkg")).toMatchSnapshot();
   });
 });

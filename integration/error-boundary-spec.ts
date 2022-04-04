@@ -1,7 +1,9 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("ErrorBoundary", () => {
+test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
   let app: AppFixture;
   let _consoleError: any;
@@ -22,7 +24,7 @@ describe("ErrorBoundary", () => {
   // packages/remix-react/errorBoundaries.tsx
   let INTERNAL_ERROR_BOUNDARY_HEADING = "Application Error";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     _consoleError = console.error;
     console.error = () => {};
     fixture = await createFixture({
@@ -174,7 +176,7 @@ describe("ErrorBoundary", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     console.error = _consoleError;
     await app.close();
   });
@@ -186,40 +188,48 @@ describe("ErrorBoundary", () => {
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  // FIXME: this is broken, it renders the root boundary logging in `RemixRoute`
-  // it's because the route module hasn't been loaded, my gut tells me that we
-  // didn't load the route module but tried to render it's boundary, we need the
+  // FIXME: this is broken, test renders the root boundary logging in `RemixRoute`
+  // test's because the route module hasn't been loaded, my gut tells me that we
+  // didn't load the route module but tried to render test's boundary, we need the
   // module for that!  this will probably fix the twin test over in
   // catch-boundary-test
-  test.skip("own boundary, action, client transition from other route", async () => {
-    await app.goto("/");
-    await app.clickSubmitButton(HAS_BOUNDARY_ACTION);
-    expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
+  test.skip("own boundary, action, client transition from other route", async ({
+    page,
+  }) => {
+    await app.goto(page, "/");
+    await app.clickSubmitButton(page, HAS_BOUNDARY_ACTION);
+    expect(await app.getHtml(page, "main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  test("own boundary, action, client transition from itself", async () => {
-    await app.goto(HAS_BOUNDARY_ACTION);
-    await app.clickSubmitButton(HAS_BOUNDARY_ACTION);
-    expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
+  test("own boundary, action, client transition from itself", async ({
+    page,
+  }) => {
+    await app.goto(page, HAS_BOUNDARY_ACTION);
+    await app.clickSubmitButton(page, HAS_BOUNDARY_ACTION);
+    expect(await app.getHtml(page, "main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  it("bubbles to parent in action document requests", async () => {
+  test("bubbles to parent in action document requests", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(NO_BOUNDARY_ACTION, params);
     expect(res.status).toBe(500);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  it("bubbles to parent in action script transitions from other routes", async () => {
-    await app.goto("/");
-    await app.clickSubmitButton(NO_BOUNDARY_ACTION);
-    expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
+  test("bubbles to parent in action script transitions from other routes", async ({
+    page,
+  }) => {
+    await app.goto(page, "/");
+    await app.clickSubmitButton(page, NO_BOUNDARY_ACTION);
+    expect(await app.getHtml(page, "main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  it("bubbles to parent in action script transitions from self", async () => {
-    await app.goto(NO_BOUNDARY_ACTION);
-    await app.clickSubmitButton(NO_BOUNDARY_ACTION);
-    expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
+  test("bubbles to parent in action script transitions from self", async ({
+    page,
+  }) => {
+    await app.goto(page, NO_BOUNDARY_ACTION);
+    await app.clickSubmitButton(page, NO_BOUNDARY_ACTION);
+    expect(await app.getHtml(page, "main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
   test("own boundary, loader, document request", async () => {
@@ -228,22 +238,24 @@ describe("ErrorBoundary", () => {
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  test("own boundary, loader, client transition", async () => {
-    await app.goto("/");
-    await app.clickLink(HAS_BOUNDARY_LOADER);
-    expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
+  test("own boundary, loader, client transition", async ({ page }) => {
+    await app.goto(page, "/");
+    await app.clickLink(page, HAS_BOUNDARY_LOADER);
+    expect(await app.getHtml(page, "main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  it("bubbles to parent in loader document requests", async () => {
+  test("bubbles to parent in loader document requests", async () => {
     let res = await fixture.requestDocument(NO_BOUNDARY_LOADER);
     expect(res.status).toBe(500);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  it("bubbles to parent in action script transitions from other routes", async () => {
-    await app.goto("/");
-    await app.clickLink(NO_BOUNDARY_LOADER);
-    expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
+  test("bubbles to parent in loader script transitions from other routes", async ({
+    page,
+  }) => {
+    await app.goto(page, "/");
+    await app.clickLink(page, NO_BOUNDARY_LOADER);
+    expect(await app.getHtml(page, "main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
   test("ssr rendering errors with no boundary", async () => {
@@ -252,10 +264,12 @@ describe("ErrorBoundary", () => {
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  test("script transition rendering errors with no boundary", async () => {
-    await app.goto("/");
-    await app.clickLink(NO_BOUNDARY_RENDER);
-    expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
+  test("script transition rendering errors with no boundary", async ({
+    page,
+  }) => {
+    await app.goto(page, "/");
+    await app.clickLink(page, NO_BOUNDARY_RENDER);
+    expect(await app.getHtml(page, "main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
   test("ssr rendering errors with boundary", async () => {
@@ -264,18 +278,18 @@ describe("ErrorBoundary", () => {
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  test("script transition rendering errors with boundary", async () => {
-    await app.goto("/");
-    await app.clickLink(HAS_BOUNDARY_RENDER);
-    expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
+  test("script transition rendering errors with boundary", async ({ page }) => {
+    await app.goto(page, "/");
+    await app.clickLink(page, HAS_BOUNDARY_RENDER);
+    expect(await app.getHtml(page, "main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  describe("if no error boundary exists in the app", () => {
+  test.describe("if no error boundary exists in the app", () => {
     let NO_ROOT_BOUNDARY_LOADER = "/loader-bad";
     let NO_ROOT_BOUNDARY_ACTION = "/action-bad";
     let NO_ROOT_BOUNDARY_ACTION_RETURN = "/action-no-return";
 
-    beforeAll(async () => {
+    test.beforeAll(async () => {
       fixture = await createFixture({
         files: {
           "app/root.jsx": js`
@@ -368,21 +382,33 @@ describe("ErrorBoundary", () => {
       app = await createAppFixture(fixture);
     });
 
-    it("bubbles to internal boundary in loader document requests", async () => {
-      await app.goto(NO_ROOT_BOUNDARY_LOADER);
-      expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
+    test("bubbles to internal boundary in loader document requests", async ({
+      page,
+    }) => {
+      await app.goto(page, NO_ROOT_BOUNDARY_LOADER);
+      expect(await app.getHtml(page, "h1")).toMatch(
+        INTERNAL_ERROR_BOUNDARY_HEADING
+      );
     });
 
-    it("bubbles to internal boundary in action script transitions from other routes", async () => {
-      await app.goto("/");
-      await app.clickSubmitButton(NO_ROOT_BOUNDARY_ACTION);
-      expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
+    test("bubbles to internal boundary in action script transitions from other routes", async ({
+      page,
+    }) => {
+      await app.goto(page, "/");
+      await app.clickSubmitButton(page, NO_ROOT_BOUNDARY_ACTION);
+      expect(await app.getHtml(page, "h1")).toMatch(
+        INTERNAL_ERROR_BOUNDARY_HEADING
+      );
     });
 
-    it("bubbles to internal boundary if action doesn't return", async () => {
-      await app.goto("/");
-      await app.clickSubmitButton(NO_ROOT_BOUNDARY_ACTION_RETURN);
-      expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
+    test("bubbles to internal boundary if action doesn't return", async ({
+      page,
+    }) => {
+      await app.goto(page, "/");
+      await app.clickSubmitButton(page, NO_ROOT_BOUNDARY_ACTION_RETURN);
+      expect(await app.getHtml(page, "h1")).toMatch(
+        INTERNAL_ERROR_BOUNDARY_HEADING
+      );
     });
   });
 });

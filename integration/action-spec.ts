@@ -1,3 +1,5 @@
+import { test, expect } from "@playwright/test";
+
 import {
   createFixture,
   createAppFixture,
@@ -6,7 +8,7 @@ import {
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("actions", () => {
+test.describe("actions", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
@@ -17,7 +19,7 @@ describe("actions", () => {
   let REDIRECT_TARGET = "page";
   let PAGE_TEXT = "PAGE_TEXT";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/routes/urlencoded.jsx": js`
@@ -72,17 +74,17 @@ describe("actions", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("is not called on document GET requests", async () => {
+  test("is not called on document GET requests", async () => {
     let res = await fixture.requestDocument("/urlencoded");
     let html = selectHtml(await res.text(), "#text");
     expect(html).toMatch(WAITING_VALUE);
   });
 
-  it("is called on document POST requests", async () => {
+  test("is called on document POST requests", async () => {
     let FIELD_VALUE = "cheeseburger";
 
     let params = new URLSearchParams();
@@ -94,31 +96,33 @@ describe("actions", () => {
     expect(html).toMatch(FIELD_VALUE);
   });
 
-  it("is called on script transition POST requests", async () => {
-    await app.goto(`/urlencoded`);
-    let html = await app.getHtml("#text");
+  test("is called on script transition POST requests", async ({ page }) => {
+    await app.goto(page, `/urlencoded`);
+    let html = await app.getHtml(page, "#text");
     expect(html).toMatch(WAITING_VALUE);
 
-    await app.page.click("button[type=submit]");
-    await app.page.waitForSelector("#action-text");
-    html = await app.getHtml("#text");
+    await page.click("button[type=submit]");
+    await page.waitForSelector("#action-text");
+    html = await app.getHtml(page, "#text");
     expect(html).toMatch(SUBMITTED_VALUE);
   });
 
-  it("redirects a thrown response on document requests", async () => {
+  test("redirects a thrown response on document requests", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(`/${THROWS_REDIRECT}`, params);
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe(`/${REDIRECT_TARGET}`);
   });
 
-  it("redirects a thrown response on script transitions", async () => {
-    await app.goto(`/${THROWS_REDIRECT}`);
-    let responses = app.collectDataResponses();
-    await app.clickSubmitButton(`/${THROWS_REDIRECT}`);
+  test("redirects a thrown response on script transitions", async ({
+    page,
+  }) => {
+    await app.goto(page, `/${THROWS_REDIRECT}`);
+    let responses = app.collectDataResponses(page);
+    await app.clickSubmitButton(page, `/${THROWS_REDIRECT}`);
     expect(responses.length).toBe(1);
     expect(responses[0].status()).toBe(204);
-    expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
-    expect(await app.getHtml()).toMatch(PAGE_TEXT);
+    expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
+    expect(await app.getHtml(page)).toMatch(PAGE_TEXT);
   });
 });

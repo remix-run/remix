@@ -310,10 +310,9 @@ test.describe("Forms", () => {
 
   test("posts to a loader with button data with keyboard", async ({ page }) => {
     await app.goto(page, "/get-submission");
-    await app.waitForNetworkAfter(page, async () => {
-      await page.focus(`#${KEYBOARD_INPUT}`);
-      await page.keyboard.press("Enter");
-    });
+    await page.focus(`#${KEYBOARD_INPUT}`);
+    await page.keyboard.press("Enter");
+    await page.waitForLoadState("load");
     expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
   });
 

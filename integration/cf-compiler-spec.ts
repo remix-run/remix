@@ -1,12 +1,13 @@
+import { test, expect } from "@playwright/test";
 import fs from "fs/promises";
 import path from "path";
 
 import { createFixtureProject, js } from "./helpers/create-fixture";
 
-describe("cloudflare compiler", () => {
+test.describe("cloudflare compiler", () => {
   let projectDir: string;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     projectDir = await createFixtureProject({
       template: "cloudflare-workers",
       files: {
@@ -94,7 +95,7 @@ describe("cloudflare compiler", () => {
     });
   });
 
-  it("bundles browser entry of 3rd party package correctly", async () => {
+  test("bundles browser entry of 3rd party package correctly", async () => {
     let serverBundle = await fs.readFile(
       path.resolve(projectDir, "build/index.js"),
       "utf8"
@@ -112,7 +113,7 @@ describe("cloudflare compiler", () => {
     expect(serverBundle).not.toMatch("cjs-only-pkg/node-cjs.js");
   });
 
-  it("bundles worker export of 3rd party package", async () => {
+  test("bundles worker export of 3rd party package", async () => {
     let serverBundle = await fs.readFile(
       path.resolve(projectDir, "build/index.js"),
       "utf8"
