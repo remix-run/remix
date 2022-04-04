@@ -35,7 +35,7 @@ export const run = <TransformOptions extends Options = {}>({
     "--parser=tsx",
     ...["--transform", transformPath],
     ...files,
-    ...toFlags(transformOptions),
+    ...toFlags(transformOptions || {}),
   ];
 
   console.log(
