@@ -11,6 +11,12 @@ export function isSetupPlatform(platform: any): platform is SetupPlatform {
 }
 
 export async function setupRemix(platform: SetupPlatform): Promise<void> {
+  console.warn(
+    "Calling `remix setup` and importing from `remix` are deprecated."
+  );
+  console.log(
+    "HINT: Remove `remix setup` from your `package.json`'s `postinstall` script."
+  );
   let remixPkgJsonFile: string;
   try {
     remixPkgJsonFile = resolvePackageJsonFile("remix");
