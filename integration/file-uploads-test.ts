@@ -18,7 +18,7 @@ test.describe("file-uploads", () => {
 
           export let uploadHandler = createFileUploadHandler({
             directory: path.resolve(__dirname, "..", "uploads"),
-            maxFileSize: 3000000, // 3MB
+            maxFileSize: 10_000, // 10kb
             // you probably want to avoid conflicts in production
             // do not set to false or passthrough filename in real
             // applications.
@@ -75,7 +75,7 @@ test.describe("file-uploads", () => {
       "toUpload",
       "underLimit.txt"
     );
-    let uploadData = Array(1000000).fill("a").join(""); // 1MB
+    let uploadData = Array(1_000).fill("a").join(""); // 1kb
     await fs
       .mkdir(path.dirname(uploadFile), { recursive: true })
       .catch(() => {});
@@ -95,7 +95,7 @@ test.describe("file-uploads", () => {
 
   test("rejects files over upload size limit", async ({ page }) => {
     let uploadFile = path.join(fixture.projectDir, "toUpload", "overLimit.txt");
-    let uploadData = Array(3000001).fill("a").join(""); // 3.000001MB
+    let uploadData = Array(10_001).fill("a").join(""); // 10.000001KB
     await fs
       .mkdir(path.dirname(uploadFile), { recursive: true })
       .catch(() => {});
