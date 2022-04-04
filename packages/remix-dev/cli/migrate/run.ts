@@ -32,7 +32,6 @@ export const run = async (input: {
   projectDir: string;
   flags: Flags;
 }) => {
-  console.log(input);
   let projectDir = checkProjectDir(input.projectDir);
   if (!input.flags.dry) {
     checkGitStatus(projectDir, { force: input.flags.force });

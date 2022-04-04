@@ -20,8 +20,6 @@ const resolveMigrationId = async (input?: string): Promise<string> => {
       })),
     },
   ]);
-  // TODO need to catch inquirer prompt?
-  console.log({ input, migrationId });
   return input || migrationId;
 };
 
