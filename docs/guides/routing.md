@@ -125,7 +125,7 @@ If the URL is `/accounts`, the UI hierarchy changes to this:
 It's partly your job to make this work. You need to render an `<Outlet/>` to continue the rendering of the route hierarchy from the parent routes. `root.jsx` renders the main layout, sidebar, and then an outlet for the child routes to continue rendering through:
 
 ```jsx filename=app/root.jsx lines=[1,7]
-import { Outlet } from "remix";
+import { Outlet } from "@remix-run/react";
 
 export default function Root() {
   return (
@@ -140,7 +140,7 @@ export default function Root() {
 Next up is the sales route, which also renders an outlet for its child routes (all of the routes inside of `app/routes/sales/*.jsx`).
 
 ```jsx filename=app/routes/sales.jsx lines=[8]
-import { Outlet } from "remix";
+import { Outlet } from "@remix-run/react";
 
 export default function Sales() {
   return (
@@ -290,7 +290,7 @@ Prefixing a file name with `$` will make that route path a **dynamic segment**. 
 For example, the `$invoiceId.jsx` route. When the url is `/sales/invoices/102000`, Remix will provide the string value `102000` to your loaders, actions, and components by the same name as the filename segment:
 
 ```jsx
-import { useParams } from "remix";
+import { useParams } from "@remix-run/react";
 
 export function loader({ params }) {
   const id = params.invoiceId;
