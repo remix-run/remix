@@ -14,9 +14,9 @@ const resolveMigrationId = async (input?: string): Promise<string> => {
       type: "list",
       when: !input,
       pageSize: migrations.length,
-      choices: migrations.map((m) => ({
-        name: `${m.id}: ${m.description}`,
-        value: m.id,
+      choices: migrations.map(({ id, description }) => ({
+        name: `${id}: ${description}`,
+        value: id,
       })),
     },
   ]);

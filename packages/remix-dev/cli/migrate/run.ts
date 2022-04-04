@@ -7,7 +7,7 @@ import type { Migration } from "./types";
 import * as colors from "../colors";
 
 const parseMigration = (migrationId: string): Migration => {
-  let migration = migrations.find((m) => m.id === migrationId);
+  let migration = migrations.find(({ id }) => id === migrationId);
   if (migration === undefined) {
     throw Error(`
 ${colors.error("Invalid migration. Pick one of:")}
